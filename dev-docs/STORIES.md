@@ -421,6 +421,14 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Wert-Anzeige hat einen optionalen Titel; alle Widget-Dialoge zeigen den Alias des gewählten Devices (Regeln 10/11 in ENTWICKLUNG.md).
 - Ventil und Batterie (mit Fallback auf Kanäle) waren bereits vorhanden.
 
+## Buglist
+
+Gemeldete Fehler, die noch besprochen werden. Noch nicht umgesetzt.
+
+- **B01 - Wert-Anzeige skaliert nicht richtig.** Gemeldet am 2026-10-31.
+- **B02 - Wert-Anzeige zeigt den Titel nicht an**, obwohl einer eingetragen ist. Gemeldet am 2026-10-31.
+- **B03 - Thermostat-Kachel: unten viel ungenutzter Leerraum.** Der Platz wird nicht benötigt; Inhalt und Kachelhöhe sollen besser zusammenpassen (Screenshot vom 2026-10-31, Kacheln im Layout-Modus). Gemeldet am 2026-10-31.
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.
