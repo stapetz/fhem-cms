@@ -1,3 +1,8 @@
+2026-10-31 - Add cache busting to the generated CMS page
+
+Version the stylesheet, entry script and all modules with a content hash and
+regenerate module-owned index.html files when frontend assets change.
+
 2026-10-31 - Add device picker popup to thermostat dialog
 
 Replace the device input list with a modal popup showing name, alias and type

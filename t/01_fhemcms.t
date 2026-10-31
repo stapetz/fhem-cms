@@ -161,4 +161,43 @@ open(my $preserved, '<', $collisionPath) or die "Cannot read collision fixture: 
 is(do { local $/; <$preserved> }, 'user-owned file', 'preserves the existing file');
 close($preserved) or die "Cannot close collision fixture: $!";
 
+# Cache-Busting der Startseite
+my $assetRoot = File::Spec->catdir($modPath, 'www', 'fhem-cms');
+foreach my $dir ('css', 'js', 'components') {
+    make_path(File::Spec->catdir($assetRoot, $dir));
+}
+sub write_file {
+    my ($path, $text) = @_;
+    open(my $out, '>', $path) or die "Cannot write $path: $!";
+    print {$out} $text;
+    close($out) or die "Cannot close $path: $!";
+}
+sub read_file {
+    my ($path) = @_;
+    open(my $in, '<', $path) or die "Cannot read $path: $!";
+    local $/;
+    return <$in>;
+}
+write_file(File::Spec->catfile($assetRoot, 'css', 'fhem-cms.css'), 'a{}');
+write_file(File::Spec->catfile($assetRoot, 'js', 'fhem-cms.js'), 'one');
+write_file(File::Spec->catfile($assetRoot, 'js', 'fhem-client.js'), 'client');
+write_file(File::Spec->catfile($assetRoot, 'components', 'cms-widget.js'), 'widget');
+is(FHEMCMS_Define({NAME => 'CMS'}, 'CMS FHEMCMS'), undef, 'redefines an existing device');
+my $first = read_file($pagePath);
+like($first, qr{fhem-cms\.css\?v=[0-9a-f]{10}"}, 'versions the stylesheet URL');
+like($first, qr{fhem-cms\.js\?v=[0-9a-f]{10}"}, 'versions the entry script URL');
+like($first, qr{"\.\./components/cms-widget\.js"\s*:\s*"\.\./components/cms-widget\.js\?v=[0-9a-f]{10}"},
+    'maps component modules to versioned URLs');
+like($first, qr{"\.\./js/fhem-client\.js"\s*:\s*"\.\./js/fhem-client\.js\?v=[0-9a-f]{10}"},
+    'maps helper modules to versioned URLs');
+unlike($first, qr{"\.\./js/fhem-cms\.js":}, 'does not map the entry script itself');
+my ($tokenOne) = $first =~ m{fhem-cms\.css\?v=([0-9a-f]+)};
+is(FHEMCMS_Define({NAME => 'CMS'}, 'CMS FHEMCMS'), undef, 'redefines without asset changes');
+is(read_file($pagePath), $first, 'keeps the page unchanged without asset changes');
+write_file(File::Spec->catfile($assetRoot, 'components', 'cms-widget.js'), 'widget v2');
+is(FHEMCMS_Define({NAME => 'CMS'}, 'CMS FHEMCMS'), undef, 'redefines after an asset change');
+my ($tokenTwo) = read_file($pagePath) =~ m{fhem-cms\.css\?v=([0-9a-f]+)};
+isnt($tokenTwo, $tokenOne, 'regenerates the page with a new token after an asset change');
+ok(!-e "$pagePath.tmp", 'leaves no temporary page file behind');
+
 done_testing();
