@@ -44,7 +44,8 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Gemeinsame FTUI3-inspirierte Ressourcenstruktur und URL-Konvention für Device-Einstiegspunkte festlegen (`<FHEM-Device-Name>/index.html`).
 - [x] FHEMWEB-Inform via WebSocket und HTTP-Langpoll anhand des aktuellen FHEM-Quellcodes vergleichen; Grenzen und offene Laufzeit-/Berechtigungsprüfung dokumentieren.
 - [x] Einen Read-only-Machbarkeitsprototyp für FHEMWEB-Inform erstellen.
-- [ ] Den Prototyp auf FHEM 6.5 ausführen und Initialstatus, Zustandsänderungen, Anmeldung und Berechtigungen prüfen.
+- [x] Die WebSocket-Verbindung aus FHEMWEB sowie `on`-/`off`-Statusänderungen in der FHEM-Instanz des Entwicklers prüfen.
+- [ ] Die genaue FHEM-Version festhalten und den Initialstatus, FHEM-6.5-Kompatibilität sowie Geräte-/Reading-Berechtigungen und unberechtigte Verbindungen prüfen.
 - [ ] Gewählte Architektur und verworfene Alternativen nach dem Machbarkeitsnachweis mit Begründung in `ENTWICKLUNG.md` festhalten.
 
 **Akzeptanzkriterien**

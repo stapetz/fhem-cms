@@ -1,3 +1,8 @@
+2026-10-31 - Simplify FHEMWEB inform probe output
+
+Show only device names and states in the read-only inform probe instead of
+including the large rendered SVG markup in the event list.
+
 2026-10-31 - Add FHEM room and direct CMS link
 
 Assign new CMS devices to the FHEM CMS room and show a room-view link to the

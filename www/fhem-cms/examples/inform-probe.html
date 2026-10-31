@@ -49,7 +49,20 @@
           }
 
           const item = document.createElement('li');
-          item.textContent = message;
+          try {
+            const data = JSON.parse(message);
+            if (!Array.isArray(data) || typeof data[0] !== 'string'
+                || typeof data[1] !== 'string') {
+              item.textContent = 'Nicht unterstütztes Inform-Nachrichtenformat.';
+            } else {
+              item.textContent = `${data[0]}: ${data[1]}`;
+            }
+          } catch (error) {
+            if (!(error instanceof SyntaxError)) {
+              throw error;
+            }
+            item.textContent = 'Inform-Nachricht enthält kein gültiges JSON.';
+          }
           events.prepend(item);
 
           while (events.children.length > 50) {

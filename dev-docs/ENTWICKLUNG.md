@@ -231,7 +231,7 @@ Der Read-only-Prototyp liegt unter `www/fhem-cms/examples/inform-probe.html`. F�
 3. `set cmsTransportTest on` und danach `set cmsTransportTest off` ausführen; empfangene Initial- und Änderungsnachrichten in der Seite prüfen.
 4. `delete cmsTransportTest` ausführen.
 
-Die Probe abonniert ausschliesslich dieses fest eingetragene Testdevice, sendet keine FHEM-Befehle und zeigt empfangene Zeilen als Text an. Der Laufzeittest und die Prüfung von Anmeldung und Berechtigungen stehen noch aus.
+Der Live-Test in der FHEM-Instanz des Entwicklers hat eine WebSocket-Verbindung aus der FHEMWEB-Seite sowie die Statusänderungen `on` und `off` für das Testdevice bestätigt. Die Probe abonniert ausschliesslich dieses fest eingetragene Testdevice, sendet keine FHEM-Befehle und zeigt nur Device-Name und Status an; das zusätzliche von FHEMWEB gelieferte SVG-Markup wird nicht gerendert. Die genaue FHEM-Version, ein vollständiger Initial-Snapshot und die Abgrenzung von Geräte-/Reading-Berechtigungen sind noch zu prüfen. Das erfolgreiche Öffnen aus einer angemeldeten Oberfläche allein belegt noch keine Autorisierungstests.
 
 Quellen zur Vorprüfung: [FHEMWEB-Modul](https://github.com/fhem/fhem-mirror/blob/main/fhem/FHEM/01_FHEMWEB.pm) und [FHEM-Webfrontend](https://github.com/fhem/fhem-mirror/blob/main/fhem/www/pgm2/fhemweb.js). Die Prüfung des aktuellen Quellstands ersetzt keinen Laufzeittest gegen die unterstützte FHEM-6.5-Baseline.
 
