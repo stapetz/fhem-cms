@@ -1,4 +1,4 @@
-UPD 2026-10-31_08:03:56 6538 FHEM/01_FHEMCMS.pm
+UPD 2026-10-31_08:58:56 14933 FHEM/01_FHEMCMS.pm
 UPD 2026-10-31_07:29:58 1377 www/fhem-cms/components/cms-device-card.js
 UPD 2026-10-31_07:29:58 658 www/fhem-cms/css/fhem-cms.css
 UPD 2026-10-31_07:29:58 292 www/fhem-cms/js/fhem-cms.js
