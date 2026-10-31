@@ -1,3 +1,8 @@
+2026-10-31 - Menu bar above the grid
+
+The edit menu bar no longer covers the page; the navigation row fits its content.
+Reload the browser (hard).
+
 2026-10-31 - Value display widget
 
 New widget (Insert > Value display): shows a reading with optional unit and FHEM icon.

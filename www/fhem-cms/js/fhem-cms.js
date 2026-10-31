@@ -819,10 +819,26 @@ class CmsPage {
     this.syncGuides();
   }
 
+  // Zeilen, die nur die waagerechte Navigation (Höhe 1) enthalten, passen sich ihrem Inhalt an.
+  syncRowHeights(layout) {
+    const items = this.layoutItems();
+    const gridOf = (item) => (layout && layout.get(item.id)) || item.grid;
+    const rows = items.reduce((max, item) => Math.max(max, gridOf(item).row + gridOf(item).h - 1), 1) + 2;
+    const tracks = [];
+    for (let row = 1; row <= rows; row += 1) {
+      const inRow = items.filter((item) => gridOf(item).row <= row && row < gridOf(item).row + gridOf(item).h);
+      const navOnly = inRow.length > 0 && inRow.every((item) => item.id === NAV_ID && gridOf(item).h === 1)
+        && this.config.navigation.orientation !== 'vertical';
+      tracks.push(navOnly ? 'auto' : 'minmax(5.5rem, auto)');
+    }
+    this.grid.style.gridTemplateRows = tracks.join(' ');
+  }
+
   // Gitternetzlinien: eine leere Zelle je Rasterfeld, mindestens bis zwei Zeilen unter dem Inhalt.
   syncGuides(layout) {
     this.guides?.remove();
     this.guides = null;
+    this.syncRowHeights(layout);
     if (VIEW_MODE || !this.showGrid) {
       return;
     }

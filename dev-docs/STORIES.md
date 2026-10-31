@@ -384,6 +384,12 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Schema validiert `unit` und `icon` streng; Wert wird live aktualisiert.
 - [x] Verschieben, Skalieren und Löschen wie bei den anderen Kacheln.
 
+### S26 - Menüleiste nimmt Platz ein, Navigationszeile passt sich an
+
+- [x] Die Menüleiste im Edit-Modus überdeckt den Seiteninhalt nicht mehr; das Raster beginnt unterhalb der Leiste.
+- [x] Eine Rasterzeile, die nur die waagerechte Navigation (Höhe 1) enthält, passt sich der Höhe der Navigationspunkte an.
+- [ ] Senkrechte Navigation: Spaltenbreite bleibt vorerst 1/12 der Seitenbreite.
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.
