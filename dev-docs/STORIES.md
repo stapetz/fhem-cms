@@ -346,6 +346,15 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Farbauswahl für die Schrift.
 - [x] Text hervorheben mit frei wählbarer Farbe.
 - [x] Erlaubte Farbwerte in der HTML-Allowlist und im Modul prüfen (kein freies `style`).
+### S22 - Aufgeräumte Werkzeugleiste und Meldungen
+
+**Ziel:** Feste Reihenfolge der Befehle, Kacheln ohne Zusatzmodus verschiebbar, Meldungen unauffällig.
+
+- [x] Feste Reihenfolge im Bearbeitungsmodus: Navigation, + Widget, Vorschau, Veröffentlichen, Entwurf verwerfen (Backups folgt am Ende, bis S19 es durch „Versionen“ ersetzt).
+- [x] Der Button „Navigation“ steht in der Werkzeugleiste (nicht mehr im Navigations-Widget).
+- [x] „Layout ändern“ entfällt: Im Bearbeitungsmodus sind Kacheln und Navigation immer verschiebbar und in der Größe änderbar, ohne Einfärbung (dezenter Griff ⠿ am Kopf der Kachel, Größengriff beim Darüberfahren).
+- [x] Statuszeile und Entwurfshinweis entfallen. Im Bearbeitungsmodus zeigt ein rotes Ausrufezeichen oben rechts die Meldungen als Tooltip.
+- [x] Im Ansichtsmodus erscheinen nur akute Fehlermeldungen.
 
 ## Später prüfen - Erweiterungen außerhalb des MVP
 

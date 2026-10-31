@@ -40,24 +40,17 @@ class CmsPage {
 
     this.toolbar = document.createElement('div');
     this.toolbar.className = 'cms-toolbar';
-    this.pageButtons = [
-      this.button('Backups', () => this.showBackups()),
-      this.button('Layout ändern', () => this.toggleLayout()),
-      this.button('Veröffentlichen', () => this.publish()),
-      this.button('Entwurf verwerfen', () => this.discard()),
-      this.button('Vorschau', () => this.preview())
-    ];
-    this.publishButton = this.pageButtons[2];
-    this.discardButton = this.pageButtons[3];
+    this.navButton = this.button('Navigation', () => this.editNavigation());
+    this.previewButton = this.button('Vorschau', () => this.preview());
+    this.publishButton = this.button('Veröffentlichen', () => this.publish());
+    this.discardButton = this.button('Entwurf verwerfen', () => this.discard());
+    this.backupsButton = this.button('Backups', () => this.showBackups());
+    this.pageButtons = [this.navButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton];
     this.publishButton.classList.add('cms-publish');
-    this.draftNote = document.createElement('p');
-    this.draftNote.className = 'cms-draft-note';
-    this.draftNote.setAttribute('role', 'status');
     this.hasDraft = false;
-    this.layoutButton = this.pageButtons[1];
-    this.layoutButton.classList.add('cms-layout-toggle');
-    this.layoutButton.setAttribute('aria-pressed', 'false');
-    this.layoutMode = false;
+    this.statusText = '';
+    // Im Bearbeitungsmodus sind die Kacheln immer verschiebbar.
+    this.layoutMode = !VIEW_MODE;
     this.overlays = new Map();
     this.layoutTimer = null;
     this.layoutSaving = Promise.resolve();
@@ -77,14 +70,14 @@ class CmsPage {
     ];
     items.append(...this.menuButtons);
     this.menu.append(summary, items);
-    this.toolbar.append(...this.pageButtons, this.menu);
+    this.toolbar.append(this.navButton, this.menu, this.previewButton, this.publishButton, this.discardButton, this.backupsButton);
 
     this.grid = document.createElement('section');
     this.grid.className = 'cms-grid';
     this.grid.setAttribute('aria-label', 'Widgets');
     this.grid.setAttribute('aria-live', 'polite');
 
-    shell.append(this.draftNote, this.toolbar, this.grid);
+    shell.append(this.toolbar, this.grid);
   }
 
   button(label, onClick) {
@@ -114,8 +107,26 @@ class CmsPage {
     this.menu.classList.toggle('is-disabled', disabled);
   }
 
+  // Im Bearbeitungsmodus zeigt ein rotes Ausrufezeichen oben rechts die Meldungen als Tooltip.
   setStatus(message) {
-    this.statusLine.textContent = String(message);
+    this.statusText = String(message);
+    this.statusLine.textContent = this.statusText;
+    this.updateIndicator();
+  }
+
+  updateIndicator() {
+    if (VIEW_MODE) {
+      return;
+    }
+    const lines = [this.statusText];
+    if (this.hasDraft) {
+      lines.push('Entwurf: Änderungen sind noch nicht veröffentlicht. „Zeige Homepage“ zeigt weiterhin den Live-Stand.');
+    }
+    const text = lines.filter(Boolean).join('\n');
+    this.statusLine.title = text;
+    this.statusLine.tabIndex = 0;
+    this.statusLine.setAttribute('aria-label', text);
+    this.statusLine.hidden = !text;
   }
 
   preview() {
@@ -223,11 +234,6 @@ class CmsPage {
       this.nav.append(link);
     }
     this.sizeNav();
-    if (!VIEW_MODE) {
-      const edit = this.button('⚙ Navigation', () => this.editNavigation());
-      edit.classList.add('cms-nav-edit');
-      this.nav.append(edit);
-    }
   }
 
   navItem(pageId) {
@@ -727,18 +733,8 @@ class CmsPage {
     this.syncOverlays();
   }
 
-  toggleLayout(force) {
-    this.layoutMode = typeof force === 'boolean' ? force : !this.layoutMode;
-    this.layoutButton.setAttribute('aria-pressed', String(this.layoutMode));
-    this.layoutButton.textContent = this.layoutMode ? 'Layout fertig' : 'Layout ändern';
-    this.grid.classList.toggle('is-layout', this.layoutMode);
-    if (!this.layoutMode) {
-      this.flushLayout();
-    }
-    this.syncOverlays();
-  }
-
-  // Im Layout-Modus liegt über jeder Kachel ein Griff zum Ziehen (Maus, Touch) und für die Pfeiltasten.
+  // Im Bearbeitungsmodus liegt an jeder Kachel ein unauffälliger Griff zum Ziehen (Maus, Touch, Pfeiltasten)
+  // und unten rechts ein Griff für die Größe. Die Kachel selbst bleibt bedienbar.
   syncOverlays() {
     for (const overlay of this.overlays.values()) {
       overlay.remove();
@@ -749,20 +745,23 @@ class CmsPage {
     }
     for (const widget of this.layoutItems()) {
       const overlay = document.createElement('div');
-      overlay.className = 'cms-drag-handle';
-      overlay.tabIndex = 0;
-      overlay.setAttribute('role', 'button');
-      overlay.setAttribute('aria-label',
+      overlay.className = 'cms-drag-layer';
+      const handle = document.createElement('div');
+      handle.className = widget.id === NAV_ID ? 'cms-drag-handle is-nav' : 'cms-drag-handle';
+      handle.tabIndex = 0;
+      handle.setAttribute('role', 'button');
+      handle.setAttribute('aria-label',
         `${widget.id === NAV_ID ? 'Navigation' : `Kachel ${widget.title || widget.device || widget.id}`} verschieben: ziehen oder Pfeiltasten verwenden`);
-      overlay.textContent = '⠿ verschieben';
+      handle.title = 'Verschieben';
+      handle.textContent = '⠿';
       const grip = document.createElement('span');
       grip.className = 'cms-resize-grip';
       grip.setAttribute('aria-hidden', 'true');
       grip.title = 'Größe ändern (Umschalt+Pfeiltasten am Griff)';
-      overlay.append(grip);
+      overlay.append(handle, grip);
       this.place(overlay, widget);
-      this.attachDrag(overlay, widget.id);
-      this.attachResize(overlay, grip, widget.id);
+      this.attachDrag(handle, widget.id);
+      this.attachResize(handle, grip, widget.id);
       this.overlays.set(widget.id, overlay);
       this.grid.append(overlay);
     }
@@ -1016,10 +1015,7 @@ class CmsPage {
     this.hasDraft = value;
     this.publishButton.disabled = !value;
     this.discardButton.disabled = !value;
-    this.draftNote.textContent = value
-      ? 'Entwurf: Änderungen sind noch nicht veröffentlicht. „Zeige Homepage“ zeigt weiterhin den Live-Stand.'
-      : 'Keine unveröffentlichten Änderungen.';
-    this.draftNote.classList.toggle('is-draft', value);
+    this.updateIndicator();
   }
 
   async publish() {

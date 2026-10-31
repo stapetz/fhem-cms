@@ -12,6 +12,7 @@ Stand: 2026-10-31, Branch `dev`. Dieses Protokoll trennt ehrlich zwischen **gepr
 | XSS im Textbaustein | Lokaler Mock im Browser (Chromium/Playwright) mit Payloads | bleiben Text |
 | Seiten anlegen, umbenennen, löschen, ungültiger Hash | Lokaler Mock | ok |
 | Navigationseinträge (Beschriftung, Größe), Farb-Cleaner | Lokaler Mock (Chromium/Playwright) | ok |
+| Werkzeugleiste (feste Reihenfolge), Verschieben ohne Layout-Modus, Meldungs-Ausrufezeichen | Lokaler Mock (Chromium/Playwright) | ok |
 | Navigations-Widget: vertikal/horizontal, Umsortieren, Verschieben im Layout-Modus, Veröffentlichen, Ansicht ohne Kopf | Lokaler Mock (Chromium/Playwright) | ok |
 | Verbindungsabbruch: Stale-Anzeige, Erholung, Stopp nach `pagehide`, Neustart nach `pageshow` | Lokaler Mock mit erzwungenem HTTP 500 | ok |
 | Backup-Dialog: Liste, Bestätigung, Wiederherstellung, Vor-Restore-Sicherung | Lokaler Mock | ok |
@@ -29,7 +30,7 @@ Stand: 2026-10-31, Branch `dev`. Dieses Protokoll trennt ehrlich zwischen **gepr
 ## Vorgeschlagener Testlauf auf der Testinstanz
 
 1. Update einspielen, `sudo systemctl restart fhem`, `set CMS rebuild`.
-2. Navigation über `⚙ Navigation` bearbeiten (Seite anlegen, umsortieren, Ausrichtung) und im Layout-Modus verschieben. Textbaustein mit Formatierung, Tabelle und hochgeladenem Bild (Position ändern, Bildgröße per Ziehpunkt, auch per Touch und Pfeiltasten), Thermostat hinzufügen. Layout-Modus: Kachel ziehen, Größe per Griff ändern, per Pfeiltasten verschieben und mit Umschalt+Pfeiltasten skalieren.
+2. Navigation über den Button `Navigation` bearbeiten (Seite anlegen, umsortieren, Ausrichtung) und verschieben. Textbaustein mit Formatierung, Tabelle und hochgeladenem Bild (Position ändern, Bildgröße per Ziehpunkt, auch per Touch und Pfeiltasten), Thermostat hinzufügen. Kachel am Griff ziehen, Größe per Griff ändern, per Pfeiltasten verschieben und mit Umschalt+Pfeiltasten skalieren.
 3. Backup-Dialog: Liste prüfen, älteren Stand wiederherstellen.
 4. Netzwerk trennen (WLAN aus): Kachel muss „Veraltet“ zeigen und sich nach Rückkehr erholen.
 5. Ein zweites FHEMWEB mit `allowed` und eingeschränktem Benutzer: Zugriff ohne Rechte muss mit Fehler enden.

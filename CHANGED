@@ -1,3 +1,11 @@
+2026-10-31 - Cleaner toolbar, no layout mode, message icon
+
+Fixed toolbar order (Navigation, + Widget, Preview, Publish, Discard). Tiles
+are always movable in edit mode. Messages show as a red exclamation mark with
+a tooltip. Reload the browser (hard).
+
+S22 - Aufgeräumte Werkzeugleiste und Meldungen
+
 2026-10-31 - Navigation dialog: drag to reorder, save/cancel
 
 Pages in the navigation dialog are reordered by dragging the handle; the
