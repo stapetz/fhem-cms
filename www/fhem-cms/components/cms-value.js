@@ -1,5 +1,13 @@
 const UNITS = ['°C', '%', 'W', 'kW', 'kWh', 'V', 'A', 'hPa', 'lx', 'mm', 'm', 'km', 'km/h', 'm/s', 'l', 'ppm', 'dB'];
 const ICON_PAGE = 120;
+const PICKER_MAX_ROWS = 200;
+const PICKER_COLUMNS = [
+  { key: 'name', label: 'Device' },
+  { key: 'alias', label: 'Alias' },
+  { key: 'type', label: 'Typ' },
+  { key: 'room', label: 'Raum' },
+  { key: 'parent', label: 'Kanal von' }
+];
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
 class FHEMCMSValue extends HTMLElement {
@@ -38,7 +46,25 @@ class FHEMCMSValue extends HTMLElement {
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
           padding: 1.25rem; width: min(94vw, 34rem); max-height: 94vh; overflow: auto; }
         dialog::backdrop { background: rgb(0 0 0 / 0.6); }
-        form { display: grid; gap: 0.75rem; }
+        form, .picker-body { display: grid; gap: 0.75rem; }
+        .device-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
+        dialog.picker { width: min(94vw, 44rem); }
+        .picker-list { max-height: 50vh; overflow: auto; border: 1px solid #43564a; border-radius: 0.5rem; }
+        .picker-list table { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
+        .picker-list th:nth-child(1) { width: 26%; }
+        .picker-list th:nth-child(2) { width: 22%; }
+        .picker-list th:nth-child(3) { width: 14%; }
+        .picker-list th:nth-child(4) { width: 20%; }
+        .picker-list td { overflow-wrap: anywhere; }
+        .picker-list th { position: sticky; top: 0; background: #17211d; text-align: left; color: #a5c9b2; }
+        .picker-list tr.filters th { top: 2.1rem; padding-top: 0; font-weight: normal; }
+        .picker-list tr.filters input { padding: 0.25rem 0.4rem; font-size: 0.8rem; }
+        .picker-list td.dim { color: #a5c9b2; }
+        .picker-list th, .picker-list td { padding: 0.4rem 0.6rem; }
+        .picker-list tbody tr { cursor: pointer; border-top: 1px solid #2f3f36; }
+        .picker-list tbody tr:hover, .picker-list tbody tr:focus { background: #2c3f35; outline: none; }
+        select { font: inherit; color: inherit; background: #17211d; border: 1px solid #43564a;
+          border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
         input { font: inherit; color: inherit; background: #17211d; border: 1px solid #43564a;
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
@@ -63,13 +89,14 @@ class FHEMCMSValue extends HTMLElement {
       <dialog data-dialog aria-labelledby="value-dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="value-dialog-title">Wert-Anzeige konfigurieren</h3>
-          <label>Device
-            <input name="device" list="value-devices" autocomplete="off" maxlength="64" required>
-            <datalist id="value-devices" data-devices></datalist>
+          <label>FHEM-Device
+            <span class="device-row">
+              <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
+              <button type="button" data-pick-device>Auswählen …</button>
+            </span>
           </label>
           <label>Reading
-            <input name="reading" list="value-readings" autocomplete="off" maxlength="64" required>
-            <datalist id="value-readings" data-readings></datalist>
+            <select name="reading" required></select>
           </label>
           <label>Einheit (optional, Vorschlag wählen oder frei eintragen)
             <input name="unit" list="value-units" autocomplete="off" maxlength="16">
@@ -97,6 +124,23 @@ class FHEMCMSValue extends HTMLElement {
           </div>
         </form>
       </dialog>
+      <dialog data-picker aria-labelledby="value-picker-title" class="picker">
+        <div class="picker-body">
+          <h3 id="value-picker-title">Device auswählen</h3>
+          <input type="search" data-picker-search placeholder="In allen Spalten suchen" autocomplete="off" aria-label="Devices durchsuchen">
+          <div class="picker-list">
+            <table>
+              <thead>
+                <tr>${PICKER_COLUMNS.map((column) => `<th>${column.label}</th>`).join('')}</tr>
+                <tr class="filters">${PICKER_COLUMNS.map((column) => `<th><input type="search" data-picker-filter="${column.key}" placeholder="Filter" autocomplete="off" aria-label="${column.label} filtern"></th>`).join('')}</tr>
+              </thead>
+              <tbody data-picker-rows></tbody>
+            </table>
+          </div>
+          <p class="hint" data-picker-info></p>
+          <div class="actions"><button type="button" data-picker-cancel>Abbrechen</button></div>
+        </div>
+      </dialog>
     `;
 
     const $ = (selector) => this.shadowRoot.querySelector(selector);
@@ -108,7 +152,13 @@ class FHEMCMSValue extends HTMLElement {
     $('[data-icon-clear]').addEventListener('click', () => this.setIcon(''));
     $('[data-icon-filter]').addEventListener('input', () => this.renderIcons());
     const form = $('[data-form]');
-    form.elements.device.addEventListener('change', () => this.fillReadings());
+    $('[data-pick-device]').addEventListener('click', () => this.openPicker());
+    form.elements.device.addEventListener('click', () => this.openPicker());
+    $('[data-picker-cancel]').addEventListener('click', () => this.closePicker());
+    $('[data-picker-search]').addEventListener('input', () => this.renderPickerRows());
+    for (const filter of this.shadowRoot.querySelectorAll('[data-picker-filter]')) {
+      filter.addEventListener('input', () => this.renderPickerRows());
+    }
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       this.onSave();
@@ -173,38 +223,117 @@ class FHEMCMSValue extends HTMLElement {
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.device.value = this.widgetConfig.device || '';
-    form.elements.reading.value = this.widgetConfig.reading || '';
     form.elements.unit.value = this.widgetConfig.unit || '';
     this.setIcon(this.widgetConfig.icon || '');
     this.shadowRoot.querySelector('[data-icon-picker]').hidden = true;
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.setDialogError('');
     this.shadowRoot.querySelector('[data-dialog]').showModal();
+    this.devices = [];
+    this.fillReadings(this.widgetConfig.reading || '');
     try {
       this.devices = await this.services.listAllDevices();
-      const list = this.shadowRoot.querySelector('[data-devices]');
-      list.replaceChildren(...this.devices.map((device) => {
-        const option = document.createElement('option');
-        option.value = device.name;
-        option.label = device.alias ? `${device.alias} (${device.name})` : device.name;
-        return option;
-      }));
-      this.fillReadings();
+      this.fillReadings(this.widgetConfig.reading || '');
     } catch (error) {
       this.setDialogError(`Geräteliste nicht verfügbar: ${error.message}`);
     }
   }
 
-  fillReadings() {
+  fillReadings(wanted) {
     const form = this.shadowRoot.querySelector('[data-form]');
     const device = (this.devices || []).find((item) => item.name === form.elements.device.value.trim());
-    const list = this.shadowRoot.querySelector('[data-readings]');
-    list.replaceChildren(...Object.keys(device ? device.readings : {}).sort().map((name) => {
+    const names = new Set(Object.keys(device ? device.readings : {}));
+    if (wanted) {
+      names.add(wanted);
+    }
+    const options = [...names].sort((a, b) => a.localeCompare(b)).map((name) => {
       const option = document.createElement('option');
       option.value = name;
-      option.label = `${name}: ${device.readings[name]}`;
+      const value = device && device.readings[name];
+      option.textContent = value === undefined ? name : `${name} (${value})`;
       return option;
+    });
+    form.elements.reading.replaceChildren(...options);
+    form.elements.reading.value = wanted && names.has(wanted) ? wanted : (options[0]?.value || '');
+  }
+
+  async openPicker() {
+    const $ = (selector) => this.shadowRoot.querySelector(selector);
+    $('[data-picker-search]').value = '';
+    for (const filter of this.shadowRoot.querySelectorAll('[data-picker-filter]')) {
+      filter.value = '';
+    }
+    if (!$('[data-picker]').open) {
+      $('[data-picker]').showModal();
+    }
+    $('[data-picker-search]').focus();
+    if (!this.devices || this.devices.length === 0) {
+      $('[data-picker-info]').textContent = 'Geräteliste wird geladen …';
+      try {
+        this.devices = await this.services.listAllDevices();
+      } catch (error) {
+        $('[data-picker-info]').textContent = error.message || 'Geräteliste konnte nicht geladen werden';
+        return;
+      }
+    }
+    this.renderPickerRows();
+  }
+
+  renderPickerRows() {
+    const $ = (selector) => this.shadowRoot.querySelector(selector);
+    const split = (text) => text.toLowerCase().split(/\s+/).filter(Boolean);
+    const terms = split($('[data-picker-search]').value);
+    const filters = PICKER_COLUMNS.map((column) => ({
+      key: column.key,
+      terms: split($(`[data-picker-filter="${column.key}"]`).value)
+    })).filter((filter) => filter.terms.length > 0);
+    const text = (device, key) => String(device[key] ?? '');
+    const matches = this.devices.filter((device) => {
+      const haystack = PICKER_COLUMNS.map((column) => text(device, column.key)).join(' ').toLowerCase();
+      return terms.every((term) => haystack.includes(term))
+        && filters.every((filter) => filter.terms.every((term) => text(device, filter.key).toLowerCase().includes(term)));
+    });
+    const shown = matches.slice(0, PICKER_MAX_ROWS);
+    $('[data-picker-rows]').replaceChildren(...shown.map((device) => {
+      const row = document.createElement('tr');
+      row.tabIndex = 0;
+      for (const column of PICKER_COLUMNS) {
+        const cell = document.createElement('td');
+        cell.textContent = text(device, column.key);
+        if (column.key === 'parent') {
+          cell.className = 'dim';
+        }
+        row.append(cell);
+      }
+      const choose = () => this.pickDevice(device);
+      row.addEventListener('click', choose);
+      row.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          choose();
+        }
+      });
+      return row;
     }));
+    $('[data-picker-info]').textContent = matches.length === 0
+      ? 'Keine passenden Devices gefunden'
+      : matches.length > shown.length
+        ? `${shown.length} von ${matches.length} Treffern angezeigt, Suche weiter einschränken`
+        : `${matches.length} Devices`;
+  }
+
+  pickDevice(device) {
+    this.shadowRoot.querySelector('[data-form]').elements.device.value = device.name;
+    this.closePicker();
+    this.setDialogError('');
+    this.fillReadings('');
+  }
+
+  closePicker() {
+    const picker = this.shadowRoot.querySelector('[data-picker]');
+    if (picker.open) {
+      picker.close();
+    }
   }
 
   setIcon(name) {

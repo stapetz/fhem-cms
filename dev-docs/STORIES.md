@@ -378,7 +378,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Ziel:** Ein einfaches Widget zeigt ein Reading eines Devices an.
 
-- [x] Widget `fhem-value`: Device und Reading werden aus Vorschlagslisten gewählt (freie Eingabe möglich).
+- [x] Widget `fhem-value`: Device über den Suchdialog (wie bei der Thermostat-Kachel), Reading aus den Readings des gewählten Devices.
 - [x] Optionale Einheit hinter dem Wert: Vorschlagsliste (°C, %, km, …) plus freier Text.
 - [x] Optionales Icon aus dem FHEM-Icon-Verzeichnis vor dem Wert (Auswahl mit Filter; Liste über `get <CMS> icons`).
 - [x] Schema validiert `unit` und `icon` streng; Wert wird live aktualisiert.

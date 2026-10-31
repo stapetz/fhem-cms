@@ -357,8 +357,19 @@ FHEMWEB und vorgeschaltete Proxys (z. B. nginx) halten statische Dateien lange i
 - **Schlanke Seite (S17):** Die erzeugte `index.html` enthält nur `<main class="cms-shell">` mit einer Statuszeile (`.cms-status`). Die Komponente `cms-device-card` entfiel. Im Ansichtsmodus ist die Statuszeile nur bei einem Fehler sichtbar.
 - **Live-Abos:** Daten und WebSocket-Abos gelten nur für die aktuelle Seite und werden beim Seitenwechsel neu aufgebaut.
 - **Menü „Einfügen“:** Thermostat-Kachel, Wert-Anzeige und Textbaustein.
-- **Wert-Anzeige (`type: "fhem-value"`, S25):** Felder `id`, `type`, `device`, `reading`, `grid`, optional `unit` (1–16 Zeichen ohne Steuerzeichen) und `icon` (logischer FHEMWEB-Icon-Name wie `temp_temperature` oder `weather/sunny`, ohne `..`, höchstens 80 Zeichen). Komponente `components/cms-value.js`; Wert aus `snapshots` des Devices (Hauptdevice, dann Kanäle), Aktualisierung wie die Thermostat-Kachel (`isLiveWidget`). Die Auswahllisten nutzen `jsonlist2 .*` (`listAllDevices`, einmal je Seite zwischengespeichert) und `get <CMS> icons`: `FHEMCMS_ListIcons` liest `www/images/<Stil>/` (Tiefe ≤ 4, keine Symlinks, höchstens 5000 Namen, ohne Endung). Das Icon lädt der Browser über FHEMWEB unter `<FHEMWEB>/icons/<Name>`. Angezeigt wird Text (`textContent`), kein HTML.
+- **Wert-Anzeige (`type: "fhem-value"`, S25):** Felder `id`, `type`, `device`, `reading`, `grid`, optional `unit` (1–16 Zeichen ohne Steuerzeichen) und `icon` (logischer FHEMWEB-Icon-Name wie `temp_temperature` oder `weather/sunny`, ohne `..`, höchstens 80 Zeichen). Komponente `components/cms-value.js`; Wert aus `snapshots` des Devices (Hauptdevice, dann Kanäle), Aktualisierung wie die Thermostat-Kachel (`isLiveWidget`). Device-Auswahl wie bei der Thermostat-Kachel (Suchdialog, siehe „Konfigurationsdialog für Widgets“). Die Auswahllisten nutzen `jsonlist2 .*` (`listAllDevices`, einmal je Seite zwischengespeichert) und `get <CMS> icons`: `FHEMCMS_ListIcons` liest `www/images/<Stil>/` (Tiefe ≤ 4, keine Symlinks, höchstens 5000 Namen, ohne Endung). Das Icon lädt der Browser über FHEMWEB unter `<FHEMWEB>/icons/<Name>`. Angezeigt wird Text (`textContent`), kein HTML.
 - **Textbaustein (`type: "text"`):** Felder `id`, `type`, genau eines von `html` (WYSIWYG, siehe unten) oder `markdown` (Altbestand; höchstens 20000 Zeichen, keine Steuerzeichen außer Tab/Zeilenumbruch), optional `title` (höchstens 64 Zeichen), `grid`. Der Renderer `js/markdown.js` ist eigenständig und baut nur DOM-Knoten per `createElement`/`textContent`. Unterstützt: `#`–`###`, Absätze, `-`/`1.`-Listen, `**fett**`, `*kursiv*`, `` `code` ``, `[Text](URL)`. HTML bleibt Text; Links nur mit `http(s)` oder relativ (`/`, `./`, `../`, `#`), mit `rel="noopener noreferrer"`.
+
+## Konfigurationsdialog für Widgets (verbindlich für alle Widgets)
+
+Jedes Widget mit Device-Bezug folgt dem Muster der Thermostat-Kachel:
+
+1. Das Feld „FHEM-Device“ ist schreibgeschützt. „Auswählen …“ (oder Klick ins Feld) öffnet einen Suchdialog: ein Suchfeld über alle Spalten, Filter je Spalte (Device, Alias, Typ, Raum, Kanal von), höchstens 200 angezeigte Treffer, Auswahl per Klick oder Enter.
+2. Nach der Auswahl wird das Device im Konfigurationsdialog des Widgets eingetragen; abhängige Felder (z. B. Readings) werden aus den Daten dieses Devices befüllt.
+3. Der Dialog hat immer Speichern, Abbrechen und – bei bestehenden Widgets – Löschen. Ein neues, abgebrochenes Widget wird entfernt (`cms-widget-cancel`).
+4. Geräte kommen über `services.listDevices()` (typbegrenzt) bzw. `services.listAllDevices()` (alle Geräte), Icons über `services.listIcons()`; keine eigenen FHEM-Aufrufe in der Komponente.
+
+Neue Widgets übernehmen diesen Ablauf; Abweichungen werden vorher in `STORIES.md` abgestimmt.
 
 ## Live-Zustände und Verbindungsverhalten (S09)
 
