@@ -1,3 +1,7 @@
+2026-10-31 - Remove temporary FHEMWEB Inform probe
+
+Remove the one-off transport test page after verifying WebSocket status updates.
+
 2026-10-31 - Simplify FHEMWEB inform probe output
 
 Show only device names and states in the read-only inform probe instead of

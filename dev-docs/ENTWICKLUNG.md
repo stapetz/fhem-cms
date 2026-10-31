@@ -224,14 +224,9 @@ Ohne numerischen `since`-Wert verwendet FHEMWEB standardmässig `time()-5` und l
 
 **Arbeitskandidat, noch keine Architekturentscheidung:** FHEMWEB-`inform` als Ereigniskanal, WebSocket bevorzugt und HTTP-Langpoll als Fallback; ein eigener Ereignisserver wäre dafür zunächst nicht erforderlich. Snapshot und CMS-Konfiguration benötigen einen separat zu prüfenden JSON-Zugriff. Authentifizierung, CSRF, Geräte-/Reading-Berechtigungen und das Verhalten auf FHEM 6.5 sind vor Freigabe mit einem Machbarkeitsnachweis zu validieren (S02/S03). Bis dahin werden keine produktive API und kein eigener Ereignisserver implementiert.
 
-Der Read-only-Prototyp liegt unter `www/fhem-cms/examples/inform-probe.html`. Für einen manuellen Test auf dem FHEM-6.5-Referenzsystem:
+Ein temporärer Read-only-Prototyp hat in der FHEM-Instanz des Entwicklers eine WebSocket-Verbindung aus FHEMWEB sowie die Statusänderungen `on` und `off` eines Dummy-Devices bestätigt. Die Testseite wurde nach dem Versuch aus dem Repository entfernt und wird nicht als Produktdatei ausgeliefert. Temporäre Dummy-Devices sind nach einem Test wieder zu löschen. Die genaue FHEM-Version, ein vollständiger Initial-Snapshot und die Abgrenzung von Geräte-/Reading-Berechtigungen sind noch zu prüfen. Das erfolgreiche Öffnen aus einer angemeldeten Oberfläche allein belegt noch keine Autorisierungstests.
 
-1. `define cmsTransportTest dummy` ausführen.
-2. `/fhem/fhem-cms/examples/inform-probe.html` über FHEMWEB öffnen.
-3. `set cmsTransportTest on` und danach `set cmsTransportTest off` ausführen; empfangene Initial- und Änderungsnachrichten in der Seite prüfen.
-4. `delete cmsTransportTest` ausführen.
-
-Der Live-Test in der FHEM-Instanz des Entwicklers hat eine WebSocket-Verbindung aus der FHEMWEB-Seite sowie die Statusänderungen `on` und `off` für das Testdevice bestätigt. Die Probe abonniert ausschliesslich dieses fest eingetragene Testdevice, sendet keine FHEM-Befehle und zeigt nur Device-Name und Status an; das zusätzliche von FHEMWEB gelieferte SVG-Markup wird nicht gerendert. Die genaue FHEM-Version, ein vollständiger Initial-Snapshot und die Abgrenzung von Geräte-/Reading-Berechtigungen sind noch zu prüfen. Das erfolgreiche Öffnen aus einer angemeldeten Oberfläche allein belegt noch keine Autorisierungstests.
+Für weitere UI- und Funktionstests darf der integrierte Browser auf eine vom Entwickler ausdrücklich benannte Testinstanz zugreifen, sofern diese aus der Browserumgebung erreichbar ist. Tests sind standardmässig lesend; Änderungen an FHEM-Geräten oder CMS-Inhalten brauchen eine ausdrückliche Freigabe. Die konkreten Zugriffsregeln stehen in [copilot-instructions.md](../.github/copilot-instructions.md).
 
 Quellen zur Vorprüfung: [FHEMWEB-Modul](https://github.com/fhem/fhem-mirror/blob/main/fhem/FHEM/01_FHEMWEB.pm) und [FHEM-Webfrontend](https://github.com/fhem/fhem-mirror/blob/main/fhem/www/pgm2/fhemweb.js). Die Prüfung des aktuellen Quellstands ersetzt keinen Laufzeittest gegen die unterstützte FHEM-6.5-Baseline.
 
