@@ -370,6 +370,8 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 ### S24 - Werkzeugleiste links, Meldungsbox
 
 - [x] Werkzeugleiste im Bearbeitungsmodus linksbündig und blau, um sie von der Seitennavigation abzuheben.
+- [x] Die Leiste besteht aus Menüs wie in klassischen Programmen: Datei (Vorschau, Veröffentlichen, Entwurf verwerfen, Backups), Bearbeiten (Navigation), Einfügen (Widgets), Ansicht (Raster).
+- [x] Das Ausrufezeichen ist im Bearbeitungsmodus immer sichtbar.
 - [x] Klick auf das rote Ausrufezeichen öffnet eine kleine Box mit den Meldungen (statt Tooltip).
 
 ## Später prüfen - Erweiterungen außerhalb des MVP

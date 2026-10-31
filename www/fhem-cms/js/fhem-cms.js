@@ -66,16 +66,14 @@ class CmsPage {
 
     this.toolbar = document.createElement('div');
     this.toolbar.className = 'cms-toolbar';
-    this.navButton = this.button('Navigation', () => this.editNavigation());
+    this.navButton = this.button('Navigation bearbeiten …', () => this.editNavigation());
     this.previewButton = this.button('Vorschau', () => this.preview());
     this.publishButton = this.button('Veröffentlichen', () => this.publish());
     this.discardButton = this.button('Entwurf verwerfen', () => this.discard());
-    this.backupsButton = this.button('Backups', () => this.showBackups());
+    this.backupsButton = this.button('Backups …', () => this.showBackups());
     this.showGrid = !VIEW_MODE && window.localStorage.getItem(GUIDE_KEY) === '1';
-    this.gridButton = this.button('▦', () => this.toggleGuides());
+    this.gridButton = this.button('Raster anzeigen', () => this.toggleGuides());
     this.gridButton.classList.add('cms-grid-toggle');
-    this.gridButton.title = 'Raster anzeigen oder ausblenden';
-    this.gridButton.setAttribute('aria-label', 'Raster anzeigen');
     this.gridButton.setAttribute('aria-pressed', String(this.showGrid));
     this.pageButtons = [this.navButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.gridButton];
     this.publishButton.classList.add('cms-publish');
@@ -87,31 +85,44 @@ class CmsPage {
     this.layoutTimer = null;
     this.layoutSaving = Promise.resolve();
 
-    this.menu = document.createElement('details');
-    this.menu.className = 'cms-menu';
-    const summary = document.createElement('summary');
-    summary.className = 'cms-button';
-    summary.textContent = '+ Widget ▾';
-    const items = document.createElement('div');
-    items.className = 'cms-menu-items';
-    items.setAttribute('role', 'group');
-    items.setAttribute('aria-label', 'Widget-Typ');
     this.menuButtons = [
       this.button('Thermostat-Kachel', () => this.addWidget('thermostat')),
       this.button('Textbaustein', () => this.addWidget('text'))
     ];
-    items.append(...this.menuButtons);
-    this.menu.append(summary, items);
-    const separator = () => {
-      const line = document.createElement('span');
-      line.className = 'cms-toolbar-sep';
-      line.setAttribute('role', 'separator');
-      return line;
+    // Menüs wie in klassischen Programmen: Datei, Bearbeiten, Einfügen, Ansicht.
+    this.menus = [];
+    const makeMenu = (label, buttons, ...sections) => {
+      const menu = document.createElement('details');
+      menu.className = 'cms-menu';
+      const summary = document.createElement('summary');
+      summary.className = 'cms-button';
+      summary.textContent = label;
+      const items = document.createElement('div');
+      items.className = 'cms-menu-items';
+      items.setAttribute('role', 'group');
+      items.setAttribute('aria-label', label);
+      items.append(...buttons);
+      menu.append(summary, items);
+      menu.addEventListener('toggle', () => {
+        if (menu.open) {
+          this.closeMenus(menu);
+        }
+      });
+      this.menus.push(menu);
+      return menu;
     };
+    const fileMenu = makeMenu('Datei', [this.previewButton, this.publishButton, this.discardButton, this.backupsButton]);
+    const editMenu = makeMenu('Bearbeiten', [this.navButton]);
+    this.menu = makeMenu('Einfügen', this.menuButtons);
+    const viewMenu = makeMenu('Ansicht', [this.gridButton]);
+    document.addEventListener('click', (event) => {
+      if (!this.toolbar.contains(event.target)) {
+        this.closeMenus();
+      }
+    });
     this.toolbar.setAttribute('role', 'toolbar');
     this.toolbar.setAttribute('aria-label', 'Bearbeiten');
-    this.toolbar.append(this.navButton, this.menu, separator(), this.previewButton, separator(),
-      this.publishButton, this.discardButton, separator(), this.backupsButton, separator(), this.gridButton);
+    this.toolbar.append(fileMenu, editMenu, this.menu, viewMenu);
 
     this.grid = document.createElement('section');
     this.grid.className = 'cms-grid';
@@ -127,10 +138,18 @@ class CmsPage {
     button.className = 'cms-button';
     button.textContent = label;
     button.addEventListener('click', () => {
-      this.menu.open = false;
+      this.closeMenus();
       onClick();
     });
     return button;
+  }
+
+  closeMenus(except) {
+    for (const menu of this.menus || []) {
+      if (menu !== except) {
+        menu.open = false;
+      }
+    }
   }
 
   get page() {
@@ -145,7 +164,6 @@ class CmsPage {
     for (const button of [...this.pageButtons, ...this.menuButtons]) {
       button.disabled = disabled;
     }
-    this.menu.classList.toggle('is-disabled', disabled);
   }
 
   // Im Bearbeitungsmodus öffnet das rote Ausrufezeichen oben rechts per Klick eine Box mit den Meldungen.
