@@ -1,8 +1,10 @@
 2026-10-31 - Use device names in CMS URLs
 
-Use the FHEM device name in the generated surface directory and returned URL.
+Use the FHEM device name in the generated device directory and returned URL.
 Also accept the FHEMCMS module type regardless of capitalization.
 Keep device files when the FHEM device definition is deleted.
+Place the device entry point directly at <device>/index.html; CMS pages belong
+to the device's content structure, not to separate surface directories.
 
 2026-10-31 - Initial fhem-cms test device and frontend
 

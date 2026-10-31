@@ -93,7 +93,7 @@ Frontend-Dateien liegen unabhängig davon im FHEM-`www`-Kontext unter `www/fhem-
 und werden über FHEMs normale statische Dateiauslieferung bereitgestellt.
 Die Struktur orientiert sich funktional an FTUI3 (Komponenten, Module, Styles, Themes
 und Icons), ergänzt um klassische Verzeichnisse für JavaScript und Bilder sowie eigene
-Einstiegspunkte pro Device und Oberfläche.
+einen Einstiegspunkt pro Device.
 
 ---
 
@@ -103,9 +103,8 @@ Einstiegspunkte pro Device und Oberfläche.
 * **Modul `01_FHEMCMS.pm`:** Ein natives FHEM-Perl-Modul, das via `define myCms FHEMCMS` instanziiert wird; der Gerätetyp wird ohne Beachtung der Groß-/Kleinschreibung erkannt.
 * **Frontend im FHEM-`www`-Kontext:** Die statischen Frontend-Dateien liegen in einer eigenen Verzeichnisstruktur unter `www/fhem-cms/` und werden über FHEMs normale `www`-Auslieferung bereitgestellt. Das Steuerungsmodul stellt keinen eigenen Web-Endpunkt für die HTML-Seiten oder Assets bereit.
   * Die gemeinsame Ressourcenstruktur ist nach Funktionen gegliedert und an FTUI3 angelehnt. Vorgesehene Verzeichnisse sind `components/`, `examples/`, `icons/`, `images/`, `js/`, `modules/`, `css/` und `themes/`. Das FTUI3-Verzeichnis `styles/` wird im CMS zunächst als `css/` geführt; neue Verzeichnisse kommen nur bei konkretem Bedarf hinzu.
-  * Für jedes CMS-Device und jede zugehörige Oberfläche wird ein eigener Einstiegspunkt unter `www/fhem-cms/<device>/<oberflaeche>/index.html` geführt. Beim `define` wird der Einstiegspunkt für die initiale Oberfläche erzeugt; weitere Oberflächen erhalten jeweils ein eigenes Unterverzeichnis.
-  * Die geräte- und oberflächenspezifische HTML-Datei ist nur Bootstrap und lädt gemeinsame Ressourcen aus `www/fhem-cms/`. Konfiguration und Inhalte bleiben in validiertem JSON und werden über die API geladen.
-  * Device-Verzeichnisse werden kollisionsfrei als `d-` plus kleingeschriebene Hex-Kodierung des UTF-8-Device-Namens abgebildet. So bleiben Namen mit Groß-/Kleinschreibung auch auf case-insensitiven Dateisystemen unterscheidbar. Die initiale Oberfläche heißt `default`.
+  * Für jedes CMS-Device wird genau ein Einstiegspunkt unter `www/fhem-cms/<device>/index.html` geführt. Der Device-Ordner verwendet den FHEM-Devicenamen direkt.
+  * Die gerätespezifische HTML-Datei ist nur Bootstrap und lädt gemeinsame Ressourcen aus `www/fhem-cms/`. Die vollständige Inhaltsstruktur des CMS-Devices besteht aus einer Startseite mit Navigation zu weiteren Inhaltsseiten wie `urlaub.html`; Konfiguration und Inhalte bleiben in validiertem JSON und werden über die API geladen.
   * Die `index.html` wird exklusiv angelegt. Eine vorhandene Datei wird nur als eigene Moduldatei akzeptiert, wenn sie den Modul-Marker enthält; fremde Dateien werden nicht überschrieben. `undef` löscht die HTML-Datei vorerst nicht, damit keine Nutzerdaten oder fremden Dateien unbeabsichtigt entfernt werden.
 * **Ereignis-/Zustandstransport (Technik offen):**
   * Liefert Zustandsänderungen über den ausgewählten Transport zeitnah an den Browser. Eine dauerhafte Vollduplex-Verbindung ist zu prüfen, nicht vorausgesetzt.
@@ -193,7 +192,7 @@ Dieser Abschnitt konkretisiert das vorangehende Zielbild. Bei Widersprüchen hab
 
 - **Frontend:** rendert Seiten, Layouts und Widgets. Es ist nicht vertrauenswürdig und ersetzt keine Validierung oder Berechtigungsprüfung im Backend.
 - **FHEM-Modul:** ist die Vertrauensgrenze für den Zugriff auf FHEM-Daten, das Speichern von Konfigurationen, das Erzeugen der gerätebezogenen HTML-Startdatei beim `define` und später gegebenenfalls das Ausführen von Steuerbefehlen. Es liefert die CMS-Seiten und Frontend-Assets nicht über einen eigenen Webserver aus.
-- **Frontend-Dateien:** liegen im FHEM-`www`-Kontext unter `www/fhem-cms/`, getrennt vom Web-Endpunkt des Steuerungsmoduls. Die gemeinsame, FTUI3-inspirierte Struktur enthält `components/`, `examples/`, `icons/`, `images/`, `js/`, `modules/`, `css/` und `themes/`. Der Einstieg je Gerät und Oberfläche liegt unter `www/fhem-cms/<device>/<oberflaeche>/index.html`.
+- **Frontend-Dateien:** liegen im FHEM-`www`-Kontext unter `www/fhem-cms/`, getrennt vom Web-Endpunkt des Steuerungsmoduls. Die gemeinsame, FTUI3-inspirierte Struktur enthält `components/`, `examples/`, `icons/`, `images/`, `js/`, `modules/`, `css/` und `themes/`. Der Einstieg je Gerät liegt unter `www/fhem-cms/<device>/index.html`.
 - **Beispielstruktur:**
 
   ```text
@@ -207,15 +206,12 @@ Dieser Abschnitt konkretisiert das vorangehende Zielbild. Bei Widersprüchen hab
   ├── css/
   ├── themes/
   └── <fhem-device-name>/
-      ├── default/
-      │   └── index.html
-      └── <oberflaeche-2>/
-          └── index.html
+      └── index.html
   ```
 
-  Die gemeinsamen Ressourcen werden nicht pro Device dupliziert. Das Device-Verzeichnis verwendet exakt den FHEM-Devicenamen. Die Device- und Oberflächenverzeichnisse enthalten die jeweiligen HTML-Bootstrap-Einstiegspunkte; Konfiguration und Inhalte bleiben in der JSON-Persistenz. `get <device> url` gibt die URL zur initialen `default`-Oberfläche zurück. Das Löschen der Device-Definition entfernt keine Dateien; Datenbereinigung darf nur über eine separate, ausdrücklich ausgelöste Funktion erfolgen.
+  Die gemeinsamen Ressourcen werden nicht pro Device dupliziert. Das Device-Verzeichnis verwendet exakt den FHEM-Devicenamen und enthält einen Bootstrap-Einstiegspunkt `index.html`. Unterschiedliche CMS-Inhalte werden innerhalb des Devices als Seiten modelliert und über die Navigation verknüpft; ein weiteres CMS-Device erhält einen eigenen Ordner und Einstiegspunkt. `get <device> url` gibt die URL zu dieser `index.html` zurück. Das Löschen der Device-Definition entfernt keine Dateien; Datenbereinigung darf nur über eine separate, ausdrücklich ausgelöste Funktion erfolgen.
 - **Datenzugriff:** der Browser erhält nur Daten, für die die jeweilige FHEM-Sitzung berechtigt ist. Abonnements sollen auf benötigte Geräte/Readings begrenzt und bei Seitenwechsel oder Verbindungsende aufgeräumt werden.
-- **Noch offen:** WebSocket gegenüber vorhandenen FHEM-Schnittstellen oder einer Alternative, Aufteilung zwischen JSON-API und Ereigniskanal, sichere Slug-/Kollisionsstrategie und Lebenszyklus der geräte- und oberflächenbezogenen HTML-Dateien. Die Mindestversion ist FHEM 6.5; Tests gegen diese Baseline bleiben Teil der Integrationsprüfung.
+- **Noch offen:** WebSocket gegenüber vorhandenen FHEM-Schnittstellen oder einer Alternative, Aufteilung zwischen JSON-API und Ereigniskanal, sichere Slug-/Kollisionsstrategie und Lebenszyklus der gerätebezogenen HTML-Einstiegsdatei sowie der CMS-Inhaltsseiten. Die Mindestversion ist FHEM 6.5; Tests gegen diese Baseline bleiben Teil der Integrationsprüfung.
 - Ein eigener WebSocket-Server und ein zusätzlicher REST-Endpunkt sind nicht als verbindliche Architektur beschlossen. Vor einer Entscheidung ist ein Machbarkeitsnachweis zu erstellen und hinsichtlich Abhängigkeiten, Berechtigungen und Serverlast zu bewerten.
 - Backend und Frontend kommunizieren mit JSON. Die bereits gesetzten Leitplanken sind Perl/FHEM, Standard Web Components, CSS Grid/Flexbox, CSS Custom Properties und JSON-Konfigurationen.
 
@@ -274,7 +270,7 @@ Gespeicherte Seiten und Layouts sind JSON-Daten und kein ausführbares HTML. Die
 Der MVP-Vorschlag umfasst:
 
 1. Statische CMS-Dateien liegen unter `www/fhem-cms/` und werden von FHEMs normaler `www`-Auslieferung bereitgestellt; das Steuerungsmodul bedient keine HTML- oder Asset-Seiten selbst.
-2. Beim Anlegen eines CMS-Devices wird für dessen initiale Oberfläche eine HTML-Bootstrap-Datei unter `www/fhem-cms/<device>/<oberflaeche>/index.html` erzeugt. Sie lädt die gemeinsamen Assets und startet dieses Device und diese Oberfläche.
+2. Beim Anlegen eines CMS-Devices wird genau eine HTML-Bootstrap-Datei unter `www/fhem-cms/<device>/index.html` erzeugt. Sie lädt die gemeinsamen Assets und startet dieses Device. Inhaltsseiten wie `urlaub.html` gehören zur Inhaltsstruktur des Devices und werden von der Startseite aus navigiert.
 3. Die HTML-Datei lädt und speichert eine validierte JSON-Konfiguration, die nach einem FHEM-Neustart erhalten bleibt.
 4. Eine SPA mit mindestens einer Seite, Navigation und responsivem Layout.
 5. Einen einfachen Text-/Markdown-Baustein.

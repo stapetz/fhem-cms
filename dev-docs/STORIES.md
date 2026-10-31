@@ -41,7 +41,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 - [ ] FHEMs `www`-Verzeichnis und die normale URL-Abbildung für statische Dateien untersuchen.
 - [ ] Festlegen, wie `www/fhem-cms/` im Entwicklungs- und Installationsablauf bereitgestellt wird.
-- [x] Gemeinsame FTUI3-inspirierte Ressourcenstruktur und URL-Konvention für Device-/Oberflächen-Unterverzeichnisse festlegen (`<FHEM-Device-Name>/<oberflaeche>/index.html`, initial `default`).
+- [x] Gemeinsame FTUI3-inspirierte Ressourcenstruktur und URL-Konvention für Device-Einstiegspunkte festlegen (`<FHEM-Device-Name>/index.html`).
 - [ ] WebSocket, vorhandene FHEM-Schnittstellen und mögliche Alternativen anhand von Kompatibilität, Abhängigkeiten und Serverlast vergleichen.
 - [ ] Einen kleinen Machbarkeitsnachweis für den bevorzugten Weg erstellen.
 - [ ] Gewählte Architektur und verworfene Alternativen mit Begründung in `ENTWICKLUNG.md` dokumentieren.
@@ -49,7 +49,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 **Akzeptanzkriterien**
 
 - Statische Assets sind über FHEMs normalen `www`-Kontext erreichbar, ohne dass das Steuerungsmodul HTML- oder Asset-Seiten selbst ausliefert.
-- Die Ablage gemeinsamer Ressourcen und von `www/fhem-cms/<device>/<oberflaeche>/index.html` ist dokumentiert.
+- Die Ablage gemeinsamer Ressourcen und von `www/fhem-cms/<device>/index.html` ist dokumentiert.
 - Der erforderliche JSON-Endpunkt und Live-Datentransport sind über einen dokumentierten, kompatiblen Weg erreichbar.
 - Für Live-Daten ist geklärt, wie Verbindung, Authentifizierung, Nachrichtenformat und Abonnement-Lebenszyklus funktionieren.
 - Die Lösung benötigt keine ungeprüfte oder nicht dokumentierte Abhängigkeit.
@@ -123,8 +123,8 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 **Aufgaben**
 
 - [x] Die gemeinsame FTUI3-inspirierte Ressourcenstruktur unter `www/fhem-cms/` anlegen: `components/`, `examples/`, `icons/`, `images/`, `js/`, `modules/`, `css/` und `themes/`.
-- [x] Beim `define` eines CMS-Devices eine HTML-Startdatei für die initiale `default`-Oberfläche unter `www/fhem-cms/<FHEM-Device-Name>/default/index.html` erzeugen; sie referenziert gemeinsame Ressourcen und startet das richtige Device.
-- [x] Device-/Oberflächenpfad und `get <device> url` dokumentieren. Startseiten werden exklusiv erzeugt, fremde Dateien nicht überschrieben und beim `undef` nicht gelöscht.
+- [x] Beim `define` eines CMS-Devices eine HTML-Startdatei direkt unter `www/fhem-cms/<FHEM-Device-Name>/index.html` erzeugen; sie referenziert gemeinsame Ressourcen und startet das richtige Device.
+- [x] Device-Pfad und `get <device> url` dokumentieren. Startseiten werden exklusiv erzeugt, fremde Dateien nicht überschrieben und beim `undef` nicht gelöscht.
 - [ ] Eine separate Datenlöschfunktion mit Bestätigung umsetzen, die den betroffenen Device-Ordner anzeigt und die Optionen Löschen, Behalten und Abbrechen anbietet. Das normale FHEM-`delete <device>` behält die Dateien.
 - [x] Eine zentrale `controls_fhem-cms.txt` für das gesamte Repository generieren und über GitHub Actions nach Branch-Updates aktualisieren.
 - [x] FHEM-Installationsbefehle für `dev` und `main` in der README dokumentieren; alle Laufzeitdateien werden über eine gemeinsame Update-Quelle installiert.
@@ -137,8 +137,8 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 **Akzeptanzkriterien**
 
 - Autorisierte Nutzer können eine gültige Konfiguration laden und speichern.
-- Für jedes definierte CMS-Device und jede eingerichtete Oberfläche existiert ein erreichbarer HTML-Einstiegspunkt unter `www/fhem-cms/<FHEM-Device-Name>/<oberflaeche>/index.html`, der Device und Oberfläche startet sowie gemeinsame Frontend-Assets referenziert.
-- Oberflächen verschiedener Devices liegen in getrennten Verzeichnissen; gültige Device-/Oberflächenkennungen können keine fremden Verzeichnisse oder Dateien adressieren.
+- Für jedes definierte CMS-Device existiert ein erreichbarer HTML-Einstiegspunkt unter `www/fhem-cms/<FHEM-Device-Name>/index.html`, der das Device startet und gemeinsame Frontend-Assets referenziert.
+- Jedes Device bildet eine vollständige Inhaltsstruktur mit einer Startseite und Navigation zu weiteren Inhaltsseiten ab. Ein weiteres Device erhält einen eigenen Ordner und Einstiegspunkt.
 - Das Steuerungsmodul registriert keinen eigenen HTML-/Asset-Web-Endpunkt; statische Dateien werden aus dem `www`-Kontext ausgeliefert.
 - Die einzelne `controls_fhem-cms.txt` enthält sowohl das FHEM-Modul als auch alle gemeinsamen Assets und Komponenten, ohne eine Update-Aufteilung nach Modulen.
 - Die README beschreibt Installation aus Entwicklungs- und freigegebenem Branch über jeweils diese eine Controls-Datei.
@@ -162,7 +162,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 **Akzeptanzkriterien**
 
 - Eine gültige gespeicherte Beispielseite wird ohne manuelle Anpassung im Browser dargestellt.
-- Der device- und oberflächenbezogene HTML-Bootstrap lädt gemeinsame Assets aus `www/fhem-cms/` und startet genau die zugehörige Oberfläche.
+- Der devicebezogene HTML-Bootstrap lädt gemeinsame Assets aus `www/fhem-cms/` und startet genau das zugehörige Device.
 - Unbekannte oder ungültige Widgettypen führen zu einem sichtbaren, kontrollierten Fehler statt zu ausführbarem Markup.
 - Kernnavigation und Layout sind auf der vereinbarten Zielumgebung bedienbar.
 
