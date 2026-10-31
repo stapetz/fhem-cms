@@ -355,6 +355,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] „Layout ändern“ entfällt: Im Bearbeitungsmodus sind Kacheln und Navigation immer verschiebbar und in der Größe änderbar, ohne Einfärbung (dezenter Griff ⠿ am Kopf der Kachel, Größengriff beim Darüberfahren).
 - [x] Statuszeile und Entwurfshinweis entfallen. Im Bearbeitungsmodus zeigt ein rotes Ausrufezeichen oben rechts die Meldungen als Tooltip.
 - [x] Im Ansichtsmodus erscheinen nur akute Fehlermeldungen.
+- [x] Die Befehle sehen aus wie die Menüleiste klassischer Programme (Word, Pages): eine zusammenhängende, beim Scrollen oben haftende Leiste mit flachen Einträgen, Trennstrichen zwischen den Gruppen und einem Dropdown „+ Widget ▾“.
 
 ## Später prüfen - Erweiterungen außerhalb des MVP
 

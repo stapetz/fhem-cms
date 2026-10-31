@@ -59,7 +59,7 @@ class CmsPage {
     this.menu.className = 'cms-menu';
     const summary = document.createElement('summary');
     summary.className = 'cms-button';
-    summary.textContent = '+ Widget';
+    summary.textContent = '+ Widget ▾';
     const items = document.createElement('div');
     items.className = 'cms-menu-items';
     items.setAttribute('role', 'group');
@@ -70,7 +70,16 @@ class CmsPage {
     ];
     items.append(...this.menuButtons);
     this.menu.append(summary, items);
-    this.toolbar.append(this.navButton, this.menu, this.previewButton, this.publishButton, this.discardButton, this.backupsButton);
+    const separator = () => {
+      const line = document.createElement('span');
+      line.className = 'cms-toolbar-sep';
+      line.setAttribute('role', 'separator');
+      return line;
+    };
+    this.toolbar.setAttribute('role', 'toolbar');
+    this.toolbar.setAttribute('aria-label', 'Bearbeiten');
+    this.toolbar.append(this.navButton, this.menu, separator(), this.previewButton, separator(),
+      this.publishButton, this.discardButton, separator(), this.backupsButton);
 
     this.grid = document.createElement('section');
     this.grid.className = 'cms-grid';
