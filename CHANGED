@@ -1,3 +1,8 @@
+2026-10-31 - Add a view mode link for the finished homepage
+
+The device now shows CMS starten (edit mode) and Zeige Homepage, which opens
+index.html?mode=view without header, toolbar and edit buttons.
+
 2026-10-31 - Add WYSIWYG text editor and image upload
 
 Text blocks are edited in a rich text editor (formatting, links, tables, images

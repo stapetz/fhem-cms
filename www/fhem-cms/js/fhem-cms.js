@@ -8,6 +8,9 @@ const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
 const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
 
+// ?mode=view zeigt nur die fertige Seite ohne Bearbeitungsknöpfe. Das ist keine Zugriffssperre.
+const VIEW_MODE = new URLSearchParams(window.location.search).get('mode') === 'view';
+
 class CmsPage {
   constructor(cmsDevice, shell, card) {
     this.client = new FhemClient(cmsDevice);
@@ -107,6 +110,7 @@ class CmsPage {
     try {
       this.config = await this.client.getConfig();
     } catch (error) {
+      this.card.setAttribute('data-error', '');
       this.setStatus(`Konfiguration konnte nicht geladen werden: ${error.message}`);
       this.setControlsDisabled(true);
       return;
@@ -581,6 +585,9 @@ class CmsPage {
       element.className = 'cms-unsupported';
       element.textContent = `Widget-Typ „${widget.type}“ wird noch nicht angezeigt.`;
     }
+    if (VIEW_MODE) {
+      element.setAttribute('view-only', '');
+    }
     this.place(element, widget);
     this.elements.set(widget.id, element);
     return element;
@@ -775,7 +782,11 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!card || !shell) {
     return;
   }
+  if (VIEW_MODE) {
+    document.documentElement.classList.add('cms-view');
+  }
   if (!isValidName(cmsDevice)) {
+    card.setAttribute('data-error', '');
     card.status = 'Ungültiger CMS-Device-Name';
     return;
   }

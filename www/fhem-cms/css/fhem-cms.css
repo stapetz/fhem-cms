@@ -252,3 +252,11 @@ cms-device-card {
   max-height: 50vh;
   overflow-y: auto;
 }
+
+.cms-view .cms-kicker,
+.cms-view .cms-shell > h1,
+.cms-view .cms-copy,
+.cms-view .cms-toolbar,
+.cms-view cms-device-card:not([data-error]) {
+  display: none;
+}

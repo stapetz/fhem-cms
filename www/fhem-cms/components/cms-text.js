@@ -39,6 +39,7 @@ class FHEMCMSText extends HTMLElement {
         button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible {
           outline: 2px solid #8fd0a8; outline-offset: 2px; }
         .icon { padding: 0.2rem 0.5rem; }
+        :host([view-only]) [data-open-config] { display: none; }
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
           padding: 1.25rem; width: min(94vw, 52rem); max-height: 94vh; overflow: auto; }
         dialog::backdrop { background: rgb(0 0 0 / 0.6); }

@@ -100,6 +100,7 @@ class FHEMCMSThermostat extends HTMLElement {
         button:hover { background: #34493e; }
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
         .icon { padding: 0.2rem 0.5rem; }
+        :host([view-only]) [data-open-config] { display: none; }
         .actual { font-size: 2.4rem; font-weight: 700; line-height: 1.1; }
         .label { color: #a5c9b2; font-size: 0.8rem; }
         .target-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }

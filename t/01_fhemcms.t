@@ -60,7 +60,7 @@ is(FHEMCMS_Get($hash, $name, 'url'),
     'returns the test page URL');
 $FW_ME = '/fhem';
 is(FHEMCMS_Summary('WEB', $name, 'FHEM CMS', {}),
-    '<a href="/fhem/fhem-cms/CMS/index.html">CMS starten</a>',
+    '<a href="/fhem/fhem-cms/CMS/index.html">CMS starten</a> <a href="/fhem/fhem-cms/CMS/index.html?mode=view">Zeige Homepage</a>',
     'renders a link to the device entry page in the FHEM room');
 $FW_ME = '/custom-fhem';
 like(FHEMCMS_Summary('WEB', $name, 'FHEM CMS', {}),
