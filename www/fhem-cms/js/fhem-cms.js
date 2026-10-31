@@ -16,6 +16,7 @@ class CmsPage {
     this.refreshTimer = null;
     this.live = false;
     this.deviceCache = null;
+    this.subscribedKey = '';
 
     this.toolbar = document.createElement('div');
     this.toolbar.className = 'cms-toolbar';
@@ -62,7 +63,7 @@ class CmsPage {
   services() {
     return {
       listDevices: () => this.listDevices(),
-      setTarget: (widget, value) => this.client.setReading(widget.device, widget.readings.target, value),
+      setTarget: (widget, value, device) => this.client.setReading(device || widget.device, widget.readings.target, value),
       saveWidget: (widget) => this.saveWidget(widget),
       deleteWidget: (id) => this.deleteWidget(id)
     };
@@ -178,8 +179,9 @@ class CmsPage {
     }
 
     try {
-      const results = await this.client.jsonlist(devices.join(','));
-      this.snapshots = new Map(results.map((item) => [item.name, item]));
+      const specs = devices.flatMap((name) => [name, `device=${name}`]);
+      const results = await this.client.jsonlist(specs.join(','));
+      this.snapshots = this.groupSnapshots(devices, results);
     } catch (error) {
       this.snapshots = new Map();
       this.updateStatus(`Daten nicht verfügbar: ${error.message}`);
@@ -194,6 +196,34 @@ class CmsPage {
     if (this.snapshots.size > 0) {
       this.updateStatus();
     }
+    this.resubscribe();
+  }
+
+  // Je Hauptdevice: [Hauptdevice, Kanäle ...]; die Kachel sucht Readings in dieser Reihenfolge.
+  groupSnapshots(mains, results) {
+    const byName = new Map(results.map((item) => [item.name, item]));
+    const groups = new Map();
+    for (const name of mains) {
+      const main = byName.get(name);
+      if (!main) {
+        continue;
+      }
+      const channels = results
+        .filter((item) => item.parent === name)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      groups.set(name, [main, ...channels]);
+    }
+    return groups;
+  }
+
+  watchedNames() {
+    const names = new Set(this.devices());
+    for (const group of this.snapshots.values()) {
+      for (const item of group) {
+        names.add(item.name);
+      }
+    }
+    return [...names].sort();
   }
 
   updateStatus(message) {
@@ -206,8 +236,14 @@ class CmsPage {
   }
 
   resubscribe() {
+    const names = this.watchedNames();
+    const key = names.join('|');
+    if (key === this.subscribedKey) {
+      return;
+    }
+    this.subscribedKey = key;
     this.client.subscribe(
-      this.devices(),
+      names,
       () => this.scheduleRefresh(),
       (state) => {
         this.live = state === 'live';

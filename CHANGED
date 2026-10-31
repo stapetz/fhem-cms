@@ -1,3 +1,8 @@
+2026-10-31 - Add channel lookup and column filters to the device picker
+
+Resolve thermostat readings across the main device and its channels, show the
+room and parent device in the picker, and add a filter field per column.
+
 2026-10-31 - Add cache busting to the generated CMS page
 
 Version the stylesheet, entry script and all modules with a content hash and

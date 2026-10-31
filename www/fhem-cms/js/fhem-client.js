@@ -85,7 +85,11 @@ export class FhemClient {
           ? item.Attributes.alias
           : '';
         const type = item.Internals && typeof item.Internals.TYPE === 'string' ? item.Internals.TYPE : '';
-        return { name: item.Name, alias, type, readings };
+        const attributes = item.Attributes || {};
+        const room = typeof attributes.room === 'string' ? attributes.room.split(',')[0].trim() : '';
+        const owner = item.Internals && typeof item.Internals.device === 'string' ? item.Internals.device : '';
+        const parent = isValidName(owner) && owner !== item.Name ? owner : '';
+        return { name: item.Name, alias, type, room, parent, readings };
       });
   }
 

@@ -6,13 +6,33 @@ const TARGET_STEP = 0.5;
 const SEND_DELAY_MS = 1500;
 const CONFIRM_WAIT_MS = 120000;
 const PICKER_MAX_ROWS = 200;
+const PICKER_COLUMNS = [
+  { key: 'name', label: 'Device' },
+  { key: 'alias', label: 'Alias' },
+  { key: 'type', label: 'Typ' },
+  { key: 'room', label: 'Raum' },
+  { key: 'parent', label: 'Kanal von' }
+];
+
+// Das erste Device der Gruppe (Hauptdevice, dann Kanäle) mit diesem Reading liefert den Wert.
+function lookupReading(group, name) {
+  if (!Array.isArray(group) || !name) {
+    return null;
+  }
+  for (const device of group) {
+    if (device.readings[name] !== undefined) {
+      return { device: device.name, value: device.readings[name] };
+    }
+  }
+  return null;
+}
 
 const PRESETS = {
   actual: ['temperature', 'measured-temp'],
   target: ['desiredTemperature', 'desired-temp'],
   valve: ['valveposition', 'ValvePosition'],
   mode: ['mode', 'R-controlMode', 'controlMode'],
-  battery: ['battery', 'batteryState', 'batteryLevel']
+  battery: ['batteryPercent', 'battery', 'batteryState', 'batteryLevel']
 };
 
 const FIELDS = [
@@ -99,6 +119,9 @@ class FHEMCMSThermostat extends HTMLElement {
         .picker-list { max-height: 50vh; overflow: auto; border: 1px solid #43564a; border-radius: 0.5rem; }
         .picker-list table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
         .picker-list th { position: sticky; top: 0; background: #17211d; text-align: left; color: #a5c9b2; }
+        .picker-list tr.filters th { top: 2.1rem; padding-top: 0; font-weight: normal; }
+        .picker-list tr.filters input { padding: 0.25rem 0.4rem; font-size: 0.8rem; }
+        .picker-list td.dim { color: #a5c9b2; }
         .picker-list th, .picker-list td { padding: 0.4rem 0.6rem; }
         .picker-list tbody tr { cursor: pointer; border-top: 1px solid #2f3f36; }
         .picker-list tbody tr:hover, .picker-list tbody tr:focus { background: #2c3f35; outline: none; }
@@ -165,10 +188,13 @@ class FHEMCMSThermostat extends HTMLElement {
       <dialog data-picker aria-labelledby="picker-title" class="picker">
         <div class="picker-body">
           <h3 id="picker-title">Device auswählen</h3>
-          <input type="search" data-picker-search placeholder="Suchen in Name, Alias und Typ" autocomplete="off" aria-label="Devices durchsuchen">
+          <input type="search" data-picker-search placeholder="In allen Spalten suchen" autocomplete="off" aria-label="Devices durchsuchen">
           <div class="picker-list">
             <table>
-              <thead><tr><th>Device</th><th>Alias</th><th>Typ</th></tr></thead>
+              <thead>
+                <tr>${PICKER_COLUMNS.map((column) => `<th>${column.label}</th>`).join('')}</tr>
+                <tr class="filters">${PICKER_COLUMNS.map((column) => `<th><input type="search" data-picker-filter="${column.key}" placeholder="Filter" autocomplete="off" aria-label="${column.label} filtern"></th>`).join('')}</tr>
+              </thead>
               <tbody data-picker-rows></tbody>
             </table>
           </div>
@@ -192,6 +218,9 @@ class FHEMCMSThermostat extends HTMLElement {
     this.shadowRoot.querySelector('input[name="device"]').addEventListener('click', () => this.openPicker());
     this.shadowRoot.querySelector('[data-picker-cancel]').addEventListener('click', () => this.closePicker());
     this.shadowRoot.querySelector('[data-picker-search]').addEventListener('input', () => this.renderPickerRows());
+    for (const filter of this.shadowRoot.querySelectorAll('[data-picker-filter]')) {
+      filter.addEventListener('input', () => this.renderPickerRows());
+    }
     this.render();
   }
 
@@ -248,11 +277,15 @@ class FHEMCMSThermostat extends HTMLElement {
     }
 
     const config = this.widgetConfig;
-    const readings = (this.snapshot && this.snapshot.readings) || {};
-    const alias = (this.snapshot && this.snapshot.alias) || '';
+    const group = this.snapshot;
+    const read = (name) => {
+      const found = lookupReading(group, name);
+      return found ? found.value : undefined;
+    };
+    const alias = (group && group[0].alias) || '';
     root.querySelector('[data-title]').textContent = config.title || alias || config.device || 'Thermostat';
 
-    const actualRaw = readings[config.readings.actual];
+    const actualRaw = read(config.readings.actual);
     const actual = toNumber(actualRaw);
     root.querySelector('[data-actual]').textContent = actual === null
       ? (actualRaw !== undefined && actualRaw !== '' ? actualRaw : '–')
@@ -260,7 +293,7 @@ class FHEMCMSThermostat extends HTMLElement {
 
     const slider = root.querySelector('[data-slider]');
     const output = root.querySelector('[data-target-out]');
-    const targetRaw = readings[config.readings.target];
+    const targetRaw = read(config.readings.target);
     const target = toNumber(targetRaw);
     slider.disabled = !this.services || !this.snapshot || target === null;
     if (this.sent && (target === this.sent.value || Date.now() > this.sent.until)) {
@@ -279,10 +312,10 @@ class FHEMCMSThermostat extends HTMLElement {
       }
     }
 
-    this.renderOptional('[data-mode]', 'Modus', readings[config.readings.mode], config.readings.mode);
-    this.renderOptional('[data-battery]', 'Batterie', readings[config.readings.battery], config.readings.battery);
+    this.renderOptional('[data-mode]', 'Modus', read(config.readings.mode), config.readings.mode);
+    this.renderOptional('[data-battery]', 'Batterie', read(config.readings.battery), config.readings.battery);
 
-    const valveRaw = config.readings.valve ? readings[config.readings.valve] : undefined;
+    const valveRaw = config.readings.valve ? read(config.readings.valve) : undefined;
     const valve = toNumber(valveRaw === undefined ? '' : valveRaw.replace('%', '').trim());
     const valveBox = root.querySelector('[data-valve]');
     valveBox.hidden = valve === null;
@@ -324,7 +357,8 @@ class FHEMCMSThermostat extends HTMLElement {
     const slider = this.shadowRoot.querySelector('[data-slider]');
     const value = Number.parseFloat(slider.value).toFixed(1);
     try {
-      await this.services.setTarget(this.widgetConfig, value);
+      const found = lookupReading(this.snapshot, this.widgetConfig.readings.target);
+      await this.services.setTarget(this.widgetConfig, value, found ? found.device : this.widgetConfig.device);
       this.pending = false;
       this.sent = { value: Number.parseFloat(value), until: Date.now() + CONFIRM_WAIT_MS };
       this.setStatus('Wert gesendet, wartet auf Bestätigung des Geräts');
@@ -364,17 +398,31 @@ class FHEMCMSThermostat extends HTMLElement {
         this.setDialogError(error.message || 'Geräteliste konnte nicht geladen werden');
       }
     }
-    this.fillReadingOptions(this.findDevice(form.elements.device.value), config.readings);
+    this.fillReadingOptions(this.groupFor(form.elements.device.value), config.readings);
   }
 
   findDevice(name) {
     return this.devices.find((device) => device.name === name) || null;
   }
 
+  groupFor(name) {
+    const main = this.findDevice(name);
+    if (!main) {
+      return null;
+    }
+    const channels = this.devices
+      .filter((device) => device.parent === name)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return [main, ...channels];
+  }
+
   async openPicker() {
     const picker = this.shadowRoot.querySelector('[data-picker]');
     const search = this.shadowRoot.querySelector('[data-picker-search]');
     search.value = '';
+    for (const filter of this.shadowRoot.querySelectorAll('[data-picker-filter]')) {
+      filter.value = '';
+    }
     if (!picker.open) {
       picker.showModal();
     }
@@ -392,19 +440,27 @@ class FHEMCMSThermostat extends HTMLElement {
   }
 
   renderPickerRows() {
-    const terms = this.shadowRoot.querySelector('[data-picker-search]').value
-      .toLowerCase().split(/\s+/).filter(Boolean);
+    const split = (text) => text.toLowerCase().split(/\s+/).filter(Boolean);
+    const terms = split(this.shadowRoot.querySelector('[data-picker-search]').value);
+    const filters = PICKER_COLUMNS.map((column) => ({
+      key: column.key,
+      terms: split(this.shadowRoot.querySelector(`[data-picker-filter="${column.key}"]`).value)
+    })).filter((filter) => filter.terms.length > 0);
     const matches = this.devices.filter((device) => {
-      const haystack = `${device.name} ${device.alias} ${device.type}`.toLowerCase();
-      return terms.every((term) => haystack.includes(term));
+      const haystack = PICKER_COLUMNS.map((column) => device[column.key]).join(' ').toLowerCase();
+      return terms.every((term) => haystack.includes(term))
+        && filters.every((filter) => filter.terms.every((term) => device[filter.key].toLowerCase().includes(term)));
     });
     const shown = matches.slice(0, PICKER_MAX_ROWS);
     this.shadowRoot.querySelector('[data-picker-rows]').replaceChildren(...shown.map((device) => {
       const row = document.createElement('tr');
       row.tabIndex = 0;
-      for (const text of [device.name, device.alias, device.type]) {
+      for (const column of PICKER_COLUMNS) {
         const cell = document.createElement('td');
-        cell.textContent = text;
+        cell.textContent = device[column.key];
+        if (column.key === 'parent') {
+          cell.className = 'dim';
+        }
         row.append(cell);
       }
       const choose = () => this.pickDevice(device);
@@ -430,7 +486,7 @@ class FHEMCMSThermostat extends HTMLElement {
 
   pickDevice(device) {
     const form = this.shadowRoot.querySelector('[data-form]');
-    form.elements.device.value = device.name;
+    form.elements.device.value = device.parent || device.name;
     this.closePicker();
     this.onDeviceChanged();
   }
@@ -444,21 +500,27 @@ class FHEMCMSThermostat extends HTMLElement {
 
   onDeviceChanged() {
     const form = this.shadowRoot.querySelector('[data-form]');
-    const device = this.findDevice(form.elements.device.value.trim());
-    this.fillReadingOptions(device, {});
-    this.setDialogError(device || !form.elements.device.value.trim()
+    const group = this.groupFor(form.elements.device.value.trim());
+    this.fillReadingOptions(group, {});
+    this.setDialogError(group || !form.elements.device.value.trim()
       ? ''
       : 'Dieses Device wurde nicht gefunden');
   }
 
-  fillReadingOptions(device, selected) {
+  fillReadingOptions(group, selected) {
     const form = this.shadowRoot.querySelector('[data-form]');
-    const names = device ? Object.keys(device.readings).sort((a, b) => a.localeCompare(b)) : [];
+    const names = new Set();
+    for (const device of group || []) {
+      for (const name of Object.keys(device.readings)) {
+        names.add(name);
+      }
+    }
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
 
     for (const field of FIELDS) {
       const select = form.elements[`reading-${field.key}`];
-      const wanted = selected[field.key] || PRESETS[field.key].find((name) => names.includes(name)) || '';
-      const entries = new Set(names);
+      const wanted = selected[field.key] || PRESETS[field.key].find((name) => names.has(name)) || '';
+      const entries = new Set(sorted);
       if (wanted) {
         entries.add(wanted);
       }
@@ -471,10 +533,11 @@ class FHEMCMSThermostat extends HTMLElement {
         options.push(none);
       }
       for (const name of entries) {
+        const found = lookupReading(group, name);
         const option = document.createElement('option');
         option.value = name;
-        option.textContent = device && device.readings[name] !== undefined
-          ? `${name} (${device.readings[name]})`
+        option.textContent = found
+          ? `${name} (${found.value})${found.device !== group[0].name ? ` · ${found.device}` : ''}`
           : name;
         options.push(option);
       }
