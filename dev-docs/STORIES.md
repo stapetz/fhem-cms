@@ -437,9 +437,10 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 - [ ] Skalierung nach K02: bisher feste Basisschrift `1rem`, Inhalt oben ausgerichtet, Überlauf scrollt; die einheitliche Skalierung folgt mit K02.
 - [ ] Schaltaktionen aus dem freien HTML (z. B. `data-cms-set`) bleiben offen; sie folgen nach S32/S33 mit denselben validierten Namen und Werten.
 
-### S32 - Schalter (an/aus) (Entwurf)
+### S32 - Schalter (an/aus) (umgesetzt, Prüfung offen)
 
-- [ ] Widget `fhem-switch` wie `ftui-switch`: Device, Reading für den Zustand, Werte für an/aus (Vorschlag aus den Set-Befehlen), Titel, optionales Icon je Zustand; Klick sendet `set <Device> on|off`.
+- [x] Widget `fhem-switch` wie `ftui-switch`: Device, Reading für den Zustand, Befehle für an/aus (Auswahl aus den Set-Befehlen), Titel, optionales Icon je Zustand; Klick sendet `set <Device> on|off`.
+- [ ] Offen: abweichende Zustandswerte (z. B. Reading `ON` bei Befehl `on`), Befehle mit Parameter.
 
 ### S33 - Taster / Befehlsknopf (Entwurf)
 

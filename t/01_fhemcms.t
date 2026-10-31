@@ -503,6 +503,28 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     isnt(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html rejects unknown fields');
 }
 
+# fhem-switch: Zustand, Befehle und Icons
+{
+    my $scfg = {schemaVersion => 2, pages => [{id => 'p', title => 'P', widgets => [{id => 's1', type => 'fhem-switch',
+        device => 'Lamp', reading => 'state', on => 'on', off => 'off', icon => 'light_on', iconOff => 'light_off',
+        title => 'Lampe', grid => {col => 1, row => 1, w => 3, h => 2}}]}]};
+    is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-switch accepts a complete config');
+    my $w = $scfg->{pages}[0]{widgets}[0];
+    for my $case (['on', 'on off'], ['off', 'off;shutdown'], ['on', 'off'], ['reading', 'a b'], ['device', 'x y'],
+        ['icon', '../x'], ['iconOff', '/etc']) {
+        my ($field, $bad) = @$case;
+        my $old = $w->{$field};
+        $w->{$field} = $bad;
+        isnt(FHEMCMS_ValidateConfig($scfg), undef, "fhem-switch rejects $field=$bad");
+        $w->{$field} = $old;
+    }
+    $w->{extra} = 1;
+    isnt(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-switch rejects unknown fields');
+    delete $w->{extra};
+    delete $w->{off};
+    isnt(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-switch requires off');
+}
+
 # fhem-value: Einheit und Icon
 {
     my $vcfg = {schemaVersion => 2, pages => [{id => 'p', title => 'P', widgets => [{id => 'v1', type => 'fhem-value',

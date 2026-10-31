@@ -37,6 +37,9 @@ const STYLE = `
   .cms-ph-dialog .check { display: flex; align-items: center; gap: 0.5rem; }
   .cms-ph-dialog .check input { width: auto; }
   .cms-ph-dialog .row { display: flex; gap: 0.5rem; }
+  .cms-ph-dialog .filter { display: grid; gap: 0.4rem; padding: 0.6rem; border: 1px solid #43564a; border-radius: 0.75rem; }
+  .cms-ph-dialog .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .cms-ph-dialog .chips button { padding: 0.15rem 0.6rem; font-size: 0.8rem; border-radius: 1rem; font-family: ui-monospace, monospace; }
   .cms-ph-dialog .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
 `;
 
@@ -60,12 +63,16 @@ const TEMPLATE = `
         <p class="hint">@alias, @name und @type liefern Alias, Namen und Typ des Devices.</p>
       </div>
     </div>
-    <label>Filter (optional)
-      <div class="row">
-        <input data-filter autocomplete="off" spellcheck="false" placeholder="z. B. round(1)|suffix( °C)" aria-label="Filter">
-        <select data-preset aria-label="Filter hinzufügen"></select>
-      </div>
-    </label>
+    <div class="filter">
+      <label>Filter (optional)
+        <span class="row">
+          <input data-filter autocomplete="off" spellcheck="false" placeholder="z. B. round(1)|suffix( °C)" aria-label="Filter">
+          <button type="button" data-filter-clear title="Filter leeren">Leeren</button>
+        </span>
+      </label>
+      <div class="chips" data-presets role="group" aria-label="Filter hinzufügen"></div>
+      <p class="hint" data-preset-hint>Ein Klick fügt den Filter an; mehrere werden mit | verkettet. Beschreibung beim Darüberfahren.</p>
+    </div>
     <label class="check" data-element-row hidden><input type="checkbox" data-element> Als Element schreiben (&lt;span device=… reading=…&gt;)</label>
     <p class="hint" data-preview></p>
     <p class="result" data-result></p>
@@ -100,15 +107,19 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
       readingInput.value = initial.reading || '';
       filterInput.value = initial.filter || '';
     }
-    const presetSelect = $('[data-preset]');
-    const first = document.createElement('option');
-    first.value = '';
-    first.textContent = 'Filter hinzufügen …';
-    presetSelect.append(first, ...PRESETS.map(([value, label]) => {
-      const option = document.createElement('option');
-      option.value = value;
-      option.textContent = `${value} – ${label}`;
-      return option;
+    const presetBox = $('[data-presets]');
+    presetBox.append(...PRESETS.map(([value, label]) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.textContent = value;
+      chip.title = label;
+      chip.addEventListener('click', () => {
+        const current = filterInput.value.trim();
+        filterInput.value = current ? `${current}|${value}` : value;
+        refresh();
+        filterInput.focus();
+      });
+      return chip;
     }));
 
     const terms = (text) => text.toLowerCase().split(/\s+/).filter(Boolean);
@@ -222,12 +233,10 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
     readingInput.addEventListener('input', refresh);
     filterInput.addEventListener('input', refresh);
     elementBox.addEventListener('change', refresh);
-    presetSelect.addEventListener('change', () => {
-      if (presetSelect.value) {
-        filterInput.value = filterInput.value.trim() ? `${filterInput.value.trim()}|${presetSelect.value}` : presetSelect.value;
-        presetSelect.value = '';
-        refresh();
-      }
+    $('[data-filter-clear]').addEventListener('click', () => {
+      filterInput.value = '';
+      refresh();
+      filterInput.focus();
     });
     $('[data-cancel]').addEventListener('click', () => finish(null));
     dialog.addEventListener('cancel', (event) => {

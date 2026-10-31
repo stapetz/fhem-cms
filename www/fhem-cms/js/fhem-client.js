@@ -213,12 +213,13 @@ export class FhemClient {
     }
   }
 
-  // Setzt einen Wert oder eine Betriebsart (z. B. controlMode auto), analog zum Thermostat-Dashboard.
+  // Setzt einen Wert oder eine Betriebsart (z. B. controlMode auto) oder sendet einen Befehl ohne Wert (z. B. on), analog zum Thermostat-Dashboard.
   async setCommand(device, command, value) {
-    if (!isValidName(device) || !isValidName(command) || !/^[A-Za-z0-9_.+-]{1,32}$/.test(value)) {
+    const hasValue = value !== undefined && value !== null && value !== '';
+    if (!isValidName(device) || !isValidName(command) || (hasValue && !/^[A-Za-z0-9_.+-]{1,32}$/.test(value))) {
       throw new Error('Ungültiger Befehl');
     }
-    const result = await this.command(`set ${device} ${command} ${value}`);
+    const result = await this.command(hasValue ? `set ${device} ${command} ${value}` : `set ${device} ${command}`);
     if (result) {
       throw new Error(result);
     }

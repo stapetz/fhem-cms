@@ -595,7 +595,8 @@ sub FHEMCMS_ValidateConfig {
             return 'Unbekannter Widget-Typ'
                 if (ref($widget->{type}) || !defined($widget->{type})
                     || ($widget->{type} ne 'fhem-value' && $widget->{type} ne 'thermostat'
-                        && $widget->{type} ne 'text' && $widget->{type} ne 'fhem-html'));
+                        && $widget->{type} ne 'text' && $widget->{type} ne 'fhem-html'
+                        && $widget->{type} ne 'fhem-switch'));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -604,6 +605,9 @@ sub FHEMCMS_ValidateConfig {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'html', 'devices', 'grid'], ['title']);
             } elsif ($widget->{type} eq 'fhem-value') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['title', 'unit', 'icon']);
+            } elsif ($widget->{type} eq 'fhem-switch') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'on', 'off', 'grid'],
+                    ['title', 'icon', 'iconOff']);
             } else {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title']);
             }
@@ -643,6 +647,17 @@ sub FHEMCMS_ValidateConfig {
 
             if ($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html') {
                 # keine weiteren Felder
+            } elsif ($widget->{type} eq 'fhem-switch') {
+                for my $field ('reading', 'on', 'off') {
+                    return "Ungueltiger Wert fuer $field" if (!$isName->($widget->{$field}));
+                }
+                return 'on und off muessen verschieden sein' if ($widget->{on} eq $widget->{off});
+                for my $field ('icon', 'iconOff') {
+                    return 'Ungueltiges Icon'
+                        if (exists($widget->{$field})
+                            && (ref($widget->{$field}) || !defined($widget->{$field})
+                                || $widget->{$field} !~ $FHEMCMS_ICON_NAME));
+                }
             } elsif ($widget->{type} eq 'fhem-value') {
                 return 'Ungueltiger Wert fuer reading' if (!$isName->($widget->{reading}));
                 return 'Ungueltige Einheit'
