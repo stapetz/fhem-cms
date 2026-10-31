@@ -84,7 +84,8 @@ export class FhemClient {
         const alias = item.Attributes && typeof item.Attributes.alias === 'string'
           ? item.Attributes.alias
           : '';
-        return { name: item.Name, alias, readings };
+        const type = item.Internals && typeof item.Internals.TYPE === 'string' ? item.Internals.TYPE : '';
+        return { name: item.Name, alias, type, readings };
       });
   }
 

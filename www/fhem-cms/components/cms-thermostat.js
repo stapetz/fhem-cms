@@ -5,6 +5,7 @@ const TARGET_MAX = 25;
 const TARGET_STEP = 0.5;
 const SEND_DELAY_MS = 1500;
 const CONFIRM_WAIT_MS = 120000;
+const PICKER_MAX_ROWS = 200;
 
 const PRESETS = {
   actual: ['temperature', 'measured-temp'],
@@ -92,7 +93,15 @@ class FHEMCMSThermostat extends HTMLElement {
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
           padding: 1.25rem; width: min(92vw, 32rem); }
         dialog::backdrop { background: rgb(0 0 0 / 0.6); }
-        form { display: grid; gap: 0.75rem; }
+        form, .picker-body { display: grid; gap: 0.75rem; }
+        .device-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
+        dialog.picker { width: min(94vw, 44rem); }
+        .picker-list { max-height: 50vh; overflow: auto; border: 1px solid #43564a; border-radius: 0.5rem; }
+        .picker-list table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .picker-list th { position: sticky; top: 0; background: #17211d; text-align: left; color: #a5c9b2; }
+        .picker-list th, .picker-list td { padding: 0.4rem 0.6rem; }
+        .picker-list tbody tr { cursor: pointer; border-top: 1px solid #2f3f36; }
+        .picker-list tbody tr:hover, .picker-list tbody tr:focus { background: #2c3f35; outline: none; }
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
         input, select { font: inherit; color: inherit; background: #17211d;
           border: 1px solid #43564a; border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
@@ -134,8 +143,10 @@ class FHEMCMSThermostat extends HTMLElement {
             <input name="title" maxlength="64" autocomplete="off">
           </label>
           <label>FHEM-Device
-            <input name="device" list="device-list" maxlength="128" autocomplete="off" required>
-            <datalist id="device-list" data-device-list></datalist>
+            <span class="device-row">
+              <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
+              <button type="button" data-pick-device>Auswählen …</button>
+            </span>
           </label>
           <fieldset data-readings>
             <legend>Readings</legend>
@@ -151,6 +162,20 @@ class FHEMCMSThermostat extends HTMLElement {
           </div>
         </form>
       </dialog>
+      <dialog data-picker aria-labelledby="picker-title" class="picker">
+        <div class="picker-body">
+          <h3 id="picker-title">Device auswählen</h3>
+          <input type="search" data-picker-search placeholder="Suchen in Name, Alias und Typ" autocomplete="off" aria-label="Devices durchsuchen">
+          <div class="picker-list">
+            <table>
+              <thead><tr><th>Device</th><th>Alias</th><th>Typ</th></tr></thead>
+              <tbody data-picker-rows></tbody>
+            </table>
+          </div>
+          <p class="error" data-picker-info></p>
+          <div class="actions"><button type="button" data-picker-cancel>Abbrechen</button></div>
+        </div>
+      </dialog>
     `;
 
     this.buildDialogFields();
@@ -163,7 +188,10 @@ class FHEMCMSThermostat extends HTMLElement {
       this.onSave();
     });
     this.shadowRoot.querySelector('[data-dialog]').addEventListener('cancel', () => this.closeDialog(true));
-    this.shadowRoot.querySelector('input[name="device"]').addEventListener('change', () => this.onDeviceChanged());
+    this.shadowRoot.querySelector('[data-pick-device]').addEventListener('click', () => this.openPicker());
+    this.shadowRoot.querySelector('input[name="device"]').addEventListener('click', () => this.openPicker());
+    this.shadowRoot.querySelector('[data-picker-cancel]').addEventListener('click', () => this.closePicker());
+    this.shadowRoot.querySelector('[data-picker-search]').addEventListener('input', () => this.renderPickerRows());
     this.render();
   }
 
@@ -336,20 +364,82 @@ class FHEMCMSThermostat extends HTMLElement {
         this.setDialogError(error.message || 'Geräteliste konnte nicht geladen werden');
       }
     }
-    const list = this.shadowRoot.querySelector('[data-device-list]');
-    list.replaceChildren(...this.devices.map((device) => {
-      const option = document.createElement('option');
-      option.value = device.name;
-      if (device.alias) {
-        option.label = device.alias;
-      }
-      return option;
-    }));
     this.fillReadingOptions(this.findDevice(form.elements.device.value), config.readings);
   }
 
   findDevice(name) {
     return this.devices.find((device) => device.name === name) || null;
+  }
+
+  async openPicker() {
+    const picker = this.shadowRoot.querySelector('[data-picker]');
+    const search = this.shadowRoot.querySelector('[data-picker-search]');
+    search.value = '';
+    if (!picker.open) {
+      picker.showModal();
+    }
+    search.focus();
+    if (this.devices.length === 0 && this.services) {
+      this.setPickerInfo('Geräteliste wird geladen …');
+      try {
+        this.devices = await this.services.listDevices();
+      } catch (error) {
+        this.setPickerInfo(error.message || 'Geräteliste konnte nicht geladen werden');
+        return;
+      }
+    }
+    this.renderPickerRows();
+  }
+
+  renderPickerRows() {
+    const terms = this.shadowRoot.querySelector('[data-picker-search]').value
+      .toLowerCase().split(/\s+/).filter(Boolean);
+    const matches = this.devices.filter((device) => {
+      const haystack = `${device.name} ${device.alias} ${device.type}`.toLowerCase();
+      return terms.every((term) => haystack.includes(term));
+    });
+    const shown = matches.slice(0, PICKER_MAX_ROWS);
+    this.shadowRoot.querySelector('[data-picker-rows]').replaceChildren(...shown.map((device) => {
+      const row = document.createElement('tr');
+      row.tabIndex = 0;
+      for (const text of [device.name, device.alias, device.type]) {
+        const cell = document.createElement('td');
+        cell.textContent = text;
+        row.append(cell);
+      }
+      const choose = () => this.pickDevice(device);
+      row.addEventListener('click', choose);
+      row.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          choose();
+        }
+      });
+      return row;
+    }));
+    this.setPickerInfo(matches.length === 0
+      ? 'Keine passenden Devices gefunden'
+      : matches.length > shown.length
+        ? `${shown.length} von ${matches.length} Treffern angezeigt, Suche weiter einschränken`
+        : `${matches.length} Devices`);
+  }
+
+  setPickerInfo(message) {
+    this.shadowRoot.querySelector('[data-picker-info]').textContent = message;
+  }
+
+  pickDevice(device) {
+    const form = this.shadowRoot.querySelector('[data-form]');
+    form.elements.device.value = device.name;
+    this.closePicker();
+    this.onDeviceChanged();
+  }
+
+  closePicker() {
+    const picker = this.shadowRoot.querySelector('[data-picker]');
+    if (picker.open) {
+      picker.close();
+    }
   }
 
   onDeviceChanged() {
@@ -470,6 +560,7 @@ class FHEMCMSThermostat extends HTMLElement {
   }
 
   closeDialog(cancelled) {
+    this.closePicker();
     const dialog = this.shadowRoot.querySelector('[data-dialog]');
     if (dialog.open) {
       dialog.close();

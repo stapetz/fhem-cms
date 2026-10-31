@@ -1,3 +1,8 @@
+2026-10-31 - Add device picker popup to thermostat dialog
+
+Replace the device input list with a modal popup showing name, alias and type
+with search over all columns.
+
 2026-10-31 - Add thermostat test widget and config commands
 
 Add schema version 2 with widget ids and a thermostat widget, get/set commands
