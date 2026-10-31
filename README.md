@@ -1,5 +1,6 @@
 # fhem-cms
-Frontend zur Erstellung von grafischen Oberflächen für fhem inklusive der Möglichkeit freier Seiten- / Inhaltsseiten wie bei klassischen Content Management Systemen, wie bspw. Wordpress oder Type/3
+
+Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
 ## Repositorystruktur
 
@@ -8,6 +9,34 @@ Frontend zur Erstellung von grafischen Oberflächen für fhem inklusive der Mög
 | `FHEM/` | FHEM-Integration und Moduldateien |
 | `docs/` | Dokumentation für Anwender |
 | `dev-docs/` | Interne Entwicklungsdokumentation |
+| `www/fhem-cms/` | Frontend für FHEM; enthält gemeinsame Assets und Komponenten |
+| `controls_fhem-cms.txt` | Vom Workflow erzeugte Update-Liste für alle installierbaren Dateien dieses Repositories |
+
+Die erste wiederverwendbare Web Component liegt unter `www/fhem-cms/components/cms-device-card.js`; die gemeinsamen Styles und der Modul-Einstieg liegen unter `css/` und `js/`.
+
+## Installation und Update in FHEM
+
+fhem-cms wird als **ein gemeinsames Repository** aktualisiert. Die zentrale Controls-Datei umfasst das FHEM-Modul und alle dazugehörigen Frontend-Dateien. Es gibt keine getrennten Update-Quellen für einzelne Module oder Komponenten.
+
+Für den freigegebenen Stand:
+
+```text
+update add https://raw.githubusercontent.com/stapetz/fhem-cms/main/controls_fhem-cms.txt
+update all https://raw.githubusercontent.com/stapetz/fhem-cms/main/controls_fhem-cms.txt
+shutdown restart
+```
+
+Entwickler können stattdessen den Entwicklungsstand von `dev` verwenden:
+
+```text
+update add https://raw.githubusercontent.com/stapetz/fhem-cms/dev/controls_fhem-cms.txt
+update all https://raw.githubusercontent.com/stapetz/fhem-cms/dev/controls_fhem-cms.txt
+shutdown restart
+```
+
+Nach dem Update steht das Modul `FHEMCMS` zur Verfügung. Ein Testgerät lässt sich mit `define cmsTest FHEMCMS` anlegen. Die erzeugte Oberfläche und ihr URL-Pfad können mit `get cmsTest url` ermittelt werden.
+
+Die `controls_fhem-cms.txt` wird aus den installierbaren Dateien unter `FHEM/` und `www/fhem-cms/` erzeugt. Der repositorybezogene Dateiname vermeidet Kollisionen mit Controls-Dateien anderer Update-Quellen auf demselben FHEM-Server. GitHub Actions aktualisiert sie nach Änderungen auf `dev` oder `main`; sie nicht manuell bearbeiten. Eine FHEM-Installation erhält damit Modul, Komponenten, Styles, Skripte und weitere Frontend-Dateien gemeinsam.
 
 ## Branches
 

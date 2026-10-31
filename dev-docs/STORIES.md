@@ -1,0 +1,235 @@
+# Story- und Aufgabenliste
+
+Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorgeschlagenen Umsetzungsreihenfolge. Sie ist das gemeinsame Arbeitsboard in der Entwicklerdokumentation.
+
+- Offene Stories stehen als `- [ ]`, abgeschlossene Stories als `- [x]`.
+- Eine Story ist erst abgeschlossen, wenn ihre Akzeptanzkriterien geprüft sind und nötige Tests sowie Dokumentation vorliegen.
+- Neue bekannte Stories werden am Ende ergänzt. Wenn eine neue Voraussetzung die Reihenfolge ändert, wird die Abhängigkeit hier festgehalten und betroffene Stories werden gemeinsam neu geordnet.
+- Entscheidungen mit Auswirkungen auf das Zielbild oder die Architektur werden zusätzlich in [ENTWICKLUNG.md](./ENTWICKLUNG.md) dokumentiert.
+- Stories sind zunächst Vorschläge aus dem aktuellen Anforderungsstand. Umfang, Reihenfolge und Abnahmewerte können gemeinsam angepasst werden.
+
+## Reihenfolge
+
+### S01 - MVP-Umfang und Referenzumgebung festlegen
+
+**Ziel:** Ein gemeinsames, prüfbares erstes Lieferziel festlegen, bevor technische Details unumkehrbar werden.
+
+**Aufgaben**
+
+- [ ] MVP-Funktionen und explizite Nicht-Ziele bestätigen.
+- [ ] FHEM 6.5 als Mindest-Baseline für Integrationstests bestätigen und Testprozedur gegen die stabile Releaseversion dokumentieren.
+- [ ] Browsermatrix für Windows, macOS, Linux, Android und iOS festlegen: Edge, Chrome, Firefox und Safari auf den jeweils unterstützten Kombinationen.
+- [ ] Mindestversionen der Browser und konkrete Phone-/Tablet-Referenzgeräte festlegen.
+- [ ] Mobile-First-Abnahmekriterien für Phone, Tablet und Desktop festlegen.
+- [ ] Prüfen und bestätigen oder anpassen: erste bedienbare Ansicht innerhalb von 2 Sekunden und Zustandsanzeige innerhalb von 500 ms bei einem Dashboard mit 20 Widgets.
+- [ ] Messbedingungen für Performance und Serverlast dokumentieren.
+
+**Akzeptanzkriterien**
+
+- MVP-Umfang, Nicht-Ziele und Zielumgebung stehen in `ENTWICKLUNG.md`.
+- FHEM 6.5 oder eine neuere stabile Version ist als unterstützte Baseline festgehalten; der unterstützte Browser-/Betriebssystemumfang und die Browser-Mindestversionen sind dokumentiert.
+- Die Phone-, Tablet- und Desktop-Ansichten sind Teil der Abnahmematrix und werden Mobile-First geprüft.
+- Leistungsziele haben eine nachvollziehbare Messmethode und wurden bestätigt oder durch begründete Werte ersetzt.
+
+### S02 - FHEM-Integrationsweg und Kommunikation validieren
+
+**Abhängigkeit:** S01.
+
+**Ziel:** FHEMs normale `www`-Auslieferung für Frontend-Dateien von der JSON-API und dem Transport für Live-Zustände des Steuerungsmoduls abgrenzen.
+
+**Aufgaben**
+
+- [ ] FHEMs `www`-Verzeichnis und die normale URL-Abbildung für statische Dateien untersuchen.
+- [ ] Festlegen, wie `www/fhem-cms/` im Entwicklungs- und Installationsablauf bereitgestellt wird.
+- [x] Gemeinsame FTUI3-inspirierte Ressourcenstruktur und URL-Konvention für Device-/Oberflächen-Unterverzeichnisse festlegen (`d-<hex UTF-8-Device-Name>/<oberflaeche>/index.html`, initial `default`).
+- [ ] WebSocket, vorhandene FHEM-Schnittstellen und mögliche Alternativen anhand von Kompatibilität, Abhängigkeiten und Serverlast vergleichen.
+- [ ] Einen kleinen Machbarkeitsnachweis für den bevorzugten Weg erstellen.
+- [ ] Gewählte Architektur und verworfene Alternativen mit Begründung in `ENTWICKLUNG.md` dokumentieren.
+
+**Akzeptanzkriterien**
+
+- Statische Assets sind über FHEMs normalen `www`-Kontext erreichbar, ohne dass das Steuerungsmodul HTML- oder Asset-Seiten selbst ausliefert.
+- Die Ablage gemeinsamer Ressourcen und von `www/fhem-cms/<device>/<oberflaeche>/index.html` ist dokumentiert.
+- Der erforderliche JSON-Endpunkt und Live-Datentransport sind über einen dokumentierten, kompatiblen Weg erreichbar.
+- Für Live-Daten ist geklärt, wie Verbindung, Authentifizierung, Nachrichtenformat und Abonnement-Lebenszyklus funktionieren.
+- Die Lösung benötigt keine ungeprüfte oder nicht dokumentierte Abhängigkeit.
+
+### S03 - Sicherheits- und Berechtigungsmodell definieren
+
+**Abhängigkeit:** S02.
+
+**Ziel:** Vertrauensgrenzen und erlaubte Zugriffe vor der Implementierung von APIs und Widgets festlegen.
+
+**Aufgaben**
+
+- [ ] Nutzung von FHEM-Sitzung, Authentifizierung und Berechtigungen für HTTP- und dauerhafte Verbindungen nachweisen.
+- [ ] CSRF-Schutz und erlaubte Ursprünge für schreibende/API-Aufrufe definieren.
+- [ ] Erlaubte Geräte/Readings und serverseitige Validierung spezifizieren.
+- [ ] Regeln für Steuerbefehle definieren; bis zur Freigabe bleiben sie außerhalb des MVP.
+- [ ] Regeln für Markdown, Pfade, Konfigurationsgrößen, Logging und spätere Uploads/Plugins dokumentieren.
+
+**Akzeptanzkriterien**
+
+- Die Sicherheitsregeln sind in `ENTWICKLUNG.md` festgehalten.
+- Es gibt keine API, über die der Browser ungeprüfte FHEM-Befehle oder Dateipfade übermitteln kann.
+- Negativtests für nicht autorisierte Zugriffe und ungültige Eingaben sind festgelegt.
+
+### S04 - JSON-Konfigurationsschema und Persistenz definieren
+
+**Abhängigkeit:** S01.
+
+**Ziel:** Ein versioniertes und sicher speicherbares Format für Seiten, Layouts und Widgets festlegen.
+
+**Aufgaben**
+
+- [ ] Schema für Seiten, Komponenten, IDs und Layoutdaten definieren.
+- [ ] Regeln für Schema-Versionen, unbekannte Felder und künftige Migrationen festlegen.
+- [ ] Speicherort und Dateinamenskonvention im FHEM-Kontext festlegen.
+- [ ] Größenlimits, Backup- und sicheres Schreibverhalten spezifizieren.
+- [ ] Beispiele und Schema in `ENTWICKLUNG.md` oder einer späteren technischen Spezifikation dokumentieren.
+
+**Akzeptanzkriterien**
+
+- Gültige Beispielkonfigurationen bestehen die Schema-Validierung; ungültige werden abgewiesen.
+- Der Speicherpfad ist festgelegt und kann nicht durch Benutzereingaben verlassen werden.
+- Das Schema kann versioniert erweitert werden, ohne bestehende Konfigurationen stillschweigend zu beschädigen.
+
+### S05 - Binding- und Widget-Schnittstelle definieren
+
+**Abhängigkeiten:** S01, S03 und S04.
+
+**Ziel:** Festlegen, wie JSON-Konfigurationen zu Web Components werden und wie Widgets FHEM-Daten anzeigen.
+
+**Aufgaben**
+
+- [ ] Erstes lesendes Widget und seine JSON-Felder festlegen.
+- [ ] Zuordnung von Device/Reading zu Initialwerten und Live-Änderungen spezifizieren.
+- [ ] Lade-, Fehler-, Offline- und Berechtigungszustände definieren.
+- [ ] Benutzeraktionen von lesenden Bindings trennen.
+- [ ] Die frühere Angular-ähnliche Syntax nicht als Vertrag verwenden.
+
+**Akzeptanzkriterien**
+
+- Ein vollständiges, validierbares Beispiel für ein lesendes Widget ist dokumentiert.
+- Das Frontend kann keine ausführbaren Expressions aus einer gespeicherten Konfiguration ausführen.
+- Die Schnittstelle funktioniert mit der in S02 gewählten Kommunikation.
+
+### S06 - FHEM-Backend-Grundlage implementieren
+
+**Abhängigkeiten:** S02, S03 und S04.
+
+**Ziel:** Das Steuerungsmodul legt pro Device einen HTML-Bootstrap an und stellt sicheres Laden und Speichern von Konfigurationen bereit. Statische Frontend-Dateien werden unabhängig davon von FHEMs normaler `www`-Auslieferung bereitgestellt.
+
+**Aufgaben**
+
+- [x] Die gemeinsame FTUI3-inspirierte Ressourcenstruktur unter `www/fhem-cms/` anlegen: `components/`, `examples/`, `icons/`, `images/`, `js/`, `modules/`, `css/` und `themes/`.
+- [x] Beim `define` eines CMS-Devices eine HTML-Startdatei für die initiale `default`-Oberfläche unter `www/fhem-cms/d-<hex UTF-8-Device-Name>/default/index.html` erzeugen; sie referenziert gemeinsame Ressourcen und startet das richtige Device.
+- [x] Device-/Oberflächenpfad und `get <device> url` dokumentieren. Startseiten werden exklusiv erzeugt, fremde Dateien nicht überschrieben und beim `undef` vorerst nicht gelöscht.
+- [x] Eine zentrale `controls_fhem-cms.txt` für das gesamte Repository generieren und über GitHub Actions nach Branch-Updates aktualisieren.
+- [x] FHEM-Installationsbefehle für `dev` und `main` in der README dokumentieren; alle Laufzeitdateien werden über eine gemeinsame Update-Quelle installiert.
+- [x] Die erste wiederverwendbare Web Component `cms-device-card.js` erstellen und in das Testfrontend integrieren.
+- [ ] JSON-Lese-/Schreib-API mit Schema- und Pfadvalidierung umsetzen.
+- [ ] FHEM-Sitzung und Berechtigungen serverseitig prüfen.
+- [ ] Fehlerfälle nachvollziehbar protokollieren, ohne sensible Werte zu loggen.
+- [ ] Perl-Syntaxprüfung und passende Tests hinzufügen.
+
+**Akzeptanzkriterien**
+
+- Autorisierte Nutzer können eine gültige Konfiguration laden und speichern.
+- Für jedes definierte CMS-Device und jede eingerichtete Oberfläche existiert ein erreichbarer HTML-Einstiegspunkt unter `www/fhem-cms/d-<hex UTF-8-Device-Name>/<oberflaeche>/index.html`, der Device und Oberfläche startet sowie gemeinsame Frontend-Assets referenziert.
+- Oberflächen verschiedener Devices liegen in getrennten Verzeichnissen; gültige Device-/Oberflächenkennungen können keine fremden Verzeichnisse oder Dateien adressieren.
+- Das Steuerungsmodul registriert keinen eigenen HTML-/Asset-Web-Endpunkt; statische Dateien werden aus dem `www`-Kontext ausgeliefert.
+- Die einzelne `controls_fhem-cms.txt` enthält sowohl das FHEM-Modul als auch alle gemeinsamen Assets und Komponenten, ohne eine Update-Aufteilung nach Modulen.
+- Die README beschreibt Installation aus Entwicklungs- und freigegebenem Branch über jeweils diese eine Controls-Datei.
+- Ungültige, zu große oder nicht autorisierte Anfragen werden mit erkennbaren Fehlern abgewiesen.
+- Keine angeforderte Device-ID oder Datei kann aus dem vorgesehenen CMS- oder Datenverzeichnis ausbrechen oder fremde Dateien überschreiben.
+- Konfigurationen bleiben nach einem FHEM-Neustart verfügbar.
+
+### S07 - SPA-Grundgerüst und Seitenrendering erstellen
+
+**Abhängigkeiten:** S01, S04, S05 und S06.
+
+**Ziel:** Eine gespeicherte Konfiguration als navigierbare, responsive CMS-Seite darstellen.
+
+**Aufgaben**
+
+- [x] Frontend-Grundgerüst unter `www/fhem-cms/` mit HTML-Bootstrap, Mobile-First-CSS und JS-Initialisierung anlegen.
+- [ ] JSON-Konfiguration laden und validierte Seiten/Widgets rendern.
+- [ ] Grundlegende Navigation und Layoutdarstellung implementieren.
+- [ ] Lade-, Fehler- und Berechtigungszustände anzeigen.
+
+**Akzeptanzkriterien**
+
+- Eine gültige gespeicherte Beispielseite wird ohne manuelle Anpassung im Browser dargestellt.
+- Der device- und oberflächenbezogene HTML-Bootstrap lädt gemeinsame Assets aus `www/fhem-cms/` und startet genau die zugehörige Oberfläche.
+- Unbekannte oder ungültige Widgettypen führen zu einem sichtbaren, kontrollierten Fehler statt zu ausführbarem Markup.
+- Kernnavigation und Layout sind auf der vereinbarten Zielumgebung bedienbar.
+
+### S08 - Redaktionellen Textbaustein umsetzen
+
+**Abhängigkeiten:** S04, S06 und S07.
+
+**Ziel:** Redaktionelle Inhalte als Kern des CMS sicher anzeigen und bearbeiten können.
+
+**Aufgaben**
+
+- [ ] Text-/Markdown-Komponente spezifizieren und umsetzen.
+- [ ] Darstellung gegen XSS absichern; erlaubte Markdown-Funktionen definieren.
+- [ ] Bearbeiten und Speichern über die validierte Konfigurations-API integrieren.
+
+**Akzeptanzkriterien**
+
+- Text kann erstellt, gespeichert, nach Neustart wieder geladen und angezeigt werden.
+- Testinhalte mit HTML-/Script-Payloads werden nicht als ausführbarer Code behandelt.
+- Bedienung ist mit Maus, Touch und Tastatur möglich.
+
+### S09 - Lesendes FHEM-Widget und Live-Zustände umsetzen
+
+**Abhängigkeiten:** S02, S03, S05, S06 und S07.
+
+**Ziel:** Ein konfiguriertes FHEM-Reading initial und bei Änderungen anzeigen.
+
+**Aufgaben**
+
+- [ ] Serverseitige Prüfung von Device- und Reading-Abonnements implementieren.
+- [ ] Initialwerte und Live-Änderungen über die gewählte Kommunikation übertragen.
+- [ ] Abonnements bei Seitenwechsel, Verbindungsende und Sitzungsende aufräumen.
+- [ ] Reconnect mit erneutem Laden aktueller Zustände und Wiederherstellen der Abonnements umsetzen.
+- [ ] Offline-, Fehler- und veraltete Zustände in der UI sichtbar behandeln.
+
+**Akzeptanzkriterien**
+
+- Nur konfigurierte und autorisierte Readings werden übertragen.
+- Nach einem Reconnect zeigt das Widget den aktuellen Backend-Zustand, nicht nur zwischenzeitliche Nachrichten.
+- Es bleiben nach einem Seitenwechsel oder Verbindungsende keine unnötigen Abonnements bestehen.
+- Die bestätigten Performance- und Serverlastziele aus S01 werden gemessen.
+
+### S10 - MVP-Abnahme und Dokumentation abschließen
+
+**Abhängigkeiten:** S06 bis S09.
+
+**Ziel:** Den festgelegten MVP auf der Referenzumgebung reproduzierbar prüfen.
+
+**Aufgaben**
+
+- [ ] Testfälle für Berechtigungen, ungültige Daten, Neustart und Verbindungsabbruch ausführen.
+- [ ] Browser-, Tastatur- und Touch-Bedienung auf den vereinbarten Zielgeräten prüfen.
+- [ ] Performance und Serverlast mit den S01-Messbedingungen bewerten.
+- [ ] Installations-, Konfigurations- und Fehlerbehebungsdokumentation für Anwender erstellen.
+- [ ] Abweichungen und Folgestories am Ende dieser Liste ergänzen.
+
+**Akzeptanzkriterien**
+
+- Alle MVP-Kriterien aus `ENTWICKLUNG.md` sind nachweislich erfüllt oder Abweichungen sind ausdrücklich akzeptiert und dokumentiert.
+- Tests und Installationsschritte sind für Entwickler nachvollziehbar.
+- Der Stand ist erst nach ausdrücklicher Freigabe zur Veröffentlichung auf `main` vorgesehen.
+
+## Später prüfen - Erweiterungen außerhalb des MVP
+
+Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.
+
+- Bild-Uploads und Medienverwaltung mit Dateityp-, Größen- und Speicherregeln.
+- Schreibende Widgets und FHEM-Befehle nach separater Sicherheitsfreigabe.
+- Kalender-, Wetter- und RSS-Komponenten einschließlich externer Vertrauensgrenzen.
+- Plugin-Vertrag, Versionskompatibilität und Isolation von Drittanbieter-Code.
+- Charts, weitere Widgettypen, Themes und zusätzliche Layoutfunktionen.
