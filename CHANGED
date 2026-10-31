@@ -1,3 +1,8 @@
+2026-10-31 - Add FHEM room and direct CMS link
+
+Assign new CMS devices to the FHEM CMS room and show a room-view link to the
+device entry page.
+
 2026-10-31 - Use device names in CMS URLs
 
 Use the FHEM device name in the generated device directory and returned URL.

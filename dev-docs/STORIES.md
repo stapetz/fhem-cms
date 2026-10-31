@@ -125,6 +125,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Die gemeinsame FTUI3-inspirierte Ressourcenstruktur unter `www/fhem-cms/` anlegen: `components/`, `examples/`, `icons/`, `images/`, `js/`, `modules/`, `css/` und `themes/`.
 - [x] Beim `define` eines CMS-Devices eine HTML-Startdatei direkt unter `www/fhem-cms/<FHEM-Device-Name>/index.html` erzeugen; sie referenziert gemeinsame Ressourcen und startet das richtige Device.
 - [x] Device-Pfad und `get <device> url` dokumentieren. Startseiten werden exklusiv erzeugt, fremde Dateien nicht überschrieben und beim `undef` nicht gelöscht.
+- [x] Neue Devices standardmäßig dem Raum `FHEM CMS` zuordnen und in der FHEMWEB-Raumansicht einen direkten Link zur Startseite anzeigen; eine vorhandene Raumzuordnung bleibt erhalten.
 - [ ] Eine separate Datenlöschfunktion mit Bestätigung umsetzen, die den betroffenen Device-Ordner anzeigt und die Optionen Löschen, Behalten und Abbrechen anbietet. Das normale FHEM-`delete <device>` behält die Dateien.
 - [x] Eine zentrale `controls_fhem-cms.txt` für das gesamte Repository generieren und über GitHub Actions nach Branch-Updates aktualisieren.
 - [x] FHEM-Installationsbefehle für `dev` und `main` in der README dokumentieren; alle Laufzeitdateien werden über eine gemeinsame Update-Quelle installiert.
@@ -138,6 +139,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 - Autorisierte Nutzer können eine gültige Konfiguration laden und speichern.
 - Für jedes definierte CMS-Device existiert ein erreichbarer HTML-Einstiegspunkt unter `www/fhem-cms/<FHEM-Device-Name>/index.html`, der das Device startet und gemeinsame Frontend-Assets referenziert.
+- Neue Devices erscheinen standardmäßig im Raum `FHEM CMS`; der Link in der Raumansicht öffnet den CMS-Einstieg unter dem aktuellen FHEMWEB-Pfad.
 - Jedes Device bildet eine vollständige Inhaltsstruktur mit einer Startseite und Navigation zu weiteren Inhaltsseiten ab. Ein weiteres Device erhält einen eigenen Ordner und Einstiegspunkt.
 - Das Steuerungsmodul registriert keinen eigenen HTML-/Asset-Web-Endpunkt; statische Dateien werden aus dem `www`-Kontext ausgeliefert.
 - Die einzelne `controls_fhem-cms.txt` enthält sowohl das FHEM-Modul als auch alle gemeinsamen Assets und Komponenten, ohne eine Update-Aufteilung nach Modulen.

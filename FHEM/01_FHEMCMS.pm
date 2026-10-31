@@ -17,6 +17,7 @@ sub FHEMCMS_Initialize {
     $modHash->{DefFn} = 'FHEMCMS_Define';
     $modHash->{UndefFn} = 'FHEMCMS_Undef';
     $modHash->{GetFn} = 'FHEMCMS_Get';
+    $modHash->{FW_summaryFn} = 'FHEMCMS_Summary';
     $modHash->{AttrList} = $readingFnAttributes // '';
 }
 
@@ -32,6 +33,11 @@ sub FHEMCMS_Define {
 
     my $error = FHEMCMS_CreateStartPage($name);
     return $error if (defined($error));
+
+    if (!defined($main::attr{$name}{room}) || $main::attr{$name}{room} eq '') {
+        $error = CommandAttr(undef, "$name room FHEM CMS");
+        return $error if (defined($error));
+    }
 
     $hash->{VERSION} = $FHEMCMS_VERSION;
     $hash->{STATE} = 'defined';
@@ -56,6 +62,15 @@ sub FHEMCMS_Get {
     }
 
     return 'Unknown argument ' . $cmd . ', choose one of url:noArg';
+}
+
+sub FHEMCMS_Summary {
+    my ($webName, $name) = @_;
+    return '' if (!defined($name) || $name !~ /\A[A-Za-z0-9_.-]{1,128}\z/);
+
+    my $basePath = $main::FW_ME || '/fhem';
+    $basePath =~ s{/$}{};
+    return '<a href="' . $basePath . '/fhem-cms/' . $name . '/index.html">CMS starten</a>';
 }
 
 sub FHEMCMS_CreateStartPage {

@@ -6,7 +6,14 @@ use File::Spec;
 use File::Temp qw(tempdir);
 use Test::More;
 
-our %attr;
+our (%attr, $FW_ME);
+
+sub CommandAttr {
+    my ($client, $definition) = @_;
+    my ($name, $attribute, $value) = split(/\s+/, $definition, 3);
+    $attr{$name}{$attribute} = $value;
+    return undef;
+}
 
 require './FHEM/01_FHEMCMS.pm';
 
@@ -14,6 +21,7 @@ my $modHash = {};
 FHEMCMS_Initialize($modHash);
 is($modHash->{DefFn}, 'FHEMCMS_Define', 'registers the define callback');
 is($modHash->{GetFn}, 'FHEMCMS_Get', 'registers the get callback');
+is($modHash->{FW_summaryFn}, 'FHEMCMS_Summary', 'registers the FHEMWEB summary link');
 
 my $modPath = tempdir(CLEANUP => 1);
 make_path(File::Spec->catdir($modPath, 'www'));
@@ -22,6 +30,7 @@ $attr{global}{modpath} = $modPath;
 my $name = 'CMS';
 my $hash = {NAME => $name};
 is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines a CMS test device');
+is($attr{$name}{room}, 'FHEM CMS', 'assigns new devices to the FHEM CMS room');
 
 my $pagePath = File::Spec->catfile(
     $modPath, 'www', 'fhem-cms', 'CMS', 'index.html');
@@ -44,6 +53,15 @@ is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'redefining a device accepts i
 is(FHEMCMS_Get($hash, $name, 'url'),
     '/fhem/fhem-cms/CMS/index.html',
     'returns the test page URL');
+$FW_ME = '/fhem';
+is(FHEMCMS_Summary('WEB', $name, 'FHEM CMS', {}),
+    '<a href="/fhem/fhem-cms/CMS/index.html">CMS starten</a>',
+    'renders a link to the device entry page in the FHEM room');
+$FW_ME = '/custom-fhem';
+like(FHEMCMS_Summary('WEB', $name, 'FHEM CMS', {}),
+    qr{href="/custom-fhem/fhem-cms/CMS/index\.html"},
+    'uses the current FHEMWEB path for the link');
+$FW_ME = '/fhem';
 is(FHEMCMS_Undef($hash), undef, 'allows deleting the device definition');
 ok(-f $pagePath, 'keeps the device files when the definition is deleted');
 
@@ -54,6 +72,14 @@ is(FHEMCMS_Define($lowercaseHash, "$lowercaseName fhemcms"), undef,
 ok(-f File::Spec->catfile(
     $modPath, 'www', 'fhem-cms', $lowercaseName, 'index.html'),
     'creates the start page for a lowercase module type');
+
+my $customRoomName = 'cmsCustomRoom';
+$attr{$customRoomName}{room} = 'Arbeitszimmer';
+my $customRoomHash = {NAME => $customRoomName};
+is(FHEMCMS_Define($customRoomHash, "$customRoomName FHEMCMS"), undef,
+    'defines a device with a preconfigured room');
+is($attr{$customRoomName}{room}, 'Arbeitszimmer',
+    'preserves a room already assigned by the user');
 
 my $invalid = {NAME => '../escape'};
 like(FHEMCMS_Define($invalid, '../escape FHEMCMS'), qr/Device-Name/,
