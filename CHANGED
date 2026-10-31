@@ -1,3 +1,10 @@
+2026-10-31 - Grid lines in edit mode
+
+A toolbar button shows or hides the layout grid as grid lines while editing.
+Reload the browser (hard).
+
+S23 - Gitternetz im Bearbeitungsmodus
+
 2026-10-31 - Cleaner toolbar, no layout mode, message icon
 
 Fixed toolbar order (Navigation, + Widget, Preview, Publish, Discard), styled

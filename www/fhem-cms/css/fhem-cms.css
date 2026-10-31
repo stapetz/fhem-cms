@@ -226,6 +226,24 @@ body {
   color: #c4d0c8;
 }
 
+.cms-guides {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  grid-template-rows: subgrid;
+  pointer-events: none;
+}
+
+.cms-guides span {
+  border: 1px dashed rgba(165, 201, 178, 0.22);
+  border-radius: 0.4rem;
+}
+
+.cms-grid-toggle[aria-pressed="true"] {
+  background: #34493e;
+  border-color: #43564a;
+}
+
 .cms-drag-layer {
   position: relative;
   z-index: 2;

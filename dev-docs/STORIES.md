@@ -358,6 +358,15 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Die Leiste schwebt über der Seite (`position: fixed`) und zählt nicht zum Raster des Seiteninhalts; Inhalte lassen sich bis an den oberen Seitenrand schieben.
 - [x] Die Befehle sehen aus wie die Menüleiste klassischer Programme (Word, Pages): eine zusammenhängende, beim Scrollen oben haftende Leiste mit flachen Einträgen, Trennstrichen zwischen den Gruppen und einem Dropdown „+ Widget ▾“.
 
+### S23 - Gitternetz im Bearbeitungsmodus
+
+**Ziel:** Das Raster des Seiteninhalts ist beim Platzieren sichtbar.
+
+- [x] Schaltfläche ▦ am Ende der Werkzeugleiste blendet das 12-Spalten-Raster als gestrichelte Gitterlinien ein oder aus. Die Einstellung bleibt pro Browser erhalten.
+- [x] Das Gitternetz reicht mindestens zwei Zeilen unter den Inhalt und wächst beim Verschieben mit.
+- [x] Nur im Bearbeitungsmodus; Ansicht und Vorschau zeigen kein Gitternetz.
+- Entschieden: Keine einstellbare Rasterfeinheit (bleibt bei 12 Spalten).
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.

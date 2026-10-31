@@ -1,12 +1,13 @@
 import '../components/cms-thermostat.js';
 import '../components/cms-text.js';
 import { FhemClient, isValidName } from './fhem-client.js';
-import { cellFromPoint, moveWidget, resizeWidget } from './layout.js';
+import { GRID_COLUMNS, cellFromPoint, moveWidget, resizeWidget } from './layout.js';
 
 const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
 const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
 const NAV_ID = '__nav';
+const GUIDE_KEY = 'fhem-cms-show-grid';
 const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 12, h: 1 };
 
 // Ohne Parameter zeigt die Seite nur die fertige Homepage. ?mode=edit startet die Bearbeitung.
@@ -45,7 +46,13 @@ class CmsPage {
     this.publishButton = this.button('Veröffentlichen', () => this.publish());
     this.discardButton = this.button('Entwurf verwerfen', () => this.discard());
     this.backupsButton = this.button('Backups', () => this.showBackups());
-    this.pageButtons = [this.navButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton];
+    this.showGrid = !VIEW_MODE && window.localStorage.getItem(GUIDE_KEY) === '1';
+    this.gridButton = this.button('▦', () => this.toggleGuides());
+    this.gridButton.classList.add('cms-grid-toggle');
+    this.gridButton.title = 'Raster anzeigen oder ausblenden';
+    this.gridButton.setAttribute('aria-label', 'Raster anzeigen');
+    this.gridButton.setAttribute('aria-pressed', String(this.showGrid));
+    this.pageButtons = [this.navButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.gridButton];
     this.publishButton.classList.add('cms-publish');
     this.hasDraft = false;
     this.statusText = '';
@@ -79,7 +86,7 @@ class CmsPage {
     this.toolbar.setAttribute('role', 'toolbar');
     this.toolbar.setAttribute('aria-label', 'Bearbeiten');
     this.toolbar.append(this.navButton, this.menu, separator(), this.previewButton, separator(),
-      this.publishButton, this.discardButton, separator(), this.backupsButton);
+      this.publishButton, this.discardButton, separator(), this.backupsButton, separator(), this.gridButton);
 
     this.grid = document.createElement('section');
     this.grid.className = 'cms-grid';
@@ -742,6 +749,41 @@ class CmsPage {
     this.syncOverlays();
   }
 
+  toggleGuides() {
+    this.showGrid = !this.showGrid;
+    window.localStorage.setItem(GUIDE_KEY, this.showGrid ? '1' : '0');
+    this.gridButton.setAttribute('aria-pressed', String(this.showGrid));
+    this.syncGuides();
+  }
+
+  // Gitternetzlinien: eine leere Zelle je Rasterfeld, mindestens bis zwei Zeilen unter dem Inhalt.
+  syncGuides(layout) {
+    this.guides?.remove();
+    this.guides = null;
+    if (VIEW_MODE || !this.showGrid) {
+      return;
+    }
+    const items = this.layoutItems();
+    const rows = items.reduce((max, item) => {
+      const grid = (layout && layout.get(item.id)) || item.grid;
+      return Math.max(max, grid.row + grid.h - 1);
+    }, 1) + 2;
+    const guides = document.createElement('div');
+    guides.className = 'cms-guides';
+    guides.setAttribute('aria-hidden', 'true');
+    guides.style.gridRow = `1 / span ${rows}`;
+    for (let row = 1; row <= rows; row += 1) {
+      for (let col = 1; col <= GRID_COLUMNS; col += 1) {
+        const cell = document.createElement('span');
+        cell.style.gridColumn = String(col);
+        cell.style.gridRow = String(row);
+        guides.append(cell);
+      }
+    }
+    this.guides = guides;
+    this.grid.prepend(guides);
+  }
+
   // Im Bearbeitungsmodus liegt an jeder Kachel ein unauffälliger Griff zum Ziehen (Maus, Touch, Pfeiltasten)
   // und unten rechts ein Griff für die Größe. Die Kachel selbst bleibt bedienbar.
   syncOverlays() {
@@ -749,6 +791,7 @@ class CmsPage {
       overlay.remove();
     }
     this.overlays.clear();
+    this.syncGuides();
     if (!this.layoutMode) {
       return;
     }
@@ -782,6 +825,9 @@ class CmsPage {
 
   previewLayout(layout) {
     this.pendingLayout = layout;
+    if (this.showGrid) {
+      this.syncGuides(layout);
+    }
     for (const widget of this.layoutItems()) {
       const grid = layout.get(widget.id);
       const element = this.elements.get(widget.id);
