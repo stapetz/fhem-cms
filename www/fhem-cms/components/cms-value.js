@@ -1,5 +1,6 @@
 const UNITS = ['°C', '%', 'W', 'kW', 'kWh', 'V', 'A', 'hPa', 'lx', 'mm', 'm', 'km', 'km/h', 'm/s', 'l', 'ppm', 'dB'];
 const ICON_PAGE = 120;
+const ICON_COLOR = '8fd0a8';
 const PICKER_MAX_ROWS = 200;
 const PICKER_COLUMNS = [
   { key: 'name', label: 'Device' },
@@ -29,19 +30,21 @@ class FHEMCMSValue extends HTMLElement {
     }
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; min-width: 0; }
+        :host { display: block; min-width: 0; min-height: 0; container-type: size; }
         * { box-sizing: border-box; }
-        .tile { height: 100%; padding: 0.6rem 1rem; border: 1px solid #43564a; border-radius: 1rem;
+        .tile { height: 100%; overflow: hidden; padding: 0 clamp(0.3rem, 6cqw, 1rem); border: 1px solid #43564a; border-radius: 1rem;
           background: #202e27; display: flex; align-items: center; gap: 0.6rem; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
-        .icon { width: 2rem; height: 2rem; flex: none; object-fit: contain; }
-        .value { flex: 1; min-width: 0; font-size: 1.6rem; font-weight: 600; overflow-wrap: anywhere; }
-        .unit { margin-left: 0.25rem; font-size: 1rem; font-weight: 400; color: #a5c9b2; }
+        .icon { height: min(70cqh, 4rem); width: min(70cqh, 4rem); flex: none; object-fit: contain; }
+        .icon-row .icon { width: 2rem; height: 2rem; }
+        .value { flex: 1; min-width: 0; font-size: clamp(0.7rem, min(45cqh, 18cqw), 4.5rem); line-height: 1.1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .unit { margin-left: 0.25rem; font-size: 0.6em; font-weight: 400; color: #a5c9b2; }
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
           border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
         button:hover { background: #34493e; }
         button:focus-visible, input:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
-        .gear { padding: 0.2rem 0.5rem; }
+        .gear { padding: 0.1rem 0.4rem; flex: none; }
+        @container (max-width: 7rem) { .gear { display: none; } }
         :host([view-only]) [data-open-config] { display: none; }
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
           padding: 1.25rem; width: min(94vw, 34rem); max-height: 94vh; overflow: auto; }
@@ -219,11 +222,26 @@ class FHEMCMSValue extends HTMLElement {
     const tile = this.shadowRoot.querySelector('[data-tile]');
     tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''}`;
     const icon = this.shadowRoot.querySelector('[data-icon]');
-    const url = this.widgetConfig.icon && this.services ? this.services.iconUrl(this.widgetConfig.icon) : '';
+    const url = this.widgetConfig.icon && this.services ? this.coloredIcon(this.widgetConfig.icon) : '';
     icon.hidden = !url;
-    if (url && icon.getAttribute('src') !== url) {
-      icon.src = url;
+    this.setIconSrc(icon, url);
+  }
+
+  // SVG-Icons liefert FHEMWEB mit Farbsuffix (@farbe) aus; andere Formate fallen auf das Original zurück.
+  coloredIcon(name) {
+    const url = this.services.iconUrl(name);
+    return url ? `${url}@${ICON_COLOR}` : '';
+  }
+
+  setIconSrc(image, url) {
+    if (!url || image.getAttribute('src') === url) {
+      return;
     }
+    image.onerror = () => {
+      image.onerror = null;
+      image.src = url.replace(`@${ICON_COLOR}`, '');
+    };
+    image.src = url;
   }
 
   async openConfig(options = {}) {
@@ -346,11 +364,9 @@ class FHEMCMSValue extends HTMLElement {
   setIcon(name) {
     this.icon = name;
     const preview = this.shadowRoot.querySelector('[data-icon-preview]');
-    const url = name && this.services ? this.services.iconUrl(name) : '';
+    const url = name && this.services ? this.coloredIcon(name) : '';
     preview.hidden = !url;
-    if (url) {
-      preview.src = url;
-    }
+    this.setIconSrc(preview, url);
     this.shadowRoot.querySelector('[data-icon-name]').textContent = name || 'kein Icon';
   }
 
@@ -384,7 +400,7 @@ class FHEMCMSValue extends HTMLElement {
       const image = document.createElement('img');
       image.loading = 'lazy';
       image.alt = '';
-      image.src = this.services.iconUrl(name);
+      this.setIconSrc(image, this.coloredIcon(name));
       button.append(image);
       button.addEventListener('click', () => {
         this.setIcon(name);

@@ -848,7 +848,7 @@ class CmsPage {
       const inRow = items.filter((item) => gridOf(item).row <= row && row < gridOf(item).row + gridOf(item).h);
       const navOnly = inRow.length > 0 && inRow.every((item) => item.id === NAV_ID && gridOf(item).h === 1)
         && this.config.navigation.orientation !== 'vertical';
-      tracks.push(navOnly ? 'auto' : 'minmax(5.5rem, auto)');
+      tracks.push(navOnly ? 'auto' : 'minmax(2.75rem, auto)');
     }
     this.grid.style.gridTemplateRows = tracks.join(' ');
   }
@@ -1151,7 +1151,7 @@ class CmsPage {
   addWidget(type) {
     const prefix = { text: 'x', 'fhem-value': 'v' }[type] || 't';
     const id = this.uniqueId(prefix, new Set(this.page.widgets.map((widget) => widget.id)));
-    const size = { text: { w: 6, h: 2 }, 'fhem-value': { w: 3, h: 1 } }[type] || { w: 4, h: 2 };
+    const size = { text: { w: 6, h: 2 }, 'fhem-value': { w: 3, h: 2 } }[type] || { w: 4, h: 2 };
     const grid = { col: 1, row: this.nextFreeRow(), ...size };
     let widget = { id, type, device: '', readings: { actual: '', target: '' }, grid };
     if (type === 'text') {

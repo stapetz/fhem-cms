@@ -371,6 +371,9 @@ Jedes Widget mit Device-Bezug folgt dem Muster der Thermostat-Kachel:
 
 5. Keine nativen Browser-Popups in Dialogen: `<datalist>` (und ähnliche Auswahlfenster) werden vom Browser außerhalb des modalen `<dialog>`/Shadow-DOM positioniert und springen aus dem Fenster. Vorschläge werden stattdessen im Dialog selbst gezeigt (z. B. Schaltflächen unter dem Textfeld, die den Wert eintragen; freier Text bleibt möglich). Für Listen sind `<select>` oder der Suchdialog zu verwenden.
 
+6. Größe: Kacheln müssen bis 1×1 Rasterfeld verkleinerbar sein. Rasterzeilen haben nur 2,75 rem Mindesthöhe; Widgets mit festem Inhalt skalieren Schrift und Icons über Container-Einheiten (`container-type: size`, `cqh`/`cqw`) statt feste Mindestmaße zu setzen.
+7. Icons: FHEM-Icons sind meist schwarz und auf dem dunklen Design unlesbar. SVG-Icons mit dem FHEMWEB-Farbsuffix laden (`<url>@8fd0a8`) und bei Fehler (z. B. PNG) auf die URL ohne Suffix zurückfallen.
+
 Neue Widgets übernehmen diesen Ablauf; Abweichungen werden vorher in `STORIES.md` abgestimmt.
 
 ## Live-Zustände und Verbindungsverhalten (S09)
