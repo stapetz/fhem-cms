@@ -353,3 +353,13 @@ FHEMWEB und vorgeschaltete Proxys (z. B. nginx) halten statische Dateien lange i
 - **Live-Abos:** Daten und WebSocket-Abos gelten nur für die aktuelle Seite und werden beim Seitenwechsel neu aufgebaut.
 - **„+ Widget“-Menü:** Thermostat-Kachel und Textbaustein.
 - **Textbaustein (`type: "text"`):** Felder `id`, `type`, `markdown` (höchstens 20000 Zeichen, keine Steuerzeichen außer Tab/Zeilenumbruch), optional `title` (höchstens 64 Zeichen), `grid`. Der Renderer `js/markdown.js` ist eigenständig und baut nur DOM-Knoten per `createElement`/`textContent`. Unterstützt: `#`–`###`, Absätze, `-`/`1.`-Listen, `**fett**`, `*kursiv*`, `` `code` ``, `[Text](URL)`. HTML bleibt Text; Links nur mit `http(s)` oder relativ (`/`, `./`, `../`, `#`), mit `rel="noopener noreferrer"`.
+
+## Live-Zustände und Verbindungsverhalten (S09)
+
+- **Abrufe:** Ein Refresh ist genau ein `jsonlist2`-Aufruf je Seite (Hauptdevices plus Kanäle über `device=<name>`), unabhängig von der Widget-Zahl. Das Polling läuft alle 30 s, nur bei sichtbarem Tab. Beim Sichtbarwerden und bei `online` wird sofort neu gelesen.
+- **Live-Hinweise:** Eine WebSocket-Verbindung (`inform`) je geöffneter Seite, gefiltert auf die Namen der aktuellen Seite. Ereignisse lösen ein entprelltes (300 ms) Neulesen aus, die Werte kommen nie aus dem Ereignis-HTML. Der WebSocket wird bei Seitenwechsel neu aufgebaut und bei `pagehide` beendet; Reconnect mit Backoff (1 s bis 30 s).
+- **Reconnect:** Nach dem Wiederverbinden wird sofort der aktuelle Zustand neu gelesen. Aus dem Back-Forward-Cache zurückkehrende Seiten starten Polling und Refresh neu (`pageshow`).
+- **Fehler und veraltete Zustände:** Schlägt ein Abruf fehl, bleiben die letzten Werte sichtbar, die Kachel wird gedämpft und gestrichelt dargestellt, trägt „Veraltet seit hh:mm:ss“ und der Sollwert-Slider ist gesperrt. Die Statuszeile nennt die Ursache. Beim nächsten erfolgreichen Abruf verschwindet die Markierung.
+- **Autorisierung:** Das CMS besitzt keine eigene Rechteprüfung für Readings. FHEMWEB (`allowed`, Device-Rechte) entscheidet; ohne Berechtigung schlagen die Abrufe fehl und werden als Fehler angezeigt.
+- **Nicht gemessen:** Serverlast und Latenz auf der Referenzumgebung (Messung gehört zu S10).
+

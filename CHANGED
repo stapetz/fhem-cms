@@ -1,3 +1,9 @@
+2026-10-31 - Show stale and offline states and clean up on page hide
+
+Keep the last values visible when a refresh fails and mark tiles as stale,
+reload immediately after a reconnect, pause polling in hidden tabs and stop
+timers and subscriptions when the page is hidden.
+
 2026-10-31 - Add text widget, multiple pages and navigation
 
 Add the markdown text widget with a safe built-in renderer, pages with hash

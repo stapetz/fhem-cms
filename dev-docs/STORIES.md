@@ -198,11 +198,11 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Aufgaben**
 
-- [ ] Serverseitige Prüfung von Device- und Reading-Abonnements implementieren.
-- [ ] Initialwerte und Live-Änderungen über die gewählte Kommunikation übertragen.
-- [ ] Abonnements bei Seitenwechsel, Verbindungsende und Sitzungsende aufräumen.
-- [ ] Reconnect mit erneutem Laden aktueller Zustände und Wiederherstellen der Abonnements umsetzen.
-- [ ] Offline-, Fehler- und veraltete Zustände in der UI sichtbar behandeln.
+- [x] Serverseitige Prüfung von Device- und Reading-Abonnements: Das Frontend verwendet ausschließlich FHEMWEB (`jsonlist2`, `inform`); Authentifizierung, `allowed` und Device-Rechte bleiben bei FHEMWEB. Das CMS fragt nur Devices der konfigurierten Widgets ab (Namen validiert).
+- [x] Initialwerte und Live-Änderungen über die gewählte Kommunikation übertragen.
+- [x] Abonnements bei Seitenwechsel, Verbindungsende und Sitzungsende aufräumen.
+- [x] Reconnect mit erneutem Laden aktueller Zustände und Wiederherstellen der Abonnements umsetzen.
+- [x] Offline-, Fehler- und veraltete Zustände in der UI sichtbar behandeln.
 
 **Akzeptanzkriterien**
 

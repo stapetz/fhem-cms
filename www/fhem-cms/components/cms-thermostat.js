@@ -69,6 +69,7 @@ class FHEMCMSThermostat extends HTMLElement {
     this.sendTimer = null;
     this.pending = false;
     this.sent = null;
+    this.staleSince = null;
   }
 
   connectedCallback() {
@@ -110,6 +111,7 @@ class FHEMCMSThermostat extends HTMLElement {
         .marker { position: absolute; top: -0.2rem; width: 0.2rem; height: 0.9rem; background: #fff; border-radius: 0.1rem; }
         .status { margin: 0; min-height: 1.2em; font-size: 0.85rem; color: #a5c9b2; }
         .status[data-error] { color: #ffb4a8; }
+        .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
           padding: 1.25rem; width: min(92vw, 32rem); }
         dialog::backdrop { background: rgb(0 0 0 / 0.6); }
@@ -248,6 +250,17 @@ class FHEMCMSThermostat extends HTMLElement {
     this.render();
   }
 
+  // Zeitpunkt des letzten erfolgreichen Abrufs, solange die Anzeige veraltet ist; sonst null.
+  set stale(since) {
+    this.staleSince = since || null;
+    const tile = this.shadowRoot.querySelector('.tile');
+    if (!tile) {
+      return;
+    }
+    tile.toggleAttribute('data-stale', this.staleSince !== null);
+    this.render();
+  }
+
   buildDialogFields() {
     const readings = this.shadowRoot.querySelector('[data-readings]');
     for (const field of FIELDS) {
@@ -301,7 +314,7 @@ class FHEMCMSThermostat extends HTMLElement {
     const output = root.querySelector('[data-target-out]');
     const targetRaw = read(config.readings.target);
     const target = toNumber(targetRaw);
-    slider.disabled = !this.services || !this.snapshot || target === null;
+    slider.disabled = !this.services || !this.snapshot || target === null || Boolean(this.staleSince);
     if (this.sent && (target === this.sent.value || Date.now() > this.sent.until)) {
       this.sent = null;
       this.setStatus('');
@@ -331,7 +344,9 @@ class FHEMCMSThermostat extends HTMLElement {
       root.querySelector('[data-valve-marker]').style.left = `calc(${percent}% - 0.1rem)`;
     }
 
-    if (this.snapshot === null && !this.pending) {
+    if (this.staleSince && !this.pending) {
+      this.setStatus(`Veraltet seit ${new Date(this.staleSince).toLocaleTimeString('de-DE')}`, true);
+    } else if (this.snapshot === null && !this.pending) {
       this.setStatus('Keine Daten für dieses Device', true);
     } else if (!this.pending && root.querySelector('[data-status]').hasAttribute('data-error')) {
       this.setStatus('');

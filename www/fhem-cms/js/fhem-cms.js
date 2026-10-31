@@ -18,6 +18,9 @@ class CmsPage {
     this.live = false;
     this.deviceCache = null;
     this.subscribedKey = '';
+    this.lastSuccess = null;
+    this.pollTimer = null;
+    this.stopped = false;
 
     this.pageId = null;
     this.loadToken = 0;
@@ -99,8 +102,41 @@ class CmsPage {
       return;
     }
     window.addEventListener('hashchange', () => this.showPage(this.pageFromHash()));
-    window.setInterval(() => this.refresh(), POLL_INTERVAL_MS);
+    window.addEventListener('online', () => this.refresh());
+    window.addEventListener('offline', () => this.markStale('Offline'));
+    window.addEventListener('pagehide', () => this.stop());
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        this.startPolling();
+        this.refresh();
+      }
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        this.refresh();
+      }
+    });
+    this.startPolling();
     await this.showPage(this.pageFromHash());
+  }
+
+  // Beendet Timer und Abonnements, damit nach dem Verlassen der Seite nichts weiterläuft.
+  startPolling() {
+    window.clearInterval(this.pollTimer);
+    this.stopped = false;
+    this.pollTimer = window.setInterval(() => {
+      if (!document.hidden) {
+        this.refresh();
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  stop() {
+    this.stopped = true;
+    window.clearInterval(this.pollTimer);
+    window.clearTimeout(this.refreshTimer);
+    this.client.unsubscribe();
+    this.subscribedKey = '';
   }
 
   pageFromHash() {
@@ -112,6 +148,7 @@ class CmsPage {
     this.pageId = id;
     this.loadToken += 1;
     this.snapshots = new Map();
+    this.lastSuccess = null;
     this.renderNav();
     this.renderWidgets();
     this.subscribedKey = '';
@@ -367,15 +404,20 @@ class CmsPage {
   }
 
   async refresh() {
+    if (this.stopped) {
+      return;
+    }
     const token = this.loadToken;
     const devices = this.devices();
     if (devices.length === 0) {
       this.snapshots = new Map();
+      this.lastSuccess = null;
       this.updateStatus(this.page.widgets.length === 0 ? 'Die Seite ist noch leer' : undefined);
       this.resubscribe();
       return;
     }
 
+    let failure = null;
     try {
       const specs = devices.flatMap((name) => [name, `device=${name}`]);
       const results = await this.client.jsonlist(specs.join(','));
@@ -383,24 +425,41 @@ class CmsPage {
         return;
       }
       this.snapshots = this.groupSnapshots(devices, results);
+      this.lastSuccess = Date.now();
     } catch (error) {
       if (token !== this.loadToken) {
         return;
       }
-      this.snapshots = new Map();
-      this.updateStatus(`Daten nicht verfügbar: ${error.message}`);
+      failure = error.message || 'unbekannter Fehler';
     }
 
+    // Bei einem Fehler bleiben die letzten Werte sichtbar, werden aber als veraltet gekennzeichnet.
     for (const widget of this.page.widgets) {
       const element = this.elements.get(widget.id);
       if (element && widget.type === 'thermostat') {
         element.data = this.snapshots.get(widget.device) || null;
+        element.stale = failure !== null && this.lastSuccess !== null ? this.lastSuccess : null;
       }
     }
-    if (this.snapshots.size > 0) {
+    if (failure !== null) {
+      this.markStale(`Daten nicht verfügbar: ${failure}`);
+    } else {
       this.updateStatus();
     }
     this.resubscribe();
+  }
+
+  markStale(reason) {
+    const since = this.lastSuccess
+      ? ` · Anzeige veraltet seit ${new Date(this.lastSuccess).toLocaleTimeString('de-DE')}`
+      : '';
+    this.setStatus(`${reason}${since}`);
+    for (const widget of this.page.widgets) {
+      const element = this.elements.get(widget.id);
+      if (element && widget.type === 'thermostat' && this.lastSuccess !== null) {
+        element.stale = this.lastSuccess;
+      }
+    }
   }
 
   // Je Hauptdevice: [Hauptdevice, Kanäle ...]; die Kachel sucht Readings in dieser Reihenfolge.
@@ -450,8 +509,12 @@ class CmsPage {
       names,
       () => this.scheduleRefresh(),
       (state) => {
+        const reconnected = state === 'live' && !this.live && this.lastSuccess !== null;
         this.live = state === 'live';
         this.updateStatus();
+        if (reconnected) {
+          this.scheduleRefresh();
+        }
       }
     );
   }
