@@ -135,8 +135,8 @@ class FHEMCMSThermostat extends HTMLElement {
         .tile { height: 100%; overflow: hidden; container-type: size; border: 1px solid #43564a;
           border-radius: 1rem; background: #202e27; }
         /* Der Inhalt ist rund 10,5 em hoch und 26 em breit; die Schrift richtet sich nach der knapperen Seite, damit er die Kachel ohne Leerraum füllt. */
-        .body { height: 100%; display: flex; flex-direction: column; justify-content: space-evenly;
-          font-size: clamp(0.5rem, min(8.6cqh, 3.7cqw), 1.5rem); }
+        .body { height: 100%; display: flex; flex-direction: column; justify-content: flex-start;
+          font-size: max(4px, min(8.6cqh, 3.4cqw)); }
         header { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
           padding: 0.2em 0.6em 0.2em 0.8em; border-bottom: 1px solid #43564a; min-height: 2em; flex: none; }
         h3 { margin: 0; font-size: 1.3em; font-weight: 500; font-family: Georgia, 'Times New Roman', serif;
@@ -150,11 +150,11 @@ class FHEMCMSThermostat extends HTMLElement {
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
         .icon { padding: 0 0.4em; line-height: 1.4; flex: none; font-size: 1em; }
         :host([view-only]) [data-open-config] { display: none; }
-        .boxes { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; padding: 0 0.7em; }
+        .boxes { align-self: stretch; margin: auto 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; padding: 0 0.7em; }
         .box { border: 1px solid #3a4d42; border-radius: 0.2rem; background: #1a261f; min-width: 0; min-height: 0;
           padding: 0.4em 0.6em 0.5em; display: flex; flex-direction: column; gap: 0.25em; overflow: hidden; }
-        .label { color: #a5c9b2; font-size: 0.85em; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
-          overflow: hidden; text-overflow: ellipsis; }
+        .label { color: #a5c9b2; font-size: 0.78em; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
+          overflow: hidden; text-overflow: clip; }
         .num { font-size: 2.2em; font-weight: 700; line-height: 1.05; white-space: nowrap; }
         .unit { font-size: 0.55em; font-weight: 400; color: #a5c9b2; margin-left: 0.2em; }
         input[type="range"] { width: 100%; margin: 0.15em 0 0; accent-color: #8fd0a8; height: 1.2em; }
@@ -176,7 +176,7 @@ class FHEMCMSThermostat extends HTMLElement {
         @container (max-width: 13rem) { .batt { display: none; } }
         @container (max-height: 6.5rem) { .foot, .status { display: none; } }
         @container (max-height: 4.8rem) { [data-slider], .box .label { display: none; } }
-        @container (max-height: 3.4rem) { header { display: none; } }
+        @container (max-height: 4.4rem) { header { display: none; } }
         @container (max-width: 9rem) { .boxes { grid-template-columns: 1fr; } .box.ist { display: none; } [data-open-config] { display: none; } }
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
           padding: 1.25rem; width: min(92vw, 32rem); }

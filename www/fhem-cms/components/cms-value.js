@@ -31,28 +31,36 @@ class FHEMCMSValue extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { height: 100%; overflow: hidden; container-type: size; padding: 0 0.6rem; border: 1px solid #43564a; border-radius: 1rem;
-          background: #202e27; display: flex; align-items: center; gap: 0.6rem; }
+        .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid #43564a; border-radius: 1rem;
+          background: #202e27; display: flex; flex-direction: column; }
+        header { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; flex: none;
+          padding: 0.15em 0.5em 0.15em 0.8em; border-bottom: 1px solid #43564a; font-size: max(5px, min(11cqh, 4cqw)); }
+        header[hidden] { display: none; }
+        h3 { margin: 0; font-size: 1.3em; font-weight: 500; font-family: Georgia, 'Times New Roman', serif;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .main { flex: 1; min-height: 0; display: flex; align-items: center; gap: 0.5em; padding: 0 0.7em; }
+        .gear.solo { position: absolute; top: 0.2rem; right: 0.3rem; font-size: 0.75rem; }
+        .tile[data-has-title] .gear.solo { display: none; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         :host { --cms-icon-color: #8fd0a8; }
         .glyph { display: inline-block; background-color: var(--cms-icon-color);
           -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
         .glyph[hidden] { display: none; }
-        .icon { height: min(48cqh, 1.5rem); width: min(48cqh, 1.5rem); flex: none; }
+        .icon { height: 1.1em; width: 1.1em; flex: none; }
         .icon-row .icon { width: 2rem; height: 2rem; }
-        .value { font-size: 1.2rem; min-width: 0; font-size: clamp(0.6rem, min(34cqh, 11cqw), 1.5rem); line-height: 1.1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .value { font-size: max(5px, min(var(--vh, 38cqh), 11cqw)); min-width: 0; line-height: 1.1; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .main { font-size: max(5px, min(var(--vh, 38cqh), 11cqw)); }
+        .value { font-size: inherit; }
         .unit { margin-left: 0.25rem; font-size: 0.6em; font-weight: 400; color: #a5c9b2; }
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
           border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
         button:hover { background: #34493e; }
         button:focus-visible, input:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
-        .text { flex: 1; min-width: 0; display: grid; }
-        .ttl { color: #a5c9b2; font-size: clamp(0.5rem, 17cqh, 0.75rem); line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .ttl[hidden] { display: none; }
-        .tile[data-has-title] .value { font-size: clamp(0.6rem, min(26cqh, 11cqw), 1.5rem); }
-        @container (max-height: 3.4rem) { .ttl { display: none; } }
-        .gear { padding: 0 0.3rem; font-size: 0.75rem; line-height: 1.4; flex: none; }
-        @container (max-width: 7rem) { .gear { display: none; } }
+        .tile[data-has-title] { --vh: 27cqh; }
+        .gear { padding: 0 0.35em; font-size: 1em; line-height: 1.4; flex: none; }
+        header .gear { font-size: 0.9em; }
+        @container (max-height: 3rem) { header { display: none; } .tile[data-has-title] { --vh: 38cqh; } }
+        @container (max-width: 6rem) { .gear { display: none; } }
         :host([view-only]) [data-open-config] { display: none; }
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
           padding: 1.25rem; width: min(94vw, 34rem); max-height: 94vh; overflow: auto; }
@@ -94,9 +102,15 @@ class FHEMCMSValue extends HTMLElement {
         .error { margin: 0; color: #ffb4a8; min-height: 1.2em; }
       </style>
       <article class="tile" data-tile>
-        <span class="glyph icon" data-icon aria-hidden="true" hidden></span>
-        <div class="text"><div class="ttl" data-title hidden></div><div class="value"><span data-value>–</span><span class="unit" data-unit></span></div></div>
-        <button type="button" class="gear" data-open-config aria-label="Wert-Anzeige konfigurieren">⚙</button>
+        <header data-header hidden>
+          <h3 data-title></h3>
+          <button type="button" class="gear" data-open-config aria-label="Wert-Anzeige konfigurieren">⚙</button>
+        </header>
+        <button type="button" class="gear solo" data-open-config aria-label="Wert-Anzeige konfigurieren">⚙</button>
+        <div class="main">
+          <span class="glyph icon" data-icon aria-hidden="true" hidden></span>
+          <div class="value"><span data-value>–</span><span class="unit" data-unit></span></div>
+        </div>
       </article>
       <dialog data-dialog aria-labelledby="value-dialog-title">
         <form method="dialog" data-form novalidate>
@@ -160,7 +174,7 @@ class FHEMCMSValue extends HTMLElement {
     `;
 
     const $ = (selector) => this.shadowRoot.querySelector(selector);
-    $('[data-open-config]').addEventListener('click', () => this.openConfig());
+    this.shadowRoot.querySelectorAll('[data-open-config]').forEach((button) => button.addEventListener('click', () => this.openConfig()));
     $('[data-cancel]').addEventListener('click', () => this.closeDialog(true));
     $('[data-delete]').addEventListener('click', () => this.onDelete());
     $('[data-dialog]').addEventListener('cancel', () => this.closeDialog(true));
@@ -234,7 +248,7 @@ class FHEMCMSValue extends HTMLElement {
     tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''}`;
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
-    title.hidden = !this.widgetConfig.title;
+    this.shadowRoot.querySelector('[data-header]').hidden = !this.widgetConfig.title;
     tile.toggleAttribute('data-has-title', Boolean(this.widgetConfig.title));
     const icon = this.shadowRoot.querySelector('[data-icon]');
     const url = this.widgetConfig.icon && this.services ? this.services.iconUrl(this.widgetConfig.icon) : '';
