@@ -326,8 +326,17 @@ Das Testfrontend bestätigt die Anlage und zeigt den Device-Namen. Eine JSON-API
 ## Konfigurationsspeicher (S04)
 
 - Pfad: `<modpath>/fhem-cms-data/<Device>/config.json`, ausserhalb von `www`. Der Ordner wird beim `define` und bei jedem FHEM-Start nachgerüstet, falls er fehlt; eine vorhandene Konfiguration wird nie überschrieben.
-- Format: `{"schemaVersion":1,"pages":[{"id","title","widgets":[{"type":"fhem-value","device","reading","grid":{"col","row","w","h"}}]}]}`. Unbekannte Felder, fehlende Pflichtfelder und nicht unterstützte Versionen werden abgewiesen.
+- Format: `{"schemaVersion":2,"pages":[{"id","title","widgets":[{"type":"fhem-value","device","reading","grid":{"col","row","w","h"}}]}]}`. Unbekannte Felder, fehlende Pflichtfelder und nicht unterstützte Versionen werden abgewiesen.
 - Limits: 1 MiB, höchstens 50 Seiten, 200 Widgets je Seite, Raster 12 Spalten.
 - Schreiben: temporäre Datei, dann atomares `rename`; die Vorgängerversion bleibt als `config.json.<JJJJMMTT-hhmmss>.bak` erhalten (die letzten 20).
 - Wiederherstellen: `FHEMCMS_RestoreBackup` akzeptiert nur Backup-Namen dieses Musters und validiert die Datei vor dem Zurückschreiben. Ein UI-Dialog folgt später.
 - `delete <Device>` löscht den Datenordner nicht; die bestätigte Löschfunktion ist offen.
+
+## Erstes Widget: Thermostat-Kachel (Test)
+
+- Widgets werden deklarativ in `config.json` beschrieben und von der Seite in Web Components übersetzt (`type: "thermostat"` → `<cms-thermostat>`). Es gibt keine ausführbaren Ausdrücke; freie Markup-Erweiterungen sind eine spätere Entscheidung.
+- Schema Version 2: Widgets haben eine `id`. Version-1-Konfigurationen werden beim Lesen automatisch migriert. Thermostat-Felder: `device`, optional `title`, `readings` (`actual`, `target` Pflicht; `valve`, `mode`, `battery` optional) und `grid`.
+- Lesen: Die Seite liest Gerätedaten über FHEMWEB (`jsonlist2`) und lädt bei WebSocket-Inform-Ereignissen nach. Fällt der WebSocket aus, aktualisiert sie alle 30 s.
+- Schreiben: Der Sollwert wird mit `set <Device> <target-Reading> <Wert>` über FHEMWEB (POST mit CSRF-Token) gesendet. Anmeldung, Rechte und `allowed` verantwortet FHEMWEB. Der Regler läuft von 5 bis 25 °C in 0,5-Schritten, nach 1,5 s Ruhe wird gesendet.
+- Konfiguration: `get <CMS> config|backups` und `set <CMS> config <Base64-JSON>|restore <Backup>` des Moduls. Der Dialog der Kachel wählt Device und Readings aus der Geräteliste (`TYPE=MAX` und `TYPE=CUL_HM`) und speichert über das Modul.
+- Noch offen: Verhalten bei fehlenden Rechten, FHEM-6.5-Kompatibilität, mehrere Seiten, eigene Widget-Pakete mit Konfigurationsschema.

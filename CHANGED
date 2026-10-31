@@ -1,3 +1,8 @@
+2026-10-31 - Add thermostat test widget and config commands
+
+Add schema version 2 with widget ids and a thermostat widget, get/set commands
+for config, backups and restore, and a thermostat tile with configuration dialog.
+
 2026-10-31 - Add per-device config storage
 
 Create fhem-cms-data/<device>/ with a validated config.json, timestamped

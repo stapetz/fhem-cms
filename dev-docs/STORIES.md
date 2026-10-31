@@ -106,7 +106,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Aufgaben**
 
-- [ ] Erstes lesendes Widget und seine JSON-Felder festlegen.
+- [x] Erstes Widget (Thermostat-Kachel, lesend und Sollwert setzen) und seine JSON-Felder festgelegt und als Test umgesetzt.
 - [ ] Zuordnung von Device/Reading zu Initialwerten und Live-Änderungen spezifizieren.
 - [ ] Lade-, Fehler-, Offline- und Berechtigungszustände definieren.
 - [ ] Benutzeraktionen von lesenden Bindings trennen.

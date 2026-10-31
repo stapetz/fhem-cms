@@ -4,6 +4,8 @@ use warnings;
 use File::Path qw(make_path remove_tree);
 use File::Spec;
 use File::Temp qw(tempdir);
+use JSON::PP ();
+use MIME::Base64 ();
 use Test::More;
 
 our (%attr, $FW_ME);
@@ -67,7 +69,7 @@ ok(-d $dataDir, 'creates a data directory per device outside www');
 ok(-f File::Spec->catfile($dataDir, 'config.json'), 'creates a default config');
 my ($cfg, $cfgErr) = FHEMCMS_ReadConfig($name, $dataDir);
 is($cfgErr, undef, 'default config is valid');
-$cfg->{pages}[0]{widgets} = [{type => 'fhem-value', device => 'Lamp', reading => 'state',
+$cfg->{pages}[0]{widgets} = [{id => 'w1', type => 'fhem-value', device => 'Lamp', reading => 'state',
     grid => {col => 1, row => 1, w => 2, h => 1}}];
 is(FHEMCMS_WriteConfig($name, $dataDir, $cfg), undef, 'writes a valid config');
 my @backups = FHEMCMS_ListBackups($dataDir);
@@ -81,6 +83,42 @@ is(scalar(@{$restored->{pages}[0]{widgets}}), 0, 'restored config is the earlier
 like(FHEMCMS_RestoreBackup($name, $dataDir, '../x'), qr/Ungueltiger Backup-Name/, 'rejects path-like backup names');
 my ($big, $bigErr) = FHEMCMS_ParseConfig('x' x 1048577);
 like($bigErr, qr/zu gross/, 'rejects oversized config');
+my $thermostat = {id => 't1', type => 'thermostat', device => 'th_Buero', title => 'Buero',
+    readings => {actual => 'temperature', target => 'desiredTemperature', valve => 'valveposition'},
+    grid => {col => 3, row => 1, w => 4, h => 2}};
+push(@{$restored->{pages}[0]{widgets}}, $thermostat);
+is(FHEMCMS_WriteConfig($name, $dataDir, $restored), undef, 'accepts a thermostat widget');
+my $bad = {%{$thermostat}, id => 't2', readings => {actual => 'temperature'}};
+push(@{$restored->{pages}[0]{widgets}}, $bad);
+like(FHEMCMS_WriteConfig($name, $dataDir, $restored), qr/Pflichtfeld 'target'/,
+    'requires the target reading for thermostats');
+pop(@{$restored->{pages}[0]{widgets}});
+push(@{$restored->{pages}[0]{widgets}}, {%{$thermostat}});
+like(FHEMCMS_WriteConfig($name, $dataDir, $restored), qr/Doppelte Widget-ID/, 'rejects duplicate widget ids');
+pop(@{$restored->{pages}[0]{widgets}});
+my $migrated = FHEMCMS_MigrateConfig({schemaVersion => 1, pages => [{id => 'p', title => 'P',
+    widgets => [{type => 'fhem-value', device => 'A', reading => 'r',
+        grid => {col => 1, row => 1, w => 1, h => 1}}]}]});
+is(FHEMCMS_ValidateConfig($migrated), undef, 'migrates a version 1 config to version 2');
+is($migrated->{pages}[0]{widgets}[0]{id}, 'w1', 'assigns ids during migration');
+
+my $json = FHEMCMS_Get($hash, $name, 'config');
+my $decoded = JSON::PP::decode_json($json);
+is(scalar(@{$decoded->{pages}[0]{widgets}}), 1, 'get config returns the stored config as JSON');
+like(FHEMCMS_Get($hash, $name, 'backups'), qr/config\.json\.\d{8}-\d{6}/, 'get backups lists backup names');
+
+my $payload = MIME::Base64::encode_base64(JSON::PP->new->utf8->encode(FHEMCMS_DefaultConfig()), '');
+is(FHEMCMS_Set($hash, $name, 'config', $payload), undef, 'set config stores a Base64 payload');
+my $stored = JSON::PP::decode_json(FHEMCMS_Get($hash, $name, 'config'));
+is(scalar(@{$stored->{pages}[0]{widgets}}), 0, 'set config replaced the config');
+like(FHEMCMS_Set($hash, $name, 'config', 'not base64!'), qr/Base64/, 'set config rejects non-Base64 input');
+like(FHEMCMS_Set($hash, $name, 'config', MIME::Base64::encode_base64('{"schemaVersion":2}', '')),
+    qr/Pflichtfeld 'pages'/, 'set config validates the payload');
+my ($latest) = FHEMCMS_ListBackups($dataDir);
+is(FHEMCMS_Set($hash, $name, 'restore', $latest), undef, 'set restore restores a backup');
+like(FHEMCMS_Set($hash, $name, 'restore', '../x'), qr/Ungueltiger Backup-Name/, 'set restore rejects bad names');
+like(FHEMCMS_Set($hash, $name, 'bogus'), qr/Unknown argument/, 'set rejects unknown commands');
+
 unlink(File::Spec->catfile($dataDir, 'config.json'));
 remove_tree($dataDir);
 is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'redefine recreates missing data for existing devices');

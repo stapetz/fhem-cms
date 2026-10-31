@@ -8,6 +8,7 @@ use File::Copy qw(copy);
 use File::Path qw(make_path);
 use File::Spec;
 use JSON::PP ();
+use MIME::Base64 qw(decode_base64);
 use POSIX qw(strftime);
 
 our $FHEMCMS_VERSION = '0.1.0-dev';
@@ -22,6 +23,7 @@ sub FHEMCMS_Initialize {
     $modHash->{DefFn} = 'FHEMCMS_Define';
     $modHash->{UndefFn} = 'FHEMCMS_Undef';
     $modHash->{GetFn} = 'FHEMCMS_Get';
+    $modHash->{SetFn} = 'FHEMCMS_Set';
     $modHash->{FW_summaryFn} = 'FHEMCMS_Summary';
     $modHash->{AttrList} = $readingFnAttributes // '';
 }
@@ -59,20 +61,64 @@ sub FHEMCMS_Undef {
     return undef;
 }
 
+sub FHEMCMS_ValidName {
+    my ($name) = @_;
+    return defined($name) && $name =~ /\A[A-Za-z0-9_.-]{1,128}\z/ && $name !~ /\A\.{1,2}\z/;
+}
+
 sub FHEMCMS_Get {
     my ($hash, $name, $cmd) = @_;
     $cmd //= '';
 
     if ($cmd eq 'url') {
         return 'Ungueltiges Device'
-            if (!defined($name) || $name ne ($hash->{NAME} // '')
-                || $name !~ /\A[A-Za-z0-9_.-]{1,128}\z/ || $name eq '.' || $name eq '..');
+            if (!defined($name) || $name ne ($hash->{NAME} // '') || !FHEMCMS_ValidName($name));
         my $basePath = $main::FW_ME || '/fhem';
         $basePath =~ s{/$}{};
         return $basePath . '/fhem-cms/' . $name . '/index.html';
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg';
+    if ($cmd eq 'config' || $cmd eq 'backups') {
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
+        return $error if (defined($error));
+
+        if ($cmd eq 'backups') {
+            return JSON::PP->new->utf8->canonical->encode([FHEMCMS_ListBackups($dataDir)]);
+        }
+        my ($text, $readError) = FHEMCMS_ReadFile(File::Spec->catfile($dataDir, 'config.json'));
+        return $readError if (defined($readError));
+        my ($config, $parseError) = FHEMCMS_ParseConfig($text);
+        return "Konfiguration ist ungueltig: $parseError" if (defined($parseError));
+        return JSON::PP->new->utf8->canonical->encode($config);
+    }
+
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg backups:noArg';
+}
+
+sub FHEMCMS_Set {
+    my ($hash, $name, $cmd, @args) = @_;
+    $cmd //= '';
+
+    if ($cmd eq 'config' || $cmd eq 'restore') {
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        return "$cmd erwartet genau einen Parameter" if (@args != 1);
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
+        return $error if (defined($error));
+
+        if ($cmd eq 'restore') {
+            return FHEMCMS_RestoreBackup($name, $dataDir, $args[0]);
+        }
+
+        # Base64, damit Leerzeichen und Semikolons den FHEM-Befehl nicht veraendern.
+        return 'Konfiguration ist zu gross' if (length($args[0]) > 2 * $FHEMCMS_MAX_CONFIG_BYTES);
+        return 'Konfiguration ist nicht Base64-kodiert' if ($args[0] !~ /\A[A-Za-z0-9+\/]+={0,2}\z/);
+        my ($config, $parseError) = FHEMCMS_ParseConfig(decode_base64($args[0]));
+        return $parseError if (defined($parseError));
+        return FHEMCMS_WriteConfig($name, $dataDir, $config);
+    }
+
+    return 'Unknown argument ' . $cmd . ', choose one of config restore';
 }
 
 sub FHEMCMS_Summary {
@@ -202,7 +248,7 @@ sub FHEMCMS_CreateDataDir {
 
 sub FHEMCMS_DefaultConfig {
     return {
-        schemaVersion => 1,
+        schemaVersion => 2,
         pages => [{id => 'start', title => 'Start', widgets => []}],
     };
 }
@@ -214,19 +260,38 @@ sub FHEMCMS_EnsureConfig {
     return FHEMCMS_WriteConfig($name, $dataDir, FHEMCMS_DefaultConfig());
 }
 
+# Hebt eine Konfiguration der Schema-Version 1 auf Version 2 (Widgets erhalten eine ID).
+sub FHEMCMS_MigrateConfig {
+    my ($config) = @_;
+    return $config if (ref($config) ne 'HASH' || !defined($config->{schemaVersion})
+        || ref($config->{schemaVersion}) || $config->{schemaVersion} ne '1');
+    return $config if (ref($config->{pages}) ne 'ARRAY');
+
+    for my $page (@{$config->{pages}}) {
+        next if (ref($page) ne 'HASH' || ref($page->{widgets}) ne 'ARRAY');
+        my $n = 0;
+        for my $widget (@{$page->{widgets}}) {
+            $n++;
+            $widget->{id} = "w$n" if (ref($widget) eq 'HASH' && !exists($widget->{id}));
+        }
+    }
+    $config->{schemaVersion} = 2;
+    return $config;
+}
+
 sub FHEMCMS_ValidateConfig {
     my ($config) = @_;
     my $id = qr/\A[A-Za-z0-9_-]{1,64}\z/;
     my $fhemName = qr/\A[A-Za-z0-9_.-]{1,128}\z/;
 
     my $exact = sub {
-        my ($ref, $where, @allowed) = @_;
+        my ($ref, $where, $required, $optional) = @_;
         return "$where muss ein Objekt sein" if (ref($ref) ne 'HASH');
-        my %ok = map { $_ => 1 } @allowed;
+        my %ok = map { $_ => 1 } (@{$required}, @{$optional || []});
         for my $key (sort keys %{$ref}) {
             return "Unbekanntes Feld '$key' in $where" if (!$ok{$key});
         }
-        for my $key (@allowed) {
+        for my $key (@{$required}) {
             return "Pflichtfeld '$key' fehlt in $where" if (!exists($ref->{$key}));
         }
         return undef;
@@ -235,17 +300,21 @@ sub FHEMCMS_ValidateConfig {
         my ($v, $min, $max) = @_;
         return defined($v) && !ref($v) && $v =~ /\A[0-9]{1,6}\z/ && $v >= $min && $v <= $max;
     };
+    my $isName = sub {
+        my ($v) = @_;
+        return defined($v) && !ref($v) && $v =~ $fhemName && $v !~ /\A\.{1,2}\z/;
+    };
 
-    my $err = $exact->($config, 'Konfiguration', 'schemaVersion', 'pages');
+    my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages']);
     return $err if ($err);
     return 'Nicht unterstuetzte schemaVersion'
-        if (!$isInt->($config->{schemaVersion}, 1, 1));
+        if (!$isInt->($config->{schemaVersion}, 2, 2));
     return 'pages muss eine Liste mit 1 bis 50 Seiten sein'
         if (ref($config->{pages}) ne 'ARRAY' || @{$config->{pages}} < 1 || @{$config->{pages}} > 50);
 
     my %pageIds;
     for my $page (@{$config->{pages}}) {
-        $err = $exact->($page, 'Seite', 'id', 'title', 'widgets');
+        $err = $exact->($page, 'Seite', ['id', 'title', 'widgets']);
         return $err if ($err);
         return 'Ungueltige Seiten-ID'
             if (ref($page->{id}) || !defined($page->{id}) || $page->{id} !~ $id);
@@ -257,17 +326,42 @@ sub FHEMCMS_ValidateConfig {
         return 'widgets muss eine Liste mit hoechstens 200 Eintraegen sein'
             if (ref($page->{widgets}) ne 'ARRAY' || @{$page->{widgets}} > 200);
 
+        my %widgetIds;
         for my $widget (@{$page->{widgets}}) {
-            $err = $exact->($widget, 'Widget', 'type', 'device', 'reading', 'grid');
-            return $err if ($err);
+            return 'Widget muss ein Objekt sein' if (ref($widget) ne 'HASH');
             return 'Unbekannter Widget-Typ'
-                if (ref($widget->{type}) || !defined($widget->{type}) || $widget->{type} ne 'fhem-value');
-            for my $field ('device', 'reading') {
-                return "Ungueltiger Wert fuer $field"
-                    if (ref($widget->{$field}) || !defined($widget->{$field})
-                        || $widget->{$field} !~ $fhemName || $widget->{$field} =~ /\A\.{1,2}\z/);
+                if (ref($widget->{type}) || !defined($widget->{type})
+                    || ($widget->{type} ne 'fhem-value' && $widget->{type} ne 'thermostat'));
+
+            if ($widget->{type} eq 'fhem-value') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid']);
+            } else {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title']);
             }
-            $err = $exact->($widget->{grid}, 'grid', 'col', 'row', 'w', 'h');
+            return $err if ($err);
+
+            return 'Ungueltige Widget-ID'
+                if (ref($widget->{id}) || !defined($widget->{id}) || $widget->{id} !~ $id);
+            return "Doppelte Widget-ID '$widget->{id}'" if ($widgetIds{$widget->{id}}++);
+            return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
+
+            if ($widget->{type} eq 'fhem-value') {
+                return 'Ungueltiger Wert fuer reading' if (!$isName->($widget->{reading}));
+            } else {
+                return 'Ungueltiger Widget-Titel'
+                    if (exists($widget->{title})
+                        && (ref($widget->{title}) || !defined($widget->{title})
+                            || length($widget->{title}) > 64 || $widget->{title} =~ /[\x00-\x1f\x7f]/));
+                $err = $exact->($widget->{readings}, 'readings', ['actual', 'target'],
+                    ['valve', 'mode', 'battery']);
+                return $err if ($err);
+                for my $field (keys %{$widget->{readings}}) {
+                    return "Ungueltiger Wert fuer readings.$field"
+                        if (!$isName->($widget->{readings}{$field}));
+                }
+            }
+
+            $err = $exact->($widget->{grid}, 'grid', ['col', 'row', 'w', 'h']);
             return $err if ($err);
             my $grid = $widget->{grid};
             return 'Ungueltige Rasterwerte'
@@ -284,6 +378,7 @@ sub FHEMCMS_ParseConfig {
     return (undef, 'Konfiguration ist zu gross') if (length($text) > $FHEMCMS_MAX_CONFIG_BYTES);
     my $config = eval { JSON::PP->new->utf8->decode($text) };
     return (undef, 'Konfiguration ist kein gueltiges JSON') if (!defined($config));
+    $config = FHEMCMS_MigrateConfig($config);
     my $error = FHEMCMS_ValidateConfig($config);
     return (undef, $error) if (defined($error));
     return ($config, undef);
