@@ -411,6 +411,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [ ] Verschieben im Navigationsdialog (entschieden): Am Griff ⠿ ziehen; nach rechts ziehen rückt ein (Unterpunkt), nach links eine Ebene höher.
 - [ ] Schema: Einträge in `navigation.items` erhalten einen Verweis auf den übergeordneten Eintrag; Zyklen werden abgelehnt.
 - [ ] Ein Punkt ohne eigene Seite darf als reine Gruppe dienen (entschieden).
+- [ ] Ergänzt am 2026-10-31: Server prüft Zyklen, fehlende Eltern und eine Obergrenze der Tiefe; Löschen eines Eltern-Eintrags fragt nach (Kinder anheben oder mitlöschen); Baum-Rolle und Tastaturbedienung für Screenreader; Tests für Schema, Zyklen, Migration; Abstimmung mit S28 und S46.
 - Umsetzung später (vom Nutzer so entschieden).
 
 ### S30 - Thermostat schreibt wie das ThermostatDashboard und skaliert
@@ -505,19 +506,6 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 ### S46 - Freieres, feineres Layout (Entwurf, Entscheidung offen)
 
 Das grobe Spaltenraster wirkt zu starr; FTUI erlaubt freieres Platzieren. Hauptgeräte: Tablet und Smartphone. Zu entscheiden: A) feineres Raster (z. B. 48 Spalten, kleinere Zeilenhöhe, `col/row/w/h` bleiben; Migration der Altwerte), B) freie Positionierung `x,y,w,h` (px/%), C) feste Designfläche, die als Ganzes skaliert, D) Hybrid aus feinem Raster und freiem Offset. Einordnung: A ist klein und risikoarm; B/C erschweren Zoom, Safari (B05) und das Umbrechen auf dem Smartphone. Vor einer Umsetzung Entscheidung einholen. **Entwurf.** Gemeldet am 2026-10-31.
-
-### S47 - Navigation mit Unterebenen (Entwurf)
-
-**Ziel:** Seiten lassen sich in der Navigation in Unterebenen gliedern (z. B. „Wohnzimmer“ unter „Erdgeschoss“).
-
-- [ ] Schema: Seite erhält optional `parent` (Seiten-ID); bestehende Konfigurationen bleiben gültig (flache Liste).
-- [ ] Höchstens 3 Ebenen. Server prüft: Elternseite existiert, keine Zyklen, maximale Tiefe, Seite ist nicht ihr eigener Vorfahr; beim Löschen einer Elternseite werden Kinder angehoben oder mitgelöscht (Rückfrage).
-- [ ] Waagerechte Navigation: Dropdown für Unterseiten. Senkrechte Navigation: eingerückte Liste. Smartphone: auf- und zuklappbarer Baum (zusammen mit S28).
-- [ ] Dialog „Navigation“: Einrücken und Ausrücken sowie Umhängen per Ziehen; Reihenfolge bleibt innerhalb einer Ebene änderbar.
-- [ ] Tastaturbedienung und Beschriftung für Screenreader (Baum-Rolle, Zustand auf-/zugeklappt).
-- [ ] Tests (Schema, Zyklen, Tiefe, Migration) und Doku.
-
-**Hinweis:** Nach Entscheidung S46 (Layout) und mit S28 (Burgermenü) abstimmen. Gemeldet am 2026-10-31. **Entwurf.**
 
 ## Buglist
 
