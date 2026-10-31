@@ -21,7 +21,7 @@ Stand: 2026-10-31, Branch `dev`. Dieses Protokoll trennt ehrlich zwischen **gepr
 - **Browser, Tastatur, Touch:** Nur Desktop-Chromium im Mock. Keine Phone-/Tablet-Referenzgeräte festgelegt, keine Safari-/Firefox-Läufe, keine Touch-Prüfung.
 - **Performance und Serverlast:** Nicht gemessen (Ziele: 2 s bis bedienbar, 500 ms bis sichtbare Änderung bei 20 Widgets).
 - **WebSocket-Live-Updates im Mock:** Der Mock unterstützt keinen WebSocket; auf der Testinstanz wurden Live-Updates früher geprüft, die neueste Version (S07 bis S09, Backup-Dialog, Purge) aber noch nicht.
-- **Neueste Version auf der Testinstanz:** Seiten, Textbaustein, WYSIWYG-Editor, Bild-Upload (auch die POST-Größe von bis zu ca. 1,4 MB über FHEMWEB und nginx), Layout-Modus, Stale-Verhalten, `rebuild`, `purge`, Backup-Dialog und Restore-Auswahlliste sind dort noch nicht getestet. Der Editor wurde nur in Chromium getestet (Firefox und Safari offen); der Touch-Drag ist nicht auf echten Geräten geprüft.
+- **Neueste Version auf der Testinstanz:** Seiten, Textbaustein, WYSIWYG-Editor, Bild-Upload (auch die POST-Größe von bis zu ca. 4,2 MB über FHEMWEB und nginx), Layout-Modus, Stale-Verhalten, `rebuild`, `purge`, Backup-Dialog und Restore-Auswahlliste sind dort noch nicht getestet. Der Editor wurde nur in Chromium getestet (Firefox und Safari offen); der Touch-Drag ist nicht auf echten Geräten geprüft.
 - **FHEM-6.5-Kompatibilität** außerhalb der Testinstanz und die genaue FHEM-Version sind nicht festgehalten.
 
 ## Vorgeschlagener Testlauf auf der Testinstanz

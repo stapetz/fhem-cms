@@ -242,9 +242,8 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Ziel:** Handyfotos ohne Handarbeit nutzen können.
 
-- [ ] Größenlimit für Uploads anheben (derzeit 1 MiB in `$FHEMCMS_MAX_MEDIA_BYTES` und `MAX_IMAGE_BYTES`).
-- [ ] POST-Größe über FHEMWEB und nginx (`client_max_body_size`) messen und das Ergebnis dokumentieren.
-- [ ] Optional: Bilder vor dem Upload im Browser verkleinern (Canvas, z. B. höchstens 1600 px Kantenlänge); Auswirkung auf Transparenz und GIF-Animation klären.
+- [x] Größenlimit für Uploads auf 3 MiB angehoben (`$FHEMCMS_MAX_MEDIA_BYTES`, `MAX_IMAGE_BYTES`).
+- [ ] POST-Größe (ca. 4,2 MB als Base64) über FHEMWEB und nginx (`client_max_body_size`) auf der Testinstanz messen und das Ergebnis dokumentieren.
 
 ### S12 - Medienverwaltung
 
@@ -254,6 +253,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [ ] Anzeige je Asset, ob es verwendet wird und auf welchen Seiten.
 - [ ] Löschen aus der Medienverwaltung; bei verwendeten Assets erscheint vorher ein Warndialog. Der Löschbefehl im Modul prüft strikt (nur MD5-Dateinamen, keine Pfade).
 - [ ] Der Texteditor ersetzt „Bild hochladen“ durch „Bild auswählen / hochladen“, das direkt die Medienverwaltung öffnet, in der ein Bild hochgeladen oder ein vorhandenes gewählt wird.
+- [ ] Thema Bildgröße pragmatisch neu bewerten: Limit, Verkleinern vor dem Upload im Browser (Canvas, z. B. höchstens 1600 px Kantenlänge; Auswirkung auf Transparenz und GIF-Animation) und Serverlast.
 - [ ] Konzept für weitere Asset-Typen und deren Sicherheitsregeln (MIME-Typen von FHEMWEB beachten).
 
 **Akzeptanzkriterien**

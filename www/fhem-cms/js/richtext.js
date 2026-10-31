@@ -3,7 +3,7 @@
 // fuer Rendern und Speichern. Er muss zur Allowlist in FHEMCMS_ValidateHtml (01_FHEMCMS.pm) passen.
 
 export const MAX_HTML = 50000;
-export const MAX_IMAGE_BYTES = 1048576;
+export const MAX_IMAGE_BYTES = 3145728;
 
 const ALIGN = ['cms-align-left', 'cms-align-center', 'cms-align-right'];
 const IMAGE_CLASSES = ['cms-img-left', 'cms-img-right', 'cms-img-center', 'cms-img-full',
@@ -552,7 +552,7 @@ export function createEditor({ root, services, html, onError }) {
   };
   const upload = async (file) => {
     if (file.size > MAX_IMAGE_BYTES) {
-      onError('Das Bild darf höchstens 1 MiB groß sein');
+      onError('Das Bild darf höchstens 3 MiB groß sein');
       return;
     }
     const bytes = new Uint8Array(await file.arrayBuffer());

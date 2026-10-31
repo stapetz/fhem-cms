@@ -388,7 +388,7 @@ Der Textbaustein nutzt einen eigenen, schlanken Editor auf `contenteditable` (`j
 - Modul: `FHEMCMS_ValidateHtml` lehnt alles Unerlaubte ab, statt es umzuschreiben. Erlaubt sind `p`, `h1`–`h3`, `blockquote`, `ul`, `ol`, `li`, `table`, `thead`, `tbody`, `tr`, `th`, `td`, `strong`, `em`, `u`, `s`, `code`, `br`, `hr`, `a` (nur `href`: `http(s)://`, `mailto:` oder `#/<seite>`) und `img` (nur `media/<32 Hex>.png|jpg|gif`). Klassen nur aus `cms-align-*`, `cms-img-*` und `cms-w-*`. Keine Event-, Style- oder sonstigen Attribute. Grenzen: 50000 Zeichen, 3000 Elemente, Tiefe 30.
 - Links werden mit `target="_blank"` und `rel="noopener noreferrer"` gerendert.
 
-**Bilder:** Upload per `set <CMS> media <base64>` (nur PNG, JPEG, GIF, höchstens 1 MiB, Prüfung der Magic-Bytes, kein SVG/WebP). Ablage unter `www/fhem-cms/<Device>/media/<md5>.<ext>` (Deduplizierung per MD5, atomares Schreiben, höchstens 200 Dateien). Der Rückgabewert ist der relative Pfad. `get <CMS> media` listet die Dateien. FHEMWEB liefert nur `png`, `jpg` und `gif` mit Bild-MIME-Typ aus, deshalb sind andere Formate ausgeschlossen. Bilder werden noch nicht automatisch gelöscht (Folge-Story); `purge` entfernt den Medienordner.
+**Bilder:** Upload per `set <CMS> media <base64>` (nur PNG, JPEG, GIF, höchstens 3 MiB, Prüfung der Magic-Bytes, kein SVG/WebP). Ablage unter `www/fhem-cms/<Device>/media/<md5>.<ext>` (Deduplizierung per MD5, atomares Schreiben, höchstens 200 Dateien). Der Rückgabewert ist der relative Pfad. `get <CMS> media` listet die Dateien. FHEMWEB liefert nur `png`, `jpg` und `gif` mit Bild-MIME-Typ aus, deshalb sind andere Formate ausgeschlossen. Bilder werden noch nicht automatisch gelöscht (Folge-Story); `purge` entfernt den Medienordner.
 
 ## Kacheln verschieben (Layout-Modus)
 
