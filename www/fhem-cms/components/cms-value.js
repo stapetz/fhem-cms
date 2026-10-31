@@ -30,14 +30,14 @@ class FHEMCMSValue extends HTMLElement {
     }
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; min-width: 0; min-height: 0; container-type: size; }
+        :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { height: 100%; overflow: hidden; padding: 0 clamp(0.3rem, 6cqw, 1rem); border: 1px solid #43564a; border-radius: 1rem;
+        .tile { height: 100%; overflow: hidden; container-type: size; padding: 0 0.6rem; border: 1px solid #43564a; border-radius: 1rem;
           background: #202e27; display: flex; align-items: center; gap: 0.6rem; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         .icon { height: min(70cqh, 4rem); width: min(70cqh, 4rem); flex: none; object-fit: contain; }
         .icon-row .icon { width: 2rem; height: 2rem; }
-        .value { flex: 1; min-width: 0; font-size: clamp(0.7rem, min(45cqh, 18cqw), 4.5rem); line-height: 1.1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .value { font-size: 1.2rem; flex: 1; min-width: 0; font-size: clamp(0.7rem, min(45cqh, 18cqw), 4.5rem); line-height: 1.1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .unit { margin-left: 0.25rem; font-size: 0.6em; font-weight: 400; color: #a5c9b2; }
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
           border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }

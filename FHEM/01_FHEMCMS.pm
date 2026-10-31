@@ -780,17 +780,6 @@ sub FHEMCMS_ListIcons {
     if (opendir(my $dh, $imageDir)) {
         my @styles = sort grep { $_ !~ /\A\./ && -d File::Spec->catdir($imageDir, $_) && !-l File::Spec->catdir($imageDir, $_) } readdir($dh);
         closedir($dh);
-        # Nur Stile, die FHEMWEB tatsaechlich ausliefert (Attribut iconPath, sonst Standard).
-        my %served;
-        for my $name (keys %main::defs) {
-            my $def = $main::defs{$name};
-            next if (ref($def) ne 'HASH' || ($def->{TYPE} // '') ne 'FHEMWEB' || !defined($def->{PORT}));
-            my $path = $main::attr{$name}{iconPath} // '';
-            $served{$_} = 1 for (grep { /\A[A-Za-z0-9_.-]+\z/ } split(/:/, $path));
-        }
-        %served = map { $_ => 1 } qw(default fhemSVG openautomation) if (!%served);
-        $served{default} = 1;
-        @styles = grep { $served{$_} } @styles;
         $scan->(File::Spec->catdir($imageDir, $_), '', 0) for @styles;
     }
     return sort keys %names;

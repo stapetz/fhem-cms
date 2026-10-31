@@ -384,7 +384,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Schema validiert `unit` und `icon` streng; Wert wird live aktualisiert.
 - [x] Verschieben, Skalieren und Löschen wie bei den anderen Kacheln.
 - [x] Die Kachel ist beliebig verkleinerbar (Rasterzeile mindestens 2,75 rem); Schrift, Einheit und Icon skalieren mit der Kachelgröße (Container-Einheiten), das ⚙ entfällt bei sehr schmalen Kacheln.
-- [x] Icon-Auswahl zeigt nur Icons, die FHEMWEB ausliefert (Stile aus `iconPath`); nicht ladbare Kacheln verschwinden.
+- [x] Icon-Auswahl: alle Stile werden gelistet, nicht ladbare Kacheln verschwinden.
 - [x] SVG-Icons werden in hellem Grün (`#8fd0a8`) dargestellt statt schwarz (FHEMWEB-Farbsuffix `@8fd0a8`, Fallback auf das Original).
 
 ### S26 - Menüleiste nimmt Platz ein, Navigationszeile passt sich an
