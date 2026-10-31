@@ -135,6 +135,31 @@ export class FhemClient {
     }
   }
 
+  async listMedia() {
+    const text = await this.command(`get ${this.cmsDevice} media`);
+    let list;
+    try {
+      list = JSON.parse(text);
+    } catch (error) {
+      throw new Error(text || 'Die Bilder konnten nicht gelesen werden');
+    }
+    return Array.isArray(list)
+      ? list.filter((name) => typeof name === 'string' && /^[0-9a-f]{32}\.(png|jpg|gif)$/.test(name)).map((name) => `media/${name}`)
+      : [];
+  }
+
+  async uploadMedia(bytes) {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    const result = await this.command(`set ${this.cmsDevice} media ${btoa(binary)}`);
+    if (!/^media\/[0-9a-f]{32}\.(png|jpg|gif)$/.test(result)) {
+      throw new Error(result || 'Der Bild-Upload ist fehlgeschlagen');
+    }
+    return result;
+  }
+
   async setReading(device, command, value) {
     if (!isValidName(device) || !isValidName(command) || !/^-?[0-9]{1,3}(\.[0-9])?$/.test(value)) {
       throw new Error('Ungültiger Sollwert');

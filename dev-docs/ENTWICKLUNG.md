@@ -259,7 +259,7 @@ Gespeicherte Seiten und Layouts sind JSON-Daten und kein ausführbares HTML. Die
 - Lesende Bindings und schreibende Aktionen sind getrennte Funktionen. Buttons oder andere Steuerungen werden erst nach Definition und Prüfung des Sicherheitsmodells umgesetzt.
 - Die Persistenz prüft Konfigurationen gegen ein versioniertes Schema. Schema-Migrationen, unbekannte Felder und Speicherlimits müssen definiert werden.
 - Daten werden nur in einem festgelegten CMS-Verzeichnis gespeichert. IDs und Dateinamen werden validiert; Pfad-Traversal ist zu verhindern. Schreibvorgänge sollen vor Teil- oder Überschreibungsfehlern schützen.
-- Markdown und Nutzereingaben werden bei der Darstellung gegen XSS abgesichert. Ungeprüftes Roh-HTML gehört nicht in das Konfigurationsformat.
+- Markdown und Nutzereingaben werden bei der Darstellung gegen XSS abgesichert. Ungeprüftes Roh-HTML gehört nicht in das Konfigurationsformat; das `html`-Feld des Textbausteins ist ein streng validierter Allowlist-Teilsatz (siehe „WYSIWYG-Editor und Medien“).
 
 ### Sicherheit
 
@@ -352,7 +352,7 @@ FHEMWEB und vorgeschaltete Proxys (z. B. nginx) halten statische Dateien lange i
 - **Seiten:** `pages[]` der Konfiguration wird als Navigation (Links `#/<seiten-id>`) angezeigt. Der Hash bestimmt die aktuelle Seite, unbekannte Hashes führen zur ersten Seite. „+ Seite“, „Seite umbenennen“ und „Seite löschen“ ändern die Konfiguration über die validierte API; die letzte Seite kann nicht gelöscht werden. Eingabe des Titels über einen eigenen `<dialog>` (kein `prompt()`).
 - **Live-Abos:** Daten und WebSocket-Abos gelten nur für die aktuelle Seite und werden beim Seitenwechsel neu aufgebaut.
 - **„+ Widget“-Menü:** Thermostat-Kachel und Textbaustein.
-- **Textbaustein (`type: "text"`):** Felder `id`, `type`, `markdown` (höchstens 20000 Zeichen, keine Steuerzeichen außer Tab/Zeilenumbruch), optional `title` (höchstens 64 Zeichen), `grid`. Der Renderer `js/markdown.js` ist eigenständig und baut nur DOM-Knoten per `createElement`/`textContent`. Unterstützt: `#`–`###`, Absätze, `-`/`1.`-Listen, `**fett**`, `*kursiv*`, `` `code` ``, `[Text](URL)`. HTML bleibt Text; Links nur mit `http(s)` oder relativ (`/`, `./`, `../`, `#`), mit `rel="noopener noreferrer"`.
+- **Textbaustein (`type: "text"`):** Felder `id`, `type`, genau eines von `html` (WYSIWYG, siehe unten) oder `markdown` (Altbestand; höchstens 20000 Zeichen, keine Steuerzeichen außer Tab/Zeilenumbruch), optional `title` (höchstens 64 Zeichen), `grid`. Der Renderer `js/markdown.js` ist eigenständig und baut nur DOM-Knoten per `createElement`/`textContent`. Unterstützt: `#`–`###`, Absätze, `-`/`1.`-Listen, `**fett**`, `*kursiv*`, `` `code` ``, `[Text](URL)`. HTML bleibt Text; Links nur mit `http(s)` oder relativ (`/`, `./`, `../`, `#`), mit `rel="noopener noreferrer"`.
 
 ## Live-Zustände und Verbindungsverhalten (S09)
 
@@ -377,6 +377,18 @@ Der Device-Name muss als Bestätigung wiederholt werden. `purge` löscht `<modpa
 ## Backups wiederherstellen (Frontend)
 
 Die Schaltfläche „Backups“ in der Werkzeugleiste öffnet einen Dialog mit allen Sicherungen (neueste zuerst, Anzeige als Datum und Uhrzeit). Ein Klick fragt nach und führt dann `set <CMS> restore <Name>` aus. Vor der Wiederherstellung sichert das Modul den aktuellen Stand als eigenes Backup, sodass der Schritt umkehrbar ist. Danach wird die Konfiguration neu geladen und die aktuelle Seite angezeigt (oder die erste, falls sie im Backup nicht existiert). Der Client akzeptiert nur Namen im Format `config.json.<JJJJMMTT-HHMMSS>[-n].bak`.
+
+## WYSIWYG-Editor und Medien
+
+Der Textbaustein nutzt einen eigenen, schlanken Editor auf `contenteditable` (`js/richtext.js`, keine Fremdbibliothek). Funktionen: fett, kursiv, unterstrichen, durchgestrichen, Überschriften 1–3, Absatz, Zitat, Listen, Ausrichtung, Links, Tabellen (Zeilen/Spalten einfügen und löschen), Bilder, Rückgängig/Wiederholen. Alte Markdown-Bausteine werden beim Öffnen des Editors nach HTML überführt und beim Speichern als `html` abgelegt.
+
+**Sicherheitsmodell (zwei unabhängige Prüfungen mit gleicher Allowlist):**
+
+- Frontend: `cleanHtml`/`renderHtml` parsen mit `DOMParser` (inert) und bauen ein neues DOM nur aus erlaubten Elementen. Die Funktion wird für Einfügen, Speichern und Anzeige benutzt; es gibt kein `innerHTML` auf Live-Daten.
+- Modul: `FHEMCMS_ValidateHtml` lehnt alles Unerlaubte ab, statt es umzuschreiben. Erlaubt sind `p`, `h1`–`h3`, `blockquote`, `ul`, `ol`, `li`, `table`, `thead`, `tbody`, `tr`, `th`, `td`, `strong`, `em`, `u`, `s`, `code`, `br`, `hr`, `a` (nur `href`: `http(s)://`, `mailto:` oder `#/<seite>`) und `img` (nur `media/<32 Hex>.png|jpg|gif`). Klassen nur aus `cms-align-*`, `cms-img-*` und `cms-w-*`. Keine Event-, Style- oder sonstigen Attribute. Grenzen: 50000 Zeichen, 3000 Elemente, Tiefe 30.
+- Links werden mit `target="_blank"` und `rel="noopener noreferrer"` gerendert.
+
+**Bilder:** Upload per `set <CMS> media <base64>` (nur PNG, JPEG, GIF, höchstens 1 MiB, Prüfung der Magic-Bytes, kein SVG/WebP). Ablage unter `www/fhem-cms/<Device>/media/<md5>.<ext>` (Deduplizierung per MD5, atomares Schreiben, höchstens 200 Dateien). Der Rückgabewert ist der relative Pfad. `get <CMS> media` listet die Dateien. FHEMWEB liefert nur `png`, `jpg` und `gif` mit Bild-MIME-Typ aus, deshalb sind andere Formate ausgeschlossen. Bilder werden noch nicht automatisch gelöscht (Folge-Story); `purge` entfernt den Medienordner.
 
 ## Kacheln verschieben (Layout-Modus)
 

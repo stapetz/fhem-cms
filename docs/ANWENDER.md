@@ -37,7 +37,9 @@ Das CMS speichert keine Zugangsdaten und erlaubt keine fremden Origins (kein COR
 
 - **Seiten:** Navigation oben, `+ Seite`, `Seite umbenennen`, `Seite löschen` (die letzte Seite kann nicht gelöscht werden). Seiten sind per Link `#/<id>` aufrufbar.
 - **Widgets:** `+ Widget` fügt eine Thermostat-Kachel oder einen Textbaustein hinzu. Das Zahnrad an der Kachel öffnet die Konfiguration. Beim Thermostat wird das Hauptdevice gewählt; Kanäle werden automatisch durchsucht. Der Dialog filtert pro Spalte (Device, Alias, Typ, Raum).
-- **Textbaustein:** Markdown (Überschriften, Listen, Hervorhebungen, Links). HTML wird nie ausgeführt; Links sind nur `http(s)` oder relativ erlaubt.
+- **Textbaustein:** WYSIWYG-Editor mit Fett, Kursiv, Unterstrichen, Durchgestrichen, Überschriften, Listen, Ausrichtung, Links, Tabellen und Bildern. Bilder (PNG, JPEG, GIF, höchstens 1 MiB) werden hochgeladen oder aus bereits vorhandenen gewählt; ein Klick auf das Bild öffnet Position (links, Mitte, rechts, voll), Breite und Alternativtext. Der Text wird beim Einfügen und Speichern bereinigt, Skripte und fremde Bildquellen sind nicht möglich. Alte Markdown-Bausteine werden beim Bearbeiten umgewandelt.
+- **Layout ändern:** Der Button blendet an jeder Kachel einen Griff ein. Ziehen mit Maus oder Touch, oder Griff fokussieren und Pfeiltasten nutzen. Überlappende Kacheln rutschen nach unten, das Layout wird gespeichert. Auf schmalen Bildschirmen ist der Modus ausgeblendet.
+- **Wiederherstellen per Modul:** `set <CMS> restore` bietet die 20 neuesten Backups als Auswahlliste an.
 - **Backups:** Jede Speicherung legt ein Backup an. `Backups` zeigt die Liste; ein Klick stellt den Stand nach Bestätigung wieder her. Der aktuelle Stand wird vorher selbst gesichert.
 - **Verbindungsabbruch:** Die Kachel zeigt die letzten Werte gedämpft mit „Veraltet seit …“, der Regler ist gesperrt. Nach Wiederherstellung der Verbindung wird sofort neu gelesen.
 

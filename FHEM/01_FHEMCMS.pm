@@ -22,6 +22,10 @@ our $FHEMCMS_REFRESH_INTERVAL = 10;
 our %FHEMCMS_LAST_REFRESH;
 our %FHEMCMS_PURGED;
 our $FHEMCMS_USAGE_BACKUPS = 20;
+our $FHEMCMS_MAX_HTML = 50000;
+our $FHEMCMS_MAX_MEDIA_BYTES = 1048576;
+our $FHEMCMS_MAX_MEDIA_FILES = 200;
+my $FHEMCMS_MEDIA_NAME = qr/\A[0-9a-f]{32}\.(?:png|jpg|gif)\z/;
 
 sub FHEMCMS_Initialize {
     my ($modHash) = @_;
@@ -103,7 +107,14 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->canonical->encode($config);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg backups:noArg';
+    if ($cmd eq 'media') {
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $mediaDir) = FHEMCMS_MediaDir($name);
+        return $error if (defined($error));
+        return JSON::PP->new->utf8->encode([FHEMCMS_ListMedia($mediaDir)]);
+    }
+
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg backups:noArg media:noArg';
 }
 
 sub FHEMCMS_Set {
@@ -124,6 +135,14 @@ sub FHEMCMS_Set {
 
     return 'Die Daten dieses Devices wurden geloescht; bitte das Device loeschen oder FHEM neu starten'
         if (defined($name) && $FHEMCMS_PURGED{$name});
+
+    if ($cmd eq 'media') {
+        return 'media erwartet genau einen Base64-Parameter' if (@args != 1);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $file) = FHEMCMS_StoreMedia($name, $args[0]);
+        return $error if (defined($error));
+        return "media/$file";
+    }
 
     if ($cmd eq 'config' || $cmd eq 'restore') {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
@@ -165,7 +184,7 @@ sub FHEMCMS_SetUsage {
         splice(@backups, $FHEMCMS_USAGE_BACKUPS) if (@backups > $FHEMCMS_USAGE_BACKUPS);
     }
     my $restore = @backups ? 'restore:' . join(',', @backups) : 'restore';
-    return "config $restore rebuild:noArg purge";
+    return "config $restore rebuild:noArg media purge";
 }
 
 sub FHEMCMS_Summary {
@@ -215,7 +234,17 @@ sub FHEMCMS_Purge {
         opendir(my $dh, $pageDir) or return "Verzeichnis '$pageDir' konnte nicht gelesen werden: $!";
         my @entries = grep { $_ ne '.' && $_ ne '..' } readdir($dh);
         closedir($dh);
-        my @foreign = grep { $_ ne 'index.html' && $_ !~ /\Aindex\.html\..*\.tmp\z/ } @entries;
+        my $mediaDir = File::Spec->catdir($pageDir, 'media');
+        my @foreign = grep { $_ ne 'index.html' && $_ !~ /\Aindex\.html\..*\.tmp\z/ && $_ ne 'media' } @entries;
+        if (grep { $_ eq 'media' } @entries) {
+            return "Verzeichnis '$mediaDir' ist kein reines Medienverzeichnis" if (-l $mediaDir || !-d $mediaDir);
+            opendir(my $mh, $mediaDir) or return "Verzeichnis '$mediaDir' konnte nicht gelesen werden: $!";
+            my @mediaForeign = grep { $_ ne '.' && $_ ne '..' && $_ !~ $FHEMCMS_MEDIA_NAME
+                && $_ !~ /\A\.upload-.*\.tmp\z/ } readdir($mh);
+            closedir($mh);
+            return "Medienverzeichnis enthaelt fremde Dateien (" . join(', ', sort @mediaForeign) . ')'
+                if (@mediaForeign);
+        }
         return "Verzeichnis '$pageDir' enthaelt fremde Dateien (" . join(', ', sort @foreign) . ')' if (@foreign);
         if (grep { $_ eq 'index.html' } @entries) {
             my ($text, $readError) = FHEMCMS_ReadFile(File::Spec->catfile($pageDir, 'index.html'));
@@ -490,7 +519,8 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'text'));
 
             if ($widget->{type} eq 'text') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'markdown', 'grid'], ['title']);
+                my $body = exists($widget->{html}) ? 'html' : 'markdown';
+                $err = $exact->($widget, 'Widget', ['id', 'type', $body, 'grid'], ['title']);
             } elsif ($widget->{type} eq 'fhem-value') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid']);
             } else {
@@ -506,7 +536,10 @@ sub FHEMCMS_ValidateConfig {
                     && (ref($widget->{title}) || !defined($widget->{title})
                         || length($widget->{title}) > 64 || $widget->{title} =~ /[\x00-\x1f\x7f]/));
 
-            if ($widget->{type} eq 'text') {
+            if ($widget->{type} eq 'text' && exists($widget->{html})) {
+                my $htmlError = FHEMCMS_ValidateHtml($widget->{html});
+                return "Ungueltiger HTML-Text: $htmlError" if (defined($htmlError));
+            } elsif ($widget->{type} eq 'text') {
                 my $text = $widget->{markdown};
                 return 'Ungueltiger Markdown-Text'
                     if (ref($text) || !defined($text) || length($text) > $FHEMCMS_MAX_TEXT
@@ -543,6 +576,150 @@ sub FHEMCMS_ValidateConfig {
         }
     }
     return undef;
+}
+
+# Prueft HTML strikt gegen eine Allowlist. Der Editor serialisiert nur diese Teilmenge;
+# alles andere wird abgelehnt statt umgeschrieben.
+sub FHEMCMS_ValidateHtml {
+    my ($html) = @_;
+    return 'kein Text' if (ref($html) || !defined($html));
+    return 'zu lang' if (length($html) > $FHEMCMS_MAX_HTML);
+    return 'enthaelt Steuerzeichen' if ($html =~ /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
+
+    my %align = map { $_ => 1 } qw(cms-align-left cms-align-center cms-align-right);
+    my %imageClass = map { $_ => 1 } qw(cms-img-left cms-img-right cms-img-center cms-img-full
+        cms-w-25 cms-w-50 cms-w-75 cms-w-100);
+    my %tags = (
+        p => {class => \%align}, h1 => {class => \%align}, h2 => {class => \%align},
+        h3 => {class => \%align}, blockquote => {class => \%align},
+        th => {class => \%align}, td => {class => \%align},
+        strong => {}, em => {}, u => {}, s => {}, code => {}, ul => {}, ol => {}, li => {},
+        table => {}, thead => {}, tbody => {}, tr => {},
+        a => {href => 1}, img => {src => 1, alt => 1, class => \%imageClass},
+        br => {void => 1}, hr => {void => 1},
+    );
+    $tags{img}{void} = 1;
+
+    my @stack;
+    my $count = 0;
+    my $text = $html;
+    pos($text) = 0;
+    while (pos($text) < length($text)) {
+        next if ($text =~ /\G[^<>&]+/gc);
+        next if ($text =~ /\G&(?:amp|lt|gt|quot|nbsp|#39);/gc);
+        if ($text =~ /\G<(\/?)([a-z][a-z0-9]*)((?:\s+[a-z]+="[^"<>]*")*)\s*>/gc) {
+            my ($closing, $tag, $attrs) = ($1, $2, $3);
+            return "Tag '$tag' ist nicht erlaubt" if (!$tags{$tag});
+            return 'zu viele Elemente' if (++$count > 3000);
+            if ($closing) {
+                return "Unerwartetes Ende von '$tag'" if ($attrs ne '' || !@stack || $stack[-1] ne $tag);
+                pop(@stack);
+                next;
+            }
+            my %seen;
+            while ($attrs =~ /\s+([a-z]+)="([^"<>]*)"/g) {
+                my ($attr, $value) = ($1, $2);
+                return "Attribut '$attr' ist bei '$tag' nicht erlaubt" if (!$tags{$tag}{$attr} || $seen{$attr}++);
+                (my $plain = $value) =~ s/&(?:amp|quot|#39|nbsp|lt|gt);/ /g;
+                return 'ungueltige Zeichenfolge in Attribut' if ($plain =~ /&/);
+                (my $decoded = $value) =~ s/&amp;/&/g;
+                if ($attr eq 'href') {
+                    return 'ungueltiger Link'
+                        if ($decoded !~ m{\A(?:https?://[A-Za-z0-9._~:/?\#\[\]\@!\$&'()*+,;=%-]{1,2000}|mailto:[A-Za-z0-9._%+-]{1,64}\@[A-Za-z0-9.-]{1,255}|\#/[A-Za-z0-9_-]{1,64})\z});
+                } elsif ($attr eq 'src') {
+                    return 'ungueltige Bildquelle'
+                        if ($decoded !~ m{\Amedia/[0-9a-f]{32}\.(?:png|jpg|gif)\z});
+                } elsif ($attr eq 'alt') {
+                    return 'ungueltiger Alternativtext' if (length($decoded) > 200);
+                } else {
+                    my @classes = split(/ /, $value);
+                    return 'ungueltige Klasse' if (!@classes || grep { !$tags{$tag}{class}{$_} } @classes);
+                }
+            }
+            return "'$tag' braucht ein Pflichtattribut"
+                if (($tag eq 'a' && $attrs !~ /\shref="/) || ($tag eq 'img' && $attrs !~ /\ssrc="/));
+            if (!$tags{$tag}{void}) {
+                push(@stack, $tag);
+                return 'zu tief verschachtelt' if (@stack > 30);
+            }
+            next;
+        }
+        return 'ungueltige Zeichenfolge an Position ' . pos($text);
+    }
+    return 'nicht geschlossene Elemente' if (@stack);
+    return undef;
+}
+
+sub FHEMCMS_MediaDir {
+    my ($name) = @_;
+    my $modPath = $main::attr{global}{modpath};
+    return ('FHEM global modpath ist nicht gesetzt') if (!defined($modPath) || $modPath eq '');
+    my $root = abs_path($modPath);
+    return ('FHEM global modpath verweist nicht auf ein Verzeichnis') if (!defined($root) || !-d $root);
+    my $cmsRoot = abs_path(File::Spec->catdir($root, 'www', 'fhem-cms'));
+    my $pageDir = File::Spec->catdir($root, 'www', 'fhem-cms', $name);
+    return ('Die Startseite des Devices existiert nicht') if (!-d $pageDir || -l $pageDir);
+    my $realPage = abs_path($pageDir);
+    return ('Das Device-Verzeichnis liegt ausserhalb von www/fhem-cms')
+        if (!defined($cmsRoot) || !defined($realPage) || !FHEMCMS_IsChildPath($realPage, $cmsRoot));
+    my $mediaDir = File::Spec->catdir($realPage, 'media');
+    return ('Das Medienverzeichnis ist ein Symlink') if (-l $mediaDir);
+    return (undef, $mediaDir);
+}
+
+sub FHEMCMS_ListMedia {
+    my ($mediaDir) = @_;
+    opendir(my $dh, $mediaDir) or return ();
+    my @files = sort grep { $_ =~ $FHEMCMS_MEDIA_NAME && !-l File::Spec->catfile($mediaDir, $_) } readdir($dh);
+    closedir($dh);
+    return @files;
+}
+
+# Speichert ein hochgeladenes Bild (Base64). Der Typ wird am Dateikopf erkannt, nicht am Namen.
+sub FHEMCMS_StoreMedia {
+    my ($name, $base64) = @_;
+    return ('Bild ist zu gross') if (length($base64) > int($FHEMCMS_MAX_MEDIA_BYTES * 4 / 3) + 8);
+    return ('Ungueltige Base64-Daten') if ($base64 !~ /\A[A-Za-z0-9+\/]+={0,2}\z/ || length($base64) % 4);
+    my $data = decode_base64($base64);
+    return ('Bild ist leer oder zu gross') if (length($data) < 16 || length($data) > $FHEMCMS_MAX_MEDIA_BYTES);
+
+    my $ext;
+    if (substr($data, 0, 8) eq "\x89PNG\r\n\x1a\n") {
+        $ext = 'png';
+    } elsif (substr($data, 0, 3) eq "\xff\xd8\xff") {
+        $ext = 'jpg';
+    } elsif (substr($data, 0, 6) eq 'GIF87a' || substr($data, 0, 6) eq 'GIF89a') {
+        $ext = 'gif';
+    }
+    return ('Nur PNG-, JPEG- und GIF-Bilder sind erlaubt') if (!defined($ext));
+
+    my ($error, $mediaDir) = FHEMCMS_MediaDir($name);
+    return ($error) if (defined($error));
+    if (!-d $mediaDir) {
+        my $errors;
+        make_path($mediaDir, {error => \$errors});
+        return (FHEMCMS_PathError('Medienverzeichnis konnte nicht angelegt werden', $mediaDir, $errors))
+            if (ref($errors) eq 'ARRAY' && @{$errors});
+    }
+
+    my $file = md5_hex($data) . ".$ext";
+    my $target = File::Spec->catfile($mediaDir, $file);
+    return (undef, $file) if (-f $target && !-l $target);
+    return ('Es sind hoechstens ' . $FHEMCMS_MAX_MEDIA_FILES . ' Bilder pro Device erlaubt')
+        if (scalar(FHEMCMS_ListMedia($mediaDir)) >= $FHEMCMS_MAX_MEDIA_FILES);
+
+    my $tmp = File::Spec->catfile($mediaDir, ".upload-$$-" . time() . '.tmp');
+    sysopen(my $out, $tmp, O_CREAT | O_EXCL | O_WRONLY, 0644)
+        or return ("Bild konnte nicht gespeichert werden: $!");
+    binmode($out);
+    my $ok = print {$out} $data;
+    $ok = close($out) && $ok;
+    if (!$ok || !rename($tmp, $target)) {
+        my $reason = $!;
+        unlink($tmp);
+        return ("Bild konnte nicht gespeichert werden: $reason");
+    }
+    return (undef, $file);
 }
 
 sub FHEMCMS_ParseConfig {

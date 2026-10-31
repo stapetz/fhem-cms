@@ -386,6 +386,8 @@ class CmsPage {
     return {
       listDevices: () => this.listDevices(),
       setTarget: (widget, value, device) => this.client.setReading(device || widget.device, widget.readings.target, value),
+      listMedia: () => this.client.listMedia(),
+      uploadMedia: (bytes) => this.client.uploadMedia(bytes),
       saveWidget: (widget) => this.saveWidget(widget),
       deleteWidget: (id) => this.deleteWidget(id)
     };
@@ -597,7 +599,7 @@ class CmsPage {
     const id = this.uniqueId(type === 'text' ? 'x' : 't', new Set(this.page.widgets.map((widget) => widget.id)));
     const grid = { col: 1, row: this.nextFreeRow(), w: type === 'text' ? 6 : 4, h: 2 };
     const widget = type === 'text'
-      ? { id, type, markdown: '', grid }
+      ? { id, type, html: '', grid }
       : { id, type, device: '', readings: { actual: '', target: '' }, grid };
     const element = this.createElementFor(widget);
     element.addEventListener('cms-widget-cancel', () => {

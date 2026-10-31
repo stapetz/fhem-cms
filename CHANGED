@@ -1,3 +1,10 @@
+2026-10-31 - Add WYSIWYG text editor and image upload
+
+Text blocks are edited in a rich text editor (formatting, links, tables, images
+with positioning). HTML is validated against a strict allowlist in the browser
+and in the module. set <CMS> media uploads PNG, JPEG and GIF images (max 1 MiB),
+get <CMS> media lists them.
+
 2026-10-31 - Move tiles freely in the 12 column grid
 
 The new Layout button lets tiles be dragged by mouse or touch, or moved with

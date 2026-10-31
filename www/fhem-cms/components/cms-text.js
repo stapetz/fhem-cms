@@ -1,6 +1,6 @@
 import { renderMarkdown } from '../js/markdown.js';
+import { MAX_HTML, contentCss, createEditor, editorCss, markdownToHtml, renderHtml } from '../js/richtext.js';
 
-const MAX_TEXT = 20000;
 const GRID_FIELDS = [
   { key: 'col', label: 'Spalte (1–12)', min: 1, max: 12 },
   { key: 'row', label: 'Zeile', min: 1, max: 1000 },
@@ -15,6 +15,7 @@ class FHEMCMSText extends HTMLElement {
     this.widgetConfig = null;
     this.services = null;
     this.isNew = false;
+    this.editor = null;
   }
 
   connectedCallback() {
@@ -29,12 +30,9 @@ class FHEMCMSText extends HTMLElement {
           background: #202e27; display: grid; gap: 0.5rem; align-content: start; }
         header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
         h3 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
-        .body { overflow-wrap: anywhere; line-height: 1.5; }
-        .body > :first-child { margin-top: 0; }
-        .body > :last-child { margin-bottom: 0; }
-        .body h3, .body h4, .body h5 { margin: 0.8rem 0 0.4rem; }
-        .body a { color: #8fd0a8; }
-        .body code { background: #17211d; padding: 0 0.25rem; border-radius: 0.25rem; }
+        ${contentCss('.body')}
+        .body h4, .body h5 { margin: 0.8rem 0 0.4rem; }
+        ${editorCss()}
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
           border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
         button:hover { background: #34493e; }
@@ -42,7 +40,7 @@ class FHEMCMSText extends HTMLElement {
           outline: 2px solid #8fd0a8; outline-offset: 2px; }
         .icon { padding: 0.2rem 0.5rem; }
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
-          padding: 1.25rem; width: min(92vw, 36rem); }
+          padding: 1.25rem; width: min(94vw, 52rem); max-height: 94vh; overflow: auto; }
         dialog::backdrop { background: rgb(0 0 0 / 0.6); }
         form { display: grid; gap: 0.75rem; }
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
@@ -70,10 +68,7 @@ class FHEMCMSText extends HTMLElement {
           <label>Titel (optional)
             <input name="title" maxlength="64" autocomplete="off">
           </label>
-          <label>Text (Markdown)
-            <textarea name="markdown" maxlength="${MAX_TEXT}"></textarea>
-          </label>
-          <p class="hint">Unterstützt: # Überschrift, **fett**, *kursiv*, \`Code\`, - Listen, 1. Listen, [Text](https://…). HTML wird nicht ausgeführt.</p>
+          <div data-editor></div>
           <fieldset data-grid><legend>Position im 12-Spalten-Raster</legend></fieldset>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
@@ -104,6 +99,12 @@ class FHEMCMSText extends HTMLElement {
     $('[data-cancel]').addEventListener('click', () => this.closeDialog(true));
     $('[data-delete]').addEventListener('click', () => this.onDelete());
     $('[data-dialog]').addEventListener('cancel', () => this.closeDialog(true));
+    $('[data-form]').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && event.target instanceof HTMLInputElement && event.target.type !== 'submit'
+        && event.target.closest('.rt')) {
+        event.preventDefault();
+      }
+    });
     $('[data-form]').addEventListener('submit', (event) => {
       event.preventDefault();
       this.onSave();
@@ -130,14 +131,26 @@ class FHEMCMSText extends HTMLElement {
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
     title.hidden = !this.widgetConfig.title;
-    body.replaceChildren(renderMarkdown(this.widgetConfig.markdown || ''));
+    body.replaceChildren(typeof this.widgetConfig.html === 'string'
+      ? renderHtml(this.widgetConfig.html)
+      : renderMarkdown(this.widgetConfig.markdown || ''));
   }
 
   openConfig(options = {}) {
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
-    form.elements.markdown.value = this.widgetConfig.markdown || '';
+    const initial = typeof this.widgetConfig.html === 'string'
+      ? this.widgetConfig.html
+      : markdownToHtml(renderMarkdown(this.widgetConfig.markdown || ''));
+    this.destroyEditor();
+    this.editor = createEditor({
+      root: this.shadowRoot,
+      services: this.services,
+      html: initial,
+      onError: (message) => this.setDialogError(message)
+    });
+    this.shadowRoot.querySelector('[data-editor]').replaceChildren(this.editor.element);
     for (const field of GRID_FIELDS) {
       form.elements[`grid-${field.key}`].value = this.widgetConfig.grid[field.key];
     }
@@ -152,12 +165,9 @@ class FHEMCMSText extends HTMLElement {
 
   collectWidget() {
     const form = this.shadowRoot.querySelector('[data-form]');
-    const markdown = form.elements.markdown.value;
-    if (markdown.length > MAX_TEXT) {
-      throw new Error(`Der Text darf höchstens ${MAX_TEXT} Zeichen lang sein`);
-    }
-    if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(markdown)) {
-      throw new Error('Der Text enthält ungültige Steuerzeichen');
+    const html = this.editor ? this.editor.getHtml() : '';
+    if (html.length > MAX_HTML) {
+      throw new Error(`Der Text darf höchstens ${MAX_HTML} Zeichen lang sein (aktuell ${html.length})`);
     }
     const title = form.elements.title.value.trim();
     if (/[\u0000-\u001f\u007f]/.test(title)) {
@@ -175,7 +185,7 @@ class FHEMCMSText extends HTMLElement {
     if (grid.col + grid.w > 13) {
       throw new Error('Spalte und Breite passen nicht in das 12-Spalten-Raster');
     }
-    const widget = { id: this.widgetConfig.id, type: 'text', markdown, grid };
+    const widget = { id: this.widgetConfig.id, type: 'text', html, grid };
     if (title) {
       widget.title = title;
     }
@@ -209,7 +219,15 @@ class FHEMCMSText extends HTMLElement {
     }
   }
 
+  destroyEditor() {
+    if (this.editor) {
+      this.editor.destroy();
+      this.editor = null;
+    }
+  }
+
   closeDialog(cancelled) {
+    this.destroyEditor();
     const dialog = this.shadowRoot.querySelector('[data-dialog]');
     if (dialog.open) {
       dialog.close();

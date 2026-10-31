@@ -296,4 +296,89 @@ like(FHEMCMS_Set($pHash, $pName, '?'), qr/restore:config\.json\.20200101-000000\
     is($list, 'config.json.20210103-000000.bak', 'usage limits the list to the newest backups');
 }
 
+# html text widgets
+my $md5 = 'a' x 32;
+my @validHtml = (
+    '<p>Hallo <strong>Welt</strong> &amp; <em>mehr</em></p>',
+    '<h1 class="cms-align-center">Titel</h1><ul><li>eins</li><li>zwei</li></ul>',
+    '<p><a href="https://example.org/a?x=1&amp;y=2">Link</a> <a href="#/start">Seite</a></p>',
+    '<table><thead><tr><th>A</th></tr></thead><tbody><tr><td class="cms-align-right">1</td></tr></tbody></table>',
+    "<p><img src=\"media/$md5.png\" alt=\"Bild\" class=\"cms-img-left cms-w-50\"><br></p>",
+    "<p>Zeile 1\n\tZeile 2 \"zitiert\" it's</p>",
+    '',
+);
+is(FHEMCMS_ValidateHtml($_), undef, 'accepts html: ' . substr($_, 0, 30)) for @validHtml;
+
+my @badHtml = (
+    ['<script>alert(1)</script>', 'script tag'],
+    ['<p onclick="x()">a</p>', 'event attribute'],
+    ['<p style="color:red">a</p>', 'style attribute'],
+    ['<a href="javascript:alert(1)">x</a>', 'javascript link'],
+    ['<a href="//evil.example/">x</a>', 'protocol relative link'],
+    ['<a>x</a>', 'link without href'],
+    ['<img src="https://evil.example/x.png">', 'external image'],
+    ['<img src="media/../../x.png">', 'image path traversal'],
+    ['<img src="media/' . $md5 . '.svg">', 'svg image'],
+    ['<p>a</div>', 'mismatched close'],
+    ['<p>a', 'unclosed element'],
+    ['<p>a < b</p>', 'raw less-than'],
+    ['<p>&copy;</p>', 'unknown entity'],
+    ['<p class="evil">a</p>', 'unknown class'],
+    ['<img src="media/' . $md5 . '.png" class="cms-align-left">', 'wrong class for image'],
+    ['<br/>', 'self closing syntax'],
+    ['<p href="#/x">a</p>', 'attribute on wrong tag'],
+    ["<p>a\x01</p>", 'control character'],
+    ['<iframe src="x"></iframe>', 'iframe'],
+    ['<p class="cms-align-left" class="cms-align-right">a</p>', 'duplicate attribute'],
+    ['<p>' . ('a' x 50001) . '</p>', 'too long'],
+);
+for my $case (@badHtml) {
+    isnt(FHEMCMS_ValidateHtml($case->[0]), undef, "rejects html: $case->[1]");
+}
+
+my $hw = {schemaVersion => 2, pages => [{id => 'p', title => 'P', widgets => [
+    {id => 'h1', type => 'text', html => '<p>ok</p>', grid => {col => 1, row => 1, w => 4, h => 2}}]}]};
+is(FHEMCMS_ValidateConfig($hw), undef, 'config with an html text widget is valid');
+$hw->{pages}[0]{widgets}[0]{html} = '<script>x</script>';
+like(FHEMCMS_ValidateConfig($hw), qr/Ungueltiger HTML-Text/, 'config with unsafe html is rejected');
+$hw->{pages}[0]{widgets}[0]{html} = '<p>ok</p>';
+$hw->{pages}[0]{widgets}[0]{markdown} = 'x';
+isnt(FHEMCMS_ValidateConfig($hw), undef, 'a text widget cannot carry markdown and html');
+
+# media
+my $png = "\x89PNG\r\n\x1a\n" . ("\0" x 32);
+my $mediaB64 = MIME::Base64::encode_base64($png, '');
+my $mediaRes = FHEMCMS_Set($pHash, $pName, 'media', $mediaB64);
+like($mediaRes, qr{\Amedia/[0-9a-f]{32}\.png\z}, 'media upload returns a relative path');
+my $mediaFile = File::Spec->catfile($pPage, $mediaRes);
+ok(-f $mediaFile, 'media file is stored below the page folder');
+is(read_file($mediaFile), $png, 'media content is unchanged');
+is(FHEMCMS_Set($pHash, $pName, 'media', $mediaB64), $mediaRes, 'same upload returns the same name');
+is(FHEMCMS_Get($pHash, $pName, 'media'), '["' . substr($mediaRes, 6) . '"]', 'get media lists the file');
+is(FHEMCMS_ValidateHtml("<p><img src=\"$mediaRes\"></p>"), undef, 'uploaded media path is valid html');
+like(FHEMCMS_Set($pHash, $pName, 'media', MIME::Base64::encode_base64("<svg xmlns='x'><script/></svg>" . ('a' x 20), '')),
+    qr/Nur PNG/, 'media rejects svg');
+like(FHEMCMS_Set($pHash, $pName, 'media', MIME::Base64::encode_base64("GIF89a" . ("\0" x 20), '')) , qr{\.gif\z}, 'media accepts gif');
+like(FHEMCMS_Set($pHash, $pName, 'media', MIME::Base64::encode_base64("\xff\xd8\xff" . ("\0" x 20), '')), qr{\.jpg\z}, 'media stores jpeg as jpg');
+like(FHEMCMS_Set($pHash, $pName, 'media', 'not base64!'), qr/Base64/, 'media rejects invalid base64');
+like(FHEMCMS_Set($pHash, $pName, 'media', 'AAAA'), qr/leer/, 'media rejects tiny files');
+{
+    local $main::FHEMCMS_MAX_MEDIA_BYTES = 40;
+    like(FHEMCMS_Set($pHash, $pName, 'media', MIME::Base64::encode_base64($png . ("\0" x 64), '')),
+        qr/zu gross/, 'media rejects oversized files');
+}
+{
+    local $main::FHEMCMS_MAX_MEDIA_FILES = 1;
+    like(FHEMCMS_Set($pHash, $pName, 'media', MIME::Base64::encode_base64("\x89PNG\r\n\x1a\n" . ("\1" x 32), '')),
+        qr/hoechstens 1 Bilder/, 'media limits the number of files');
+}
+like(FHEMCMS_Set($pHash, $pName, 'media'), qr/genau einen/, 'media needs a parameter');
+
+write_file(File::Spec->catfile($pPage, 'media', 'evil.txt'), 'x');
+like(FHEMCMS_Set($pHash, $pName, 'purge', $pName), qr/fremde Dateien/, 'purge refuses foreign files in the media folder');
+unlink(File::Spec->catfile($pPage, 'media', 'evil.txt'));
+is(FHEMCMS_Set($pHash, $pName, 'purge', $pName), undef, 'purge removes pages with media');
+ok(!-e $pPage, 'media folder is removed with the page');
+FHEMCMS_Define($pHash, "$pName FHEMCMS");
+
 done_testing();

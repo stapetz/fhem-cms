@@ -183,6 +183,10 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Text-/Markdown-Komponente spezifizieren und umsetzen.
 - [x] Darstellung gegen XSS absichern; erlaubte Markdown-Funktionen definieren.
 - [x] Bearbeiten und Speichern über die validierte Konfigurations-API integrieren.
+- [x] WYSIWYG-Editor (Formatierung, Links, Tabellen, Bilder mit Positionierung) mit Allowlist-Validierung in Frontend und Modul.
+- [x] Bild-Upload (`set media`, `get media`) mit Typ-, Größen- und Mengenprüfung.
+- [x] Kacheln im Layout-Modus frei im Raster verschieben.
+- [x] `set restore` zeigt Backups als Auswahlliste.
 
 **Akzeptanzkriterien**
 
@@ -236,7 +240,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.
 
-- Bild-Uploads und Medienverwaltung mit Dateityp-, Größen- und Speicherregeln.
+- Medienverwaltung: einzelne Bilder löschen, ungenutzte Bilder erkennen (Upload selbst ist umgesetzt).
 - Schreibende Widgets und FHEM-Befehle nach separater Sicherheitsfreigabe.
 - Kalender-, Wetter- und RSS-Komponenten einschließlich externer Vertrauensgrenzen.
 - Plugin-Vertrag, Versionskompatibilität und Isolation von Drittanbieter-Code.
