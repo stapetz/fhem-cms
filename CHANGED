@@ -1,3 +1,8 @@
+2026-10-31 - Add a preview button for the draft
+
+The edit mode has a Vorschau button that opens the current draft as the
+finished page (mode=preview) in a new window.
+
 2026-10-31 - Open CMS links in a new browser window
 
 CMS starten and Zeige Homepage now open in a new window or tab.

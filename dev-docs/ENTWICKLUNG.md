@@ -383,6 +383,8 @@ Die Schaltfläche „Backups“ in der Werkzeugleiste öffnet einen Dialog mit a
 
 Die Device-Zeile in FHEMWEB zeigt „CMS starten“ (`index.html?mode=edit`) und „Zeige Homepage“ (`index.html` ohne Parameter), beide mit `target="_blank" rel="noopener"`. Ohne Parameter gilt der Ansichtsmodus; nur `mode=edit` aktiviert die Bearbeitung, damit die öffentliche Adresse keinen Modus-Parameter nennt. `js/fhem-cms.js` liest den Parameter beim Start, setzt im Ansichtsmodus die Klasse `cms-view` am `html`-Element und das Attribut `view-only` an den Kacheln. Das CSS blendet Kopf, Werkzeugleiste und Device-Karte aus (Fehlermeldungen bleiben sichtbar), die Kacheln blenden ihr Zahnrad aus. Es ist eine reine Darstellung ohne Sicherheitswirkung: Schreibzugriffe laufen weiter über FHEMWEB und `allowed`.
 
+Vorschau: Der Button „Vorschau“ öffnet `index.html?mode=preview` in einem neuen Fenster. Der Modus verhält sich wie der Ansichtsmodus, liest aber den Entwurf (`get draft`) statt des Live-Stands und blendet den Entwurfshinweis aus.
+
 ## WYSIWYG-Editor und Medien
 
 Der Textbaustein nutzt einen eigenen, schlanken Editor auf `contenteditable` (`js/richtext.js`, keine Fremdbibliothek). Funktionen: fett, kursiv, unterstrichen, durchgestrichen, Überschriften 1–3, Absatz, Zitat, Listen, Ausrichtung, Links, Tabellen (Zeilen/Spalten einfügen und löschen), Bilder, Rückgängig/Wiederholen. Alte Markdown-Bausteine werden beim Öffnen des Editors nach HTML überführt und beim Speichern als `html` abgelegt.

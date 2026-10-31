@@ -10,7 +10,10 @@ const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
 
 // Ohne Parameter zeigt die Seite nur die fertige Homepage. ?mode=edit startet die Bearbeitung.
 // Das ist keine Zugriffssperre.
-const VIEW_MODE = new URLSearchParams(window.location.search).get('mode') !== 'edit';
+const MODE = new URLSearchParams(window.location.search).get('mode');
+const VIEW_MODE = MODE !== 'edit';
+// ?mode=preview zeigt den Entwurf wie die fertige Seite (nur Ansicht).
+const PREVIEW_MODE = MODE === 'preview';
 
 class CmsPage {
   constructor(cmsDevice, shell, card) {
@@ -43,7 +46,8 @@ class CmsPage {
       this.button('Backups', () => this.showBackups()),
       this.button('Layout ändern', () => this.toggleLayout()),
       this.button('Veröffentlichen', () => this.publish()),
-      this.button('Entwurf verwerfen', () => this.discard())
+      this.button('Entwurf verwerfen', () => this.discard()),
+      this.button('Vorschau', () => this.preview())
     ];
     this.publishButton = this.pageButtons[5];
     this.discardButton = this.pageButtons[6];
@@ -116,9 +120,16 @@ class CmsPage {
     this.card.status = message;
   }
 
+  preview() {
+    const url = new URL(window.location.href);
+    url.search = '?mode=preview';
+    url.hash = window.location.hash;
+    window.open(url.href, '_blank', 'noopener');
+  }
+
   async start() {
     try {
-      this.config = await this.client.getConfig(VIEW_MODE ? 'config' : 'draft');
+      this.config = await this.client.getConfig(VIEW_MODE && !PREVIEW_MODE ? 'config' : 'draft');
       this.hasDraft = VIEW_MODE ? false : await this.client.hasDraft();
     } catch (error) {
       this.card.setAttribute('data-error', '');
