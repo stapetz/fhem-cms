@@ -1,3 +1,9 @@
+2026-10-31 - Add rebuild command and text widget schema
+
+Add set rebuild and throttled start page refresh from the FHEMWEB link so new
+frontend assets get a fresh cache token without a restart. Accept text widgets
+with a markdown field in the config schema.
+
 2026-10-31 - Fix device picker layout
 
 Use fixed column widths so all picker columns fit and show the hit count in a

@@ -96,6 +96,27 @@ pop(@{$restored->{pages}[0]{widgets}});
 push(@{$restored->{pages}[0]{widgets}}, {%{$thermostat}});
 like(FHEMCMS_WriteConfig($name, $dataDir, $restored), qr/Doppelte Widget-ID/, 'rejects duplicate widget ids');
 pop(@{$restored->{pages}[0]{widgets}});
+my $textWidget = {id => 'x1', type => 'text', title => 'Hinweis', markdown => "# Titel\n\nText mit **fett**",
+    grid => {col => 1, row => 3, w => 6, h => 2}};
+push(@{$restored->{pages}[0]{widgets}}, $textWidget);
+is(FHEMCMS_WriteConfig($name, $dataDir, $restored), undef, 'accepts a text widget');
+pop(@{$restored->{pages}[0]{widgets}});
+for my $case (
+    ['control characters', {%{$textWidget}, id => 'x2', markdown => "a\x01b"}, qr/Markdown/],
+    ['oversized text', {%{$textWidget}, id => 'x3', markdown => 'a' x 20001}, qr/Markdown/],
+    ['text without markdown', {id => 'x4', type => 'text', grid => $textWidget->{grid}}, qr/Pflichtfeld 'markdown'/],
+    ['text with device', {%{$textWidget}, id => 'x5', device => 'Lamp'}, qr/Unbekanntes Feld 'device'/],
+    ['non-string text', {%{$textWidget}, id => 'x6', markdown => ['a']}, qr/Markdown/],
+    ['long title', {%{$textWidget}, id => 'x7', title => 'a' x 65}, qr/Widget-Titel/],
+) {
+    my ($label, $widget, $expected) = @{$case};
+    push(@{$restored->{pages}[0]{widgets}}, $widget);
+    like(FHEMCMS_ValidateConfig($restored), $expected, "rejects a text widget with $label");
+    pop(@{$restored->{pages}[0]{widgets}});
+}
+push(@{$restored->{pages}[0]{widgets}}, {%{$textWidget}, markdown => "Zeile\r\n\tTab"});
+is(FHEMCMS_ValidateConfig($restored), undef, 'allows line breaks and tabs in text');
+pop(@{$restored->{pages}[0]{widgets}});
 my $migrated = FHEMCMS_MigrateConfig({schemaVersion => 1, pages => [{id => 'p', title => 'P',
     widgets => [{type => 'fhem-value', device => 'A', reading => 'r',
         grid => {col => 1, row => 1, w => 1, h => 1}}]}]});
@@ -104,7 +125,7 @@ is($migrated->{pages}[0]{widgets}[0]{id}, 'w1', 'assigns ids during migration');
 
 my $json = FHEMCMS_Get($hash, $name, 'config');
 my $decoded = JSON::PP::decode_json($json);
-is(scalar(@{$decoded->{pages}[0]{widgets}}), 1, 'get config returns the stored config as JSON');
+is(scalar(@{$decoded->{pages}[0]{widgets}}), 2, 'get config returns the stored config as JSON');
 like(FHEMCMS_Get($hash, $name, 'backups'), qr/config\.json\.\d{8}-\d{6}/, 'get backups lists backup names');
 
 my $payload = MIME::Base64::encode_base64(JSON::PP->new->utf8->encode(FHEMCMS_DefaultConfig()), '');
@@ -199,5 +220,22 @@ is(FHEMCMS_Define({NAME => 'CMS'}, 'CMS FHEMCMS'), undef, 'redefines after an as
 my ($tokenTwo) = read_file($pagePath) =~ m{fhem-cms\.css\?v=([0-9a-f]+)};
 isnt($tokenTwo, $tokenOne, 'regenerates the page with a new token after an asset change');
 ok(!-e "$pagePath.tmp", 'leaves no temporary page file behind');
+
+# rebuild und automatische Auffrischung
+my $assetFile = File::Spec->catfile($assetRoot, 'components', 'cms-widget.js');
+write_file($assetFile, 'widget v3');
+is(FHEMCMS_Set($hash, $name, 'rebuild'), undef, 'set rebuild regenerates the page');
+my ($tokenThree) = read_file($pagePath) =~ m{fhem-cms\.css\?v=([0-9a-f]+)};
+isnt($tokenThree, $tokenTwo, 'rebuild picks up changed assets');
+like(FHEMCMS_Set($hash, $name, 'rebuild', 'x'), qr/keine Parameter/, 'rebuild rejects parameters');
+write_file($assetFile, 'widget v4');
+%main::FHEMCMS_LAST_REFRESH = ();
+FHEMCMS_Summary('WEB', $name);
+my ($tokenFour) = read_file($pagePath) =~ m{fhem-cms\.css\?v=([0-9a-f]+)};
+isnt($tokenFour, $tokenThree, 'summary refreshes the page after asset changes');
+write_file($assetFile, 'widget v5');
+FHEMCMS_Summary('WEB', $name);
+my ($tokenStill) = read_file($pagePath) =~ m{fhem-cms\.css\?v=([0-9a-f]+)};
+is($tokenStill, $tokenFour, 'summary throttles repeated refreshes');
 
 done_testing();

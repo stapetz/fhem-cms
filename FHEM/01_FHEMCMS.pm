@@ -17,6 +17,9 @@ our ($readingFnAttributes, $FW_ME);
 our (%attr);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
 our $FHEMCMS_MAX_BACKUPS = 20;
+our $FHEMCMS_MAX_TEXT = 20000;
+our $FHEMCMS_REFRESH_INTERVAL = 10;
+our %FHEMCMS_LAST_REFRESH;
 
 sub FHEMCMS_Initialize {
     my ($modHash) = @_;
@@ -119,12 +122,30 @@ sub FHEMCMS_Set {
         return FHEMCMS_WriteConfig($name, $dataDir, $config);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of config restore';
+    if ($cmd eq 'rebuild') {
+        return 'rebuild erwartet keine Parameter' if (@args);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my $error = FHEMCMS_CreateStartPage($name);
+        return $error if (defined($error));
+        $FHEMCMS_LAST_REFRESH{$name} = time();
+        return undef;
+    }
+
+    return 'Unknown argument ' . $cmd . ', choose one of config restore rebuild:noArg';
 }
 
 sub FHEMCMS_Summary {
     my ($webName, $name) = @_;
     return '' if (!defined($name) || $name !~ /\A[A-Za-z0-9_.-]{1,128}\z/);
+
+    # Nach einem Update zeigt der Startlink sofort auf eine Seite mit neuem Cache-Token.
+    my $now = time();
+    if (!defined($FHEMCMS_LAST_REFRESH{$name}) || $now - $FHEMCMS_LAST_REFRESH{$name} >= $FHEMCMS_REFRESH_INTERVAL) {
+        $FHEMCMS_LAST_REFRESH{$name} = $now;
+        my $error = FHEMCMS_CreateStartPage($name);
+        Log3($name, 2, "FHEMCMS ($name): Startseite konnte nicht aktualisiert werden: $error")
+            if (defined($error));
+    }
 
     my $basePath = $main::FW_ME || '/fhem';
     $basePath =~ s{/$}{};
@@ -382,9 +403,12 @@ sub FHEMCMS_ValidateConfig {
             return 'Widget muss ein Objekt sein' if (ref($widget) ne 'HASH');
             return 'Unbekannter Widget-Typ'
                 if (ref($widget->{type}) || !defined($widget->{type})
-                    || ($widget->{type} ne 'fhem-value' && $widget->{type} ne 'thermostat'));
+                    || ($widget->{type} ne 'fhem-value' && $widget->{type} ne 'thermostat'
+                        && $widget->{type} ne 'text'));
 
-            if ($widget->{type} eq 'fhem-value') {
+            if ($widget->{type} eq 'text') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'markdown', 'grid'], ['title']);
+            } elsif ($widget->{type} eq 'fhem-value') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid']);
             } else {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title']);
@@ -394,9 +418,23 @@ sub FHEMCMS_ValidateConfig {
             return 'Ungueltige Widget-ID'
                 if (ref($widget->{id}) || !defined($widget->{id}) || $widget->{id} !~ $id);
             return "Doppelte Widget-ID '$widget->{id}'" if ($widgetIds{$widget->{id}}++);
-            return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
+            return 'Ungueltiger Widget-Titel'
+                if ($widget->{type} eq 'text' && exists($widget->{title})
+                    && (ref($widget->{title}) || !defined($widget->{title})
+                        || length($widget->{title}) > 64 || $widget->{title} =~ /[\x00-\x1f\x7f]/));
 
-            if ($widget->{type} eq 'fhem-value') {
+            if ($widget->{type} eq 'text') {
+                my $text = $widget->{markdown};
+                return 'Ungueltiger Markdown-Text'
+                    if (ref($text) || !defined($text) || length($text) > $FHEMCMS_MAX_TEXT
+                        || $text =~ /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
+            } else {
+                return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
+            }
+
+            if ($widget->{type} eq 'text') {
+                # keine weiteren Felder
+            } elsif ($widget->{type} eq 'fhem-value') {
                 return 'Ungueltiger Wert fuer reading' if (!$isName->($widget->{reading}));
             } else {
                 return 'Ungueltiger Widget-Titel'
