@@ -378,3 +378,7 @@ Der Device-Name muss als Bestätigung wiederholt werden. `purge` löscht `<modpa
 
 Die Schaltfläche „Backups“ in der Werkzeugleiste öffnet einen Dialog mit allen Sicherungen (neueste zuerst, Anzeige als Datum und Uhrzeit). Ein Klick fragt nach und führt dann `set <CMS> restore <Name>` aus. Vor der Wiederherstellung sichert das Modul den aktuellen Stand als eigenes Backup, sodass der Schritt umkehrbar ist. Danach wird die Konfiguration neu geladen und die aktuelle Seite angezeigt (oder die erste, falls sie im Backup nicht existiert). Der Client akzeptiert nur Namen im Format `config.json.<JJJJMMTT-HHMMSS>[-n].bak`.
 
+## Kacheln verschieben (Layout-Modus)
+
+`Layout ändern` blendet über jeder Kachel einen Griff ein. Die Kachel lässt sich per Maus oder Touch ziehen oder mit dem fokussierten Griff per Pfeiltasten um eine Zelle verschieben. Die Zelle unter dem Zeiger wird aus der tatsächlichen Spurbreite und den berechneten Zeilenhöhen des CSS-Rasters ermittelt (`js/layout.js`). Überlappende Kacheln rutschen nach unten (`moveWidget`), das Ergebnis wird beim Loslassen (bei Pfeiltasten nach 700 ms Ruhe oder beim Verlassen des Griffs) über die normale Konfigurationsspeicherung geschrieben. Schlägt das Speichern fehl, springt das Layout auf den gespeicherten Stand zurück. Größe (`w`, `h`) ändert sich weiterhin nur im Konfigurationsdialog. Auf schmalen Bildschirmen (einspaltig) ist der Layout-Modus ausgeblendet.
+

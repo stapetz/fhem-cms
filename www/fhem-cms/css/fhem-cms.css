@@ -146,7 +146,42 @@ cms-device-card {
   color: #c4d0c8;
 }
 
+.cms-grid.is-layout > :not(.cms-drag-handle) {
+  pointer-events: none;
+}
+
+.cms-drag-handle {
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0.4rem 0.6rem;
+  border: 2px dashed #8fd1a8;
+  border-radius: 0.9rem;
+  background: rgba(143, 209, 168, 0.12);
+  color: #d8f0e0;
+  font-size: 0.85rem;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.cms-drag-handle:focus-visible,
+.cms-drag-handle.is-dragging {
+  outline: 3px solid #8fd1a8;
+  background: rgba(143, 209, 168, 0.28);
+}
+
+.cms-drag-handle.is-dragging {
+  cursor: grabbing;
+}
+
 @media (max-width: 40rem) {
+  .cms-layout-toggle,
+  .cms-drag-handle {
+    display: none !important;
+  }
+
   .cms-grid {
     grid-template-columns: minmax(0, 1fr);
   }

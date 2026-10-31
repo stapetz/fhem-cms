@@ -1,3 +1,8 @@
+2026-10-31 - Move tiles freely in the 12 column grid
+
+The new Layout button lets tiles be dragged by mouse or touch, or moved with
+the arrow keys. Overlapping tiles are pushed down and the layout is saved.
+
 2026-10-31 - Offer backups as a dropdown for set restore
 
 FHEMWEB now lists the 20 newest backups as choices for "restore".

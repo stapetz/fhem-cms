@@ -2,6 +2,7 @@ import '../components/cms-device-card.js';
 import '../components/cms-thermostat.js';
 import '../components/cms-text.js';
 import { FhemClient, isValidName } from './fhem-client.js';
+import { cellFromPoint, moveWidget } from './layout.js';
 
 const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
@@ -35,8 +36,16 @@ class CmsPage {
       this.button('+ Seite', () => this.addPage()),
       this.button('Seite umbenennen', () => this.renamePage()),
       this.button('Seite löschen', () => this.deletePage()),
-      this.button('Backups', () => this.showBackups())
+      this.button('Backups', () => this.showBackups()),
+      this.button('Layout ändern', () => this.toggleLayout())
     ];
+    this.layoutButton = this.pageButtons[4];
+    this.layoutButton.classList.add('cms-layout-toggle');
+    this.layoutButton.setAttribute('aria-pressed', 'false');
+    this.layoutMode = false;
+    this.overlays = new Map();
+    this.layoutTimer = null;
+    this.layoutSaving = Promise.resolve();
 
     this.menu = document.createElement('details');
     this.menu.className = 'cms-menu';
@@ -146,6 +155,7 @@ class CmsPage {
   }
 
   async showPage(id) {
+    this.flushLayout();
     this.pageId = id;
     this.loadToken += 1;
     this.snapshots = new Map();
@@ -391,9 +401,166 @@ class CmsPage {
   renderWidgets() {
     this.grid.replaceChildren();
     this.elements.clear();
+    this.overlays.clear();
     for (const widget of this.page.widgets) {
       this.grid.append(this.createElementFor(widget));
     }
+    this.syncOverlays();
+  }
+
+  toggleLayout(force) {
+    this.layoutMode = typeof force === 'boolean' ? force : !this.layoutMode;
+    this.layoutButton.setAttribute('aria-pressed', String(this.layoutMode));
+    this.layoutButton.textContent = this.layoutMode ? 'Layout fertig' : 'Layout ändern';
+    this.grid.classList.toggle('is-layout', this.layoutMode);
+    if (!this.layoutMode) {
+      this.flushLayout();
+    }
+    this.syncOverlays();
+  }
+
+  // Im Layout-Modus liegt über jeder Kachel ein Griff zum Ziehen (Maus, Touch) und für die Pfeiltasten.
+  syncOverlays() {
+    for (const overlay of this.overlays.values()) {
+      overlay.remove();
+    }
+    this.overlays.clear();
+    if (!this.layoutMode) {
+      return;
+    }
+    for (const widget of this.page.widgets) {
+      const overlay = document.createElement('div');
+      overlay.className = 'cms-drag-handle';
+      overlay.tabIndex = 0;
+      overlay.setAttribute('role', 'button');
+      overlay.setAttribute('aria-label',
+        `Kachel ${widget.title || widget.device || widget.id} verschieben: ziehen oder Pfeiltasten verwenden`);
+      overlay.textContent = '⠿ verschieben';
+      this.place(overlay, widget);
+      this.attachDrag(overlay, widget.id);
+      this.overlays.set(widget.id, overlay);
+      this.grid.append(overlay);
+    }
+  }
+
+  currentLayout() {
+    return new Map(this.page.widgets.map((widget) => [widget.id, { ...widget.grid }]));
+  }
+
+  previewLayout(layout) {
+    this.pendingLayout = layout;
+    for (const widget of this.page.widgets) {
+      const grid = layout.get(widget.id);
+      const element = this.elements.get(widget.id);
+      const overlay = this.overlays.get(widget.id);
+      if (grid && element) {
+        this.place(element, { grid });
+        if (overlay) {
+          this.place(overlay, { grid });
+        }
+      }
+    }
+  }
+
+  attachDrag(overlay, id) {
+    overlay.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) {
+        return;
+      }
+      event.preventDefault();
+      this.flushLayout();
+      const widget = this.page.widgets.find((item) => item.id === id);
+      const start = cellFromPoint(this.grid, event.clientX, event.clientY);
+      const offset = { col: start.col - widget.grid.col, row: start.row - widget.grid.row };
+      overlay.setPointerCapture(event.pointerId);
+      overlay.classList.add('is-dragging');
+      let last = null;
+
+      const move = (moveEvent) => {
+        const cell = cellFromPoint(this.grid, moveEvent.clientX, moveEvent.clientY);
+        const layout = moveWidget(this.page.widgets, id, cell.col - offset.col, cell.row - offset.row);
+        const key = layout && JSON.stringify([...layout]);
+        if (layout && key !== last) {
+          last = key;
+          this.previewLayout(layout);
+        }
+      };
+      const finish = (commit) => {
+        overlay.removeEventListener('pointermove', move);
+        overlay.removeEventListener('pointerup', up);
+        overlay.removeEventListener('pointercancel', cancel);
+        overlay.classList.remove('is-dragging');
+        if (commit && last) {
+          this.commitLayout(this.pendingLayout);
+        } else {
+          this.previewLayout(this.currentLayout());
+        }
+      };
+      const up = () => finish(true);
+      const cancel = () => finish(false);
+      overlay.addEventListener('pointermove', move);
+      overlay.addEventListener('pointerup', up);
+      overlay.addEventListener('pointercancel', cancel);
+    });
+
+    overlay.addEventListener('keydown', (event) => {
+      const steps = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+      const step = steps[event.key];
+      if (!step) {
+        return;
+      }
+      event.preventDefault();
+      const base = (this.pendingLayout && this.pendingLayout.get(id)) || this.page.widgets.find((item) => item.id === id).grid;
+      const working = this.page.widgets.map((widget) => ({ ...widget, grid: (this.pendingLayout && this.pendingLayout.get(widget.id)) || widget.grid }));
+      const layout = moveWidget(working, id, base.col + step[0], base.row + step[1]);
+      if (!layout) {
+        return;
+      }
+      this.previewLayout(layout);
+      window.clearTimeout(this.layoutTimer);
+      this.layoutTimer = window.setTimeout(() => this.flushLayout(), 700);
+    });
+    overlay.addEventListener('blur', () => this.flushLayout());
+  }
+
+  flushLayout() {
+    window.clearTimeout(this.layoutTimer);
+    const layout = this.pendingLayout;
+    this.pendingLayout = null;
+    if (layout) {
+      this.commitLayout(layout);
+    }
+  }
+
+  commitLayout(layout) {
+    this.pendingLayout = null;
+    const changed = this.page.widgets.some((widget) => {
+      const grid = layout.get(widget.id);
+      return grid && (grid.col !== widget.grid.col || grid.row !== widget.grid.row);
+    });
+    if (!changed) {
+      return this.layoutSaving;
+    }
+    const pageId = this.page.id;
+    this.layoutSaving = this.layoutSaving.then(async () => {
+      const next = structuredClone(this.config);
+      for (const widget of next.pages.find((page) => page.id === pageId).widgets) {
+        const grid = layout.get(widget.id);
+        if (grid) {
+          widget.grid = { col: grid.col, row: grid.row, w: grid.w, h: grid.h };
+        }
+      }
+      try {
+        await this.persist(next);
+        this.setStatus('Layout gespeichert');
+      } catch (error) {
+        this.setStatus(`Layout konnte nicht gespeichert werden: ${error.message}`);
+      }
+      if (this.pageId === pageId) {
+        this.previewLayout(this.currentLayout());
+      }
+    });
+    return this.layoutSaving;
   }
 
   createElementFor(widget) {
