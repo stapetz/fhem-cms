@@ -4,12 +4,17 @@ use strict;
 use warnings;
 use Cwd qw(abs_path);
 use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
+use File::Copy qw(copy);
 use File::Path qw(make_path);
 use File::Spec;
+use JSON::PP ();
+use POSIX qw(strftime);
 
 our $FHEMCMS_VERSION = '0.1.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr);
+our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
+our $FHEMCMS_MAX_BACKUPS = 20;
 
 sub FHEMCMS_Initialize {
     my ($modHash) = @_;
@@ -32,6 +37,12 @@ sub FHEMCMS_Define {
         if ($name !~ /\A[A-Za-z0-9_.-]{1,128}\z/ || $name eq '.' || $name eq '..');
 
     my $error = FHEMCMS_CreateStartPage($name);
+    return $error if (defined($error));
+
+    # Läuft bei jedem Start: richtet Datenordner und Konfiguration für bestehende Devices nach.
+    my ($dataError, $dataDir) = FHEMCMS_CreateDataDir($name);
+    return $dataError if (defined($dataError));
+    $error = FHEMCMS_EnsureConfig($name, $dataDir);
     return $error if (defined($error));
 
     if (!defined($main::attr{$name}{room}) || $main::attr{$name}{room} eq '') {
@@ -159,6 +170,209 @@ HTML
     }
 
     return undef;
+}
+
+sub FHEMCMS_CreateDataDir {
+    my ($name) = @_;
+    my $modPath = $main::attr{global}{modpath};
+    return ('FHEM global modpath ist nicht gesetzt')
+        if (!defined($modPath) || $modPath eq '');
+
+    my $root = abs_path($modPath);
+    return ('FHEM global modpath verweist nicht auf ein Verzeichnis')
+        if (!defined($root) || !-d $root);
+
+    my $dataPath = File::Spec->catdir($root, 'fhem-cms-data');
+    my $devicePath = File::Spec->catdir($dataPath, $name);
+    if (!-d $devicePath) {
+        my $errors;
+        make_path($devicePath, {mode => 0750, error => \$errors});
+        return (FHEMCMS_PathError('Datenverzeichnis konnte nicht angelegt werden', $devicePath, $errors))
+            if (ref($errors) eq 'ARRAY' && @{$errors});
+    }
+
+    my $dataRoot = abs_path($dataPath);
+    my $realPath = abs_path($devicePath);
+    return ('Das CMS-Datenverzeichnis liegt ausserhalb des FHEM-Verzeichnisses')
+        if (!defined($dataRoot) || !defined($realPath)
+            || !FHEMCMS_IsChildPath($dataRoot, $root) || !FHEMCMS_IsChildPath($realPath, $dataRoot));
+
+    return (undef, $realPath);
+}
+
+sub FHEMCMS_DefaultConfig {
+    return {
+        schemaVersion => 1,
+        pages => [{id => 'start', title => 'Start', widgets => []}],
+    };
+}
+
+sub FHEMCMS_EnsureConfig {
+    my ($name, $dataDir) = @_;
+    my $file = File::Spec->catfile($dataDir, 'config.json');
+    return undef if (-e $file);
+    return FHEMCMS_WriteConfig($name, $dataDir, FHEMCMS_DefaultConfig());
+}
+
+sub FHEMCMS_ValidateConfig {
+    my ($config) = @_;
+    my $id = qr/\A[A-Za-z0-9_-]{1,64}\z/;
+    my $fhemName = qr/\A[A-Za-z0-9_.-]{1,128}\z/;
+
+    my $exact = sub {
+        my ($ref, $where, @allowed) = @_;
+        return "$where muss ein Objekt sein" if (ref($ref) ne 'HASH');
+        my %ok = map { $_ => 1 } @allowed;
+        for my $key (sort keys %{$ref}) {
+            return "Unbekanntes Feld '$key' in $where" if (!$ok{$key});
+        }
+        for my $key (@allowed) {
+            return "Pflichtfeld '$key' fehlt in $where" if (!exists($ref->{$key}));
+        }
+        return undef;
+    };
+    my $isInt = sub {
+        my ($v, $min, $max) = @_;
+        return defined($v) && !ref($v) && $v =~ /\A[0-9]{1,6}\z/ && $v >= $min && $v <= $max;
+    };
+
+    my $err = $exact->($config, 'Konfiguration', 'schemaVersion', 'pages');
+    return $err if ($err);
+    return 'Nicht unterstuetzte schemaVersion'
+        if (!$isInt->($config->{schemaVersion}, 1, 1));
+    return 'pages muss eine Liste mit 1 bis 50 Seiten sein'
+        if (ref($config->{pages}) ne 'ARRAY' || @{$config->{pages}} < 1 || @{$config->{pages}} > 50);
+
+    my %pageIds;
+    for my $page (@{$config->{pages}}) {
+        $err = $exact->($page, 'Seite', 'id', 'title', 'widgets');
+        return $err if ($err);
+        return 'Ungueltige Seiten-ID'
+            if (ref($page->{id}) || !defined($page->{id}) || $page->{id} !~ $id);
+        return "Doppelte Seiten-ID '$page->{id}'" if ($pageIds{$page->{id}}++);
+        return 'Ungueltiger Seitentitel'
+            if (ref($page->{title}) || !defined($page->{title})
+                || length($page->{title}) < 1 || length($page->{title}) > 128
+                || $page->{title} =~ /[\x00-\x1f\x7f]/);
+        return 'widgets muss eine Liste mit hoechstens 200 Eintraegen sein'
+            if (ref($page->{widgets}) ne 'ARRAY' || @{$page->{widgets}} > 200);
+
+        for my $widget (@{$page->{widgets}}) {
+            $err = $exact->($widget, 'Widget', 'type', 'device', 'reading', 'grid');
+            return $err if ($err);
+            return 'Unbekannter Widget-Typ'
+                if (ref($widget->{type}) || !defined($widget->{type}) || $widget->{type} ne 'fhem-value');
+            for my $field ('device', 'reading') {
+                return "Ungueltiger Wert fuer $field"
+                    if (ref($widget->{$field}) || !defined($widget->{$field})
+                        || $widget->{$field} !~ $fhemName || $widget->{$field} =~ /\A\.{1,2}\z/);
+            }
+            $err = $exact->($widget->{grid}, 'grid', 'col', 'row', 'w', 'h');
+            return $err if ($err);
+            my $grid = $widget->{grid};
+            return 'Ungueltige Rasterwerte'
+                if (!$isInt->($grid->{col}, 1, 12) || !$isInt->($grid->{row}, 1, 1000)
+                    || !$isInt->($grid->{w}, 1, 12) || !$isInt->($grid->{h}, 1, 1000)
+                    || $grid->{col} + $grid->{w} > 13);
+        }
+    }
+    return undef;
+}
+
+sub FHEMCMS_ParseConfig {
+    my ($text) = @_;
+    return (undef, 'Konfiguration ist zu gross') if (length($text) > $FHEMCMS_MAX_CONFIG_BYTES);
+    my $config = eval { JSON::PP->new->utf8->decode($text) };
+    return (undef, 'Konfiguration ist kein gueltiges JSON') if (!defined($config));
+    my $error = FHEMCMS_ValidateConfig($config);
+    return (undef, $error) if (defined($error));
+    return ($config, undef);
+}
+
+sub FHEMCMS_ReadFile {
+    my ($file) = @_;
+    return (undef, 'Datei nicht gefunden') if (!-f $file);
+    return (undef, 'Konfiguration ist zu gross') if (-s $file > $FHEMCMS_MAX_CONFIG_BYTES);
+    open(my $in, '<:raw', $file) or return (undef, "Datei konnte nicht gelesen werden: $!");
+    local $/;
+    my $text = <$in>;
+    close($in);
+    return ($text, undef);
+}
+
+sub FHEMCMS_ReadConfig {
+    my ($name, $dataDir) = @_;
+    my ($text, $error) = FHEMCMS_ReadFile(File::Spec->catfile($dataDir, 'config.json'));
+    return (undef, $error) if (defined($error));
+    return FHEMCMS_ParseConfig($text);
+}
+
+sub FHEMCMS_WriteConfig {
+    my ($name, $dataDir, $config) = @_;
+    my $error = FHEMCMS_ValidateConfig($config);
+    return $error if (defined($error));
+
+    my $text = JSON::PP->new->utf8->canonical->pretty->encode($config);
+    return 'Konfiguration ist zu gross' if (length($text) > $FHEMCMS_MAX_CONFIG_BYTES);
+
+    my $file = File::Spec->catfile($dataDir, 'config.json');
+    my $tmp = File::Spec->catfile($dataDir, 'config.json.tmp');
+    unlink($tmp);
+    my $out;
+    return "Temporaere Datei konnte nicht angelegt werden: $!"
+        if (!sysopen($out, $tmp, O_WRONLY | O_CREAT | O_EXCL, 0640));
+    binmode($out, ':raw');
+    my $written = print {$out} $text;
+    my $closeOk = close($out);
+    if (!$written || !$closeOk) {
+        my $writeError = "$!";
+        unlink($tmp);
+        return "Konfiguration konnte nicht geschrieben werden: $writeError";
+    }
+
+    if (-e $file) {
+        my $stamp = strftime('%Y%m%d-%H%M%S', localtime());
+        my $backup = File::Spec->catfile($dataDir, "config.json.$stamp.bak");
+        for (my $i = 1; -e $backup; $i++) {
+            $backup = File::Spec->catfile($dataDir, "config.json.$stamp-$i.bak");
+        }
+        if (!copy($file, $backup)) {
+            my $copyError = "$!";
+            unlink($tmp);
+            return "Backup konnte nicht angelegt werden: $copyError";
+        }
+    }
+
+    if (!rename($tmp, $file)) {
+        my $renameError = "$!";
+        unlink($tmp);
+        return "Konfiguration konnte nicht gespeichert werden: $renameError";
+    }
+
+    my @backups = FHEMCMS_ListBackups($dataDir);
+    for my $old (@backups[$FHEMCMS_MAX_BACKUPS .. $#backups]) {
+        unlink(File::Spec->catfile($dataDir, $old));
+    }
+    return undef;
+}
+
+sub FHEMCMS_ListBackups {
+    my ($dataDir) = @_;
+    opendir(my $dh, $dataDir) or return ();
+    my @files = grep { /\Aconfig\.json\.\d{8}-\d{6}(?:-\d+)?\.bak\z/ } readdir($dh);
+    closedir($dh);
+    return sort { $b cmp $a } @files;
+}
+
+sub FHEMCMS_RestoreBackup {
+    my ($name, $dataDir, $backupName) = @_;
+    return 'Ungueltiger Backup-Name'
+        if (!defined($backupName) || $backupName !~ /\Aconfig\.json\.\d{8}-\d{6}(?:-\d+)?\.bak\z/);
+    my ($text, $error) = FHEMCMS_ReadFile(File::Spec->catfile($dataDir, $backupName));
+    return $error if (defined($error));
+    my ($config, $parseError) = FHEMCMS_ParseConfig($text);
+    return "Backup ist ungueltig: $parseError" if (defined($parseError));
+    return FHEMCMS_WriteConfig($name, $dataDir, $config);
 }
 
 sub FHEMCMS_IsChildPath {

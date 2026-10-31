@@ -1,3 +1,8 @@
+2026-10-31 - Add per-device config storage
+
+Create fhem-cms-data/<device>/ with a validated config.json, timestamped
+backups and restore support. Existing devices are upgraded on the next start.
+
 2026-10-31 - Remove temporary FHEMWEB Inform probe
 
 Remove the one-off transport test page after verifying WebSocket status updates.

@@ -64,6 +64,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Aufgaben**
 
+- [x] Sicherheitsleitplanken für FHEM-Sitzung, gleich-originige Zugriffe, CSRF, fehlende Steuerbefehle, Geräte-/Reading-Validierung und Logging in `ENTWICKLUNG.md` festhalten.
 - [ ] Nutzung von FHEM-Sitzung, Authentifizierung und Berechtigungen für HTTP- und dauerhafte Verbindungen nachweisen.
 - [ ] CSRF-Schutz und erlaubte Ursprünge für schreibende/API-Aufrufe definieren.
 - [ ] Erlaubte Geräte/Readings und serverseitige Validierung spezifizieren.
@@ -72,7 +73,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Akzeptanzkriterien**
 
-- Die Sicherheitsregeln sind in `ENTWICKLUNG.md` festgehalten.
+- Die Sicherheitsregeln stehen in `ENTWICKLUNG.md`; offene Prüfungen gegen die konkrete FHEM-Referenzinstanz sind dokumentiert.
 - Es gibt keine API, über die der Browser ungeprüfte FHEM-Befehle oder Dateipfade übermitteln kann.
 - Negativtests für nicht autorisierte Zugriffe und ungültige Eingaben sind festgelegt.
 
@@ -84,11 +85,12 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Aufgaben**
 
-- [ ] Schema für Seiten, Komponenten, IDs und Layoutdaten definieren.
-- [ ] Regeln für Schema-Versionen, unbekannte Felder und künftige Migrationen festlegen.
-- [ ] Speicherort und Dateinamenskonvention im FHEM-Kontext festlegen.
-- [ ] Größenlimits, Backup- und sicheres Schreibverhalten spezifizieren.
-- [ ] Beispiele und Schema in `ENTWICKLUNG.md` oder einer späteren technischen Spezifikation dokumentieren.
+- [x] Schema für Seiten, Komponenten, IDs und Layoutdaten definieren (`schemaVersion` 1, `pages[]`, `widgets[]`, Raster `col`/`row`/`w`/`h`, erstes Widget `fhem-value`).
+- [x] Regeln für Schema-Versionen und unbekannte Felder festlegen (strikt abweisen). Migrationen sind noch offen.
+- [x] Speicherort und Dateinamenskonvention festlegen: `<modpath>/fhem-cms-data/<Device>/config.json`.
+- [x] Größenlimit (1 MiB), atomares Schreiben und Backups mit Zeitstempel (letzte 20) umgesetzt.
+- [x] Bestehende Devices werden beim nächsten `define`/FHEM-Start nachträglich mit Datenordner und Default-Konfiguration ausgestattet.
+- [ ] Wiederherstellungsdialog im Frontend, Löschfunktion mit Bestätigung und Beispiele in einer technischen Spezifikation.
 
 **Akzeptanzkriterien**
 

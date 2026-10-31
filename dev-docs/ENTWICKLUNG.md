@@ -263,10 +263,13 @@ Gespeicherte Seiten und Layouts sind JSON-Daten und kein ausführbares HTML. Die
 
 ### Sicherheit
 
-- API-Zugriffe müssen an die FHEM-Sitzung und deren Berechtigungen gebunden sein. Die konkrete Nutzung von FHEM-Authentifizierung, CSRF-Schutz und Berechtigungen ist vor Umsetzung zu verifizieren.
-- Geräte, Readings und Befehle werden serverseitig validiert. Der Browser darf keine beliebigen FHEM-Kommandos ausführen können.
-- Dauerhafte Verbindungen müssen Sitzung und zulässigen Ursprung prüfen und Verbindungen/Abonnements bei Sitzungsende schließen.
-- Eingaben, Konfigurationen und gegebenenfalls spätere Uploads benötigen Typ-, Größen- und Pfadprüfungen. Secrets und sensible Werte dürfen weder im Quellcode noch in Logs erscheinen.
+- **Identität und Transport:** Es gibt keine separate CMS-Anmeldung. Jede API muss dieselbe FHEM-Websitzung und deren Rechte nutzen; anonyme Zugriffe werden abgewiesen. Browserzugriffe bleiben gleich-originig zu FHEMWEB. Es werden weder CORS-Freigaben für fremde Origins noch Zugangsdaten im CMS gespeichert.
+- **Schreibschutz und CSRF:** Der MVP bietet keine schreibenden FHEM-Steuerbefehle. Konfigurationsänderungen sind davon getrennte Schreibvorgänge und müssen FHEMWEB-Authentifizierung und dessen CSRF-Schutz einhalten. Vor der Implementierung ist zu prüfen, wie die gewählte FHEM-Version CSRF-Token für den konkreten Request bereitstellt und validiert.
+- **Geräte und Readings:** Der Client darf keine FHEM-Kommandos, Devspec-/Regex-Filter oder Dateipfade übermitteln. Backend-Aufrufe akzeptieren nur explizite, syntaktisch validierte Device- und Reading-Namen; das Backend prüft Existenz und Lesbarkeit bei jeder Anfrage gegen den autorisierten FHEM-Kontext. Abonnements bleiben auf die konfigurierte Auswahl begrenzt und werden beim Verbindungsende entfernt.
+- **FHEMWEB-Inform:** Inform-Nachrichten gelten als nicht vertrauenswürdige Daten. Es wird nur der benötigte Statuswert ausgewertet und als Text dargestellt; von FHEMWEB geliefertes HTML/SVG wird nicht ausgeführt oder in das DOM eingefügt. `since=0` und Filter dürfen keinen ungeprüften, globalen Gerätezugriff erzeugen.
+- **Persistenz und Eingaben:** Konfigurationen werden gegen ein versioniertes Schema geprüft und ausschliesslich in einem festgelegten Datenverzeichnis ausserhalb der öffentlich statischen `www`-Auslieferung gespeichert. Typ-, Schema-, Grössen- und Pfadprüfungen erfolgen serverseitig. Unbekannte Felder und nicht unterstützte Schema-Versionen werden abgewiesen statt stillschweigend entfernt oder überschrieben.
+- **Fehler und Protokolle:** Ungültige oder nicht autorisierte Anfragen erhalten erkennbare Fehler. Logs enthalten weder Sitzungs-/CSRF-Token noch Konfigurationsinhalte oder andere Secrets; Eingaben werden vor einer Protokollierung begrenzt und bereinigt.
+- **Noch zu verifizieren:** FHEM-Version und konkrete Authentifizierungs-/CSRF-Konfiguration der Referenzinstanz, Verhalten bei fehlender Sitzung, eingeschränkten Berechtigungen und unzulässigen Devices/Readings sowie die Einbindung des CMS-Datenverzeichnisses in FHEM-Backup und Restore.
 - Externe Medien, RSS-Quellen und Plugins bilden zusätzliche Vertrauensgrenzen und bleiben außerhalb des MVP, bis deren Sicherheitsregeln festgelegt sind.
 
 ### Nicht-funktionale Anforderungen und Messbarkeit
@@ -319,3 +322,12 @@ Für den ersten manuellen Test FHEM 6.5 oder neuer verwenden:
 4. `define cmsTest FHEMCMS` ausführen und mit `get cmsTest url` den URL-Pfad abrufen.
 
 Das Testfrontend bestätigt die Anlage und zeigt den Device-Namen. Eine JSON-API, Persistenz und Live-FHEM-Datenanbindung sind in diesem ersten Gerüst noch nicht enthalten.
+
+## Konfigurationsspeicher (S04)
+
+- Pfad: `<modpath>/fhem-cms-data/<Device>/config.json`, ausserhalb von `www`. Der Ordner wird beim `define` und bei jedem FHEM-Start nachgerüstet, falls er fehlt; eine vorhandene Konfiguration wird nie überschrieben.
+- Format: `{"schemaVersion":1,"pages":[{"id","title","widgets":[{"type":"fhem-value","device","reading","grid":{"col","row","w","h"}}]}]}`. Unbekannte Felder, fehlende Pflichtfelder und nicht unterstützte Versionen werden abgewiesen.
+- Limits: 1 MiB, höchstens 50 Seiten, 200 Widgets je Seite, Raster 12 Spalten.
+- Schreiben: temporäre Datei, dann atomares `rename`; die Vorgängerversion bleibt als `config.json.<JJJJMMTT-hhmmss>.bak` erhalten (die letzten 20).
+- Wiederherstellen: `FHEMCMS_RestoreBackup` akzeptiert nur Backup-Namen dieses Musters und validiert die Datei vor dem Zurückschreiben. Ein UI-Dialog folgt später.
+- `delete <Device>` löscht den Datenordner nicht; die bestätigte Löschfunktion ist offen.
