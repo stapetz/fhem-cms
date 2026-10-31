@@ -304,10 +304,33 @@ class FHEMCMSThermostat extends HTMLElement {
       filter.addEventListener('input', () => this.renderPickerRows());
     }
     this.render();
+    this.fitObserver = new ResizeObserver(() => this.fitText());
+    this.fitObserver.observe(this.shadowRoot.querySelector('[data-tile]'));
   }
 
   disconnectedCallback() {
     window.clearTimeout(this.sendTimer);
+    this.fitObserver?.disconnect();
+  }
+
+  // Schriftgröße in px aus der Kachelgröße (wie die CSS-Formel), unabhängig von der Container-Query-Auswertung des Browsers; danach Fit-Prüfung.
+  fitText() {
+    const tile = this.shadowRoot.querySelector('[data-tile]');
+    const body = tile?.querySelector('.body');
+    if (!body) {
+      return;
+    }
+    const { clientWidth: w, clientHeight: h } = tile;
+    if (!w || !h) {
+      return;
+    }
+    let size = w / h < 1.7 ? Math.min(0.065 * h, 0.062 * w) : Math.min(0.092 * h, 0.0385 * w);
+    size = Math.max(4, size);
+    body.style.fontSize = `${size}px`;
+    for (let i = 0; i < 12 && size > 4 && body.scrollHeight > body.clientHeight + 1; i += 1) {
+      size = Math.max(4, size * 0.96);
+      body.style.fontSize = `${size}px`;
+    }
   }
 
   set config(value) {
