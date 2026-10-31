@@ -212,9 +212,28 @@ Dieser Abschnitt konkretisiert das vorangehende Zielbild. Bei Widersprüchen hab
 
   Die gemeinsamen Ressourcen werden nicht pro Device dupliziert. Das Device-Verzeichnis verwendet exakt den FHEM-Devicenamen und enthält einen Bootstrap-Einstiegspunkt `index.html`. Unterschiedliche CMS-Inhalte werden innerhalb des Devices als Seiten modelliert und über die Navigation verknüpft; ein weiteres CMS-Device erhält einen eigenen Ordner und Einstiegspunkt. `get <device> url` gibt die URL zu dieser `index.html` zurück. Das Löschen der Device-Definition entfernt keine Dateien; Datenbereinigung darf nur über eine separate, ausdrücklich ausgelöste Funktion erfolgen.
 - **Datenzugriff:** der Browser erhält nur Daten, für die die jeweilige FHEM-Sitzung berechtigt ist. Abonnements sollen auf benötigte Geräte/Readings begrenzt und bei Seitenwechsel oder Verbindungsende aufgeräumt werden.
-- **Noch offen:** WebSocket gegenüber vorhandenen FHEM-Schnittstellen oder einer Alternative, Aufteilung zwischen JSON-API und Ereigniskanal, sichere Slug-/Kollisionsstrategie und Lebenszyklus der gerätebezogenen HTML-Einstiegsdatei sowie der CMS-Inhaltsseiten. Die Mindestversion ist FHEM 6.5; Tests gegen diese Baseline bleiben Teil der Integrationsprüfung.
+- **Noch offen:** die abschliessende Wahl des Ereignistransports, die JSON-API, Berechtigungsprüfung, sichere Slug-/Kollisionsstrategie und der Lebenszyklus der gerätebezogenen HTML-Einstiegsdatei sowie der CMS-Inhaltsseiten. Die Mindestversion ist FHEM 6.5; Tests gegen diese Baseline bleiben Teil der Integrationsprüfung.
 - Ein eigener WebSocket-Server und ein zusätzlicher REST-Endpunkt sind nicht als verbindliche Architektur beschlossen. Vor einer Entscheidung ist ein Machbarkeitsnachweis zu erstellen und hinsichtlich Abhängigkeiten, Berechtigungen und Serverlast zu bewerten.
 - Backend und Frontend kommunizieren mit JSON. Die bereits gesetzten Leitplanken sind Perl/FHEM, Standard Web Components, CSS Grid/Flexbox, CSS Custom Properties und JSON-Konfigurationen.
+
+#### Vorläufige FHEMWEB-Transportprüfung (S02)
+
+Die aktuelle FHEMWEB-Implementierung kennt für `longpoll` die Werte `0`, `1` und `websocket`. Der Browser der FHEM-Oberfläche nutzt für Statusmeldungen den FHEMWEB-`inform`-Pfad; bei `longpoll=websocket` wird derselbe Inform-Datenstrom über WebSocket übertragen. Die eingehenden Statusnachrichten sind zeilenweise JSON. FHEMWEB kann den Stream alternativ als HTTP-Langpoll bereitstellen. Für den WebSocket-Pfad prüft FHEMWEB das optionale Perl-Modul `Digest::SHA`.
+
+Ohne numerischen `since`-Wert verwendet FHEMWEB standardmässig `time()-5` und liefert initial nur Statuswerte mit einem neueren Änderungszeitpunkt. Ein Client kann mit `since=0` ältere Statuswerte anfordern; ob das für alle benötigten Readings und den Reconnect des CMS genügt, muss der Machbarkeitstest zeigen.
+
+**Arbeitskandidat, noch keine Architekturentscheidung:** FHEMWEB-`inform` als Ereigniskanal, WebSocket bevorzugt und HTTP-Langpoll als Fallback; ein eigener Ereignisserver wäre dafür zunächst nicht erforderlich. Snapshot und CMS-Konfiguration benötigen einen separat zu prüfenden JSON-Zugriff. Authentifizierung, CSRF, Geräte-/Reading-Berechtigungen und das Verhalten auf FHEM 6.5 sind vor Freigabe mit einem Machbarkeitsnachweis zu validieren (S02/S03). Bis dahin werden keine produktive API und kein eigener Ereignisserver implementiert.
+
+Der Read-only-Prototyp liegt unter `www/fhem-cms/examples/inform-probe.html`. Für einen manuellen Test auf dem FHEM-6.5-Referenzsystem:
+
+1. `define cmsTransportTest dummy` ausführen.
+2. `/fhem/fhem-cms/examples/inform-probe.html` über FHEMWEB öffnen.
+3. `set cmsTransportTest on` und danach `set cmsTransportTest off` ausführen; empfangene Initial- und Änderungsnachrichten in der Seite prüfen.
+4. `delete cmsTransportTest` ausführen.
+
+Die Probe abonniert ausschliesslich dieses fest eingetragene Testdevice, sendet keine FHEM-Befehle und zeigt empfangene Zeilen als Text an. Der Laufzeittest und die Prüfung von Anmeldung und Berechtigungen stehen noch aus.
+
+Quellen zur Vorprüfung: [FHEMWEB-Modul](https://github.com/fhem/fhem-mirror/blob/main/fhem/FHEM/01_FHEMWEB.pm) und [FHEM-Webfrontend](https://github.com/fhem/fhem-mirror/blob/main/fhem/www/pgm2/fhemweb.js). Die Prüfung des aktuellen Quellstands ersetzt keinen Laufzeittest gegen die unterstützte FHEM-6.5-Baseline.
 
 ### Binding, Widgets und Konfigurationsdaten
 
@@ -257,18 +276,18 @@ Gespeicherte Seiten und Layouts sind JSON-Daten und kein ausführbares HTML. Die
 
 ### Nicht-funktionale Anforderungen und Messbarkeit
 
-- **Mobile First:** Layout und Interaktionen werden zuerst für kleine Smartphone-Bildschirme entworfen und anschließend für Tablets und Desktop erweitert. Die Oberfläche muss sowohl Phone- als auch Tablet-Ansichten unterstützen; Touch-Ziele und Navigation sind für mobile Nutzung auszulegen.
-- **Betriebssysteme:** Windows, macOS und Linux auf Desktop-/Laptop-Systemen sowie Android und iOS auf Phone und Tablet.
-- **Browser:** aktuelle unterstützte Versionen von Edge, Chrome, Firefox und Safari. Safari ist insbesondere für macOS und iOS Teil der Browsermatrix; die konkrete Mindestversion je Browser und Betriebssystem ist in S01 festzulegen.
-- **Bedienung:** responsive Darstellung für Wandtablet, Phone, Tablet und Desktop; große Touch-Ziele. Tastaturbedienbarkeit und sichtbarer Fokus sind für alle Kernaktionen erforderlich. Kernabläufe müssen auf den festgelegten Browser-/Betriebssystemkombinationen geprüft werden.
+- **Referenzumgebung:** FHEM 6.5 auf dem vorhandenen FHEM-System. Phone- und Tablet-Referenzmodelle werden vor der MVP-Abnahme in S10 festgehalten; sie blockieren nicht die Architekturprüfung.
+- **Browsermatrix:** jeweils aktuelle und vorherige stabile Hauptversion, bestimmt zum Zeitpunkt des Tests. Zu prüfen sind Edge, Chrome und Firefox auf Windows, macOS, Linux, Android und iOS sowie Safari auf macOS und iOS, soweit die jeweilige Browser-App auf der Plattform verfügbar ist.
+- **Mobile First:** Layout und Interaktionen werden zuerst für kleine Smartphone-Bildschirme entworfen und anschliessend für Tablets und Desktop erweitert. Phone-, Tablet- und Desktop-Ansichten sind Teil der Abnahme. Auf Phone-Breite darf kein horizontales Seiten-Scrolling erforderlich sein; Kernaktionen müssen mit Touch und Tastatur erreichbar sein und sichtbaren Tastaturfokus bieten. Touch-Ziele sollen mindestens 44 × 44 CSS-Pixel gross sein.
+- **Bedienung:** responsive Darstellung für Wandtablet, Phone, Tablet und Desktop. Kernabläufe müssen auf den festgelegten Browser-/Betriebssystemkombinationen geprüft werden.
 - **Robustheit:** bei Verbindungsabbruch zeigt die UI einen erkennbaren Offline-/Wiederverbindungsstatus. Nach Wiederverbindung werden aktuelle Zustände erneut geladen und erforderliche Abonnements wiederhergestellt; veraltete Nachrichten dürfen keinen neueren Zustand überschreiben.
-- **Performance-Vorschlag:** Für ein noch festzulegendes Referenzsystem und ein Dashboard mit 20 Widgets gelten als erste Diskussionswerte: erste bedienbare Ansicht innerhalb von 2 Sekunden im lokalen Netz und Anzeige einer eingehenden Zustandsänderung innerhalb von 500 ms. Hardware, Browser, Netzwerk und Messmethode müssen vor Abnahme bestätigt werden; Werte können anhand eines Prototyps angepasst werden.
+- **Performance-Abnahme:** Für ein Dashboard mit 20 Widgets gelten im lokalen Netz die bestätigten Ziele: erste bedienbare Ansicht innerhalb von 2 Sekunden und Anzeige einer Reading-Änderung innerhalb von 500 ms. Die erste Zeit wird ab Navigation bis zur bedienbaren CMS-Ansicht gemessen; die zweite ab der ausgelösten FHEM-Änderung bis zur sichtbaren Aktualisierung im Widget. S10 protokolliert die Messungen auf dem FHEM-Referenzsystem und den dort getesteten Browser-/Gerätekombinationen.
 - **Serverlast:** Ereignisse sollen nur an interessierte Clients gehen. CPU- und Speicherverbrauch werden auf der festgelegten FHEM-Referenzhardware mit dokumentierter Anzahl von Geräten, Widgets und Ereignissen gemessen. Grenzwerte werden vor dem MVP-Abnahmetest festgelegt.
 - „60 FPS“ ist kein pauschales Abnahmekriterium für alle Zielgeräte. Animationen dürfen die Bedienung nicht blockieren; die Leistung wird auf der vereinbarten Referenzhardware geprüft.
 
-### MVP-Vorschlag und Abnahmekriterien
+### Bestätigter MVP-Umfang und Abnahmekriterien
 
-Der MVP-Vorschlag umfasst:
+Der MVP-Umfang und die Nicht-Ziele wurden am 31.10.2026 bestätigt. Er umfasst:
 
 1. Statische CMS-Dateien liegen unter `www/fhem-cms/` und werden von FHEMs normaler `www`-Auslieferung bereitgestellt; das Steuerungsmodul bedient keine HTML- oder Asset-Seiten selbst.
 2. Beim Anlegen eines CMS-Devices wird genau eine HTML-Bootstrap-Datei unter `www/fhem-cms/<device>/index.html` erzeugt. Sie lädt die gemeinsamen Assets und startet dieses Device. Inhaltsseiten wie `urlaub.html` gehören zur Inhaltsstruktur des Devices und werden von der Startseite aus navigiert.
@@ -281,7 +300,7 @@ Der MVP-Vorschlag umfasst:
 
 **Vorgeschlagene Nicht-Ziele des MVP:** schreibende FHEM-Steuerung, Bild-Uploads, Kalender, Wetter, RSS, externe Medien und Community-Plugins. Diese Funktionen können nach dem MVP als eigene Stories aufgenommen werden.
 
-Der MVP-Umfang, das Referenzsystem und vorgeschlagene Leistungswerte werden in der Storyliste zuerst gemeinsam bestätigt. Eine Roadmap-Phase gilt erst als abgeschlossen, wenn ihre Akzeptanzkriterien erfüllt sind, passende Tests vorliegen und die Entwicklerdokumentation aktualisiert ist.
+Die konkreten Phone-/Tablet-Modelle werden vor der Abnahme in S10 ergänzt. Eine Roadmap-Phase gilt erst als abgeschlossen, wenn ihre Akzeptanzkriterien erfüllt sind, passende Tests vorliegen und die Entwicklerdokumentation aktualisiert ist.
 
 ### Langfristige Reihenfolge
 

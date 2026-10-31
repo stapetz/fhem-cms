@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FHEMWEB-Inform-Test</title>
+  <link rel="stylesheet" href="../css/fhem-cms.css">
+</head>
+<body>
+  <main class="cms-shell">
+    <p class="cms-kicker">fhem-cms | Machbarkeitstest</p>
+    <h1>FHEMWEB-Inform</h1>
+    <p class="cms-copy">
+      Read-only-Test des FHEMWEB-WebSocket-Inform-Kanals für
+      <code>cmsTransportTest</code>. Es werden keine FHEM-Befehle gesendet.
+    </p>
+    <p id="connection" role="status" aria-live="polite">Verbindung wird aufgebaut ...</p>
+    <h2>Empfangene Statusnachrichten</h2>
+    <ol id="events" aria-live="polite"></ol>
+  </main>
+  <script type="module">
+    const connection = document.querySelector('#connection');
+    const events = document.querySelector('#events');
+    const fhemRoot = new URL('../../', window.location.href);
+
+    if (fhemRoot.protocol !== 'http:' && fhemRoot.protocol !== 'https:') {
+      connection.textContent = 'Der Test muss über FHEMWEB geöffnet werden.';
+    } else {
+      const endpoint = new URL(fhemRoot);
+      endpoint.pathname = endpoint.pathname.replace(/\/$/, '');
+      endpoint.protocol = fhemRoot.protocol === 'https:' ? 'wss:' : 'ws:';
+      endpoint.search = new URLSearchParams({
+        XHR: '1',
+        inform: 'type=status;filter=NAME=cmsTransportTest;since=0;fmt=JSON',
+        fw_id: `cms-inform-probe-${Date.now()}`,
+        timestamp: String(Date.now())
+      }).toString();
+
+      const socket = new WebSocket(endpoint);
+
+      socket.addEventListener('open', () => {
+        connection.textContent = 'WebSocket verbunden.';
+      });
+
+      socket.addEventListener('message', (event) => {
+        for (const message of String(event.data).split('\n')) {
+          if (!message) {
+            continue;
+          }
+
+          const item = document.createElement('li');
+          item.textContent = message;
+          events.prepend(item);
+
+          while (events.children.length > 50) {
+            events.lastElementChild.remove();
+          }
+        }
+      });
+
+      socket.addEventListener('error', () => {
+        connection.textContent = 'Verbindungsfehler. FHEMWEB- und Browserkonsole prüfen.';
+      });
+
+      socket.addEventListener('close', (event) => {
+        connection.textContent = `Verbindung geschlossen (Code ${event.code}).`;
+      });
+
+      window.addEventListener('pagehide', () => socket.close(), { once: true });
+    }
+  </script>
+</body>
+</html>

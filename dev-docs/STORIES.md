@@ -16,20 +16,20 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Aufgaben**
 
-- [ ] MVP-Funktionen und explizite Nicht-Ziele bestätigen.
-- [ ] FHEM 6.5 als Mindest-Baseline für Integrationstests bestätigen und Testprozedur gegen die stabile Releaseversion dokumentieren.
-- [ ] Browsermatrix für Windows, macOS, Linux, Android und iOS festlegen: Edge, Chrome, Firefox und Safari auf den jeweils unterstützten Kombinationen.
-- [ ] Mindestversionen der Browser und konkrete Phone-/Tablet-Referenzgeräte festlegen.
-- [ ] Mobile-First-Abnahmekriterien für Phone, Tablet und Desktop festlegen.
-- [ ] Prüfen und bestätigen oder anpassen: erste bedienbare Ansicht innerhalb von 2 Sekunden und Zustandsanzeige innerhalb von 500 ms bei einem Dashboard mit 20 Widgets.
-- [ ] Messbedingungen für Performance und Serverlast dokumentieren.
+- [x] MVP-Funktionen und explizite Nicht-Ziele bestätigen.
+- [x] FHEM 6.5 als Mindest-Baseline für Integrationstests bestätigen und Testprozedur gegen die stabile Releaseversion dokumentieren.
+- [x] Browsermatrix für Windows, macOS, Linux, Android und iOS festlegen: Edge, Chrome, Firefox und Safari auf den jeweils verfügbaren Kombinationen.
+- [x] Mindestversionen auf aktuelle und vorherige stabile Hauptversion festlegen. Konkrete Phone-/Tablet-Referenzgeräte werden vor der MVP-Abnahme in S10 protokolliert.
+- [x] Mobile-First-Abnahmekriterien für Phone, Tablet und Desktop festlegen.
+- [x] Ziele von 2 Sekunden bis zur bedienbaren Ansicht und 500 ms bis zur sichtbaren Zustandsänderung für 20 Widgets bestätigen.
+- [x] Messbedingungen für Performance und Serverlast dokumentieren.
 
 **Akzeptanzkriterien**
 
 - MVP-Umfang, Nicht-Ziele und Zielumgebung stehen in `ENTWICKLUNG.md`.
 - FHEM 6.5 oder eine neuere stabile Version ist als unterstützte Baseline festgehalten; der unterstützte Browser-/Betriebssystemumfang und die Browser-Mindestversionen sind dokumentiert.
-- Die Phone-, Tablet- und Desktop-Ansichten sind Teil der Abnahmematrix und werden Mobile-First geprüft.
-- Leistungsziele haben eine nachvollziehbare Messmethode und wurden bestätigt oder durch begründete Werte ersetzt.
+- Phone-, Tablet- und Desktop-Ansichten sind Teil der Abnahmematrix und werden Mobile-First geprüft; konkrete Modelle werden mit den S10-Abnahmetests festgehalten.
+- Leistungsziele und Messmethode stehen in `ENTWICKLUNG.md`; Browser-/Gerätekombinationen und Ergebnisse werden bei der S10-Abnahme protokolliert.
 
 ### S02 - FHEM-Integrationsweg und Kommunikation validieren
 
@@ -39,12 +39,13 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Aufgaben**
 
-- [ ] FHEMs `www`-Verzeichnis und die normale URL-Abbildung für statische Dateien untersuchen.
-- [ ] Festlegen, wie `www/fhem-cms/` im Entwicklungs- und Installationsablauf bereitgestellt wird.
+- [x] FHEMs `www`-Verzeichnis und die normale URL-Abbildung für statische Dateien untersuchen und mit dem Testdevice bestätigen.
+- [x] Festlegen, wie `www/fhem-cms/` im Entwicklungs- und Installationsablauf bereitgestellt wird.
 - [x] Gemeinsame FTUI3-inspirierte Ressourcenstruktur und URL-Konvention für Device-Einstiegspunkte festlegen (`<FHEM-Device-Name>/index.html`).
-- [ ] WebSocket, vorhandene FHEM-Schnittstellen und mögliche Alternativen anhand von Kompatibilität, Abhängigkeiten und Serverlast vergleichen.
-- [ ] Einen kleinen Machbarkeitsnachweis für den bevorzugten Weg erstellen.
-- [ ] Gewählte Architektur und verworfene Alternativen mit Begründung in `ENTWICKLUNG.md` dokumentieren.
+- [x] FHEMWEB-Inform via WebSocket und HTTP-Langpoll anhand des aktuellen FHEM-Quellcodes vergleichen; Grenzen und offene Laufzeit-/Berechtigungsprüfung dokumentieren.
+- [x] Einen Read-only-Machbarkeitsprototyp für FHEMWEB-Inform erstellen.
+- [ ] Den Prototyp auf FHEM 6.5 ausführen und Initialstatus, Zustandsänderungen, Anmeldung und Berechtigungen prüfen.
+- [ ] Gewählte Architektur und verworfene Alternativen nach dem Machbarkeitsnachweis mit Begründung in `ENTWICKLUNG.md` festhalten.
 
 **Akzeptanzkriterien**
 
@@ -217,6 +218,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 - [ ] Testfälle für Berechtigungen, ungültige Daten, Neustart und Verbindungsabbruch ausführen.
 - [ ] Browser-, Tastatur- und Touch-Bedienung auf den vereinbarten Zielgeräten prüfen.
+- [ ] Die Phone-/Tablet-Referenzmodelle vor Testbeginn festlegen und zusammen mit Browser-Version und Ergebnis protokollieren.
 - [ ] Performance und Serverlast mit den S01-Messbedingungen bewerten.
 - [ ] Installations-, Konfigurations- und Fehlerbehebungsdokumentation für Anwender erstellen.
 - [ ] Abweichungen und Folgestories am Ende dieser Liste ergänzen.
