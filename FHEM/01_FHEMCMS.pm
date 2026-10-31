@@ -12,7 +12,7 @@ use JSON::PP ();
 use MIME::Base64 qw(decode_base64);
 use POSIX qw(strftime);
 
-our $FHEMCMS_VERSION = '0.1.0-dev';
+our $FHEMCMS_VERSION = '0.1.0';
 our ($readingFnAttributes, $FW_ME);
 our (%attr);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;

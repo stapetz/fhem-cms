@@ -1,3 +1,20 @@
+2026-10-31 - First release 0.1.0
+
+First public version of fhem-cms: pages with navigation, text blocks with placeholders, thermostat, value, free HTML, switch and button widgets, draft and publish workflow.
+S01 - MVP-Umfang und Referenzumgebung festlegen
+S08 - Redaktionellen Textbaustein umsetzen
+S09 - Lesendes FHEM-Widget und Live-Zustände umsetzen
+S17 - Schlanke Seite ohne Kopfbereich
+S20 - Navigationspunkte: Größe und Beschriftung
+S21 - Texteditor: Farben
+S22 - Aufgeräumte Werkzeugleiste und Meldungen
+S23 - Gitternetz im Bearbeitungsmodus
+S24 - Werkzeugleiste links, Meldungsbox
+S25 - Wert-Anzeige (Device, Reading, Einheit, Icon)
+S27 - Menüs öffnen beim Überfahren
+S30 - Thermostat schreibt wie das ThermostatDashboard und skaliert
+S33 - Taster / Befehlsknopf
+
 2026-10-31 - Text placeholders accept formatting
 
 Bold, italic, underline, strikethrough, colour and highlight now apply to placeholders in the text editor; placeholders always stay inside a paragraph.
