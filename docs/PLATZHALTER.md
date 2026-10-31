@@ -57,11 +57,107 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 - **Nicht erlaubt:** `script`, `iframe`, Bilder, Formulare, Ereignis-Attribute (`onclick` …), Links, Kommentare, `url()`, `@import`, `position: fixed`. Eine Verletzung zeigt der Dialog beim Speichern als Fehler.
 - Höchstens 20 000 Zeichen.
 
-## Beispiel
+## Häufige Fragen
+
+**Wie finde ich Device- und Reading-Namen?** In FHEM öffnest du das Device (Detailseite) und liest die Namen unter *Readings* ab. Es zählt die exakte Schreibweise inklusive Groß- und Kleinschreibung.
+
+**Mehrere Devices in einer Kachel?** Ja, einfach mehrere Platzhalter mit verschiedenen Devices verwenden (höchstens 20).
+
+**Reading eines Kanals (z. B. HomeMatic)?** Das Device wird zuerst selbst durchsucht, dann seine Kanäle. Du schreibst also nur den Namen des Hauptdevices und das Reading, z. B. `{{Heizung:desired-temp}}`.
+
+**Warum steht dort `–`?** Das Device oder Reading existiert nicht, oder es hat (noch) keinen Wert. Mit `default(…)` legst du einen eigenen Ersatztext fest.
+
+**Warum wird mein Code abgelehnt?** Meist ein nicht erlaubtes Element oder ein Attribut in einfachen statt doppelten Anführungszeichen. Schreibe `class="x"`, nicht `class='x'`.
+
+## Beispiele
+
+### 1. Einfache Werte
 
 ```html
-<div style="font-size:1.4em">
-  {{Garten:@alias|default(Garten)}}: <b>{{Garten:temperature|round(1)|suffix( °C)}}</b>
-</div>
+<div>Temperatur: {{Garten:temperature}} °C</div>
+```
+
+### 2. Runden und Einheit anhängen
+
+```html
+<div style="font-size:1.6em"><b>{{Garten:temperature|round(1)|suffix( °C)}}</b></div>
 <div>Luftfeuchte: {{Garten:humidity|int|suffix( %)}}</div>
 ```
+
+### 3. Alias als Überschrift
+
+```html
+<h3>{{Garten:@alias|default(Garten)}}</h3>
+<div>{{Garten:temperature|round(1)|suffix( °C)}}</div>
+```
+
+### 4. Zustände in Klartext übersetzen
+
+```html
+<div>Fenster: <b>{{Fenster:state|map(open=Offen,closed=Geschlossen,tilted=Gekippt)}}</b></div>
+<div>Licht: {{Lampe:state|map(on=An,off=Aus)|default(unbekannt)}}</div>
+```
+
+### 5. Farbe nach Zustand
+
+```html
+<style>
+  .an   { color: #8fd0a8; }
+  .aus  { color: #888; }
+  .warm { color: #ff8a80; }
+  .kalt { color: #7fb4ff; }
+</style>
+<div data-cms-class="Lampe:state=on:an; Lampe:state=off:aus">
+  Lampe: {{Lampe:state|map(on=An,off=Aus)}}
+</div>
+<div data-cms-class="Garten:temperature>=25:warm; Garten:temperature<10:kalt">
+  Garten: {{Garten:temperature|round(1)|suffix( °C)}}
+</div>
+```
+
+Passt keine Bedingung, bleibt die Klasse einfach weg. Die Bedingungen werden bei jeder Änderung neu geprüft.
+
+### 6. Kleine Tabelle mit mehreren Devices
+
+```html
+<table>
+  <thead><tr><th>Raum</th><th>Ist</th><th>Soll</th></tr></thead>
+  <tbody>
+    <tr><td>{{Wohnzimmer:@alias|default(Wohnzimmer)}}</td><td>{{Wohnzimmer:measured-temp|round(1)}}</td><td>{{Wohnzimmer:desired-temp|round(1)}}</td></tr>
+    <tr><td>{{Bad:@alias|default(Bad)}}</td><td>{{Bad:measured-temp|round(1)}}</td><td>{{Bad:desired-temp|round(1)}}</td></tr>
+  </tbody>
+</table>
+```
+
+### 7. Liste mit Hinweis-Tooltip
+
+```html
+<ul>
+  <li title="Gerät: {{Garten:@name}}">Außen: {{Garten:temperature|round(1)|suffix( °C)}}</li>
+  <li>Batterie: {{Garten:battery|upper|default(?)}}</li>
+</ul>
+```
+
+### 8. Text vor und hinter dem Wert nur bei vorhandenem Wert
+
+`prefix` und `suffix` setzen den Text nur, wenn ein Wert da ist; sonst erscheint `–` (oder der Standardwert).
+
+```html
+<div>{{Garten:rain|prefix(Regen: )|suffix( mm)}}</div>
+```
+
+### 9. Zahlen im Text vergleichen
+
+Bei `>`, `<`, `>=`, `<=` wird zahlenmäßig verglichen, wenn beide Seiten Zahlen sind. `Garten:temperature>20:warm` ist also für `20.5` wahr, für `abc` nicht.
+
+## Kurzübersicht
+
+| Ich möchte … | Schreibe ich so |
+| --- | --- |
+| einen Wert anzeigen | `{{Device:reading}}` |
+| auf eine Stelle runden | `{{Device:reading\|round(1)}}` |
+| eine Einheit anhängen | `{{Device:reading\|suffix( °C)}}` |
+| einen Ersatz bei leerem Wert | `{{Device:reading\|default(n/a)}}` |
+| Werte umbenennen | `{{Device:reading\|map(on=An,off=Aus)}}` |
+| den Alias eines Devices | `{{Device:@alias}}` |
+| eine Farbe je nach Wert | `<div data-cms-class="Device:reading>20:warm">` |
