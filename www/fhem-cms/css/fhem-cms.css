@@ -44,10 +44,75 @@ cms-device-card {
   margin-bottom: 1rem;
 }
 
+.cms-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+}
+
+.cms-nav-link {
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid #43564a;
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+}
+
+.cms-nav-link:hover {
+  background: #2a3b32;
+}
+
+.cms-nav-link[aria-current="page"] {
+  background: #34493e;
+  border-color: #8fd0a8;
+  font-weight: 700;
+}
+
+.cms-nav-link:focus-visible,
+.cms-button:focus-visible,
+.cms-menu summary:focus-visible {
+  outline: 2px solid #8fd0a8;
+  outline-offset: 2px;
+}
+
 .cms-toolbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 0.5rem;
   margin: 1rem 0 0.5rem;
+}
+
+.cms-menu {
+  position: relative;
+}
+
+.cms-menu summary {
+  list-style: none;
+}
+
+.cms-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.cms-menu.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.cms-menu-items {
+  position: absolute;
+  right: 0;
+  z-index: 10;
+  display: grid;
+  gap: 0.25rem;
+  min-width: 12rem;
+  margin-top: 0.25rem;
+  padding: 0.4rem;
+  border: 1px solid #43564a;
+  border-radius: 0.5rem;
+  background: #202e27;
 }
 
 .cms-button {
@@ -98,4 +163,49 @@ cms-device-card {
     align-items: center;
     padding: 2rem;
   }
+}
+
+.cms-dialog {
+  width: min(92vw, 24rem);
+  padding: 1.25rem;
+  color: inherit;
+  border: 1px solid #43564a;
+  border-radius: 1rem;
+  background: #202e27;
+}
+
+.cms-dialog::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.cms-dialog form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cms-dialog label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cms-dialog input {
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #43564a;
+  border-radius: 0.5rem;
+  background: #17211d;
+}
+
+.cms-dialog-error {
+  min-height: 1.2em;
+  margin: 0;
+  color: #ffb4a8;
+}
+
+.cms-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }

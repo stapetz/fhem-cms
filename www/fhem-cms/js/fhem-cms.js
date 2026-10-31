@@ -1,5 +1,6 @@
 import '../components/cms-device-card.js';
 import '../components/cms-thermostat.js';
+import '../components/cms-text.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 
 const POLL_INTERVAL_MS = 30000;
@@ -18,24 +19,71 @@ class CmsPage {
     this.deviceCache = null;
     this.subscribedKey = '';
 
+    this.pageId = null;
+    this.loadToken = 0;
+
+    this.nav = document.createElement('nav');
+    this.nav.className = 'cms-nav';
+    this.nav.setAttribute('aria-label', 'Seiten');
+
     this.toolbar = document.createElement('div');
     this.toolbar.className = 'cms-toolbar';
-    this.addButton = document.createElement('button');
-    this.addButton.type = 'button';
-    this.addButton.className = 'cms-button';
-    this.addButton.textContent = '+ Thermostat-Kachel';
-    this.addButton.addEventListener('click', () => this.addThermostat());
-    this.toolbar.append(this.addButton);
+    this.pageButtons = [
+      this.button('+ Seite', () => this.addPage()),
+      this.button('Seite umbenennen', () => this.renamePage()),
+      this.button('Seite löschen', () => this.deletePage())
+    ];
+
+    this.menu = document.createElement('details');
+    this.menu.className = 'cms-menu';
+    const summary = document.createElement('summary');
+    summary.className = 'cms-button';
+    summary.textContent = '+ Widget';
+    const items = document.createElement('div');
+    items.className = 'cms-menu-items';
+    items.setAttribute('role', 'group');
+    items.setAttribute('aria-label', 'Widget-Typ');
+    this.menuButtons = [
+      this.button('Thermostat-Kachel', () => this.addWidget('thermostat')),
+      this.button('Textbaustein', () => this.addWidget('text'))
+    ];
+    items.append(...this.menuButtons);
+    this.menu.append(summary, items);
+    this.toolbar.append(...this.pageButtons, this.menu);
 
     this.grid = document.createElement('section');
     this.grid.className = 'cms-grid';
     this.grid.setAttribute('aria-label', 'Widgets');
+    this.grid.setAttribute('aria-live', 'polite');
 
-    shell.append(this.toolbar, this.grid);
+    shell.append(this.nav, this.toolbar, this.grid);
+  }
+
+  button(label, onClick) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'cms-button';
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      this.menu.open = false;
+      onClick();
+    });
+    return button;
   }
 
   get page() {
-    return this.config.pages[0];
+    return this.config.pages.find((page) => page.id === this.pageId) || this.config.pages[0];
+  }
+
+  get pageIndex() {
+    return this.config.pages.indexOf(this.page);
+  }
+
+  setControlsDisabled(disabled) {
+    for (const button of [...this.pageButtons, ...this.menuButtons]) {
+      button.disabled = disabled;
+    }
+    this.menu.classList.toggle('is-disabled', disabled);
   }
 
   setStatus(message) {
@@ -47,13 +95,163 @@ class CmsPage {
       this.config = await this.client.getConfig();
     } catch (error) {
       this.setStatus(`Konfiguration konnte nicht geladen werden: ${error.message}`);
-      this.addButton.disabled = true;
+      this.setControlsDisabled(true);
       return;
     }
+    window.addEventListener('hashchange', () => this.showPage(this.pageFromHash()));
+    window.setInterval(() => this.refresh(), POLL_INTERVAL_MS);
+    await this.showPage(this.pageFromHash());
+  }
+
+  pageFromHash() {
+    const match = /^#\/([A-Za-z0-9_-]{1,64})$/.exec(window.location.hash);
+    return match && this.config.pages.some((page) => page.id === match[1]) ? match[1] : this.config.pages[0].id;
+  }
+
+  async showPage(id) {
+    this.pageId = id;
+    this.loadToken += 1;
+    this.snapshots = new Map();
+    this.renderNav();
     this.renderWidgets();
+    this.subscribedKey = '';
+    this.live = false;
+    this.client.subscribe([], () => {}, () => {});
+    this.setStatus('Seite wird geladen ...');
     await this.refresh();
     this.resubscribe();
-    window.setInterval(() => this.refresh(), POLL_INTERVAL_MS);
+  }
+
+  renderNav() {
+    this.nav.replaceChildren();
+    for (const page of this.config.pages) {
+      const link = document.createElement('a');
+      link.className = 'cms-nav-link';
+      link.href = `#/${page.id}`;
+      link.textContent = page.title;
+      if (page.id === this.page.id) {
+        link.setAttribute('aria-current', 'page');
+      }
+      this.nav.append(link);
+    }
+    this.pageButtons[2].disabled = this.config.pages.length < 2;
+  }
+
+  uniqueId(prefix, existing) {
+    let id = `${prefix}${Date.now().toString(36)}`;
+    while (existing.has(id)) {
+      id += 'x';
+    }
+    return id;
+  }
+
+  askTitle(message, initial) {
+    return new Promise((resolve) => {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'cms-dialog';
+      dialog.setAttribute('aria-label', message);
+      const form = document.createElement('form');
+      form.method = 'dialog';
+      const label = document.createElement('label');
+      label.textContent = message;
+      const input = document.createElement('input');
+      input.maxLength = 64;
+      input.value = initial;
+      input.autocomplete = 'off';
+      label.append(input);
+      const error = document.createElement('p');
+      error.className = 'cms-dialog-error';
+      error.setAttribute('role', 'alert');
+      const actions = document.createElement('div');
+      actions.className = 'cms-dialog-actions';
+      let done = false;
+      const finish = (value) => {
+        if (done) {
+          return;
+        }
+        done = true;
+        if (dialog.open) {
+          dialog.close();
+        }
+        dialog.remove();
+        resolve(value);
+      };
+      const cancel = this.button('Abbrechen', () => finish(null));
+      const ok = document.createElement('button');
+      ok.type = 'submit';
+      ok.className = 'cms-button';
+      ok.textContent = 'OK';
+      actions.append(cancel, ok);
+      form.append(label, error, actions);
+      dialog.append(form);
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const title = input.value.trim();
+        if (title.length < 1 || title.length > 64 || /[\u0000-\u001f\u007f]/.test(title)) {
+          error.textContent = 'Der Titel muss 1 bis 64 Zeichen ohne Steuerzeichen lang sein';
+          return;
+        }
+        finish(title);
+      });
+      dialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        finish(null);
+      });
+      document.body.append(dialog);
+      dialog.showModal();
+      input.select();
+    });
+  }
+
+  async changePages(mutate, targetId) {
+    const next = structuredClone(this.config);
+    mutate(next);
+    try {
+      await this.persist(next);
+    } catch (error) {
+      this.setStatus(`Speichern fehlgeschlagen: ${error.message}`);
+      return;
+    }
+    if (window.location.hash === `#/${targetId}`) {
+      await this.showPage(targetId);
+    } else {
+      window.location.hash = `#/${targetId}`;
+    }
+  }
+
+  async addPage() {
+    const title = await this.askTitle('Titel der neuen Seite', '');
+    if (title === null) {
+      return;
+    }
+    const id = this.uniqueId('p', new Set(this.config.pages.map((page) => page.id)));
+    await this.changePages((next) => next.pages.push({ id, title, widgets: [] }), id);
+  }
+
+  async renamePage() {
+    const title = await this.askTitle('Neuer Titel der Seite', this.page.title);
+    if (title === null) {
+      return;
+    }
+    const id = this.page.id;
+    await this.changePages((next) => {
+      next.pages.find((page) => page.id === id).title = title;
+    }, id);
+  }
+
+  async deletePage() {
+    if (this.config.pages.length < 2) {
+      return;
+    }
+    const { id, title, widgets } = this.page;
+    if (!window.confirm(`Seite „${title}“ mit ${widgets.length} Widget(s) wirklich löschen?`)) {
+      return;
+    }
+    const fallback = this.config.pages.find((page) => page.id !== id).id;
+    await this.changePages((next) => {
+      next.pages = next.pages.filter((page) => page.id !== id);
+    }, fallback);
   }
 
   devices() {
@@ -91,6 +289,10 @@ class CmsPage {
       element.services = this.services();
       element.config = widget;
       element.data = this.snapshots.get(widget.device) || null;
+    } else if (widget.type === 'text') {
+      element = document.createElement('cms-text');
+      element.services = this.services();
+      element.config = widget;
     } else {
       element = document.createElement('p');
       element.className = 'cms-unsupported';
@@ -110,20 +312,12 @@ class CmsPage {
     return this.page.widgets.reduce((row, widget) => Math.max(row, widget.grid.row + widget.grid.h), 1);
   }
 
-  addThermostat() {
-    const existing = new Set(this.page.widgets.map((widget) => widget.id));
-    let id = `t${Date.now().toString(36)}`;
-    while (existing.has(id)) {
-      id += 'x';
-    }
-
-    const widget = {
-      id,
-      type: 'thermostat',
-      device: '',
-      readings: { actual: '', target: '' },
-      grid: { col: 1, row: this.nextFreeRow(), w: 4, h: 2 }
-    };
+  addWidget(type) {
+    const id = this.uniqueId(type === 'text' ? 'x' : 't', new Set(this.page.widgets.map((widget) => widget.id)));
+    const grid = { col: 1, row: this.nextFreeRow(), w: type === 'text' ? 6 : 4, h: 2 };
+    const widget = type === 'text'
+      ? { id, type, markdown: '', grid }
+      : { id, type, device: '', readings: { actual: '', target: '' }, grid };
     const element = this.createElementFor(widget);
     element.addEventListener('cms-widget-cancel', () => {
       element.remove();
@@ -140,7 +334,7 @@ class CmsPage {
 
   async saveWidget(widget) {
     const next = structuredClone(this.config);
-    const widgets = next.pages[0].widgets;
+    const widgets = next.pages[this.pageIndex].widgets;
     const index = widgets.findIndex((item) => item.id === widget.id);
     if (index >= 0) {
       widgets[index] = widget;
@@ -161,7 +355,8 @@ class CmsPage {
 
   async deleteWidget(id) {
     const next = structuredClone(this.config);
-    next.pages[0].widgets = next.pages[0].widgets.filter((item) => item.id !== id);
+    const target = next.pages[this.pageIndex];
+    target.widgets = target.widgets.filter((item) => item.id !== id);
     await this.persist(next);
     const element = this.elements.get(id);
     if (element) {
@@ -172,17 +367,26 @@ class CmsPage {
   }
 
   async refresh() {
+    const token = this.loadToken;
     const devices = this.devices();
     if (devices.length === 0) {
-      this.updateStatus('Keine Widgets konfiguriert');
+      this.snapshots = new Map();
+      this.updateStatus(this.page.widgets.length === 0 ? 'Die Seite ist noch leer' : undefined);
+      this.resubscribe();
       return;
     }
 
     try {
       const specs = devices.flatMap((name) => [name, `device=${name}`]);
       const results = await this.client.jsonlist(specs.join(','));
+      if (token !== this.loadToken) {
+        return;
+      }
       this.snapshots = this.groupSnapshots(devices, results);
     } catch (error) {
+      if (token !== this.loadToken) {
+        return;
+      }
       this.snapshots = new Map();
       this.updateStatus(`Daten nicht verfügbar: ${error.message}`);
     }

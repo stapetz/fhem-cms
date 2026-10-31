@@ -161,8 +161,8 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 **Aufgaben**
 
 - [x] Frontend-Grundgerüst unter `www/fhem-cms/` mit HTML-Bootstrap, Mobile-First-CSS und JS-Initialisierung anlegen.
-- [ ] JSON-Konfiguration laden und validierte Seiten/Widgets rendern.
-- [ ] Grundlegende Navigation und Layoutdarstellung implementieren.
+- [x] JSON-Konfiguration laden und validierte Seiten/Widgets rendern.
+- [x] Grundlegende Navigation und Layoutdarstellung implementieren.
 - [ ] Lade-, Fehler- und Berechtigungszustände anzeigen.
 
 **Akzeptanzkriterien**
@@ -180,9 +180,9 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Aufgaben**
 
-- [ ] Text-/Markdown-Komponente spezifizieren und umsetzen.
-- [ ] Darstellung gegen XSS absichern; erlaubte Markdown-Funktionen definieren.
-- [ ] Bearbeiten und Speichern über die validierte Konfigurations-API integrieren.
+- [x] Text-/Markdown-Komponente spezifizieren und umsetzen.
+- [x] Darstellung gegen XSS absichern; erlaubte Markdown-Funktionen definieren.
+- [x] Bearbeiten und Speichern über die validierte Konfigurations-API integrieren.
 
 **Akzeptanzkriterien**
 
