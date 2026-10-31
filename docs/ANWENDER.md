@@ -19,7 +19,18 @@ Danach FHEM neu starten (`shutdown restart` oder `sudo systemctl restart fhem`),
 define CMS fhemcms
 ```
 
-Das Device erscheint im Raum `FHEM CMS` mit dem Link `CMS starten`. Alternativ: `get CMS url`.
+Das Device erscheint im Raum `FHEM CMS` mit den Links `CMS starten` und `Zeige Homepage`. Alternativ: `get CMS url`.
+
+## Updates einspielen
+
+Nach `update all …` hängt das weitere Vorgehen davon ab, was sich geändert hat:
+
+| Geändert | Nötig |
+|---|---|
+| Nur Frontend-Dateien (`www/fhem-cms/`: JS, CSS, Komponenten) | `set <CMS> rebuild`, dann Browser hart neu laden. Ein Neustart ist nicht nötig. |
+| Das Modul (`FHEM/01_FHEMCMS.pm`) | Neustart (`shutdown restart` oder `sudo systemctl restart fhem`). Ein zusätzliches `rebuild` ist dann überflüssig. |
+
+`rebuild` erzeugt nur die Startseite `www/fhem-cms/<Device>/index.html` neu und aktualisiert dabei die Versionsparameter, damit der Browser die neuen Dateien lädt. Konfiguration, Entwurf und Backups bleiben unberührt. Dieselbe Neuerzeugung läuft automatisch bei jedem FHEM-Start. Meldet `update` „nothing to do“, obwohl es Änderungen gibt, ist meist das Manifest auf GitHub noch nicht fertig (ein bis zwei Minuten nach dem Push) oder gecacht.
 
 ## Sicherheit: FHEMWEB absichern
 
@@ -71,7 +82,7 @@ Das CMS speichert keine Zugangsdaten und erlaubt keine fremden Origins (kein COR
 | `set <CMS> publish` | Entwurf als Live-Stand übernehmen (Backup des alten Stands) |
 | `set <CMS> discard` | Entwurf verwerfen |
 | `set <CMS> restore <Backupname>` | Backup wiederherstellen |
-| `set <CMS> rebuild` | Startseite neu erzeugen (nach Updates der Frontend-Dateien) |
+| `set <CMS> rebuild` | Startseite neu erzeugen (nach Updates der Frontend-Dateien; läuft auch bei jedem FHEM-Start) |
 | `set <CMS> purge <CMS>` | Daten und Startseite endgültig löschen, danach `delete <CMS>` |
 
 `delete <CMS>` allein lässt Daten und Startseite bewusst bestehen.
