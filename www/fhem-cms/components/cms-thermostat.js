@@ -136,9 +136,9 @@ class FHEMCMSThermostat extends HTMLElement {
           border-radius: 1.4rem; background: #202e27; }
         /* Der Inhalt ist rund 10,4 em hoch und 26 em breit, oben ausgerichtet; die Schrift richtet sich nach der knapperen Seite. */
         .body { height: 100%; display: flex; flex-direction: column; justify-content: flex-start;
-          font-size: max(4px, min(9.2cqh, 3.85cqw)); }
+          font-size: max(4px, min(9.2cqh, 3.6cqw)); }
         header { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
-          padding: 0.3em 1.6rem 0 1.1em; flex: none; }
+          padding: 0.4em 1.6rem 0 1.3em; flex: none; }
         h3 { margin: 0; font-size: 1.05em; font-weight: 400; color: #a5c9b2;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         button {
@@ -150,7 +150,7 @@ class FHEMCMSThermostat extends HTMLElement {
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
         .icon { position: absolute; top: 0.2rem; right: 0.3rem; padding: 0 0.35em; line-height: 1.4; font-size: 0.75rem; z-index: 1; }
         :host([view-only]) [data-open-config] { display: none; }
-        .boxes { align-self: stretch; margin: 0.4em 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; padding: 0 0.7em; }
+        .boxes { align-self: stretch; margin: 0.4em 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; padding: 0 1em; }
         .box { border: 1px solid #3a4d42; border-radius: 0.2rem; background: #1a261f; min-width: 0; min-height: 0;
           padding: 0.3em 0.6em 0.4em; display: flex; flex-direction: column; gap: 0.15em; overflow: hidden; }
         .label { color: #a5c9b2; font-size: 0.78em; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
@@ -164,12 +164,12 @@ class FHEMCMSThermostat extends HTMLElement {
         input[type="range"]::-moz-range-progress { height: 0.35em; border-radius: 0.2em; background: #8fd0a8; }
         input[type="range"]::-moz-range-thumb { width: 1em; height: 1em; border: 0; border-radius: 50%; background: #8fd0a8; }
         .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
-        .foot { display: flex; align-self: stretch; align-items: center; gap: 0.6em; flex-wrap: nowrap; padding: 0 0.7em 0.5em; margin-top: 0.5em; flex: none; }
-        .foot select { appearance: none; -webkit-appearance: none; width: auto; flex: none; max-width: 12em; height: 2.3em; padding: 0.2em 2em 0.2em 0.7em; border: 1px solid #69796f; border-radius: 0.5em; color: #f4f4e9; font: 1em 'Helvetica Neue', sans-serif; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='16'%3E%3Cpath d='M5 1 9 6H1zM5 15 1 10h8z' fill='%23f4f4e9'/%3E%3C/svg%3E") no-repeat right 0.7em center / 0.7em auto, linear-gradient(#7d8a82 0%, #55645b 45%, #26342d 50%, #3a4a41 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+        .foot { display: flex; align-self: stretch; align-items: center; gap: 0.6em; flex-wrap: nowrap; padding: 0 1em 0.8em; margin-top: 0.5em; flex: none; }
+        .foot select { appearance: none; -webkit-appearance: none; width: auto; flex: none; max-width: 15em; height: 2.1em; padding: 0.1em 2.2em 0.1em 0.75em; border: 1px solid #69796f; border-radius: 0.5em; color: #f4f4e9; font: 0.8em 'Helvetica Neue', sans-serif; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='16'%3E%3Cpath d='M5 1 9 6H1zM5 15 1 10h8z' fill='%23f4f4e9'/%3E%3C/svg%3E") no-repeat right 0.7em center / 0.7em auto, linear-gradient(#7d8a82 0%, #55645b 45%, #26342d 50%, #3a4a41 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
         .foot [data-mode]:empty, .foot [data-mode-select][hidden], .valve[hidden], .batt:empty { display: none; }
-        .valve { flex: 1; min-width: 3em; position: relative; height: 2.3em; border: 1px solid #3a4d42;
+        .valve { flex: 1; min-width: 3em; position: relative; height: 1.7em; border: 1px solid #3a4d42;
           background: linear-gradient(90deg, #2b7bc0, #2f9b8a 50%, #7a2b3b); display: grid; place-items: center; }
-        .valve span.pct { font-weight: 700; font-size: 0.85em; z-index: 1; }
+        .valve span.pct { font-weight: 700; font-size: 0.7em; z-index: 1; }
         .marker { position: absolute; top: 0; bottom: 0; width: 0.2em; background: #fff; }
         .batt { display: inline-flex; align-items: center; gap: 0.3em; color: #5fd08f; white-space: nowrap; }
         .batt svg { width: 1.6em; height: 1em; }
@@ -178,7 +178,7 @@ class FHEMCMSThermostat extends HTMLElement {
         .status[data-error] { color: #ffb4a8; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         /* Hohe, schmale Kacheln: Boxen untereinander mit gleichmäßig verteiltem Restplatz (untere Zeile am Kachelende), Schrift richtet sich nach dem einspaltigen Inhalt (ca. 15 em hoch, 16 em breit; zweispaltig 10,6 em hoch, 26 em breit). */
-        @container (aspect-ratio < 1.7) { .body { font-size: max(4px, min(6.5cqh, 6.2cqw)); } .boxes { grid-template-columns: 1fr; grid-template-rows: auto auto; flex: 1; align-content: space-evenly; margin-top: 0; } }
+        @container (aspect-ratio < 1.7) { .body { font-size: max(4px, min(6.5cqh, 5.8cqw)); } .boxes { grid-template-columns: 1fr; grid-template-rows: auto auto; flex: 1; align-content: space-evenly; margin-top: 0; } }
         /* Je kleiner die Kachel, desto weniger Inhalt: erst Status, dann Batterie, Ventil und Modus, zuletzt der Schieber. */
         @container (max-width: 13rem) { .batt { display: none; } }
         @container (max-height: 6.5rem) { .foot, .status { display: none; } }
@@ -324,7 +324,7 @@ class FHEMCMSThermostat extends HTMLElement {
     if (!w || !h) {
       return;
     }
-    let size = w / h < 1.7 ? Math.min(0.065 * h, 0.062 * w) : Math.min(0.092 * h, 0.0385 * w);
+    let size = w / h < 1.7 ? Math.min(0.065 * h, 0.058 * w) : Math.min(0.092 * h, 0.036 * w);
     size = Math.max(4, size);
     body.style.fontSize = `${size}px`;
     for (let i = 0; i < 12 && size > 4 && body.scrollHeight > body.clientHeight + 1; i += 1) {
