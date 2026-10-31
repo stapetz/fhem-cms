@@ -13,6 +13,7 @@ Die bekannten, nach Abhängigkeiten geordneten Umsetzungsstories stehen in der [
 | `dev-docs/` | Interne Entwicklungsdokumentation |
 | `.github/` | GitHub-Konfiguration und Copilot-Anweisungen |
 | `controls_fhem-cms.txt` | Vom Workflow erzeugte FHEM-Update-Liste des gesamten installierbaren Repositories |
+| `CHANGED` | FHEM-Änderungsprotokoll im Repository-Root |
 | `scripts/generate_controls.py` | Erzeugt `controls_fhem-cms.txt` aus `FHEM/` und `www/fhem-cms/` |
 
 ## Branches und Freigaben
@@ -29,6 +30,7 @@ Die bekannten, nach Abhängigkeiten geordneten Umsetzungsstories stehen in der [
 - Für KI-unterstützte Commits den Trailer `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>` ergänzen.
 - Zu Änderungen passende Tests und Syntaxprüfungen ausführen. Für Perl-Module ist mindestens `perl -c` auszuführen; gegebenenfalls benötigte FHEM-Core-Funktionen müssen in Tests geeignet bereitgestellt werden.
 - `controls_fhem-cms.txt` wird vom Workflow aus allen installierbaren Dateien unter `FHEM/` und `www/fhem-cms/` erzeugt. Der repositorybezogene Name verhindert Kollisionen mit den lokal auf dem FHEM-Server abgelegten Controls-Dateien anderer Update-Quellen. Es gibt eine gemeinsame Update-Quelle für das ganze Repository, keine Controls-Dateien je Modul oder Komponente. Die Datei nicht von Hand ändern.
+- Die `CHANGED`-Datei liegt im Repository-Root und wird von FHEM zusätzlich zur Controls-Datei abgerufen. Bei funktionalen Änderungen ist dort ein neuer Eintrag mit Datum, kurzer Überschrift und Beschreibung zu ergänzen; sie gehört nicht als Runtime-Datei in `controls_fhem-cms.txt`.
 
 ## FHEM-Module
 

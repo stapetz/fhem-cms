@@ -11,6 +11,7 @@ Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freie
 | `dev-docs/` | Interne Entwicklungsdokumentation |
 | `www/fhem-cms/` | Frontend für FHEM; enthält gemeinsame Assets und Komponenten |
 | `controls_fhem-cms.txt` | Vom Workflow erzeugte Update-Liste für alle installierbaren Dateien dieses Repositories |
+| `CHANGED` | FHEM-Änderungsprotokoll für Updates |
 
 Die erste wiederverwendbare Web Component liegt unter `www/fhem-cms/components/cms-device-card.js`; die gemeinsamen Styles und der Modul-Einstieg liegen unter `css/` und `js/`.
 
@@ -36,7 +37,7 @@ shutdown restart
 
 Nach dem Update steht das Modul `FHEMCMS` zur Verfügung. Ein Testgerät lässt sich mit `define cmsTest FHEMCMS` anlegen. Die erzeugte Oberfläche und ihr URL-Pfad können mit `get cmsTest url` ermittelt werden.
 
-Die `controls_fhem-cms.txt` wird aus den installierbaren Dateien unter `FHEM/` und `www/fhem-cms/` erzeugt. Der repositorybezogene Dateiname vermeidet Kollisionen mit Controls-Dateien anderer Update-Quellen auf demselben FHEM-Server. GitHub Actions aktualisiert sie nach Änderungen auf `dev` oder `main`; sie nicht manuell bearbeiten. Eine FHEM-Installation erhält damit Modul, Komponenten, Styles, Skripte und weitere Frontend-Dateien gemeinsam.
+Die `controls_fhem-cms.txt` wird aus den installierbaren Dateien unter `FHEM/` und `www/fhem-cms/` erzeugt. Der repositorybezogene Dateiname vermeidet Kollisionen mit Controls-Dateien anderer Update-Quellen auf demselben FHEM-Server. GitHub Actions aktualisiert sie nach Änderungen auf `dev` oder `main`; sie nicht manuell bearbeiten. Die `CHANGED`-Datei im Repository-Root enthält das Änderungsprotokoll für FHEM und wird bei funktionalen Änderungen gepflegt. Eine FHEM-Installation erhält Modul, Komponenten, Styles, Skripte und weitere Frontend-Dateien gemeinsam.
 
 ## Branches
 

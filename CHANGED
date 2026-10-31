@@ -1,0 +1,4 @@
+2026-10-31 - Initial fhem-cms test device and frontend
+
+Add the FHEMCMS device module, generated test page, and shared frontend component.
+Add repository-wide FHEM update controls and installation instructions.
