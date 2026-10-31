@@ -68,6 +68,8 @@ class FHEMCMSValue extends HTMLElement {
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
         input { font: inherit; color: inherit; background: #17211d; border: 1px solid #43564a;
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
+        .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+        .chips button { padding: 0.15rem 0.55rem; font-size: 0.85rem; }
         .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
         .icon-row { display: flex; align-items: center; gap: 0.5rem; }
         .icon-row .icon { background: #17211d; border-radius: 0.4rem; padding: 0.15rem; }
@@ -99,9 +101,9 @@ class FHEMCMSValue extends HTMLElement {
             <select name="reading" required></select>
           </label>
           <label>Einheit (optional, Vorschlag wählen oder frei eintragen)
-            <input name="unit" list="value-units" autocomplete="off" maxlength="16">
-            <datalist id="value-units">${UNITS.map((unit) => `<option value="${unit}"></option>`).join('')}</datalist>
+            <input name="unit" autocomplete="off" maxlength="16">
           </label>
+          <div class="chips" role="group" aria-label="Einheiten-Vorschläge">${UNITS.map((unit) => `<button type="button" data-unit-choice="${unit}">${unit}</button>`).join('')}</div>
           <div>
             <span class="hint">Icon (optional)</span>
             <div class="icon-row">
@@ -152,6 +154,11 @@ class FHEMCMSValue extends HTMLElement {
     $('[data-icon-clear]').addEventListener('click', () => this.setIcon(''));
     $('[data-icon-filter]').addEventListener('input', () => this.renderIcons());
     const form = $('[data-form]');
+    for (const chip of this.shadowRoot.querySelectorAll('[data-unit-choice]')) {
+      chip.addEventListener('click', () => {
+        form.elements.unit.value = chip.dataset.unitChoice;
+      });
+    }
     $('[data-pick-device]').addEventListener('click', () => this.openPicker());
     form.elements.device.addEventListener('click', () => this.openPicker());
     $('[data-picker-cancel]').addEventListener('click', () => this.closePicker());

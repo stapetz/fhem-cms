@@ -369,6 +369,8 @@ Jedes Widget mit Device-Bezug folgt dem Muster der Thermostat-Kachel:
 3. Der Dialog hat immer Speichern, Abbrechen und – bei bestehenden Widgets – Löschen. Ein neues, abgebrochenes Widget wird entfernt (`cms-widget-cancel`).
 4. Geräte kommen über `services.listDevices()` (typbegrenzt) bzw. `services.listAllDevices()` (alle Geräte), Icons über `services.listIcons()`; keine eigenen FHEM-Aufrufe in der Komponente.
 
+5. Keine nativen Browser-Popups in Dialogen: `<datalist>` (und ähnliche Auswahlfenster) werden vom Browser außerhalb des modalen `<dialog>`/Shadow-DOM positioniert und springen aus dem Fenster. Vorschläge werden stattdessen im Dialog selbst gezeigt (z. B. Schaltflächen unter dem Textfeld, die den Wert eintragen; freier Text bleibt möglich). Für Listen sind `<select>` oder der Suchdialog zu verwenden.
+
 Neue Widgets übernehmen diesen Ablauf; Abweichungen werden vorher in `STORIES.md` abgestimmt.
 
 ## Live-Zustände und Verbindungsverhalten (S09)
