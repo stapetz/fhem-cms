@@ -425,17 +425,17 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsame Regeln für jedes neue Widget: Regeln 1–12 in `ENTWICKLUNG.md` (Titel, Alias, Skalierung, Top-Ausrichtung), einheitliches Skalierverhalten nach K02, schreibende Aktionen nur über validierte Namen und Werte (wie `setCommand`), strenges Schema samt Tests.
 
-### S31 - Freies HTML-Widget mit Platzhaltern (Entwurf)
+### S31 - Freies HTML-Widget mit Platzhaltern (umgesetzt, Prüfung offen)
 
 **Ziel:** Eigener HTML-Code in einer Kachel, der Live-Werte aus FHEM einbindet.
 
-- [ ] Widget `fhem-html`: Textfeld für HTML/CSS im Konfigurationsdialog.
-- [ ] Sicherheit: Der Code wird bereinigt (Positivliste von Tags und Attributen, kein `script`, keine `on...`-Handler, keine `javascript:`-URLs, keine fremden Ressourcen ohne Freigabe) und im Shadow-DOM der Kachel gerendert, damit Stile die Seite nicht verändern.
-- [ ] Platzhalter, die live aktualisiert werden, zum Beispiel `{{Device:reading}}` (Wert), `{{Device:reading|unit}}`, `{{Device:alias}}`, `{{Device:state}}`; Format-Filter wie `|round(1)`; Zugriff nur auf Devices, die der Konfiguration bekannt sind. Genauer Satz wird in der Story festgelegt.
-- [ ] Bedingte Darstellung, zum Beispiel Attribut `data-cms-class-if="Device:reading=on:aktiv"`, damit sich Farben und Icons je nach Zustand ändern, ohne Skript.
-- [ ] Hilfe: Link „Platzhalter-Hilfe“ im Dialog öffnet eine Seite (`docs/PLATZHALTER.md`, auch als Hilfetext im Dialog) mit Syntax, Device einbinden, Reading holen, Beispielen und Grenzen.
-- [ ] Skalierung nach K02: Basisschrift der Kachel in `em`-Maß, Inhalt oben ausgerichtet.
-- [ ] Offene Frage: Soll der Code Schaltaktionen auslösen dürfen (z. B. `data-cms-set="Device:on"`)? Wenn ja, nur mit validierten Namen und Werten.
+- [x] Widget `fhem-html`: Textfeld für HTML/CSS im Konfigurationsdialog.
+- [x] Sicherheit: Der Code wird bereinigt (Positivliste von Tags und Attributen, kein `script`, keine `on...`-Handler, keine `javascript:`-URLs, keine fremden Ressourcen ohne Freigabe) und im Shadow-DOM der Kachel gerendert, damit Stile die Seite nicht verändern.
+- [x] Platzhalter, die live aktualisiert werden, zum Beispiel `{{Device:reading}}` (Wert), `{{Device:reading|unit}}`, `{{Device:alias}}`, `{{Device:state}}`; Format-Filter wie `|round(1)`; Zugriff nur auf Devices, die der Konfiguration bekannt sind. Genauer Satz wird in der Story festgelegt.
+- [x] Filter: `round(n)`, `int`, `upper`, `lower`, `default`, `prefix`, `suffix`, `map`. Bedingte Darstellung, zum Beispiel Attribut `data-cms-class-if="Device:reading=on:aktiv"`, damit sich Farben und Icons je nach Zustand ändern, ohne Skript.
+- [x] Hilfe: Link „Platzhalter-Hilfe“ im Dialog öffnet eine Seite (`docs/PLATZHALTER.md`, auch als Hilfetext im Dialog) mit Syntax, Device einbinden, Reading holen, Beispielen und Grenzen.
+- [ ] Skalierung nach K02: bisher feste Basisschrift `1rem`, Inhalt oben ausgerichtet, Überlauf scrollt; die einheitliche Skalierung folgt mit K02.
+- [ ] Schaltaktionen aus dem freien HTML (z. B. `data-cms-set`) bleiben offen; sie folgen nach S32/S33 mit denselben validierten Namen und Werten.
 
 ### S32 - Schalter (an/aus) (Entwurf)
 

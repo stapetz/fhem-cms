@@ -454,6 +454,35 @@ is(FHEMCMS_Set($pHash, $pName, 'purge', $pName), undef, 'purge removes pages wit
 ok(!-e $pPage, 'media folder is removed with the page');
 FHEMCMS_Define($pHash, "$pName FHEMCMS");
 
+# fhem-html: freies HTML mit Platzhaltern
+{
+    my $hcfg = {schemaVersion => 2, pages => [{id => 'p', title => 'P', widgets => [{id => 'h1', type => 'fhem-html',
+        html => '<div class="a">{{Temp:temperature|round(1)}}</div><style>.a{color:red}</style>', devices => ['Temp'],
+        grid => {col => 1, row => 1, w => 3, h => 2}}]}]};
+    is(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html accepts safe html');
+    my $w = $hcfg->{pages}[0]{widgets}[0];
+    $w->{html} = '<span data-cms-class="Temp:temperature>25:hot; Lamp:state=on:an">x</span>';
+    is(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html accepts conditions');
+    for my $bad ('<script>alert(1)</script>', '<img src="x">', '<div onclick="x()">a</div>', '<a href="javascript:x">a</a>',
+        '<iframe src="x"></iframe>', '<div style="background:url(x)">a</div>', '<div style="position:fixed">a</div>',
+        '<style>@import "x";</style>', '<!-- c -->', '<div', '<div data-x="1">a</div>', "<p>a\x01</p>",
+        '<span data-cms-class="bad">x</span>', 'a < b', '<div class="a b>c">x</div>') {
+        $w->{html} = $bad;
+        isnt(FHEMCMS_ValidateConfig($hcfg), undef, "fhem-html rejects: $bad");
+    }
+    $w->{html} = 'x' x 20001;
+    isnt(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html rejects too long html');
+    $w->{html} = 'ok';
+    for my $devices ('Temp', ['a b'], [map { "D$_" } 1 .. 21], ['A', 'A']) {
+        $w->{devices} = $devices;
+        isnt(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html rejects invalid devices');
+    }
+    $w->{devices} = [];
+    is(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html accepts no devices');
+    $w->{device} = 'X';
+    isnt(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html rejects unknown fields');
+}
+
 # fhem-value: Einheit und Icon
 {
     my $vcfg = {schemaVersion => 2, pages => [{id => 'p', title => 'P', widgets => [{id => 'v1', type => 'fhem-value',

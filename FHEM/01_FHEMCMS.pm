@@ -23,6 +23,7 @@ our %FHEMCMS_LAST_REFRESH;
 our %FHEMCMS_PURGED;
 our $FHEMCMS_USAGE_BACKUPS = 20;
 our $FHEMCMS_MAX_HTML = 50000;
+our $FHEMCMS_MAX_FREE_HTML = 20000;
 our $FHEMCMS_MAX_MEDIA_BYTES = 3145728;
 our $FHEMCMS_MAX_MEDIA_FILES = 200;
 our $FHEMCMS_MAX_ICONS = 5000;
@@ -594,11 +595,13 @@ sub FHEMCMS_ValidateConfig {
             return 'Unbekannter Widget-Typ'
                 if (ref($widget->{type}) || !defined($widget->{type})
                     || ($widget->{type} ne 'fhem-value' && $widget->{type} ne 'thermostat'
-                        && $widget->{type} ne 'text'));
+                        && $widget->{type} ne 'text' && $widget->{type} ne 'fhem-html'));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
                 $err = $exact->($widget, 'Widget', ['id', 'type', $body, 'grid'], ['title']);
+            } elsif ($widget->{type} eq 'fhem-html') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'html', 'devices', 'grid'], ['title']);
             } elsif ($widget->{type} eq 'fhem-value') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['title', 'unit', 'icon']);
             } else {
@@ -622,11 +625,21 @@ sub FHEMCMS_ValidateConfig {
                 return 'Ungueltiger Markdown-Text'
                     if (ref($text) || !defined($text) || length($text) > $FHEMCMS_MAX_TEXT
                         || $text =~ /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
+            } elsif ($widget->{type} eq 'fhem-html') {
+                my $freeError = FHEMCMS_ValidateFreeHtml($widget->{html});
+                return "Ungueltiger HTML-Code: $freeError" if (defined($freeError));
+                return 'devices muss eine Liste mit hoechstens 20 Devices sein'
+                    if (ref($widget->{devices}) ne 'ARRAY' || @{$widget->{devices}} > 20);
+                my %seenDevice;
+                for my $name (@{$widget->{devices}}) {
+                    return 'Ungueltiger Wert fuer devices' if (!$isName->($name));
+                    return 'Doppeltes Device in devices' if ($seenDevice{$name}++);
+                }
             } else {
                 return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
             }
 
-            if ($widget->{type} eq 'text') {
+            if ($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html') {
                 # keine weiteren Felder
             } elsif ($widget->{type} eq 'fhem-value') {
                 return 'Ungueltiger Wert fuer reading' if (!$isName->($widget->{reading}));
@@ -656,6 +669,51 @@ sub FHEMCMS_ValidateConfig {
             $err = $checkGrid->($widget->{grid});
             return $err if ($err);
         }
+    }
+    return undef;
+}
+
+# Freies HTML (fhem-html): strenge Allowlist fuer Elemente und Attribute; kein Skript, keine
+# Ereignis-Attribute, keine Ressourcen. Platzhalter {{Device:reading}} sind reiner Text.
+sub FHEMCMS_ValidateFreeHtml {
+    my ($html) = @_;
+    return 'kein Text' if (ref($html) || !defined($html));
+    return 'zu lang' if (length($html) > $FHEMCMS_MAX_FREE_HTML);
+    return 'enthaelt Steuerzeichen' if ($html =~ /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
+
+    my %tags = map { $_ => 1 } qw(div span p h1 h2 h3 h4 strong b em i u small br hr ul ol li
+        table thead tbody tr th td style);
+    my %attrs = map { $_ => 1 } qw(class style title colspan rowspan data-cms-class);
+    my $badCss = qr{\@import|url\s*\(|expression|behavior|binding|javascript:|position\s*:\s*(?:fixed|sticky)|\\}i;
+
+    # Kommentare, CDATA und Verarbeitungsanweisungen gibt es nicht.
+    return 'Kommentare und Sonderkonstrukte sind nicht erlaubt' if ($html =~ /<(?:!|\?)/);
+
+    my $rest = $html;
+    while ($rest =~ /<(\/?)([A-Za-z][A-Za-z0-9]*)((?:\s+[A-Za-z][A-Za-z0-9-]*\s*=\s*"[^"]*")*)\s*(\/?)>/g) {
+        my ($close, $tag, $attrText) = ($1, lc($2), $3);
+        return "Element <$tag> nicht erlaubt" if (!$tags{$tag});
+        return 'Attribute in Endtag' if ($close && $attrText ne '');
+        while ($attrText =~ /\s+([A-Za-z][A-Za-z0-9-]*)\s*=\s*"([^"]*)"/g) {
+            my ($name, $value) = (lc($1), $2);
+            return "Attribut '$name' nicht erlaubt" if (!$attrs{$name});
+            return 'Ungueltiges style-Attribut' if ($name eq 'style' && $value =~ $badCss);
+            return 'Ungueltiges class-Attribut' if ($name eq 'class' && $value !~ /\A[A-Za-z0-9_ -]{0,200}\z/);
+            return 'Ungueltiges colspan/rowspan' if (($name eq 'colspan' || $name eq 'rowspan') && $value !~ /\A[1-9][0-9]?\z/);
+            if ($name eq 'data-cms-class') {
+                for my $part (grep { $_ ne '' && $_ !~ /\A\s*\z/ } split(/;/, $value)) {
+                    return 'Ungueltige Bedingung in data-cms-class'
+                        if ($part !~ /\A\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+\s*(?:>=|<=|!=|=|>|<)\s*[^:;<>"]{0,40}?\s*:\s*[A-Za-z0-9_-]{1,40}\s*\z/);
+                }
+            }
+        }
+    }
+    # Jedes verbliebene '<' muss zu einem erlaubten Tag gehoeren (oben geprueft); nackte '<' oder '>' in Attributen sind unzulaessig.
+    my $stripped = $html;
+    $stripped =~ s/<\/?[A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9-]*\s*=\s*"[^"]*")*\s*\/?>//g;
+    return 'unvollstaendiges oder ungueltiges Element' if ($stripped =~ /</);
+    while ($html =~ m{<style(?:\s[^>]*)?>(.*?)</style>}gis) {
+        return 'Ungueltiges style-Element' if ($1 =~ $badCss);
     }
     return undef;
 }

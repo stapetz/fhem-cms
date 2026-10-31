@@ -1,6 +1,7 @@
 import '../components/cms-thermostat.js';
 import '../components/cms-text.js';
 import '../components/cms-value.js';
+import '../components/cms-html.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { GRID_COLUMNS, cellFromPoint, moveWidget, resizeWidget } from './layout.js';
 
@@ -8,7 +9,11 @@ const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
 const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
 const NAV_ID = '__nav';
-const isLiveWidget = (widget) => widget.type === 'thermostat' || widget.type === 'fhem-value';
+const isLiveWidget = (widget) => widget.type === 'thermostat' || widget.type === 'fhem-value' || widget.type === 'fhem-html';
+// Daten einer Kachel: ein Device oder (freies HTML) die Map aller verwendeten Devices.
+const dataFor = (widget, snapshots) => (widget.type === 'fhem-html'
+  ? new Map((widget.devices || []).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
+  : snapshots.get(widget.device) || null);
 const GUIDE_KEY = 'fhem-cms-show-grid';
 const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 12, h: 1 };
 
@@ -90,6 +95,7 @@ class CmsPage {
     this.menuButtons = [
       this.button('Thermostat-Kachel', () => this.addWidget('thermostat')),
       this.button('Wert-Anzeige', () => this.addWidget('fhem-value')),
+      this.button('Freies HTML', () => this.addWidget('fhem-html')),
       this.button('Textbaustein', () => this.addWidget('text'))
     ];
     // Menüs wie in klassischen Programmen: Datei, Bearbeiten, Einfügen, Ansicht.
@@ -779,7 +785,7 @@ class CmsPage {
   }
 
   devices() {
-    return [...new Set(this.page.widgets.map((widget) => widget.device).filter(isValidName))];
+    return [...new Set(this.page.widgets.flatMap((widget) => (widget.type === 'fhem-html' ? widget.devices || [] : [widget.device])).filter(isValidName))];
   }
 
   services() {
@@ -1123,6 +1129,11 @@ class CmsPage {
       element.services = this.services();
       element.config = widget;
       element.data = this.snapshots.get(widget.device) || null;
+    } else if (widget.type === 'fhem-html') {
+      element = document.createElement('cms-html');
+      element.services = this.services();
+      element.config = widget;
+      element.data = dataFor(widget, this.snapshots);
     } else if (widget.type === 'text') {
       element = document.createElement('cms-text');
       element.services = this.services();
@@ -1150,15 +1161,17 @@ class CmsPage {
   }
 
   addWidget(type) {
-    const prefix = { text: 'x', 'fhem-value': 'v' }[type] || 't';
+    const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-html': 'h' }[type] || 't';
     const id = this.uniqueId(prefix, new Set(this.page.widgets.map((widget) => widget.id)));
-    const size = { text: { w: 6, h: 2 }, 'fhem-value': { w: 3, h: 2 } }[type] || { w: 4, h: 2 };
+    const size = { text: { w: 6, h: 2 }, 'fhem-value': { w: 3, h: 2 }, 'fhem-html': { w: 4, h: 3 } }[type] || { w: 4, h: 2 };
     const grid = { col: 1, row: this.nextFreeRow(), ...size };
     let widget = { id, type, device: '', readings: { actual: '', target: '' }, grid };
     if (type === 'text') {
       widget = { id, type, html: '', grid };
     } else if (type === 'fhem-value') {
       widget = { id, type, device: '', reading: '', grid };
+    } else if (type === 'fhem-html') {
+      widget = { id, type, html: '', devices: [], grid };
     }
     const element = this.createElementFor(widget);
     element.addEventListener('cms-widget-cancel', () => {
@@ -1231,7 +1244,7 @@ class CmsPage {
     const element = this.elements.get(widget.id);
     if (element) {
       element.config = widget;
-      element.data = this.snapshots.get(widget.device) || null;
+      element.data = dataFor(widget, this.snapshots);
       this.place(element, widget);
     }
     await this.refresh();
@@ -1285,7 +1298,7 @@ class CmsPage {
     for (const widget of this.page.widgets) {
       const element = this.elements.get(widget.id);
       if (element && isLiveWidget(widget)) {
-        element.data = this.snapshots.get(widget.device) || null;
+        element.data = dataFor(widget, this.snapshots);
         element.stale = failure !== null && this.lastSuccess !== null ? this.lastSuccess : null;
       }
     }
