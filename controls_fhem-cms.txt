@@ -1,4 +1,4 @@
-UPD 2026-10-31_11:34:15 35345 FHEM/01_FHEMCMS.pm
+UPD 2026-10-31_11:58:47 35345 FHEM/01_FHEMCMS.pm
 UPD 2026-10-31_07:29:58 1377 www/fhem-cms/components/cms-device-card.js
 UPD 2026-10-31_11:34:15 9329 www/fhem-cms/components/cms-text.js
 UPD 2026-10-31_11:12:08 25810 www/fhem-cms/components/cms-thermostat.js
@@ -7,4 +7,4 @@ UPD 2026-10-31_11:34:15 7865 www/fhem-cms/js/fhem-client.js
 UPD 2026-10-31_11:34:15 25364 www/fhem-cms/js/fhem-cms.js
 UPD 2026-10-31_11:27:47 2370 www/fhem-cms/js/layout.js
 UPD 2026-10-31_10:55:33 3145 www/fhem-cms/js/markdown.js
-UPD 2026-10-31_11:34:15 23345 www/fhem-cms/js/richtext.js
+UPD 2026-10-31_11:58:47 23345 www/fhem-cms/js/richtext.js
