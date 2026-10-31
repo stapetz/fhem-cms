@@ -1247,6 +1247,7 @@ class CmsPage {
       element.data = dataFor(widget, this.snapshots);
       this.place(element, widget);
     }
+    this.syncOverlays();
     await this.refresh();
     this.resubscribe();
   }
@@ -1261,6 +1262,7 @@ class CmsPage {
       element.remove();
       this.elements.delete(id);
     }
+    this.syncOverlays();
     this.resubscribe();
   }
 
