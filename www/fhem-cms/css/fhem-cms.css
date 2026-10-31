@@ -21,34 +21,61 @@ body {
   margin: 0 auto;
 }
 
-.cms-kicker {
+.cms-status {
   margin: 0 0 0.5rem;
   color: #a5c9b2;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-h1 {
-  margin: 0;
-  font-size: clamp(2rem, 9vw, 3rem);
-}
-
-.cms-copy {
-  color: #c4d0c8;
+  font-size: 0.85rem;
   line-height: 1.5;
 }
 
-cms-device-card {
-  margin-bottom: 1rem;
+.cms-status[data-error] {
+  color: #ffb4a8;
 }
 
 .cms-nav {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
   gap: 0.5rem;
-  margin: 1rem 0 0;
+}
+
+.cms-nav.is-vertical {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.cms-nav-edit {
+  margin-left: auto;
+}
+
+.cms-nav.is-vertical .cms-nav-edit {
+  margin-left: 0;
+}
+
+.cms-nav-list {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cms-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cms-nav-row span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.cms-nav-dialog select {
+  font: inherit;
+  color: inherit;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #43564a;
+  border-radius: 0.5rem;
+  background: #17211d;
 }
 
 .cms-nav-link {
@@ -266,11 +293,9 @@ cms-device-card {
   overflow-y: auto;
 }
 
-.cms-view .cms-kicker,
-.cms-view .cms-shell > h1,
-.cms-view .cms-copy,
 .cms-view .cms-toolbar,
-.cms-view cms-device-card:not([data-error]) {
+.cms-view .cms-nav-edit,
+.cms-view .cms-status:not([data-error]) {
   display: none;
 }
 

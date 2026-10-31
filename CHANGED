@@ -1,3 +1,10 @@
+2026-10-31 - Navigation widget, no header
+
+The page header and device card are gone. The navigation is now a movable
+widget (horizontal or vertical) shared by all pages; creating, renaming,
+deleting and reordering pages moved into its dialog. Restart FHEM, then
+set <CMS> rebuild.
+
 2026-10-31 - Resize images and tiles by dragging
 
 Images get a drag handle (5 percent steps, ratio kept) instead of percent

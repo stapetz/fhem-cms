@@ -133,7 +133,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [ ] Eine separate Datenlöschfunktion mit Bestätigung umsetzen, die den betroffenen Device-Ordner anzeigt und die Optionen Löschen, Behalten und Abbrechen anbietet. Das normale FHEM-`delete <device>` behält die Dateien.
 - [x] Eine zentrale `controls_fhem-cms.txt` für das gesamte Repository generieren und über GitHub Actions nach Branch-Updates aktualisieren.
 - [x] FHEM-Installationsbefehle für `dev` und `main` in der README dokumentieren; alle Laufzeitdateien werden über eine gemeinsame Update-Quelle installiert.
-- [x] Die erste wiederverwendbare Web Component `cms-device-card.js` erstellen und in das Testfrontend integrieren.
+- [x] Die erste wiederverwendbare Web Component `cms-device-card.js` erstellen und in das Testfrontend integrieren (mit S17 wieder entfernt).
 - [ ] JSON-Lese-/Schreib-API mit Schema- und Pfadvalidierung umsetzen.
 - [ ] FHEM-Sitzung und Berechtigungen serverseitig prüfen.
 - [ ] Fehlerfälle nachvollziehbar protokollieren, ohne sensible Werte zu loggen.
@@ -299,6 +299,24 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Größengriff unten rechts an jeder Kachel im Layout-Modus (ziehen oder Umschalt+Pfeiltasten), Einrasten im Raster, überlappende Kacheln rutschen nach unten.
 - [x] Die Felder „Position im 12-Spalten-Raster“ sind aus den Dialogen entfernt. Neue Kacheln starten in Spalte 1 in der ersten freien Zeile mit Standardgröße.
 - [ ] Touch-Bedienung auf einem echten Gerät prüfen.
+
+### S17 - Schlanke Seite ohne Kopfbereich
+
+**Ziel:** Die Seite beginnt direkt mit den Inhalten. Eine Überschrift schreibt, wer sie möchte, selbst in einem Textbaustein.
+
+- [x] Kopfbereich (Kicker, Überschrift, Einleitungstext) und Device-Karte entfallen; die Komponente `cms-device-card` wird entfernt.
+- [x] Status und Fehlermeldungen erscheinen in einer schlichten Statuszeile (im Ansichtsmodus nur bei einem Fehler).
+
+### S18 - Navigations-Widget
+
+**Ziel:** Die Seitennavigation ist ein eigenes, frei platzierbares Widget, das auf allen Seiten gleich gilt.
+
+- [x] Die Navigation steht global in der Konfiguration (`navigation` mit `orientation` und `grid`) und wird im Layout-Modus wie jede Kachel verschoben und in der Größe geändert. Die Position gilt für alle Seiten; Kacheln anderer Seiten rutschen bei Überlappung nach unten.
+- [x] Ausrichtung wählbar: horizontal oder vertikal.
+- [x] Der Dialog „Navigation“ enthält Seite anlegen, umbenennen, löschen und Reihenfolge ändern (Hoch/Runter). Die Seitenbuttons verschwinden aus der Werkzeugleiste.
+- [x] Bestehende Konfigurationen ohne `navigation` erhalten eine Standardnavigation (horizontal, Zeile 1, volle Breite); die Kacheln rutschen dafür um die Navigationshöhe nach unten.
+- [ ] Reihenfolge per Ziehen der Einträge (bisher nur Hoch/Runter-Schaltflächen).
+- [ ] Navigation pro Seite ausblenden (nicht umgesetzt).
 
 ## Später prüfen - Erweiterungen außerhalb des MVP
 

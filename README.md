@@ -13,7 +13,7 @@ Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freie
 | `controls_fhem-cms.txt` | Vom Workflow erzeugte Update-Liste für alle installierbaren Dateien dieses Repositories |
 | `CHANGED` | FHEM-Änderungsprotokoll für Updates |
 
-Die erste wiederverwendbare Web Component liegt unter `www/fhem-cms/components/cms-device-card.js`; die gemeinsamen Styles und der Modul-Einstieg liegen unter `css/` und `js/`.
+Die wiederverwendbaren Web Components liegen unter `www/fhem-cms/components/`; die gemeinsamen Styles und der Modul-Einstieg liegen unter `css/` und `js/`.
 
 ## Installation und Update in FHEM
 

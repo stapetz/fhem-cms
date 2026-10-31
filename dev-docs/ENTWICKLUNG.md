@@ -326,7 +326,7 @@ Das Testfrontend bestätigt die Anlage und zeigt den Device-Namen. Eine JSON-API
 ## Konfigurationsspeicher (S04)
 
 - Pfad: `<modpath>/fhem-cms-data/<Device>/config.json`, ausserhalb von `www`. Der Ordner wird beim `define` und bei jedem FHEM-Start nachgerüstet, falls er fehlt; eine vorhandene Konfiguration wird nie überschrieben.
-- Format: `{"schemaVersion":2,"pages":[{"id","title","widgets":[{"type":"fhem-value","device","reading","grid":{"col","row","w","h"}}]}]}`. Unbekannte Felder, fehlende Pflichtfelder und nicht unterstützte Versionen werden abgewiesen.
+- Format: `{"schemaVersion":2,"navigation":{"orientation":"horizontal|vertical","grid":{…}},"pages":[{"id","title","widgets":[{"type":"fhem-value","device","reading","grid":{"col","row","w","h"}}]}]}`. Unbekannte Felder, fehlende Pflichtfelder und nicht unterstützte Versionen werden abgewiesen. `navigation` ist optional (S18).
 - Limits: 1 MiB, höchstens 50 Seiten, 200 Widgets je Seite, Raster 12 Spalten.
 - Schreiben: temporäre Datei, dann atomares `rename`; die Vorgängerversion bleibt als `config.json.<JJJJMMTT-hhmmss>.bak` erhalten (die letzten 20).
 - Wiederherstellen: `FHEMCMS_RestoreBackup` akzeptiert nur Backup-Namen dieses Musters und validiert die Datei vor dem Zurückschreiben. Ein UI-Dialog folgt später.
@@ -350,7 +350,9 @@ FHEMWEB und vorgeschaltete Proxys (z. B. nginx) halten statische Dateien lange i
 
 ## Seiten, Navigation und Textbaustein (S07/S08)
 
-- **Seiten:** `pages[]` der Konfiguration wird als Navigation (Links `#/<seiten-id>`) angezeigt. Der Hash bestimmt die aktuelle Seite, unbekannte Hashes führen zur ersten Seite. „+ Seite“, „Seite umbenennen“ und „Seite löschen“ ändern die Konfiguration über die validierte API; die letzte Seite kann nicht gelöscht werden. Eingabe des Titels über einen eigenen `<dialog>` (kein `prompt()`).
+- **Seiten:** `pages[]` der Konfiguration wird als Navigation (Links `#/<seiten-id>`) angezeigt. Der Hash bestimmt die aktuelle Seite, unbekannte Hashes führen zur ersten Seite. Seiten anlegen, umbenennen, löschen und umsortieren erledigt der Dialog des Navigations-Widgets (S18) über die validierte API; die letzte Seite kann nicht gelöscht werden. Die Reihenfolge von `pages[]` ist die Menüreihenfolge. Eingabe des Titels über einen eigenen `<dialog>` (kein `prompt()`).
+- **Navigations-Widget (S18):** `navigation` (`orientation`, `grid`) steht global in der Konfiguration. Im Frontend ist es als Pseudo-Widget `__nav` Teil der Layout-Logik (`layoutItems()`); Verschieben und Größe laufen wie bei Kacheln. `arrangeAround()` schiebt beim Speichern überlappende Kacheln der übrigen Seiten nach unten. Fehlt `navigation` (ältere Konfiguration), setzt `loadConfig()` im Speicher eine Standardnavigation (horizontal, Zeile 1, volle Breite) und rückt alle Kacheln um eine Zeile nach unten; gespeichert wird beim nächsten Schreiben.
+- **Schlanke Seite (S17):** Die erzeugte `index.html` enthält nur `<main class="cms-shell">` mit einer Statuszeile (`.cms-status`). Die Komponente `cms-device-card` entfiel. Im Ansichtsmodus ist die Statuszeile nur bei einem Fehler sichtbar.
 - **Live-Abos:** Daten und WebSocket-Abos gelten nur für die aktuelle Seite und werden beim Seitenwechsel neu aufgebaut.
 - **„+ Widget“-Menü:** Thermostat-Kachel und Textbaustein.
 - **Textbaustein (`type: "text"`):** Felder `id`, `type`, genau eines von `html` (WYSIWYG, siehe unten) oder `markdown` (Altbestand; höchstens 20000 Zeichen, keine Steuerzeichen außer Tab/Zeilenumbruch), optional `title` (höchstens 64 Zeichen), `grid`. Der Renderer `js/markdown.js` ist eigenständig und baut nur DOM-Knoten per `createElement`/`textContent`. Unterstützt: `#`–`###`, Absätze, `-`/`1.`-Listen, `**fett**`, `*kursiv*`, `` `code` ``, `[Text](URL)`. HTML bleibt Text; Links nur mit `http(s)` oder relativ (`/`, `./`, `../`, `#`), mit `rel="noopener noreferrer"`.

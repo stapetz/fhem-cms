@@ -370,10 +370,7 @@ $importMap
 </head>
 <body>
   <main class="cms-shell">
-    <p class="cms-kicker">FHEM CMS | Testoberflaeche</p>
-    <h1>fhem-cms</h1>
-    <p class="cms-copy">Der Frontend-Einstiegspunkt wurde fuer dieses FHEM-Device angelegt.</p>
-    <cms-device-card device="$htmlName" status="Frontend wird geladen ..."></cms-device-card>
+    <p class="cms-status" role="status">Frontend wird geladen ...</p>
   </main>
 </body>
 </html>
@@ -520,8 +517,28 @@ sub FHEMCMS_ValidateConfig {
         return defined($v) && !ref($v) && $v =~ $fhemName && $v !~ /\A\.{1,2}\z/;
     };
 
-    my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages']);
+    my $checkGrid = sub {
+        my ($grid) = @_;
+        my $gridError = $exact->($grid, 'grid', ['col', 'row', 'w', 'h']);
+        return $gridError if ($gridError);
+        return 'Ungueltige Rasterwerte'
+            if (!$isInt->($grid->{col}, 1, 12) || !$isInt->($grid->{row}, 1, 1000)
+                || !$isInt->($grid->{w}, 1, 12) || !$isInt->($grid->{h}, 1, 1000)
+                || $grid->{col} + $grid->{w} > 13);
+        return undef;
+    };
+
+    my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages'], ['navigation']);
     return $err if ($err);
+    if (exists($config->{navigation})) {
+        $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid']);
+        return $err if ($err);
+        return 'Ungueltige Ausrichtung der Navigation'
+            if (ref($config->{navigation}{orientation}) || !defined($config->{navigation}{orientation})
+                || $config->{navigation}{orientation} !~ /\A(?:horizontal|vertical)\z/);
+        $err = $checkGrid->($config->{navigation}{grid});
+        return $err if ($err);
+    }
     return 'Nicht unterstuetzte schemaVersion'
         if (!$isInt->($config->{schemaVersion}, 2, 2));
     return 'pages muss eine Liste mit 1 bis 50 Seiten sein'
@@ -597,13 +614,8 @@ sub FHEMCMS_ValidateConfig {
                 }
             }
 
-            $err = $exact->($widget->{grid}, 'grid', ['col', 'row', 'w', 'h']);
+            $err = $checkGrid->($widget->{grid});
             return $err if ($err);
-            my $grid = $widget->{grid};
-            return 'Ungueltige Rasterwerte'
-                if (!$isInt->($grid->{col}, 1, 12) || !$isInt->($grid->{row}, 1, 1000)
-                    || !$isInt->($grid->{w}, 1, 12) || !$isInt->($grid->{h}, 1, 1000)
-                    || $grid->{col} + $grid->{w} > 13);
         }
     }
     return undef;

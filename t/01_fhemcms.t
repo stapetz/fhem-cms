@@ -46,13 +46,11 @@ ok(!-d File::Spec->catdir($modPath, 'www', 'fhem-cms', 'CMS', 'default'),
 open(my $page, '<', $pagePath) or die "Cannot open generated page: $!";
 my $html = do { local $/; <$page> };
 close($page) or die "Cannot close generated page: $!";
-like($html, qr/<cms-device-card device="CMS"/, 'bootstraps the requested device component');
+like($html, qr/<main class="cms-shell">\s*<p class="cms-status"/, 'bootstraps a slim shell with a status line');
+unlike($html, qr/<h1|cms-kicker|cms-device-card/, 'has no header area');
 like($html, qr{\.\./css/fhem-cms\.css}, 'loads shared CSS from the common asset tree');
 like($html, qr{\.\./js/fhem-cms\.js}, 'loads shared JavaScript from the common asset tree');
 like($html, qr{type="module"}, 'loads the frontend as an ES module');
-ok(-f File::Spec->catfile(
-    'www', 'fhem-cms', 'components', 'cms-device-card.js'),
-    'provides the shared device-card component');
 
 is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'redefining a device accepts its generated page');
 is(FHEMCMS_Get($hash, $name, 'url'),
@@ -120,6 +118,20 @@ for my $case (
 push(@{$restored->{pages}[0]{widgets}}, {%{$textWidget}, markdown => "Zeile\r\n\tTab"});
 is(FHEMCMS_ValidateConfig($restored), undef, 'allows line breaks and tabs in text');
 pop(@{$restored->{pages}[0]{widgets}});
+$restored->{navigation} = {orientation => 'vertical', grid => {col => 1, row => 1, w => 3, h => 4}};
+is(FHEMCMS_ValidateConfig($restored), undef, 'accepts a navigation widget');
+for my $case (
+    ['bad orientation', {orientation => 'diagonal', grid => {col => 1, row => 1, w => 3, h => 4}}, qr/Ausrichtung/],
+    ['bad grid', {orientation => 'horizontal', grid => {col => 10, row => 1, w => 5, h => 1}}, qr/Rasterwerte/],
+    ['unknown field', {orientation => 'horizontal', grid => {col => 1, row => 1, w => 3, h => 1}, x => 1}, qr/Unbekanntes Feld 'x'/],
+    ['missing grid', {orientation => 'horizontal'}, qr/Pflichtfeld 'grid'/],
+) {
+    my ($label, $navigation, $expected) = @{$case};
+    local $restored->{navigation} = $navigation;
+    like(FHEMCMS_ValidateConfig($restored), $expected, "rejects a navigation with $label");
+}
+delete($restored->{navigation});
+is(FHEMCMS_ValidateConfig($restored), undef, 'navigation stays optional');
 my $migrated = FHEMCMS_MigrateConfig({schemaVersion => 1, pages => [{id => 'p', title => 'P',
     widgets => [{type => 'fhem-value', device => 'A', reading => 'r',
         grid => {col => 1, row => 1, w => 1, h => 1}}]}]});

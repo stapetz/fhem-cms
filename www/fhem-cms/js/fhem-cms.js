@@ -1,4 +1,3 @@
-import '../components/cms-device-card.js';
 import '../components/cms-thermostat.js';
 import '../components/cms-text.js';
 import { FhemClient, isValidName } from './fhem-client.js';
@@ -7,6 +6,8 @@ import { cellFromPoint, moveWidget, resizeWidget } from './layout.js';
 const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
 const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
+const NAV_ID = '__nav';
+const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 12, h: 1 };
 
 // Ohne Parameter zeigt die Seite nur die fertige Homepage. ?mode=edit startet die Bearbeitung.
 // Das ist keine Zugriffssperre.
@@ -16,9 +17,9 @@ const VIEW_MODE = MODE !== 'edit';
 const PREVIEW_MODE = MODE === 'preview';
 
 class CmsPage {
-  constructor(cmsDevice, shell, card) {
+  constructor(cmsDevice, shell, statusLine) {
     this.client = new FhemClient(cmsDevice);
-    this.card = card;
+    this.statusLine = statusLine;
     this.config = null;
     this.snapshots = new Map();
     this.elements = new Map();
@@ -40,23 +41,20 @@ class CmsPage {
     this.toolbar = document.createElement('div');
     this.toolbar.className = 'cms-toolbar';
     this.pageButtons = [
-      this.button('+ Seite', () => this.addPage()),
-      this.button('Seite umbenennen', () => this.renamePage()),
-      this.button('Seite löschen', () => this.deletePage()),
       this.button('Backups', () => this.showBackups()),
       this.button('Layout ändern', () => this.toggleLayout()),
       this.button('Veröffentlichen', () => this.publish()),
       this.button('Entwurf verwerfen', () => this.discard()),
       this.button('Vorschau', () => this.preview())
     ];
-    this.publishButton = this.pageButtons[5];
-    this.discardButton = this.pageButtons[6];
+    this.publishButton = this.pageButtons[2];
+    this.discardButton = this.pageButtons[3];
     this.publishButton.classList.add('cms-publish');
     this.draftNote = document.createElement('p');
     this.draftNote.className = 'cms-draft-note';
     this.draftNote.setAttribute('role', 'status');
     this.hasDraft = false;
-    this.layoutButton = this.pageButtons[4];
+    this.layoutButton = this.pageButtons[1];
     this.layoutButton.classList.add('cms-layout-toggle');
     this.layoutButton.setAttribute('aria-pressed', 'false');
     this.layoutMode = false;
@@ -86,7 +84,7 @@ class CmsPage {
     this.grid.setAttribute('aria-label', 'Widgets');
     this.grid.setAttribute('aria-live', 'polite');
 
-    shell.append(this.nav, this.draftNote, this.toolbar, this.grid);
+    shell.append(this.draftNote, this.toolbar, this.grid);
   }
 
   button(label, onClick) {
@@ -117,7 +115,7 @@ class CmsPage {
   }
 
   setStatus(message) {
-    this.card.status = message;
+    this.statusLine.textContent = String(message);
   }
 
   preview() {
@@ -127,12 +125,26 @@ class CmsPage {
     window.open(url.href, '_blank', 'noopener');
   }
 
+  // Konfigurationen ohne Navigation erhalten die Standardnavigation oben; die Kacheln rücken darunter.
+  async loadConfig(source) {
+    const config = await this.client.getConfig(source);
+    if (!config.navigation) {
+      config.navigation = { orientation: 'horizontal', grid: { ...DEFAULT_NAV_GRID } };
+      for (const page of config.pages) {
+        for (const widget of page.widgets) {
+          widget.grid.row = Math.min(widget.grid.row + DEFAULT_NAV_GRID.h, 1000);
+        }
+      }
+    }
+    return config;
+  }
+
   async start() {
     try {
-      this.config = await this.client.getConfig(VIEW_MODE && !PREVIEW_MODE ? 'config' : 'draft');
+      this.config = await this.loadConfig(VIEW_MODE && !PREVIEW_MODE ? 'config' : 'draft');
       this.hasDraft = VIEW_MODE ? false : await this.client.hasDraft();
     } catch (error) {
-      this.card.setAttribute('data-error', '');
+      this.statusLine.setAttribute('data-error', '');
       this.setStatus(`Konfiguration konnte nicht geladen werden: ${error.message}`);
       this.setControlsDisabled(true);
       return;
@@ -199,6 +211,7 @@ class CmsPage {
 
   renderNav() {
     this.nav.replaceChildren();
+    this.nav.classList.toggle('is-vertical', this.config.navigation.orientation === 'vertical');
     for (const page of this.config.pages) {
       const link = document.createElement('a');
       link.className = 'cms-nav-link';
@@ -209,7 +222,11 @@ class CmsPage {
       }
       this.nav.append(link);
     }
-    this.pageButtons[2].disabled = this.config.pages.length < 2;
+    if (!VIEW_MODE) {
+      const edit = this.button('⚙ Navigation', () => this.editNavigation());
+      edit.classList.add('cms-nav-edit');
+      this.nav.append(edit);
+    }
   }
 
   uniqueId(prefix, existing) {
@@ -339,7 +356,7 @@ class CmsPage {
           await this.client.restoreBackup(name);
           // Restore betrifft nur den Live-Stand; ein vorhandener Entwurf bleibt unveraendert.
           if (!this.hasDraft) {
-            this.config = await this.client.getConfig('draft');
+            this.config = await this.loadConfig('draft');
           }
         } catch (failure) {
           error.textContent = `Wiederherstellen fehlgeschlagen: ${failure.message}`;
@@ -361,54 +378,144 @@ class CmsPage {
     }
   }
 
-  async changePages(mutate, targetId) {
-    const next = structuredClone(this.config);
-    mutate(next);
-    try {
-      await this.persist(next);
-    } catch (error) {
-      this.setStatus(`Speichern fehlgeschlagen: ${error.message}`);
-      return;
-    }
-    if (window.location.hash === `#/${targetId}`) {
-      await this.showPage(targetId);
-    } else {
-      window.location.hash = `#/${targetId}`;
+  // Verschiebt Kacheln aller Seiten, die mit der Navigation überlappen, nach unten.
+  arrangeAround(config, exceptPageId) {
+    const nav = { id: NAV_ID, grid: config.navigation.grid };
+    for (const page of config.pages) {
+      if (page.id === exceptPageId) {
+        continue;
+      }
+      const layout = moveWidget([nav, ...page.widgets], NAV_ID, nav.grid.col, nav.grid.row);
+      if (!layout) {
+        throw new Error('Kein Platz im Raster');
+      }
+      for (const widget of page.widgets) {
+        const grid = layout.get(widget.id);
+        widget.grid = { col: grid.col, row: grid.row, w: grid.w, h: grid.h };
+      }
     }
   }
 
-  async addPage() {
-    const title = await this.askTitle('Titel der neuen Seite', '');
-    if (title === null) {
-      return;
+  editNavigation() {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'cms-dialog cms-nav-dialog';
+    dialog.setAttribute('aria-label', 'Navigation bearbeiten');
+    const form = document.createElement('form');
+    form.method = 'dialog';
+    const heading = document.createElement('p');
+    heading.textContent = 'Navigation';
+    const orientationLabel = document.createElement('label');
+    orientationLabel.textContent = 'Ausrichtung';
+    const orientation = document.createElement('select');
+    for (const [value, text] of [['horizontal', 'Horizontal'], ['vertical', 'Vertikal']]) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = text;
+      orientation.append(option);
     }
-    const id = this.uniqueId('p', new Set(this.config.pages.map((page) => page.id)));
-    await this.changePages((next) => next.pages.push({ id, title, widgets: [] }), id);
-  }
+    orientation.value = this.config.navigation.orientation;
+    orientationLabel.append(orientation);
+    const list = document.createElement('div');
+    list.className = 'cms-nav-list';
+    list.setAttribute('role', 'group');
+    list.setAttribute('aria-label', 'Seiten');
+    const error = document.createElement('p');
+    error.className = 'cms-dialog-error';
+    error.setAttribute('role', 'alert');
+    const actions = document.createElement('div');
+    actions.className = 'cms-dialog-actions';
+    const close = () => {
+      if (dialog.open) {
+        dialog.close();
+      }
+      dialog.remove();
+    };
 
-  async renamePage() {
-    const title = await this.askTitle('Neuer Titel der Seite', this.page.title);
-    if (title === null) {
-      return;
-    }
-    const id = this.page.id;
-    await this.changePages((next) => {
-      next.pages.find((page) => page.id === id).title = title;
-    }, id);
-  }
+    const run = async (mutate) => {
+      error.textContent = '';
+      const next = structuredClone(this.config);
+      try {
+        mutate(next);
+        this.arrangeAround(next);
+        await this.persist(next);
+      } catch (failure) {
+        error.textContent = `Speichern fehlgeschlagen: ${failure.message}`;
+        return;
+      }
+      if (!this.config.pages.some((page) => page.id === this.pageId)) {
+        window.location.hash = `#/${this.config.pages[0].id}`;
+      }
+      this.renderNav();
+      this.previewLayout(this.currentLayout());
+      fill();
+    };
+    const rowButton = (label, title, onClick, disabled) => {
+      const item = this.button(label, onClick);
+      item.title = title;
+      item.setAttribute('aria-label', title);
+      item.disabled = disabled;
+      return item;
+    };
+    const fill = () => {
+      list.replaceChildren();
+      const pages = this.config.pages;
+      pages.forEach((page, index) => {
+        const row = document.createElement('div');
+        row.className = 'cms-nav-row';
+        const name = document.createElement('span');
+        name.textContent = page.title;
+        const swap = (other) => run((next) => {
+          [next.pages[index], next.pages[other]] = [next.pages[other], next.pages[index]];
+        });
+        row.append(
+          name,
+          rowButton('↑', `„${page.title}“ nach oben`, () => swap(index - 1), index === 0),
+          rowButton('↓', `„${page.title}“ nach unten`, () => swap(index + 1), index === pages.length - 1),
+          rowButton('✎', `„${page.title}“ umbenennen`, async () => {
+            const title = await this.askTitle('Neuer Titel der Seite', page.title);
+            if (title !== null) {
+              run((next) => {
+                next.pages[index].title = title;
+              });
+            }
+          }, false),
+          rowButton('✕', `„${page.title}“ löschen`, () => {
+            if (window.confirm(`Seite „${page.title}“ mit ${page.widgets.length} Widget(s) wirklich löschen?`)) {
+              run((next) => {
+                next.pages.splice(index, 1);
+              });
+            }
+          }, pages.length < 2)
+        );
+        list.append(row);
+      });
+    };
 
-  async deletePage() {
-    if (this.config.pages.length < 2) {
-      return;
-    }
-    const { id, title, widgets } = this.page;
-    if (!window.confirm(`Seite „${title}“ mit ${widgets.length} Widget(s) wirklich löschen?`)) {
-      return;
-    }
-    const fallback = this.config.pages.find((page) => page.id !== id).id;
-    await this.changePages((next) => {
-      next.pages = next.pages.filter((page) => page.id !== id);
-    }, fallback);
+    orientation.addEventListener('change', () => run((next) => {
+      const grid = next.navigation.grid;
+      next.navigation.orientation = orientation.value;
+      next.navigation.grid = orientation.value === 'vertical'
+        ? { ...grid, w: Math.min(3, 13 - grid.col), h: Math.max(grid.h, 3) }
+        : { ...grid, col: 1, w: 12, h: 1 };
+    }));
+    const add = this.button('+ Seite', async () => {
+      const title = await this.askTitle('Titel der neuen Seite', '');
+      if (title !== null) {
+        const id = this.uniqueId('p', new Set(this.config.pages.map((page) => page.id)));
+        run((next) => next.pages.push({ id, title, widgets: [] }));
+      }
+    });
+    actions.append(add, this.button('Schließen', close));
+    form.append(heading, orientationLabel, list, error, actions);
+    dialog.append(form);
+    form.addEventListener('submit', (event) => event.preventDefault());
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      close();
+    });
+    fill();
+    document.body.append(dialog);
+    dialog.showModal();
   }
 
   devices() {
@@ -437,6 +544,9 @@ class CmsPage {
     this.grid.replaceChildren();
     this.elements.clear();
     this.overlays.clear();
+    this.elements.set(NAV_ID, this.nav);
+    this.place(this.nav, this.config.navigation);
+    this.grid.append(this.nav);
     for (const widget of this.page.widgets) {
       this.grid.append(this.createElementFor(widget));
     }
@@ -463,13 +573,13 @@ class CmsPage {
     if (!this.layoutMode) {
       return;
     }
-    for (const widget of this.page.widgets) {
+    for (const widget of this.layoutItems()) {
       const overlay = document.createElement('div');
       overlay.className = 'cms-drag-handle';
       overlay.tabIndex = 0;
       overlay.setAttribute('role', 'button');
       overlay.setAttribute('aria-label',
-        `Kachel ${widget.title || widget.device || widget.id} verschieben: ziehen oder Pfeiltasten verwenden`);
+        `${widget.id === NAV_ID ? 'Navigation' : `Kachel ${widget.title || widget.device || widget.id}`} verschieben: ziehen oder Pfeiltasten verwenden`);
       overlay.textContent = '⠿ verschieben';
       const grip = document.createElement('span');
       grip.className = 'cms-resize-grip';
@@ -485,12 +595,12 @@ class CmsPage {
   }
 
   currentLayout() {
-    return new Map(this.page.widgets.map((widget) => [widget.id, { ...widget.grid }]));
+    return new Map(this.layoutItems().map((widget) => [widget.id, { ...widget.grid }]));
   }
 
   previewLayout(layout) {
     this.pendingLayout = layout;
-    for (const widget of this.page.widgets) {
+    for (const widget of this.layoutItems()) {
       const grid = layout.get(widget.id);
       const element = this.elements.get(widget.id);
       const overlay = this.overlays.get(widget.id);
@@ -510,7 +620,7 @@ class CmsPage {
       }
       event.preventDefault();
       this.flushLayout();
-      const widget = this.page.widgets.find((item) => item.id === id);
+      const widget = this.layoutItems().find((item) => item.id === id);
       const start = cellFromPoint(this.grid, event.clientX, event.clientY);
       const offset = { col: start.col - widget.grid.col, row: start.row - widget.grid.row };
       overlay.setPointerCapture(event.pointerId);
@@ -519,7 +629,7 @@ class CmsPage {
 
       const move = (moveEvent) => {
         const cell = cellFromPoint(this.grid, moveEvent.clientX, moveEvent.clientY);
-        const layout = moveWidget(this.page.widgets, id, cell.col - offset.col, cell.row - offset.row);
+        const layout = moveWidget(this.layoutItems(), id, cell.col - offset.col, cell.row - offset.row);
         const key = layout && JSON.stringify([...layout]);
         if (layout && key !== last) {
           last = key;
@@ -551,8 +661,8 @@ class CmsPage {
         return;
       }
       event.preventDefault();
-      const base = (this.pendingLayout && this.pendingLayout.get(id)) || this.page.widgets.find((item) => item.id === id).grid;
-      const working = this.page.widgets.map((widget) => ({ ...widget, grid: (this.pendingLayout && this.pendingLayout.get(widget.id)) || widget.grid }));
+      const base = (this.pendingLayout && this.pendingLayout.get(id)) || this.layoutItems().find((item) => item.id === id).grid;
+      const working = this.layoutItems().map((widget) => ({ ...widget, grid: (this.pendingLayout && this.pendingLayout.get(widget.id)) || widget.grid }));
       const layout = moveWidget(working, id, base.col + step[0], base.row + step[1]);
       if (!layout) {
         return;
@@ -573,14 +683,14 @@ class CmsPage {
       event.preventDefault();
       event.stopPropagation();
       this.flushLayout();
-      const widget = this.page.widgets.find((item) => item.id === id);
+      const widget = this.layoutItems().find((item) => item.id === id);
       grip.setPointerCapture(event.pointerId);
       overlay.classList.add('is-dragging');
       let last = null;
 
       const move = (moveEvent) => {
         const cell = cellFromPoint(this.grid, moveEvent.clientX, moveEvent.clientY);
-        const layout = resizeWidget(this.page.widgets, id, cell.col - widget.grid.col + 1, cell.row - widget.grid.row + 1);
+        const layout = resizeWidget(this.layoutItems(), id, cell.col - widget.grid.col + 1, cell.row - widget.grid.row + 1);
         const key = layout && JSON.stringify([...layout]);
         if (layout && key !== last) {
           last = key;
@@ -612,8 +722,8 @@ class CmsPage {
         return;
       }
       event.preventDefault();
-      const base = (this.pendingLayout && this.pendingLayout.get(id)) || this.page.widgets.find((item) => item.id === id).grid;
-      const working = this.page.widgets.map((widget) => ({ ...widget, grid: (this.pendingLayout && this.pendingLayout.get(widget.id)) || widget.grid }));
+      const base = (this.pendingLayout && this.pendingLayout.get(id)) || this.layoutItems().find((item) => item.id === id).grid;
+      const working = this.layoutItems().map((widget) => ({ ...widget, grid: (this.pendingLayout && this.pendingLayout.get(widget.id)) || widget.grid }));
       const layout = resizeWidget(working, id, base.w + step[0], base.h + step[1]);
       if (!layout) {
         return;
@@ -635,7 +745,7 @@ class CmsPage {
 
   commitLayout(layout) {
     this.pendingLayout = null;
-    const changed = this.page.widgets.some((widget) => {
+    const changed = this.layoutItems().some((widget) => {
       const grid = layout.get(widget.id);
       return grid && (grid.col !== widget.grid.col || grid.row !== widget.grid.row
         || grid.w !== widget.grid.w || grid.h !== widget.grid.h);
@@ -646,13 +756,18 @@ class CmsPage {
     const pageId = this.page.id;
     this.layoutSaving = this.layoutSaving.then(async () => {
       const next = structuredClone(this.config);
+      const copy = (grid) => ({ col: grid.col, row: grid.row, w: grid.w, h: grid.h });
+      if (layout.get(NAV_ID)) {
+        next.navigation.grid = copy(layout.get(NAV_ID));
+      }
       for (const widget of next.pages.find((page) => page.id === pageId).widgets) {
         const grid = layout.get(widget.id);
         if (grid) {
-          widget.grid = { col: grid.col, row: grid.row, w: grid.w, h: grid.h };
+          widget.grid = copy(grid);
         }
       }
       try {
+        this.arrangeAround(next, pageId);
         await this.persist(next);
         this.setStatus('Layout gespeichert');
       } catch (error) {
@@ -663,6 +778,10 @@ class CmsPage {
       }
     });
     return this.layoutSaving;
+  }
+
+  layoutItems() {
+    return [{ id: NAV_ID, grid: this.config.navigation.grid }, ...this.page.widgets];
   }
 
   createElementFor(widget) {
@@ -750,7 +869,7 @@ class CmsPage {
     }
     try {
       await this.client.discardDraft();
-      this.config = await this.client.getConfig('draft');
+      this.config = await this.loadConfig('draft');
     } catch (error) {
       this.setStatus(`Verwerfen fehlgeschlagen: ${error.message}`);
       return;
@@ -916,7 +1035,7 @@ class CmsPage {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  const card = document.querySelector('cms-device-card');
+  const card = document.querySelector('.cms-status');
   const shell = document.querySelector('.cms-shell');
   const meta = document.querySelector('meta[name="fhem-cms-device"]');
   const cmsDevice = meta ? meta.content : '';
@@ -929,10 +1048,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   if (!isValidName(cmsDevice)) {
     card.setAttribute('data-error', '');
-    card.status = 'Ungültiger CMS-Device-Name';
+    card.textContent = 'Ungültiger CMS-Device-Name';
     return;
   }
 
-  card.status = 'Konfiguration wird geladen ...';
+  card.textContent = 'Konfiguration wird geladen ...';
   new CmsPage(cmsDevice, shell, card).start();
 });
