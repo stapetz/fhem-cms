@@ -117,7 +117,13 @@ class FHEMCMSThermostat extends HTMLElement {
         .device-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
         dialog.picker { width: min(94vw, 44rem); }
         .picker-list { max-height: 50vh; overflow: auto; border: 1px solid #43564a; border-radius: 0.5rem; }
-        .picker-list table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .picker-list table { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
+        .picker-list th:nth-child(1) { width: 26%; }
+        .picker-list th:nth-child(2) { width: 22%; }
+        .picker-list th:nth-child(3) { width: 14%; }
+        .picker-list th:nth-child(4) { width: 20%; }
+        .picker-list td { overflow-wrap: anywhere; }
+        .picker-info { margin: 0; min-height: 1.2em; font-size: 0.85rem; color: #a5c9b2; }
         .picker-list th { position: sticky; top: 0; background: #17211d; text-align: left; color: #a5c9b2; }
         .picker-list tr.filters th { top: 2.1rem; padding-top: 0; font-weight: normal; }
         .picker-list tr.filters input { padding: 0.25rem 0.4rem; font-size: 0.8rem; }
@@ -198,7 +204,7 @@ class FHEMCMSThermostat extends HTMLElement {
               <tbody data-picker-rows></tbody>
             </table>
           </div>
-          <p class="error" data-picker-info></p>
+          <p class="picker-info" data-picker-info></p>
           <div class="actions"><button type="button" data-picker-cancel>Abbrechen</button></div>
         </div>
       </dialog>

@@ -1,3 +1,8 @@
+2026-10-31 - Fix device picker layout
+
+Use fixed column widths so all picker columns fit and show the hit count in a
+neutral color.
+
 2026-10-31 - Add channel lookup and column filters to the device picker
 
 Resolve thermostat readings across the main device and its channels, show the
