@@ -427,7 +427,7 @@ Gemeldete Fehler, die noch besprochen werden. Noch nicht umgesetzt.
 
 - **B01 - Wert-Anzeige skaliert nicht richtig.** Gemeldet am 2026-10-31.
 - **B02 - Wert-Anzeige zeigt den Titel nicht an**, obwohl einer eingetragen ist. Gemeldet am 2026-10-31.
-- **B03 - Thermostat-Kachel: unten viel ungenutzter Leerraum.** Der Platz wird nicht benötigt; Inhalt und Kachelhöhe sollen besser zusammenpassen (Screenshot vom 2026-10-31, Kacheln im Layout-Modus). Gemeldet am 2026-10-31.
+- **B03 - Thermostat-Kachel: unten viel ungenutzter Leerraum.** Der Platz wird nicht benötigt; Inhalt und Kachelhöhe sollen besser zusammenpassen (Screenshot vom 2026-10-31, Kacheln im Layout-Modus). Gemeldet am 2026-10-31. **Umgesetzt (Prüfung offen):** hohe Kacheln schalten auf einspaltiges Layout und füllen die Höhe.
 
 ## Später prüfen - Erweiterungen außerhalb des MVP
 

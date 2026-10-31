@@ -136,7 +136,7 @@ class FHEMCMSThermostat extends HTMLElement {
           border-radius: 1.4rem; background: #202e27; }
         /* Der Inhalt ist rund 10,4 em hoch und 26 em breit, oben ausgerichtet; die Schrift richtet sich nach der knapperen Seite. */
         .body { height: 100%; display: flex; flex-direction: column; justify-content: flex-start;
-          font-size: max(4px, min(9.2cqh, 4cqw)); }
+          font-size: max(4px, min(9.2cqh, 3.85cqw)); }
         header { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
           padding: 0.3em 1.6rem 0 1.1em; flex: none; }
         h3 { margin: 0; font-size: 1.05em; font-weight: 400; color: #a5c9b2;
@@ -172,6 +172,8 @@ class FHEMCMSThermostat extends HTMLElement {
         .status:empty { display: none; }
         .status[data-error] { color: #ffb4a8; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
+        /* Hohe, schmale Kacheln: Boxen untereinander mit gleichmäßig verteiltem Restplatz (untere Zeile am Kachelende), Schrift richtet sich nach dem einspaltigen Inhalt (ca. 15 em hoch, 16 em breit; zweispaltig 10,6 em hoch, 26 em breit). */
+        @container (aspect-ratio < 1.7) { .body { font-size: max(4px, min(6.5cqh, 6.2cqw)); } .boxes { grid-template-columns: 1fr; grid-template-rows: auto auto; flex: 1; align-content: space-evenly; margin-top: 0; } }
         /* Je kleiner die Kachel, desto weniger Inhalt: erst Status, dann Batterie, Ventil und Modus, zuletzt der Schieber. */
         @container (max-width: 13rem) { .batt { display: none; } }
         @container (max-height: 6.5rem) { .foot, .status { display: none; } }
