@@ -502,6 +502,10 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 - [x] Textbaustein erhält Live-Daten (Abo auf die Devices im Text, Anzeige „veraltet“ bei Verbindungsproblemen).
 - [ ] Offen: Platzhalter in Links und Bildbeschreibungen, Eingabe per Tastatur (Chip ohne Maus bearbeiten).
 
+### S46 - Freieres, feineres Layout (Entwurf, Entscheidung offen)
+
+Das grobe Spaltenraster wirkt zu starr; FTUI erlaubt freieres Platzieren. Hauptgeräte: Tablet und Smartphone. Zu entscheiden: A) feineres Raster (z. B. 48 Spalten, kleinere Zeilenhöhe, `col/row/w/h` bleiben; Migration der Altwerte), B) freie Positionierung `x,y,w,h` (px/%), C) feste Designfläche, die als Ganzes skaliert, D) Hybrid aus feinem Raster und freiem Offset. Einordnung: A ist klein und risikoarm; B/C erschweren Zoom, Safari (B05) und das Umbrechen auf dem Smartphone. Vor einer Umsetzung Entscheidung einholen. **Entwurf.** Gemeldet am 2026-10-31.
+
 ## Buglist
 
 Gemeldete Fehler, die noch besprochen werden. Noch nicht umgesetzt.
