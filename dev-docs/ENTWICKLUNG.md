@@ -363,3 +363,14 @@ FHEMWEB und vorgeschaltete Proxys (z. B. nginx) halten statische Dateien lange i
 - **Autorisierung:** Das CMS besitzt keine eigene Rechteprüfung für Readings. FHEMWEB (`allowed`, Device-Rechte) entscheidet; ohne Berechtigung schlagen die Abrufe fehl und werden als Fehler angezeigt.
 - **Nicht gemessen:** Serverlast und Latenz auf der Referenzumgebung (Messung gehört zu S10).
 
+## Daten eines Devices löschen (purge)
+
+`delete <CMS>` entfernt nur die FHEM-Definition; Datenordner und Startseite bleiben bewusst erhalten, damit ein versehentliches Löschen keine Konfiguration vernichtet. Zum endgültigen Entfernen:
+
+```
+set <CMS> purge <CMS>
+delete <CMS>
+```
+
+Der Device-Name muss als Bestätigung wiederholt werden. `purge` löscht `<modpath>/fhem-cms-data/<Device>/` (inklusive Backups) und `<modpath>/www/fhem-cms/<Device>/`. Es verweigert die Aktion bei Symlinks, bei Dateien im Startseitenordner, die nicht vom Modul stammen, und bei einer Startseite ohne Modul-Marker. Die gemeinsamen Assets unter `www/fhem-cms/` bleiben unangetastet. Danach sind `get`, `set` und der Startlink gesperrt (Status `purged`), bis das Device gelöscht oder FHEM neu gestartet wird; ein Neustart oder erneutes `define` legt leere Standarddaten wieder an.
+

@@ -1,3 +1,9 @@
+2026-10-31 - Add purge command to delete a device's data
+
+set <name> purge <name> removes the data folder (with backups) and the start
+page of a device after an explicit name confirmation. Symlinks, foreign files
+and pages without the module marker are refused.
+
 2026-10-31 - Show stale and offline states and clean up on page hide
 
 Keep the last values visible when a refresh fails and mark tiles as stale,

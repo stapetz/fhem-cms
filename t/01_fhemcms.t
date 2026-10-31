@@ -17,6 +17,9 @@ sub CommandAttr {
     return undef;
 }
 
+my @logged;
+sub Log3 { push(@logged, [@_]); return; }
+
 require './FHEM/01_FHEMCMS.pm';
 
 my $modHash = {};
@@ -237,5 +240,46 @@ write_file($assetFile, 'widget v5');
 FHEMCMS_Summary('WEB', $name);
 my ($tokenStill) = read_file($pagePath) =~ m{fhem-cms\.css\?v=([0-9a-f]+)};
 is($tokenStill, $tokenFour, 'summary throttles repeated refreshes');
+
+# purge
+my $pName = 'cmsPurge';
+my $pHash = {NAME => $pName};
+is(FHEMCMS_Define($pHash, "$pName FHEMCMS"), undef, 'defines a device for purge tests');
+my $pData = File::Spec->catdir($modPath, 'fhem-cms-data', $pName);
+my $pPage = File::Spec->catdir($modPath, 'www', 'fhem-cms', $pName);
+ok(-d $pData && -d $pPage, 'purge test device has data and page');
+like(FHEMCMS_Set($pHash, $pName, 'purge'), qr/Bestaetigung/, 'purge needs a confirmation argument');
+like(FHEMCMS_Set($pHash, $pName, 'purge', 'other'), qr/Device-Name/, 'purge rejects a wrong confirmation');
+like(FHEMCMS_Set($pHash, $pName, 'purge', $pName, 'x'), qr/Bestaetigung/, 'purge rejects extra arguments');
+ok(-d $pData && -d $pPage, 'failed purge keeps everything');
+
+write_file(File::Spec->catfile($pPage, 'extra.txt'), 'mine');
+like(FHEMCMS_Set($pHash, $pName, 'purge', $pName), qr/fremde Dateien \(extra\.txt\)/, 'purge refuses foreign files in the page folder');
+ok(-d $pData && -d $pPage, 'refused purge keeps everything');
+unlink(File::Spec->catfile($pPage, 'extra.txt'));
+
+my $pIndex = File::Spec->catfile($pPage, 'index.html');
+my $pOriginal = read_file($pIndex);
+write_file($pIndex, "<html>hand made</html>\n");
+like(FHEMCMS_Set($pHash, $pName, 'purge', $pName), qr/nicht von diesem Modul/, 'purge refuses a page without the module marker');
+write_file($pIndex, $pOriginal);
+
+my $moved = $pData . '.real';
+rename($pData, $moved);
+symlink($moved, $pData);
+like(FHEMCMS_Set($pHash, $pName, 'purge', $pName), qr/Symlink/, 'purge refuses a symlinked data folder');
+ok(-d $moved && -d $pPage, 'symlink refusal keeps targets');
+unlink($pData);
+rename($moved, $pData);
+
+is(FHEMCMS_Set($pHash, $pName, 'purge', $pName), undef, 'purge removes data and page');
+ok(!-e $pData && !-e $pPage, 'data and page folders are gone');
+ok(-d File::Spec->catdir($modPath, 'www', 'fhem-cms'), 'purge keeps the shared asset folder');
+like(FHEMCMS_Get($pHash, $pName, 'config'), qr/geloescht/, 'get is blocked after purge');
+like(FHEMCMS_Set($pHash, $pName, 'rebuild'), qr/geloescht/, 'set is blocked after purge');
+like(FHEMCMS_Summary('WEB', $pName), qr/Daten geloescht/, 'summary shows the purged state without a link');
+ok(!-e $pData && !-e $pPage, 'blocked calls do not recreate the folders');
+is(FHEMCMS_Define($pHash, "$pName FHEMCMS"), undef, 'redefine after purge works');
+ok(-f File::Spec->catfile($pData, 'config.json') && -f $pIndex, 'redefine recreates data and page');
 
 done_testing();
