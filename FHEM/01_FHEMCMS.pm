@@ -3,7 +3,6 @@ package main;
 use strict;
 use warnings;
 use Cwd qw(abs_path);
-use Encode qw(encode_utf8);
 use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
 use File::Path qw(make_path);
 use File::Spec;
@@ -27,7 +26,7 @@ sub FHEMCMS_Define {
     my $name = $hash->{NAME} // '';
 
     return 'Usage: define <name> FHEMCMS'
-        if (@args != 2 || $args[0] ne $name || $args[1] ne 'FHEMCMS');
+        if (@args != 2 || $args[0] ne $name || uc($args[1]) ne 'FHEMCMS');
     return 'Der Device-Name darf nur Buchstaben, Ziffern, Punkt, Unterstrich und Bindestrich enthalten'
         if ($name !~ /\A[A-Za-z0-9_.-]{1,128}\z/ || $name eq '.' || $name eq '..');
 
@@ -53,15 +52,10 @@ sub FHEMCMS_Get {
                 || $name !~ /\A[A-Za-z0-9_.-]{1,128}\z/ || $name eq '.' || $name eq '..');
         my $basePath = $main::FW_ME || '/fhem';
         $basePath =~ s{/$}{};
-        return $basePath . '/fhem-cms/' . FHEMCMS_DevicePathId($name) . '/default/index.html';
+        return $basePath . '/fhem-cms/' . $name . '/default/index.html';
     }
 
     return 'Unknown argument ' . $cmd . ', choose one of url:noArg';
-}
-
-sub FHEMCMS_DevicePathId {
-    my ($name) = @_;
-    return 'd-' . unpack('H*', encode_utf8($name));
 }
 
 sub FHEMCMS_CreateStartPage {
@@ -91,7 +85,7 @@ sub FHEMCMS_CreateStartPage {
     return 'Das CMS-Verzeichnis liegt nicht innerhalb des FHEM-www-Verzeichnisses'
         if (!defined($cmsRoot) || !FHEMCMS_IsChildPath($cmsRoot, $wwwRoot));
 
-    my $devicePath = File::Spec->catdir($cmsRoot, FHEMCMS_DevicePathId($name));
+    my $devicePath = File::Spec->catdir($cmsRoot, $name);
     my $surfacePath = File::Spec->catdir($devicePath, 'default');
     for my $path ($devicePath, $surfacePath) {
         if (!-d $path) {

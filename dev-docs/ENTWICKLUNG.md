@@ -100,7 +100,7 @@ Einstiegspunkte pro Device und Oberfläche.
 ## 3. Funktionale Anforderungen (Features)
 
 ### 3.1. Backend-Ebene (FHEM / Perl)
-* **Modul `01_FHEMCMS.pm`:** Ein natives FHEM-Perl-Modul, das via `define myCms FHEMCMS` instanziiert wird.
+* **Modul `01_FHEMCMS.pm`:** Ein natives FHEM-Perl-Modul, das via `define myCms FHEMCMS` instanziiert wird; der Gerätetyp wird ohne Beachtung der Groß-/Kleinschreibung erkannt.
 * **Frontend im FHEM-`www`-Kontext:** Die statischen Frontend-Dateien liegen in einer eigenen Verzeichnisstruktur unter `www/fhem-cms/` und werden über FHEMs normale `www`-Auslieferung bereitgestellt. Das Steuerungsmodul stellt keinen eigenen Web-Endpunkt für die HTML-Seiten oder Assets bereit.
   * Die gemeinsame Ressourcenstruktur ist nach Funktionen gegliedert und an FTUI3 angelehnt. Vorgesehene Verzeichnisse sind `components/`, `examples/`, `icons/`, `images/`, `js/`, `modules/`, `css/` und `themes/`. Das FTUI3-Verzeichnis `styles/` wird im CMS zunächst als `css/` geführt; neue Verzeichnisse kommen nur bei konkretem Bedarf hinzu.
   * Für jedes CMS-Device und jede zugehörige Oberfläche wird ein eigener Einstiegspunkt unter `www/fhem-cms/<device>/<oberflaeche>/index.html` geführt. Beim `define` wird der Einstiegspunkt für die initiale Oberfläche erzeugt; weitere Oberflächen erhalten jeweils ein eigenes Unterverzeichnis.
@@ -206,14 +206,14 @@ Dieser Abschnitt konkretisiert das vorangehende Zielbild. Bei Widersprüchen hab
   ├── modules/
   ├── css/
   ├── themes/
-  └── d-<hex-device-name>/
+  └── <fhem-device-name>/
       ├── default/
       │   └── index.html
       └── <oberflaeche-2>/
           └── index.html
   ```
 
-  Die gemeinsamen Ressourcen werden nicht pro Device dupliziert. Die Device- und Oberflächenverzeichnisse enthalten die jeweiligen HTML-Bootstrap-Einstiegspunkte; Konfiguration und Inhalte bleiben in der JSON-Persistenz. `get <device> url` gibt die URL zur initialen `default`-Oberfläche zurück.
+  Die gemeinsamen Ressourcen werden nicht pro Device dupliziert. Das Device-Verzeichnis verwendet exakt den FHEM-Devicenamen. Die Device- und Oberflächenverzeichnisse enthalten die jeweiligen HTML-Bootstrap-Einstiegspunkte; Konfiguration und Inhalte bleiben in der JSON-Persistenz. `get <device> url` gibt die URL zur initialen `default`-Oberfläche zurück. Das Löschen der Device-Definition entfernt keine Dateien; Datenbereinigung darf nur über eine separate, ausdrücklich ausgelöste Funktion erfolgen.
 - **Datenzugriff:** der Browser erhält nur Daten, für die die jeweilige FHEM-Sitzung berechtigt ist. Abonnements sollen auf benötigte Geräte/Readings begrenzt und bei Seitenwechsel oder Verbindungsende aufgeräumt werden.
 - **Noch offen:** WebSocket gegenüber vorhandenen FHEM-Schnittstellen oder einer Alternative, Aufteilung zwischen JSON-API und Ereigniskanal, sichere Slug-/Kollisionsstrategie und Lebenszyklus der geräte- und oberflächenbezogenen HTML-Dateien. Die Mindestversion ist FHEM 6.5; Tests gegen diese Baseline bleiben Teil der Integrationsprüfung.
 - Ein eigener WebSocket-Server und ein zusätzlicher REST-Endpunkt sind nicht als verbindliche Architektur beschlossen. Vor einer Entscheidung ist ein Machbarkeitsnachweis zu erstellen und hinsichtlich Abhängigkeiten, Berechtigungen und Serverlast zu bewerten.

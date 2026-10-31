@@ -35,9 +35,11 @@ update all https://raw.githubusercontent.com/stapetz/fhem-cms/dev/controls_fhem-
 shutdown restart
 ```
 
-Nach dem Update steht das Modul `FHEMCMS` zur Verfügung. Ein Testgerät lässt sich mit `define cmsTest FHEMCMS` anlegen. Die erzeugte Oberfläche und ihr URL-Pfad können mit `get cmsTest url` ermittelt werden.
+Nach dem Update steht das Modul `FHEMCMS` zur Verfügung. Ein Testgerät lässt sich beispielsweise mit `define CMS fhemcms` anlegen. Der Gerätetyp wird unabhängig von Groß-/Kleinschreibung erkannt. Die erzeugte Oberfläche und ihr URL-Pfad können mit `get CMS url` ermittelt werden, beispielsweise `/fhem/fhem-cms/CMS/default/index.html`.
 
 Die `controls_fhem-cms.txt` wird aus den installierbaren Dateien unter `FHEM/` und `www/fhem-cms/` erzeugt. Der repositorybezogene Dateiname vermeidet Kollisionen mit Controls-Dateien anderer Update-Quellen auf demselben FHEM-Server. GitHub Actions aktualisiert sie nach Änderungen auf `dev` oder `main`; sie nicht manuell bearbeiten. Die `CHANGED`-Datei im Repository-Root enthält das Änderungsprotokoll für FHEM und wird bei funktionalen Änderungen gepflegt. Eine FHEM-Installation erhält Modul, Komponenten, Styles, Skripte und weitere Frontend-Dateien gemeinsam.
+
+Beim Löschen einer FHEMCMS-Definition mit `delete CMS` bleiben ihr Geräteordner und dessen Dateien erhalten. Eine spätere, separate Datenlöschfunktion muss ausdrücklich ausgelöst werden.
 
 ## Branches
 
