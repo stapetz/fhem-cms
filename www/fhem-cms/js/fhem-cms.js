@@ -849,7 +849,7 @@ class CmsPage {
       const inRow = items.filter((item) => gridOf(item).row <= row && row < gridOf(item).row + gridOf(item).h);
       const navOnly = inRow.length > 0 && inRow.every((item) => item.id === NAV_ID && gridOf(item).h === 1)
         && this.config.navigation.orientation !== 'vertical';
-      tracks.push(navOnly ? 'auto' : 'minmax(2.75rem, auto)');
+      tracks.push(navOnly ? 'auto' : 'minmax(var(--cms-row-h), auto)');
     }
     this.grid.style.gridTemplateRows = tracks.join(' ');
   }
