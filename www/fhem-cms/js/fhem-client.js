@@ -14,6 +14,8 @@ function toBase64(text) {
 }
 
 // Dünner Client für FHEMWEB. Anmeldung, Rechte und CSRF-Schutz bleiben bei FHEMWEB.
+const BACKUP_NAME = /^config\.json\.\d{8}-\d{6}(?:-\d+)?\.bak$/;
+
 export class FhemClient {
   constructor(cmsDevice, baseUrl = new URL('../../', window.location.href)) {
     if (!isValidName(cmsDevice)) {
@@ -104,6 +106,30 @@ export class FhemClient {
 
   async saveConfig(config) {
     const result = await this.command(`set ${this.cmsDevice} config ${toBase64(JSON.stringify(config))}`);
+    if (result) {
+      throw new Error(result);
+    }
+  }
+
+  async getBackups() {
+    const text = await this.command(`get ${this.cmsDevice} backups`);
+    let list;
+    try {
+      list = JSON.parse(text);
+    } catch (error) {
+      throw new Error(text || 'Die Backups konnten nicht gelesen werden');
+    }
+    if (!Array.isArray(list)) {
+      throw new Error('Unerwartete Antwort für die Backup-Liste');
+    }
+    return list.filter((name) => typeof name === 'string' && BACKUP_NAME.test(name));
+  }
+
+  async restoreBackup(name) {
+    if (!BACKUP_NAME.test(name)) {
+      throw new Error('Ungültiger Backup-Name');
+    }
+    const result = await this.command(`set ${this.cmsDevice} restore ${name}`);
     if (result) {
       throw new Error(result);
     }

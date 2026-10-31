@@ -209,3 +209,11 @@ cms-device-card {
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+.cms-backup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}

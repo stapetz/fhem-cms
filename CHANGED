@@ -1,3 +1,8 @@
+2026-10-31 - Add backup restore dialog
+
+A Backups button lists the saved configurations and restores the selected one
+after confirmation. The current state is backed up before it is replaced.
+
 2026-10-31 - Add purge command to delete a device's data
 
 set <name> purge <name> removes the data folder (with backups) and the start

@@ -374,3 +374,7 @@ delete <CMS>
 
 Der Device-Name muss als Bestätigung wiederholt werden. `purge` löscht `<modpath>/fhem-cms-data/<Device>/` (inklusive Backups) und `<modpath>/www/fhem-cms/<Device>/`. Es verweigert die Aktion bei Symlinks, bei Dateien im Startseitenordner, die nicht vom Modul stammen, und bei einer Startseite ohne Modul-Marker. Die gemeinsamen Assets unter `www/fhem-cms/` bleiben unangetastet. Danach sind `get`, `set` und der Startlink gesperrt (Status `purged`), bis das Device gelöscht oder FHEM neu gestartet wird; ein Neustart oder erneutes `define` legt leere Standarddaten wieder an.
 
+## Backups wiederherstellen (Frontend)
+
+Die Schaltfläche „Backups“ in der Werkzeugleiste öffnet einen Dialog mit allen Sicherungen (neueste zuerst, Anzeige als Datum und Uhrzeit). Ein Klick fragt nach und führt dann `set <CMS> restore <Name>` aus. Vor der Wiederherstellung sichert das Modul den aktuellen Stand als eigenes Backup, sodass der Schritt umkehrbar ist. Danach wird die Konfiguration neu geladen und die aktuelle Seite angezeigt (oder die erste, falls sie im Backup nicht existiert). Der Client akzeptiert nur Namen im Format `config.json.<JJJJMMTT-HHMMSS>[-n].bak`.
+

@@ -34,7 +34,8 @@ class CmsPage {
     this.pageButtons = [
       this.button('+ Seite', () => this.addPage()),
       this.button('Seite umbenennen', () => this.renamePage()),
-      this.button('Seite löschen', () => this.deletePage())
+      this.button('Seite löschen', () => this.deletePage()),
+      this.button('Backups', () => this.showBackups())
     ];
 
     this.menu = document.createElement('details');
@@ -239,6 +240,82 @@ class CmsPage {
       dialog.showModal();
       input.select();
     });
+  }
+
+  formatBackup(name) {
+    const m = /\.(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/.exec(name);
+    return m ? `${m[3]}.${m[2]}.${m[1]} ${m[4]}:${m[5]}:${m[6]}` : name;
+  }
+
+  async showBackups() {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'cms-dialog';
+    dialog.setAttribute('aria-label', 'Backups wiederherstellen');
+    const form = document.createElement('form');
+    form.method = 'dialog';
+    const heading = document.createElement('p');
+    heading.textContent = 'Backup wiederherstellen';
+    const list = document.createElement('div');
+    list.className = 'cms-backup-list';
+    list.setAttribute('role', 'group');
+    list.setAttribute('aria-label', 'Verfügbare Backups');
+    const error = document.createElement('p');
+    error.className = 'cms-dialog-error';
+    error.setAttribute('role', 'alert');
+    const actions = document.createElement('div');
+    actions.className = 'cms-dialog-actions';
+    const close = () => {
+      if (dialog.open) {
+        dialog.close();
+      }
+      dialog.remove();
+    };
+    actions.append(this.button('Schließen', close));
+    form.append(heading, list, error, actions);
+    dialog.append(form);
+    form.addEventListener('submit', (event) => event.preventDefault());
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      close();
+    });
+    document.body.append(dialog);
+    dialog.showModal();
+
+    let names;
+    try {
+      names = await this.client.getBackups();
+    } catch (failure) {
+      error.textContent = `Backups konnten nicht geladen werden: ${failure.message}`;
+      return;
+    }
+    if (names.length === 0) {
+      list.textContent = 'Es gibt noch keine Backups.';
+      return;
+    }
+    for (const name of [...names].sort().reverse()) {
+      const label = this.formatBackup(name);
+      list.append(this.button(label, async () => {
+        if (!window.confirm(`Konfiguration vom ${label} wiederherstellen? Der aktuelle Stand wird zuvor gesichert.`)) {
+          return;
+        }
+        try {
+          await this.client.restoreBackup(name);
+          this.config = await this.client.getConfig();
+        } catch (failure) {
+          error.textContent = `Wiederherstellen fehlgeschlagen: ${failure.message}`;
+          return;
+        }
+        close();
+        const target = this.config.pages.some((page) => page.id === this.pageId)
+          ? this.pageId
+          : this.config.pages[0].id;
+        if (window.location.hash === `#/${target}`) {
+          await this.showPage(target);
+        } else {
+          window.location.hash = `#/${target}`;
+        }
+      }));
+    }
   }
 
   async changePages(mutate, targetId) {
