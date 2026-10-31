@@ -388,6 +388,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 - [x] Die Menüleiste im Edit-Modus überdeckt den Seiteninhalt nicht mehr; das Raster beginnt unterhalb der Leiste.
 - [x] Eine Rasterzeile, die nur die waagerechte Navigation (Höhe 1) enthält, passt sich der Höhe der Navigationspunkte an.
+- [x] Fix: Der Verschiebegriff der Navigation ist klein und rechts, die Seitenlinks bleiben im Edit-Modus anklickbar.
 - [ ] Senkrechte Navigation: Spaltenbreite bleibt vorerst 1/12 der Seitenbreite.
 
 ### S27 - Menüs öffnen beim Überfahren

@@ -266,11 +266,14 @@ body {
   user-select: none;
 }
 
+/* Nur ein kleiner Griff am rechten Rand, damit er die Navigationspunkte nicht überdeckt. */
 .cms-drag-handle.is-nav {
-  top: auto;
-  right: 0;
-  bottom: 0;
+  top: 0;
+  left: auto;
+  right: 1.4rem;
+  width: 2rem;
   height: 1.2rem;
+  border-radius: 0.4rem;
 }
 
 .cms-drag-layer:hover .cms-drag-handle,
