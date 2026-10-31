@@ -683,7 +683,7 @@ sub FHEMCMS_ValidateFreeHtml {
 
     my %tags = map { $_ => 1 } qw(div span p h1 h2 h3 h4 strong b em i u small br hr ul ol li
         table thead tbody tr th td style);
-    my %attrs = map { $_ => 1 } qw(class style title colspan rowspan data-cms-class);
+    my %attrs = map { $_ => 1 } qw(class style title colspan rowspan data-cms-class device reading filter);
     my $badCss = qr{\@import|url\s*\(|expression|behavior|binding|javascript:|position\s*:\s*(?:fixed|sticky)|\\}i;
 
     # Kommentare, CDATA und Verarbeitungsanweisungen gibt es nicht.
@@ -694,12 +694,18 @@ sub FHEMCMS_ValidateFreeHtml {
         my ($close, $tag, $attrText) = ($1, lc($2), $3);
         return "Element <$tag> nicht erlaubt" if (!$tags{$tag});
         return 'Attribute in Endtag' if ($close && $attrText ne '');
+        my %seen;
         while ($attrText =~ /\s+([A-Za-z][A-Za-z0-9-]*)\s*=\s*"([^"]*)"/g) {
             my ($name, $value) = (lc($1), $2);
             return "Attribut '$name' nicht erlaubt" if (!$attrs{$name});
+            $seen{$name} = 1;
             return 'Ungueltiges style-Attribut' if ($name eq 'style' && $value =~ $badCss);
             return 'Ungueltiges class-Attribut' if ($name eq 'class' && $value !~ /\A[A-Za-z0-9_ -]{0,200}\z/);
             return 'Ungueltiges colspan/rowspan' if (($name eq 'colspan' || $name eq 'rowspan') && $value !~ /\A[1-9][0-9]?\z/);
+            return 'Ungueltiger Device-Name im Attribut device' if ($name eq 'device' && $value !~ /\A[A-Za-z0-9_.-]{1,64}\z/);
+            return 'Ungueltiger Reading-Name im Attribut reading' if ($name eq 'reading' && $value !~ /\A\@?[A-Za-z0-9_.-]{1,64}\z/);
+            return 'Ungueltiger Filter im Attribut filter'
+                if ($name eq 'filter' && $value !~ /\A\s*(?:[a-z]+(?:\([^()|{}"<>]{0,80}\))?(?:\s*\|\s*[a-z]+(?:\([^()|{}"<>]{0,80}\))?)*)?\s*\z/);
             if ($name eq 'data-cms-class') {
                 for my $part (grep { $_ ne '' && $_ !~ /\A\s*\z/ } split(/;/, $value)) {
                     return 'Ungueltige Bedingung in data-cms-class'
@@ -707,6 +713,7 @@ sub FHEMCMS_ValidateFreeHtml {
                 }
             }
         }
+        return 'Die Attribute device und reading gehoeren zusammen' if (!!$seen{device} != !!$seen{reading});
     }
     # Jedes verbliebene '<' muss zu einem erlaubten Tag gehoeren (oben geprueft); nackte '<' oder '>' in Attributen sind unzulaessig.
     my $stripped = $html;

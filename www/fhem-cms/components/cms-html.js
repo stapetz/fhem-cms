@@ -83,11 +83,12 @@ class FHEMCMSHtml extends HTMLElement {
             <ul>
               <li><code>{{Device:reading}}</code> – Wert eines Readings, z. B. <code>{{Wohnzimmer:temperature}}</code></li>
               <li><code>{{Device:@alias}}</code>, <code>{{Device:@name}}</code>, <code>{{Device:@type}}</code> – Alias, Name und Typ des Devices</li>
+              <li>Alternativ als Attribute (wie FTUI): <code>&lt;span device="Wohnzimmer" reading="temperature" filter="round(1)|suffix( °C)"&gt;&lt;/span&gt;</code> – der Inhalt des Elements wird durch den Wert ersetzt; <code>device</code> und <code>reading</code> gehören immer zusammen, <code>filter</code> ist optional.</li>
               <li>Filter mit <code>|</code>: <code>round(1)</code>, <code>int</code>, <code>upper</code>, <code>lower</code>, <code>default(Text)</code>, <code>prefix(Text)</code>, <code>suffix(Text)</code>, <code>map(on=An,off=Aus)</code></li>
               <li>Zustandsklassen: <code>data-cms-class="Device:reading=on:aktiv; Device:temperature&gt;25:heiss"</code> setzt die Klasse, wenn die Bedingung stimmt (<code>= != &gt; &lt; &gt;= &lt;=</code>). Die Klassen definierst du in einem <code>&lt;style&gt;</code>-Element.</li>
             </ul>
             <pre>${EXAMPLE.replace(/</g, '&lt;')}</pre>
-            <p>Erlaubt sind <code>div span p h1–h4 strong b em i u small br hr ul ol li table thead tbody tr th td style</code> und die Attribute <code>class style title colspan rowspan data-cms-class</code>. Skripte, Ereignis-Attribute, Bilder, Formulare und <code>url()</code> sind nicht erlaubt.</p>
+            <p>Erlaubt sind <code>div span p h1–h4 strong b em i u small br hr ul ol li table thead tbody tr th td style</code> und die Attribute <code>class style title colspan rowspan data-cms-class device reading filter</code>. Skripte, Ereignis-Attribute, Bilder, Formulare und <code>url()</code> sind nicht erlaubt.</p>
             <p><a href="${HELP_URL}" target="_blank" rel="noopener noreferrer">Ausführliche Beschreibung (PLATZHALTER.md)</a></p>
           </details>
           <p class="hint" data-devices></p>

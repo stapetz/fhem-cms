@@ -463,10 +463,18 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     my $w = $hcfg->{pages}[0]{widgets}[0];
     $w->{html} = '<span data-cms-class="Temp:temperature>25:hot; Lamp:state=on:an">x</span>';
     is(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html accepts conditions');
+    for my $good ('<span device="Temp" reading="temperature"></span>', '<td device="Temp" reading="@alias" filter="round(1)|suffix( C)">-</td>',
+        '<span device="Temp" reading="state" filter="map(on=An,off=Aus)"></span>', '<p title="a device=b">x</p>') {
+        $w->{html} = $good;
+        is(FHEMCMS_ValidateConfig($hcfg), undef, "fhem-html accepts: $good");
+    }
     for my $bad ('<script>alert(1)</script>', '<img src="x">', '<div onclick="x()">a</div>', '<a href="javascript:x">a</a>',
         '<iframe src="x"></iframe>', '<div style="background:url(x)">a</div>', '<div style="position:fixed">a</div>',
         '<style>@import "x";</style>', '<!-- c -->', '<div', '<div data-x="1">a</div>', "<p>a\x01</p>",
-        '<span data-cms-class="bad">x</span>', 'a < b', '<div class="a b>c">x</div>') {
+        '<span data-cms-class="bad">x</span>', 'a < b',
+        '<span device="Temp">x</span>', '<span reading="a">x</span>', '<span device="a b" reading="c"></span>',
+        '<span device="a" reading="c d"></span>', '<span device="a" reading="c" filter="x(<b>)"></span>',
+        '<span device="a" reading="c" filter="round(1"></span>', '<span device="a" reading="c" onclick="x()"></span>', '<div class="a b>c">x</div>') {
         $w->{html} = $bad;
         isnt(FHEMCMS_ValidateConfig($hcfg), undef, "fhem-html rejects: $bad");
     }

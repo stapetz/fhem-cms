@@ -9,6 +9,9 @@ const READING = '@?[A-Za-z0-9_.-]+';
 const CLASS_NAME = /^[A-Za-z0-9_-]{1,40}$/;
 const PLACEHOLDER = new RegExp(`\\{\\{\\s*(${NAME}):(${READING})((?:\\s*\\|\\s*[a-z]+(?:\\([^()|{}]{0,80}\\))?)*)\\s*\\}\\}`, 'g');
 const CONDITION = new RegExp(`^\\s*(${NAME}):(${READING})\\s*(>=|<=|!=|=|>|<)\\s*([^:;]{0,40}?)\\s*:\\s*([A-Za-z0-9_-]{1,40})\\s*$`);
+const DEVICE_ATTR = /^[A-Za-z0-9_.-]{1,64}$/;
+const READING_ATTR = /^@?[A-Za-z0-9_.-]{1,64}$/;
+const FILTER_ATTR = /^\s*(?:[a-z]+(?:\([^()|{}"<>]{0,80}\))?(?:\s*\|\s*[a-z]+(?:\([^()|{}"<>]{0,80}\))?)*)?\s*$/;
 const FORBIDDEN_CSS = /@import|url\s*\(|expression|behavior|binding|javascript:|position\s*:\s*(?:fixed|sticky)|[<>\\]/i;
 
 export function isSafeCss(text) {
@@ -34,7 +37,7 @@ export function checkSource(html) {
     }
     for (const attribute of element.attributes) {
       const name = attribute.name;
-      if (!['class', 'style', 'title', 'colspan', 'rowspan', 'data-cms-class'].includes(name)) {
+      if (!['class', 'style', 'title', 'colspan', 'rowspan', 'data-cms-class', 'device', 'reading', 'filter'].includes(name)) {
         return `Das Attribut „${name}“ ist nicht erlaubt (Element <${tag}>)`;
       }
       if (name === 'style' && !isSafeCss(attribute.value)) {
@@ -50,6 +53,18 @@ export function checkSource(html) {
           }
         }
       }
+      if (name === 'device' && !DEVICE_ATTR.test(attribute.value)) {
+        return `Ungültiger Device-Name im Attribut device: „${attribute.value}“`;
+      }
+      if (name === 'reading' && !READING_ATTR.test(attribute.value)) {
+        return `Ungültiger Reading-Name im Attribut reading: „${attribute.value}“`;
+      }
+      if (name === 'filter' && !FILTER_ATTR.test(attribute.value)) {
+        return `Ungültiger Filter im Attribut filter: „${attribute.value}“`;
+      }
+    }
+    if (element.hasAttribute('device') !== element.hasAttribute('reading')) {
+      return `Die Attribute device und reading gehören zusammen (Element <${tag}>)`;
     }
     if (tag === 'style' && !isSafeCss(element.textContent)) {
       return 'Das <style>-Element enthält nicht erlaubte Angaben (url(), @import, position: fixed, …)';
@@ -63,6 +78,11 @@ export function extractDevices(html) {
   const names = new Set();
   for (const match of String(html).matchAll(PLACEHOLDER)) {
     names.add(match[1]);
+  }
+  for (const match of String(html).matchAll(/\sdevice\s*=\s*"([^"]*)"/g)) {
+    if (DEVICE_ATTR.test(match[1])) {
+      names.add(match[1]);
+    }
   }
   for (const match of String(html).matchAll(/data-cms-class\s*=\s*"([^"]*)"/g)) {
     for (const part of match[1].split(';')) {
@@ -90,6 +110,12 @@ function cleanChildren(source, target) {
         } else if (name === 'title') {
           element.setAttribute('title', value.slice(0, 200));
         } else if ((name === 'colspan' || name === 'rowspan') && /^[1-9][0-9]?$/.test(value)) {
+          element.setAttribute(name, value);
+        } else if (name === 'device' && DEVICE_ATTR.test(value)) {
+          element.setAttribute(name, value);
+        } else if (name === 'reading' && READING_ATTR.test(value)) {
+          element.setAttribute(name, value);
+        } else if (name === 'filter' && FILTER_ATTR.test(value)) {
           element.setAttribute(name, value);
         } else if (name === 'data-cms-class') {
           element.setAttribute(name, value.split(';').filter((part) => CONDITION.test(part)).join(';'));
@@ -155,15 +181,16 @@ function applyFilter(value, filter) {
   }
 }
 
+function formatValue(found, filters) {
+  let value = found === null || found === undefined ? '' : String(found);
+  for (const filter of filters.split('|').map((part) => part.trim()).filter(Boolean)) {
+    value = applyFilter(value, filter);
+  }
+  return value === '' ? '–' : value;
+}
+
 export function substitute(text, lookup) {
-  return text.replace(PLACEHOLDER, (_all, device, reading, filters) => {
-    const found = lookup(device, reading);
-    let value = found === null || found === undefined ? '' : String(found);
-    for (const filter of filters.split('|').map((part) => part.trim()).filter(Boolean)) {
-      value = applyFilter(value, filter);
-    }
-    return value === '' ? '–' : value;
-  });
+  return text.replace(PLACEHOLDER, (_all, device, reading, filters) => formatValue(lookup(device, reading), filters));
 }
 
 function compare(actual, operator, expected) {
@@ -196,6 +223,10 @@ export function renderTemplate(template, lookup) {
   }
   const container = document.createElement('div');
   container.append(copy);
+  // FTUI-Schreibweise: <span device="X" reading="Y" filter="round(1)"></span> wird durch den Wert ersetzt.
+  for (const element of container.querySelectorAll('[device][reading]')) {
+    element.textContent = formatValue(lookup(element.getAttribute('device'), element.getAttribute('reading')), element.getAttribute('filter') || '');
+  }
   for (const element of container.querySelectorAll('[title], [data-cms-class]')) {
     if (element.hasAttribute('title')) {
       element.setAttribute('title', substitute(element.getAttribute('title'), lookup));

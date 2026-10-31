@@ -19,6 +19,22 @@ Ein Platzhalter hat die Form `{{Device:reading}}`:
 - Werte werden immer als reiner Text eingesetzt, nie als HTML.
 - Die Anzeige wird bei jeder Änderung des Devices aktualisiert.
 
+## Schreibweise als Attribute (wie in FTUI)
+
+Statt `{{…}}` kannst du Device und Reading auch als Attribute an ein Element schreiben. Der Inhalt des Elements wird dann durch den Wert ersetzt:
+
+```html
+<span device="Garten" reading="temperature" filter="round(1)|suffix( °C)"></span>
+<div device="Lampe" reading="state" filter="map(on=An,off=Aus)"></div>
+<h3 device="Garten" reading="@alias"></h3>
+```
+
+- `device` und `reading` gehören immer zusammen; eines allein wird abgelehnt.
+- `filter` ist optional und hat dieselbe Syntax wie bei den Platzhaltern (mehrere Filter mit `|`).
+- Das Element darf jedes erlaubte Element sein (`span`, `div`, `td`, `h3` …). Vorhandener Inhalt wird ersetzt, ein leerer Wert ergibt `–`.
+- Beide Schreibweisen lassen sich frei mischen. `{{…}}` eignet sich für Werte mitten im Text und in `title`, die Attribute für eigenständige Werte.
+- Die Attribute heißen bewusst `device` und `reading` (ohne `data-`).
+
 ## Filter
 
 Filter werden mit `|` angehängt und von links nach rechts angewendet, z. B. `{{Wohnzimmer:temperature|round(1)|suffix( °C)}}`.
@@ -52,7 +68,7 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 ## Erlaubter Code
 
 - Elemente: `div span p h1 h2 h3 h4 strong b em i u small br hr ul ol li table thead tbody tr th td style`
-- Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class`
+- Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class device reading filter`
 - `title` darf Platzhalter enthalten.
 - **Nicht erlaubt:** `script`, `iframe`, Bilder, Formulare, Ereignis-Attribute (`onclick` …), Links, Kommentare, `url()`, `@import`, `position: fixed`. Eine Verletzung zeigt der Dialog beim Speichern als Fehler.
 - Höchstens 20 000 Zeichen.
@@ -159,5 +175,6 @@ Bei `>`, `<`, `>=`, `<=` wird zahlenmäßig verglichen, wenn beide Seiten Zahlen
 | eine Einheit anhängen | `{{Device:reading\|suffix( °C)}}` |
 | einen Ersatz bei leerem Wert | `{{Device:reading\|default(n/a)}}` |
 | Werte umbenennen | `{{Device:reading\|map(on=An,off=Aus)}}` |
+| einen Wert als Attribut (FTUI-Stil) | `<span device="Device" reading="reading" filter="round(1)"></span>` |
 | den Alias eines Devices | `{{Device:@alias}}` |
 | eine Farbe je nach Wert | `<div data-cms-class="Device:reading>20:warm">` |
