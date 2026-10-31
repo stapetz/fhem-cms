@@ -216,17 +216,124 @@ class CmsPage {
       const link = document.createElement('a');
       link.className = 'cms-nav-link';
       link.href = `#/${page.id}`;
-      link.textContent = page.title;
+      link.textContent = this.navItem(page.id).label || page.title;
       if (page.id === this.page.id) {
         link.setAttribute('aria-current', 'page');
       }
       this.nav.append(link);
     }
+    this.sizeNav();
     if (!VIEW_MODE) {
       const edit = this.button('⚙ Navigation', () => this.editNavigation());
       edit.classList.add('cms-nav-edit');
       this.nav.append(edit);
     }
+  }
+
+  navItem(pageId) {
+    return (this.config.navigation.items || []).find((item) => item.page === pageId) || {};
+  }
+
+  // Standardgröße: alle Einträge ohne eigene Maße übernehmen die Größe des größten Eintrags.
+  sizeNav() {
+    const links = [...this.nav.querySelectorAll('.cms-nav-link')];
+    for (const link of links) {
+      link.style.width = '';
+      link.style.height = '';
+    }
+    if (!this.nav.isConnected) {
+      return;
+    }
+    let width = 0;
+    let height = 0;
+    for (const link of links) {
+      const rect = link.getBoundingClientRect();
+      width = Math.max(width, Math.ceil(rect.width));
+      height = Math.max(height, Math.ceil(rect.height));
+    }
+    this.config.pages.forEach((page, index) => {
+      const item = this.navItem(page.id);
+      links[index].style.width = `${item.width || width}px`;
+      links[index].style.height = `${item.height || height}px`;
+    });
+  }
+
+  askNavItem(page, item) {
+    return new Promise((resolve) => {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'cms-dialog';
+      dialog.setAttribute('aria-label', 'Navigationseintrag');
+      const form = document.createElement('form');
+      form.method = 'dialog';
+      const inputs = {};
+      const labelled = (text, key, type, attrs) => {
+        const label = document.createElement('label');
+        label.textContent = text;
+        const input = document.createElement('input');
+        input.type = type;
+        Object.assign(input, attrs);
+        input.autocomplete = 'off';
+        inputs[key] = input;
+        label.append(input);
+        return label;
+      };
+      const error = document.createElement('p');
+      error.className = 'cms-dialog-error';
+      error.setAttribute('role', 'alert');
+      const actions = document.createElement('div');
+      actions.className = 'cms-dialog-actions';
+      const finish = (value) => {
+        if (dialog.open) {
+          dialog.close();
+        }
+        dialog.remove();
+        resolve(value);
+      };
+      const ok = document.createElement('button');
+      ok.type = 'submit';
+      ok.className = 'cms-button';
+      ok.textContent = 'OK';
+      actions.append(this.button('Abbrechen', () => finish(null)), ok);
+      form.append(
+        labelled(`Beschriftung (leer = „${page.title}“)`, 'label', 'text', { maxLength: 64, value: item.label || '' }),
+        labelled('Breite in Pixel (leer = Standard)', 'width', 'number', { min: 40, max: 600, value: item.width || '' }),
+        labelled('Höhe in Pixel (leer = Standard)', 'height', 'number', { min: 24, max: 200, value: item.height || '' }),
+        error,
+        actions
+      );
+      dialog.append(form);
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const label = inputs.label.value.trim();
+        const result = {};
+        if (label) {
+          if (/[\u0000-\u001f\u007f]/.test(label)) {
+            error.textContent = 'Die Beschriftung darf keine Steuerzeichen enthalten';
+            return;
+          }
+          result.label = label;
+        }
+        for (const [key, min, max] of [['width', 40, 600], ['height', 24, 200]]) {
+          const raw = inputs[key].value.trim();
+          if (raw) {
+            const number = Number(raw);
+            if (!Number.isInteger(number) || number < min || number > max) {
+              error.textContent = `${key === 'width' ? 'Breite' : 'Höhe'}: ganze Zahl von ${min} bis ${max}`;
+              return;
+            }
+            result[key] = number;
+          }
+        }
+        finish(result);
+      });
+      dialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        finish(null);
+      });
+      document.body.append(dialog);
+      dialog.showModal();
+      inputs.label.focus();
+    });
   }
 
   uniqueId(prefix, existing) {
@@ -463,7 +570,7 @@ class CmsPage {
         const row = document.createElement('div');
         row.className = 'cms-nav-row';
         const name = document.createElement('span');
-        name.textContent = page.title;
+        name.textContent = this.navItem(page.id).label ? `${page.title} → ${this.navItem(page.id).label}` : page.title;
         const swap = (other) => run((next) => {
           [next.pages[index], next.pages[other]] = [next.pages[other], next.pages[index]];
         });
@@ -479,10 +586,31 @@ class CmsPage {
               });
             }
           }, false),
+          rowButton('⚙', `„${page.title}“: Beschriftung und Größe`, async () => {
+            const result = await this.askNavItem(page, this.navItem(page.id));
+            if (result !== null) {
+              run((next) => {
+                const items = (next.navigation.items || []).filter((entry) => entry.page !== page.id);
+                if (Object.keys(result).length) {
+                  items.push({ page: page.id, ...result });
+                }
+                next.navigation.items = items;
+                if (!items.length) {
+                  delete next.navigation.items;
+                }
+              });
+            }
+          }, false),
           rowButton('✕', `„${page.title}“ löschen`, () => {
             if (window.confirm(`Seite „${page.title}“ mit ${page.widgets.length} Widget(s) wirklich löschen?`)) {
               run((next) => {
                 next.pages.splice(index, 1);
+                if (next.navigation.items) {
+                  next.navigation.items = next.navigation.items.filter((entry) => entry.page !== page.id);
+                  if (!next.navigation.items.length) {
+                    delete next.navigation.items;
+                  }
+                }
               });
             }
           }, pages.length < 2)
@@ -547,6 +675,7 @@ class CmsPage {
     this.elements.set(NAV_ID, this.nav);
     this.place(this.nav, this.config.navigation);
     this.grid.append(this.nav);
+    this.sizeNav();
     for (const widget of this.page.widgets) {
       this.grid.append(this.createElementFor(widget));
     }

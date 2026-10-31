@@ -11,6 +11,7 @@ Stand: 2026-10-31, Branch `dev`. Dieses Protokoll trennt ehrlich zwischen **gepr
 | Neustart: Redefine legt fehlende Daten neu an, Daten bleiben bei `delete` erhalten | Perl-Tests | ok |
 | XSS im Textbaustein | Lokaler Mock im Browser (Chromium/Playwright) mit Payloads | bleiben Text |
 | Seiten anlegen, umbenennen, löschen, ungültiger Hash | Lokaler Mock | ok |
+| Navigationseinträge (Beschriftung, Größe), Farb-Cleaner | Lokaler Mock (Chromium/Playwright) | ok |
 | Navigations-Widget: vertikal/horizontal, Umsortieren, Verschieben im Layout-Modus, Veröffentlichen, Ansicht ohne Kopf | Lokaler Mock (Chromium/Playwright) | ok |
 | Verbindungsabbruch: Stale-Anzeige, Erholung, Stopp nach `pagehide`, Neustart nach `pageshow` | Lokaler Mock mit erzwungenem HTTP 500 | ok |
 | Backup-Dialog: Liste, Bestätigung, Wiederherstellung, Vor-Restore-Sicherung | Lokaler Mock | ok |

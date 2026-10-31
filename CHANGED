@@ -1,3 +1,13 @@
+2026-10-31 - Navigation entries, text colors, page starts at top
+
+Navigation entries get a custom label and size (default: all as large as the
+largest). The text editor can set text color and highlight colors. The page
+now starts at the top of the browser window. Restart FHEM, then
+set <CMS> rebuild.
+
+S20 - Navigationspunkte: Größe und Beschriftung
+S21 - Texteditor: Farben
+
 2026-10-31 - Navigation widget, no header
 
 The page header and device card are gone. The navigation is now a movable

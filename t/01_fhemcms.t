@@ -130,6 +130,21 @@ for my $case (
     local $restored->{navigation} = $navigation;
     like(FHEMCMS_ValidateConfig($restored), $expected, "rejects a navigation with $label");
 }
+$restored->{navigation}{items} = [{page => $restored->{pages}[0]{id}, label => 'Daheim', width => 120, height => 40}, ];
+is(FHEMCMS_ValidateConfig($restored), undef, 'accepts navigation items with label and size');
+for my $case (
+    ['unknown page', [{page => 'nope'}], qr/unbekannte Seite/],
+    ['duplicate item', [{page => $restored->{pages}[0]{id}}, {page => $restored->{pages}[0]{id}}], qr/Doppelter/],
+    ['empty label', [{page => $restored->{pages}[0]{id}, label => ''}], qr/Beschriftung/],
+    ['control label', [{page => $restored->{pages}[0]{id}, label => "a\x01"}], qr/Beschriftung/],
+    ['tiny width', [{page => $restored->{pages}[0]{id}, width => 10}], qr/Breite/],
+    ['huge height', [{page => $restored->{pages}[0]{id}, height => 900}], qr/Hoehe/],
+    ['unknown field', [{page => $restored->{pages}[0]{id}, color => 'red'}], qr/Unbekanntes Feld 'color'/],
+) {
+    my ($label, $items, $expected) = @{$case};
+    local $restored->{navigation}{items} = $items;
+    like(FHEMCMS_ValidateConfig($restored), $expected, "rejects navigation items with $label");
+}
 delete($restored->{navigation});
 is(FHEMCMS_ValidateConfig($restored), undef, 'navigation stays optional');
 my $migrated = FHEMCMS_MigrateConfig({schemaVersion => 1, pages => [{id => 'p', title => 'P',
@@ -354,6 +369,7 @@ my @validHtml = (
     '<table><thead><tr><th>A</th></tr></thead><tbody><tr><td class="cms-align-right">1</td></tr></tbody></table>',
     "<p><img src=\"media/$md5.png\" alt=\"Bild\" class=\"cms-img-left cms-w-50\"><br></p>",
     "<p><img src=\"media/$md5.png\" class=\"cms-w-35\"><br></p>",
+    '<p><span style="color:#ff0000">rot</span> <span style="background-color:#ffe066">gelb</span> <span style="color:#00ff00;background-color:#000000">beides</span></p>',
     "<p>Zeile 1\n\tZeile 2 \"zitiert\" it's</p>",
     '',
 );
@@ -363,6 +379,11 @@ my @badHtml = (
     ['<script>alert(1)</script>', 'script tag'],
     ['<p onclick="x()">a</p>', 'event attribute'],
     ['<p style="color:red">a</p>', 'style attribute'],
+    ['<span style="color:red">a</span>', 'named color'],
+    ['<span style="color:#ff0000;position:fixed">a</span>', 'extra style property'],
+    ['<span style="color:#ff0000;background:url(x)">a</span>', 'style with url'],
+    ['<span style="color:#f00">a</span>', 'short hex color'],
+    ['<span class="cms-align-left">a</span>', 'class on span'],
     ['<a href="javascript:alert(1)">x</a>', 'javascript link'],
     ['<a href="//evil.example/">x</a>', 'protocol relative link'],
     ['<a>x</a>', 'link without href'],

@@ -22,8 +22,33 @@ const DROP = new Set(['script', 'style', 'iframe', 'object', 'embed', 'template'
 const HREF = /^(?:https?:\/\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]{1,2000}|mailto:[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,255}|#\/[A-Za-z0-9_-]{1,64})$/;
 const MEDIA_SRC = /^media\/[0-9a-f]{32}\.(?:png|jpg|gif)$/;
 const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
+const COLORABLE = new Set(['p', 'h1', 'h2', 'h3', 'blockquote', 'li', 'th', 'td', 'strong', 'em', 'u', 's', 'code']);
+const HEX_COLOR = /^#[0-9a-f]{6}$/;
 const MAX_DEPTH = 25;
 const MAX_NODES = 2500;
+
+// Farben werden nur als #rrggbb gespeichert; alles andere (Namen, hsl, Verläufe) entfällt.
+function toHex(value) {
+  const text = String(value || '').trim().toLowerCase();
+  let match = /^#([0-9a-f]{3})$/.exec(text);
+  if (match) {
+    return `#${[...match[1]].map((c) => c + c).join('')}`;
+  }
+  if (HEX_COLOR.test(text)) {
+    return text;
+  }
+  match = /^rgba?\(\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*(?:[,/]\s*([\d.]+%?)\s*)?\)$/.exec(text);
+  if (match && match.slice(1, 4).every((part) => Number(part) <= 255) && match[4] !== '0') {
+    return `#${match.slice(1, 4).map((part) => Number(part).toString(16).padStart(2, '0')).join('')}`;
+  }
+  return '';
+}
+
+function colorStyle(node) {
+  const color = toHex(node.localName === 'font' ? node.getAttribute('color') : node.style && node.style.color);
+  const background = toHex(node.style && node.style.backgroundColor);
+  return [color && `color:${color}`, background && `background-color:${background}`].filter(Boolean).join(';');
+}
 
 function alignClass(node) {
   const fromClass = ALIGN.find((name) => node.classList && node.classList.contains(name));
@@ -96,6 +121,19 @@ function convert(source, parent, state, depth) {
       }
       continue;
     }
+    if (tag === 'span' || tag === 'font' || tag === 'mark') {
+      const style = colorStyle(node) || (tag === 'mark' ? 'background-color:#ffe066' : '');
+      if (style) {
+        const span = document.createElement('span');
+        span.setAttribute('style', style);
+        state.count += 1;
+        convert(node, span, state, depth + 1);
+        parent.append(span);
+      } else {
+        convert(node, parent, state, depth);
+      }
+      continue;
+    }
     if (tag === 'br' || tag === 'hr') {
       parent.append(document.createElement(tag));
       state.count += 1;
@@ -108,7 +146,15 @@ function convert(source, parent, state, depth) {
         element.setAttribute('class', align);
       }
       state.count += 1;
-      convert(node, element, state, depth + 1);
+      const style = COLORABLE.has(tag) ? colorStyle(node) : '';
+      let inner = element;
+      if (style) {
+        inner = document.createElement('span');
+        inner.setAttribute('style', style);
+        element.append(inner);
+        state.count += 1;
+      }
+      convert(node, inner, state, depth + (style ? 2 : 1));
       parent.append(element);
       continue;
     }
@@ -207,6 +253,7 @@ export function editorCss() {
     .rt-row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
     .rt-row input[type="text"], .rt-row input[type="url"] { flex: 1 1 12rem; width: auto; }
     .rt-row input[type="number"] { width: 5rem; }
+    .rt-row input[type="color"] { width: 3rem; height: 2rem; padding: 0; }
     .rt-media { display: flex; flex-wrap: wrap; gap: 0.4rem; max-height: 8rem; overflow: auto; }
     .rt-media button { padding: 0.15rem; }
     .rt-media img { display: block; width: 4rem; height: 3rem; object-fit: cover; }
@@ -236,6 +283,8 @@ const BUTTONS = [
   null,
   { label: '• Liste', title: 'Aufzählung', cmd: 'insertUnorderedList' },
   { label: '1. Liste', title: 'Nummerierte Liste', cmd: 'insertOrderedList' },
+  null,
+  { label: 'Farbe', title: 'Textfarbe und Hervorhebung', panel: 'color' },
   null,
   { label: '⇤', title: 'Linksbündig', cmd: 'justifyLeft' },
   { label: '↔', title: 'Zentriert', cmd: 'justifyCenter' },
@@ -314,6 +363,7 @@ export function createEditor({ root, services, html, onError }) {
 
   const exec = (cmd, value) => {
     restore();
+    document.execCommand('styleWithCSS', false, cmd === 'foreColor' || cmd === 'hiliteColor');
     document.execCommand(cmd, false, value);
     remember();
   };
@@ -406,6 +456,27 @@ export function createEditor({ root, services, html, onError }) {
     }));
   linkPanel.append(linkRow);
   panels.link = linkPanel;
+
+  // Farben
+  const colorPanel = document.createElement('div');
+  colorPanel.className = 'rt-panel';
+  colorPanel.hidden = true;
+  const colorRow = (label, command, initial, resetTitle) => {
+    const row = document.createElement('div');
+    row.className = 'rt-row';
+    const input = field('color', '', label);
+    input.value = initial;
+    const name = document.createElement('span');
+    name.textContent = label;
+    row.append(name, input,
+      button('Anwenden', `${label} auf die Auswahl anwenden`, () => exec(command, input.value)),
+      button('Entfernen', resetTitle, () => exec(command, command === 'foreColor' ? '#edf4ef' : 'transparent')));
+    return row;
+  };
+  colorPanel.append(
+    colorRow('Textfarbe', 'foreColor', '#ff6b6b', 'Textfarbe zurücksetzen'),
+    colorRow('Hervorhebung', 'hiliteColor', '#ffe066', 'Hervorhebung entfernen'));
+  panels.color = colorPanel;
 
   // Tabelle
   const tablePanel = document.createElement('div');
@@ -724,7 +795,7 @@ export function createEditor({ root, services, html, onError }) {
   });
   area.addEventListener('drop', (event) => event.preventDefault());
 
-  wrapper.append(bar, linkPanel, tablePanel, imagePanel, area, handle);
+  wrapper.append(bar, linkPanel, colorPanel, tablePanel, imagePanel, area, handle);
 
   return {
     element: wrapper,

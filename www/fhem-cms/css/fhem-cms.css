@@ -84,6 +84,12 @@ body {
   border: 1px solid #43564a;
   border-radius: 999px;
   padding: 0.3rem 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cms-nav-link:hover {
@@ -234,8 +240,6 @@ body {
 
 @media (min-width: 48rem) {
   body {
-    display: grid;
-    align-items: center;
     padding: 2rem;
   }
 }

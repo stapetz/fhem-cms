@@ -531,13 +531,37 @@ sub FHEMCMS_ValidateConfig {
     my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages'], ['navigation']);
     return $err if ($err);
     if (exists($config->{navigation})) {
-        $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid']);
+        $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid'], ['items']);
         return $err if ($err);
         return 'Ungueltige Ausrichtung der Navigation'
             if (ref($config->{navigation}{orientation}) || !defined($config->{navigation}{orientation})
                 || $config->{navigation}{orientation} !~ /\A(?:horizontal|vertical)\z/);
         $err = $checkGrid->($config->{navigation}{grid});
         return $err if ($err);
+        if (exists($config->{navigation}{items})) {
+            my $items = $config->{navigation}{items};
+            return 'navigation.items muss eine Liste mit hoechstens 50 Eintraegen sein'
+                if (ref($items) ne 'ARRAY' || @{$items} > 50);
+            my %known = ref($config->{pages}) eq 'ARRAY'
+                ? map { (ref($_) eq 'HASH' && defined($_->{id}) && !ref($_->{id})) ? ($_->{id} => 1) : () } @{$config->{pages}}
+                : ();
+            my %seenItem;
+            for my $item (@{$items}) {
+                $err = $exact->($item, 'Navigationseintrag', ['page'], ['label', 'width', 'height']);
+                return $err if ($err);
+                return 'Navigationseintrag verweist auf eine unbekannte Seite'
+                    if (ref($item->{page}) || !defined($item->{page}) || !$known{$item->{page}});
+                return 'Doppelter Navigationseintrag' if ($seenItem{$item->{page}}++);
+                return 'Ungueltige Beschriftung'
+                    if (exists($item->{label}) && (ref($item->{label}) || !defined($item->{label})
+                        || length($item->{label}) < 1 || length($item->{label}) > 64
+                        || $item->{label} =~ /[\x00-\x1f\x7f]/));
+                return 'Ungueltige Breite'
+                    if (exists($item->{width}) && !$isInt->($item->{width}, 40, 600));
+                return 'Ungueltige Hoehe'
+                    if (exists($item->{height}) && !$isInt->($item->{height}, 24, 200));
+            }
+        }
     }
     return 'Nicht unterstuetzte schemaVersion'
         if (!$isInt->($config->{schemaVersion}, 2, 2));
@@ -636,7 +660,7 @@ sub FHEMCMS_ValidateHtml {
         p => {class => \%align}, h1 => {class => \%align}, h2 => {class => \%align},
         h3 => {class => \%align}, blockquote => {class => \%align},
         th => {class => \%align}, td => {class => \%align},
-        strong => {}, em => {}, u => {}, s => {}, code => {}, ul => {}, ol => {}, li => {},
+        strong => {}, em => {}, u => {}, s => {}, code => {}, span => {style => 1}, ul => {}, ol => {}, li => {},
         table => {}, thead => {}, tbody => {}, tr => {},
         a => {href => 1}, img => {src => 1, alt => 1, class => \%imageClass},
         br => {void => 1}, hr => {void => 1},
@@ -672,6 +696,9 @@ sub FHEMCMS_ValidateHtml {
                 } elsif ($attr eq 'src') {
                     return 'ungueltige Bildquelle'
                         if ($decoded !~ m{\Amedia/[0-9a-f]{32}\.(?:png|jpg|gif)\z});
+                } elsif ($attr eq 'style') {
+                    return 'ungueltige Farbe'
+                        if ($value !~ /\A(?:color:\#[0-9a-f]{6}(?:;background-color:\#[0-9a-f]{6})?|background-color:\#[0-9a-f]{6})\z/);
                 } elsif ($attr eq 'alt') {
                     return 'ungueltiger Alternativtext' if (length($decoded) > 200);
                 } else {

@@ -306,6 +306,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 - [x] Kopfbereich (Kicker, Überschrift, Einleitungstext) und Device-Karte entfallen; die Komponente `cms-device-card` wird entfernt.
 - [x] Status und Fehlermeldungen erscheinen in einer schlichten Statuszeile (im Ansichtsmodus nur bei einem Fehler).
+- [x] Die Seite beginnt ganz oben im Browserfenster (keine vertikale Zentrierung des Inhalts mehr).
 
 ### S18 - Navigations-Widget
 
@@ -332,18 +333,18 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Ziel:** Die Navigationspunkte („Bubbles“) sehen einheitlich aus und lassen sich je Eintrag anpassen.
 
-- [ ] Standard: Alle Bubbles übernehmen die Größe des größten Eintrags.
-- [ ] Je Eintrag ist die Beschriftung änderbar (Standard: Seitenname, überschreibbar).
-- [ ] Je Eintrag ist eine eigene Größe in x- und y-Richtung in Pixeln einstellbar.
-- [ ] Schema-Erweiterung in `navigation` (optional je Eintrag), Validierung und Tests.
+- [x] Standard: Alle Bubbles übernehmen die Größe des größten Eintrags.
+- [x] Je Eintrag ist die Beschriftung änderbar (Standard: Seitenname, überschreibbar).
+- [x] Je Eintrag ist eine eigene Größe in x- und y-Richtung in Pixeln einstellbar.
+- [x] Schema-Erweiterung in `navigation` (optional je Eintrag), Validierung und Tests.
 
 ### S21 - Texteditor: Farben
 
 **Ziel:** Der WYSIWYG-Editor bietet Textfarbe und Hervorhebung.
 
-- [ ] Farbauswahl für die Schrift.
-- [ ] Text hervorheben mit frei wählbarer Farbe.
-- [ ] Erlaubte Farbwerte in der HTML-Allowlist und im Modul prüfen (kein freies `style`).
+- [x] Farbauswahl für die Schrift.
+- [x] Text hervorheben mit frei wählbarer Farbe.
+- [x] Erlaubte Farbwerte in der HTML-Allowlist und im Modul prüfen (kein freies `style`).
 
 ## Später prüfen - Erweiterungen außerhalb des MVP
 

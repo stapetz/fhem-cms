@@ -390,6 +390,10 @@ Vorschau: Der Button „Vorschau“ öffnet `index.html?mode=preview` in einem n
 
 ## WYSIWYG-Editor und Medien
 
+**Farben (S21):** Der Editor setzt Farben per `foreColor`/`hiliteColor` (mit `styleWithCSS`). Der Cleaner wandelt sie in `<span style="color:#rrggbb;background-color:#rrggbb">` um (auch `font`, `mark` und Stile an anderen Tags). Das Modul akzeptiert `style` nur an `span` und nur genau in dieser Form; Namen, Kurzformen, weitere Eigenschaften und `url()` werden abgewiesen.
+
+**Navigationseinträge (S20):** `navigation.items` ist optional: `[{"page","label","width","height"}]` (`label` 1–64 Zeichen, `width` 40–600, `height` 24–200, je Seite höchstens ein Eintrag, `page` muss existieren). `sizeNav()` setzt für Einträge ohne eigene Maße die Größe des größten Eintrags.
+
 Der Textbaustein nutzt einen eigenen, schlanken Editor auf `contenteditable` (`js/richtext.js`, keine Fremdbibliothek). Funktionen: fett, kursiv, unterstrichen, durchgestrichen, Überschriften 1–3, Absatz, Zitat, Listen, Ausrichtung, Links, Tabellen (Zeilen/Spalten einfügen und löschen), Bilder, Rückgängig/Wiederholen. Alte Markdown-Bausteine werden beim Öffnen des Editors nach HTML überführt und beim Speichern als `html` abgelegt.
 
 **Sicherheitsmodell (zwei unabhängige Prüfungen mit gleicher Allowlist):**
