@@ -234,7 +234,7 @@ sub FHEMCMS_Summary {
     my $basePath = $main::FW_ME || '/fhem';
     $basePath =~ s{/$}{};
     my $entry = $basePath . '/fhem-cms/' . $name . '/index.html';
-    return '<a href="' . $entry . '?mode=edit">CMS starten</a> <a href="' . $entry . '">Zeige Homepage</a>';
+    return '<a href="' . $entry . '?mode=edit" target="_blank" rel="noopener">CMS starten</a> <a href="' . $entry . '" target="_blank" rel="noopener">Zeige Homepage</a>';
 }
 
 # Entfernt Datenordner und Startseite eines Devices. Symlinks und fremde Dateien werden nicht angetastet.
