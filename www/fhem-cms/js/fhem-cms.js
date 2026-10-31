@@ -788,6 +788,7 @@ class CmsPage {
       listAllDevices: () => this.listAllDevices(),
       listIcons: () => this.listIcons(),
       iconUrl: (name) => this.client.iconUrl(name),
+      setCommand: (device, command, value) => this.client.setCommand(device, command, value),
       setTarget: (widget, value, device) => this.client.setReading(device || widget.device, widget.readings.target, value),
       listMedia: () => this.client.listMedia(),
       uploadMedia: (bytes) => this.client.uploadMedia(bytes),

@@ -1,7 +1,7 @@
 import { isValidName } from '../js/fhem-client.js';
 
 const TARGET_MIN = 5;
-const TARGET_MAX = 25;
+const TARGET_MAX = 30;
 const TARGET_STEP = 0.5;
 const SEND_DELAY_MS = 1500;
 const CONFIRM_WAIT_MS = 120000;
@@ -50,6 +50,61 @@ function toNumber(value) {
   return Number.parseFloat(value);
 }
 
+const MODE_LABELS = {
+  auto: 'Auto', manual: 'Manuell', boost: 'Boost', day: 'Tag', night: 'Nacht',
+  eco: 'Eco', comfort: 'Komfort'
+};
+const MAX_MODES = ['auto', 'eco', 'comfort', 'boost', 'manual'];
+
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+
+function hasCommand(usage, command) {
+  return typeof usage === 'string'
+    && new RegExp(`(?:^|\\s)${escapeRegExp(command)}(?:\\s|\\(|:|$)`).test(usage);
+}
+
+// Wie im Thermostat-Dashboard: Befehle und Wertebereich ergeben sich aus den möglichen Set-Befehlen des Geräts.
+function thermostatControl(group, targetReading) {
+  const device = (Array.isArray(group) ? group : []).find((item) => item.readings[targetReading] !== undefined) || null;
+  const usage = device ? device.sets : '';
+  const isMax = Boolean(device) && device.type === 'MAX';
+  const result = { device: device ? device.name : '', min: TARGET_MIN, max: TARGET_MAX, modes: [], modeCommand: '', modeDevice: '' };
+  if (!device) {
+    return result;
+  }
+  if (!isMax) {
+    const list = new RegExp(`\\b${escapeRegExp(targetReading)}:([A-Za-z0-9.,|+-]+)`).exec(usage);
+    const range = new RegExp(`\\b${escapeRegExp(targetReading)}\\s+\\([^)]*?([-+]?\\d+(?:\\.\\d+)?)\\.\\.([-+]?\\d+(?:\\.\\d+)?)`).exec(usage);
+    const numbers = list ? list[1].split(/[|,]/).map(toNumber).filter((n) => n !== null) : [];
+    if (numbers.length > 0) {
+      result.min = Math.min(...numbers);
+      result.max = Math.max(...numbers);
+    } else if (range) {
+      result.min = Number.parseFloat(range[1]);
+      result.max = Number.parseFloat(range[2]);
+    }
+  }
+  if (isMax) {
+    if (hasCommand(usage, 'desiredTemperature')) {
+      result.modeCommand = 'desiredTemperature';
+      result.modeDevice = device.name;
+      result.modes = MAX_MODES;
+    }
+  } else {
+    // controlMode kann am Hauptdevice oder am Kanal liegen.
+    for (const item of [device, ...(Array.isArray(group) ? group : [])]) {
+      const match = /\bcontrolMode(?:\s+\(([^)]*)\)|:([A-Za-z0-9_|,-]+))/.exec(item.sets || '');
+      if (match) {
+        result.modeCommand = 'controlMode';
+        result.modeDevice = item.name;
+        result.modes = (match[1] || match[2]).split(/[|,]/).filter((mode) => MODE_LABELS[mode]);
+        break;
+      }
+    }
+  }
+  return result;
+}
+
 class FHEMCMSThermostat extends HTMLElement {
   constructor() {
     super();
@@ -62,6 +117,8 @@ class FHEMCMSThermostat extends HTMLElement {
     this.sendTimer = null;
     this.pending = false;
     this.sent = null;
+    this.modePending = false;
+    this.control = null;
     this.staleSince = null;
   }
 
@@ -71,20 +128,15 @@ class FHEMCMSThermostat extends HTMLElement {
     }
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; min-width: 0; }
+        :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile {
-          height: 100%;
-          padding: 1rem;
-          border: 1px solid #43564a;
-          border-radius: 1rem;
-          background: #202e27;
-          display: grid;
-          gap: 0.6rem;
-          align-content: start;
-        }
+        .tile { height: 100%; overflow: hidden; container-type: size; border: 1px solid #43564a;
+          border-radius: 1rem; background: #202e27; }
+        .body { height: 100%; display: flex; flex-direction: column; justify-content: space-between;
+          gap: clamp(0.1rem, 1.5cqh, 0.6rem); padding: clamp(0.25rem, 4cqmin, 1rem);
+          font-size: clamp(0.65rem, 4.2cqmin, 1rem); }
         header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-        h3 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+        h3 { margin: 0; font-size: 1.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         button {
           font: inherit; color: inherit; cursor: pointer;
           border: 1px solid #43564a; border-radius: 0.5rem;
@@ -92,20 +144,27 @@ class FHEMCMSThermostat extends HTMLElement {
         }
         button:hover { background: #34493e; }
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
-        .icon { padding: 0.2rem 0.5rem; }
+        .icon { padding: 0.1rem 0.45rem; flex: none; }
         :host([view-only]) [data-open-config] { display: none; }
-        .actual { font-size: 2.4rem; font-weight: 700; line-height: 1.1; }
-        .label { color: #a5c9b2; font-size: 0.8rem; }
+        .actual { font-size: clamp(1.1rem, min(26cqh, 15cqw), 3rem); font-weight: 700; line-height: 1.05; white-space: nowrap; }
+        .label { color: #a5c9b2; font-size: 0.85em; }
         .target-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
-        input[type="range"] { width: 100%; accent-color: #8fd0a8; }
-        .meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; color: #c4d0c8; font-size: 0.9rem; }
-        .valve[hidden] { display: none; }
-        .bar { position: relative; height: 0.5rem; border-radius: 0.25rem;
+        input[type="range"] { width: 100%; margin: 0; accent-color: #8fd0a8; }
+        .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 1rem; color: #c4d0c8; font-size: 0.9em; }
+        .meta select { width: auto; max-width: 100%; padding: 0.15rem 0.4rem; font-size: 1em; }
+        .valve[hidden], [data-mode-select][hidden] { display: none; }
+        .bar { position: relative; height: 0.5em; border-radius: 0.25rem;
           background: linear-gradient(90deg, #3b82f6, #ef4444, #7f1d1d); }
-        .marker { position: absolute; top: -0.2rem; width: 0.2rem; height: 0.9rem; background: #fff; border-radius: 0.1rem; }
-        .status { margin: 0; min-height: 1.2em; font-size: 0.85rem; color: #a5c9b2; }
+        .marker { position: absolute; top: -0.2em; width: 0.2em; height: 0.9em; background: #fff; border-radius: 0.1rem; }
+        .status { margin: 0; min-height: 1.2em; font-size: 0.85em; color: #a5c9b2; }
         .status[data-error] { color: #ffb4a8; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
+        /* Je kleiner die Kachel, desto weniger Inhalt: erst Ventil, dann Meta, Titel und zuletzt der Schieber. */
+        @container (max-height: 13rem) { .valve, .status:empty { display: none; } }
+        @container (max-height: 10rem) { .meta [data-battery], .label.is-ist { display: none; } }
+        @container (max-height: 7.5rem) { .meta, header .title-text { display: none; } }
+        @container (max-height: 5rem) { .target-row .label, [data-slider] { display: none; } }
+        @container (max-width: 7rem) { [data-open-config] { display: none; } .target-row .label { display: none; } }
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
           padding: 1.25rem; width: min(92vw, 32rem); }
         dialog::backdrop { background: rgb(0 0 0 / 0.6); }
@@ -137,28 +196,33 @@ class FHEMCMSThermostat extends HTMLElement {
         .danger { margin-right: auto; border-color: #7f3b33; }
         .error { margin: 0; color: #ffb4a8; min-height: 1.2em; }
       </style>
-      <article class="tile">
-        <header>
-          <h3 data-title></h3>
-          <button type="button" class="icon" data-open-config aria-label="Kachel konfigurieren">⚙</button>
-        </header>
-        <div>
-          <div class="actual" data-actual>–</div>
-          <div class="label">Ist</div>
-        </div>
-        <div>
-          <div class="target-row">
-            <label class="label" for="slider">Soll</label>
-            <output data-target-out>–</output>
+      <article class="tile" data-tile>
+        <div class="body">
+          <header>
+            <h3 data-title></h3>
+            <button type="button" class="icon" data-open-config aria-label="Kachel konfigurieren">⚙</button>
+          </header>
+          <div>
+            <div class="actual" data-actual>–</div>
+            <div class="label is-ist">Ist</div>
           </div>
-          <input id="slider" type="range" data-slider min="${TARGET_MIN}" max="${TARGET_MAX}" step="${TARGET_STEP}" disabled>
+          <div>
+            <div class="target-row">
+              <label class="label" for="slider">Soll</label>
+              <output data-target-out>–</output>
+            </div>
+            <input id="slider" type="range" data-slider min="${TARGET_MIN}" max="${TARGET_MAX}" step="${TARGET_STEP}" disabled>
+          </div>
+          <div class="meta">
+            <select data-mode-select aria-label="Betriebsart" hidden></select>
+            <span data-mode></span><span data-battery></span>
+          </div>
+          <div class="valve" data-valve hidden>
+            <div class="label">Ventil <span data-valve-text></span></div>
+            <div class="bar"><span class="marker" data-valve-marker></span></div>
+          </div>
+          <p class="status" role="status" data-status></p>
         </div>
-        <div class="meta"><span data-mode></span><span data-battery></span></div>
-        <div class="valve" data-valve hidden>
-          <div class="label">Ventil <span data-valve-text></span></div>
-          <div class="bar"><span class="marker" data-valve-marker></span></div>
-        </div>
-        <p class="status" role="status" data-status></p>
       </article>
       <dialog data-dialog aria-labelledby="dialog-title">
         <form method="dialog" data-form novalidate>
@@ -205,6 +269,7 @@ class FHEMCMSThermostat extends HTMLElement {
     this.buildDialogFields();
     this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
     this.shadowRoot.querySelector('[data-slider]').addEventListener('input', () => this.onSliderInput());
+    this.shadowRoot.querySelector('[data-mode-select]').addEventListener('change', () => this.onModeChange());
     this.shadowRoot.querySelector('[data-cancel]').addEventListener('click', () => this.closeDialog(true));
     this.shadowRoot.querySelector('[data-delete]').addEventListener('click', () => this.onDelete());
     this.shadowRoot.querySelector('[data-form]').addEventListener('submit', (event) => {
@@ -290,6 +355,10 @@ class FHEMCMSThermostat extends HTMLElement {
     const output = root.querySelector('[data-target-out]');
     const targetRaw = read(config.readings.target);
     const target = toNumber(targetRaw);
+    const control = thermostatControl(group, config.readings.target);
+    this.control = control;
+    slider.min = String(control.min);
+    slider.max = String(control.max);
     slider.disabled = !this.services || !this.snapshot || target === null || Boolean(this.staleSince);
     if (this.sent && (target === this.sent.value || Date.now() > this.sent.until)) {
       this.sent = null;
@@ -302,12 +371,38 @@ class FHEMCMSThermostat extends HTMLElement {
       } else if (target === null) {
         output.textContent = targetRaw !== undefined && targetRaw !== '' ? targetRaw : '–';
       } else {
-        slider.value = String(Math.min(TARGET_MAX, Math.max(TARGET_MIN, target)));
+        slider.value = String(Math.min(control.max, Math.max(control.min, target)));
         output.textContent = `${target.toFixed(1)} °C`;
       }
     }
 
-    this.renderOptional('[data-mode]', 'Modus', read(config.readings.mode), config.readings.mode);
+    const modeValue = read(config.readings.mode);
+    const select = root.querySelector('[data-mode-select]');
+    const modeText = root.querySelector('[data-mode]');
+    const canSetMode = Boolean(this.services) && control.modes.length > 0 && !this.staleSince;
+    select.hidden = !canSetMode;
+    if (canSetMode) {
+      if (!this.modePending && this.shadowRoot.activeElement !== select) {
+        const options = control.modes.map((mode) => {
+          const option = document.createElement('option');
+          option.value = mode;
+          option.textContent = MODE_LABELS[mode] || mode;
+          return option;
+        });
+        if (!control.modes.includes(modeValue)) {
+          const unknown = document.createElement('option');
+          unknown.value = '';
+          unknown.textContent = modeValue ? `Modus: ${modeValue}` : 'Betriebsart …';
+          unknown.disabled = true;
+          options.unshift(unknown);
+        }
+        select.replaceChildren(...options);
+        select.value = control.modes.includes(modeValue) ? modeValue : '';
+      }
+      modeText.textContent = '';
+    } else {
+      this.renderOptional('[data-mode]', 'Modus', modeValue, config.readings.mode);
+    }
     this.renderOptional('[data-battery]', 'Batterie', read(config.readings.battery), config.readings.battery);
 
     const valveRaw = config.readings.valve ? read(config.readings.valve) : undefined;
@@ -348,6 +443,29 @@ class FHEMCMSThermostat extends HTMLElement {
     this.setStatus('Wird gleich gesendet …');
     window.clearTimeout(this.sendTimer);
     this.sendTimer = window.setTimeout(() => this.sendTarget(), SEND_DELAY_MS);
+  }
+
+  async onModeChange() {
+    const select = this.shadowRoot.querySelector('[data-mode-select]');
+    const control = this.control;
+    if (!control || !control.modeCommand || !select.value) {
+      return;
+    }
+    this.modePending = true;
+    select.disabled = true;
+    this.setStatus('Betriebsart wird gesendet …');
+    try {
+      await this.services.setCommand(control.modeDevice, control.modeCommand, select.value);
+      this.setStatus('Betriebsart gesendet, wartet auf Bestätigung des Geräts');
+    } catch (error) {
+      this.setStatus(error.message || 'Senden fehlgeschlagen', true);
+    } finally {
+      select.disabled = false;
+      window.setTimeout(() => {
+        this.modePending = false;
+        this.render();
+      }, 3000);
+    }
   }
 
   async sendTarget() {

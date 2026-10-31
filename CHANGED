@@ -1,3 +1,10 @@
+2026-10-31 - Thermostat writes mode, scales down
+
+Thermostat tile can set the operating mode (like ThermostatDashboard), uses the device's setpoint range and scales its content with the tile size.
+Reload the browser (hard), then: set CMS rebuild.
+
+S30 - Thermostat schreibt wie das Dashboard und skaliert
+
 2026-10-31 - Menus open on hover
 
 Edit menus open when hovering with a mouse; touch still uses tap.

@@ -93,7 +93,8 @@ export class FhemClient {
         const room = typeof attributes.room === 'string' ? attributes.room.split(',')[0].trim() : '';
         const owner = item.Internals && typeof item.Internals.device === 'string' ? item.Internals.device : '';
         const parent = isValidName(owner) && owner !== item.Name ? owner : '';
-        return { name: item.Name, alias, type, room, parent, readings };
+        const sets = typeof item.PossibleSets === 'string' ? item.PossibleSets : '';
+        return { name: item.Name, alias, type, room, parent, readings, sets };
       });
   }
 
@@ -205,6 +206,17 @@ export class FhemClient {
   async setReading(device, command, value) {
     if (!isValidName(device) || !isValidName(command) || !/^-?[0-9]{1,3}(\.[0-9])?$/.test(value)) {
       throw new Error('Ungültiger Sollwert');
+    }
+    const result = await this.command(`set ${device} ${command} ${value}`);
+    if (result) {
+      throw new Error(result);
+    }
+  }
+
+  // Setzt einen Wert oder eine Betriebsart (z. B. controlMode auto), analog zum Thermostat-Dashboard.
+  async setCommand(device, command, value) {
+    if (!isValidName(device) || !isValidName(command) || !/^[A-Za-z0-9_.+-]{1,32}$/.test(value)) {
+      throw new Error('Ungültiger Befehl');
     }
     const result = await this.command(`set ${device} ${command} ${value}`);
     if (result) {
