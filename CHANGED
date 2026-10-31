@@ -1,3 +1,7 @@
+2026-10-31 - Text placeholders accept formatting
+
+Bold, italic, underline, strikethrough, colour and highlight now apply to placeholders in the text editor; placeholders always stay inside a paragraph.
+
 2026-10-31 - Thermostat writes mode, scales down
 
 Tiles use smaller text and icons; thermostat looks like the ThermostatDashboard.

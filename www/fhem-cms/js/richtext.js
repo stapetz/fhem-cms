@@ -359,10 +359,51 @@ function chipify(root) {
   }
 }
 
+// Formatierung eines Platzhalters wird als Wrapper um den {{…}}-Text gespeichert.
+const CHIP_FORMATS = [['bold', 'b'], ['italic', 'i'], ['underline', 'u'], ['strikeThrough', 's']];
+const COLOR_RE = /^(#[0-9a-f]{3,8}|rgba?\([0-9 ,.%]+\))$/i;
+
+function applyChipFormat(chip, cmd, value) {
+  const key = { bold: 'b', italic: 'i', underline: 'u', strikeThrough: 's', foreColor: 'color', hiliteColor: 'bg', backColor: 'bg' }[cmd];
+  if (!key) {
+    return;
+  }
+  if (cmd === 'foreColor' || cmd === 'hiliteColor' || cmd === 'backColor') {
+    chip.dataset[key] = COLOR_RE.test(value || '') ? value : '';
+  } else {
+    chip.dataset[key] = value ? '1' : '';
+  }
+  chip.style.fontWeight = chip.dataset.b ? '700' : '';
+  chip.style.fontStyle = chip.dataset.i ? 'italic' : '';
+  chip.style.textDecoration = [chip.dataset.u ? 'underline' : '', chip.dataset.s ? 'line-through' : ''].filter(Boolean).join(' ');
+  chip.style.color = chip.dataset.color || '';
+  chip.style.backgroundColor = chip.dataset.bg || '';
+}
+
+function chipNode(chip) {
+  let node = document.createTextNode(placeholderText(chip.dataset.device, chip.dataset.reading, chip.dataset.filter));
+  const color = COLOR_RE.test(chip.dataset.color || '') ? chip.dataset.color : '';
+  const bg = COLOR_RE.test(chip.dataset.bg || '') ? chip.dataset.bg : '';
+  if (color || bg) {
+    const span = document.createElement('span');
+    span.style.cssText = `${color ? `color:${color};` : ''}${bg ? `background-color:${bg};` : ''}`;
+    span.append(node);
+    node = span;
+  }
+  for (const [, tag] of CHIP_FORMATS) {
+    if (chip.dataset[tag]) {
+      const wrap = document.createElement(tag);
+      wrap.append(node);
+      node = wrap;
+    }
+  }
+  return node;
+}
+
 function serializeArea(area) {
   const copy = area.cloneNode(true);
   for (const chip of copy.querySelectorAll('.cms-ph')) {
-    chip.replaceWith(document.createTextNode(placeholderText(chip.dataset.device, chip.dataset.reading, chip.dataset.filter)));
+    chip.replaceWith(chipNode(chip));
   }
   return cleanHtml(copy.innerHTML);
 }
@@ -411,7 +452,42 @@ export function createEditor({ root, services, html, onError }) {
     restore();
     document.execCommand('styleWithCSS', false, cmd === 'foreColor' || cmd === 'hiliteColor');
     document.execCommand(cmd, false, value);
+    formatChips(cmd, value);
     remember();
+  };
+
+  // execCommand überspringt contenteditable=false-Bausteine; Platzhalter in der Auswahl werden hier nachgezogen.
+  const formatChips = (cmd, value) => {
+    const range = saved || (selection() && selection().rangeCount ? selection().getRangeAt(0) : null);
+    if (!range || range.collapsed) {
+      return;
+    }
+    const chips = [...area.querySelectorAll('.cms-ph')].filter((chip) => range.intersectsNode(chip));
+    if (!chips.length) {
+      return;
+    }
+    if (cmd === 'removeFormat') {
+      for (const chip of chips) {
+        for (const c of ['bold', 'italic', 'underline', 'strikeThrough']) {
+          applyChipFormat(chip, c, false);
+        }
+        applyChipFormat(chip, 'foreColor', '');
+        applyChipFormat(chip, 'hiliteColor', '');
+      }
+      return;
+    }
+    if (CHIP_FORMATS.some(([name]) => name === cmd)) {
+      const key = CHIP_FORMATS.find(([name]) => name === cmd)[1];
+      const hasText = range.toString().replace(/\s+/g, '') !== '' && range.toString().replace(/\s+/g, '').length > chips.reduce((n, c) => n + c.textContent.length, 0);
+      const on = hasText ? document.queryCommandState(cmd) : !chips[0].dataset[key];
+      for (const chip of chips) {
+        applyChipFormat(chip, cmd, on);
+      }
+      return;
+    }
+    for (const chip of chips) {
+      applyChipFormat(chip, cmd, value);
+    }
   };
 
   const insertNode = (node) => {
@@ -423,6 +499,23 @@ export function createEditor({ root, services, html, onError }) {
       range.collapse(false);
     }
     range.deleteContents();
+    if (range.startContainer === area) {
+      // Direkt in der Area würde der Platzhalter außerhalb eines Absatzes stehen und umbrechen.
+      const before = area.childNodes[range.startOffset - 1];
+      const after = area.childNodes[range.startOffset];
+      const block = [before, after].find((n) => n && n.nodeType === 1 && /^(P|H[1-6]|BLOCKQUOTE|LI)$/.test(n.nodeName));
+      if (block) {
+        range.selectNodeContents(block);
+        range.collapse(block === before);
+      } else if (area.lastElementChild && /^(P|H[1-6]|BLOCKQUOTE)$/.test(area.lastElementChild.nodeName)) {
+        range.selectNodeContents(area.lastElementChild);
+        range.collapse(false);
+      } else {
+        const paragraph = document.createElement('p');
+        range.insertNode(paragraph);
+        range.selectNodeContents(paragraph);
+      }
+    }
     range.insertNode(node);
     range.setStartAfter(node);
     range.collapse(true);
