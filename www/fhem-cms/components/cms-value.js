@@ -33,12 +33,12 @@ class FHEMCMSValue extends HTMLElement {
         * { box-sizing: border-box; }
         .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid #7f8c84; border-radius: 1.4rem;
           background: #202e27; display: flex; flex-direction: column; }
-        header { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; flex: none;
-          padding: 0.4em 1.6rem 0 1.1em; font-size: max(5px, min(13cqh, 5cqw)); }
+        header { position: absolute; top: 0; left: 0; right: 1.6rem; z-index: 1; display: flex; align-items: center; gap: 0.4rem;
+          padding: 0.4em 0 0 1.1em; font-size: max(5px, min(13cqh, 5cqw)); }
         header[hidden] { display: none; }
         h3 { margin: 0; font-size: 1.1em; font-weight: 400; color: #a5c9b2; font-family: inherit;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .main { flex: 1; min-height: 0; display: flex; align-items: flex-start; gap: 0.5em; padding: 0.1em 0.8em 0; }
+        .main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 0.5em; padding: 0 0.8em; }
         .gear.solo { position: absolute; top: 0.2rem; right: 0.3rem; font-size: 0.75rem; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         :host { --cms-icon-color: #8fd0a8; }
@@ -49,13 +49,13 @@ class FHEMCMSValue extends HTMLElement {
         .icon-row .icon { width: 2rem; height: 2rem; }
         .value { font-size: max(5px, min(var(--vh, 38cqh), 11cqw)); min-width: 0; line-height: 1.1; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .main { font-size: max(5px, min(var(--vh, 38cqh), 11cqw)); }
-        .value { font-size: inherit; }
+        .value { font-size: inherit; flex: 0 1 auto; text-align: center; }
         .unit { margin-left: 0.25rem; font-size: 0.6em; font-weight: 400; color: #a5c9b2; }
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
           border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
         button:hover { background: #34493e; }
         button:focus-visible, input:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
-        .tile[data-has-title] { --vh: 26cqh; }
+        .tile[data-has-title] { --vh: 32cqh; }
         .gear { padding: 0 0.35em; font-size: 1em; line-height: 1.4; flex: none; }
         @container (max-height: 3rem) { header { display: none; } .tile[data-has-title] { --vh: 38cqh; } }
         @container (max-width: 6rem) { .gear { display: none; } }

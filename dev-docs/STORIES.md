@@ -429,6 +429,8 @@ Gemeldete Fehler, die noch besprochen werden. Noch nicht umgesetzt.
 - **B02 - Wert-Anzeige zeigt den Titel nicht an**, obwohl einer eingetragen ist. Gemeldet am 2026-10-31.
 - **B03 - Thermostat-Kachel: unten viel ungenutzter Leerraum.** Der Platz wird nicht benötigt; Inhalt und Kachelhöhe sollen besser zusammenpassen (Screenshot vom 2026-10-31, Kacheln im Layout-Modus). Gemeldet am 2026-10-31. **Umgesetzt (Prüfung offen):** hohe Kacheln schalten auf einspaltiges Layout und füllen die Höhe.
 
+- **K01 - Browser-Zoom (Konzept offen).** Raster und Inhalte sollen sich beim Ändern der Browser-Seitenskalierung (Zoom) flüssig anpassen. Gemeldet am 2026-10-31, wird besprochen.
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.
