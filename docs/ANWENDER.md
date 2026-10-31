@@ -41,7 +41,8 @@ Das CMS speichert keine Zugangsdaten und erlaubt keine fremden Origins (kein COR
 - **Zwei Einstiege am Device:** „CMS starten“ öffnet den Bearbeitungsmodus. „Zeige Homepage“ öffnet dieselbe Seite mit `?mode=view`, also nur die fertige Seite ohne Kopf, Werkzeugleiste und Zahnräder. Die Seitennavigation und die Kachelwerte bleiben. Achtung: Das ist nur eine Ansicht und keine Zugriffssperre, wer die Adresse ohne `?mode=view` aufruft, kann bearbeiten. Schutz bieten nur `allowed` und FHEMWEB.
 - **Layout ändern:** Der Button blendet an jeder Kachel einen Griff ein. Ziehen mit Maus oder Touch, oder Griff fokussieren und Pfeiltasten nutzen. Überlappende Kacheln rutschen nach unten, das Layout wird gespeichert. Auf schmalen Bildschirmen ist der Modus ausgeblendet.
 - **Wiederherstellen per Modul:** `set <CMS> restore` bietet die 20 neuesten Backups als Auswahlliste an.
-- **Backups:** Jede Speicherung legt ein Backup an. `Backups` zeigt die Liste; ein Klick stellt den Stand nach Bestätigung wieder her. Der aktuelle Stand wird vorher selbst gesichert.
+- **Entwurf und Veröffentlichen:** Änderungen im Bearbeitungsmodus landen in einem Entwurf. „Zeige Homepage“ zeigt weiter den bisherigen Live-Stand. `Veröffentlichen` übernimmt den Entwurf als Live-Stand, `Entwurf verwerfen` löscht ihn. Es gibt einen Entwurf pro Device; bearbeiten zwei Personen gleichzeitig, gewinnt die letzte Speicherung.
+- **Backups:** Jede Veröffentlichung sichert den bisherigen Live-Stand als Backup. `Backups` zeigt die Liste; ein Klick stellt den Live-Stand nach Bestätigung wieder her (der aktuelle Live-Stand wird vorher gesichert). Ein offener Entwurf bleibt dabei unverändert.
 - **Verbindungsabbruch:** Die Kachel zeigt die letzten Werte gedämpft mit „Veraltet seit …“, der Regler ist gesperrt. Nach Wiederherstellung der Verbindung wird sofort neu gelesen.
 
 ## Dateien und Daten
@@ -50,7 +51,8 @@ Das CMS speichert keine Zugangsdaten und erlaubt keine fremden Origins (kein COR
 |---|---|
 | `<modpath>/www/fhem-cms/` | Gemeinsame Frontend-Dateien (werden durch `update` ersetzt) |
 | `<modpath>/www/fhem-cms/<Device>/index.html` | Generierte Startseite (nicht bearbeiten) |
-| `<modpath>/fhem-cms-data/<Device>/config.json` | Konfiguration inkl. Backups (`config.json.<Zeit>.bak`) |
+| `<modpath>/fhem-cms-data/<Device>/config.json` | Live-Konfiguration inkl. Backups (`config.json.<Zeit>.bak`) |
+| `<modpath>/fhem-cms-data/<Device>/draft.json` | Offener Entwurf (nur vorhanden, solange nicht veröffentlicht) |
 
 `fhem-cms-data` liegt außerhalb von `www` und wird nicht ausgeliefert. Das Betriebssystem-Konto von FHEM braucht dort Schreibrechte; empfohlen sind Verzeichnisrechte 0750 und Dateirechte 0640.
 
@@ -61,7 +63,12 @@ Das CMS speichert keine Zugangsdaten und erlaubt keine fremden Origins (kein COR
 | `get <CMS> url` | Pfad der Startseite |
 | `get <CMS> config` | Konfiguration als JSON |
 | `get <CMS> backups` | Liste der Backups |
-| `set <CMS> config <Base64-JSON>` | Konfiguration speichern (wird validiert) |
+| `get <CMS> draft` | Entwurf als JSON (ohne Entwurf der Live-Stand) |
+| `get <CMS> status` | `{"draft":true|false}` |
+| `set <CMS> config <Base64-JSON>` | Live-Konfiguration direkt speichern (wird validiert, mit Backup) |
+| `set <CMS> draft <Base64-JSON>` | Entwurf speichern (ohne Backup) |
+| `set <CMS> publish` | Entwurf als Live-Stand übernehmen (Backup des alten Stands) |
+| `set <CMS> discard` | Entwurf verwerfen |
 | `set <CMS> restore <Backupname>` | Backup wiederherstellen |
 | `set <CMS> rebuild` | Startseite neu erzeugen (nach Updates der Frontend-Dateien) |
 | `set <CMS> purge <CMS>` | Daten und Startseite endgültig löschen, danach `delete <CMS>` |

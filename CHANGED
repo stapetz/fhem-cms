@@ -1,3 +1,10 @@
+2026-10-31 - Add draft and publish workflow
+
+Editing now changes a draft (draft.json) instead of the live page. Zeige
+Homepage keeps showing the live version until Veroeffentlichen publishes the
+draft, which backs up the previous live version. New commands get draft,
+get status, set draft, set publish and set discard.
+
 2026-10-31 - Add a view mode link for the finished homepage
 
 The device now shows CMS starten (edit mode) and Zeige Homepage, which opens

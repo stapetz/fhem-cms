@@ -92,7 +92,7 @@ sub FHEMCMS_Get {
         return $basePath . '/fhem-cms/' . $name . '/index.html';
     }
 
-    if ($cmd eq 'config' || $cmd eq 'backups') {
+    if ($cmd eq 'config' || $cmd eq 'backups' || $cmd eq 'draft' || $cmd eq 'status') {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
         my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
         return $error if (defined($error));
@@ -100,7 +100,13 @@ sub FHEMCMS_Get {
         if ($cmd eq 'backups') {
             return JSON::PP->new->utf8->canonical->encode([FHEMCMS_ListBackups($dataDir)]);
         }
-        my ($text, $readError) = FHEMCMS_ReadFile(File::Spec->catfile($dataDir, 'config.json'));
+        my $draftFile = File::Spec->catfile($dataDir, 'draft.json');
+        if ($cmd eq 'status') {
+            return JSON::PP->new->utf8->canonical->encode({draft => (-f $draftFile ? JSON::PP::true : JSON::PP::false)});
+        }
+        # Ohne Entwurf startet die Bearbeitung mit einer Kopie des Live-Stands.
+        my $source = ($cmd eq 'draft' && -f $draftFile) ? $draftFile : File::Spec->catfile($dataDir, 'config.json');
+        my ($text, $readError) = FHEMCMS_ReadFile($source);
         return $readError if (defined($readError));
         my ($config, $parseError) = FHEMCMS_ParseConfig($text);
         return "Konfiguration ist ungueltig: $parseError" if (defined($parseError));
@@ -114,7 +120,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListMedia($mediaDir)]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg backups:noArg media:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg';
 }
 
 sub FHEMCMS_Set {
@@ -144,7 +150,31 @@ sub FHEMCMS_Set {
         return "media/$file";
     }
 
-    if ($cmd eq 'config' || $cmd eq 'restore') {
+    if ($cmd eq 'publish' || $cmd eq 'discard') {
+        return "$cmd erwartet keine Parameter" if (@args);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
+        return $error if (defined($error));
+        my $draftFile = File::Spec->catfile($dataDir, 'draft.json');
+        if ($cmd eq 'discard') {
+            return undef if (!-e $draftFile);
+            return "Entwurf konnte nicht geloescht werden: $!" if (!unlink($draftFile));
+            return undef;
+        }
+        return 'Es gibt keinen Entwurf zum Veroeffentlichen' if (!-f $draftFile);
+        my ($text, $readError) = FHEMCMS_ReadFile($draftFile);
+        return $readError if (defined($readError));
+        my ($config, $parseError) = FHEMCMS_ParseConfig($text);
+        return "Entwurf ist ungueltig: $parseError" if (defined($parseError));
+        my $writeError = FHEMCMS_WriteConfig($name, $dataDir, $config);
+        return $writeError if (defined($writeError));
+        # Der Live-Stand ist gesichert und geschrieben; ein verbleibender Entwurf waere nur ein Duplikat.
+        unlink($draftFile);
+        Log3($name, 3, "FHEMCMS ($name): Entwurf wurde veroeffentlicht");
+        return undef;
+    }
+
+    if ($cmd eq 'config' || $cmd eq 'restore' || $cmd eq 'draft') {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
         return "$cmd erwartet genau einen Parameter" if (@args != 1);
         my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
@@ -159,7 +189,7 @@ sub FHEMCMS_Set {
         return 'Konfiguration ist nicht Base64-kodiert' if ($args[0] !~ /\A[A-Za-z0-9+\/]+={0,2}\z/);
         my ($config, $parseError) = FHEMCMS_ParseConfig(decode_base64($args[0]));
         return $parseError if (defined($parseError));
-        return FHEMCMS_WriteConfig($name, $dataDir, $config);
+        return FHEMCMS_WriteConfig($name, $dataDir, $config, $cmd eq 'draft' ? 'draft.json' : 'config.json');
     }
 
     if ($cmd eq 'rebuild') {
@@ -184,7 +214,7 @@ sub FHEMCMS_SetUsage {
         splice(@backups, $FHEMCMS_USAGE_BACKUPS) if (@backups > $FHEMCMS_USAGE_BACKUPS);
     }
     my $restore = @backups ? 'restore:' . join(',', @backups) : 'restore';
-    return "config $restore rebuild:noArg media purge";
+    return "config draft publish:noArg discard:noArg $restore rebuild:noArg media purge";
 }
 
 sub FHEMCMS_Summary {
@@ -753,15 +783,17 @@ sub FHEMCMS_ReadConfig {
 }
 
 sub FHEMCMS_WriteConfig {
-    my ($name, $dataDir, $config) = @_;
+    my ($name, $dataDir, $config, $target) = @_;
+    $target //= 'config.json';
+    my $isDraft = $target eq 'draft.json';
     my $error = FHEMCMS_ValidateConfig($config);
     return $error if (defined($error));
 
     my $text = JSON::PP->new->utf8->canonical->pretty->encode($config);
     return 'Konfiguration ist zu gross' if (length($text) > $FHEMCMS_MAX_CONFIG_BYTES);
 
-    my $file = File::Spec->catfile($dataDir, 'config.json');
-    my $tmp = File::Spec->catfile($dataDir, 'config.json.tmp');
+    my $file = File::Spec->catfile($dataDir, $target);
+    my $tmp = File::Spec->catfile($dataDir, "$target.tmp");
     unlink($tmp);
     my $out;
     return "Temporaere Datei konnte nicht angelegt werden: $!"
@@ -775,7 +807,8 @@ sub FHEMCMS_WriteConfig {
         return "Konfiguration konnte nicht geschrieben werden: $writeError";
     }
 
-    if (-e $file) {
+    # Backups sichern nur den veroeffentlichten Stand; Entwurf-Speicherungen erzeugen keine.
+    if (!$isDraft && -e $file) {
         my $stamp = strftime('%Y%m%d-%H%M%S', localtime());
         my $backup = File::Spec->catfile($dataDir, "config.json.$stamp.bak");
         for (my $i = 1; -e $backup; $i++) {
@@ -794,6 +827,7 @@ sub FHEMCMS_WriteConfig {
         return "Konfiguration konnte nicht gespeichert werden: $renameError";
     }
 
+    return undef if ($isDraft);
     my @backups = FHEMCMS_ListBackups($dataDir);
     for my $old (@backups[$FHEMCMS_MAX_BACKUPS .. $#backups]) {
         unlink(File::Spec->catfile($dataDir, $old));

@@ -260,3 +260,17 @@ cms-device-card {
 .cms-view cms-device-card:not([data-error]) {
   display: none;
 }
+
+.cms-draft-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: #a5c9b2;
+}
+
+.cms-draft-note.is-draft {
+  color: #ffd98f;
+}
+
+.cms-view .cms-draft-note {
+  display: none;
+}

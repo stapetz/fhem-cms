@@ -331,6 +331,7 @@ Das Testfrontend bestätigt die Anlage und zeigt den Device-Namen. Eine JSON-API
 - Schreiben: temporäre Datei, dann atomares `rename`; die Vorgängerversion bleibt als `config.json.<JJJJMMTT-hhmmss>.bak` erhalten (die letzten 20).
 - Wiederherstellen: `FHEMCMS_RestoreBackup` akzeptiert nur Backup-Namen dieses Musters und validiert die Datei vor dem Zurückschreiben. Ein UI-Dialog folgt später.
 - `delete <Device>` löscht den Datenordner nicht; die bestätigte Löschfunktion ist offen.
+- Entwurf (S13): `draft.json` im selben Ordner, gleiches Schema und gleiche Validierung. `FHEMCMS_WriteConfig($name,$dir,$config,$target)` schreibt wahlweise `config.json` (mit Backup und Rotation) oder `draft.json` (ohne Backup). `set publish` liest und validiert den Entwurf, schreibt ihn live (Backup des alten Stands) und löscht ihn. `restore` wirkt nur auf `config.json`. `FHEMCMS_ListBackups` erfasst nur `config.json.*.bak`. `purge` entfernt den ganzen Ordner inklusive Entwurf. Das Frontend liest im Bearbeitungsmodus den Entwurf (`get draft`), im Ansichtsmodus den Live-Stand. Es gibt keine Sperre gegen paralleles Bearbeiten (S14).
 
 ## Erstes Widget: Thermostat-Kachel (Test)
 

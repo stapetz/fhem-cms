@@ -284,7 +284,7 @@ ok(-f File::Spec->catfile($pData, 'config.json') && -f $pIndex, 'redefine recrea
 
 # restore dropdown
 my $usage = FHEMCMS_Set($pHash, $pName, '?');
-like($usage, qr/choose one of config restore(?::|\s)/, 'usage names restore');
+like($usage, qr/choose one of config draft publish:noArg discard:noArg restore(?::|\s)/, 'usage names restore');
 write_file(File::Spec->catfile($pData, 'config.json.20200101-000000.bak'), read_file(File::Spec->catfile($pData, 'config.json')));
 like(FHEMCMS_Set($pHash, $pName, '?'), qr/restore:config\.json\.20200101-000000\.bak/, 'usage lists backups as dropdown');
 {
@@ -295,6 +295,43 @@ like(FHEMCMS_Set($pHash, $pName, '?'), qr/restore:config\.json\.20200101-000000\
     my ($list) = FHEMCMS_Set($pHash, $pName, '?') =~ /restore:(\S+)/;
     is($list, 'config.json.20210103-000000.bak', 'usage limits the list to the newest backups');
 }
+
+# draft and publish
+my $liveFile = File::Spec->catfile($pData, 'config.json');
+my $draftFile = File::Spec->catfile($pData, 'draft.json');
+my $liveBefore = read_file($liveFile);
+my $backupsBefore = scalar(my @b0 = FHEMCMS_ListBackups($pData));
+is(FHEMCMS_Get($pHash, $pName, 'status'), '{"draft":false}', 'status reports no draft');
+is(FHEMCMS_Get($pHash, $pName, 'draft'), FHEMCMS_Get($pHash, $pName, 'config'), 'draft falls back to the live config');
+like(FHEMCMS_Set($pHash, $pName, 'publish'), qr/keinen Entwurf/, 'publish needs a draft');
+my $draftCfg = {schemaVersion => 2, pages => [{id => 'start', title => 'Entwurf', widgets => []}]};
+my $draftB64 = MIME::Base64::encode_base64(JSON::PP->new->utf8->encode($draftCfg), '');
+is(FHEMCMS_Set($pHash, $pName, 'draft', $draftB64), undef, 'saves a draft');
+ok(-f $draftFile, 'draft file exists');
+is(read_file($liveFile), $liveBefore, 'saving a draft does not touch the live config');
+is(scalar(my @b1 = FHEMCMS_ListBackups($pData)), $backupsBefore, 'saving a draft creates no backup');
+is(FHEMCMS_Get($pHash, $pName, 'status'), '{"draft":true}', 'status reports the draft');
+like(FHEMCMS_Get($pHash, $pName, 'draft'), qr/"title":"Entwurf"/, 'get draft returns the draft');
+unlike(FHEMCMS_Get($pHash, $pName, 'config'), qr/Entwurf/, 'get config still returns the live config');
+like(FHEMCMS_Set($pHash, $pName, 'draft', MIME::Base64::encode_base64('{"schemaVersion":2,"pages":[]}', '')),
+    qr/\S/, 'rejects an invalid draft');
+is(FHEMCMS_Set($pHash, $pName, 'discard'), undef, 'discards the draft');
+ok(!-e $draftFile, 'draft file is gone after discard');
+is(FHEMCMS_Set($pHash, $pName, 'discard'), undef, 'discard without a draft is fine');
+FHEMCMS_Set($pHash, $pName, 'draft', $draftB64);
+my $restoreFrom = (FHEMCMS_ListBackups($pData))[0];
+is(FHEMCMS_Set($pHash, $pName, 'restore', $restoreFrom), undef, 'restore works while a draft exists');
+ok(-f $draftFile, 'restore leaves the draft untouched');
+is(FHEMCMS_Set($pHash, $pName, 'publish'), undef, 'publishes the draft');
+like(FHEMCMS_Get($pHash, $pName, 'config'), qr/"title":"Entwurf"/, 'live config now has the draft content');
+ok(!-e $draftFile, 'draft is removed after publish');
+my @afterPublish = FHEMCMS_ListBackups($pData);
+ok(scalar(@afterPublish) > $backupsBefore, 'publish creates a new backup version');
+write_file($draftFile, '{kaputt');
+like(FHEMCMS_Set($pHash, $pName, 'publish'), qr/Entwurf ist ungueltig/, 'publish refuses a broken draft');
+like(FHEMCMS_Get($pHash, $pName, 'config'), qr/"title":"Entwurf"/, 'a refused publish keeps the live config');
+unlink($draftFile);
+like(FHEMCMS_Set($pHash, $pName, 'publish', 'x'), qr/keine Parameter/, 'publish takes no parameters');
 
 # html text widgets
 my $md5 = 'a' x 32;

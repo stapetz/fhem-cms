@@ -250,7 +250,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 **Ziel:** Alle Bilder (und später weitere Medien-Assets) über eine eigene Oberfläche verwalten.
 
 - [ ] Medienverwaltung als eigene Oberfläche mit Liste aller Assets und direktem Upload.
-- [ ] Anzeige je Asset, ob es verwendet wird und auf welchen Seiten.
+- [ ] Anzeige je Asset, ob es verwendet wird und auf welchen Seiten. „In Verwendung“ prüft Live-Stand und Entwurf (S13).
 - [ ] Löschen aus der Medienverwaltung; bei verwendeten Assets erscheint vorher ein Warndialog. Der Löschbefehl im Modul prüft strikt (nur MD5-Dateinamen, keine Pfade).
 - [ ] Der Texteditor ersetzt „Bild hochladen“ durch „Bild auswählen / hochladen“, das direkt die Medienverwaltung öffnet, in der ein Bild hochgeladen oder ein vorhandenes gewählt wird.
 - [ ] Thema Bildgröße pragmatisch neu bewerten: Limit, Verkleinern vor dem Upload im Browser (Canvas, z. B. höchstens 1600 px Kantenlänge; Auswirkung auf Transparenz und GIF-Animation) und Serverlast.
@@ -261,6 +261,28 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - Verwendete und unverwendete Bilder sind unterscheidbar, die Fundstellen sind sichtbar.
 - Ein verwendetes Bild wird nie ohne Warnung gelöscht.
 - Bedienung ist mit Maus, Touch und Tastatur möglich.
+
+### S13 - Entwurf und Veröffentlichen
+
+**Ziel:** Bearbeitung verändert die ausgelieferte Seite nicht, bis sie ausdrücklich freigegeben wird.
+
+- [x] Pro Device ein einzelner Entwurf (`draft.json`). Der Bearbeitungsmodus liest und schreibt nur den Entwurf (`get draft|status`, `set draft`).
+- [x] „Zeige Homepage“ (`?mode=view`) liest immer den Live-Stand (`config.json`).
+- [x] `set publish` validiert den Entwurf, sichert den bisherigen Live-Stand als Backup, schreibt den Entwurf als Live-Stand und löscht ihn. Die neue Version erscheint im Restore-Dialog.
+- [x] `set discard` und Schaltfläche „Entwurf verwerfen“; Hinweiszeile zeigt, ob ein Entwurf offen ist.
+- [x] `restore` und Backups beziehen sich nur auf den Live-Stand; ein vorhandener Entwurf bleibt unverändert.
+- [ ] Auf der Testinstanz prüfen (Bearbeiten, Veröffentlichen, Verwerfen, Restore mit offenem Entwurf).
+- [ ] Offen: Der Entwurf startet nicht automatisch aus dem Live-Stand neu, wenn per `restore` ein Stand zurückgeholt wird; Hinweis im Dialog prüfen.
+
+**Bewusst akzeptiert:** Zwei Benutzer können denselben Entwurf gleichzeitig bearbeiten; der letzte Speichervorgang gewinnt. Schutz folgt mit S14.
+
+### S14 - Rechte- und Rollenkonzept
+
+**Ziel:** Wer darf bearbeiten, veröffentlichen, wiederherstellen und löschen?
+
+- [ ] Rollen (z. B. Betrachter, Redakteur, Administrator) und Abbildung auf FHEMWEB/`allowed`.
+- [ ] Sperre (Semaphore oder Lock mit Ablauf) gegen gleichzeitiges Bearbeiten desselben Entwurfs, inkl. Anzeige, wer gerade bearbeitet.
+- [ ] Mehrere Entwürfe und Freigabeprozess prüfen.
 
 ## Später prüfen - Erweiterungen außerhalb des MVP
 

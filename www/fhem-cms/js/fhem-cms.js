@@ -40,8 +40,17 @@ class CmsPage {
       this.button('Seite umbenennen', () => this.renamePage()),
       this.button('Seite löschen', () => this.deletePage()),
       this.button('Backups', () => this.showBackups()),
-      this.button('Layout ändern', () => this.toggleLayout())
+      this.button('Layout ändern', () => this.toggleLayout()),
+      this.button('Veröffentlichen', () => this.publish()),
+      this.button('Entwurf verwerfen', () => this.discard())
     ];
+    this.publishButton = this.pageButtons[5];
+    this.discardButton = this.pageButtons[6];
+    this.publishButton.classList.add('cms-publish');
+    this.draftNote = document.createElement('p');
+    this.draftNote.className = 'cms-draft-note';
+    this.draftNote.setAttribute('role', 'status');
+    this.hasDraft = false;
     this.layoutButton = this.pageButtons[4];
     this.layoutButton.classList.add('cms-layout-toggle');
     this.layoutButton.setAttribute('aria-pressed', 'false');
@@ -72,7 +81,7 @@ class CmsPage {
     this.grid.setAttribute('aria-label', 'Widgets');
     this.grid.setAttribute('aria-live', 'polite');
 
-    shell.append(this.nav, this.toolbar, this.grid);
+    shell.append(this.nav, this.draftNote, this.toolbar, this.grid);
   }
 
   button(label, onClick) {
@@ -108,7 +117,8 @@ class CmsPage {
 
   async start() {
     try {
-      this.config = await this.client.getConfig();
+      this.config = await this.client.getConfig(VIEW_MODE ? 'config' : 'draft');
+      this.hasDraft = VIEW_MODE ? false : await this.client.hasDraft();
     } catch (error) {
       this.card.setAttribute('data-error', '');
       this.setStatus(`Konfiguration konnte nicht geladen werden: ${error.message}`);
@@ -130,6 +140,7 @@ class CmsPage {
         this.refresh();
       }
     });
+    this.setDraft(this.hasDraft);
     this.startPolling();
     await this.showPage(this.pageFromHash());
   }
@@ -309,17 +320,23 @@ class CmsPage {
     for (const name of [...names].sort().reverse()) {
       const label = this.formatBackup(name);
       list.append(this.button(label, async () => {
-        if (!window.confirm(`Konfiguration vom ${label} wiederherstellen? Der aktuelle Stand wird zuvor gesichert.`)) {
+        if (!window.confirm(`Live-Stand vom ${label} wiederherstellen? Der aktuelle Live-Stand wird zuvor gesichert.`)) {
           return;
         }
         try {
           await this.client.restoreBackup(name);
-          this.config = await this.client.getConfig();
+          // Restore betrifft nur den Live-Stand; ein vorhandener Entwurf bleibt unveraendert.
+          if (!this.hasDraft) {
+            this.config = await this.client.getConfig('draft');
+          }
         } catch (failure) {
           error.textContent = `Wiederherstellen fehlgeschlagen: ${failure.message}`;
           return;
         }
         close();
+        this.setStatus(this.hasDraft
+          ? 'Live-Stand wiederhergestellt. Der Entwurf ist unverändert.'
+          : 'Live-Stand wiederhergestellt');
         const target = this.config.pages.some((page) => page.id === this.pageId)
           ? this.pageId
           : this.config.pages[0].id;
@@ -618,8 +635,54 @@ class CmsPage {
   }
 
   async persist(config) {
-    await this.client.saveConfig(config);
+    await this.client.saveDraft(config);
     this.config = config;
+    this.setDraft(true);
+  }
+
+  setDraft(value) {
+    this.hasDraft = value;
+    this.publishButton.disabled = !value;
+    this.discardButton.disabled = !value;
+    this.draftNote.textContent = value
+      ? 'Entwurf: Änderungen sind noch nicht veröffentlicht. „Zeige Homepage“ zeigt weiterhin den Live-Stand.'
+      : 'Keine unveröffentlichten Änderungen.';
+    this.draftNote.classList.toggle('is-draft', value);
+  }
+
+  async publish() {
+    if (!window.confirm('Den Entwurf jetzt veröffentlichen? Der bisherige Live-Stand wird als Version gesichert und ist über „Backups“ wiederherstellbar.')) {
+      return;
+    }
+    await this.flushLayout();
+    try {
+      await this.client.publishDraft();
+    } catch (error) {
+      this.setStatus(`Veröffentlichen fehlgeschlagen: ${error.message}`);
+      return;
+    }
+    this.setDraft(false);
+    this.setStatus('Entwurf veröffentlicht');
+  }
+
+  async discard() {
+    if (!window.confirm('Den Entwurf verwerfen? Alle unveröffentlichten Änderungen gehen verloren; die Bearbeitung beginnt wieder beim Live-Stand.')) {
+      return;
+    }
+    try {
+      await this.client.discardDraft();
+      this.config = await this.client.getConfig('draft');
+    } catch (error) {
+      this.setStatus(`Verwerfen fehlgeschlagen: ${error.message}`);
+      return;
+    }
+    this.setDraft(false);
+    const target = this.config.pages.some((page) => page.id === this.pageId) ? this.pageId : this.config.pages[0].id;
+    if (window.location.hash === `#/${target}`) {
+      await this.showPage(target);
+    } else {
+      window.location.hash = `#/${target}`;
+    }
   }
 
   async saveWidget(widget) {

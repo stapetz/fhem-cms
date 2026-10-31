@@ -95,8 +95,8 @@ export class FhemClient {
       });
   }
 
-  async getConfig() {
-    const text = await this.command(`get ${this.cmsDevice} config`);
+  async getConfig(source = 'config') {
+    const text = await this.command(`get ${this.cmsDevice} ${source === 'draft' ? 'draft' : 'config'}`);
     try {
       return JSON.parse(text);
     } catch (error) {
@@ -104,8 +104,31 @@ export class FhemClient {
     }
   }
 
-  async saveConfig(config) {
-    const result = await this.command(`set ${this.cmsDevice} config ${toBase64(JSON.stringify(config))}`);
+  async saveDraft(config) {
+    const result = await this.command(`set ${this.cmsDevice} draft ${toBase64(JSON.stringify(config))}`);
+    if (result) {
+      throw new Error(result);
+    }
+  }
+
+  async hasDraft() {
+    const text = await this.command(`get ${this.cmsDevice} status`);
+    try {
+      return JSON.parse(text).draft === true;
+    } catch (error) {
+      throw new Error(text || 'Der Entwurfsstatus konnte nicht gelesen werden');
+    }
+  }
+
+  async publishDraft() {
+    const result = await this.command(`set ${this.cmsDevice} publish`);
+    if (result) {
+      throw new Error(result);
+    }
+  }
+
+  async discardDraft() {
+    const result = await this.command(`set ${this.cmsDevice} discard`);
     if (result) {
       throw new Error(result);
     }
