@@ -111,6 +111,25 @@ class CmsPage {
           this.closeMenus(menu);
         }
       });
+      // Maus: Menü öffnet beim Überfahren (leicht verzögertes Schließen); Touch/Tastatur: per Klick.
+      let closeTimer = null;
+      menu.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'mouse') {
+          clearTimeout(closeTimer);
+          menu.open = true;
+        }
+      });
+      menu.addEventListener('pointerleave', (event) => {
+        if (event.pointerType === 'mouse') {
+          closeTimer = setTimeout(() => { menu.open = false; }, 250);
+        }
+      });
+      summary.addEventListener('click', (event) => {
+        if (event.pointerType === 'mouse' || (event.detail > 0 && menu.open && menu.matches(':hover'))) {
+          event.preventDefault();
+          menu.open = true;
+        }
+      });
       this.menus.push(menu);
       return menu;
     };

@@ -1,3 +1,10 @@
+2026-10-31 - Menus open on hover
+
+Edit menus open when hovering with a mouse; touch still uses tap.
+Reload the browser (hard).
+
+S27 - Menüs öffnen beim Überfahren
+
 2026-10-31 - Menu bar above the grid
 
 The edit menu bar no longer covers the page; the navigation row fits its content.

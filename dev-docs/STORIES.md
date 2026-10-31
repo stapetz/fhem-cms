@@ -390,6 +390,11 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Eine Rasterzeile, die nur die waagerechte Navigation (Höhe 1) enthält, passt sich der Höhe der Navigationspunkte an.
 - [ ] Senkrechte Navigation: Spaltenbreite bleibt vorerst 1/12 der Seitenbreite.
 
+### S27 - Menüs öffnen beim Überfahren
+
+- [x] Mit der Maus öffnen die Menüs der Bearbeitungsleiste beim Überfahren und schließen nach Verlassen (250 ms Verzögerung).
+- [x] Auf Touch-Geräten und per Tastatur öffnen sie weiterhin per Klick.
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.
