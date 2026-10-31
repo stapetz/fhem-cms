@@ -1,7 +1,7 @@
 2026-10-31 - Cleaner toolbar, no layout mode, message icon
 
 Fixed toolbar order (Navigation, + Widget, Preview, Publish, Discard), styled
-like a classic menu bar. Tiles
+like a classic menu bar that floats above the page (not part of the content grid). Tiles
 are always movable in edit mode. Messages show as a red exclamation mark with
 a tooltip. Reload the browser (hard).
 
