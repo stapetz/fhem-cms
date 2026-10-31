@@ -39,7 +39,9 @@ Nach dem Update steht das Modul `FHEMCMS` zur Verfügung. Ein Testgerät lässt 
 
 Die `controls_fhem-cms.txt` wird aus den installierbaren Dateien unter `FHEM/` und `www/fhem-cms/` erzeugt. Der repositorybezogene Dateiname vermeidet Kollisionen mit Controls-Dateien anderer Update-Quellen auf demselben FHEM-Server. GitHub Actions aktualisiert sie nach Änderungen auf `dev` oder `main`; sie nicht manuell bearbeiten. Die `CHANGED`-Datei im Repository-Root enthält das Änderungsprotokoll für FHEM und wird bei funktionalen Änderungen gepflegt. Eine FHEM-Installation erhält Modul, Komponenten, Styles, Skripte und weitere Frontend-Dateien gemeinsam.
 
-Beim Löschen einer FHEMCMS-Definition mit `delete CMS` bleiben ihr Geräteordner und dessen Dateien erhalten. Eine spätere, separate Datenlöschfunktion muss ausdrücklich ausgelöst werden.
+Beim Löschen einer FHEMCMS-Definition mit `delete CMS` bleiben ihr Geräteordner und dessen Dateien erhalten. Zum endgültigen Entfernen dient `set CMS purge CMS` vor dem `delete`.
+
+Bedienung, Sicherheitshinweise (`allowed`) und Fehlerbehebung stehen in der [Anwenderdokumentation](docs/ANWENDER.md).
 
 ## Branches
 

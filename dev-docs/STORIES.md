@@ -219,12 +219,12 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Aufgaben**
 
-- [ ] Testfälle für Berechtigungen, ungültige Daten, Neustart und Verbindungsabbruch ausführen.
+- [ ] Testfälle für Berechtigungen, ungültige Daten, Neustart und Verbindungsabbruch ausführen. (Ungültige Daten, Neustart, Verbindungsabbruch im Mock/Perl geprüft; Berechtigungen offen, siehe `ABNAHME.md`.)
 - [ ] Browser-, Tastatur- und Touch-Bedienung auf den vereinbarten Zielgeräten prüfen.
 - [ ] Die Phone-/Tablet-Referenzmodelle vor Testbeginn festlegen und zusammen mit Browser-Version und Ergebnis protokollieren.
 - [ ] Performance und Serverlast mit den S01-Messbedingungen bewerten.
-- [ ] Installations-, Konfigurations- und Fehlerbehebungsdokumentation für Anwender erstellen.
-- [ ] Abweichungen und Folgestories am Ende dieser Liste ergänzen.
+- [x] Installations-, Konfigurations- und Fehlerbehebungsdokumentation für Anwender erstellen (`docs/ANWENDER.md`, inkl. `allowed`-Hinweis).
+- [ ] Abweichungen und Folgestories am Ende dieser Liste ergänzen. (Protokoll mit offenen Punkten: `dev-docs/ABNAHME.md`.)
 
 **Akzeptanzkriterien**
 
