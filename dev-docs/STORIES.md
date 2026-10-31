@@ -429,6 +429,7 @@ Gemeldete Fehler, die noch besprochen werden. Noch nicht umgesetzt.
 - **B02 - Wert-Anzeige zeigt den Titel nicht an**, obwohl einer eingetragen ist. Gemeldet am 2026-10-31.
 - **B03 - Thermostat-Kachel: unten viel ungenutzter Leerraum.** Der Platz wird nicht benötigt; Inhalt und Kachelhöhe sollen besser zusammenpassen (Screenshot vom 2026-10-31, Kacheln im Layout-Modus). Gemeldet am 2026-10-31. **Umgesetzt (Prüfung offen):** hohe Kacheln schalten auf einspaltiges Layout und füllen die Höhe.
 
+- **B04 - Safari skaliert die Schrift größer als Edge.** Ab 125 % Zoom werden Thermostat-Kacheln in Safari unten abgeschnitten, Schrift wirkt dort größer. Ursache offen (kein WebKit zum Testen). Schieberegler wurde vereinheitlicht (grün). Gemeldet am 2026-10-31.
 - **K01 - Browser-Zoom.** Raster und Inhalte sollen sich beim Ändern der Browser-Seitenskalierung (Zoom) flüssig anpassen. Entschieden: Breite und Höhe folgen beide dem Zoom, einspaltig ab ca. 40 rem (später Burgermenü, S28). **Umgesetzt (Prüfung offen):** Spaltenabstand und Zeilenhöhe in `cqw`.
 
 ## Später prüfen - Erweiterungen außerhalb des MVP

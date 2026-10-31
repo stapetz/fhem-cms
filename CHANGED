@@ -1,6 +1,7 @@
 2026-10-31 - Thermostat writes mode, scales down
 
 Tiles use smaller text and icons; thermostat looks like the ThermostatDashboard.
+Thermostat: own slider styling (green thumb and track in all browsers, fixed height).
 Grid scales with window width and browser zoom (cell height follows column width).
 Value widget: content centered, title label stays top left.
 Thermostat switches to one column in tall tiles and fills the height.

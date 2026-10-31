@@ -157,7 +157,12 @@ class FHEMCMSThermostat extends HTMLElement {
           overflow: hidden; text-overflow: clip; }
         .num { font-size: 1.9em; font-weight: 700; line-height: 1.05; white-space: nowrap; }
         .unit { font-size: 0.55em; font-weight: 400; color: #a5c9b2; margin-left: 0.2em; }
-        input[type="range"] { width: 100%; margin: 0.15em 0 0; accent-color: #8fd0a8; height: 1.2em; }
+        input[type="range"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; margin: 0.15em 0 0; padding: 0; height: 1.2em; background: transparent; }
+        input[type="range"]::-webkit-slider-runnable-track { height: 0.35em; border-radius: 0.2em; background: linear-gradient(90deg, #8fd0a8 var(--fill, 50%), #4a5750 var(--fill, 50%)); }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 1em; height: 1em; margin-top: -0.325em; border: 0; border-radius: 50%; background: #8fd0a8; }
+        input[type="range"]::-moz-range-track { height: 0.35em; border-radius: 0.2em; background: #4a5750; }
+        input[type="range"]::-moz-range-progress { height: 0.35em; border-radius: 0.2em; background: #8fd0a8; }
+        input[type="range"]::-moz-range-thumb { width: 1em; height: 1em; border: 0; border-radius: 50%; background: #8fd0a8; }
         .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
         .foot { display: flex; align-self: stretch; align-items: center; gap: 0.6em; flex-wrap: nowrap; padding: 0 0.7em 0.5em; margin-top: 0.5em; flex: none; }
         .foot select { appearance: none; -webkit-appearance: none; width: auto; flex: none; max-width: 12em; height: 2.3em; padding: 0.2em 2em 0.2em 0.7em; border: 1px solid #69796f; border-radius: 0.5em; color: #f4f4e9; font: 1em 'Helvetica Neue', sans-serif; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='16'%3E%3Cpath d='M5 1 9 6H1zM5 15 1 10h8z' fill='%23f4f4e9'/%3E%3C/svg%3E") no-repeat right 0.7em center / 0.7em auto, linear-gradient(#7d8a82 0%, #55645b 45%, #26342d 50%, #3a4a41 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
@@ -394,6 +399,7 @@ class FHEMCMSThermostat extends HTMLElement {
         unit.textContent = '°C';
       }
     }
+    this.paintSlider(slider);
 
     const modeValue = read(config.readings.mode);
     const select = root.querySelector('[data-mode-select]');
@@ -461,9 +467,17 @@ class FHEMCMSThermostat extends HTMLElement {
     status.toggleAttribute('data-error', isError);
   }
 
+  paintSlider(slider) {
+    const min = Number.parseFloat(slider.min);
+    const max = Number.parseFloat(slider.max);
+    const fill = max > min ? ((Number.parseFloat(slider.value) - min) / (max - min)) * 100 : 0;
+    slider.style.setProperty('--fill', `${Math.min(100, Math.max(0, fill))}%`);
+  }
+
   onSliderInput() {
     const slider = this.shadowRoot.querySelector('[data-slider]');
     this.pending = true;
+    this.paintSlider(slider);
     this.shadowRoot.querySelector('[data-target-out]').textContent = Number.parseFloat(slider.value).toFixed(1);
     this.shadowRoot.querySelector('[data-target-unit]').textContent = '°C';
     this.setStatus('Wird gleich gesendet …');
