@@ -134,9 +134,10 @@ class FHEMCMSThermostat extends HTMLElement {
         * { box-sizing: border-box; }
         .tile { height: 100%; overflow: hidden; container-type: size; border: 1px solid #43564a;
           border-radius: 1rem; background: #202e27; }
-        .body { height: 100%; display: flex; flex-direction: column; gap: clamp(0.15rem, 3cqh, 0.5rem);
-          font-size: clamp(0.55rem, 3.6cqmin, 0.8rem); }
-        header { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
+        /* Der Inhalt ist rund 10,5 em hoch und 26 em breit; die Schrift richtet sich nach der knapperen Seite, damit er die Kachel ohne Leerraum füllt. */
+        .body { height: 100%; display: flex; flex-direction: column; justify-content: space-evenly;
+          font-size: clamp(0.5rem, min(8.6cqh, 3.7cqw), 1.5rem); }
+        header { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
           padding: 0.2em 0.6em 0.2em 0.8em; border-bottom: 1px solid #43564a; min-height: 2em; flex: none; }
         h3 { margin: 0; font-size: 1.3em; font-weight: 500; font-family: Georgia, 'Times New Roman', serif;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -149,20 +150,19 @@ class FHEMCMSThermostat extends HTMLElement {
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
         .icon { padding: 0 0.4em; line-height: 1.4; flex: none; font-size: 1em; }
         :host([view-only]) [data-open-config] { display: none; }
-        .boxes { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.2rem, 2.5cqw, 0.6rem);
-          padding: 0 clamp(0.25rem, 3cqw, 0.7rem); }
+        .boxes { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; padding: 0 0.7em; }
         .box { border: 1px solid #3a4d42; border-radius: 0.2rem; background: #1a261f; min-width: 0; min-height: 0;
-          padding: 0.4em 0.6em; display: flex; flex-direction: column; gap: 0.2em; overflow: hidden; }
+          padding: 0.4em 0.6em 0.5em; display: flex; flex-direction: column; gap: 0.25em; overflow: hidden; }
         .label { color: #a5c9b2; font-size: 0.85em; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
           overflow: hidden; text-overflow: ellipsis; }
-        .num { font-size: clamp(0.85rem, min(2.1em, 22cqh), 1.9rem); font-weight: 700; line-height: 1.05; white-space: nowrap; }
+        .num { font-size: 2.2em; font-weight: 700; line-height: 1.05; white-space: nowrap; }
         .unit { font-size: 0.55em; font-weight: 400; color: #a5c9b2; margin-left: 0.2em; }
-        input[type="range"] { margin-top: auto !important; width: 100%; margin: 0; accent-color: #8fd0a8; height: 1em; }
+        input[type="range"] { width: 100%; margin: 0.15em 0 0; accent-color: #8fd0a8; height: 1.2em; }
         .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
-        .foot { display: flex; align-items: center; gap: 0.5em; flex-wrap: nowrap; padding: 0 clamp(0.25rem, 3cqw, 0.7rem) 0.4em; flex: none; }
-        .foot select { width: auto; flex: none; max-width: 40%; padding: 0.1em 0.3em; font-size: 1em; border-radius: 0.3rem; }
+        .foot { display: flex; align-self: stretch; align-items: center; gap: 0.6em; flex-wrap: nowrap; padding: 0 0.7em 0.6em; flex: none; }
+        .foot select { width: auto; flex: none; padding: 0.15em 0.4em; font-size: 1em; border-radius: 0.3em; }
         .foot [data-mode]:empty, .foot [data-mode-select][hidden], .valve[hidden], .batt:empty { display: none; }
-        .valve { flex: 1; min-width: 2.5em; position: relative; height: 1.5em; border: 1px solid #3a4d42;
+        .valve { flex: 1; min-width: 3em; position: relative; height: 1.7em; border: 1px solid #3a4d42;
           background: linear-gradient(90deg, #2b7bc0, #2f9b8a 50%, #7a2b3b); display: grid; place-items: center; }
         .valve span.pct { font-weight: 700; font-size: 0.85em; z-index: 1; }
         .marker { position: absolute; top: 0; bottom: 0; width: 0.2em; background: #fff; }
@@ -173,10 +173,10 @@ class FHEMCMSThermostat extends HTMLElement {
         .status[data-error] { color: #ffb4a8; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         /* Je kleiner die Kachel, desto weniger Inhalt: erst Status, dann Batterie, Ventil und Modus, zuletzt der Schieber. */
-        @container (max-height: 11rem) { .batt { display: none; } }
-        @container (max-height: 8.5rem) { .foot, .status { display: none; } }
-        @container (max-height: 6rem) { [data-slider], .box .label.is-soll { display: none; } }
-        @container (max-height: 4rem) { header { display: none; } .label { display: none; } }
+        @container (max-width: 13rem) { .batt { display: none; } }
+        @container (max-height: 6.5rem) { .foot, .status { display: none; } }
+        @container (max-height: 4.8rem) { [data-slider], .box .label { display: none; } }
+        @container (max-height: 3.4rem) { header { display: none; } }
         @container (max-width: 9rem) { .boxes { grid-template-columns: 1fr; } .box.ist { display: none; } [data-open-config] { display: none; } }
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
           padding: 1.25rem; width: min(92vw, 32rem); }
