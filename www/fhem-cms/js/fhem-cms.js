@@ -21,6 +21,31 @@ class CmsPage {
   constructor(cmsDevice, shell, statusLine) {
     this.client = new FhemClient(cmsDevice);
     this.statusLine = statusLine;
+    if (!VIEW_MODE) {
+      this.statusBox = document.createElement('div');
+      this.statusBox.className = 'cms-status-box';
+      this.statusBox.setAttribute('role', 'status');
+      this.statusBox.hidden = true;
+      document.body.append(this.statusBox);
+      statusLine.setAttribute('role', 'button');
+      statusLine.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.statusBox.hidden = !this.statusBox.hidden;
+      });
+      statusLine.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          this.statusBox.hidden = !this.statusBox.hidden;
+        } else if (event.key === 'Escape') {
+          this.statusBox.hidden = true;
+        }
+      });
+      document.addEventListener('click', (event) => {
+        if (!this.statusBox.contains(event.target)) {
+          this.statusBox.hidden = true;
+        }
+      });
+    }
     this.config = null;
     this.snapshots = new Map();
     this.elements = new Map();
@@ -123,7 +148,7 @@ class CmsPage {
     this.menu.classList.toggle('is-disabled', disabled);
   }
 
-  // Im Bearbeitungsmodus zeigt ein rotes Ausrufezeichen oben rechts die Meldungen als Tooltip.
+  // Im Bearbeitungsmodus öffnet das rote Ausrufezeichen oben rechts per Klick eine Box mit den Meldungen.
   setStatus(message) {
     this.statusText = String(message);
     this.statusLine.textContent = this.statusText;
@@ -139,7 +164,7 @@ class CmsPage {
       lines.push('Entwurf: Änderungen sind noch nicht veröffentlicht. „Zeige Homepage“ zeigt weiterhin den Live-Stand.');
     }
     const text = lines.filter(Boolean).join('\n');
-    this.statusLine.title = text;
+    this.statusBox.textContent = text;
     this.statusLine.tabIndex = 0;
     this.statusLine.setAttribute('aria-label', text);
     this.statusLine.hidden = !text;

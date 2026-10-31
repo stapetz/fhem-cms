@@ -367,6 +367,11 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Nur im Bearbeitungsmodus; Ansicht und Vorschau zeigen kein Gitternetz.
 - Entschieden: Keine einstellbare Rasterfeinheit (bleibt bei 12 Spalten).
 
+### S24 - Werkzeugleiste links, Meldungsbox
+
+- [x] Werkzeugleiste im Bearbeitungsmodus linksbündig und blau, um sie von der Seitennavigation abzuheben.
+- [x] Klick auf das rote Ausrufezeichen öffnet eine kleine Box mit den Meldungen (statt Tooltip).
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.

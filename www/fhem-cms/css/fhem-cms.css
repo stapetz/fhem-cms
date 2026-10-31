@@ -116,7 +116,7 @@ body {
 .cms-toolbar {
   position: fixed;
   top: 0.5rem;
-  right: 3rem;
+  left: 0.75rem;
   z-index: 20;
   display: flex;
   flex-wrap: wrap;
@@ -127,7 +127,8 @@ body {
   padding: 0.2rem 0.35rem;
   border: 1px solid #3a4c41;
   border-radius: 0.5rem;
-  background: #1f2b25;
+  background: #1d3550;
+  border-color: #35557a;
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
 }
 
@@ -143,8 +144,8 @@ body {
 
 .cms-toolbar .cms-button:hover:not(:disabled),
 .cms-toolbar .cms-menu[open] summary {
-  background: #34493e;
-  border-color: #43564a;
+  background: #2c4c70;
+  border-color: #4a6f99;
 }
 
 .cms-toolbar .cms-publish:not(:disabled) {
@@ -156,7 +157,7 @@ body {
   align-self: stretch;
   width: 1px;
   margin: 0.25rem 0.3rem;
-  background: #3a4c41;
+  background: #35557a;
 }
 
 .cms-menu {
@@ -190,9 +191,9 @@ body {
   margin-top: 0.2rem;
   padding: 0.25rem;
   box-shadow: 0 4px 10px rgb(0 0 0 / 0.4);
-  border: 1px solid #43564a;
+  border: 1px solid #4a6f99;
   border-radius: 0.5rem;
-  background: #202e27;
+  background: #1d3550;
 }
 
 .cms-button {
@@ -240,8 +241,8 @@ body {
 }
 
 .cms-grid-toggle[aria-pressed="true"] {
-  background: #34493e;
-  border-color: #43564a;
+  background: #2c4c70;
+  border-color: #4a6f99;
 }
 
 .cms-drag-layer {
@@ -415,4 +416,25 @@ html:not(.cms-view) .cms-status::before {
   content: "!";
   font-size: 1rem;
   font-weight: 700;
+}
+
+.cms-status-box {
+  position: fixed;
+  top: 2.8rem;
+  right: 0.75rem;
+  z-index: 31;
+  max-width: min(22rem, calc(100vw - 1.5rem));
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #c0392b;
+  border-radius: 0.5rem;
+  background: #2a1f1d;
+  color: #f3e3df;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.45);
+}
+
+.cms-status-box[hidden] {
+  display: none;
 }
