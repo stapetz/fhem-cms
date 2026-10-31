@@ -50,3 +50,7 @@ Bedienung, Sicherheitshinweise (`allowed`) und Fehlerbehebung stehen in der [Anw
 - Änderungen werden zuerst auf `dev` entwickelt. Nach `main` wird nur nach ausdrücklicher Freigabe veröffentlicht.
 
 Weitere Hinweise stehen in der [Entwicklungsdokumentation](dev-docs/ENTWICKLUNG.md).
+
+## Fragen, Fehler und Ideen
+
+Fragen, Fehler und Ideen bitte als [GitHub-Issue](https://github.com/stapetz/fhem-cms/issues/new/choose) melden. Issues sind öffentlich sichtbar und können von Suchmaschinen gefunden werden; bitte keine Passwörter, Tokens oder Adressen posten.

@@ -1,0 +1,16 @@
+name: Idee oder Frage
+description: Wunsch, Verbesserungsvorschlag oder Frage zu fhem-cms
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options: [Neues Widget, Editor und Texte, Navigation und Layout, Dokumentation, Sonstiges]
+    validations: {required: true}
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Issues sind öffentlich, bitte keine Passwörter, Tokens oder Adressen posten.
+    validations: {required: true}

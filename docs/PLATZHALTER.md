@@ -184,3 +184,7 @@ Bei `>`, `<`, `>=`, `<=` wird zahlenmäßig verglichen, wenn beide Seiten Zahlen
 | einen Wert als Attribut (FTUI-Stil) | `<span device="Device" reading="reading" filter="round(1)"></span>` |
 | den Alias eines Devices | `{{Device:@alias}}` |
 | eine Farbe je nach Wert | `<div data-cms-class="Device:reading>20:warm">` |
+
+## Fragen, Fehler und Ideen
+
+Fragen, Fehler und Ideen bitte als [GitHub-Issue](https://github.com/stapetz/fhem-cms/issues/new/choose) melden. Issues sind öffentlich sichtbar und können von Suchmaschinen gefunden werden; bitte keine Passwörter, Tokens oder Adressen posten.

@@ -1,0 +1,20 @@
+name: Fehler melden
+description: fhem-cms verhält sich nicht wie erwartet
+labels: [bug]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options: [Modul FHEMCMS (FHEM), Editor und Widgets, Navigation und Layout, Installation und Update, Sonstiges]
+    validations: {required: true}
+  - type: input
+    id: versions
+    attributes:
+      label: FHEM-Version, Browser und Stand von fhem-cms
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung, Schritte und Logzeilen
+      description: Bitte keine Passwörter, Tokens oder Adressen posten. Issues sind öffentlich.
+    validations: {required: true}
