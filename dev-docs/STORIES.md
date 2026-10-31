@@ -421,6 +421,75 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Wert-Anzeige hat einen optionalen Titel; alle Widget-Dialoge zeigen den Alias des gewählten Devices (Regeln 10/11 in ENTWICKLUNG.md).
 - Ventil und Batterie (mit Fallback auf Kanäle) waren bereits vorhanden.
 
+## Widget-Ausbau (angelehnt an FTUI)
+
+Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsame Regeln für jedes neue Widget: Regeln 1–12 in `ENTWICKLUNG.md` (Titel, Alias, Skalierung, Top-Ausrichtung), einheitliches Skalierverhalten nach K02, schreibende Aktionen nur über validierte Namen und Werte (wie `setCommand`), strenges Schema samt Tests.
+
+### S31 - Freies HTML-Widget mit Platzhaltern (Entwurf)
+
+**Ziel:** Eigener HTML-Code in einer Kachel, der Live-Werte aus FHEM einbindet.
+
+- [ ] Widget `fhem-html`: Textfeld für HTML/CSS im Konfigurationsdialog.
+- [ ] Sicherheit: Der Code wird bereinigt (Positivliste von Tags und Attributen, kein `script`, keine `on...`-Handler, keine `javascript:`-URLs, keine fremden Ressourcen ohne Freigabe) und im Shadow-DOM der Kachel gerendert, damit Stile die Seite nicht verändern.
+- [ ] Platzhalter, die live aktualisiert werden, zum Beispiel `{{Device:reading}}` (Wert), `{{Device:reading|unit}}`, `{{Device:alias}}`, `{{Device:state}}`; Format-Filter wie `|round(1)`; Zugriff nur auf Devices, die der Konfiguration bekannt sind. Genauer Satz wird in der Story festgelegt.
+- [ ] Bedingte Darstellung, zum Beispiel Attribut `data-cms-class-if="Device:reading=on:aktiv"`, damit sich Farben und Icons je nach Zustand ändern, ohne Skript.
+- [ ] Hilfe: Link „Platzhalter-Hilfe“ im Dialog öffnet eine Seite (`docs/PLATZHALTER.md`, auch als Hilfetext im Dialog) mit Syntax, Device einbinden, Reading holen, Beispielen und Grenzen.
+- [ ] Skalierung nach K02: Basisschrift der Kachel in `em`-Maß, Inhalt oben ausgerichtet.
+- [ ] Offene Frage: Soll der Code Schaltaktionen auslösen dürfen (z. B. `data-cms-set="Device:on"`)? Wenn ja, nur mit validierten Namen und Werten.
+
+### S32 - Schalter (an/aus) (Entwurf)
+
+- [ ] Widget `fhem-switch` wie `ftui-switch`: Device, Reading für den Zustand, Werte für an/aus (Vorschlag aus den Set-Befehlen), Titel, optionales Icon je Zustand; Klick sendet `set <Device> on|off`.
+
+### S33 - Taster / Befehlsknopf (Entwurf)
+
+- [ ] Widget `fhem-button` wie `ftui-button`: Beschriftung, Icon, ein fester, aus den Set-Befehlen des Devices gewählter Befehl (z. B. `on`, `toggle`, `up`); keine freien Befehle.
+
+### S34 - Schieberegler (Entwurf)
+
+- [ ] Widget `fhem-slider` wie `ftui-slider`: Device, Set-Befehl und Bereich aus der Set-Beschreibung (`slider,min,step,max`), Anzeige des Werts, Senden nach kurzer Verzögerung (wie beim Thermostat).
+
+### S35 - Auswahlliste (Entwurf)
+
+- [ ] Widget `fhem-select` wie `ftui-select`: Werte aus den Set-Optionen des Devices, Darstellung wie der Modus-Knopf des Thermostats.
+
+### S36 - Status-Symbol (Entwurf)
+
+- [ ] Widget `fhem-icon` wie `ftui-icon`: Icon und Farbe wechseln je nach Wert des Readings (Zuordnung Wert zu Icon/Farbe im Dialog, z. B. Fenster offen rot, zu grün); nur lesend.
+
+### S37 - Bild / Kamera (Entwurf)
+
+- [ ] Widget `fhem-image-live` wie `ftui-image`: Bild-URL (aus Reading oder fest), optionales Aktualisierungsintervall; Quelle nur über erlaubte Hosts (Vertrauensgrenze noch festzulegen).
+
+### S38 - Uhr / Datum (Entwurf)
+
+- [ ] Widget `fhem-clock` wie `ftui-clock`: Uhrzeit und Datum, Format wählbar, optional Sekunden.
+
+### S39 - Anzeigeinstrumente: Fortschrittsbalken, Gauge, Rundregler (Entwurf)
+
+- [ ] Widget `fhem-gauge` wie `ftui-gauge`/`ftui-progress`: Wert in einem Bereich (min/max, Farbverlauf) als Balken oder Halbkreis; später ein schreibender Rundregler wie `ftui-knob`.
+
+### S40 - Diagramm (Entwurf)
+
+- [ ] Widget `fhem-chart` wie `ftui-chart`: Verlauf eines Readings aus FileLog oder DbLog; eigene Story mit Sicherheits- und Performancebetrachtung (Datenmenge, nichtblockierend).
+
+### S41 - Readingsgroup / Tabelle (Entwurf)
+
+- [ ] Widget `fhem-table` wie `ftui-readingsgroup`: mehrere Devices und Readings in einer kompakten Tabelle.
+
+### S42 - Link und Popup (Entwurf)
+
+- [ ] Widget `fhem-link` wie `ftui-link`/`ftui-pagebutton`: Kachel, die eine CMS-Seite oder eine externe URL öffnet.
+- [ ] Popup: Kachel öffnet beim Klick eine weitere Kachel-Gruppe als Dialog (wie `ftui-popup`).
+
+### S43 - Badge (Entwurf)
+
+- [ ] Kleiner Zähler/Status-Punkt auf einer anderen Kachel oder in der Navigation (wie `ftui-badge`).
+
+### S44 - Wetter, Abfahrtszeiten (Entwurf, später)
+
+- [ ] Widgets `fhem-weather` und `fhem-departure` wie in FTUI; brauchen externe Datenquellen und deshalb zuerst eine Entscheidung zur Vertrauensgrenze.
+
 ## Buglist
 
 Gemeldete Fehler, die noch besprochen werden. Noch nicht umgesetzt.
