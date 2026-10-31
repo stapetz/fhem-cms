@@ -267,7 +267,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 **Ziel:** Bearbeitung verändert die ausgelieferte Seite nicht, bis sie ausdrücklich freigegeben wird.
 
 - [x] Pro Device ein einzelner Entwurf (`draft.json`). Der Bearbeitungsmodus liest und schreibt nur den Entwurf (`get draft|status`, `set draft`).
-- [x] „Zeige Homepage“ (`?mode=view`) liest immer den Live-Stand (`config.json`).
+- [x] „Zeige Homepage“ (Aufruf ohne Parameter; Bearbeitung nur mit `?mode=edit`) liest immer den Live-Stand (`config.json`).
 - [x] `set publish` validiert den Entwurf, sichert den bisherigen Live-Stand als Backup, schreibt den Entwurf als Live-Stand und löscht ihn. Die neue Version erscheint im Restore-Dialog.
 - [x] `set discard` und Schaltfläche „Entwurf verwerfen“; Hinweiszeile zeigt, ob ein Entwurf offen ist.
 - [x] `restore` und Backups beziehen sich nur auf den Live-Stand; ein vorhandener Entwurf bleibt unverändert.

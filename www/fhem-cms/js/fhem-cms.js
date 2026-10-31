@@ -8,8 +8,9 @@ const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
 const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
 
-// ?mode=view zeigt nur die fertige Seite ohne Bearbeitungsknöpfe. Das ist keine Zugriffssperre.
-const VIEW_MODE = new URLSearchParams(window.location.search).get('mode') === 'view';
+// Ohne Parameter zeigt die Seite nur die fertige Homepage. ?mode=edit startet die Bearbeitung.
+// Das ist keine Zugriffssperre.
+const VIEW_MODE = new URLSearchParams(window.location.search).get('mode') !== 'edit';
 
 class CmsPage {
   constructor(cmsDevice, shell, card) {

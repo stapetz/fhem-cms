@@ -379,9 +379,9 @@ Der Device-Name muss als Bestätigung wiederholt werden. `purge` löscht `<modpa
 
 Die Schaltfläche „Backups“ in der Werkzeugleiste öffnet einen Dialog mit allen Sicherungen (neueste zuerst, Anzeige als Datum und Uhrzeit). Ein Klick fragt nach und führt dann `set <CMS> restore <Name>` aus. Vor der Wiederherstellung sichert das Modul den aktuellen Stand als eigenes Backup, sodass der Schritt umkehrbar ist. Danach wird die Konfiguration neu geladen und die aktuelle Seite angezeigt (oder die erste, falls sie im Backup nicht existiert). Der Client akzeptiert nur Namen im Format `config.json.<JJJJMMTT-HHMMSS>[-n].bak`.
 
-## Ansichtsmodus (`?mode=view`)
+## Ansichts- und Bearbeitungsmodus (`?mode=edit`)
 
-Die Device-Zeile in FHEMWEB zeigt „CMS starten“ (Bearbeitung) und „Zeige Homepage“ (`index.html?mode=view`). `js/fhem-cms.js` liest den Parameter beim Start, setzt die Klasse `cms-view` am `html`-Element und das Attribut `view-only` an den Kacheln. Das CSS blendet Kopf, Werkzeugleiste und Device-Karte aus (Fehlermeldungen bleiben sichtbar), die Kacheln blenden ihr Zahnrad aus. Es ist eine reine Darstellung ohne Sicherheitswirkung: Schreibzugriffe laufen weiter über FHEMWEB und `allowed`.
+Die Device-Zeile in FHEMWEB zeigt „CMS starten“ (`index.html?mode=edit`) und „Zeige Homepage“ (`index.html` ohne Parameter). Ohne Parameter gilt der Ansichtsmodus; nur `mode=edit` aktiviert die Bearbeitung, damit die öffentliche Adresse keinen Modus-Parameter nennt. `js/fhem-cms.js` liest den Parameter beim Start, setzt im Ansichtsmodus die Klasse `cms-view` am `html`-Element und das Attribut `view-only` an den Kacheln. Das CSS blendet Kopf, Werkzeugleiste und Device-Karte aus (Fehlermeldungen bleiben sichtbar), die Kacheln blenden ihr Zahnrad aus. Es ist eine reine Darstellung ohne Sicherheitswirkung: Schreibzugriffe laufen weiter über FHEMWEB und `allowed`.
 
 ## WYSIWYG-Editor und Medien
 

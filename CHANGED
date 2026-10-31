@@ -1,3 +1,8 @@
+2026-10-31 - Make the view mode the default
+
+index.html without parameters now shows only the finished homepage. The edit
+mode needs ?mode=edit, which the CMS starten link sets.
+
 2026-10-31 - Add draft and publish workflow
 
 Editing now changes a draft (draft.json) instead of the live page. Zeige
