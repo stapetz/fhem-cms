@@ -150,6 +150,7 @@ class FHEMCMSThermostat extends HTMLElement {
         .label { color: #a5c9b2; font-size: 0.85em; }
         .target-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
         input[type="range"] { width: 100%; margin: 0; accent-color: #8fd0a8; }
+        .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
         .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 1rem; color: #c4d0c8; font-size: 0.9em; }
         .meta select { width: auto; max-width: 100%; padding: 0.15rem 0.4rem; font-size: 1em; }
         .valve[hidden], [data-mode-select][hidden] { display: none; }
@@ -236,6 +237,7 @@ class FHEMCMSThermostat extends HTMLElement {
               <button type="button" data-pick-device>Auswählen …</button>
             </span>
           </label>
+          <span class="hint" data-device-alias></span>
           <fieldset data-readings>
             <legend>Readings</legend>
           </fieldset>
@@ -510,7 +512,15 @@ class FHEMCMSThermostat extends HTMLElement {
         this.setDialogError(error.message || 'Geräteliste konnte nicht geladen werden');
       }
     }
+    this.showAlias();
     this.fillReadingOptions(this.groupFor(form.elements.device.value), config.readings);
+  }
+
+  showAlias() {
+    const name = this.shadowRoot.querySelector('input[name="device"]').value.trim();
+    const found = this.findDevice(name);
+    this.shadowRoot.querySelector('[data-device-alias]').textContent =
+      found && found.alias && found.alias !== name ? `Alias: ${found.alias}` : '';
   }
 
   findDevice(name) {
@@ -599,6 +609,7 @@ class FHEMCMSThermostat extends HTMLElement {
   pickDevice(device) {
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.device.value = device.parent || device.name;
+    this.showAlias();
     this.closePicker();
     this.onDeviceChanged();
   }

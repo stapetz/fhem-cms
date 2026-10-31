@@ -376,6 +376,8 @@ Jedes Widget mit Device-Bezug folgt dem Muster der Thermostat-Kachel:
 
 8. Icon-Liste: `get <CMS> icons` listet alle Stile unter `www/images/`; eine Filterung nach `iconPath` hat die Liste leer gemacht und ist daher nicht vorgesehen. Namen, die FHEMWEB nicht ausliefert (Fehler 404), entfernt der Icon-Picker nach dem Laden selbst wieder, damit keine leeren Kacheln bleiben.
 9. Container-Einheiten (`cqh`/`cqw`) im Shadow-DOM: Der Container (`container-type: size`) muss ein Element innerhalb des Shadow-DOMs sein (z. B. die Kachel), nicht der Host.
+10. Optionaler Titel: Jedes Widget hat im Dialog das Feld „Titel (optional)“ (`title`, höchstens 64 Zeichen, keine Steuerzeichen; im Schema als optionales Feld, in `FHEMCMS_ValidateConfig` für alle Widget-Typen geprüft). Ohne Titel verwendet das Widget einen sinnvollen Ersatz (Alias, Device-Name). Neue Widgets müssen `title` im Schema erlauben und in der Kachel (ausblendbar bei kleiner Größe) anzeigen.
+11. Alias anzeigen: Unter dem Feld „FHEM-Device“ steht, falls vorhanden und vom Namen verschieden, „Alias: …“ (Element `data-device-alias`, gefüllt beim Öffnen des Dialogs und nach der Auswahl aus der Geräteliste). Im Widget wird weiterhin der technische Name gespeichert. Auch der Suchdialog zeigt Name und Alias.
 
 Neue Widgets übernehmen diesen Ablauf; Abweichungen werden vorher in `STORIES.md` abgestimmt.
 

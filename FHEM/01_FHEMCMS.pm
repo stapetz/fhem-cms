@@ -600,7 +600,7 @@ sub FHEMCMS_ValidateConfig {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
                 $err = $exact->($widget, 'Widget', ['id', 'type', $body, 'grid'], ['title']);
             } elsif ($widget->{type} eq 'fhem-value') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['unit', 'icon']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['title', 'unit', 'icon']);
             } else {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title']);
             }
@@ -610,7 +610,7 @@ sub FHEMCMS_ValidateConfig {
                 if (ref($widget->{id}) || !defined($widget->{id}) || $widget->{id} !~ $id);
             return "Doppelte Widget-ID '$widget->{id}'" if ($widgetIds{$widget->{id}}++);
             return 'Ungueltiger Widget-Titel'
-                if ($widget->{type} eq 'text' && exists($widget->{title})
+                if (exists($widget->{title})
                     && (ref($widget->{title}) || !defined($widget->{title})
                         || length($widget->{title}) > 64 || $widget->{title} =~ /[\x00-\x1f\x7f]/));
 

@@ -40,12 +40,17 @@ class FHEMCMSValue extends HTMLElement {
         .glyph[hidden] { display: none; }
         .icon { height: min(70cqh, 4rem); width: min(70cqh, 4rem); flex: none; }
         .icon-row .icon { width: 2rem; height: 2rem; }
-        .value { font-size: 1.2rem; flex: 1; min-width: 0; font-size: clamp(0.7rem, min(45cqh, 18cqw), 4.5rem); line-height: 1.1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .value { font-size: 1.2rem; min-width: 0; font-size: clamp(0.7rem, min(45cqh, 18cqw), 4.5rem); line-height: 1.1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .unit { margin-left: 0.25rem; font-size: 0.6em; font-weight: 400; color: #a5c9b2; }
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
           border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
         button:hover { background: #34493e; }
         button:focus-visible, input:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
+        .text { flex: 1; min-width: 0; display: grid; }
+        .ttl { color: #a5c9b2; font-size: clamp(0.55rem, 16cqh, 1rem); line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ttl[hidden] { display: none; }
+        .tile[data-has-title] .value { font-size: clamp(0.7rem, min(34cqh, 18cqw), 4.5rem); }
+        @container (max-height: 3.4rem) { .ttl { display: none; } }
         .gear { padding: 0.1rem 0.4rem; flex: none; }
         @container (max-width: 7rem) { .gear { display: none; } }
         :host([view-only]) [data-open-config] { display: none; }
@@ -90,18 +95,22 @@ class FHEMCMSValue extends HTMLElement {
       </style>
       <article class="tile" data-tile>
         <span class="glyph icon" data-icon aria-hidden="true" hidden></span>
-        <div class="value"><span data-value>–</span><span class="unit" data-unit></span></div>
+        <div class="text"><div class="ttl" data-title hidden></div><div class="value"><span data-value>–</span><span class="unit" data-unit></span></div></div>
         <button type="button" class="gear" data-open-config aria-label="Wert-Anzeige konfigurieren">⚙</button>
       </article>
       <dialog data-dialog aria-labelledby="value-dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="value-dialog-title">Wert-Anzeige konfigurieren</h3>
+          <label>Titel (optional)
+            <input name="title" maxlength="64" autocomplete="off">
+          </label>
           <label>FHEM-Device
             <span class="device-row">
               <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
               <button type="button" data-pick-device>Auswählen …</button>
             </span>
           </label>
+          <span class="hint" data-device-alias></span>
           <label>Reading
             <select name="reading" required></select>
           </label>
@@ -223,6 +232,10 @@ class FHEMCMSValue extends HTMLElement {
       raw !== null && raw !== '' && this.widgetConfig.unit ? this.widgetConfig.unit : '';
     const tile = this.shadowRoot.querySelector('[data-tile]');
     tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''}`;
+    const title = this.shadowRoot.querySelector('[data-title]');
+    title.textContent = this.widgetConfig.title || '';
+    title.hidden = !this.widgetConfig.title;
+    tile.toggleAttribute('data-has-title', Boolean(this.widgetConfig.title));
     const icon = this.shadowRoot.querySelector('[data-icon]');
     const url = this.widgetConfig.icon && this.services ? this.services.iconUrl(this.widgetConfig.icon) : '';
     icon.hidden = !url;
@@ -251,6 +264,8 @@ class FHEMCMSValue extends HTMLElement {
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.device.value = this.widgetConfig.device || '';
+    form.elements.title.value = this.widgetConfig.title || '';
+    this.showAlias();
     form.elements.unit.value = this.widgetConfig.unit || '';
     this.setIcon(this.widgetConfig.icon || '');
     this.shadowRoot.querySelector('[data-icon-picker]').hidden = true;
@@ -261,6 +276,7 @@ class FHEMCMSValue extends HTMLElement {
     this.fillReadings(this.widgetConfig.reading || '');
     try {
       this.devices = await this.services.listAllDevices();
+      this.showAlias();
       this.fillReadings(this.widgetConfig.reading || '');
     } catch (error) {
       this.setDialogError(`Geräteliste nicht verfügbar: ${error.message}`);
@@ -350,8 +366,17 @@ class FHEMCMSValue extends HTMLElement {
         : `${matches.length} Devices`;
   }
 
+  showAlias(device) {
+    const form = this.shadowRoot.querySelector('[data-form]');
+    const name = form.elements.device.value.trim();
+    const found = device || (this.devices || []).find((item) => item.name === name);
+    this.shadowRoot.querySelector('[data-device-alias]').textContent =
+      found && found.alias && found.alias !== name ? `Alias: ${found.alias}` : '';
+  }
+
   pickDevice(device) {
     this.shadowRoot.querySelector('[data-form]').elements.device.value = device.name;
+    this.showAlias(device);
     this.closePicker();
     this.setDialogError('');
     this.fillReadings('');
@@ -435,6 +460,10 @@ class FHEMCMSValue extends HTMLElement {
       throw new Error('Die Einheit enthält ungültige Zeichen');
     }
     const widget = { id: this.widgetConfig.id, type: 'fhem-value', device, reading, grid: { ...this.widgetConfig.grid } };
+    const title = form.elements.title.value.trim();
+    if (title) {
+      widget.title = title;
+    }
     if (unit) {
       widget.unit = unit;
     }

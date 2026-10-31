@@ -418,6 +418,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Soll-Temperatur: Wertebereich aus den Set-Befehlen des Geräts (CUL_HM `desired-temp`), sonst 5–30 °C; 0,5-Schritte, Senden nach 1,5 s.
 - [x] Betriebsart wählbar (CUL_HM `controlMode`, MAX `desiredTemperature auto|eco|comfort|boost|manual`); nur wenn das Gerät den Befehl anbietet. Strikter Client-Befehl `setCommand` (Name und Wert validiert).
 - [x] Thermostat- und Wert-Kachel skalieren ihren Inhalt über Container-Einheiten; bei kleiner Kachel entfallen erst Ventil, dann Batterie/Modus, zuletzt Schieber.
+- [x] Wert-Anzeige hat einen optionalen Titel; alle Widget-Dialoge zeigen den Alias des gewählten Devices (Regeln 10/11 in ENTWICKLUNG.md).
 - Ventil und Batterie (mit Fallback auf Kanäle) waren bereits vorhanden.
 
 ## Später prüfen - Erweiterungen außerhalb des MVP

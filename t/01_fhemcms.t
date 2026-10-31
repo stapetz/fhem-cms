@@ -470,6 +470,13 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
         isnt(FHEMCMS_ValidateConfig($vcfg), undef, "rejects $case->[2]");
         delete $w->{$case->[0]};
     }
+    $w->{title} = 'Wohnzimmer';
+    is(FHEMCMS_ValidateConfig($vcfg), undef, 'fhem-value accepts an optional title');
+    for my $bad ('x' x 65, "a\nb") {
+        $w->{title} = $bad;
+        isnt(FHEMCMS_ValidateConfig($vcfg), undef, 'fhem-value rejects an invalid title');
+    }
+    delete $w->{title};
     $w->{icon} = 'weather/sunny';
     is(FHEMCMS_ValidateConfig($vcfg), undef, 'icon may contain a subdirectory');
 }
