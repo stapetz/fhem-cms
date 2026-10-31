@@ -454,4 +454,33 @@ is(FHEMCMS_Set($pHash, $pName, 'purge', $pName), undef, 'purge removes pages wit
 ok(!-e $pPage, 'media folder is removed with the page');
 FHEMCMS_Define($pHash, "$pName FHEMCMS");
 
+# fhem-value: Einheit und Icon
+{
+    my $vcfg = {schemaVersion => 2, pages => [{id => 'p', title => 'P', widgets => [{id => 'v1', type => 'fhem-value',
+        device => 'Temp', reading => 'temperature', unit => '°C', icon => 'temp_temperature',
+        grid => {col => 1, row => 1, w => 3, h => 1}}]}]};
+    is(FHEMCMS_ValidateConfig($vcfg), undef, 'fhem-value accepts unit and icon');
+    my $w = $vcfg->{pages}[0]{widgets}[0];
+    delete @$w{qw(unit icon)};
+    is(FHEMCMS_ValidateConfig($vcfg), undef, 'unit and icon are optional');
+    for my $case (['unit', '', 'empty unit'], ['unit', 'x' x 17, 'long unit'], ['unit', "a\nb", 'unit with control char'],
+        ['icon', '../etc/passwd', 'icon path traversal'], ['icon', 'a b', 'icon with space'], ['icon', '/abs', 'absolute icon'],
+        ['icon', '', 'empty icon']) {
+        $w->{$case->[0]} = $case->[1];
+        isnt(FHEMCMS_ValidateConfig($vcfg), undef, "rejects $case->[2]");
+        delete $w->{$case->[0]};
+    }
+    $w->{icon} = 'weather/sunny';
+    is(FHEMCMS_ValidateConfig($vcfg), undef, 'icon may contain a subdirectory');
+}
+
+my $iconDir = File::Spec->catdir($modPath, 'www', 'images', 'default', 'sub');
+make_path($iconDir);
+write_file(File::Spec->catfile($modPath, 'www', 'images', 'default', 'lamp.svg'), '<svg/>');
+write_file(File::Spec->catfile($iconDir, 'door.png'), 'x');
+write_file(File::Spec->catfile($modPath, 'www', 'images', 'default', 'notes.txt'), 'x');
+write_file(File::Spec->catfile($modPath, 'www', 'images', 'default', 'bad name.svg'), 'x');
+is_deeply([FHEMCMS_ListIcons()], ['lamp', 'sub/door'], 'lists logical icon names without extension and invalid files');
+like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, 'get icons returns JSON');
+
 done_testing();

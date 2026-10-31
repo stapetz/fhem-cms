@@ -25,6 +25,8 @@ our $FHEMCMS_USAGE_BACKUPS = 20;
 our $FHEMCMS_MAX_HTML = 50000;
 our $FHEMCMS_MAX_MEDIA_BYTES = 3145728;
 our $FHEMCMS_MAX_MEDIA_FILES = 200;
+our $FHEMCMS_MAX_ICONS = 5000;
+my $FHEMCMS_ICON_NAME = qr{\A(?!.*\.\.)[A-Za-z0-9_][A-Za-z0-9_./-]{0,79}\z};
 my $FHEMCMS_MEDIA_NAME = qr/\A[0-9a-f]{32}\.(?:png|jpg|gif)\z/;
 
 sub FHEMCMS_Initialize {
@@ -120,7 +122,11 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListMedia($mediaDir)]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg';
+    if ($cmd eq 'icons') {
+        return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
+    }
+
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg';
 }
 
 sub FHEMCMS_Set {
@@ -594,7 +600,7 @@ sub FHEMCMS_ValidateConfig {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
                 $err = $exact->($widget, 'Widget', ['id', 'type', $body, 'grid'], ['title']);
             } elsif ($widget->{type} eq 'fhem-value') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['unit', 'icon']);
             } else {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title']);
             }
@@ -624,6 +630,15 @@ sub FHEMCMS_ValidateConfig {
                 # keine weiteren Felder
             } elsif ($widget->{type} eq 'fhem-value') {
                 return 'Ungueltiger Wert fuer reading' if (!$isName->($widget->{reading}));
+                return 'Ungueltige Einheit'
+                    if (exists($widget->{unit})
+                        && (ref($widget->{unit}) || !defined($widget->{unit})
+                            || length($widget->{unit}) < 1 || length($widget->{unit}) > 16
+                            || $widget->{unit} =~ /[\x00-\x1f\x7f]/));
+                return 'Ungueltiges Icon'
+                    if (exists($widget->{icon})
+                        && (ref($widget->{icon}) || !defined($widget->{icon})
+                            || $widget->{icon} !~ $FHEMCMS_ICON_NAME));
             } else {
                 return 'Ungueltiger Widget-Titel'
                     if (exists($widget->{title})
@@ -735,6 +750,39 @@ sub FHEMCMS_MediaDir {
     my $mediaDir = File::Spec->catdir($realPage, 'media');
     return ('Das Medienverzeichnis ist ein Symlink') if (-l $mediaDir);
     return (undef, $mediaDir);
+}
+
+# Logische Icon-Namen (wie FHEMWEB sie unter /icons/<name> ausliefert) aus www/images/<Stil>/.
+sub FHEMCMS_ListIcons {
+    my $modPath = $main::attr{global}{modpath};
+    return () if (!defined($modPath) || $modPath eq '');
+    my $imageDir = File::Spec->catdir($modPath, 'www', 'images');
+    my %names;
+    my $scan;
+    $scan = sub {
+        my ($dir, $prefix, $depth) = @_;
+        return if ($depth > 4 || keys(%names) >= $FHEMCMS_MAX_ICONS);
+        opendir(my $dh, $dir) or return;
+        my @entries = sort grep { $_ !~ /\A\./ } readdir($dh);
+        closedir($dh);
+        for my $entry (@entries) {
+            my $path = File::Spec->catfile($dir, $entry);
+            next if (-l $path);
+            if (-d $path) {
+                $scan->($path, $prefix . $entry . '/', $depth + 1);
+            } elsif ($entry =~ /\A(.+)\.(?:svg|png|gif|jpe?g)\z/i) {
+                my $logical = $prefix . $1;
+                next if ($logical !~ $FHEMCMS_ICON_NAME || $logical =~ m{\A(?:weather/|dashboardicons|fhemicon|favicon)});
+                $names{$logical} = 1;
+            }
+        }
+    };
+    if (opendir(my $dh, $imageDir)) {
+        my @styles = sort grep { $_ !~ /\A\./ && -d File::Spec->catdir($imageDir, $_) && !-l File::Spec->catdir($imageDir, $_) } readdir($dh);
+        closedir($dh);
+        $scan->(File::Spec->catdir($imageDir, $_), '', 0) for @styles;
+    }
+    return sort keys %names;
 }
 
 sub FHEMCMS_ListMedia {

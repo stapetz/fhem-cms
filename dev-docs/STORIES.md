@@ -374,6 +374,16 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Das Ausrufezeichen ist im Bearbeitungsmodus immer sichtbar.
 - [x] Klick auf das rote Ausrufezeichen öffnet eine kleine Box mit den Meldungen (statt Tooltip).
 
+### S25 - Wert-Anzeige (Device, Reading, Einheit, Icon)
+
+**Ziel:** Ein einfaches Widget zeigt ein Reading eines Devices an.
+
+- [x] Widget `fhem-value`: Device und Reading werden aus Vorschlagslisten gewählt (freie Eingabe möglich).
+- [x] Optionale Einheit hinter dem Wert: Vorschlagsliste (°C, %, km, …) plus freier Text.
+- [x] Optionales Icon aus dem FHEM-Icon-Verzeichnis vor dem Wert (Auswahl mit Filter; Liste über `get <CMS> icons`).
+- [x] Schema validiert `unit` und `icon` streng; Wert wird live aktualisiert.
+- [x] Verschieben, Skalieren und Löschen wie bei den anderen Kacheln.
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.

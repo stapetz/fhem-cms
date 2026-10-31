@@ -1,5 +1,6 @@
 import '../components/cms-thermostat.js';
 import '../components/cms-text.js';
+import '../components/cms-value.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { GRID_COLUMNS, cellFromPoint, moveWidget, resizeWidget } from './layout.js';
 
@@ -7,6 +8,7 @@ const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
 const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
 const NAV_ID = '__nav';
+const isLiveWidget = (widget) => widget.type === 'thermostat' || widget.type === 'fhem-value';
 const GUIDE_KEY = 'fhem-cms-show-grid';
 const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 12, h: 1 };
 
@@ -87,6 +89,7 @@ class CmsPage {
 
     this.menuButtons = [
       this.button('Thermostat-Kachel', () => this.addWidget('thermostat')),
+      this.button('Wert-Anzeige', () => this.addWidget('fhem-value')),
       this.button('Textbaustein', () => this.addWidget('text'))
     ];
     // Menüs wie in klassischen Programmen: Datei, Bearbeiten, Einfügen, Ansicht.
@@ -763,6 +766,9 @@ class CmsPage {
   services() {
     return {
       listDevices: () => this.listDevices(),
+      listAllDevices: () => this.listAllDevices(),
+      listIcons: () => this.listIcons(),
+      iconUrl: (name) => this.client.iconUrl(name),
       setTarget: (widget, value, device) => this.client.setReading(device || widget.device, widget.readings.target, value),
       listMedia: () => this.client.listMedia(),
       uploadMedia: (bytes) => this.client.uploadMedia(bytes),
@@ -776,6 +782,20 @@ class CmsPage {
       this.deviceCache = await this.client.jsonlist(DEVICE_TYPES);
     }
     return this.deviceCache;
+  }
+
+  async listAllDevices() {
+    if (!this.allDeviceCache) {
+      this.allDeviceCache = await this.client.jsonlist('.*');
+    }
+    return this.allDeviceCache;
+  }
+
+  async listIcons() {
+    if (!this.iconCache) {
+      this.iconCache = await this.client.listIcons();
+    }
+    return this.iconCache;
   }
 
   renderWidgets() {
@@ -1062,6 +1082,11 @@ class CmsPage {
       element.services = this.services();
       element.config = widget;
       element.data = this.snapshots.get(widget.device) || null;
+    } else if (widget.type === 'fhem-value') {
+      element = document.createElement('cms-value');
+      element.services = this.services();
+      element.config = widget;
+      element.data = this.snapshots.get(widget.device) || null;
     } else if (widget.type === 'text') {
       element = document.createElement('cms-text');
       element.services = this.services();
@@ -1089,11 +1114,16 @@ class CmsPage {
   }
 
   addWidget(type) {
-    const id = this.uniqueId(type === 'text' ? 'x' : 't', new Set(this.page.widgets.map((widget) => widget.id)));
-    const grid = { col: 1, row: this.nextFreeRow(), w: type === 'text' ? 6 : 4, h: 2 };
-    const widget = type === 'text'
-      ? { id, type, html: '', grid }
-      : { id, type, device: '', readings: { actual: '', target: '' }, grid };
+    const prefix = { text: 'x', 'fhem-value': 'v' }[type] || 't';
+    const id = this.uniqueId(prefix, new Set(this.page.widgets.map((widget) => widget.id)));
+    const size = { text: { w: 6, h: 2 }, 'fhem-value': { w: 3, h: 1 } }[type] || { w: 4, h: 2 };
+    const grid = { col: 1, row: this.nextFreeRow(), ...size };
+    let widget = { id, type, device: '', readings: { actual: '', target: '' }, grid };
+    if (type === 'text') {
+      widget = { id, type, html: '', grid };
+    } else if (type === 'fhem-value') {
+      widget = { id, type, device: '', reading: '', grid };
+    }
     const element = this.createElementFor(widget);
     element.addEventListener('cms-widget-cancel', () => {
       element.remove();
@@ -1218,7 +1248,7 @@ class CmsPage {
     // Bei einem Fehler bleiben die letzten Werte sichtbar, werden aber als veraltet gekennzeichnet.
     for (const widget of this.page.widgets) {
       const element = this.elements.get(widget.id);
-      if (element && widget.type === 'thermostat') {
+      if (element && isLiveWidget(widget)) {
         element.data = this.snapshots.get(widget.device) || null;
         element.stale = failure !== null && this.lastSuccess !== null ? this.lastSuccess : null;
       }
@@ -1238,7 +1268,7 @@ class CmsPage {
     this.setStatus(`${reason}${since}`);
     for (const widget of this.page.widgets) {
       const element = this.elements.get(widget.id);
-      if (element && widget.type === 'thermostat' && this.lastSuccess !== null) {
+      if (element && isLiveWidget(widget) && this.lastSuccess !== null) {
         element.stale = this.lastSuccess;
       }
     }

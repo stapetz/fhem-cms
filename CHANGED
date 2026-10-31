@@ -1,3 +1,10 @@
+2026-10-31 - Value display widget
+
+New widget (Insert > Value display): shows a reading with optional unit and FHEM icon.
+Restart FHEM (module changed: new get icons), set <CMS> rebuild, hard browser reload.
+
+S25 - Wert-Anzeige (Device, Reading, Einheit, Icon)
+
 2026-10-31 - Toolbar on the left, message box
 
 The edit toolbar is a menu bar (File, Edit, Insert, View), left-aligned and blue; the red exclamation mark opens a message box.

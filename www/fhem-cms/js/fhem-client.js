@@ -1,5 +1,7 @@
 const NAME_PATTERN = /^[A-Za-z0-9_.-]{1,128}$/;
 
+export const ICON_NAME = /^(?!.*\.\.)[A-Za-z0-9_][A-Za-z0-9_./-]{0,79}$/;
+
 export function isValidName(value) {
   return typeof value === 'string' && NAME_PATTERN.test(value) && value !== '.' && value !== '..';
 }
@@ -156,6 +158,23 @@ export class FhemClient {
     if (result) {
       throw new Error(result);
     }
+  }
+
+  async listIcons() {
+    const text = await this.command(`get ${this.cmsDevice} icons`);
+    let list;
+    try {
+      list = JSON.parse(text);
+    } catch (error) {
+      throw new Error(text || 'Die Icons konnten nicht gelesen werden');
+    }
+    return Array.isArray(list) ? list.filter((name) => ICON_NAME.test(name)) : [];
+  }
+
+  iconUrl(name) {
+    return ICON_NAME.test(name)
+      ? `${this.endpoint.pathname}/icons/${name.split('/').map(encodeURIComponent).join('/')}`
+      : '';
   }
 
   async listMedia() {
