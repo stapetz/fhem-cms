@@ -50,6 +50,8 @@ function toNumber(value) {
   return Number.parseFloat(value);
 }
 
+const BATTERY_SVG = '<svg viewBox="0 0 24 14" aria-hidden="true"><rect x="1" y="1" width="19" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="21" y="4.5" width="2" height="5" fill="currentColor"/><rect x="3.5" y="3.5" width="4" height="7" fill="currentColor"/><rect x="9" y="3.5" width="4" height="7" fill="currentColor"/><rect x="14.5" y="3.5" width="3.5" height="7" fill="currentColor"/></svg>';
+
 const MODE_LABELS = {
   auto: 'Auto', manual: 'Manuell', boost: 'Boost', day: 'Tag', night: 'Nacht',
   eco: 'Eco', comfort: 'Komfort'
@@ -132,40 +134,50 @@ class FHEMCMSThermostat extends HTMLElement {
         * { box-sizing: border-box; }
         .tile { height: 100%; overflow: hidden; container-type: size; border: 1px solid #43564a;
           border-radius: 1rem; background: #202e27; }
-        .body { height: 100%; display: flex; flex-direction: column; justify-content: space-between;
-          gap: clamp(0.1rem, 1.5cqh, 0.6rem); padding: clamp(0.25rem, 4cqmin, 1rem);
-          font-size: clamp(0.65rem, 4.2cqmin, 1rem); }
-        header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-        h3 { margin: 0; font-size: 1.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .body { height: 100%; display: flex; flex-direction: column; gap: clamp(0.15rem, 3cqh, 0.5rem);
+          font-size: clamp(0.55rem, 3.6cqmin, 0.8rem); }
+        header { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
+          padding: 0.2em 0.6em 0.2em 0.8em; border-bottom: 1px solid #43564a; min-height: 2em; flex: none; }
+        h3 { margin: 0; font-size: 1.3em; font-weight: 500; font-family: Georgia, 'Times New Roman', serif;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         button {
           font: inherit; color: inherit; cursor: pointer;
-          border: 1px solid #43564a; border-radius: 0.5rem;
+          border: 1px solid #43564a; border-radius: 0.4rem;
           background: #2a3b32; padding: 0.35rem 0.7rem;
         }
         button:hover { background: #34493e; }
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
-        .icon { padding: 0.1rem 0.45rem; flex: none; }
+        .icon { padding: 0 0.4em; line-height: 1.4; flex: none; font-size: 1em; }
         :host([view-only]) [data-open-config] { display: none; }
-        .actual { font-size: clamp(1.1rem, min(26cqh, 15cqw), 3rem); font-weight: 700; line-height: 1.05; white-space: nowrap; }
-        .label { color: #a5c9b2; font-size: 0.85em; }
-        .target-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
-        input[type="range"] { width: 100%; margin: 0; accent-color: #8fd0a8; }
+        .boxes { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.2rem, 2.5cqw, 0.6rem);
+          padding: 0 clamp(0.25rem, 3cqw, 0.7rem); }
+        .box { border: 1px solid #3a4d42; border-radius: 0.2rem; background: #1a261f; min-width: 0; min-height: 0;
+          padding: 0.4em 0.6em; display: flex; flex-direction: column; gap: 0.2em; overflow: hidden; }
+        .label { color: #a5c9b2; font-size: 0.85em; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+          overflow: hidden; text-overflow: ellipsis; }
+        .num { font-size: clamp(0.85rem, min(2.1em, 22cqh), 1.9rem); font-weight: 700; line-height: 1.05; white-space: nowrap; }
+        .unit { font-size: 0.55em; font-weight: 400; color: #a5c9b2; margin-left: 0.2em; }
+        input[type="range"] { margin-top: auto !important; width: 100%; margin: 0; accent-color: #8fd0a8; height: 1em; }
         .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
-        .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 1rem; color: #c4d0c8; font-size: 0.9em; }
-        .meta select { width: auto; max-width: 100%; padding: 0.15rem 0.4rem; font-size: 1em; }
-        .valve[hidden], [data-mode-select][hidden] { display: none; }
-        .bar { position: relative; height: 0.5em; border-radius: 0.25rem;
-          background: linear-gradient(90deg, #3b82f6, #ef4444, #7f1d1d); }
-        .marker { position: absolute; top: -0.2em; width: 0.2em; height: 0.9em; background: #fff; border-radius: 0.1rem; }
-        .status { margin: 0; min-height: 1.2em; font-size: 0.85em; color: #a5c9b2; }
+        .foot { display: flex; align-items: center; gap: 0.5em; flex-wrap: nowrap; padding: 0 clamp(0.25rem, 3cqw, 0.7rem) 0.4em; flex: none; }
+        .foot select { width: auto; flex: none; max-width: 40%; padding: 0.1em 0.3em; font-size: 1em; border-radius: 0.3rem; }
+        .foot [data-mode]:empty, .foot [data-mode-select][hidden], .valve[hidden], .batt:empty { display: none; }
+        .valve { flex: 1; min-width: 2.5em; position: relative; height: 1.5em; border: 1px solid #3a4d42;
+          background: linear-gradient(90deg, #2b7bc0, #2f9b8a 50%, #7a2b3b); display: grid; place-items: center; }
+        .valve span.pct { font-weight: 700; font-size: 0.85em; z-index: 1; }
+        .marker { position: absolute; top: 0; bottom: 0; width: 0.2em; background: #fff; }
+        .batt { display: inline-flex; align-items: center; gap: 0.3em; color: #5fd08f; white-space: nowrap; }
+        .batt svg { width: 1.6em; height: 1em; }
+        .status { margin: 0; padding: 0 0.8em 0.3em; min-height: 0; font-size: 0.8em; color: #a5c9b2; flex: none; }
+        .status:empty { display: none; }
         .status[data-error] { color: #ffb4a8; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
-        /* Je kleiner die Kachel, desto weniger Inhalt: erst Ventil, dann Meta, Titel und zuletzt der Schieber. */
-        @container (max-height: 13rem) { .valve, .status:empty { display: none; } }
-        @container (max-height: 10rem) { .meta [data-battery], .label.is-ist { display: none; } }
-        @container (max-height: 7.5rem) { .meta, header .title-text { display: none; } }
-        @container (max-height: 5rem) { .target-row .label, [data-slider] { display: none; } }
-        @container (max-width: 7rem) { [data-open-config] { display: none; } .target-row .label { display: none; } }
+        /* Je kleiner die Kachel, desto weniger Inhalt: erst Status, dann Batterie, Ventil und Modus, zuletzt der Schieber. */
+        @container (max-height: 11rem) { .batt { display: none; } }
+        @container (max-height: 8.5rem) { .foot, .status { display: none; } }
+        @container (max-height: 6rem) { [data-slider], .box .label.is-soll { display: none; } }
+        @container (max-height: 4rem) { header { display: none; } .label { display: none; } }
+        @container (max-width: 9rem) { .boxes { grid-template-columns: 1fr; } .box.ist { display: none; } [data-open-config] { display: none; } }
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
           padding: 1.25rem; width: min(92vw, 32rem); }
         dialog::backdrop { background: rgb(0 0 0 / 0.6); }
@@ -203,24 +215,22 @@ class FHEMCMSThermostat extends HTMLElement {
             <h3 data-title></h3>
             <button type="button" class="icon" data-open-config aria-label="Kachel konfigurieren">⚙</button>
           </header>
-          <div>
-            <div class="actual" data-actual>–</div>
-            <div class="label is-ist">Ist</div>
-          </div>
-          <div>
-            <div class="target-row">
-              <label class="label" for="slider">Soll</label>
-              <output data-target-out>–</output>
+          <div class="boxes">
+            <div class="box ist">
+              <div class="label">Isttemperatur</div>
+              <div class="num"><span data-actual>–</span><span class="unit" data-actual-unit></span></div>
             </div>
-            <input id="slider" type="range" data-slider min="${TARGET_MIN}" max="${TARGET_MAX}" step="${TARGET_STEP}" disabled>
+            <div class="box soll">
+              <div class="label is-soll">Solltemperatur</div>
+              <div class="num"><span data-target-out>–</span><span class="unit" data-target-unit></span></div>
+              <input id="slider" type="range" data-slider aria-label="Solltemperatur" min="${TARGET_MIN}" max="${TARGET_MAX}" step="${TARGET_STEP}" disabled>
+            </div>
           </div>
-          <div class="meta">
+          <div class="foot">
             <select data-mode-select aria-label="Betriebsart" hidden></select>
-            <span data-mode></span><span data-battery></span>
-          </div>
-          <div class="valve" data-valve hidden>
-            <div class="label">Ventil <span data-valve-text></span></div>
-            <div class="bar"><span class="marker" data-valve-marker></span></div>
+            <span data-mode></span>
+            <div class="valve" data-valve hidden><span class="pct" data-valve-text></span><span class="marker" data-valve-marker></span></div>
+            <span class="batt" data-battery></span>
           </div>
           <p class="status" role="status" data-status></p>
         </div>
@@ -351,10 +361,12 @@ class FHEMCMSThermostat extends HTMLElement {
     const actual = toNumber(actualRaw);
     root.querySelector('[data-actual]').textContent = actual === null
       ? (actualRaw !== undefined && actualRaw !== '' ? actualRaw : '–')
-      : `${actual.toFixed(1)} °C`;
+      : actual.toFixed(1);
+    root.querySelector('[data-actual-unit]').textContent = actual === null ? '' : '°C';
 
     const slider = root.querySelector('[data-slider]');
     const output = root.querySelector('[data-target-out]');
+    const unit = root.querySelector('[data-target-unit]');
     const targetRaw = read(config.readings.target);
     const target = toNumber(targetRaw);
     const control = thermostatControl(group, config.readings.target);
@@ -369,12 +381,15 @@ class FHEMCMSThermostat extends HTMLElement {
     if (!this.pending) {
       if (this.sent) {
         slider.value = String(this.sent.value);
-        output.textContent = `${this.sent.value.toFixed(1)} °C (gesendet)`;
+        output.textContent = this.sent.value.toFixed(1);
+        unit.textContent = '°C';
       } else if (target === null) {
         output.textContent = targetRaw !== undefined && targetRaw !== '' ? targetRaw : '–';
+        unit.textContent = '';
       } else {
         slider.value = String(Math.min(control.max, Math.max(control.min, target)));
-        output.textContent = `${target.toFixed(1)} °C`;
+        output.textContent = target.toFixed(1);
+        unit.textContent = '°C';
       }
     }
 
@@ -405,7 +420,14 @@ class FHEMCMSThermostat extends HTMLElement {
     } else {
       this.renderOptional('[data-mode]', 'Modus', modeValue, config.readings.mode);
     }
-    this.renderOptional('[data-battery]', 'Batterie', read(config.readings.battery), config.readings.battery);
+    const battery = config.readings.battery ? read(config.readings.battery) : undefined;
+    const batteryBox = root.querySelector('[data-battery]');
+    batteryBox.replaceChildren();
+    if (battery !== undefined && battery !== '') {
+      batteryBox.insertAdjacentHTML('beforeend', BATTERY_SVG);
+      batteryBox.append(document.createTextNode(battery));
+      batteryBox.title = `Batterie: ${battery}`;
+    }
 
     const valveRaw = config.readings.valve ? read(config.readings.valve) : undefined;
     const valve = toNumber(valveRaw === undefined ? '' : valveRaw.replace('%', '').trim());
@@ -413,8 +435,8 @@ class FHEMCMSThermostat extends HTMLElement {
     valveBox.hidden = valve === null;
     if (valve !== null) {
       const percent = Math.min(100, Math.max(0, valve));
-      root.querySelector('[data-valve-text]').textContent = `${percent} %`;
-      root.querySelector('[data-valve-marker]').style.left = `calc(${percent}% - 0.1rem)`;
+      root.querySelector('[data-valve-text]').textContent = `${percent}%`;
+      root.querySelector('[data-valve-marker]').style.left = `calc(${percent}% - ${percent / 100 * 0.2}em)`;
     }
 
     if (this.staleSince && !this.pending) {
@@ -440,8 +462,8 @@ class FHEMCMSThermostat extends HTMLElement {
   onSliderInput() {
     const slider = this.shadowRoot.querySelector('[data-slider]');
     this.pending = true;
-    this.shadowRoot.querySelector('[data-target-out]').textContent =
-      `${Number.parseFloat(slider.value).toFixed(1)} °C`;
+    this.shadowRoot.querySelector('[data-target-out]').textContent = Number.parseFloat(slider.value).toFixed(1);
+    this.shadowRoot.querySelector('[data-target-unit]').textContent = '°C';
     this.setStatus('Wird gleich gesendet …');
     window.clearTimeout(this.sendTimer);
     this.sendTimer = window.setTimeout(() => this.sendTarget(), SEND_DELAY_MS);

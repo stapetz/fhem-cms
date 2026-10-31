@@ -378,6 +378,7 @@ Jedes Widget mit Device-Bezug folgt dem Muster der Thermostat-Kachel:
 9. Container-Einheiten (`cqh`/`cqw`) im Shadow-DOM: Der Container (`container-type: size`) muss ein Element innerhalb des Shadow-DOMs sein (z. B. die Kachel), nicht der Host.
 10. Optionaler Titel: Jedes Widget hat im Dialog das Feld „Titel (optional)“ (`title`, höchstens 64 Zeichen, keine Steuerzeichen; im Schema als optionales Feld, in `FHEMCMS_ValidateConfig` für alle Widget-Typen geprüft). Ohne Titel verwendet das Widget einen sinnvollen Ersatz (Alias, Device-Name). Neue Widgets müssen `title` im Schema erlauben und in der Kachel (ausblendbar bei kleiner Größe) anzeigen.
 11. Alias anzeigen: Unter dem Feld „FHEM-Device“ steht, falls vorhanden und vom Namen verschieden, „Alias: …“ (Element `data-device-alias`, gefüllt beim Öffnen des Dialogs und nach der Auswahl aus der Geräteliste). Im Widget wird weiterhin der technische Name gespeichert. Auch der Suchdialog zeigt Name und Alias.
+12. Schriftgrößen: Inhalte in Kacheln sind klein und fließend skalierend (`clamp(min, <n>cqh/cqw, max)` mit kleinen Obergrenzen, z. B. Wert höchstens 1,5 rem, Icon höchstens 1,5 rem, Thermostat-Zahlen höchstens 1,9 rem). Die Thermostat-Kachel folgt der Darstellung des ThermostatDashboard (Titelzeile, Box Ist/Soll, Zeile mit Modus, Ventil, Batterie); Neue Thermostat-ähnliche Widgets übernehmen sie.
 
 Neue Widgets übernehmen diesen Ablauf; Abweichungen werden vorher in `STORIES.md` abgestimmt.
 

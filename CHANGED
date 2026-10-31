@@ -1,5 +1,6 @@
 2026-10-31 - Thermostat writes mode, scales down
 
+Tiles use smaller text and icons; thermostat looks like the ThermostatDashboard.
 Value widget gets an optional title; device dialogs show the alias.
 Thermostat tile can set the operating mode (like ThermostatDashboard), uses the device's setpoint range and scales its content with the tile size.
 Reload the browser (hard), then: set CMS rebuild.

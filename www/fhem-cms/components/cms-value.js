@@ -38,20 +38,20 @@ class FHEMCMSValue extends HTMLElement {
         .glyph { display: inline-block; background-color: var(--cms-icon-color);
           -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
         .glyph[hidden] { display: none; }
-        .icon { height: min(70cqh, 4rem); width: min(70cqh, 4rem); flex: none; }
+        .icon { height: min(48cqh, 1.5rem); width: min(48cqh, 1.5rem); flex: none; }
         .icon-row .icon { width: 2rem; height: 2rem; }
-        .value { font-size: 1.2rem; min-width: 0; font-size: clamp(0.7rem, min(45cqh, 18cqw), 4.5rem); line-height: 1.1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .value { font-size: 1.2rem; min-width: 0; font-size: clamp(0.6rem, min(34cqh, 11cqw), 1.5rem); line-height: 1.1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .unit { margin-left: 0.25rem; font-size: 0.6em; font-weight: 400; color: #a5c9b2; }
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
           border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
         button:hover { background: #34493e; }
         button:focus-visible, input:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
         .text { flex: 1; min-width: 0; display: grid; }
-        .ttl { color: #a5c9b2; font-size: clamp(0.55rem, 16cqh, 1rem); line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ttl { color: #a5c9b2; font-size: clamp(0.5rem, 17cqh, 0.75rem); line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .ttl[hidden] { display: none; }
-        .tile[data-has-title] .value { font-size: clamp(0.7rem, min(34cqh, 18cqw), 4.5rem); }
+        .tile[data-has-title] .value { font-size: clamp(0.6rem, min(26cqh, 11cqw), 1.5rem); }
         @container (max-height: 3.4rem) { .ttl { display: none; } }
-        .gear { padding: 0.1rem 0.4rem; flex: none; }
+        .gear { padding: 0 0.3rem; font-size: 0.75rem; line-height: 1.4; flex: none; }
         @container (max-width: 7rem) { .gear { display: none; } }
         :host([view-only]) [data-open-config] { display: none; }
         dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
