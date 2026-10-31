@@ -38,7 +38,7 @@ class FHEMCMSValue extends HTMLElement {
         header[hidden] { display: none; }
         h3 { margin: 0; font-size: 1.3em; font-weight: 500; font-family: Georgia, 'Times New Roman', serif;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .main { flex: 1; min-height: 0; display: flex; align-items: center; gap: 0.5em; padding: 0 0.7em; }
+        .main { flex: 1; min-height: 0; display: flex; align-items: flex-start; gap: 0.5em; padding: 0.2em 0.7em 0; }
         .gear.solo { position: absolute; top: 0.2rem; right: 0.3rem; font-size: 0.75rem; }
         .tile[data-has-title] .gear.solo { display: none; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }

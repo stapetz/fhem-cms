@@ -134,9 +134,9 @@ class FHEMCMSThermostat extends HTMLElement {
         * { box-sizing: border-box; }
         .tile { height: 100%; overflow: hidden; container-type: size; border: 1px solid #43564a;
           border-radius: 1rem; background: #202e27; }
-        /* Der Inhalt ist rund 10,5 em hoch und 26 em breit; die Schrift richtet sich nach der knapperen Seite, damit er die Kachel ohne Leerraum füllt. */
+        /* Der Inhalt ist rund 10,4 em hoch und 26 em breit, oben ausgerichtet; die Schrift richtet sich nach der knapperen Seite. */
         .body { height: 100%; display: flex; flex-direction: column; justify-content: flex-start;
-          font-size: max(4px, min(8.6cqh, 3.4cqw)); }
+          font-size: max(4px, min(9.6cqh, 3.8cqw)); }
         header { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
           padding: 0.2em 0.6em 0.2em 0.8em; border-bottom: 1px solid #43564a; min-height: 2em; flex: none; }
         h3 { margin: 0; font-size: 1.3em; font-weight: 500; font-family: Georgia, 'Times New Roman', serif;
@@ -150,19 +150,19 @@ class FHEMCMSThermostat extends HTMLElement {
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
         .icon { padding: 0 0.4em; line-height: 1.4; flex: none; font-size: 1em; }
         :host([view-only]) [data-open-config] { display: none; }
-        .boxes { align-self: stretch; margin: auto 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; padding: 0 0.7em; }
+        .boxes { align-self: stretch; margin: 0.6em 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; padding: 0 0.7em; }
         .box { border: 1px solid #3a4d42; border-radius: 0.2rem; background: #1a261f; min-width: 0; min-height: 0;
-          padding: 0.4em 0.6em 0.5em; display: flex; flex-direction: column; gap: 0.25em; overflow: hidden; }
+          padding: 0.3em 0.6em 0.4em; display: flex; flex-direction: column; gap: 0.15em; overflow: hidden; }
         .label { color: #a5c9b2; font-size: 0.78em; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
           overflow: hidden; text-overflow: clip; }
-        .num { font-size: 2.2em; font-weight: 700; line-height: 1.05; white-space: nowrap; }
+        .num { font-size: 1.9em; font-weight: 700; line-height: 1.05; white-space: nowrap; }
         .unit { font-size: 0.55em; font-weight: 400; color: #a5c9b2; margin-left: 0.2em; }
         input[type="range"] { width: 100%; margin: 0.15em 0 0; accent-color: #8fd0a8; height: 1.2em; }
         .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
-        .foot { display: flex; align-self: stretch; align-items: center; gap: 0.6em; flex-wrap: nowrap; padding: 0 0.7em 0.6em; flex: none; }
-        .foot select { appearance: none; -webkit-appearance: none; width: auto; flex: none; max-width: 12em; height: 2.8em; padding: 0.4em 2em 0.4em 0.7em; border: 1px solid #69796f; border-radius: 0.5em; color: #f4f4e9; font: 1em 'Helvetica Neue', sans-serif; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='16'%3E%3Cpath d='M5 1 9 6H1zM5 15 1 10h8z' fill='%23f4f4e9'/%3E%3C/svg%3E") no-repeat right 0.7em center / 0.7em auto, linear-gradient(#7d8a82 0%, #55645b 45%, #26342d 50%, #3a4a41 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+        .foot { display: flex; align-self: stretch; align-items: center; gap: 0.6em; flex-wrap: nowrap; padding: 0 0.7em 0.5em; margin-top: 0.6em; flex: none; }
+        .foot select { appearance: none; -webkit-appearance: none; width: auto; flex: none; max-width: 12em; height: 2.3em; padding: 0.2em 2em 0.2em 0.7em; border: 1px solid #69796f; border-radius: 0.5em; color: #f4f4e9; font: 1em 'Helvetica Neue', sans-serif; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='16'%3E%3Cpath d='M5 1 9 6H1zM5 15 1 10h8z' fill='%23f4f4e9'/%3E%3C/svg%3E") no-repeat right 0.7em center / 0.7em auto, linear-gradient(#7d8a82 0%, #55645b 45%, #26342d 50%, #3a4a41 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
         .foot [data-mode]:empty, .foot [data-mode-select][hidden], .valve[hidden], .batt:empty { display: none; }
-        .valve { flex: 1; min-width: 3em; position: relative; height: 2.8em; border: 1px solid #3a4d42;
+        .valve { flex: 1; min-width: 3em; position: relative; height: 2.3em; border: 1px solid #3a4d42;
           background: linear-gradient(90deg, #2b7bc0, #2f9b8a 50%, #7a2b3b); display: grid; place-items: center; }
         .valve span.pct { font-weight: 700; font-size: 0.85em; z-index: 1; }
         .marker { position: absolute; top: 0; bottom: 0; width: 0.2em; background: #fff; }
