@@ -442,9 +442,9 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 - [x] Widget `fhem-switch` wie `ftui-switch`: Device, Reading für den Zustand, Befehle für an/aus (Auswahl aus den Set-Befehlen), Titel, optionales Icon je Zustand; Klick sendet `set <Device> on|off`.
 - [ ] Offen: abweichende Zustandswerte (z. B. Reading `ON` bei Befehl `on`), Befehle mit Parameter.
 
-### S33 - Taster / Befehlsknopf (Entwurf)
+### S33 - Taster / Befehlsknopf (umgesetzt, Prüfung offen)
 
-- [ ] Widget `fhem-button` wie `ftui-button`: Beschriftung, Icon, ein fester, aus den Set-Befehlen des Devices gewählter Befehl (z. B. `on`, `toggle`, `up`); keine freien Befehle.
+- [x] Widget `fhem-button` wie `ftui-button`: Beschriftung, Icon, ein fester, aus den Set-Befehlen des Devices gewählter Befehl (z. B. `on`, `toggle`, `up`); keine freien Befehle.
 
 ### S34 - Schieberegler (Entwurf)
 

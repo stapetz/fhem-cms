@@ -1,6 +1,7 @@
 2026-10-31 - Thermostat writes mode, scales down
 
 Tiles use smaller text and icons; thermostat looks like the ThermostatDashboard.
+New widget 'Button' (S33): sends one fixed set command (chosen from the device's commands without arguments), optional label and icon.
 New widget 'Switch' (S32): toggles a device with set <Device> on|off, state from a reading, optional icons; placeholder dialog uses filter chips instead of a select.
 New widget 'Free HTML' (S31): own HTML with live placeholders {{Device:reading}}, filters and state classes; see docs/PLATZHALTER.md.
 Placeholders: search dialog for device and reading in free HTML and in the text block; text blocks show live values ({{Device:reading|filter}}), placeholders are editable chips in the editor.

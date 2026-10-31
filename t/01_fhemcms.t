@@ -525,6 +525,28 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     isnt(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-switch requires off');
 }
 
+# fhem-button: fester Befehl
+{
+    my $bcfg = {schemaVersion => 2, pages => [{id => 'p', title => 'P', widgets => [{id => 'b1', type => 'fhem-button',
+        device => 'Lamp', command => 'toggle', label => 'Umschalten', icon => 'light_on', title => 'Lampe',
+        grid => {col => 1, row => 1, w => 3, h => 2}}]}]};
+    is(FHEMCMS_ValidateConfig($bcfg), undef, 'fhem-button accepts a complete config');
+    my $w = $bcfg->{pages}[0]{widgets}[0];
+    for my $case (['command', 'on off'], ['command', 'on;shutdown'], ['command', ''], ['device', 'x y'],
+        ['label', ''], ['label', 'x' x 33], ['label', "a\nb"], ['icon', '../x']) {
+        my ($field, $bad) = @$case;
+        my $old = $w->{$field};
+        $w->{$field} = $bad;
+        isnt(FHEMCMS_ValidateConfig($bcfg), undef, "fhem-button rejects $field");
+        $w->{$field} = $old;
+    }
+    $w->{value} = 'x';
+    isnt(FHEMCMS_ValidateConfig($bcfg), undef, 'fhem-button rejects unknown fields');
+    delete $w->{value};
+    delete $w->{command};
+    isnt(FHEMCMS_ValidateConfig($bcfg), undef, 'fhem-button requires command');
+}
+
 # fhem-value: Einheit und Icon
 {
     my $vcfg = {schemaVersion => 2, pages => [{id => 'p', title => 'P', widgets => [{id => 'v1', type => 'fhem-value',
