@@ -2,6 +2,7 @@
 
 Tiles use smaller text and icons; thermostat looks like the ThermostatDashboard.
 New widget 'Free HTML' (S31): own HTML with live placeholders {{Device:reading}}, filters and state classes; see docs/PLATZHALTER.md.
+Placeholders: search dialog for device and reading in free HTML and in the text block; text blocks show live values ({{Device:reading|filter}}), placeholders are editable chips in the editor.
 Free HTML: values can also be written as attributes (device, reading, filter) like in FTUI.
 Fix: tiles added in the editor can be moved and resized right after saving, without a reload.
 Thermostat: smaller mode select and valve bar, larger side padding.

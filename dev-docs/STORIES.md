@@ -490,6 +490,17 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 
 - [ ] Widgets `fhem-weather` und `fhem-departure` wie in FTUI; brauchen externe Datenquellen und deshalb zuerst eine Entscheidung zur Vertrauensgrenze.
 
+### S45 - Platzhalter suchen und im Textbaustein verwenden (umgesetzt, Prüfung offen)
+
+**Ziel:** FHEM-Werte lassen sich im freien HTML und im Textbaustein ohne Syntaxkenntnis einsetzen; der Textbaustein bleibt ein formatierter Text mit Bildern und Tabellen.
+
+- [x] Gemeinsamer Dialog „Platzhalter suchen“ (`js/placeholder-picker.js`): Device suchen (Name, Alias, Typ, Raum), Reading aus Liste wählen oder eintippen (`@alias`, `@name`, `@type` inklusive; Kanäle werden mit angeboten), optionaler Filter mit Vorschlagsliste, Vorschau des aktuellen Werts.
+- [x] Freies HTML: Knopf „Platzhalter suchen und einfügen“ setzt `{{Device:reading|filter}}` an der Cursorposition ein, wahlweise als Element im FTUI-Stil (`<span device=… reading=…>`). Im Code bleibt der Platzhalter normaler Text; der Dialog sucht und fügt nur ein.
+- [x] Textbaustein: Platzhalter stehen an beliebigen Stellen (Absatz, Überschrift, Tabelle, Liste, fett/farbig) und werden live ausgewertet. Gespeichert wird `{{Device:reading|filter}}` im Text; Server und Schema bleiben unverändert (höchstens 20 verschiedene Devices je Text).
+- [x] Im Bearbeitungsmodus des Textbausteins ist ein Platzhalter ein unteilbarer Baustein (Chip) in der Werkzeugleiste „{{ }}“ eingefügt; ein Klick darauf öffnet den Dialog zum nachträglichen Bearbeiten, Entf löscht ihn.
+- [x] Textbaustein erhält Live-Daten (Abo auf die Devices im Text, Anzeige „veraltet“ bei Verbindungsproblemen).
+- [ ] Offen: Platzhalter in Links und Bildbeschreibungen, Eingabe per Tastatur (Chip ohne Maus bearbeiten).
+
 ## Buglist
 
 Gemeldete Fehler, die noch besprochen werden. Noch nicht umgesetzt.

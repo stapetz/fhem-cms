@@ -620,6 +620,8 @@ sub FHEMCMS_ValidateConfig {
             if ($widget->{type} eq 'text' && exists($widget->{html})) {
                 my $htmlError = FHEMCMS_ValidateHtml($widget->{html});
                 return "Ungueltiger HTML-Text: $htmlError" if (defined($htmlError));
+                my %placeholderDevice = map { $_ => 1 } ($widget->{html} =~ /\{\{\s*([A-Za-z0-9_.-]+):/g);
+                return 'Zu viele Devices in Platzhaltern (hoechstens 20)' if (keys(%placeholderDevice) > 20);
             } elsif ($widget->{type} eq 'text') {
                 my $text = $widget->{markdown};
                 return 'Ungueltiger Markdown-Text'

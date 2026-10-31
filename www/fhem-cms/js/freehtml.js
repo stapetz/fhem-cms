@@ -181,7 +181,78 @@ function applyFilter(value, filter) {
   }
 }
 
-function formatValue(found, filters) {
+export function isValidDeviceName(text) {
+  return DEVICE_ATTR.test(text);
+}
+
+export function isValidReadingName(text) {
+  return READING_ATTR.test(text);
+}
+
+export function isValidFilter(text) {
+  return FILTER_ATTR.test(text);
+}
+
+export function placeholderText(device, reading, filter = '') {
+  const chain = String(filter).trim();
+  return `{{${device}:${reading}${chain ? `|${chain}` : ''}}}`;
+}
+
+export function elementText(device, reading, filter = '') {
+  const chain = String(filter).trim();
+  return `<span device="${device}" reading="${reading}"${chain ? ` filter="${chain}"` : ''}></span>`;
+}
+
+// Zerlegt Text in Textstücke und Platzhalter: Strings oder { device, reading, filter }.
+export function splitPlaceholders(text) {
+  const parts = [];
+  let last = 0;
+  for (const match of String(text).matchAll(PLACEHOLDER)) {
+    if (match.index > last) {
+      parts.push(text.slice(last, match.index));
+    }
+    parts.push({ device: match[1], reading: match[2], filter: match[3].trim().replace(/^\|\s*/, '') });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) {
+    parts.push(text.slice(last));
+  }
+  return parts;
+}
+
+// Sucht ein Reading in einer Gruppe [Hauptdevice, Kanäle …]; Pseudo-Readings @alias, @name, @type.
+export function lookupValue(groups, device, reading) {
+  const group = groups?.get(device);
+  if (!group) {
+    return null;
+  }
+  if (reading.startsWith('@')) {
+    const field = reading.slice(1);
+    return ['alias', 'name', 'type'].includes(field) ? (group[0][field] ?? null) : null;
+  }
+  for (const item of group) {
+    if (item.readings && Object.prototype.hasOwnProperty.call(item.readings, reading)) {
+      return item.readings[reading];
+    }
+  }
+  return null;
+}
+
+// Ersetzt Platzhalter in allen Textknoten (außer in <style>).
+export function substituteIn(root, lookup) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const texts = [];
+  while (walker.nextNode()) {
+    if (walker.currentNode.parentNode?.localName !== 'style' && walker.currentNode.nodeValue.includes('{{')) {
+      texts.push(walker.currentNode);
+    }
+  }
+  for (const node of texts) {
+    node.nodeValue = substitute(node.nodeValue, lookup);
+  }
+}
+
+export function formatValue(found, filters) {
   let value = found === null || found === undefined ? '' : String(found);
   for (const filter of filters.split('|').map((part) => part.trim()).filter(Boolean)) {
     value = applyFilter(value, filter);
@@ -211,16 +282,7 @@ function compare(actual, operator, expected) {
 // Erzeugt aus dem Template eine Kopie mit eingesetzten Werten und gesetzten Bedingungsklassen.
 export function renderTemplate(template, lookup) {
   const copy = template.cloneNode(true);
-  const walker = document.createTreeWalker(copy, NodeFilter.SHOW_TEXT);
-  const texts = [];
-  while (walker.nextNode()) {
-    if (walker.currentNode.parentNode?.localName !== 'style') {
-      texts.push(walker.currentNode);
-    }
-  }
-  for (const node of texts) {
-    node.nodeValue = substitute(node.nodeValue, lookup);
-  }
+  substituteIn(copy, lookup);
   const container = document.createElement('div');
   container.append(copy);
   // FTUI-Schreibweise: <span device="X" reading="Y" filter="round(1)"></span> wird durch den Wert ersetzt.

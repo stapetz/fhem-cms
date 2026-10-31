@@ -1,3 +1,4 @@
+import { lookupValue, substituteIn } from '../js/freehtml.js';
 import { renderMarkdown } from '../js/markdown.js';
 import { MAX_HTML, contentCss, createEditor, editorCss, markdownToHtml, renderHtml } from '../js/richtext.js';
 
@@ -9,6 +10,7 @@ class FHEMCMSText extends HTMLElement {
     this.services = null;
     this.isNew = false;
     this.editor = null;
+    this.groups = null;
   }
 
   connectedCallback() {
@@ -26,6 +28,7 @@ class FHEMCMSText extends HTMLElement {
         ${contentCss('.body')}
         .body h4, .body h5 { margin: 0.8rem 0 0.4rem; }
         ${editorCss()}
+        .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
           border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
         button:hover { background: #34493e; }
@@ -100,7 +103,15 @@ class FHEMCMSText extends HTMLElement {
     return this.widgetConfig;
   }
 
-  set data(_value) {}
+  // Map Device -> [Hauptdevice, Kanäle …] für Platzhalter im Text
+  set data(value) {
+    this.groups = value instanceof Map ? value : null;
+    this.render();
+  }
+
+  set stale(value) {
+    this.shadowRoot.querySelector('.tile')?.toggleAttribute('data-stale', Boolean(value));
+  }
 
   render() {
     const body = this.shadowRoot.querySelector('[data-body]');
@@ -110,9 +121,13 @@ class FHEMCMSText extends HTMLElement {
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
     title.hidden = !this.widgetConfig.title;
-    body.replaceChildren(typeof this.widgetConfig.html === 'string'
-      ? renderHtml(this.widgetConfig.html)
-      : renderMarkdown(this.widgetConfig.markdown || ''));
+    if (typeof this.widgetConfig.html === 'string') {
+      const fragment = renderHtml(this.widgetConfig.html);
+      substituteIn(fragment, (device, reading) => lookupValue(this.groups, device, reading));
+      body.replaceChildren(fragment);
+    } else {
+      body.replaceChildren(renderMarkdown(this.widgetConfig.markdown || ''));
+    }
   }
 
   openConfig(options = {}) {

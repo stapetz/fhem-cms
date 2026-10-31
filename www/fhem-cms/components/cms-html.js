@@ -1,4 +1,5 @@
-import { MAX_FREE_DEVICES, checkSource, extractDevices, renderTemplate, sanitize } from '../js/freehtml.js';
+import { MAX_FREE_DEVICES, checkSource, elementText, extractDevices, lookupValue, placeholderText, renderTemplate, sanitize } from '../js/freehtml.js';
+import { openPlaceholderPicker } from '../js/placeholder-picker.js';
 
 const HELP_URL = 'https://github.com/stapetz/fhem-cms/blob/dev/docs/PLATZHALTER.md';
 const EXAMPLE = `<div class="box">
@@ -58,6 +59,7 @@ class FHEMCMSHtml extends HTMLElement {
         details pre { padding: 0.5rem; overflow: auto; }
         details ul { margin: 0.4rem 0; padding-left: 1.2rem; }
         a { color: #8fd0a8; }
+        .row { display: flex; }
         .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
         .danger { margin-right: auto; border-color: #7f3b33; }
@@ -77,6 +79,7 @@ class FHEMCMSHtml extends HTMLElement {
           <label>HTML-Code
             <textarea name="html" spellcheck="false" autocomplete="off" placeholder="${EXAMPLE.replace(/"/g, '&quot;')}"></textarea>
           </label>
+          <div class="row"><button type="button" data-insert-placeholder>Platzhalter suchen und einfügen …</button></div>
           <details>
             <summary>Platzhalter-Hilfe</summary>
             <p>Werte aus FHEM setzt du mit Platzhaltern ein; sie werden live aktualisiert:</p>
@@ -112,6 +115,7 @@ class FHEMCMSHtml extends HTMLElement {
       this.onSave();
     });
     $('[data-form]').elements.html.addEventListener('input', () => this.showDevices());
+    $('[data-insert-placeholder]').addEventListener('click', () => this.insertPlaceholder());
     this.render();
   }
 
@@ -136,20 +140,7 @@ class FHEMCMSHtml extends HTMLElement {
   }
 
   lookup(device, reading) {
-    const group = this.groups?.get(device);
-    if (!group) {
-      return null;
-    }
-    if (reading.startsWith('@')) {
-      const field = reading.slice(1);
-      return ['alias', 'name', 'type'].includes(field) ? (group[0][field] ?? null) : null;
-    }
-    for (const item of group) {
-      if (item.readings && Object.prototype.hasOwnProperty.call(item.readings, reading)) {
-        return item.readings[reading];
-      }
-    }
-    return null;
+    return lookupValue(this.groups, device, reading);
   }
 
   render() {
@@ -167,6 +158,24 @@ class FHEMCMSHtml extends HTMLElement {
     this.shadowRoot.querySelector('[data-title]').textContent = title;
     this.shadowRoot.querySelector('[data-header]').hidden = !title;
     this.shadowRoot.querySelector('[data-tile]').toggleAttribute('data-has-title', Boolean(title));
+  }
+
+  // Fügt den gewählten Platzhalter an der Cursorposition des Codes ein (im Code bleibt er normaler Text).
+  async insertPlaceholder() {
+    const area = this.shadowRoot.querySelector('[data-form]').elements.html;
+    const start = area.selectionStart ?? area.value.length;
+    const end = area.selectionEnd ?? start;
+    const result = await openPlaceholderPicker({ services: this.services, allowElement: true });
+    if (!result) {
+      area.focus();
+      return;
+    }
+    const text = result.asElement
+      ? elementText(result.device, result.reading, result.filter)
+      : placeholderText(result.device, result.reading, result.filter);
+    area.setRangeText(text, start, end, 'end');
+    area.focus();
+    area.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   showDevices() {

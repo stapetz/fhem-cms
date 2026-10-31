@@ -2,6 +2,12 @@
 
 Die Kachel **Freies HTML** (Menü *Einfügen*) zeigt eigenen HTML-Code an und setzt Werte aus FHEM live ein. Der Code wird bei der Anzeige bereinigt; es gibt bewusst keine Skripte.
 
+## Platzhalter suchen statt tippen
+
+Im Dialog der Kachel **Freies HTML** öffnet der Knopf *Platzhalter suchen und einfügen …* eine Suche: Device nach Name, Alias, Typ oder Raum suchen, ein Reading aus der Liste wählen (mit aktuellem Wert), optional einen Filter hinzufügen. Der Dialog zeigt den aktuellen Wert und fügt den Platzhalter an der Cursorposition ein. Mit dem Haken *Als Element schreiben* entsteht die Attribut-Schreibweise.
+
+Dieselbe Suche gibt es im **Textbaustein** (Knopf `{{ }}` in der Werkzeugleiste). Dort erscheint der Platzhalter als grüner Baustein im Text; ein Klick darauf öffnet die Suche zum nachträglichen Ändern, die Entf-Taste löscht ihn. Im Textbaustein kannst du formatierten Text, Bilder und Tabellen mit Platzhaltern mischen, z. B. in einer Tabellenzelle oder mitten im Satz. Intern wird er als `{{Device:reading|filter}}` gespeichert; Filter und `@alias` funktionieren wie hier beschrieben. Das Element `device`/`reading` und die Zustandsklassen gibt es nur im freien HTML.
+
 ## Platzhalter
 
 Ein Platzhalter hat die Form `{{Device:reading}}`:

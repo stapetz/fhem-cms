@@ -454,6 +454,18 @@ is(FHEMCMS_Set($pHash, $pName, 'purge', $pName), undef, 'purge removes pages wit
 ok(!-e $pPage, 'media folder is removed with the page');
 FHEMCMS_Define($pHash, "$pName FHEMCMS");
 
+# text: Platzhalter im Textbaustein
+{
+    my $tcfg = {schemaVersion => 2, pages => [{id => 'p', title => 'P', widgets => [{id => 'x1', type => 'text',
+        html => '<p>Es sind {{Garten:temperature|round(1)|suffix( C)}} Grad.</p><table><tbody><tr><td>{{Lamp:state|map(on=An,off=Aus)}}</td></tr></tbody></table>',
+        grid => {col => 1, row => 1, w => 3, h => 2}}]}]};
+    is(FHEMCMS_ValidateConfig($tcfg), undef, 'text accepts placeholders');
+    $tcfg->{pages}[0]{widgets}[0]{html} = '<p>' . join(' ', map { "{{Dev$_:state}}" } 1 .. 21) . '</p>';
+    isnt(FHEMCMS_ValidateConfig($tcfg), undef, 'text rejects more than 20 placeholder devices');
+    $tcfg->{pages}[0]{widgets}[0]{html} = '<p>' . join(' ', map { "{{Dev" . ($_ % 20) . ":state}}" } 1 .. 40) . '</p>';
+    is(FHEMCMS_ValidateConfig($tcfg), undef, 'text accepts repeated placeholder devices');
+}
+
 # fhem-html: freies HTML mit Platzhaltern
 {
     my $hcfg = {schemaVersion => 2, pages => [{id => 'p', title => 'P', widgets => [{id => 'h1', type => 'fhem-html',

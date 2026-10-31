@@ -2,6 +2,9 @@
 // Der Cleaner baut aus einem inerten DOM (DOMParser) ein neues Fragment und ist die einzige Quelle
 // fuer Rendern und Speichern. Er muss zur Allowlist in FHEMCMS_ValidateHtml (01_FHEMCMS.pm) passen.
 
+import { placeholderText, splitPlaceholders } from './freehtml.js';
+import { openPlaceholderPicker } from './placeholder-picker.js';
+
 export const MAX_HTML = 50000;
 export const MAX_IMAGE_BYTES = 3145728;
 
@@ -265,6 +268,9 @@ export function editorCss() {
     .rt-handle { position: absolute; width: 1.1rem; height: 1.1rem; padding: 0; min-width: 0; border-radius: 0.25rem;
       background: #8fd0a8; border: 2px solid #17211d; cursor: nwse-resize; touch-action: none; z-index: 2; }
     .rt-handle[hidden] { display: none; }
+    .cms-ph { display: inline-block; padding: 0 0.45em; border-radius: 0.8em; background: #2f5a43; color: #d9f2e2;
+      border: 1px solid #8fd0a8; font-size: 0.9em; cursor: pointer; user-select: all; white-space: nowrap; }
+    .cms-ph:hover { background: #3d7157; }
     ${contentCss('.editor-area')}
   `;
 }
@@ -293,6 +299,7 @@ const BUTTONS = [
   { label: 'Link', title: 'Link einfügen', panel: 'link' },
   { label: 'Bild', title: 'Bild einfügen', panel: 'image' },
   { label: 'Tabelle', title: 'Tabelle', panel: 'table' },
+  { label: '{{ }}', title: 'Platzhalter für einen FHEM-Wert einfügen (Device suchen, Reading wählen)', placeholder: true },
   null,
   { label: '↶', title: 'Rückgängig', cmd: 'undo' },
   { label: '↷', title: 'Wiederholen', cmd: 'redo' },
@@ -322,6 +329,44 @@ function field(type, placeholder, label) {
   return input;
 }
 
+// Im Editor ist ein Platzhalter ein unteilbarer Baustein; gespeichert wird er als Text {{Device:reading|filter}}.
+function makeChip({ device, reading, filter }) {
+  const chip = document.createElement('span');
+  chip.className = 'cms-ph';
+  chip.contentEditable = 'false';
+  chip.setAttribute('role', 'button');
+  chip.dataset.device = device;
+  chip.dataset.reading = reading;
+  chip.dataset.filter = filter || '';
+  chip.textContent = `${device}:${reading}${filter ? ` | ${filter}` : ''}`;
+  chip.title = 'Klicken, um den Platzhalter zu bearbeiten';
+  return chip;
+}
+
+function chipify(root) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const texts = [];
+  while (walker.nextNode()) {
+    if (walker.currentNode.nodeValue.includes('{{')) {
+      texts.push(walker.currentNode);
+    }
+  }
+  for (const node of texts) {
+    const parts = splitPlaceholders(node.nodeValue);
+    if (parts.some((part) => typeof part !== 'string')) {
+      node.replaceWith(...parts.map((part) => (typeof part === 'string' ? document.createTextNode(part) : makeChip(part))));
+    }
+  }
+}
+
+function serializeArea(area) {
+  const copy = area.cloneNode(true);
+  for (const chip of copy.querySelectorAll('.cms-ph')) {
+    chip.replaceWith(document.createTextNode(placeholderText(chip.dataset.device, chip.dataset.reading, chip.dataset.filter)));
+  }
+  return cleanHtml(copy.innerHTML);
+}
+
 export function createEditor({ root, services, html, onError }) {
   const wrapper = document.createElement('div');
   wrapper.className = 'rt';
@@ -336,6 +381,7 @@ export function createEditor({ root, services, html, onError }) {
   area.setAttribute('aria-multiline', 'true');
   area.setAttribute('aria-label', 'Text');
   area.append(cleanToFragment(html));
+  chipify(area);
   let saved = null;
   let selectedImage = null;
   const panels = {};
@@ -422,7 +468,14 @@ export function createEditor({ root, services, html, onError }) {
       continue;
     }
     bar.append(button(spec.label, spec.title, () => {
-      if (spec.panel) {
+      if (spec.placeholder) {
+        remember();
+        openPlaceholderPicker({ services }).then((result) => {
+          if (result) {
+            insertNode(makeChip(result));
+          }
+        });
+      } else if (spec.panel) {
         showPanel(spec.panel);
       } else if (spec.block) {
         exec('formatBlock', `<${spec.block}>`);
@@ -777,6 +830,18 @@ export function createEditor({ root, services, html, onError }) {
   }
 
   area.addEventListener('click', (event) => {
+    const chip = event.target instanceof Element ? event.target.closest('.cms-ph') : null;
+    if (chip) {
+      openPlaceholderPicker({
+        services,
+        initial: { device: chip.dataset.device, reading: chip.dataset.reading, filter: chip.dataset.filter }
+      }).then((result) => {
+        if (result) {
+          chip.replaceWith(makeChip(result));
+        }
+      });
+      return;
+    }
     selectImage(event.target instanceof HTMLImageElement ? event.target : null);
   });
 
@@ -800,7 +865,7 @@ export function createEditor({ root, services, html, onError }) {
   return {
     element: wrapper,
     getHtml() {
-      return cleanHtml(area.innerHTML);
+      return serializeArea(area);
     },
     destroy() {
       document.removeEventListener('selectionchange', remember);

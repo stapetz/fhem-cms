@@ -2,6 +2,7 @@ import '../components/cms-thermostat.js';
 import '../components/cms-text.js';
 import '../components/cms-value.js';
 import '../components/cms-html.js';
+import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { GRID_COLUMNS, cellFromPoint, moveWidget, resizeWidget } from './layout.js';
 
@@ -9,10 +10,21 @@ const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
 const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
 const NAV_ID = '__nav';
-const isLiveWidget = (widget) => widget.type === 'thermostat' || widget.type === 'fhem-value' || widget.type === 'fhem-html';
-// Daten einer Kachel: ein Device oder (freies HTML) die Map aller verwendeten Devices.
-const dataFor = (widget, snapshots) => (widget.type === 'fhem-html'
-  ? new Map((widget.devices || []).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
+// Devices einer Kachel: Thermostat und Wert haben eines, freies HTML eine Liste, Texte nennen sie in Platzhaltern.
+const devicesOf = (widget) => {
+  if (widget.type === 'fhem-html') {
+    return widget.devices || [];
+  }
+  if (widget.type === 'text') {
+    return extractDevices(widget.html || '').slice(0, MAX_FREE_DEVICES);
+  }
+  return [widget.device];
+};
+const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-html'].includes(widget.type)
+  || (widget.type === 'text' && devicesOf(widget).length > 0);
+// Daten einer Kachel: ein Device oder (freies HTML, Text) die Map aller verwendeten Devices.
+const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.type === 'text'
+  ? new Map(devicesOf(widget).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
   : snapshots.get(widget.device) || null);
 const GUIDE_KEY = 'fhem-cms-show-grid';
 const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 12, h: 1 };
@@ -785,7 +797,7 @@ class CmsPage {
   }
 
   devices() {
-    return [...new Set(this.page.widgets.flatMap((widget) => (widget.type === 'fhem-html' ? widget.devices || [] : [widget.device])).filter(isValidName))];
+    return [...new Set(this.page.widgets.flatMap(devicesOf).filter(isValidName))];
   }
 
   services() {
@@ -1138,6 +1150,7 @@ class CmsPage {
       element = document.createElement('cms-text');
       element.services = this.services();
       element.config = widget;
+      element.data = dataFor(widget, this.snapshots);
     } else {
       element = document.createElement('p');
       element.className = 'cms-unsupported';
