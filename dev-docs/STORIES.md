@@ -236,11 +236,36 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - Tests und Installationsschritte sind für Entwickler nachvollziehbar.
 - Der Stand ist erst nach ausdrücklicher Freigabe zur Veröffentlichung auf `main` vorgesehen.
 
+## Geplante Folgestories
+
+### S11 - Bildgröße höher erlauben
+
+**Ziel:** Handyfotos ohne Handarbeit nutzen können.
+
+- [ ] Größenlimit für Uploads anheben (derzeit 1 MiB in `$FHEMCMS_MAX_MEDIA_BYTES` und `MAX_IMAGE_BYTES`).
+- [ ] POST-Größe über FHEMWEB und nginx (`client_max_body_size`) messen und das Ergebnis dokumentieren.
+- [ ] Optional: Bilder vor dem Upload im Browser verkleinern (Canvas, z. B. höchstens 1600 px Kantenlänge); Auswirkung auf Transparenz und GIF-Animation klären.
+
+### S12 - Medienverwaltung
+
+**Ziel:** Alle Bilder (und später weitere Medien-Assets) über eine eigene Oberfläche verwalten.
+
+- [ ] Medienverwaltung als eigene Oberfläche mit Liste aller Assets und direktem Upload.
+- [ ] Anzeige je Asset, ob es verwendet wird und auf welchen Seiten.
+- [ ] Löschen aus der Medienverwaltung; bei verwendeten Assets erscheint vorher ein Warndialog. Der Löschbefehl im Modul prüft strikt (nur MD5-Dateinamen, keine Pfade).
+- [ ] Der Texteditor ersetzt „Bild hochladen“ durch „Bild auswählen / hochladen“, das direkt die Medienverwaltung öffnet, in der ein Bild hochgeladen oder ein vorhandenes gewählt wird.
+- [ ] Konzept für weitere Asset-Typen und deren Sicherheitsregeln (MIME-Typen von FHEMWEB beachten).
+
+**Akzeptanzkriterien**
+
+- Verwendete und unverwendete Bilder sind unterscheidbar, die Fundstellen sind sichtbar.
+- Ein verwendetes Bild wird nie ohne Warnung gelöscht.
+- Bedienung ist mit Maus, Touch und Tastatur möglich.
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.
 
-- Medienverwaltung: einzelne Bilder löschen, ungenutzte Bilder erkennen (Upload selbst ist umgesetzt).
 - Schreibende Widgets und FHEM-Befehle nach separater Sicherheitsfreigabe.
 - Kalender-, Wetter- und RSS-Komponenten einschließlich externer Vertrauensgrenzen.
 - Plugin-Vertrag, Versionskompatibilität und Isolation von Drittanbieter-Code.
