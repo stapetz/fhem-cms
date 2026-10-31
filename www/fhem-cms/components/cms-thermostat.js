@@ -132,14 +132,14 @@ class FHEMCMSThermostat extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { height: 100%; overflow: hidden; container-type: size; border: 1px solid #43564a;
-          border-radius: 1rem; background: #202e27; }
+        .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid #7f8c84;
+          border-radius: 1.4rem; background: #202e27; }
         /* Der Inhalt ist rund 10,4 em hoch und 26 em breit, oben ausgerichtet; die Schrift richtet sich nach der knapperen Seite. */
         .body { height: 100%; display: flex; flex-direction: column; justify-content: flex-start;
-          font-size: max(4px, min(9.6cqh, 3.8cqw)); }
+          font-size: max(4px, min(9.2cqh, 4cqw)); }
         header { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
-          padding: 0.2em 0.6em 0.2em 0.8em; border-bottom: 1px solid #43564a; min-height: 2em; flex: none; }
-        h3 { margin: 0; font-size: 1.3em; font-weight: 500; font-family: Georgia, 'Times New Roman', serif;
+          padding: 0.3em 1.6rem 0 1.1em; flex: none; }
+        h3 { margin: 0; font-size: 1.05em; font-weight: 400; color: #a5c9b2;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         button {
           font: inherit; color: inherit; cursor: pointer;
@@ -148,9 +148,9 @@ class FHEMCMSThermostat extends HTMLElement {
         }
         button:hover { background: #34493e; }
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
-        .icon { padding: 0 0.4em; line-height: 1.4; flex: none; font-size: 1em; }
+        .icon { position: absolute; top: 0.2rem; right: 0.3rem; padding: 0 0.35em; line-height: 1.4; font-size: 0.75rem; z-index: 1; }
         :host([view-only]) [data-open-config] { display: none; }
-        .boxes { align-self: stretch; margin: 0.6em 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; padding: 0 0.7em; }
+        .boxes { align-self: stretch; margin: 0.4em 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; padding: 0 0.7em; }
         .box { border: 1px solid #3a4d42; border-radius: 0.2rem; background: #1a261f; min-width: 0; min-height: 0;
           padding: 0.3em 0.6em 0.4em; display: flex; flex-direction: column; gap: 0.15em; overflow: hidden; }
         .label { color: #a5c9b2; font-size: 0.78em; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
@@ -159,7 +159,7 @@ class FHEMCMSThermostat extends HTMLElement {
         .unit { font-size: 0.55em; font-weight: 400; color: #a5c9b2; margin-left: 0.2em; }
         input[type="range"] { width: 100%; margin: 0.15em 0 0; accent-color: #8fd0a8; height: 1.2em; }
         .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
-        .foot { display: flex; align-self: stretch; align-items: center; gap: 0.6em; flex-wrap: nowrap; padding: 0 0.7em 0.5em; margin-top: 0.6em; flex: none; }
+        .foot { display: flex; align-self: stretch; align-items: center; gap: 0.6em; flex-wrap: nowrap; padding: 0 0.7em 0.5em; margin-top: 0.5em; flex: none; }
         .foot select { appearance: none; -webkit-appearance: none; width: auto; flex: none; max-width: 12em; height: 2.3em; padding: 0.2em 2em 0.2em 0.7em; border: 1px solid #69796f; border-radius: 0.5em; color: #f4f4e9; font: 1em 'Helvetica Neue', sans-serif; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='16'%3E%3Cpath d='M5 1 9 6H1zM5 15 1 10h8z' fill='%23f4f4e9'/%3E%3C/svg%3E") no-repeat right 0.7em center / 0.7em auto, linear-gradient(#7d8a82 0%, #55645b 45%, #26342d 50%, #3a4a41 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
         .foot [data-mode]:empty, .foot [data-mode-select][hidden], .valve[hidden], .batt:empty { display: none; }
         .valve { flex: 1; min-width: 3em; position: relative; height: 2.3em; border: 1px solid #3a4d42;

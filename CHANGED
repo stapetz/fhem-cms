@@ -1,6 +1,7 @@
 2026-10-31 - Thermostat writes mode, scales down
 
 Tiles use smaller text and icons; thermostat looks like the ThermostatDashboard.
+Tiles in FTUI style: thin rounded frame, small title label, gear only in edit mode.
 Content is top-aligned and more compact.
 Mode select looks like the dashboard button.
 Value widget gets an optional title; device dialogs show the alias.

@@ -31,16 +31,15 @@ class FHEMCMSValue extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid #43564a; border-radius: 1rem;
+        .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid #7f8c84; border-radius: 1.4rem;
           background: #202e27; display: flex; flex-direction: column; }
         header { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; flex: none;
-          padding: 0.15em 0.5em 0.15em 0.8em; border-bottom: 1px solid #43564a; font-size: max(5px, min(11cqh, 4cqw)); }
+          padding: 0.4em 1.6rem 0 1.1em; font-size: max(5px, min(13cqh, 5cqw)); }
         header[hidden] { display: none; }
-        h3 { margin: 0; font-size: 1.3em; font-weight: 500; font-family: Georgia, 'Times New Roman', serif;
+        h3 { margin: 0; font-size: 1.1em; font-weight: 400; color: #a5c9b2; font-family: inherit;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .main { flex: 1; min-height: 0; display: flex; align-items: flex-start; gap: 0.5em; padding: 0.2em 0.7em 0; }
+        .main { flex: 1; min-height: 0; display: flex; align-items: flex-start; gap: 0.5em; padding: 0.1em 0.8em 0; }
         .gear.solo { position: absolute; top: 0.2rem; right: 0.3rem; font-size: 0.75rem; }
-        .tile[data-has-title] .gear.solo { display: none; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         :host { --cms-icon-color: #8fd0a8; }
         .glyph { display: inline-block; background-color: var(--cms-icon-color);
@@ -56,9 +55,8 @@ class FHEMCMSValue extends HTMLElement {
           border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
         button:hover { background: #34493e; }
         button:focus-visible, input:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
-        .tile[data-has-title] { --vh: 27cqh; }
+        .tile[data-has-title] { --vh: 26cqh; }
         .gear { padding: 0 0.35em; font-size: 1em; line-height: 1.4; flex: none; }
-        header .gear { font-size: 0.9em; }
         @container (max-height: 3rem) { header { display: none; } .tile[data-has-title] { --vh: 38cqh; } }
         @container (max-width: 6rem) { .gear { display: none; } }
         :host([view-only]) [data-open-config] { display: none; }
@@ -104,7 +102,6 @@ class FHEMCMSValue extends HTMLElement {
       <article class="tile" data-tile>
         <header data-header hidden>
           <h3 data-title></h3>
-          <button type="button" class="gear" data-open-config aria-label="Wert-Anzeige konfigurieren">⚙</button>
         </header>
         <button type="button" class="gear solo" data-open-config aria-label="Wert-Anzeige konfigurieren">⚙</button>
         <div class="main">
