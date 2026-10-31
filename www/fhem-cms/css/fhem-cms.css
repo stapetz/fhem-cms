@@ -64,9 +64,21 @@ body {
   gap: 0.25rem;
 }
 
-.cms-nav-row span {
+.cms-nav-name {
   flex: 1;
   overflow-wrap: anywhere;
+}
+
+.cms-nav-grip {
+  cursor: grab;
+  padding: 0.25rem 0.4rem;
+  touch-action: none;
+  user-select: none;
+}
+
+.cms-nav-row.is-dragging {
+  opacity: 0.6;
+  outline: 1px dashed #7fb68f;
 }
 
 .cms-nav-dialog select {

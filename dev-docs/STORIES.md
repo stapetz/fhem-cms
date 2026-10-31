@@ -314,9 +314,10 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 - [x] Die Navigation steht global in der Konfiguration (`navigation` mit `orientation` und `grid`) und wird im Layout-Modus wie jede Kachel verschoben und in der Größe geändert. Die Position gilt für alle Seiten; Kacheln anderer Seiten rutschen bei Überlappung nach unten.
 - [x] Ausrichtung wählbar: horizontal oder vertikal.
-- [x] Der Dialog „Navigation“ enthält Seite anlegen, umbenennen, löschen und Reihenfolge ändern (Hoch/Runter). Die Seitenbuttons verschwinden aus der Werkzeugleiste.
+- [x] Der Dialog „Navigation“ enthält Seite anlegen, umbenennen, löschen und Reihenfolge ändern. Die Seitenbuttons verschwinden aus der Werkzeugleiste.
 - [x] Bestehende Konfigurationen ohne `navigation` erhalten eine Standardnavigation (horizontal, Zeile 1, volle Breite); die Kacheln rutschen dafür um die Navigationshöhe nach unten.
-- [ ] Reihenfolge per Ziehen der Einträge (bisher nur Hoch/Runter-Schaltflächen).
+- [x] Reihenfolge per Ziehen am ☰-Griff (statt Pfeilen hoch/runter).
+- [x] Der Dialog arbeitet auf einer Arbeitskopie: „Speichern“ übernimmt alle Änderungen in den Entwurf, „Abbrechen“ verwirft sie (statt „Schließen“ mit sofortigem Speichern).
 - [ ] Navigation pro Seite ausblenden (nicht umgesetzt).
 
 ### S19 - Versionsverwaltung für Seiten

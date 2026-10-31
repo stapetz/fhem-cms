@@ -520,7 +520,6 @@ class CmsPage {
       option.textContent = text;
       orientation.append(option);
     }
-    orientation.value = this.config.navigation.orientation;
     orientationLabel.append(orientation);
     const list = document.createElement('div');
     list.className = 'cms-nav-list';
@@ -538,22 +537,12 @@ class CmsPage {
       dialog.remove();
     };
 
-    const run = async (mutate) => {
+    // Alle Änderungen gelten zunächst nur für eine Arbeitskopie und werden erst mit „Speichern“ übernommen.
+    const work = structuredClone(this.config);
+    const itemOf = (pageId) => (work.navigation.items || []).find((entry) => entry.page === pageId) || {};
+    const run = (mutate) => {
       error.textContent = '';
-      const next = structuredClone(this.config);
-      try {
-        mutate(next);
-        this.arrangeAround(next);
-        await this.persist(next);
-      } catch (failure) {
-        error.textContent = `Speichern fehlgeschlagen: ${failure.message}`;
-        return;
-      }
-      if (!this.config.pages.some((page) => page.id === this.pageId)) {
-        window.location.hash = `#/${this.config.pages[0].id}`;
-      }
-      this.renderNav();
-      this.previewLayout(this.currentLayout());
+      mutate(work);
       fill();
     };
     const rowButton = (label, title, onClick, disabled) => {
@@ -563,21 +552,59 @@ class CmsPage {
       item.disabled = disabled;
       return item;
     };
+    const startDrag = (event, row) => {
+      if (event.button !== undefined && event.button !== 0) {
+        return;
+      }
+      event.preventDefault();
+      row.classList.add('is-dragging');
+      const move = (moveEvent) => {
+        const over = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest('.cms-nav-row');
+        if (!over || over === row || over.parentElement !== list) {
+          return;
+        }
+        const rect = over.getBoundingClientRect();
+        if (moveEvent.clientY < rect.top + rect.height / 2) {
+          list.insertBefore(row, over);
+        } else {
+          over.after(row);
+        }
+      };
+      const end = () => {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', end);
+        document.removeEventListener('pointercancel', end);
+        row.classList.remove('is-dragging');
+        const order = [...list.querySelectorAll('.cms-nav-row')].map((entry) => entry.dataset.page);
+        work.pages = order.map((id) => work.pages.find((page) => page.id === id));
+        fill();
+      };
+      // Das Verschieben der Zeile im DOM beendet ein Pointer-Capture, daher am Dokument lauschen.
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', end);
+      document.addEventListener('pointercancel', end);
+    };
     const fill = () => {
       list.replaceChildren();
-      const pages = this.config.pages;
+      const pages = work.pages;
       pages.forEach((page, index) => {
         const row = document.createElement('div');
         row.className = 'cms-nav-row';
+        row.dataset.page = page.id;
+        const grip = document.createElement('span');
+        grip.className = 'cms-nav-grip';
+        grip.textContent = '☰';
+        grip.title = `„${page.title}“ verschieben`;
+        grip.setAttribute('role', 'img');
+        grip.setAttribute('aria-label', `„${page.title}“ per Ziehen verschieben`);
+        grip.addEventListener('pointerdown', (event) => startDrag(event, row));
         const name = document.createElement('span');
-        name.textContent = this.navItem(page.id).label ? `${page.title} → ${this.navItem(page.id).label}` : page.title;
-        const swap = (other) => run((next) => {
-          [next.pages[index], next.pages[other]] = [next.pages[other], next.pages[index]];
-        });
+        name.className = 'cms-nav-name';
+        const label = itemOf(page.id).label;
+        name.textContent = label ? `${page.title} → ${label}` : page.title;
         row.append(
+          grip,
           name,
-          rowButton('↑', `„${page.title}“ nach oben`, () => swap(index - 1), index === 0),
-          rowButton('↓', `„${page.title}“ nach unten`, () => swap(index + 1), index === pages.length - 1),
           rowButton('✎', `„${page.title}“ umbenennen`, async () => {
             const title = await this.askTitle('Neuer Titel der Seite', page.title);
             if (title !== null) {
@@ -587,7 +614,7 @@ class CmsPage {
             }
           }, false),
           rowButton('⚙', `„${page.title}“: Beschriftung und Größe`, async () => {
-            const result = await this.askNavItem(page, this.navItem(page.id));
+            const result = await this.askNavItem(page, itemOf(page.id));
             if (result !== null) {
               run((next) => {
                 const items = (next.navigation.items || []).filter((entry) => entry.page !== page.id);
@@ -619,6 +646,7 @@ class CmsPage {
       });
     };
 
+    orientation.value = work.navigation.orientation;
     orientation.addEventListener('change', () => run((next) => {
       const grid = next.navigation.grid;
       next.navigation.orientation = orientation.value;
@@ -629,11 +657,28 @@ class CmsPage {
     const add = this.button('+ Seite', async () => {
       const title = await this.askTitle('Titel der neuen Seite', '');
       if (title !== null) {
-        const id = this.uniqueId('p', new Set(this.config.pages.map((page) => page.id)));
+        const id = this.uniqueId('p', new Set(work.pages.map((page) => page.id)));
         run((next) => next.pages.push({ id, title, widgets: [] }));
       }
     });
-    actions.append(add, this.button('Schließen', close));
+    const save = this.button('Speichern', async () => {
+      error.textContent = '';
+      const next = structuredClone(work);
+      try {
+        this.arrangeAround(next);
+        await this.persist(next);
+      } catch (failure) {
+        error.textContent = `Speichern fehlgeschlagen: ${failure.message}`;
+        return;
+      }
+      close();
+      if (!this.config.pages.some((page) => page.id === this.pageId)) {
+        window.location.hash = `#/${this.config.pages[0].id}`;
+      }
+      this.renderNav();
+      this.previewLayout(this.currentLayout());
+    });
+    actions.append(add, this.button('Abbrechen', close), save);
     form.append(heading, orientationLabel, list, error, actions);
     dialog.append(form);
     form.addEventListener('submit', (event) => event.preventDefault());

@@ -1,3 +1,8 @@
+2026-10-31 - Navigation dialog: drag to reorder, save/cancel
+
+Pages in the navigation dialog are reordered by dragging the handle; the
+dialog now has Save and Cancel. Reload the browser (hard).
+
 2026-10-31 - Navigation entries, text colors, page starts at top
 
 Navigation entries get a custom label and size (default: all as large as the
