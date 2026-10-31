@@ -431,6 +431,7 @@ Gemeldete Fehler, die noch besprochen werden. Noch nicht umgesetzt.
 
 - **B04 - Safari skaliert die Schrift größer als Edge.** Ab 125 % Zoom werden Thermostat-Kacheln in Safari unten abgeschnitten, Schrift wirkt dort größer. Ursache offen (kein WebKit zum Testen). Schieberegler wurde vereinheitlicht (grün). Schriftgröße des Thermostats wird jetzt per JS (ResizeObserver) aus der Kachelgröße berechnet, mit Fit-Prüfung; **Umgesetzt (Prüfung in Safari offen).** Gemeldet am 2026-10-31.
 - **K01 - Browser-Zoom.** Raster und Inhalte sollen sich beim Ändern der Browser-Seitenskalierung (Zoom) flüssig anpassen. Entschieden: Breite und Höhe folgen beide dem Zoom, einspaltig ab ca. 40 rem (später Burgermenü, S28). **Umgesetzt (Prüfung offen):** Spaltenabstand und Zeilenhöhe in `cqw`.
+- **K02 - Einheitliches Skalierverhalten aller Widgets (Konzept).** Thermostat, Wert-Anzeige und alle künftigen Widgets sollen sich beim Skalieren gleich anfühlen und gleich aussehen. Idee: gemeinsame Hilfe (Basisklasse oder Modul) für Schriftberechnung per `ResizeObserver` samt Fit-Prüfung, gemeinsame Abstände, Titel-Label, Rahmen und Zahnrad. Bisher hat jedes Widget eigene Formeln (Thermostat per JS, Wert-Anzeige per CSS). Gemeldet am 2026-10-31, wird bei Gelegenheit besprochen.
 
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
