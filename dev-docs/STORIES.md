@@ -284,6 +284,22 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [ ] Sperre (Semaphore oder Lock mit Ablauf) gegen gleichzeitiges Bearbeiten desselben Entwurfs, inkl. Anzeige, wer gerade bearbeitet.
 - [ ] Mehrere Entwürfe und Freigabeprozess prüfen.
 
+### S15 - Bildgröße per Ziehpunkt
+
+**Ziel:** Bilder im Editor direkt am Rahmen größer und kleiner ziehen, ohne Prozentangaben.
+
+- [x] Ziehpunkt unten rechts am gewählten Bild, Seitenverhältnis bleibt erhalten (Maus, Touch, Pfeiltasten).
+- [x] Breite in 5-%-Schritten (`cms-w-5` bis `cms-w-100`); Frontend-Cleaner und Modul-Validierung angepasst. Die festen Prozent-Schaltflächen entfallen.
+- [ ] Touch-Ziehen auf einem echten Gerät prüfen (Konflikt mit Scrollen).
+
+### S16 - Kachelgröße im Layout-Modus
+
+**Ziel:** Position und Größe der Kacheln nur noch direkt auf der Seite ändern, nicht über Zahlenfelder.
+
+- [x] Größengriff unten rechts an jeder Kachel im Layout-Modus (ziehen oder Umschalt+Pfeiltasten), Einrasten im Raster, überlappende Kacheln rutschen nach unten.
+- [x] Die Felder „Position im 12-Spalten-Raster“ sind aus den Dialogen entfernt. Neue Kacheln starten in Spalte 1 in der ersten freien Zeile mit Standardgröße.
+- [ ] Touch-Bedienung auf einem echten Gerät prüfen.
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.

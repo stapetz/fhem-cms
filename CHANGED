@@ -1,3 +1,9 @@
+2026-10-31 - Resize images and tiles by dragging
+
+Images get a drag handle (5 percent steps, ratio kept) instead of percent
+buttons. In layout mode tiles can be resized with a corner handle or
+Shift+arrow keys, and the grid fields are removed from the tile dialogs.
+
 2026-10-31 - Add a preview button for the draft
 
 The edit mode has a Vorschau button that opens the current draft as the

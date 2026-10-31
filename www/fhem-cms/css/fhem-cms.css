@@ -151,10 +151,11 @@ cms-device-card {
 }
 
 .cms-drag-handle {
+  position: relative;
   z-index: 2;
   display: flex;
   align-items: flex-end;
-  justify-content: flex-end;
+  justify-content: flex-start;
   padding: 0.4rem 0.6rem;
   border: 2px dashed #8fd1a8;
   border-radius: 0.9rem;
@@ -174,6 +175,18 @@ cms-device-card {
 
 .cms-drag-handle.is-dragging {
   cursor: grabbing;
+}
+
+.cms-resize-grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 0.3rem 0 0.8rem 0;
+  background: #8fd1a8;
+  cursor: nwse-resize;
+  touch-action: none;
 }
 
 @media (max-width: 40rem) {

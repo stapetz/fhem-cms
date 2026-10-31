@@ -2,7 +2,7 @@ import '../components/cms-device-card.js';
 import '../components/cms-thermostat.js';
 import '../components/cms-text.js';
 import { FhemClient, isValidName } from './fhem-client.js';
-import { cellFromPoint, moveWidget } from './layout.js';
+import { cellFromPoint, moveWidget, resizeWidget } from './layout.js';
 
 const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
@@ -471,8 +471,14 @@ class CmsPage {
       overlay.setAttribute('aria-label',
         `Kachel ${widget.title || widget.device || widget.id} verschieben: ziehen oder Pfeiltasten verwenden`);
       overlay.textContent = '⠿ verschieben';
+      const grip = document.createElement('span');
+      grip.className = 'cms-resize-grip';
+      grip.setAttribute('aria-hidden', 'true');
+      grip.title = 'Größe ändern (Umschalt+Pfeiltasten am Griff)';
+      overlay.append(grip);
       this.place(overlay, widget);
       this.attachDrag(overlay, widget.id);
+      this.attachResize(overlay, grip, widget.id);
       this.overlays.set(widget.id, overlay);
       this.grid.append(overlay);
     }
@@ -541,7 +547,7 @@ class CmsPage {
     overlay.addEventListener('keydown', (event) => {
       const steps = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
       const step = steps[event.key];
-      if (!step) {
+      if (!step || event.shiftKey) {
         return;
       }
       event.preventDefault();
@@ -558,6 +564,66 @@ class CmsPage {
     overlay.addEventListener('blur', () => this.flushLayout());
   }
 
+  // Größe ändern: Griff unten rechts ziehen oder Umschalt+Pfeiltasten am Kachel-Griff.
+  attachResize(overlay, grip, id) {
+    grip.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      this.flushLayout();
+      const widget = this.page.widgets.find((item) => item.id === id);
+      grip.setPointerCapture(event.pointerId);
+      overlay.classList.add('is-dragging');
+      let last = null;
+
+      const move = (moveEvent) => {
+        const cell = cellFromPoint(this.grid, moveEvent.clientX, moveEvent.clientY);
+        const layout = resizeWidget(this.page.widgets, id, cell.col - widget.grid.col + 1, cell.row - widget.grid.row + 1);
+        const key = layout && JSON.stringify([...layout]);
+        if (layout && key !== last) {
+          last = key;
+          this.previewLayout(layout);
+        }
+      };
+      const finish = (commit) => {
+        grip.removeEventListener('pointermove', move);
+        grip.removeEventListener('pointerup', up);
+        grip.removeEventListener('pointercancel', cancel);
+        overlay.classList.remove('is-dragging');
+        if (commit && last) {
+          this.commitLayout(this.pendingLayout);
+        } else {
+          this.previewLayout(this.currentLayout());
+        }
+      };
+      const up = () => finish(true);
+      const cancel = () => finish(false);
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', up);
+      grip.addEventListener('pointercancel', cancel);
+    });
+
+    overlay.addEventListener('keydown', (event) => {
+      const steps = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+      const step = steps[event.key];
+      if (!step || !event.shiftKey) {
+        return;
+      }
+      event.preventDefault();
+      const base = (this.pendingLayout && this.pendingLayout.get(id)) || this.page.widgets.find((item) => item.id === id).grid;
+      const working = this.page.widgets.map((widget) => ({ ...widget, grid: (this.pendingLayout && this.pendingLayout.get(widget.id)) || widget.grid }));
+      const layout = resizeWidget(working, id, base.w + step[0], base.h + step[1]);
+      if (!layout) {
+        return;
+      }
+      this.previewLayout(layout);
+      window.clearTimeout(this.layoutTimer);
+      this.layoutTimer = window.setTimeout(() => this.flushLayout(), 700);
+    });
+  }
+
   flushLayout() {
     window.clearTimeout(this.layoutTimer);
     const layout = this.pendingLayout;
@@ -571,7 +637,8 @@ class CmsPage {
     this.pendingLayout = null;
     const changed = this.page.widgets.some((widget) => {
       const grid = layout.get(widget.id);
-      return grid && (grid.col !== widget.grid.col || grid.row !== widget.grid.row);
+      return grid && (grid.col !== widget.grid.col || grid.row !== widget.grid.row
+        || grid.w !== widget.grid.w || grid.h !== widget.grid.h);
     });
     if (!changed) {
       return this.layoutSaving;

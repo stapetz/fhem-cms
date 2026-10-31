@@ -6,8 +6,10 @@ export const MAX_HTML = 50000;
 export const MAX_IMAGE_BYTES = 3145728;
 
 const ALIGN = ['cms-align-left', 'cms-align-center', 'cms-align-right'];
-const IMAGE_CLASSES = ['cms-img-left', 'cms-img-right', 'cms-img-center', 'cms-img-full',
-  'cms-w-25', 'cms-w-50', 'cms-w-75', 'cms-w-100'];
+// Bildbreiten in 5-%-Schritten (cms-w-5 bis cms-w-100).
+const WIDTH_STEP = 5;
+const WIDTH_CLASSES = Array.from({ length: 100 / WIDTH_STEP }, (_, i) => `cms-w-${(i + 1) * WIDTH_STEP}`);
+const IMAGE_CLASSES = ['cms-img-left', 'cms-img-right', 'cms-img-center', 'cms-img-full', ...WIDTH_CLASSES];
 const ALIGNABLE = new Set(['p', 'h1', 'h2', 'h3', 'blockquote', 'th', 'td']);
 const TEXT_BLOCKS = new Set(['p', 'h1', 'h2', 'h3']);
 const KEEP = new Set(['p', 'h1', 'h2', 'h3', 'blockquote', 'ul', 'ol', 'li', 'table', 'thead', 'tbody',
@@ -189,10 +191,7 @@ export function contentCss(scope) {
     ${scope} img.cms-img-right { float: right; margin: 0.25rem 0 0.5rem 0.75rem; }
     ${scope} img.cms-img-center { display: block; margin: 0.5rem auto; }
     ${scope} img.cms-img-full { display: block; width: 100%; margin: 0.5rem 0; }
-    ${scope} img.cms-w-25 { width: 25%; }
-    ${scope} img.cms-w-50 { width: 50%; }
-    ${scope} img.cms-w-75 { width: 75%; }
-    ${scope} img.cms-w-100 { width: 100%; }
+    ${WIDTH_CLASSES.map((name) => `${scope} img.${name} { width: ${name.slice(6)}%; }`).join('\n    ')}
   `;
 }
 
@@ -215,6 +214,10 @@ export function editorCss() {
       border: 1px solid #43564a; border-radius: 0.5rem; }
     .editor-area:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
     .editor-area img.rt-selected { outline: 2px solid #8fd0a8; }
+    .rt { position: relative; }
+    .rt-handle { position: absolute; width: 1.1rem; height: 1.1rem; padding: 0; min-width: 0; border-radius: 0.25rem;
+      background: #8fd0a8; border: 2px solid #17211d; cursor: nwse-resize; touch-action: none; z-index: 2; }
+    .rt-handle[hidden] { display: none; }
     ${contentCss('.editor-area')}
   `;
 }
@@ -599,13 +602,16 @@ export function createEditor({ root, services, html, onError }) {
     }
     const kept = [...selectedImage.classList].filter((name) => !name.startsWith(prefix));
     selectedImage.setAttribute('class', [...kept, value].join(' '));
+    placeHandle();
   };
-  props.append(altInput,
+  const hint = document.createElement('span');
+  hint.textContent = 'Größe: Ziehpunkt unten rechts ziehen oder fokussieren und Pfeiltasten nutzen.';
+  hint.className = 'rt-hint';
+  props.append(altInput, hint,
     button('Links', 'Bild links, Text umfließt', setClass('cms-img-', 'cms-img-left')),
     button('Mitte', 'Bild zentriert', setClass('cms-img-', 'cms-img-center')),
     button('Rechts', 'Bild rechts, Text umfließt', setClass('cms-img-', 'cms-img-right')),
     button('Voll', 'Bild in voller Breite', setClass('cms-img-', 'cms-img-full')),
-    ...[25, 50, 75, 100].map((w) => button(`${w}%`, `Bildbreite ${w} Prozent`, setClass('cms-w-', `cms-w-${w}`))),
     button('Bild entfernen', 'Bild entfernen', () => {
       if (selectedImage) {
         selectedImage.remove();
@@ -615,16 +621,87 @@ export function createEditor({ root, services, html, onError }) {
   imagePanel.append(uploadRow, mediaList, props);
   panels.image = imagePanel;
 
+  const handle = document.createElement('button');
+  handle.type = 'button';
+  handle.className = 'rt-handle';
+  handle.hidden = true;
+  handle.setAttribute('aria-label', 'Bildgröße ändern (Pfeiltasten: 5 Prozent)');
+  handle.title = 'Bildgröße ziehen';
+
+  const contentWidth = () => {
+    const style = getComputedStyle(area);
+    return area.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  };
+  const currentPercent = () => {
+    const named = WIDTH_CLASSES.find((name) => selectedImage.classList.contains(name));
+    if (named) {
+      return Number(named.slice(6));
+    }
+    return Math.round((selectedImage.getBoundingClientRect().width / contentWidth()) * 100);
+  };
+  const applyPercent = (percent) => {
+    const snapped = Math.min(100, Math.max(WIDTH_STEP, Math.round(percent / WIDTH_STEP) * WIDTH_STEP));
+    const kept = [...selectedImage.classList].filter((name) => !name.startsWith('cms-w-'));
+    selectedImage.setAttribute('class', [...kept, `cms-w-${snapped}`].join(' '));
+    placeHandle();
+  };
+  function placeHandle() {
+    if (!selectedImage || !selectedImage.isConnected) {
+      handle.hidden = true;
+      return;
+    }
+    const image = selectedImage.getBoundingClientRect();
+    const view = area.getBoundingClientRect();
+    const box = wrapper.getBoundingClientRect();
+    const inside = image.bottom <= view.bottom + 1 && image.right <= view.right + 1 && image.top >= view.top - 1;
+    handle.hidden = !inside;
+    const size = handle.offsetWidth || 18;
+    handle.style.left = `${image.right - box.left - size}px`;
+    handle.style.top = `${image.bottom - box.top - size}px`;
+  }
+  handle.addEventListener('pointerdown', (event) => {
+    if (!selectedImage) {
+      return;
+    }
+    event.preventDefault();
+    handle.setPointerCapture(event.pointerId);
+    const startX = event.clientX;
+    const startWidth = selectedImage.getBoundingClientRect().width;
+    const move = (moveEvent) => {
+      applyPercent(((startWidth + moveEvent.clientX - startX) / contentWidth()) * 100);
+    };
+    const stop = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', stop);
+      handle.removeEventListener('pointercancel', stop);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', stop);
+    handle.addEventListener('pointercancel', stop);
+  });
+  handle.addEventListener('keydown', (event) => {
+    const delta = { ArrowRight: WIDTH_STEP, ArrowUp: WIDTH_STEP, ArrowLeft: -WIDTH_STEP, ArrowDown: -WIDTH_STEP }[event.key];
+    if (delta && selectedImage) {
+      event.preventDefault();
+      applyPercent(currentPercent() + delta);
+    }
+  });
+  area.addEventListener('scroll', placeHandle);
+  area.addEventListener('input', placeHandle);
+  window.addEventListener('resize', placeHandle);
+
   function selectImage(image) {
     if (selectedImage) {
       selectedImage.classList.remove('rt-selected');
     }
     selectedImage = image;
     props.hidden = !image;
+    handle.hidden = !image;
     if (image) {
       image.classList.add('rt-selected');
       altInput.value = image.getAttribute('alt') || '';
       imagePanel.hidden = false;
+      placeHandle();
     }
   }
 
@@ -647,7 +724,7 @@ export function createEditor({ root, services, html, onError }) {
   });
   area.addEventListener('drop', (event) => event.preventDefault());
 
-  wrapper.append(bar, linkPanel, tablePanel, imagePanel, area);
+  wrapper.append(bar, linkPanel, tablePanel, imagePanel, area, handle);
 
   return {
     element: wrapper,
@@ -656,6 +733,7 @@ export function createEditor({ root, services, html, onError }) {
     },
     destroy() {
       document.removeEventListener('selectionchange', remember);
+      window.removeEventListener('resize', placeHandle);
     }
   };
 }

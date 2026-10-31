@@ -1,13 +1,6 @@
 import { renderMarkdown } from '../js/markdown.js';
 import { MAX_HTML, contentCss, createEditor, editorCss, markdownToHtml, renderHtml } from '../js/richtext.js';
 
-const GRID_FIELDS = [
-  { key: 'col', label: 'Spalte (1–12)', min: 1, max: 12 },
-  { key: 'row', label: 'Zeile', min: 1, max: 1000 },
-  { key: 'w', label: 'Breite (Spalten)', min: 1, max: 12 },
-  { key: 'h', label: 'Höhe (Zeilen)', min: 1, max: 1000 }
-];
-
 class FHEMCMSText extends HTMLElement {
   constructor() {
     super();
@@ -70,7 +63,6 @@ class FHEMCMSText extends HTMLElement {
             <input name="title" maxlength="64" autocomplete="off">
           </label>
           <div data-editor></div>
-          <fieldset data-grid><legend>Position im 12-Spalten-Raster</legend></fieldset>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
             <button type="button" class="danger" data-delete>Löschen</button>
@@ -80,20 +72,6 @@ class FHEMCMSText extends HTMLElement {
         </form>
       </dialog>
     `;
-
-    const grid = this.shadowRoot.querySelector('[data-grid]');
-    for (const field of GRID_FIELDS) {
-      const label = document.createElement('label');
-      label.textContent = field.label;
-      const input = document.createElement('input');
-      input.name = `grid-${field.key}`;
-      input.type = 'number';
-      input.min = String(field.min);
-      input.max = String(field.max);
-      input.required = true;
-      label.append(input);
-      grid.append(label);
-    }
 
     const $ = (selector) => this.shadowRoot.querySelector(selector);
     $('[data-open-config]').addEventListener('click', () => this.openConfig());
@@ -152,9 +130,6 @@ class FHEMCMSText extends HTMLElement {
       onError: (message) => this.setDialogError(message)
     });
     this.shadowRoot.querySelector('[data-editor]').replaceChildren(this.editor.element);
-    for (const field of GRID_FIELDS) {
-      form.elements[`grid-${field.key}`].value = this.widgetConfig.grid[field.key];
-    }
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.setDialogError('');
     this.shadowRoot.querySelector('[data-dialog]').showModal();
@@ -174,19 +149,8 @@ class FHEMCMSText extends HTMLElement {
     if (/[\u0000-\u001f\u007f]/.test(title)) {
       throw new Error('Der Titel enthält ungültige Zeichen');
     }
-    const grid = {};
-    for (const field of GRID_FIELDS) {
-      const raw = form.elements[`grid-${field.key}`].value;
-      const number = Number.parseInt(raw, 10);
-      if (!/^[0-9]+$/.test(raw) || number < field.min || number > field.max) {
-        throw new Error(`${field.label}: Wert zwischen ${field.min} und ${field.max} erforderlich`);
-      }
-      grid[field.key] = number;
-    }
-    if (grid.col + grid.w > 13) {
-      throw new Error('Spalte und Breite passen nicht in das 12-Spalten-Raster');
-    }
-    const widget = { id: this.widgetConfig.id, type: 'text', html, grid };
+    // Position und Größe ändert der Layout-Modus der Seite.
+    const widget = { id: this.widgetConfig.id, type: 'text', html, grid: { ...this.widgetConfig.grid } };
     if (title) {
       widget.title = title;
     }

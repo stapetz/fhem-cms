@@ -19,7 +19,21 @@ export function moveWidget(widgets, movedId, col, row) {
   if (!moved) {
     return null;
   }
-  const target = { ...moved.grid, ...clampPosition(moved.grid, col, row) };
+  return arrange(widgets, movedId, { ...moved.grid, ...clampPosition(moved.grid, col, row) });
+}
+
+// Ändert die Größe eines Widgets (Breite und Höhe in Rasterzellen) und ordnet die übrigen neu an.
+export function resizeWidget(widgets, resizedId, w, h) {
+  const resized = widgets.find((widget) => widget.id === resizedId);
+  if (!resized) {
+    return null;
+  }
+  const width = Math.min(Math.max(1, Math.round(w)), GRID_COLUMNS + 1 - resized.grid.col);
+  const height = Math.min(Math.max(1, Math.round(h)), MAX_ROW);
+  return arrange(widgets, resizedId, { ...resized.grid, w: width, h: height });
+}
+
+function arrange(widgets, movedId, target) {
   const result = new Map([[movedId, target]]);
   const placed = [target];
 

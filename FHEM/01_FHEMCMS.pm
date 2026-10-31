@@ -618,8 +618,8 @@ sub FHEMCMS_ValidateHtml {
     return 'enthaelt Steuerzeichen' if ($html =~ /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
 
     my %align = map { $_ => 1 } qw(cms-align-left cms-align-center cms-align-right);
-    my %imageClass = map { $_ => 1 } qw(cms-img-left cms-img-right cms-img-center cms-img-full
-        cms-w-25 cms-w-50 cms-w-75 cms-w-100);
+    my %imageClass = map { $_ => 1 } qw(cms-img-left cms-img-right cms-img-center cms-img-full),
+        map { 'cms-w-' . ($_ * 5) } 1 .. 20;
     my %tags = (
         p => {class => \%align}, h1 => {class => \%align}, h2 => {class => \%align},
         h3 => {class => \%align}, blockquote => {class => \%align},

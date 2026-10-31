@@ -341,6 +341,7 @@ my @validHtml = (
     '<p><a href="https://example.org/a?x=1&amp;y=2">Link</a> <a href="#/start">Seite</a></p>',
     '<table><thead><tr><th>A</th></tr></thead><tbody><tr><td class="cms-align-right">1</td></tr></tbody></table>',
     "<p><img src=\"media/$md5.png\" alt=\"Bild\" class=\"cms-img-left cms-w-50\"><br></p>",
+    "<p><img src=\"media/$md5.png\" class=\"cms-w-35\"><br></p>",
     "<p>Zeile 1\n\tZeile 2 \"zitiert\" it's</p>",
     '',
 );
@@ -362,6 +363,8 @@ my @badHtml = (
     ['<p>&copy;</p>', 'unknown entity'],
     ['<p class="evil">a</p>', 'unknown class'],
     ['<img src="media/' . $md5 . '.png" class="cms-align-left">', 'wrong class for image'],
+    ['<img src="media/' . $md5 . '.png" class="cms-w-33">', 'width not in 5 percent steps'],
+    ['<img src="media/' . $md5 . '.png" class="cms-w-105">', 'width above 100 percent'],
     ['<br/>', 'self closing syntax'],
     ['<p href="#/x">a</p>', 'attribute on wrong tag'],
     ["<p>a\x01</p>", 'control character'],

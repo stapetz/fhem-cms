@@ -43,13 +43,6 @@ const FIELDS = [
   { key: 'battery', label: 'Batterie', required: false }
 ];
 
-const GRID_FIELDS = [
-  { key: 'col', label: 'Spalte (1–12)', min: 1, max: 12 },
-  { key: 'row', label: 'Zeile', min: 1, max: 1000 },
-  { key: 'w', label: 'Breite (Spalten)', min: 1, max: 12 },
-  { key: 'h', label: 'Höhe (Zeilen)', min: 1, max: 1000 }
-];
-
 function toNumber(value) {
   if (typeof value !== 'string' || !/^-?[0-9]+(\.[0-9]+)?$/.test(value.trim())) {
     return null;
@@ -140,7 +133,6 @@ class FHEMCMSThermostat extends HTMLElement {
         fieldset { border: 1px solid #43564a; border-radius: 0.75rem; padding: 0.75rem;
           display: grid; gap: 0.75rem; margin: 0; }
         legend { color: #a5c9b2; font-size: 0.8rem; }
-        .grid-fields { grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); }
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
         .danger { margin-right: auto; border-color: #7f3b33; }
         .error { margin: 0; color: #ffb4a8; min-height: 1.2em; }
@@ -182,9 +174,6 @@ class FHEMCMSThermostat extends HTMLElement {
           </label>
           <fieldset data-readings>
             <legend>Readings</legend>
-          </fieldset>
-          <fieldset class="grid-fields" data-grid>
-            <legend>Position im 12-Spalten-Raster</legend>
           </fieldset>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
@@ -274,20 +263,6 @@ class FHEMCMSThermostat extends HTMLElement {
       readings.append(label);
     }
 
-    const grid = this.shadowRoot.querySelector('[data-grid]');
-    for (const field of GRID_FIELDS) {
-      const label = document.createElement('label');
-      label.append(field.label);
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.name = `grid-${field.key}`;
-      input.min = String(field.min);
-      input.max = String(field.max);
-      input.step = '1';
-      input.required = true;
-      label.append(input);
-      grid.append(label);
-    }
   }
 
   render() {
@@ -401,9 +376,6 @@ class FHEMCMSThermostat extends HTMLElement {
 
     form.elements.title.value = config.title || '';
     form.elements.device.value = config.device || '';
-    for (const field of GRID_FIELDS) {
-      form.elements[`grid-${field.key}`].value = String(config.grid[field.key]);
-    }
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.setDialogError('');
     this.devices = [];
@@ -592,18 +564,8 @@ class FHEMCMSThermostat extends HTMLElement {
       }
     }
 
-    const grid = {};
-    for (const field of GRID_FIELDS) {
-      const raw = form.elements[`grid-${field.key}`].value;
-      const number = Number.parseInt(raw, 10);
-      if (!/^[0-9]+$/.test(raw) || number < field.min || number > field.max) {
-        throw new Error(`${field.label}: Wert zwischen ${field.min} und ${field.max} erforderlich`);
-      }
-      grid[field.key] = number;
-    }
-    if (grid.col + grid.w > 13) {
-      throw new Error('Spalte und Breite passen nicht in das 12-Spalten-Raster');
-    }
+    // Position und Größe ändert der Layout-Modus der Seite.
+    const grid = { ...this.widgetConfig.grid };
 
     const title = form.elements.title.value.trim();
     if (/[\u0000-\u001f\u007f]/.test(title)) {
