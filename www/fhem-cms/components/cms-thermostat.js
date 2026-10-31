@@ -160,9 +160,9 @@ class FHEMCMSThermostat extends HTMLElement {
         input[type="range"] { width: 100%; margin: 0.15em 0 0; accent-color: #8fd0a8; height: 1.2em; }
         .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
         .foot { display: flex; align-self: stretch; align-items: center; gap: 0.6em; flex-wrap: nowrap; padding: 0 0.7em 0.6em; flex: none; }
-        .foot select { width: auto; flex: none; padding: 0.15em 0.4em; font-size: 1em; border-radius: 0.3em; }
+        .foot select { appearance: none; -webkit-appearance: none; width: auto; flex: none; max-width: 12em; height: 2.8em; padding: 0.4em 2em 0.4em 0.7em; border: 1px solid #69796f; border-radius: 0.5em; color: #f4f4e9; font: 1em 'Helvetica Neue', sans-serif; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='16'%3E%3Cpath d='M5 1 9 6H1zM5 15 1 10h8z' fill='%23f4f4e9'/%3E%3C/svg%3E") no-repeat right 0.7em center / 0.7em auto, linear-gradient(#7d8a82 0%, #55645b 45%, #26342d 50%, #3a4a41 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
         .foot [data-mode]:empty, .foot [data-mode-select][hidden], .valve[hidden], .batt:empty { display: none; }
-        .valve { flex: 1; min-width: 3em; position: relative; height: 1.7em; border: 1px solid #3a4d42;
+        .valve { flex: 1; min-width: 3em; position: relative; height: 2.8em; border: 1px solid #3a4d42;
           background: linear-gradient(90deg, #2b7bc0, #2f9b8a 50%, #7a2b3b); display: grid; place-items: center; }
         .valve span.pct { font-weight: 700; font-size: 0.85em; z-index: 1; }
         .marker { position: absolute; top: 0; bottom: 0; width: 0.2em; background: #fff; }
