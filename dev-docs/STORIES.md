@@ -402,14 +402,16 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 ### S28 - Navigation als Burgermenü auf schmalen Bildschirmen
 
 - [ ] Wird das Browserfenster (Smartphone, kleines Fenster) sehr schmal, erscheint die Navigation als klassisches Burgermenü statt als Leiste.
-- [ ] Umschaltschwelle und Verhalten (Auf-/Zuklappen, Schließen nach Seitenwahl) werden vor der Umsetzung abgestimmt.
+- [ ] Umschaltschwelle: Fensterbreite unter 600 px (entschieden). Auf-/Zuklappen und Schließen nach der Seitenwahl sind noch festzulegen.
+- Umsetzung später (vom Nutzer so entschieden).
 
 ### S29 - Unterpunkte in der Navigation (beliebige Tiefe)
 
 - [ ] Navigationspunkte können Unterpunkte haben, die Tiefe ist unbegrenzt; Darstellung wie die Menüs der Bearbeitungsleiste (Aufklappen beim Überfahren, auf Touch per Klick, im Burgermenü eingerückt).
-- [ ] Verschieben im Navigationsdialog: Reihenfolge und Ebene ändern (Vorschlag: Griff ⠿ ziehen, nach rechts einrücken = Unterpunkt, nach links = eine Ebene höher).
+- [ ] Verschieben im Navigationsdialog (entschieden): Am Griff ⠿ ziehen; nach rechts ziehen rückt ein (Unterpunkt), nach links eine Ebene höher.
 - [ ] Schema: Einträge in `navigation.items` erhalten einen Verweis auf den übergeordneten Eintrag; Zyklen werden abgelehnt.
-- [ ] Offen: Darf ein Punkt ohne eigene Seite nur als Gruppe dienen?
+- [ ] Ein Punkt ohne eigene Seite darf als reine Gruppe dienen (entschieden).
+- Umsetzung später (vom Nutzer so entschieden).
 
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
