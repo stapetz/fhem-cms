@@ -31,6 +31,7 @@ Die bekannten, nach Abhängigkeiten geordneten Umsetzungsstories stehen in der [
 - Zu Änderungen passende Tests und Syntaxprüfungen ausführen. Für Perl-Module ist mindestens `perl -c` auszuführen; gegebenenfalls benötigte FHEM-Core-Funktionen müssen in Tests geeignet bereitgestellt werden.
 - `controls_fhem-cms.txt` wird vom Workflow aus allen installierbaren Dateien unter `FHEM/` und `www/fhem-cms/` erzeugt. Der repositorybezogene Name verhindert Kollisionen mit den lokal auf dem FHEM-Server abgelegten Controls-Dateien anderer Update-Quellen. Es gibt eine gemeinsame Update-Quelle für das ganze Repository, keine Controls-Dateien je Modul oder Komponente. Die Datei nicht von Hand ändern.
 - Die `CHANGED`-Datei liegt im Repository-Root und wird von FHEM zusätzlich zur Controls-Datei abgerufen. Bei funktionalen Änderungen ist dort ein neuer Eintrag mit Datum, kurzer Überschrift und Beschreibung zu ergänzen; sie gehört nicht als Runtime-Datei in `controls_fhem-cms.txt`.
+- Releases werden auf Story-Ebene beschrieben: Vor jedem Release in `dev-docs/STORIES.md` prüfen, welche Stories seit dem letzten Release fertig geworden sind (alle Punkte erledigt, abgesehen von ausdrücklich vermerkten Geräteprüfungen). Jede dieser Stories steht im `CHANGED`-Eintrag des Releases als eigene Zeile `S<Nr> - <Titel der Story>` unter der Beschreibung. Betrifft keine fertige Story das Release, entfällt die Zeile.
 
 ## FHEM-Module
 

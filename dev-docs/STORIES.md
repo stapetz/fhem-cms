@@ -318,6 +318,33 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [ ] Reihenfolge per Ziehen der Einträge (bisher nur Hoch/Runter-Schaltflächen).
 - [ ] Navigation pro Seite ausblenden (nicht umgesetzt).
 
+### S19 - Versionsverwaltung für Seiten
+
+**Ziel:** Aus den „Backups“ im Editor wird eine echte, optische Versionsverwaltung.
+
+- [ ] „Backups“ heißt im Editor „Versionen“ (Dialog, Schaltflächen, Doku).
+- [ ] Zwei Versionen nebeneinander vergleichen, auch optisch (gerenderte Seiten gegenüberstellen, Unterschiede kenntlich machen).
+- [ ] Nach dem Vergleich ausdrücklich wählen, welche Version behalten wird.
+- [ ] Alte Versionen löschen können (mit Warnung; die aktuelle Live-Version bleibt geschützt).
+- [ ] Bezug zu S13: Wiederherstellen wirkt weiterhin nur auf den Live-Stand.
+
+### S20 - Navigationspunkte: Größe und Beschriftung
+
+**Ziel:** Die Navigationspunkte („Bubbles“) sehen einheitlich aus und lassen sich je Eintrag anpassen.
+
+- [ ] Standard: Alle Bubbles übernehmen die Größe des größten Eintrags.
+- [ ] Je Eintrag ist die Beschriftung änderbar (Standard: Seitenname, überschreibbar).
+- [ ] Je Eintrag ist eine eigene Größe in x- und y-Richtung in Pixeln einstellbar.
+- [ ] Schema-Erweiterung in `navigation` (optional je Eintrag), Validierung und Tests.
+
+### S21 - Texteditor: Farben
+
+**Ziel:** Der WYSIWYG-Editor bietet Textfarbe und Hervorhebung.
+
+- [ ] Farbauswahl für die Schrift.
+- [ ] Text hervorheben mit frei wählbarer Farbe.
+- [ ] Erlaubte Farbwerte in der HTML-Allowlist und im Modul prüfen (kein freies `style`).
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.
