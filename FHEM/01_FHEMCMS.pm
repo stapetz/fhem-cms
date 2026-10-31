@@ -21,6 +21,7 @@ our $FHEMCMS_MAX_TEXT = 20000;
 our $FHEMCMS_REFRESH_INTERVAL = 10;
 our %FHEMCMS_LAST_REFRESH;
 our %FHEMCMS_PURGED;
+our $FHEMCMS_USAGE_BACKUPS = 20;
 
 sub FHEMCMS_Initialize {
     my ($modHash) = @_;
@@ -151,7 +152,20 @@ sub FHEMCMS_Set {
         return undef;
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of config restore rebuild:noArg purge';
+    return 'Unknown argument ' . $cmd . ', choose one of ' . FHEMCMS_SetUsage($name);
+}
+
+# Die neuesten Backups erscheinen als Auswahlliste bei "restore".
+sub FHEMCMS_SetUsage {
+    my ($name) = @_;
+    my @backups;
+    if (FHEMCMS_ValidName($name) && !$FHEMCMS_PURGED{$name}) {
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
+        @backups = FHEMCMS_ListBackups($dataDir) if (!defined($error));
+        splice(@backups, $FHEMCMS_USAGE_BACKUPS) if (@backups > $FHEMCMS_USAGE_BACKUPS);
+    }
+    my $restore = @backups ? 'restore:' . join(',', @backups) : 'restore';
+    return "config $restore rebuild:noArg purge";
 }
 
 sub FHEMCMS_Summary {

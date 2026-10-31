@@ -1,3 +1,7 @@
+2026-10-31 - Offer backups as a dropdown for set restore
+
+FHEMWEB now lists the 20 newest backups as choices for "restore".
+
 2026-10-31 - Add user documentation and acceptance protocol
 
 docs/ANWENDER.md covers installation, usage, securing FHEMWEB with allowed

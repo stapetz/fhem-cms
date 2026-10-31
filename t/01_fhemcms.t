@@ -282,4 +282,18 @@ ok(!-e $pData && !-e $pPage, 'blocked calls do not recreate the folders');
 is(FHEMCMS_Define($pHash, "$pName FHEMCMS"), undef, 'redefine after purge works');
 ok(-f File::Spec->catfile($pData, 'config.json') && -f $pIndex, 'redefine recreates data and page');
 
+# restore dropdown
+my $usage = FHEMCMS_Set($pHash, $pName, '?');
+like($usage, qr/choose one of config restore(?::|\s)/, 'usage names restore');
+write_file(File::Spec->catfile($pData, 'config.json.20200101-000000.bak'), read_file(File::Spec->catfile($pData, 'config.json')));
+like(FHEMCMS_Set($pHash, $pName, '?'), qr/restore:config\.json\.20200101-000000\.bak/, 'usage lists backups as dropdown');
+{
+    local $main::FHEMCMS_USAGE_BACKUPS = 1;
+    for my $i (1 .. 3) {
+        write_file(File::Spec->catfile($pData, "config.json.2021010$i-000000.bak"), read_file(File::Spec->catfile($pData, 'config.json')));
+    }
+    my ($list) = FHEMCMS_Set($pHash, $pName, '?') =~ /restore:(\S+)/;
+    is($list, 'config.json.20210103-000000.bak', 'usage limits the list to the newest backups');
+}
+
 done_testing();
