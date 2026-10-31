@@ -238,8 +238,13 @@ class FHEMCMSValue extends HTMLElement {
       return;
     }
     image.onerror = () => {
-      image.onerror = null;
-      image.src = url.replace(`@${ICON_COLOR}`, '');
+      const plain = url.replace(`@${ICON_COLOR}`, '');
+      if (image.getAttribute('src') !== plain) {
+        image.src = plain;
+      } else {
+        image.onerror = null;
+        image.closest('button')?.remove();
+      }
     };
     image.src = url;
   }

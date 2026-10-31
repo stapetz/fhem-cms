@@ -374,6 +374,8 @@ Jedes Widget mit Device-Bezug folgt dem Muster der Thermostat-Kachel:
 6. Größe: Kacheln müssen bis 1×1 Rasterfeld verkleinerbar sein. Rasterzeilen haben nur 2,75 rem Mindesthöhe; Widgets mit festem Inhalt skalieren Schrift und Icons über Container-Einheiten (`container-type: size`, `cqh`/`cqw`) statt feste Mindestmaße zu setzen.
 7. Icons: FHEM-Icons sind meist schwarz und auf dem dunklen Design unlesbar. SVG-Icons mit dem FHEMWEB-Farbsuffix laden (`<url>@8fd0a8`) und bei Fehler (z. B. PNG) auf die URL ohne Suffix zurückfallen.
 
+8. Icon-Liste nur mit auslieferbaren Icons: `get <CMS> icons` listet nur Stile aus dem Attribut `iconPath` der FHEMWEB-Geräte (Standard `default`, `fhemSVG`, `openautomation`). Namen, die FHEMWEB nicht ausliefert (Fehler 404), entfernt der Icon-Picker nach dem Laden wieder, damit keine leeren Kacheln bleiben.
+
 Neue Widgets übernehmen diesen Ablauf; Abweichungen werden vorher in `STORIES.md` abgestimmt.
 
 ## Live-Zustände und Verbindungsverhalten (S09)
