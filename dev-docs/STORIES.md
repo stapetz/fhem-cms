@@ -399,6 +399,18 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Mit der Maus öffnen die Menüs der Bearbeitungsleiste beim Überfahren und schließen nach Verlassen (250 ms Verzögerung).
 - [x] Auf Touch-Geräten und per Tastatur öffnen sie weiterhin per Klick.
 
+### S28 - Navigation als Burgermenü auf schmalen Bildschirmen
+
+- [ ] Wird das Browserfenster (Smartphone, kleines Fenster) sehr schmal, erscheint die Navigation als klassisches Burgermenü statt als Leiste.
+- [ ] Umschaltschwelle und Verhalten (Auf-/Zuklappen, Schließen nach Seitenwahl) werden vor der Umsetzung abgestimmt.
+
+### S29 - Unterpunkte in der Navigation (beliebige Tiefe)
+
+- [ ] Navigationspunkte können Unterpunkte haben, die Tiefe ist unbegrenzt; Darstellung wie die Menüs der Bearbeitungsleiste (Aufklappen beim Überfahren, auf Touch per Klick, im Burgermenü eingerückt).
+- [ ] Verschieben im Navigationsdialog: Reihenfolge und Ebene ändern (Vorschlag: Griff ⠿ ziehen, nach rechts einrücken = Unterpunkt, nach links = eine Ebene höher).
+- [ ] Schema: Einträge in `navigation.items` erhalten einen Verweis auf den übergeordneten Eintrag; Zyklen werden abgelehnt.
+- [ ] Offen: Darf ein Punkt ohne eigene Seite nur als Gruppe dienen?
+
 ## Später prüfen - Erweiterungen außerhalb des MVP
 
 Diese Themen werden nach dem MVP priorisiert. Wenn sie aufgenommen werden, entstehen dafür eigene Stories am Ende der Liste.
