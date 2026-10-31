@@ -385,7 +385,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Verschieben, Skalieren und Löschen wie bei den anderen Kacheln.
 - [x] Die Kachel ist beliebig verkleinerbar (Rasterzeile mindestens 2,75 rem); Schrift, Einheit und Icon skalieren mit der Kachelgröße (Container-Einheiten), das ⚙ entfällt bei sehr schmalen Kacheln.
 - [x] Icon-Auswahl: alle Stile werden gelistet, nicht ladbare Kacheln verschwinden.
-- [x] SVG-Icons werden in hellem Grün (`#8fd0a8`) dargestellt statt schwarz (FHEMWEB-Farbsuffix `@8fd0a8`, Fallback auf das Original).
+- [x] Icons werden als CSS-Maske in der Themenfarbe (`--cms-icon-color`, hellgrün `#8fd0a8`) gezeichnet statt schwarz; mehrfarbige Icons werden dadurch einfarbig.
 
 ### S26 - Menüleiste nimmt Platz ein, Navigationszeile passt sich an
 

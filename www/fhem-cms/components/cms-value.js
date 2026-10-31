@@ -1,6 +1,5 @@
 const UNITS = ['°C', '%', 'W', 'kW', 'kWh', 'V', 'A', 'hPa', 'lx', 'mm', 'm', 'km', 'km/h', 'm/s', 'l', 'ppm', 'dB'];
 const ICON_PAGE = 120;
-const ICON_COLOR = '8fd0a8';
 const PICKER_MAX_ROWS = 200;
 const PICKER_COLUMNS = [
   { key: 'name', label: 'Device' },
@@ -35,7 +34,11 @@ class FHEMCMSValue extends HTMLElement {
         .tile { height: 100%; overflow: hidden; container-type: size; padding: 0 0.6rem; border: 1px solid #43564a; border-radius: 1rem;
           background: #202e27; display: flex; align-items: center; gap: 0.6rem; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
-        .icon { height: min(70cqh, 4rem); width: min(70cqh, 4rem); flex: none; object-fit: contain; }
+        :host { --cms-icon-color: #8fd0a8; }
+        .glyph { display: inline-block; background-color: var(--cms-icon-color);
+          -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
+        .glyph[hidden] { display: none; }
+        .icon { height: min(70cqh, 4rem); width: min(70cqh, 4rem); flex: none; }
         .icon-row .icon { width: 2rem; height: 2rem; }
         .value { font-size: 1.2rem; flex: 1; min-width: 0; font-size: clamp(0.7rem, min(45cqh, 18cqw), 4.5rem); line-height: 1.1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .unit { margin-left: 0.25rem; font-size: 0.6em; font-weight: 400; color: #a5c9b2; }
@@ -75,19 +78,18 @@ class FHEMCMSValue extends HTMLElement {
         .chips button { padding: 0.15rem 0.55rem; font-size: 0.85rem; }
         .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
         .icon-row { display: flex; align-items: center; gap: 0.5rem; }
-        .icon-row .icon { background: #17211d; border-radius: 0.4rem; padding: 0.15rem; }
         .icon-picker { display: grid; gap: 0.5rem; padding: 0.6rem; border: 1px solid #43564a;
           border-radius: 0.75rem; }
         .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(3.2rem, 1fr)); gap: 0.35rem;
           max-height: 14rem; overflow: auto; }
         .icon-grid button { padding: 0.3rem; display: grid; place-items: center; }
-        .icon-grid img { width: 1.8rem; height: 1.8rem; object-fit: contain; }
+        .icon-grid .glyph { width: 1.8rem; height: 1.8rem; }
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
         .danger { margin-right: auto; border-color: #7f3b33; }
         .error { margin: 0; color: #ffb4a8; min-height: 1.2em; }
       </style>
       <article class="tile" data-tile>
-        <img class="icon" data-icon alt="" hidden>
+        <span class="glyph icon" data-icon aria-hidden="true" hidden></span>
         <div class="value"><span data-value>–</span><span class="unit" data-unit></span></div>
         <button type="button" class="gear" data-open-config aria-label="Wert-Anzeige konfigurieren">⚙</button>
       </article>
@@ -110,7 +112,7 @@ class FHEMCMSValue extends HTMLElement {
           <div>
             <span class="hint">Icon (optional)</span>
             <div class="icon-row">
-              <img class="icon" data-icon-preview alt="" hidden>
+              <span class="glyph icon" data-icon-preview aria-hidden="true" hidden></span>
               <span data-icon-name>kein Icon</span>
               <button type="button" data-icon-toggle>Icon wählen …</button>
               <button type="button" data-icon-clear>Entfernen</button>
@@ -222,31 +224,27 @@ class FHEMCMSValue extends HTMLElement {
     const tile = this.shadowRoot.querySelector('[data-tile]');
     tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''}`;
     const icon = this.shadowRoot.querySelector('[data-icon]');
-    const url = this.widgetConfig.icon && this.services ? this.coloredIcon(this.widgetConfig.icon) : '';
+    const url = this.widgetConfig.icon && this.services ? this.services.iconUrl(this.widgetConfig.icon) : '';
     icon.hidden = !url;
     this.setIconSrc(icon, url);
   }
 
-  // SVG-Icons liefert FHEMWEB mit Farbsuffix (@farbe) aus; andere Formate fallen auf das Original zurück.
-  coloredIcon(name) {
-    const url = this.services.iconUrl(name);
-    return url ? `${url}@${ICON_COLOR}` : '';
-  }
-
-  setIconSrc(image, url) {
-    if (!url || image.getAttribute('src') === url) {
+  // Das Icon dient als Maske und erbt die Farbe (--cms-icon-color) aus dem CSS; so sind auch schwarze Icons lesbar.
+  setIconSrc(element, url, onMissing) {
+    if (!url) {
+      element.style.removeProperty('--icon-url');
       return;
     }
-    image.onerror = () => {
-      const plain = url.replace(`@${ICON_COLOR}`, '');
-      if (image.getAttribute('src') !== plain) {
-        image.src = plain;
-      } else {
-        image.onerror = null;
-        image.closest('button')?.remove();
-      }
-    };
-    image.src = url;
+    if (element.dataset.src === url) {
+      return;
+    }
+    element.dataset.src = url;
+    element.style.setProperty('--icon-url', `url("${url}")`);
+    if (onMissing) {
+      const probe = new Image();
+      probe.onerror = onMissing;
+      probe.src = url;
+    }
   }
 
   async openConfig(options = {}) {
@@ -369,7 +367,7 @@ class FHEMCMSValue extends HTMLElement {
   setIcon(name) {
     this.icon = name;
     const preview = this.shadowRoot.querySelector('[data-icon-preview]');
-    const url = name && this.services ? this.coloredIcon(name) : '';
+    const url = name && this.services ? this.services.iconUrl(name) : '';
     preview.hidden = !url;
     this.setIconSrc(preview, url);
     this.shadowRoot.querySelector('[data-icon-name]').textContent = name || 'kein Icon';
@@ -402,10 +400,10 @@ class FHEMCMSValue extends HTMLElement {
       button.type = 'button';
       button.title = name;
       button.setAttribute('aria-label', name);
-      const image = document.createElement('img');
-      image.loading = 'lazy';
-      image.alt = '';
-      this.setIconSrc(image, this.coloredIcon(name));
+      const image = document.createElement('span');
+      image.className = 'glyph';
+      image.setAttribute('aria-hidden', 'true');
+      this.setIconSrc(image, this.services.iconUrl(name), () => button.remove());
       button.append(image);
       button.addEventListener('click', () => {
         this.setIcon(name);
