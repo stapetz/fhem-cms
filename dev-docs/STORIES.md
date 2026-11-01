@@ -1,5 +1,9 @@
 # Story- und Aufgabenliste
 
+> **Seit 2026-11-01 verwaltet GitHub Issues Status und Aufgaben** ([Issues](https://github.com/stapetz/fhem-cms/issues)). Alle offenen Stories, Bugs und Konzepte aus dieser Liste wurden dort angelegt (Labels `story`, `bug`, `widget`, `navigation`, `layout`, `editor`, `security`, `safari`, `concept`, `needs-test`, `draft`, `later`). Diese Datei bleibt als Archiv und für Hintergründe; neue Stories und Statusänderungen gehören ins Issue. Vollständig erledigte Stories (S01, S08, S09, S17, S20–S25, S27, S30) wurden nicht migriert.
+>
+> Zuordnung: S02: #2, S03: #3, S04: #4, S05: #5, S06: #6, S07: #7, S10: #8, S11: #9, S12: #10, S13: #11, S14: #12, S15: #13, S16: #14, S18: #15, S19: #16, S26: #17, S28: #18, S29: #19, S31: #20, S32: #21, S33: #22, S34: #23, S35: #24, S36: #25, S37: #26, S38: #27, S39: #28, S40: #29, S41: #30, S42: #31, S43: #32, S44: #33, S45: #34, S46: #35, B01: #36, B02: #37, B03: #38, B04: #39, K01: #40, B05: #41, K02: #42, Später: #43, Später: #44, Später: #45, Später: #46.
+
 Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorgeschlagenen Umsetzungsreihenfolge. Sie ist das gemeinsame Arbeitsboard in der Entwicklerdokumentation.
 
 - Offene Stories stehen als `- [ ]`, abgeschlossene Stories als `- [x]`.
