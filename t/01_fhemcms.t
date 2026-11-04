@@ -192,6 +192,11 @@ is(FHEMCMS_Set($hash, $name, 'config', $payload), undef, 'set config stores a Ba
 my $stored = JSON::PP::decode_json(FHEMCMS_Get($hash, $name, 'config'));
 is(scalar(@{$stored->{pages}[0]{widgets}}), 0, 'set config replaced the config');
 like(FHEMCMS_Set($hash, $name, 'config', 'not base64!'), qr/Base64/, 'set config rejects non-Base64 input');
+{
+    my $last = $logged[-1];
+    like($last->[2] // '', qr/set config abgewiesen: .*Base64/, 'rejected set is logged with command and reason');
+    unlike($last->[2] // '', qr/not base64!/, 'rejected set does not log the submitted content');
+}
 like(FHEMCMS_Set($hash, $name, 'config', MIME::Base64::encode_base64('{"schemaVersion":4}', '')),
     qr/Pflichtfeld 'pages'/, 'set config validates the payload');
 my ($latest) = FHEMCMS_ListBackups($dataDir);
@@ -682,6 +687,13 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     $w->{rows}[0]{unit} = "°C\n";
     like(FHEMCMS_ValidateConfig($rcfg), qr/Einheit in rows/, 'fhem-table rejects control characters in units');
     $w->{rows}[0]{unit} = '°C';
+    $w->{rows}[0]{label} = 'Wohnzimmer';
+    is(FHEMCMS_ValidateConfig($rcfg), undef, 'fhem-table accepts a row label');
+    $w->{rows}[0]{label} = 'x' x 33;
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Bezeichner in rows/, 'fhem-table rejects oversized row labels');
+    $w->{rows}[0]{label} = "a\n";
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Bezeichner in rows/, 'fhem-table rejects control characters in row labels');
+    delete $w->{rows}[0]{label};
     $w->{rows}[1]{device} = 'bad device';
     like(FHEMCMS_ValidateConfig($rcfg), qr/rows.device/, 'fhem-table rejects invalid device names');
     $w->{rows}[1]{device} = 'Temp';
@@ -701,5 +713,87 @@ write_file(File::Spec->catfile($modPath, 'www', 'images', 'default', 'notes.txt'
 write_file(File::Spec->catfile($modPath, 'www', 'images', 'default', 'bad name.svg'), 'x');
 is_deeply([FHEMCMS_ListIcons()], ['lamp', 'sub/door'], 'lists logical icon names without extension and invalid files');
 like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, 'get icons returns JSON');
+
+# fhem-chart: Widget-Schema
+{
+    my $ccfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'g1', type => 'fhem-chart',
+        device => 'Temp', reading => 'temperature', unit => '°C', range => '7d', granularity => '1h', source => 'filelog',
+        grid => {col => 1, row => 1, w => 24, h => 10}}]}]};
+    is(FHEMCMS_ValidateConfig($ccfg), undef, 'fhem-chart accepts a complete config');
+    my $w = $ccfg->{pages}[0]{widgets}[0];
+    for my $bad (['device', 'bad device'], ['reading', ''], ['range', '1y'], ['granularity', 'week'], ['source', 'sql'],
+        ['unit', "a\nb"], ['unit', 'x' x 17]) {
+        my ($field, $value) = @{$bad};
+        my $old = $w->{$field};
+        $w->{$field} = $value;
+        isnt(FHEMCMS_ValidateConfig($ccfg), undef, "fhem-chart rejects invalid $field");
+        $w->{$field} = $old;
+    }
+    $w->{extra} = 1;
+    like(FHEMCMS_ValidateConfig($ccfg), qr/Unbekanntes Feld/, 'fhem-chart rejects unknown fields');
+}
+
+# Verlauf aus FileLog und DbLog
+{
+    my $logDir = tempdir(CLEANUP => 1);
+    my $logFile = File::Spec->catfile($logDir, 'hist.log');
+    my $now = time();
+    my @lines;
+    for my $i (0 .. 9) {
+        my $t = $now - (9 - $i) * 600;
+        push(@lines, POSIX::strftime('%Y-%m-%d_%H:%M:%S', localtime($t)) . ' Temp temperature: ' . (20 + $i));
+    }
+    push(@lines, POSIX::strftime('%Y-%m-%d_%H:%M:%S', localtime($now)) . ' Temp humidity: 55');
+    push(@lines, POSIX::strftime('%Y-%m-%d_%H:%M:%S', localtime($now)) . ' Other temperature: 99');
+    push(@lines, POSIX::strftime('%Y-%m-%d_%H:%M:%S', localtime($now)) . ' Temp state: on');
+    write_file($logFile, join("\n", @lines) . "\n");
+    $main::defs{HistLog} = {NAME => 'HistLog', TYPE => 'FileLog', REGEXP => 'Temp:.*', logfile => $logFile};
+    %main::FHEMCMS_HISTORY_CACHE = ();
+
+    my $readings = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Temp'));
+    is($readings->{source}, 'filelog', 'logreadings falls back to the FileLog');
+    is_deeply($readings->{readings}, ['humidity', 'state', 'temperature'], 'logreadings lists the readings logged for the device');
+
+    my $history = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'raw'));
+    is($history->{source}, 'filelog', 'history reads the FileLog');
+    is(scalar(@{$history->{points}}), 10, 'history returns only the matching numeric rows');
+    is($history->{points}[0][1] + 0, 20, 'history keeps the values in time order');
+
+    %main::FHEMCMS_HISTORY_CACHE = ();
+    my $bucketed = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', '1h'));
+    ok(scalar(@{$bucketed->{points}}) <= 3, 'history aggregates into hour buckets');
+    my ($min, $max) = (1e9, -1e9);
+    for my $point (@{$bucketed->{points}}) {
+        $min = $point->[2] if ($point->[2] < $min);
+        $max = $point->[3] if ($point->[3] > $max);
+    }
+    is($min, 20, 'bucket minimum is kept');
+    is($max, 29, 'bucket maximum is kept');
+
+    like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'bad device', 'temperature'), qr/Ungueltiges Device/, 'history validates the device');
+    like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '10y'), qr/Zeitraum/, 'history validates the range');
+    like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'auto', 'sql'), qr/Quelle/, 'history validates the source');
+    like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Lamp', 'state', '24h', 'auto', 'filelog'), qr/FileLog/,
+        'history reports a missing matching FileLog');
+
+    no warnings 'once';
+    local *main::DbLog_Get = sub {
+        my ($dbHash, $dbName, $in, $out, @rest) = @_;
+        return '{"data":[{"READING":"power"},{"READING":"bad name"}]}' if ($out eq 'webchart');
+        return ({tstamp => POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime(time() - 60)), value => '12.5 W'},
+            {tstamp => 'broken', value => '1'});
+    };
+    $main::defs{HistDb} = {NAME => 'HistDb', TYPE => 'DbLog'};
+    %main::FHEMCMS_HISTORY_CACHE = ();
+    my $dbReadings = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Meter'));
+    is($dbReadings->{source}, 'dblog', 'logreadings prefers DbLog');
+    is_deeply($dbReadings->{readings}, ['power'], 'logreadings drops invalid reading names from DbLog');
+    my $dbHistory = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Meter', 'power', '24h'));
+    is($dbHistory->{source}, 'dblog', 'history prefers DbLog');
+    is($dbHistory->{points}[0][1], 12.5, 'history parses numeric DbLog values');
+    is(scalar(@{$dbHistory->{points}}), 1, 'history ignores unusable DbLog rows');
+    delete $main::defs{HistDb};
+    delete $main::defs{HistLog};
+}
 
 done_testing();

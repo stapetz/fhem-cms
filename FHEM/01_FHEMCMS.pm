@@ -11,8 +11,9 @@ use File::Spec;
 use JSON::PP ();
 use MIME::Base64 qw(decode_base64);
 use POSIX qw(strftime);
+use Time::Local ();
 
-our $FHEMCMS_VERSION = '0.3.0';
+our $FHEMCMS_VERSION = '0.4.0';
 our ($readingFnAttributes, $FW_ME);
 our (%attr);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -38,7 +39,7 @@ sub FHEMCMS_Initialize {
     $modHash->{GetFn} = 'FHEMCMS_Get';
     $modHash->{SetFn} = 'FHEMCMS_Set';
     $modHash->{FW_summaryFn} = 'FHEMCMS_Summary';
-    $modHash->{AttrList} = $readingFnAttributes // '';
+    $modHash->{AttrList} = 'dbLog fileLog historySource:auto,dblog,filelog ' . ($readingFnAttributes // '');
 }
 
 sub FHEMCMS_Define {
@@ -81,11 +82,22 @@ sub FHEMCMS_ValidName {
 }
 
 sub FHEMCMS_Get {
-    my ($hash, $name, $cmd) = @_;
+    my ($hash, $name, $cmd, @args) = @_;
     $cmd //= '';
 
     return 'Die Daten dieses Devices wurden geloescht; bitte das Device loeschen oder FHEM neu starten'
         if (defined($name) && $FHEMCMS_PURGED{$name});
+
+    if ($cmd eq 'logreadings') {
+        return 'logreadings erwartet <device> [auto|dblog|filelog]' if (@args < 1 || @args > 2);
+        return FHEMCMS_LogReadings($name, @args);
+    }
+
+    if ($cmd eq 'history') {
+        return 'history erwartet <device> <reading> [24h|7d|30d|365d] [auto|raw|15m|1h|1d] [auto|dblog|filelog]'
+            if (@args < 2 || @args > 5);
+        return FHEMCMS_History($name, @args);
+    }
 
     if ($cmd eq 'url') {
         return 'Ungueltiges Device'
@@ -127,10 +139,23 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history';
 }
 
+# Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
 sub FHEMCMS_Set {
+    my ($hash, $name, $cmd, @args) = @_;
+    my $result = FHEMCMS_SetCommand($hash, $name, $cmd, @args);
+    if (defined($result) && length($result) && defined($cmd)
+        && $cmd =~ /\A(?:config|draft|restore|publish|discard|media|purge|rebuild)\z/) {
+        my $reason = substr($result, 0, 200);
+        $reason =~ s/[\x00-\x1f\x7f]/ /g;
+        Log3($name, 3, "FHEMCMS ($name): set $cmd abgewiesen: $reason");
+    }
+    return $result;
+}
+
+sub FHEMCMS_SetCommand {
     my ($hash, $name, $cmd, @args) = @_;
     $cmd //= '';
 
@@ -635,7 +660,8 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'text' && $widget->{type} ne 'fhem-html'
                         && $widget->{type} ne 'fhem-switch' && $widget->{type} ne 'fhem-button'
                         && $widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-icon'
-                        && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-slider'));
+                        && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-slider'
+                        && $widget->{type} ne 'fhem-chart'));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -657,6 +683,9 @@ sub FHEMCMS_ValidateConfig {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title']);
             } elsif ($widget->{type} eq 'fhem-table') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title', 'deviceLabel']);
+            } elsif ($widget->{type} eq 'fhem-chart') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
+                    ['title', 'unit', 'range', 'granularity', 'source']);
             } elsif ($widget->{type} eq 'fhem-slider') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title']);
             } else {
@@ -731,6 +760,22 @@ sub FHEMCMS_ValidateConfig {
                     if (exists($widget->{icon})
                         && (ref($widget->{icon}) || !defined($widget->{icon})
                             || $widget->{icon} !~ $FHEMCMS_ICON_NAME));
+            } elsif ($widget->{type} eq 'fhem-chart') {
+                for my $field ('device', 'reading') {
+                    return "Ungueltiger Wert fuer $field" if (!$isName->($widget->{$field}));
+                }
+                return 'Ungueltige Einheit'
+                    if (exists($widget->{unit})
+                        && (ref($widget->{unit}) || !defined($widget->{unit})
+                            || length($widget->{unit}) < 1 || length($widget->{unit}) > 16
+                            || $widget->{unit} =~ /[\x00-\x1f\x7f]/));
+                for my $option (['range', qr/\A(?:24h|7d|30d|365d)\z/], ['granularity', qr/\A(?:auto|raw|15m|1h|1d)\z/],
+                    ['source', qr/\A(?:auto|dblog|filelog)\z/]) {
+                    my ($field, $pattern) = @{$option};
+                    return "Ungueltiger Wert fuer $field"
+                        if (exists($widget->{$field})
+                            && (ref($widget->{$field}) || !defined($widget->{$field}) || $widget->{$field} !~ $pattern));
+                }
             } elsif ($widget->{type} eq 'fhem-slider') {
                 for my $field ('command', 'reading') {
                     return "Ungueltiger Wert fuer $field" if (!$isName->($widget->{$field}));
@@ -774,10 +819,15 @@ sub FHEMCMS_ValidateConfig {
                     if (ref($rows) ne 'ARRAY' || @{$rows} < 1 || @{$rows} > 40);
                 my %seenReading;
                 for my $row (@{$rows}) {
-                    $err = $exact->($row, 'Tabellenzeile', ['device', 'reading'], ['unit']);
+                    $err = $exact->($row, 'Tabellenzeile', ['device', 'reading'], ['unit', 'label']);
                     return $err if ($err);
                     return 'Ungueltiger Wert fuer rows.device' if (!$isName->($row->{device}));
                     return 'Ungueltiger Wert fuer rows.reading' if (!$isName->($row->{reading}));
+                    return 'Ungueltiger Bezeichner in rows'
+                        if (exists($row->{label})
+                            && (ref($row->{label}) || !defined($row->{label})
+                                || length($row->{label}) < 1 || length($row->{label}) > 32
+                                || $row->{label} =~ /[\x00-\x1f\x7f]/));
                     return 'Ungueltige Einheit in rows'
                         if (exists($row->{unit})
                             && (ref($row->{unit}) || !defined($row->{unit})
@@ -1037,6 +1087,248 @@ sub FHEMCMS_StoreMedia {
         return ("Bild konnte nicht gespeichert werden: $reason");
     }
     return (undef, $file);
+}
+
+# Verlauf aus DbLog oder FileLog (wie TemperatureCollector); Zeitraum, Punktezahl und gelesene Zeilen sind begrenzt.
+our %FHEMCMS_HISTORY_CACHE;
+our $FHEMCMS_HISTORY_CACHE_SECONDS = 30;
+our $FHEMCMS_HISTORY_MAX_POINTS = 400;
+our $FHEMCMS_HISTORY_MAX_LINES = 2000000;
+our $FHEMCMS_HISTORY_MAX_ROWS = 500000;
+my %FHEMCMS_HISTORY_HOURS = ('24h' => 24, '7d' => 168, '30d' => 720, '365d' => 8760);
+my %FHEMCMS_HISTORY_STEPS = (auto => 0, raw => 0, '15m' => 15, '1h' => 60, '1d' => 1440);
+my @FHEMCMS_HISTORY_NICE_STEPS = (1, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440);
+
+sub FHEMCMS_LogDevices {
+    my ($cmsName, $type, $attribute) = @_;
+    my $configured = $main::attr{$cmsName}{$attribute} // '';
+    if ($configured ne '') {
+        my $def = $main::defs{$configured};
+        return (ref($def) eq 'HASH' && ($def->{TYPE} // '') eq $type) ? ($def) : ();
+    }
+    return grep { ref($_) eq 'HASH' && ($_->{TYPE} // '') eq $type }
+        map { $main::defs{$_} } sort keys %main::defs;
+}
+
+sub FHEMCMS_FileLogMatches {
+    my ($fileLog, $device, $reading) = @_;
+    my $regexp = $fileLog->{REGEXP};
+    return 0 if (!defined($regexp));
+    return eval { "$device:$reading: 0" =~ /\A(?:$regexp)\z/ } ? 1 : 0;
+}
+
+sub FHEMCMS_FileLogFiles {
+    my ($fileLog, $from, $to) = @_;
+    return () if (!defined($fileLog->{logfile}));
+    my $logdir = ($main::attr{global} && $main::attr{global}{logdir}) || './log';
+    my %files;
+    for (my $day = $from - ($from % 86400); $day <= $to + 86400; $day += 86400) {
+        my $file = $fileLog->{logfile};
+        $file =~ s/%L/$logdir/g;
+        $file = strftime($file, localtime($day));
+        $files{$file} = 1 if (-f $file && -r $file);
+    }
+    return sort keys %files;
+}
+
+# Liest passende FileLog-Zeilen; $onLine erhaelt (epoch, reading, value).
+sub FHEMCMS_ScanFileLog {
+    my ($fileLog, $device, $from, $to, $onLine) = @_;
+    my $lines = 0;
+    my $truncated = 0;
+    FILE: for my $file (FHEMCMS_FileLogFiles($fileLog, $from, $to)) {
+        open(my $fh, '<', $file) or next;
+        while (my $line = <$fh>) {
+            if (++$lines > $FHEMCMS_HISTORY_MAX_LINES) {
+                $truncated = 1;
+                close($fh);
+                last FILE;
+            }
+            next if (index($line, " $device ") < 0);
+            next if ($line !~ /\A(\d{4})-(\d{2})-(\d{2})_(\d{2}):(\d{2}):(\d{2})\s+\Q$device\E\s+([A-Za-z0-9_.-]+):\s*(\S+)/);
+            my $epoch = eval { Time::Local::timelocal($6, $5, $4, $3, $2 - 1, $1) };
+            next if (!defined($epoch) || $epoch < $from || $epoch > $to);
+            $onLine->($epoch, $7, $8);
+        }
+        close($fh);
+    }
+    return $truncated;
+}
+
+sub FHEMCMS_DbLogCall {
+    my ($dbLog, @args) = @_;
+    return (undef, 'DbLog ist nicht verfuegbar') if (!defined(&DbLog_Get));
+    local $@;
+    my @result = eval { DbLog_Get($dbLog, $dbLog->{NAME}, '-', @args) };
+    return (undef, 'DbLog-Abfrage fehlgeschlagen') if ($@);
+    return (\@result, undef);
+}
+
+sub FHEMCMS_ReadingNumber {
+    my ($value) = @_;
+    return undef if (!defined($value) || $value !~ /\A\s*([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)/);
+    return $1 + 0;
+}
+
+# Liefert die Quelle fuer ein Device/Reading: ('dblog', $hash), ('filelog', $hash) oder (undef, Fehlertext).
+sub FHEMCMS_HistorySource {
+    my ($cmsName, $source, $device, $reading) = @_;
+    my $mode = ($source // 'auto') eq 'auto' ? ($main::attr{$cmsName}{historySource} // 'auto') : $source;
+    $mode = 'auto' if ($mode !~ /\A(?:auto|dblog|filelog)\z/);
+    if ($mode ne 'filelog' && defined(&DbLog_Get)) {
+        my ($dbLog) = FHEMCMS_LogDevices($cmsName, 'DbLog', 'dbLog');
+        return ('dblog', $dbLog) if ($dbLog);
+    }
+    return (undef, 'Kein DbLog-Device gefunden') if ($mode eq 'dblog');
+    if ($mode ne 'dblog') {
+        for my $fileLog (FHEMCMS_LogDevices($cmsName, 'FileLog', 'fileLog')) {
+            return ('filelog', $fileLog) if (!defined($reading) || FHEMCMS_FileLogMatches($fileLog, $device, $reading));
+        }
+    }
+    return (undef, 'Kein passendes FileLog-Device gefunden');
+}
+
+# get <cms> logreadings <device> [auto|dblog|filelog]: Readings, die zu dem Device protokolliert werden.
+sub FHEMCMS_LogReadings {
+    my ($cmsName, $device, $source) = @_;
+    return 'Ungueltiges Device' if (!FHEMCMS_ValidName($device));
+    $source //= 'auto';
+    return 'Ungueltige Quelle' if ($source !~ /\A(?:auto|dblog|filelog)\z/);
+    my $json = JSON::PP->new->utf8->canonical;
+
+    if ($source ne 'filelog' && defined(&DbLog_Get)) {
+        my ($dbLog) = FHEMCMS_LogDevices($cmsName, 'DbLog', 'dbLog');
+        if ($dbLog) {
+            my ($result, $error) = FHEMCMS_DbLogCall($dbLog, 'webchart', '2000-01-01_00:00:00', '2099-12-31_23:59:59',
+                $device, 'getreadings');
+            if (!$error) {
+                my $data = eval { JSON::PP::decode_json(join('', grep { defined($_) && !ref($_) } @{$result})) };
+                my @readings = ref($data) eq 'HASH' && ref($data->{data}) eq 'ARRAY'
+                    ? sort grep { defined($_) && /\A[A-Za-z0-9_.-]{1,128}\z/ }
+                        map { ref($_) eq 'HASH' ? $_->{READING} : undef } @{$data->{data}}
+                    : ();
+                return $json->encode({source => 'dblog', readings => \@readings}) if (@readings || $source eq 'dblog');
+            } elsif ($source eq 'dblog') {
+                return $error;
+            }
+        } elsif ($source eq 'dblog') {
+            return 'Kein DbLog-Device gefunden';
+        }
+    }
+
+    my (%seen, $any);
+    my $now = time();
+    for my $fileLog (FHEMCMS_LogDevices($cmsName, 'FileLog', 'fileLog')) {
+        $any = 1;
+        FHEMCMS_ScanFileLog($fileLog, $device, $now - 7 * 86400, $now, sub { $seen{$_[1]} = 1; });
+    }
+    return 'Kein DbLog- oder FileLog-Device gefunden' if (!$any);
+    return $json->encode({source => 'filelog', readings => [sort keys %seen]});
+}
+
+sub FHEMCMS_HistoryRows {
+    my ($cmsName, $kind, $logHash, $device, $reading, $from, $to) = @_;
+    my (@rows, $truncated);
+    if ($kind eq 'filelog') {
+        $truncated = FHEMCMS_ScanFileLog($logHash, $device, $from, $to, sub {
+            return if ($_[1] ne $reading);
+            my $number = FHEMCMS_ReadingNumber($_[2]);
+            push(@rows, [$_[0], $number]) if (defined($number) && @rows < $FHEMCMS_HISTORY_MAX_ROWS);
+        });
+        return (\@rows, $truncated, undef);
+    }
+    my ($result, $error) = FHEMCMS_DbLogCall($logHash, 'array',
+        strftime('%Y-%m-%d_%H:%M:%S', localtime($from)), strftime('%Y-%m-%d_%H:%M:%S', localtime($to)),
+        "$device:$reading");
+    return (undef, 0, $error) if ($error);
+    for my $row (@{$result}) {
+        next if (ref($row) ne 'HASH' || ($row->{tstamp} // '') !~ /\A(\d{4})-(\d{2})-(\d{2})[_ ](\d{2}):(\d{2}):(\d{2})/);
+        my $epoch = eval { Time::Local::timelocal($6, $5, $4, $3, $2 - 1, $1) };
+        my $number = FHEMCMS_ReadingNumber($row->{value});
+        next if (!defined($epoch) || !defined($number));
+        if (@rows >= $FHEMCMS_HISTORY_MAX_ROWS) {
+            $truncated = 1;
+            last;
+        }
+        push(@rows, [$epoch, $number]);
+    }
+    return (\@rows, $truncated, undef);
+}
+
+# get <cms> history <device> <reading> <24h|7d|30d|365d> <auto|raw|15m|1h|1d> [auto|dblog|filelog]
+sub FHEMCMS_History {
+    my ($cmsName, $device, $reading, $range, $granularity, $source) = @_;
+    return 'Ungueltiges Device' if (!FHEMCMS_ValidName($device));
+    return 'Ungueltiges Reading' if (!defined($reading) || $reading !~ /\A[A-Za-z0-9_.-]{1,128}\z/);
+    $range //= '24h';
+    $granularity //= 'auto';
+    $source //= 'auto';
+    return 'Ungueltiger Zeitraum' if (!exists($FHEMCMS_HISTORY_HOURS{$range}));
+    return 'Ungueltige Granularitaet' if (!exists($FHEMCMS_HISTORY_STEPS{$granularity}));
+    return 'Ungueltige Quelle' if ($source !~ /\A(?:auto|dblog|filelog)\z/);
+
+    my $key = join("\0", $cmsName, $device, $reading, $range, $granularity, $source);
+    my $cached = $FHEMCMS_HISTORY_CACHE{$key};
+    return $cached->{json} if ($cached && time() - $cached->{time} < $FHEMCMS_HISTORY_CACHE_SECONDS);
+
+    my ($kind, $logHash) = FHEMCMS_HistorySource($cmsName, $source, $device, $reading);
+    return $logHash if (!$kind);
+
+    my $to = time();
+    my $hours = $FHEMCMS_HISTORY_HOURS{$range};
+    my $from = $to - $hours * 3600;
+    my ($rows, $truncated, $error) = FHEMCMS_HistoryRows($cmsName, $kind, $logHash, $device, $reading, $from, $to);
+    if ($error) {
+        Log3($cmsName, 2, "FHEMCMS ($cmsName): Verlauf von $device:$reading nicht lesbar: $error");
+        return $error;
+    }
+
+    my @rows = sort { $a->[0] <=> $b->[0] } @{$rows};
+    my $minStep = 1;
+    for my $candidate (@FHEMCMS_HISTORY_NICE_STEPS) {
+        $minStep = $candidate;
+        last if ($hours * 60 / $candidate <= $FHEMCMS_HISTORY_MAX_POINTS);
+    }
+    my $step = $FHEMCMS_HISTORY_STEPS{$granularity};
+    $step = 0 if ($granularity eq 'raw' && @rows <= $FHEMCMS_HISTORY_MAX_POINTS);
+    $step = $minStep if ($granularity eq 'auto' || ($step > 0 && $step < $minStep)
+        || ($granularity eq 'raw' && @rows > $FHEMCMS_HISTORY_MAX_POINTS));
+
+    my @points;
+    if ($step == 0) {
+        @points = map { [$_->[0], $_->[1], $_->[1], $_->[1]] } @rows;
+    } else {
+        my %buckets;
+        my @order;
+        for my $row (@rows) {
+            my $id = int($row->[0] / ($step * 60));
+            my $bucket = $buckets{$id};
+            if (!$bucket) {
+                $bucket = $buckets{$id} = {count => 0, time => 0, sum => 0, min => $row->[1], max => $row->[1]};
+                push(@order, $id);
+            }
+            $bucket->{count}++;
+            $bucket->{time} += $row->[0];
+            $bucket->{sum} += $row->[1];
+            $bucket->{min} = $row->[1] if ($row->[1] < $bucket->{min});
+            $bucket->{max} = $row->[1] if ($row->[1] > $bucket->{max});
+        }
+        @points = map {
+            my $bucket = $buckets{$_};
+            [int($bucket->{time} / $bucket->{count}), $bucket->{sum} / $bucket->{count}, $bucket->{min}, $bucket->{max}]
+        } @order;
+    }
+    for my $point (@points) {
+        $_ = sprintf('%.4f', $_) + 0 for (@{$point}[1 .. 3]);
+    }
+
+    my $text = JSON::PP->new->utf8->canonical->encode({
+        source => $kind, from => $from, to => $to, step => $step, rows => scalar(@rows),
+        truncated => ($truncated ? JSON::PP::true : JSON::PP::false), points => \@points,
+    });
+    %FHEMCMS_HISTORY_CACHE = () if (keys(%FHEMCMS_HISTORY_CACHE) > 50);
+    $FHEMCMS_HISTORY_CACHE{$key} = {time => time(), json => $text};
+    return $text;
 }
 
 sub FHEMCMS_ParseConfig {
