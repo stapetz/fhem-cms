@@ -423,6 +423,8 @@ Die Device-Zeile in FHEMWEB zeigt „CMS starten“ (`index.html?mode=edit`) und
 
 Vorschau: Der Button „Vorschau“ öffnet `index.html?mode=preview` in einem neuen Fenster. Der Modus verhält sich wie der Ansichtsmodus, liest aber den Entwurf (`get draft`) statt des Live-Stands und blendet den Entwurfshinweis aus.
 
+Entwurfsänderungen werden im Frontend der Reihe nach gespeichert. Vor `publish` und `discard` müssen sowohl ausstehende Layoutänderungen als auch alle laufenden Entwurfsspeicherungen abgeschlossen sein; ein fehlgeschlagener Speichervorgang verhindert die Aktion und wird angezeigt. So kann eine schnelle Veröffentlichung nicht vor dem Speichern der Theme-Änderung den vorherigen Stand übernehmen.
+
 ## WYSIWYG-Editor und Medien
 
 **Farben (S21):** Der Editor setzt Farben per `foreColor`/`hiliteColor` (mit `styleWithCSS`). Der Cleaner wandelt sie in `<span style="color:#rrggbb;background-color:#rrggbb">` um (auch `font`, `mark` und Stile an anderen Tags). Das Modul akzeptiert `style` nur an `span` und nur genau in dieser Form; Namen, Kurzformen, weitere Eigenschaften und `url()` werden abgewiesen.

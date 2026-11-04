@@ -353,7 +353,7 @@ my $backupsBefore = scalar(my @b0 = FHEMCMS_ListBackups($pData));
 is(FHEMCMS_Get($pHash, $pName, 'status'), '{"draft":false}', 'status reports no draft');
 is(FHEMCMS_Get($pHash, $pName, 'draft'), FHEMCMS_Get($pHash, $pName, 'config'), 'draft falls back to the live config');
 like(FHEMCMS_Set($pHash, $pName, 'publish'), qr/keinen Entwurf/, 'publish needs a draft');
-my $draftCfg = {schemaVersion => 4, theme => 'dark', pages => [{id => 'start', title => 'Entwurf', widgets => []}]};
+my $draftCfg = {schemaVersion => 4, theme => 'light', pages => [{id => 'start', title => 'Entwurf', widgets => []}]};
 my $draftB64 = MIME::Base64::encode_base64(JSON::PP->new->utf8->encode($draftCfg), '');
 is(FHEMCMS_Set($pHash, $pName, 'draft', $draftB64), undef, 'saves a draft');
 ok(-f $draftFile, 'draft file exists');
@@ -375,6 +375,8 @@ ok(-f $draftFile, 'restore leaves the draft untouched');
 is(read_file($draftFile), $draftBeforeRestore, 'restore preserves the existing draft content');
 is(FHEMCMS_Set($pHash, $pName, 'publish'), undef, 'publishes the draft');
 like(FHEMCMS_Get($pHash, $pName, 'config'), qr/"title":"Entwurf"/, 'live config now has the draft content');
+is(JSON::PP::decode_json(FHEMCMS_Get($pHash, $pName, 'config'))->{theme}, 'light',
+    'publishing preserves the light theme in the live config');
 ok(!-e $draftFile, 'draft is removed after publish');
 my @afterPublish = FHEMCMS_ListBackups($pData);
 ok(scalar(@afterPublish) > $backupsBefore, 'publish creates a new backup version');

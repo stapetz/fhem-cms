@@ -114,6 +114,8 @@ class CmsPage {
     this.overlays = new Map();
     this.layoutTimer = null;
     this.layoutSaving = Promise.resolve();
+    this.draftSaving = Promise.resolve();
+    this.draftSaveError = null;
 
     this.menuButtons = [
       this.button('Thermostat-Kachel', () => this.addWidget('thermostat')),
@@ -1126,8 +1128,9 @@ class CmsPage {
     const layout = this.pendingLayout;
     this.pendingLayout = null;
     if (layout) {
-      this.commitLayout(layout);
+      return this.commitLayout(layout);
     }
+    return this.layoutSaving;
   }
 
   commitLayout(layout) {
@@ -1278,10 +1281,26 @@ class CmsPage {
   }
 
   async persist(config) {
-    await this.client.saveDraft(config);
+    const saving = this.draftSaving.then(() => this.client.saveDraft(config));
+    this.draftSaving = saving.then(
+      () => {
+        this.draftSaveError = null;
+      },
+      (error) => {
+        this.draftSaveError = error;
+      }
+    );
+    await saving;
     this.config = config;
     this.applyTheme();
     this.setDraft(true);
+  }
+
+  async flushDraftWrites() {
+    await this.draftSaving;
+    if (this.draftSaveError) {
+      throw this.draftSaveError;
+    }
   }
 
   setDraft(value) {
@@ -1295,8 +1314,9 @@ class CmsPage {
     if (!window.confirm('Den Entwurf jetzt veröffentlichen? Der bisherige Live-Stand wird als Version gesichert und ist über „Backups“ wiederherstellbar.')) {
       return;
     }
-    await this.flushLayout();
     try {
+      await this.flushLayout();
+      await this.flushDraftWrites();
       await this.client.publishDraft();
     } catch (error) {
       this.setStatus(`Veröffentlichen fehlgeschlagen: ${error.message}`);
@@ -1311,6 +1331,8 @@ class CmsPage {
       return;
     }
     try {
+      await this.flushLayout();
+      await this.flushDraftWrites();
       await this.client.discardDraft();
       this.config = await this.loadConfig('draft');
     } catch (error) {
