@@ -64,13 +64,13 @@ class FHEMCMSlider extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; display: grid; height: 100%; align-content: center; gap: 0.6rem; overflow: hidden;
+        .tile { position: relative; display: grid; height: 100%; align-content: center; gap: max(1px, 3cqh); overflow: hidden;
           container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
-          background: var(--cms-surface, #202e27); padding: 1rem; }
-        header { padding-right: 1.6rem; color: var(--cms-muted, #a5c9b2); font-size: max(5px, min(10cqh, 4cqw)); }
+          background: var(--cms-surface, #202e27); padding: max(2px, 6cqh) 1.2rem max(2px, 6cqh) 0.8em; }
+        header { padding-right: 0; color: var(--cms-muted, #a5c9b2); font-size: max(5px, min(10cqh, 4cqw)); }
         h3 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1em; font-weight: 400; }
         .value { display: flex; align-items: baseline; justify-content: center; gap: 0.35em; min-width: 0;
-          font-size: max(8px, min(20cqh, 9cqw)); font-variant-numeric: tabular-nums; }
+          font-size: max(8px, min(22cqh, 9cqw)); line-height: 1.1; font-variant-numeric: tabular-nums; }
         output { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .reading { color: var(--cms-muted, #a5c9b2); font-size: 0.55em; overflow-wrap: anywhere; }
         input[type="range"] { width: 100%; margin: 0; accent-color: var(--cms-accent, #8fd0a8); }
@@ -99,7 +99,7 @@ class FHEMCMSlider extends HTMLElement {
         .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { min-height: 1.2em; margin: 0; color: var(--cms-danger, #ffb4a8); }
-        @container (max-height: 3.5rem) { header, .range, .status { display: none; } }
+        @container (max-height: 4.5rem) { header, .range, .status { display: none; } }
       </style>
       <article class="tile" data-tile>
         <header><h3 data-title></h3></header>

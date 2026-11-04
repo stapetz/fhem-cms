@@ -1317,7 +1317,7 @@ class CmsPage {
   addWidget(type) {
     const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-switch': 's', 'fhem-slider': 'l', 'fhem-button': 'b', 'fhem-html': 'h', 'fhem-clock': 'c', 'fhem-icon': 'i', 'fhem-table': 'r' }[type] || 't';
     const id = this.uniqueId(prefix, new Set(this.page.widgets.map((widget) => widget.id)));
-    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 }, 'fhem-clock': { w: 12, h: 4 }, 'fhem-icon': { w: 6, h: 4 }, 'fhem-table': { w: 24, h: 8 }, 'fhem-slider': { w: 12, h: 3 } }[type] || { w: 16, h: 2 };
+    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 }, 'fhem-clock': { w: 12, h: 4 }, 'fhem-icon': { w: 6, h: 4 }, 'fhem-table': { w: 24, h: 8 }, 'fhem-slider': { w: 16, h: 6 } }[type] || { w: 16, h: 2 };
     const grid = { col: 1, row: this.nextFreeRow(), ...size };
     let widget = { id, type, device: '', readings: { actual: '', target: '' }, grid };
     if (type === 'text') {
