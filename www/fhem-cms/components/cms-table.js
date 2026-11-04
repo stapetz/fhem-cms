@@ -76,7 +76,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         label { display: grid; gap: 0.25rem; }
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
         input[type="text"], select { width: 100%; }
-        .row { display: grid; grid-template-columns: minmax(10rem, 1.3fr) minmax(7rem, 1fr) minmax(8rem, 0.8fr) auto; align-items: end; gap: 0.45rem;
+        .row { display: grid; grid-template-columns: minmax(9rem, 1.2fr) minmax(7rem, 0.9fr) minmax(7rem, 1fr) minmax(8rem, 0.8fr) auto; align-items: end; gap: 0.45rem;
           padding: 0.5rem 0; border-top: 1px solid var(--cms-border-subtle, #3a4d42); }
         .device { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.3rem; }
         .device input { min-width: 0; }
@@ -188,6 +188,16 @@ class FHEMCMSReadingsTable extends HTMLElement {
     pick.textContent = 'Wählen …';
     deviceBox.append(deviceInput, pick);
     deviceLabel.append(deviceBox);
+    const nameLabel = document.createElement('label');
+    nameLabel.textContent = 'Bezeichner (optional)';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.maxLength = 32;
+    nameInput.autocomplete = 'off';
+    nameInput.placeholder = 'Alias oder Device-Name';
+    nameInput.dataset.rowLabel = '';
+    nameInput.value = initial.label || '';
+    nameLabel.append(nameInput);
     const readingLabel = document.createElement('label');
     readingLabel.textContent = 'Reading';
     const readingSelect = document.createElement('select');
@@ -237,7 +247,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
       }
     });
-    row.append(deviceLabel, readingLabel, unitLabel, remove);
+    row.append(deviceLabel, nameLabel, readingLabel, unitLabel, remove);
     container.append(row);
     this.setRowUnit(row, initial.unit || '');
     if (initial.device) {
@@ -286,8 +296,10 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const rows = [...this.shadowRoot.querySelectorAll('[data-config-rows] .row')].map((row) => {
       const unitSelect = row.querySelector('[data-unit-select]');
       const customUnit = row.querySelector('[data-custom-unit]').value.trim();
+      const label = row.querySelector('[data-row-label]').value.trim();
       return {
         device: row.querySelector('.device input').value,
+        ...(label ? { label } : {}),
         reading: row.querySelector('select:not([data-unit-select])').value,
         ...(unitSelect.value === 'custom' ? (customUnit ? { unit: customUnit } : {}) : (unitSelect.value ? { unit: unitSelect.value } : {}))
       };
@@ -303,7 +315,8 @@ class FHEMCMSReadingsTable extends HTMLElement {
       return;
     }
     if (deviceLabel.length > 32 || /[\u0000-\u001f\u007f]/.test(deviceLabel)
-      || rows.some((row) => row.unit && (row.unit.length > 16 || /[\u0000-\u001f\u007f]/.test(row.unit)))) {
+      || rows.some((row) => (row.unit && (row.unit.length > 16 || /[\u0000-\u001f\u007f]/.test(row.unit)))
+        || (row.label && (row.label.length > 32 || /[\u0000-\u001f\u007f]/.test(row.label))))) {
       this.shadowRoot.querySelector('[data-error]').textContent = 'Bezeichnung oder Einheit ist ungültig.';
       return;
     }
@@ -361,9 +374,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
     body.replaceChildren(...(this.widgetConfig.rows || []).map((row) => {
       const tr = document.createElement('tr');
       const deviceCell = document.createElement('td');
-      deviceCell.textContent = row.device;
       const valueCell = document.createElement('td');
       const group = this.snapshots.get(row.device) || [];
+      deviceCell.textContent = row.label || group.find((snapshot) => snapshot.name === row.device)?.alias || row.device;
       const item = group.find((snapshot) => snapshot.readings?.[row.reading] !== undefined);
       valueCell.textContent = item ? `${item.readings[row.reading]}${row.unit ? ` ${row.unit}` : ''}` : '–';
       tr.append(deviceCell, valueCell);

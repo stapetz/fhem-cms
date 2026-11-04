@@ -489,6 +489,7 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 ### S41 - Readingsgroup / Tabelle (Entwurf)
 
 - [x] Widget `fhem-table` zeigt mehrere frei kombinierbare Devices und Readings in einer kompakten Tabelle.
+- [x] Zeilenname: FHEM-Alias statt Device-Name, überschreibbar durch einen eigenen Bezeichner je Zeile (`rows[].label`, höchstens 32 Zeichen).
 - [x] Werte werden aus den Live-Snapshots aktualisiert; Schema begrenzt und validiert Zeilen, Device- und Reading-Namen.
 - [ ] Darstellung und Live-Aktualisierung auf FHEM-Testinstanz prüfen.
 

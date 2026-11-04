@@ -774,10 +774,15 @@ sub FHEMCMS_ValidateConfig {
                     if (ref($rows) ne 'ARRAY' || @{$rows} < 1 || @{$rows} > 40);
                 my %seenReading;
                 for my $row (@{$rows}) {
-                    $err = $exact->($row, 'Tabellenzeile', ['device', 'reading'], ['unit']);
+                    $err = $exact->($row, 'Tabellenzeile', ['device', 'reading'], ['unit', 'label']);
                     return $err if ($err);
                     return 'Ungueltiger Wert fuer rows.device' if (!$isName->($row->{device}));
                     return 'Ungueltiger Wert fuer rows.reading' if (!$isName->($row->{reading}));
+                    return 'Ungueltiger Bezeichner in rows'
+                        if (exists($row->{label})
+                            && (ref($row->{label}) || !defined($row->{label})
+                                || length($row->{label}) < 1 || length($row->{label}) > 32
+                                || $row->{label} =~ /[\x00-\x1f\x7f]/));
                     return 'Ungueltige Einheit in rows'
                         if (exists($row->{unit})
                             && (ref($row->{unit}) || !defined($row->{unit})
