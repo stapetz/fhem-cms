@@ -454,6 +454,7 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 
 - [x] Widget `fhem-slider`: Device, Slider-Set-Befehl und Bereich aus der Set-Beschreibung (`slider,min,step,max`), aktuelles Reading, Wertanzeige und Senden 1,5 Sekunden nach der letzten Änderung.
 - [ ] Auf der FHEM-Testinstanz prüfen (Set-Befehl, Schrittweite, Rückmeldung des Readings).
+- [ ] Erweiterung (geplant): Wertelisten mit gleichem Abstand (z. B. `desired-temp:5,5.5,…,30`) und `knob,min:max` als Slider-Bereich erkennen, damit auch Thermostate wählbar sind; optional manuelle Eingabe von min, max und step für beliebige numerische Set-Befehle. Bisher erscheinen nur Devices mit `slider,min,step,max` in der Set-Liste.
 
 ### S35 - Auswahlliste (Entwurf)
 
