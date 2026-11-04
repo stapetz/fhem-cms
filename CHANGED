@@ -1,29 +1,14 @@
-2026-11-04 - Add confirmed CMS data deletion
+2026-11-05 - Slider, Uhr, Status-Symbol, Tabelle, Themes und Layout-Verbesserungen (0.3.0)
 
-The editor now offers a confirmation dialog that identifies the CMS data and start-page folders before permanently deleting them.
-
-2026-11-04 - Improve readings table labels and units
-
-The table widget now supports a custom first-column heading and common or custom units per value; the internal Reading column is hidden.
-
-2026-11-04 - Refine CMS widget scaling and image resizing
-
-Image resizing now supports 1-percent increments. The status icon and clock scale with their tiles; the analog clock shows minute marks. Added a slider widget whose range is derived from the FHEM set description.
-
-2026-11-04 - Finer responsive layout grid
-
-The page layout now uses 48 columns. Existing schema-version 2 layouts are migrated without changing tile or navigation positions and sizes.
-
-2026-11-04 - Dark and light theme presets
-
-The CMS can switch between dark and light color palettes per device. The theme is stored in the draft and appears on the homepage after publishing.
-
-2026-11-04 - Clock and date widget
-
-Added digital and analog clock presets with optional seconds, date and weekday.
+Neue Widgets: Schieberegler, Uhr/Datum, Status-Symbol und Readings-Tabelle. Hell/Dunkel-Theme pro Gerät, Bildgröße per Ziehpunkt, einheitliches Skalierverhalten der Kacheln und Dialog zum bestätigten Löschen der CMS-Daten. Konfigurationen werden automatisch auf Schema 4 migriert.
+S34 - Schieberegler
 S36 - Status-Symbol
 S38 - Uhr / Datum
 S41 - Readingsgroup / Tabelle
+
+2026-11-04 - 48-Spalten-Raster (0.2.0)
+
+Das Layout-Raster wurde auf 48 Spalten verfeinert. Bestehende Konfigurationen werden automatisch migriert; Position und Größe von Kacheln und Navigation bleiben erhalten.
 S46 - Freieres, feineres Layout
 
 2026-10-31 - First release 0.1.0
