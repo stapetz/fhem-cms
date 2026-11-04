@@ -70,6 +70,7 @@ ok(-d $dataDir, 'creates a data directory per device outside www');
 ok(-f File::Spec->catfile($dataDir, 'config.json'), 'creates a default config');
 my ($cfg, $cfgErr) = FHEMCMS_ReadConfig($name, $dataDir);
 is($cfgErr, undef, 'default config is valid');
+is($cfg->{schemaVersion}, 4, 'creates the current config schema');
 $cfg->{pages}[0]{widgets} = [{id => 'w1', type => 'fhem-value', device => 'Lamp', reading => 'state',
     grid => {col => 1, row => 1, w => 2, h => 1}}];
 is(FHEMCMS_WriteConfig($name, $dataDir, $cfg), undef, 'writes a valid config');
@@ -120,6 +121,12 @@ is(FHEMCMS_ValidateConfig($restored), undef, 'allows line breaks and tabs in tex
 pop(@{$restored->{pages}[0]{widgets}});
 $restored->{navigation} = {orientation => 'vertical', grid => {col => 1, row => 1, w => 3, h => 4}};
 is(FHEMCMS_ValidateConfig($restored), undef, 'accepts a navigation widget');
+my $gridBoundary = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [
+    {id => 'w1', type => 'fhem-value', device => 'Lamp', reading => 'state',
+        grid => {col => 48, row => 1, w => 1, h => 1}}]}]};
+is(FHEMCMS_ValidateConfig($gridBoundary), undef, 'accepts the last cell in the 48-column grid');
+$gridBoundary->{pages}[0]{widgets}[0]{grid}{w} = 2;
+like(FHEMCMS_ValidateConfig($gridBoundary), qr/Rasterwerte/, 'rejects a widget overflowing the 48-column grid');
 for my $case (
     ['bad orientation', {orientation => 'diagonal', grid => {col => 1, row => 1, w => 3, h => 4}}, qr/Ausrichtung/],
     ['bad grid', {orientation => 'horizontal', grid => {col => 45, row => 1, w => 5, h => 1}}, qr/Rasterwerte/],

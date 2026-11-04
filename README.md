@@ -2,6 +2,8 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
+**Aktuelle stabile Version: 0.2.0**
+
 ## Repositorystruktur
 
 | Pfad | Zweck |
@@ -17,7 +19,7 @@ Die wiederverwendbaren Web Components liegen unter `www/fhem-cms/components/`; d
 
 ## Version
 
-Die aktuelle stabile Version ist **0.1.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
+Die aktuelle stabile Version ist **0.2.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
 
 ## Installation und Update in FHEM
 

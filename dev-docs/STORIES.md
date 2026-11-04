@@ -301,7 +301,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 **Ziel:** Position und Größe der Kacheln nur noch direkt auf der Seite ändern, nicht über Zahlenfelder.
 
 - [x] Größengriff unten rechts an jeder Kachel im Layout-Modus (ziehen oder Umschalt+Pfeiltasten), Einrasten im Raster, überlappende Kacheln rutschen nach unten.
-- [x] Die Felder „Position im 12-Spalten-Raster“ sind aus den Dialogen entfernt. Neue Kacheln starten in Spalte 1 in der ersten freien Zeile mit Standardgröße.
+- [x] Die Felder „Position im Raster“ sind aus den Dialogen entfernt. Neue Kacheln starten in Spalte 1 in der ersten freien Zeile mit Standardgröße; seit S46 gilt das 48-Spalten-Raster.
 - [ ] Touch-Bedienung auf einem echten Gerät prüfen.
 
 ### S17 - Schlanke Seite ohne Kopfbereich
@@ -515,9 +515,9 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 - [x] Textbaustein erhält Live-Daten (Abo auf die Devices im Text, Anzeige „veraltet“ bei Verbindungsproblemen).
 - [ ] Offen: Platzhalter in Links und Bildbeschreibungen, Eingabe per Tastatur (Chip ohne Maus bearbeiten).
 
-### S46 - Freieres, feineres Layout (48-Spalten-Raster beschlossen)
+### S46 - Freieres, feineres Layout (umgesetzt)
 
-Am 04.11.2026 wurde Option A gewählt: 48 Spalten mit kleineren Zellen; das Schema behält `col/row/w/h`. Migration aus Schema-Version 2 skaliert die Spaltenposition und -breite, sodass bestehende Layouts ihre Position und Grösse behalten. Freie Positionen und feste Designflächen sind nicht Teil dieser Änderung. Die Darstellung auf Tablet und Smartphone ist im Review zu prüfen. Gemeldet am 2026-10-31.
+Am 04.11.2026 wurde Option A umgesetzt: 48 Spalten mit kleineren Zellen; das Schema behält `col/row/w/h`. Migration aus Schema-Version 2 skaliert die Spaltenposition und -breite, sodass bestehende Layouts ihre Position und Grösse behalten. Rastergrenzen und Erhaltung der bestehenden Kachel- und Navigationsgrössen sind getestet. Freie Positionen und feste Designflächen sind nicht Teil dieser Änderung. Gemeldet am 2026-10-31.
 
 ## Buglist
 
