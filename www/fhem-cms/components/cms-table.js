@@ -1,6 +1,40 @@
 import { openDevicePicker } from '../js/device-picker.js';
 
 const MAX_ROWS = 40;
+const UNITS = [
+  ['', 'Keine Einheit'],
+  ['°C', '°C (Celsius)'],
+  ['°F', '°F (Fahrenheit)'],
+  ['km', 'km'],
+  ['m', 'm'],
+  ['cm', 'cm'],
+  ['mm', 'mm'],
+  ['km/h', 'km/h'],
+  ['m/s', 'm/s'],
+  ['%', '%'],
+  ['W', 'W'],
+  ['kW', 'kW'],
+  ['Wh', 'Wh'],
+  ['kWh', 'kWh'],
+  ['V', 'V'],
+  ['A', 'A'],
+  ['mA', 'mA'],
+  ['L', 'L'],
+  ['ml', 'ml'],
+  ['l/min', 'l/min'],
+  ['m³', 'm³'],
+  ['Pa', 'Pa'],
+  ['hPa', 'hPa'],
+  ['ppm', 'ppm'],
+  ['dB', 'dB'],
+  ['lx', 'lx'],
+  ['kg', 'kg'],
+  ['g', 'g'],
+  ['s', 's'],
+  ['min', 'min'],
+  ['h', 'h'],
+  ['custom', 'Andere …']
+];
 
 class FHEMCMSReadingsTable extends HTMLElement {
   constructor() {
@@ -42,20 +76,25 @@ class FHEMCMSReadingsTable extends HTMLElement {
         label { display: grid; gap: 0.25rem; }
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
         input[type="text"], select { width: 100%; }
-        .row { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) auto; align-items: end; gap: 0.45rem;
+        .row { display: grid; grid-template-columns: minmax(10rem, 1.3fr) minmax(7rem, 1fr) minmax(8rem, 0.8fr) auto; align-items: end; gap: 0.45rem;
           padding: 0.5rem 0; border-top: 1px solid var(--cms-border-subtle, #3a4d42); }
         .device { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.3rem; }
         .device input { min-width: 0; }
+        .unit-fields { display: grid; gap: 0.3rem; }
         .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { min-height: 1.2em; margin: 0; color: var(--cms-danger, #ffb4a8); }
-        @media (max-width: 36rem) { .row { grid-template-columns: 1fr 1fr; } .row > button { grid-column: 2; justify-self: end; } }
+        @media (max-width: 36rem) {
+          .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+          .row > button { grid-column: 2; justify-self: end; }
+          .unit-label { grid-column: 1 / -1; }
+        }
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config aria-label="Tabelle konfigurieren">⚙</button>
         <table>
-          <thead><tr><th>Device</th><th>Reading</th><th>Wert</th></tr></thead>
+          <thead><tr><th data-device-heading>Device</th><th>Wert</th></tr></thead>
           <tbody data-rows></tbody>
         </table>
       </article>
@@ -63,6 +102,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         <form method="dialog" data-form novalidate>
           <h3 id="table-dialog-title">Tabelle konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+          <label>Bezeichnungsspalte<input name="deviceLabel" type="text" maxlength="32" placeholder="Device" autocomplete="off"></label>
           <fieldset><legend>Devices und Readings</legend><div data-config-rows></div>
             <button type="button" data-add>Reading hinzufügen</button></fieldset>
           <p class="error" data-error role="alert"></p>
@@ -110,7 +150,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
 
   async openConfig({ isNew = false } = {}) {
     this.isNew = isNew;
-    this.shadowRoot.querySelector('[data-form]').elements.title.value = this.widgetConfig.title || '';
+    const form = this.shadowRoot.querySelector('[data-form]');
+    form.elements.title.value = this.widgetConfig.title || '';
+    form.elements.deviceLabel.value = this.widgetConfig.deviceLabel || '';
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
     const container = this.shadowRoot.querySelector('[data-config-rows]');
@@ -151,6 +193,36 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const readingSelect = document.createElement('select');
     readingSelect.required = true;
     readingLabel.append(readingSelect);
+    const unitLabel = document.createElement('label');
+    unitLabel.className = 'unit-label';
+    unitLabel.textContent = 'Einheit';
+    const unitFields = document.createElement('span');
+    unitFields.className = 'unit-fields';
+    const unitSelect = document.createElement('select');
+    unitSelect.dataset.unitSelect = '';
+    unitSelect.replaceChildren(...UNITS.map(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      return option;
+    }));
+    const customUnit = document.createElement('input');
+    customUnit.type = 'text';
+    customUnit.maxLength = 16;
+    customUnit.placeholder = 'Eigene Einheit';
+    customUnit.autocomplete = 'off';
+    customUnit.dataset.customUnit = '';
+    customUnit.hidden = true;
+    unitSelect.addEventListener('change', () => {
+      customUnit.hidden = unitSelect.value !== 'custom';
+      if (customUnit.hidden) {
+        customUnit.value = '';
+      } else {
+        customUnit.focus();
+      }
+    });
+    unitFields.append(unitSelect, customUnit);
+    unitLabel.append(unitFields);
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = 'Entfernen';
@@ -165,8 +237,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
         this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
       }
     });
-    row.append(deviceLabel, readingLabel, remove);
+    row.append(deviceLabel, readingLabel, unitLabel, remove);
     container.append(row);
+    this.setRowUnit(row, initial.unit || '');
     if (initial.device) {
       try {
         const devices = await this.services.listAllDevices();
@@ -192,14 +265,46 @@ class FHEMCMSReadingsTable extends HTMLElement {
     select.value = readings.includes(selectedReading) ? selectedReading : (readings[0] || '');
   }
 
+  setRowUnit(row, unit) {
+    const select = row.querySelector('[data-unit-select]');
+    const customUnit = row.querySelector('[data-custom-unit]');
+    if (UNITS.some(([value]) => value === unit && value !== 'custom')) {
+      select.value = unit;
+      customUnit.value = '';
+      customUnit.hidden = true;
+      return;
+    }
+    select.value = 'custom';
+    customUnit.value = unit;
+    customUnit.hidden = false;
+  }
+
   async saveConfig() {
-    const title = this.shadowRoot.querySelector('[name="title"]').value.trim();
-    const rows = [...this.shadowRoot.querySelectorAll('[data-config-rows] .row')].map((row) => ({
-      device: row.querySelector('input').value,
-      reading: row.querySelector('select').value
-    }));
+    const form = this.shadowRoot.querySelector('[data-form]');
+    const title = form.elements.title.value.trim();
+    const deviceLabel = form.elements.deviceLabel.value.trim();
+    const rows = [...this.shadowRoot.querySelectorAll('[data-config-rows] .row')].map((row) => {
+      const unitSelect = row.querySelector('[data-unit-select]');
+      const customUnit = row.querySelector('[data-custom-unit]').value.trim();
+      return {
+        device: row.querySelector('.device input').value,
+        reading: row.querySelector('select:not([data-unit-select])').value,
+        ...(unitSelect.value === 'custom' ? (customUnit ? { unit: customUnit } : {}) : (unitSelect.value ? { unit: unitSelect.value } : {}))
+      };
+    });
     if (!rows.length || rows.some((row) => !row.device || !row.reading)) {
       this.shadowRoot.querySelector('[data-error]').textContent = 'Für jede Zeile Device und Reading wählen.';
+      return;
+    }
+    if ([...this.shadowRoot.querySelectorAll('[data-config-rows] .row')]
+      .some((row) => row.querySelector('[data-unit-select]').value === 'custom'
+        && !row.querySelector('[data-custom-unit]').value.trim())) {
+      this.shadowRoot.querySelector('[data-error]').textContent = 'Bitte die eigene Einheit eingeben oder eine andere Einheit wählen.';
+      return;
+    }
+    if (deviceLabel.length > 32 || /[\u0000-\u001f\u007f]/.test(deviceLabel)
+      || rows.some((row) => row.unit && (row.unit.length > 16 || /[\u0000-\u001f\u007f]/.test(row.unit)))) {
+      this.shadowRoot.querySelector('[data-error]').textContent = 'Bezeichnung oder Einheit ist ungültig.';
       return;
     }
     const keys = rows.map((row) => `${row.device}\u0000${row.reading}`);
@@ -210,6 +315,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const next = { id: this.widgetConfig.id, type: 'fhem-table', rows, grid: { ...this.widgetConfig.grid } };
     if (title) {
       next.title = title;
+    }
+    if (deviceLabel) {
+      next.deviceLabel = deviceLabel;
     }
     try {
       await this.services.saveWidget(next);
@@ -248,18 +356,17 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
     title.parentElement.hidden = !this.widgetConfig.title;
+    this.shadowRoot.querySelector('[data-device-heading]').textContent = this.widgetConfig.deviceLabel || 'Device';
     const body = this.shadowRoot.querySelector('[data-rows]');
     body.replaceChildren(...(this.widgetConfig.rows || []).map((row) => {
       const tr = document.createElement('tr');
       const deviceCell = document.createElement('td');
       deviceCell.textContent = row.device;
-      const readingCell = document.createElement('td');
-      readingCell.textContent = row.reading;
       const valueCell = document.createElement('td');
       const group = this.snapshots.get(row.device) || [];
       const item = group.find((snapshot) => snapshot.readings?.[row.reading] !== undefined);
-      valueCell.textContent = item ? String(item.readings[row.reading]) : '–';
-      tr.append(deviceCell, readingCell, valueCell);
+      valueCell.textContent = item ? `${item.readings[row.reading]}${row.unit ? ` ${row.unit}` : ''}` : '–';
+      tr.append(deviceCell, valueCell);
       return tr;
     }));
   }

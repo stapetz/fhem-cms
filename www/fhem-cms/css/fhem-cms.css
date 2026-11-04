@@ -447,8 +447,14 @@ body {
 
 .cms-dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+.cms-purge-confirm {
+  border-color: var(--cms-danger-border);
+  color: var(--cms-danger);
 }
 
 .cms-backup-list {

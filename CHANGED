@@ -1,3 +1,11 @@
+2026-11-04 - Add confirmed CMS data deletion
+
+The editor now offers a confirmation dialog that identifies the CMS data and start-page folders before permanently deleting them.
+
+2026-11-04 - Improve readings table labels and units
+
+The table widget now supports a custom first-column heading and common or custom units per value; the internal Reading column is hidden.
+
 2026-11-04 - Refine CMS widget scaling and image resizing
 
 Image resizing now supports 1-percent increments. The status icon and clock scale with their tiles; the analog clock shows minute marks. Added a slider widget whose range is derived from the FHEM set description.

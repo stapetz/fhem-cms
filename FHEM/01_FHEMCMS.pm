@@ -656,7 +656,7 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-icon') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title']);
             } elsif ($widget->{type} eq 'fhem-table') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title', 'deviceLabel']);
             } elsif ($widget->{type} eq 'fhem-slider') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title']);
             } else {
@@ -764,15 +764,25 @@ sub FHEMCMS_ValidateConfig {
                             || $state->{color} !~ /\A#[0-9a-fA-F]{6}\z/);
                 }
             } elsif ($widget->{type} eq 'fhem-table') {
+                return 'Ungueltige Tabellen-Bezeichnung'
+                    if (exists($widget->{deviceLabel})
+                        && (ref($widget->{deviceLabel}) || !defined($widget->{deviceLabel})
+                            || length($widget->{deviceLabel}) < 1 || length($widget->{deviceLabel}) > 32
+                            || $widget->{deviceLabel} =~ /[\x00-\x1f\x7f]/));
                 my $rows = $widget->{rows};
                 return 'rows muss eine Liste mit 1 bis 40 Eintraegen sein'
                     if (ref($rows) ne 'ARRAY' || @{$rows} < 1 || @{$rows} > 40);
                 my %seenReading;
                 for my $row (@{$rows}) {
-                    $err = $exact->($row, 'Tabellenzeile', ['device', 'reading']);
+                    $err = $exact->($row, 'Tabellenzeile', ['device', 'reading'], ['unit']);
                     return $err if ($err);
                     return 'Ungueltiger Wert fuer rows.device' if (!$isName->($row->{device}));
                     return 'Ungueltiger Wert fuer rows.reading' if (!$isName->($row->{reading}));
+                    return 'Ungueltige Einheit in rows'
+                        if (exists($row->{unit})
+                            && (ref($row->{unit}) || !defined($row->{unit})
+                                || length($row->{unit}) < 1 || length($row->{unit}) > 16
+                                || $row->{unit} =~ /[\x00-\x1f\x7f]/));
                     my $key = $row->{device} . "\0" . $row->{reading};
                     return 'Doppelte Device/Reading-Kombination in rows' if ($seenReading{$key}++);
                 }

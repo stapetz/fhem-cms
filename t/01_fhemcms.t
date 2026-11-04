@@ -661,10 +661,20 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
 # fhem-table: mehrere Devices und Readings
 {
     my $rcfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'r1', type => 'fhem-table',
-        rows => [{device => 'Temp', reading => 'temperature'}, {device => 'Lamp', reading => 'state'}],
+        deviceLabel => 'Thermometer:',
+        rows => [{device => 'Temp', reading => 'temperature', unit => '°C'}, {device => 'Lamp', reading => 'state'}],
         grid => {col => 1, row => 1, w => 24, h => 8}}]}]};
     is(FHEMCMS_ValidateConfig($rcfg), undef, 'fhem-table accepts multiple devices and readings');
     my $w = $rcfg->{pages}[0]{widgets}[0];
+    $w->{deviceLabel} = "bad\nlabel";
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Tabellen-Bezeichnung/, 'fhem-table rejects control characters in its column heading');
+    $w->{deviceLabel} = 'Thermometer:';
+    $w->{rows}[0]{unit} = '°C' x 9;
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Einheit in rows/, 'fhem-table rejects oversized units');
+    $w->{rows}[0]{unit} = '°C';
+    $w->{rows}[0]{unit} = "°C\n";
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Einheit in rows/, 'fhem-table rejects control characters in units');
+    $w->{rows}[0]{unit} = '°C';
     $w->{rows}[1]{device} = 'bad device';
     like(FHEMCMS_ValidateConfig($rcfg), qr/rows.device/, 'fhem-table rejects invalid device names');
     $w->{rows}[1]{device} = 'Temp';

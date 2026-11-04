@@ -99,13 +99,14 @@ class CmsPage {
     this.publishButton = this.button('Veröffentlichen', () => this.publish());
     this.discardButton = this.button('Entwurf verwerfen', () => this.discard());
     this.backupsButton = this.button('Backups …', () => this.showBackups());
+    this.purgeButton = this.button('Daten löschen …', () => this.showPurgeDialog());
     this.showGrid = !VIEW_MODE && window.localStorage.getItem(GUIDE_KEY) === '1';
     this.gridButton = this.button('Raster anzeigen', () => this.toggleGuides());
     this.gridButton.classList.add('cms-grid-toggle');
     this.gridButton.setAttribute('aria-pressed', String(this.showGrid));
     this.darkThemeButton = this.button('Dunkles Theme', () => this.setTheme('dark'));
     this.lightThemeButton = this.button('Helles Theme', () => this.setTheme('light'));
-    this.pageButtons = [this.navButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.gridButton];
+    this.pageButtons = [this.navButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton, this.gridButton];
     this.publishButton.classList.add('cms-publish');
     this.hasDraft = false;
     this.statusText = '';
@@ -170,7 +171,7 @@ class CmsPage {
       this.menus.push(menu);
       return menu;
     };
-    const fileMenu = makeMenu('Datei', [this.previewButton, this.publishButton, this.discardButton, this.backupsButton]);
+    const fileMenu = makeMenu('Datei', [this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton]);
     const editMenu = makeMenu('Bearbeiten', [this.navButton]);
     this.menu = makeMenu('Einfügen', this.menuButtons);
     const viewMenu = makeMenu('Ansicht', [this.darkThemeButton, this.lightThemeButton, this.gridButton]);
@@ -632,6 +633,73 @@ class CmsPage {
         }
       }));
     }
+  }
+
+  showPurgeDialog() {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'cms-dialog';
+    dialog.setAttribute('aria-label', 'CMS-Daten löschen');
+    const form = document.createElement('form');
+    form.method = 'dialog';
+    const heading = document.createElement('h2');
+    heading.textContent = 'CMS-Daten endgültig löschen?';
+    const description = document.createElement('p');
+    description.textContent = 'Konfiguration, Entwurf, Backups, Medien und die CMS-Startseite dieses Devices werden dauerhaft gelöscht:';
+    const paths = document.createElement('ul');
+    const device = this.client.cmsDevice;
+    for (const path of [`<modpath>/fhem-cms-data/${device}/`, `<modpath>/www/fhem-cms/${device}/`]) {
+      const item = document.createElement('li');
+      const code = document.createElement('code');
+      code.textContent = path;
+      item.append(code);
+      paths.append(item);
+    }
+    const note = document.createElement('p');
+    note.textContent = `Anschließend ist das CMS-Device ${device} bis zum Löschen des FHEM-Devices oder einem FHEM-Neustart gesperrt.`;
+    const error = document.createElement('p');
+    error.className = 'cms-dialog-error';
+    error.setAttribute('role', 'alert');
+    const actions = document.createElement('div');
+    actions.className = 'cms-dialog-actions';
+    const close = () => {
+      if (dialog.open) {
+        dialog.close();
+      }
+      dialog.remove();
+    };
+    const remove = this.button('Daten endgültig löschen', async () => {
+      remove.disabled = true;
+      error.textContent = '';
+      try {
+        await this.flushLayout();
+        await this.flushDraftWrites();
+        await this.client.purgeData();
+        close();
+        this.stop();
+        this.setControlsDisabled(true);
+        this.setDraft(false);
+        this.setStatus(`Daten gelöscht. Das FHEM-Device ${device} kann jetzt gelöscht werden.`);
+      } catch (failure) {
+        remove.disabled = false;
+        error.textContent = `Löschen fehlgeschlagen: ${failure.message}`;
+      }
+    });
+    remove.classList.add('cms-purge-confirm');
+    const keep = this.button('Behalten', () => {
+      close();
+      this.setStatus('CMS-Daten wurden beibehalten');
+    });
+    const cancel = this.button('Abbrechen', close);
+    actions.append(remove, keep, cancel);
+    form.append(heading, description, paths, note, error, actions);
+    form.addEventListener('submit', (event) => event.preventDefault());
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      close();
+    });
+    dialog.append(form);
+    document.body.append(dialog);
+    dialog.showModal();
   }
 
   // Verschiebt Kacheln aller Seiten, die mit der Navigation überlappen, nach unten.
