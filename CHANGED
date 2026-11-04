@@ -1,3 +1,11 @@
+2026-11-05 - Slider, Uhr, Status-Symbol, Tabelle, Themes und Layout-Verbesserungen (0.3.0)
+
+Neue Widgets: Schieberegler, Uhr/Datum, Status-Symbol und Readings-Tabelle. Hell/Dunkel-Theme pro Gerät, Bildgröße per Ziehpunkt, einheitliches Skalierverhalten der Kacheln und Dialog zum bestätigten Löschen der CMS-Daten. Konfigurationen werden automatisch auf Schema 4 migriert.
+S34 - Schieberegler
+S36 - Status-Symbol
+S38 - Uhr / Datum
+S41 - Readingsgroup / Tabelle
+
 2026-11-04 - 48-Spalten-Raster (0.2.0)
 
 Das Layout-Raster wurde auf 48 Spalten verfeinert. Bestehende Konfigurationen werden automatisch migriert; Position und Größe von Kacheln und Navigation bleiben erhalten.

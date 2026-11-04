@@ -9,8 +9,8 @@ export const MAX_HTML = 50000;
 export const MAX_IMAGE_BYTES = 3145728;
 
 const ALIGN = ['cms-align-left', 'cms-align-center', 'cms-align-right'];
-// Bildbreiten in 5-%-Schritten (cms-w-5 bis cms-w-100).
-const WIDTH_STEP = 5;
+// Ganzzahlige Bildbreiten (cms-w-1 bis cms-w-100) für feine, sichere Größenänderung.
+const WIDTH_STEP = 1;
 const WIDTH_CLASSES = Array.from({ length: 100 / WIDTH_STEP }, (_, i) => `cms-w-${(i + 1) * WIDTH_STEP}`);
 const IMAGE_CLASSES = ['cms-img-left', 'cms-img-right', 'cms-img-center', 'cms-img-full', ...WIDTH_CLASSES];
 const ALIGNABLE = new Set(['p', 'h1', 'h2', 'h3', 'blockquote', 'th', 'td']);
@@ -226,12 +226,12 @@ export function contentCss(scope) {
     ${scope} h2 { font-size: 1.2rem; margin: 0.8rem 0 0.4rem; }
     ${scope} h3 { font-size: 1.05rem; margin: 0.8rem 0 0.4rem; }
     ${scope} p { margin: 0.5rem 0; }
-    ${scope} blockquote { margin: 0.5rem 0; padding-left: 0.75rem; border-left: 3px solid #43564a; color: #c5d8cc; }
-    ${scope} a { color: #8fd0a8; }
-    ${scope} code { background: #17211d; padding: 0 0.25rem; border-radius: 0.25rem; }
+    ${scope} blockquote { margin: 0.5rem 0; padding-left: 0.75rem; border-left: 3px solid var(--cms-border); color: var(--cms-muted-strong); }
+    ${scope} a { color: var(--cms-accent); }
+    ${scope} code { background: var(--cms-bg); padding: 0 0.25rem; border-radius: 0.25rem; }
     ${scope} table { border-collapse: collapse; width: 100%; margin: 0.5rem 0; }
-    ${scope} th, ${scope} td { border: 1px solid #43564a; padding: 0.3rem 0.5rem; vertical-align: top; min-width: 2rem; }
-    ${scope} th { background: #2a3b32; text-align: left; }
+    ${scope} th, ${scope} td { border: 1px solid var(--cms-border); padding: 0.3rem 0.5rem; vertical-align: top; min-width: 2rem; }
+    ${scope} th { background: var(--cms-surface-raised); text-align: left; }
     ${scope} img { max-width: 100%; height: auto; }
     ${scope} .cms-align-left { text-align: left; }
     ${scope} .cms-align-center { text-align: center; }
@@ -249,9 +249,9 @@ export function editorCss() {
     .rt { display: grid; gap: 0.4rem; }
     .rt-bar { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .rt-bar button { padding: 0.25rem 0.5rem; min-width: 2rem; }
-    .rt-bar button[aria-pressed="true"] { background: #3d5a49; border-color: #8fd0a8; }
-    .rt-sep { width: 1px; background: #43564a; margin: 0 0.15rem; }
-    .rt-panel { border: 1px solid #43564a; border-radius: 0.5rem; padding: 0.5rem; display: grid; gap: 0.5rem; background: #17211d; }
+    .rt-bar button[aria-pressed="true"] { background: var(--cms-surface-active); border-color: var(--cms-accent); }
+    .rt-sep { width: 1px; background: var(--cms-border); margin: 0 0.15rem; }
+    .rt-panel { border: 1px solid var(--cms-border); border-radius: 0.5rem; padding: 0.5rem; display: grid; gap: 0.5rem; background: var(--cms-bg); }
     .rt-panel[hidden] { display: none; }
     .rt-row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
     .rt-row input[type="text"], .rt-row input[type="url"] { flex: 1 1 12rem; width: auto; }
@@ -260,17 +260,17 @@ export function editorCss() {
     .rt-media { display: flex; flex-wrap: wrap; gap: 0.4rem; max-height: 8rem; overflow: auto; }
     .rt-media button { padding: 0.15rem; }
     .rt-media img { display: block; width: 4rem; height: 3rem; object-fit: cover; }
-    .editor-area { min-height: 12rem; max-height: 50vh; overflow: auto; padding: 0.5rem; background: #17211d;
-      border: 1px solid #43564a; border-radius: 0.5rem; }
-    .editor-area:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
-    .editor-area img.rt-selected { outline: 2px solid #8fd0a8; }
+    .editor-area { min-height: 12rem; max-height: 50vh; overflow: auto; padding: 0.5rem; background: var(--cms-bg);
+      border: 1px solid var(--cms-border); border-radius: 0.5rem; }
+    .editor-area:focus-visible { outline: 2px solid var(--cms-accent); outline-offset: 2px; }
+    .editor-area img.rt-selected { outline: 2px solid var(--cms-accent); }
     .rt { position: relative; }
     .rt-handle { position: absolute; width: 1.1rem; height: 1.1rem; padding: 0; min-width: 0; border-radius: 0.25rem;
-      background: #8fd0a8; border: 2px solid #17211d; cursor: nwse-resize; touch-action: none; z-index: 2; }
+      background: var(--cms-accent); border: 2px solid var(--cms-bg); cursor: nwse-resize; touch-action: none; z-index: 2; }
     .rt-handle[hidden] { display: none; }
-    .cms-ph { display: inline-block; padding: 0 0.45em; border-radius: 0.8em; background: #2f5a43; color: #d9f2e2;
-      border: 1px solid #8fd0a8; font-size: 0.9em; cursor: pointer; user-select: all; white-space: nowrap; }
-    .cms-ph:hover { background: #3d7157; }
+    .cms-ph { display: inline-block; padding: 0 0.45em; border-radius: 0.8em; background: var(--cms-accent-strong); color: var(--cms-on-accent);
+      border: 1px solid var(--cms-accent); font-size: 0.9em; cursor: pointer; user-select: all; white-space: nowrap; }
+    .cms-ph:hover { background: var(--cms-accent-hover); }
     ${contentCss('.editor-area')}
   `;
 }
@@ -616,7 +616,8 @@ export function createEditor({ root, services, html, onError }) {
     name.textContent = label;
     row.append(name, input,
       button('Anwenden', `${label} auf die Auswahl anwenden`, () => exec(command, input.value)),
-      button('Entfernen', resetTitle, () => exec(command, command === 'foreColor' ? '#edf4ef' : 'transparent')));
+      button('Entfernen', resetTitle, () => exec(command,
+        command === 'foreColor' ? getComputedStyle(root.host).getPropertyValue('--cms-text').trim() : 'transparent')));
     return row;
   };
   colorPanel.append(
@@ -842,7 +843,7 @@ export function createEditor({ root, services, html, onError }) {
   handle.type = 'button';
   handle.className = 'rt-handle';
   handle.hidden = true;
-  handle.setAttribute('aria-label', 'Bildgröße ändern (Pfeiltasten: 5 Prozent)');
+  handle.setAttribute('aria-label', 'Bildgröße ändern (Pfeiltasten: 1 Prozent)');
   handle.title = 'Bildgröße ziehen';
 
   const contentWidth = () => {
@@ -857,7 +858,7 @@ export function createEditor({ root, services, html, onError }) {
     return Math.round((selectedImage.getBoundingClientRect().width / contentWidth()) * 100);
   };
   const applyPercent = (percent) => {
-    const snapped = Math.min(100, Math.max(WIDTH_STEP, Math.round(percent / WIDTH_STEP) * WIDTH_STEP));
+    const snapped = Math.min(100, Math.max(1, Math.round(percent / WIDTH_STEP) * WIDTH_STEP));
     const kept = [...selectedImage.classList].filter((name) => !name.startsWith('cms-w-'));
     selectedImage.setAttribute('class', [...kept, `cms-w-${snapped}`].join(' '));
     placeHandle();

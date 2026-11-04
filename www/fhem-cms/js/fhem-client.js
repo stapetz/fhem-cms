@@ -137,6 +137,13 @@ export class FhemClient {
     }
   }
 
+  async purgeData() {
+    const result = await this.command(`set ${this.cmsDevice} purge ${this.cmsDevice}`);
+    if (result) {
+      throw new Error(result);
+    }
+  }
+
   async getBackups() {
     const text = await this.command(`get ${this.cmsDevice} backups`);
     let list;

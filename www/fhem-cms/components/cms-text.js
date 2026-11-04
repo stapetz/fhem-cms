@@ -21,36 +21,36 @@ class FHEMCMSText extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; }
         * { box-sizing: border-box; }
-        .tile { height: 100%; padding: 1rem; border: 1px solid #43564a; border-radius: 1rem;
-          background: #202e27; display: grid; gap: 0.5rem; align-content: start; }
+        .tile { height: 100%; padding: 1rem; border: 1px solid var(--cms-border, #43564a); border-radius: 1rem;
+          background: var(--cms-surface, #202e27); display: grid; gap: 0.5rem; align-content: start; }
         header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
         h3 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
         ${contentCss('.body')}
         .body h4, .body h5 { margin: 0.8rem 0 0.4rem; }
         ${editorCss()}
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
-        button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
-          border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
-        button:hover { background: #34493e; }
+        button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
+          border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
+        button:hover { background: var(--cms-surface-hover, #34493e); }
         button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible {
-          outline: 2px solid #8fd0a8; outline-offset: 2px; }
+          outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         .icon { padding: 0.2rem 0.5rem; }
         :host([view-only]) [data-open-config] { display: none; }
-        dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
+        dialog { border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef);
           padding: 1.25rem; width: min(94vw, 52rem); max-height: 94vh; overflow: auto; }
-        dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+        dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form { display: grid; gap: 0.75rem; }
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
-        input, textarea { font: inherit; color: inherit; background: #17211d; border: 1px solid #43564a;
+        input, textarea { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
         textarea { min-height: 10rem; resize: vertical; font-family: ui-monospace, monospace; }
-        fieldset { border: 1px solid #43564a; border-radius: 0.75rem; padding: 0.75rem; margin: 0;
+        fieldset { border: 1px solid var(--cms-border, #43564a); border-radius: 0.75rem; padding: 0.75rem; margin: 0;
           display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); }
-        legend { color: #a5c9b2; font-size: 0.8rem; }
-        .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
+        legend { color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
+        .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
-        .danger { margin-right: auto; border-color: #7f3b33; }
-        .error { margin: 0; color: #ffb4a8; min-height: 1.2em; }
+        .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
+        .error { margin: 0; color: var(--cms-danger, #ffb4a8); min-height: 1.2em; }
       </style>
       <article class="tile">
         <header>

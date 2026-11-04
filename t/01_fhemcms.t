@@ -70,7 +70,7 @@ ok(-d $dataDir, 'creates a data directory per device outside www');
 ok(-f File::Spec->catfile($dataDir, 'config.json'), 'creates a default config');
 my ($cfg, $cfgErr) = FHEMCMS_ReadConfig($name, $dataDir);
 is($cfgErr, undef, 'default config is valid');
-is($cfg->{schemaVersion}, 3, 'creates the current config schema');
+is($cfg->{schemaVersion}, 4, 'creates the current config schema');
 $cfg->{pages}[0]{widgets} = [{id => 'w1', type => 'fhem-value', device => 'Lamp', reading => 'state',
     grid => {col => 1, row => 1, w => 2, h => 1}}];
 is(FHEMCMS_WriteConfig($name, $dataDir, $cfg), undef, 'writes a valid config');
@@ -121,7 +121,7 @@ is(FHEMCMS_ValidateConfig($restored), undef, 'allows line breaks and tabs in tex
 pop(@{$restored->{pages}[0]{widgets}});
 $restored->{navigation} = {orientation => 'vertical', grid => {col => 1, row => 1, w => 3, h => 4}};
 is(FHEMCMS_ValidateConfig($restored), undef, 'accepts a navigation widget');
-my $gridBoundary = {schemaVersion => 3, pages => [{id => 'p', title => 'P', widgets => [
+my $gridBoundary = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [
     {id => 'w1', type => 'fhem-value', device => 'Lamp', reading => 'state',
         grid => {col => 48, row => 1, w => 1, h => 1}}]}]};
 is(FHEMCMS_ValidateConfig($gridBoundary), undef, 'accepts the last cell in the 48-column grid');
@@ -129,7 +129,7 @@ $gridBoundary->{pages}[0]{widgets}[0]{grid}{w} = 2;
 like(FHEMCMS_ValidateConfig($gridBoundary), qr/Rasterwerte/, 'rejects a widget overflowing the 48-column grid');
 for my $case (
     ['bad orientation', {orientation => 'diagonal', grid => {col => 1, row => 1, w => 3, h => 4}}, qr/Ausrichtung/],
-    ['bad grid', {orientation => 'horizontal', grid => {col => 46, row => 1, w => 5, h => 1}}, qr/Rasterwerte/],
+    ['bad grid', {orientation => 'horizontal', grid => {col => 45, row => 1, w => 5, h => 1}}, qr/Rasterwerte/],
     ['unknown field', {orientation => 'horizontal', grid => {col => 1, row => 1, w => 3, h => 1}, x => 1}, qr/Unbekanntes Feld 'x'/],
     ['missing grid', {orientation => 'horizontal'}, qr/Pflichtfeld 'grid'/],
 ) {
@@ -157,19 +157,30 @@ is(FHEMCMS_ValidateConfig($restored), undef, 'navigation stays optional');
 my $migrated = FHEMCMS_MigrateConfig({schemaVersion => 1, pages => [{id => 'p', title => 'P',
     widgets => [{type => 'fhem-value', device => 'A', reading => 'r',
         grid => {col => 1, row => 1, w => 1, h => 1}}]}]});
-is(FHEMCMS_ValidateConfig($migrated), undef, 'migrates a version 1 config to version 3');
+is(FHEMCMS_ValidateConfig($migrated), undef, 'migrates a version 1 config to the current schema');
 is($migrated->{pages}[0]{widgets}[0]{id}, 'w1', 'assigns ids during migration');
-is($migrated->{pages}[0]{widgets}[0]{grid}{w}, 4, 'scales the migrated widget width');
-
+is($migrated->{schemaVersion}, 4, 'migrates version 1 configs to the current schema');
+is_deeply($migrated->{pages}[0]{widgets}[0]{grid},
+    {col => 1, row => 1, w => 4, h => 1}, 'scales version 1 grids to 48 columns');
 my $migratedV2 = FHEMCMS_MigrateConfig({schemaVersion => 2,
-    navigation => {orientation => 'horizontal', grid => {col => 2, row => 3, w => 11, h => 4}},
-    pages => [{id => 'p', title => 'P', widgets => [{id => 'w1', type => 'fhem-value',
-        device => 'A', reading => 'r', grid => {col => 3, row => 5, w => 4, h => 6}}]}]});
-is(FHEMCMS_ValidateConfig($migratedV2), undef, 'migrates a version 2 config to version 3');
-is_deeply($migratedV2->{pages}[0]{widgets}[0]{grid}, {col => 9, row => 5, w => 16, h => 6},
-    'preserves widget position and size during grid migration');
-is_deeply($migratedV2->{navigation}{grid}, {col => 5, row => 3, w => 44, h => 4},
-    'preserves navigation position and size during grid migration');
+    navigation => {orientation => 'horizontal', grid => {col => 1, row => 1, w => 12, h => 1}},
+    pages => [{id => 'p', title => 'P', widgets => [{id => 'x', type => 'fhem-value', device => 'A', reading => 'r',
+        grid => {col => 3, row => 2, w => 4, h => 2}}]}]});
+is(FHEMCMS_ValidateConfig($migratedV2), undef, 'migrates version 2 configs to the current schema');
+is_deeply($migratedV2->{pages}[0]{widgets}[0]{grid},
+    {col => 9, row => 2, w => 16, h => 2}, 'keeps the existing widget dimensions after grid migration');
+is_deeply($migratedV2->{navigation}{grid},
+    {col => 1, row => 1, w => 48, h => 1}, 'keeps the existing navigation dimensions after grid migration');
+my $migratedV3 = FHEMCMS_MigrateConfig({schemaVersion => 3, pages => [{id => 'p', title => 'P', widgets => []}]});
+is($migratedV3->{schemaVersion}, 4, 'migrates version 3 configs to the current schema');
+is($migratedV3->{theme}, 'dark', 'preserves the current default theme during migration');
+my $migratedLight = FHEMCMS_MigrateConfig({schemaVersion => 3, theme => 'light',
+    pages => [{id => 'p', title => 'P', widgets => []}]});
+is($migratedLight->{theme}, 'light', 'preserves a configured theme during migration');
+my $themeConfig = FHEMCMS_DefaultConfig();
+is(FHEMCMS_ValidateConfig($themeConfig), undef, 'accepts the default theme');
+$themeConfig->{theme} = 'system';
+like(FHEMCMS_ValidateConfig($themeConfig), qr/Ungueltiges Theme/, 'rejects an unsupported theme');
 
 my $json = FHEMCMS_Get($hash, $name, 'config');
 my $decoded = JSON::PP::decode_json($json);
@@ -181,7 +192,7 @@ is(FHEMCMS_Set($hash, $name, 'config', $payload), undef, 'set config stores a Ba
 my $stored = JSON::PP::decode_json(FHEMCMS_Get($hash, $name, 'config'));
 is(scalar(@{$stored->{pages}[0]{widgets}}), 0, 'set config replaced the config');
 like(FHEMCMS_Set($hash, $name, 'config', 'not base64!'), qr/Base64/, 'set config rejects non-Base64 input');
-like(FHEMCMS_Set($hash, $name, 'config', MIME::Base64::encode_base64('{"schemaVersion":3}', '')),
+like(FHEMCMS_Set($hash, $name, 'config', MIME::Base64::encode_base64('{"schemaVersion":4}', '')),
     qr/Pflichtfeld 'pages'/, 'set config validates the payload');
 my ($latest) = FHEMCMS_ListBackups($dataDir);
 is(FHEMCMS_Set($hash, $name, 'restore', $latest), undef, 'set restore restores a backup');
@@ -349,7 +360,7 @@ my $backupsBefore = scalar(my @b0 = FHEMCMS_ListBackups($pData));
 is(FHEMCMS_Get($pHash, $pName, 'status'), '{"draft":false}', 'status reports no draft');
 is(FHEMCMS_Get($pHash, $pName, 'draft'), FHEMCMS_Get($pHash, $pName, 'config'), 'draft falls back to the live config');
 like(FHEMCMS_Set($pHash, $pName, 'publish'), qr/keinen Entwurf/, 'publish needs a draft');
-my $draftCfg = {schemaVersion => 3, pages => [{id => 'start', title => 'Entwurf', widgets => []}]};
+my $draftCfg = {schemaVersion => 4, theme => 'light', pages => [{id => 'start', title => 'Entwurf', widgets => []}]};
 my $draftB64 = MIME::Base64::encode_base64(JSON::PP->new->utf8->encode($draftCfg), '');
 is(FHEMCMS_Set($pHash, $pName, 'draft', $draftB64), undef, 'saves a draft');
 ok(-f $draftFile, 'draft file exists');
@@ -358,17 +369,21 @@ is(scalar(my @b1 = FHEMCMS_ListBackups($pData)), $backupsBefore, 'saving a draft
 is(FHEMCMS_Get($pHash, $pName, 'status'), '{"draft":true}', 'status reports the draft');
 like(FHEMCMS_Get($pHash, $pName, 'draft'), qr/"title":"Entwurf"/, 'get draft returns the draft');
 unlike(FHEMCMS_Get($pHash, $pName, 'config'), qr/Entwurf/, 'get config still returns the live config');
-like(FHEMCMS_Set($pHash, $pName, 'draft', MIME::Base64::encode_base64('{"schemaVersion":3,"pages":[]}', '')),
+like(FHEMCMS_Set($pHash, $pName, 'draft', MIME::Base64::encode_base64('{"schemaVersion":4,"pages":[]}', '')),
     qr/\S/, 'rejects an invalid draft');
 is(FHEMCMS_Set($pHash, $pName, 'discard'), undef, 'discards the draft');
 ok(!-e $draftFile, 'draft file is gone after discard');
 is(FHEMCMS_Set($pHash, $pName, 'discard'), undef, 'discard without a draft is fine');
 FHEMCMS_Set($pHash, $pName, 'draft', $draftB64);
 my $restoreFrom = (FHEMCMS_ListBackups($pData))[0];
+my $draftBeforeRestore = read_file($draftFile);
 is(FHEMCMS_Set($pHash, $pName, 'restore', $restoreFrom), undef, 'restore works while a draft exists');
 ok(-f $draftFile, 'restore leaves the draft untouched');
+is(read_file($draftFile), $draftBeforeRestore, 'restore preserves the existing draft content');
 is(FHEMCMS_Set($pHash, $pName, 'publish'), undef, 'publishes the draft');
 like(FHEMCMS_Get($pHash, $pName, 'config'), qr/"title":"Entwurf"/, 'live config now has the draft content');
+is(JSON::PP::decode_json(FHEMCMS_Get($pHash, $pName, 'config'))->{theme}, 'light',
+    'publishing preserves the light theme in the live config');
 ok(!-e $draftFile, 'draft is removed after publish');
 my @afterPublish = FHEMCMS_ListBackups($pData);
 ok(scalar(@afterPublish) > $backupsBefore, 'publish creates a new backup version');
@@ -386,6 +401,7 @@ my @validHtml = (
     '<p><a href="https://example.org/a?x=1&amp;y=2">Link</a> <a href="#/start">Seite</a></p>',
     '<table><thead><tr><th>A</th></tr></thead><tbody><tr><td class="cms-align-right">1</td></tr></tbody></table>',
     "<p><img src=\"media/$md5.png\" alt=\"Bild\" class=\"cms-img-left cms-w-50\"><br></p>",
+    "<p><img src=\"media/$md5.png\" class=\"cms-w-33\"><br></p>",
     "<p><img src=\"media/$md5.png\" class=\"cms-w-35\"><br></p>",
     '<p><span style="color:#ff0000">rot</span> <span style="background-color:#ffe066">gelb</span> <span style="color:#00ff00;background-color:#000000">beides</span></p>',
     "<p>Zeile 1\n\tZeile 2 \"zitiert\" it's</p>",
@@ -414,8 +430,8 @@ my @badHtml = (
     ['<p>&copy;</p>', 'unknown entity'],
     ['<p class="evil">a</p>', 'unknown class'],
     ['<img src="media/' . $md5 . '.png" class="cms-align-left">', 'wrong class for image'],
-    ['<img src="media/' . $md5 . '.png" class="cms-w-33">', 'width not in 5 percent steps'],
-    ['<img src="media/' . $md5 . '.png" class="cms-w-105">', 'width above 100 percent'],
+    ['<img src="media/' . $md5 . '.png" class="cms-w-0">', 'width below 1 percent'],
+    ['<img src="media/' . $md5 . '.png" class="cms-w-101">', 'width above 100 percent'],
     ['<br/>', 'self closing syntax'],
     ['<p href="#/x">a</p>', 'attribute on wrong tag'],
     ["<p>a\x01</p>", 'control character'],
@@ -427,7 +443,7 @@ for my $case (@badHtml) {
     isnt(FHEMCMS_ValidateHtml($case->[0]), undef, "rejects html: $case->[1]");
 }
 
-my $hw = {schemaVersion => 3, pages => [{id => 'p', title => 'P', widgets => [
+my $hw = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [
     {id => 'h1', type => 'text', html => '<p>ok</p>', grid => {col => 1, row => 1, w => 4, h => 2}}]}]};
 is(FHEMCMS_ValidateConfig($hw), undef, 'config with an html text widget is valid');
 $hw->{pages}[0]{widgets}[0]{html} = '<script>x</script>';
@@ -474,7 +490,7 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
 
 # text: Platzhalter im Textbaustein
 {
-    my $tcfg = {schemaVersion => 3, pages => [{id => 'p', title => 'P', widgets => [{id => 'x1', type => 'text',
+    my $tcfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'x1', type => 'text',
         html => '<p>Es sind {{Garten:temperature|round(1)|suffix( C)}} Grad.</p><table><tbody><tr><td>{{Lamp:state|map(on=An,off=Aus)}}</td></tr></tbody></table>',
         grid => {col => 1, row => 1, w => 3, h => 2}}]}]};
     is(FHEMCMS_ValidateConfig($tcfg), undef, 'text accepts placeholders');
@@ -486,7 +502,7 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
 
 # fhem-html: freies HTML mit Platzhaltern
 {
-    my $hcfg = {schemaVersion => 3, pages => [{id => 'p', title => 'P', widgets => [{id => 'h1', type => 'fhem-html',
+    my $hcfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'h1', type => 'fhem-html',
         html => '<div class="a">{{Temp:temperature|round(1)}}</div><style>.a{color:red}</style>', devices => ['Temp'],
         grid => {col => 1, row => 1, w => 3, h => 2}}]}]};
     is(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html accepts safe html');
@@ -523,7 +539,7 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
 
 # fhem-switch: Zustand, Befehle und Icons
 {
-    my $scfg = {schemaVersion => 3, pages => [{id => 'p', title => 'P', widgets => [{id => 's1', type => 'fhem-switch',
+    my $scfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 's1', type => 'fhem-switch',
         device => 'Lamp', reading => 'state', on => 'on', off => 'off', icon => 'light_on', iconOff => 'light_off',
         title => 'Lampe', grid => {col => 1, row => 1, w => 3, h => 2}}]}]};
     is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-switch accepts a complete config');
@@ -545,7 +561,7 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
 
 # fhem-button: fester Befehl
 {
-    my $bcfg = {schemaVersion => 3, pages => [{id => 'p', title => 'P', widgets => [{id => 'b1', type => 'fhem-button',
+    my $bcfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'b1', type => 'fhem-button',
         device => 'Lamp', command => 'toggle', label => 'Umschalten', icon => 'light_on', title => 'Lampe',
         grid => {col => 1, row => 1, w => 3, h => 2}}]}]};
     is(FHEMCMS_ValidateConfig($bcfg), undef, 'fhem-button accepts a complete config');
@@ -565,9 +581,27 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     isnt(FHEMCMS_ValidateConfig($bcfg), undef, 'fhem-button requires command');
 }
 
+# fhem-slider: Set-Befehl und angezeigtes Reading
+{
+    my $scfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 's1', type => 'fhem-slider',
+        device => 'Dimmer', command => 'pct', reading => 'pct', title => 'Helligkeit',
+        grid => {col => 1, row => 1, w => 12, h => 3}}]}]};
+    is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-slider accepts a complete config');
+    my $w = $scfg->{pages}[0]{widgets}[0];
+    for my $case (['device', 'bad device'], ['command', 'pct;shutdown'], ['reading', 'bad reading']) {
+        my ($field, $bad) = @$case;
+        my $old = $w->{$field};
+        $w->{$field} = $bad;
+        isnt(FHEMCMS_ValidateConfig($scfg), undef, "fhem-slider rejects invalid $field");
+        $w->{$field} = $old;
+    }
+    delete $w->{command};
+    isnt(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-slider requires a set command');
+}
+
 # fhem-value: Einheit und Icon
 {
-    my $vcfg = {schemaVersion => 3, pages => [{id => 'p', title => 'P', widgets => [{id => 'v1', type => 'fhem-value',
+    my $vcfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'v1', type => 'fhem-value',
         device => 'Temp', reading => 'temperature', unit => '°C', icon => 'temp_temperature',
         grid => {col => 1, row => 1, w => 3, h => 1}}]}]};
     is(FHEMCMS_ValidateConfig($vcfg), undef, 'fhem-value accepts unit and icon');
@@ -590,6 +624,73 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     delete $w->{title};
     $w->{icon} = 'weather/sunny';
     is(FHEMCMS_ValidateConfig($vcfg), undef, 'icon may contain a subdirectory');
+}
+
+# fhem-clock: lokale Uhr und Darstellung
+{
+    my $ccfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'c1', type => 'fhem-clock',
+        style => 'analog', showSeconds => JSON::PP::true, showDate => JSON::PP::false, showWeekday => JSON::PP::true,
+        grid => {col => 1, row => 1, w => 12, h => 4}}]}]};
+    is(FHEMCMS_ValidateConfig($ccfg), undef, 'fhem-clock accepts a complete config');
+    my $w = $ccfg->{pages}[0]{widgets}[0];
+    $w->{style} = 'system';
+    like(FHEMCMS_ValidateConfig($ccfg), qr/Uhr-Darstellung/, 'fhem-clock rejects an unsupported style');
+    $w->{style} = 'date';
+    $w->{showSeconds} = 'yes';
+    like(FHEMCMS_ValidateConfig($ccfg), qr/showSeconds/, 'fhem-clock requires a boolean option');
+    $w->{showSeconds} = JSON::PP::false;
+    $w->{device} = 'Lamp';
+    like(FHEMCMS_ValidateConfig($ccfg), qr/Unbekanntes Feld/, 'fhem-clock rejects device fields');
+}
+
+# fhem-icon: lesende Statuszuordnungen
+{
+    my $icfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'i1', type => 'fhem-icon',
+        device => 'Window', reading => 'state', states => [
+            {value => 'open', icon => 'fts_window_1w_open', color => '#ff0000'},
+            {value => 'closed', icon => 'fts_window_1w', color => '#00aa00'}
+        ], grid => {col => 1, row => 1, w => 6, h => 4}}]}]};
+    is(FHEMCMS_ValidateConfig($icfg), undef, 'fhem-icon accepts a complete config');
+    my $w = $icfg->{pages}[0]{widgets}[0];
+    $w->{states}[0]{icon} = '../etc/passwd';
+    like(FHEMCMS_ValidateConfig($icfg), qr/Ungueltiges Icon/, 'fhem-icon rejects an unsafe icon path');
+    $w->{states}[0]{icon} = 'fts_window_1w_open';
+    $w->{states}[0]{color} = 'red';
+    like(FHEMCMS_ValidateConfig($icfg), qr/Ungueltige Farbe/, 'fhem-icon requires a hex color');
+    $w->{states}[0]{color} = '#ff0000';
+    $w->{states}[1]{value} = 'open';
+    like(FHEMCMS_ValidateConfig($icfg), qr/Doppelter Wert/, 'fhem-icon rejects duplicate reading values');
+    $w->{states}[1]{value} = 'closed';
+    $w->{states}[0]{extra} = 'x';
+    like(FHEMCMS_ValidateConfig($icfg), qr/Unbekanntes Feld/, 'fhem-icon rejects unknown mapping fields');
+}
+
+# fhem-table: mehrere Devices und Readings
+{
+    my $rcfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'r1', type => 'fhem-table',
+        deviceLabel => 'Thermometer:',
+        rows => [{device => 'Temp', reading => 'temperature', unit => '°C'}, {device => 'Lamp', reading => 'state'}],
+        grid => {col => 1, row => 1, w => 24, h => 8}}]}]};
+    is(FHEMCMS_ValidateConfig($rcfg), undef, 'fhem-table accepts multiple devices and readings');
+    my $w = $rcfg->{pages}[0]{widgets}[0];
+    $w->{deviceLabel} = "bad\nlabel";
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Tabellen-Bezeichnung/, 'fhem-table rejects control characters in its column heading');
+    $w->{deviceLabel} = 'Thermometer:';
+    $w->{rows}[0]{unit} = '°C' x 9;
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Einheit in rows/, 'fhem-table rejects oversized units');
+    $w->{rows}[0]{unit} = '°C';
+    $w->{rows}[0]{unit} = "°C\n";
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Einheit in rows/, 'fhem-table rejects control characters in units');
+    $w->{rows}[0]{unit} = '°C';
+    $w->{rows}[1]{device} = 'bad device';
+    like(FHEMCMS_ValidateConfig($rcfg), qr/rows.device/, 'fhem-table rejects invalid device names');
+    $w->{rows}[1]{device} = 'Temp';
+    $w->{rows}[1]{reading} = 'temperature';
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Doppelte Device\/Reading-Kombination/, 'fhem-table rejects duplicate pairs');
+    $w->{rows}[1]{device} = 'Lamp';
+    $w->{rows}[1]{reading} = 'state';
+    $w->{rows}[0]{extra} = 'x';
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Unbekanntes Feld/, 'fhem-table rejects unknown row fields');
 }
 
 my $iconDir = File::Spec->catdir($modPath, 'www', 'images', 'default', 'sub');

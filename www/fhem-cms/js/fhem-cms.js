@@ -4,6 +4,10 @@ import '../components/cms-value.js';
 import '../components/cms-switch.js';
 import '../components/cms-button.js';
 import '../components/cms-html.js';
+import '../components/cms-clock.js';
+import '../components/cms-icon.js';
+import '../components/cms-table.js';
+import '../components/cms-slider.js';
 import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { GRID_COLUMNS, cellFromPoint, moveWidget, resizeWidget } from './layout.js';
@@ -14,6 +18,9 @@ const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
 const NAV_ID = '__nav';
 // Devices einer Kachel: Thermostat und Wert haben eines, freies HTML eine Liste, Texte nennen sie in Platzhaltern.
 const devicesOf = (widget) => {
+  if (widget.type === 'fhem-table') {
+    return [...new Set((widget.rows || []).map((row) => row.device).filter(isValidName))];
+  }
   if (widget.type === 'fhem-html') {
     return widget.devices || [];
   }
@@ -22,10 +29,10 @@ const devicesOf = (widget) => {
   }
   return [widget.device];
 };
-const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html'].includes(widget.type)
+const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider'].includes(widget.type)
   || (widget.type === 'text' && devicesOf(widget).length > 0);
 // Daten einer Kachel: ein Device oder (freies HTML, Text) die Map aller verwendeten Devices.
-const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.type === 'text'
+const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.type === 'text' || widget.type === 'fhem-table'
   ? new Map(devicesOf(widget).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
   : snapshots.get(widget.device) || null);
 const GUIDE_KEY = 'fhem-cms-show-grid';
@@ -92,11 +99,14 @@ class CmsPage {
     this.publishButton = this.button('Veröffentlichen', () => this.publish());
     this.discardButton = this.button('Entwurf verwerfen', () => this.discard());
     this.backupsButton = this.button('Backups …', () => this.showBackups());
+    this.purgeButton = this.button('Daten löschen …', () => this.showPurgeDialog());
     this.showGrid = !VIEW_MODE && window.localStorage.getItem(GUIDE_KEY) === '1';
     this.gridButton = this.button('Raster anzeigen', () => this.toggleGuides());
     this.gridButton.classList.add('cms-grid-toggle');
     this.gridButton.setAttribute('aria-pressed', String(this.showGrid));
-    this.pageButtons = [this.navButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.gridButton];
+    this.darkThemeButton = this.button('Dunkles Theme', () => this.setTheme('dark'));
+    this.lightThemeButton = this.button('Helles Theme', () => this.setTheme('light'));
+    this.pageButtons = [this.navButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton, this.gridButton];
     this.publishButton.classList.add('cms-publish');
     this.hasDraft = false;
     this.statusText = '';
@@ -105,6 +115,8 @@ class CmsPage {
     this.overlays = new Map();
     this.layoutTimer = null;
     this.layoutSaving = Promise.resolve();
+    this.draftSaving = Promise.resolve();
+    this.draftSaveError = null;
 
     this.menuButtons = [
       this.button('Thermostat-Kachel', () => this.addWidget('thermostat')),
@@ -112,6 +124,10 @@ class CmsPage {
       this.button('Schalter', () => this.addWidget('fhem-switch')),
       this.button('Taster', () => this.addWidget('fhem-button')),
       this.button('Freies HTML', () => this.addWidget('fhem-html')),
+      this.button('Uhr / Datum', () => this.addWidget('fhem-clock')),
+      this.button('Status-Symbol', () => this.addWidget('fhem-icon')),
+      this.button('Tabelle', () => this.addWidget('fhem-table')),
+      this.button('Schieberegler', () => this.addWidget('fhem-slider')),
       this.button('Textbaustein', () => this.addWidget('text'))
     ];
     // Menüs wie in klassischen Programmen: Datei, Bearbeiten, Einfügen, Ansicht.
@@ -155,10 +171,10 @@ class CmsPage {
       this.menus.push(menu);
       return menu;
     };
-    const fileMenu = makeMenu('Datei', [this.previewButton, this.publishButton, this.discardButton, this.backupsButton]);
+    const fileMenu = makeMenu('Datei', [this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton]);
     const editMenu = makeMenu('Bearbeiten', [this.navButton]);
     this.menu = makeMenu('Einfügen', this.menuButtons);
-    const viewMenu = makeMenu('Ansicht', [this.gridButton]);
+    const viewMenu = makeMenu('Ansicht', [this.darkThemeButton, this.lightThemeButton, this.gridButton]);
     document.addEventListener('click', (event) => {
       if (!this.toolbar.contains(event.target)) {
         this.closeMenus();
@@ -242,6 +258,9 @@ class CmsPage {
   // Konfigurationen ohne Navigation erhalten die Standardnavigation oben; die Kacheln rücken darunter.
   async loadConfig(source) {
     const config = await this.client.getConfig(source);
+    if (!['dark', 'light'].includes(config.theme)) {
+      config.theme = 'dark';
+    }
     if (!config.navigation) {
       config.navigation = { orientation: 'horizontal', grid: { ...DEFAULT_NAV_GRID } };
       for (const page of config.pages) {
@@ -263,6 +282,7 @@ class CmsPage {
       this.setControlsDisabled(true);
       return;
     }
+    this.applyTheme();
     window.addEventListener('hashchange', () => this.showPage(this.pageFromHash()));
     window.addEventListener('online', () => this.refresh());
     window.addEventListener('offline', () => this.markStale('Offline'));
@@ -281,6 +301,27 @@ class CmsPage {
     this.setDraft(this.hasDraft);
     this.startPolling();
     await this.showPage(this.pageFromHash());
+  }
+
+  applyTheme() {
+    const theme = this.config?.theme === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.cmsTheme = theme;
+    this.darkThemeButton?.setAttribute('aria-pressed', String(theme === 'dark'));
+    this.lightThemeButton?.setAttribute('aria-pressed', String(theme === 'light'));
+  }
+
+  async setTheme(theme) {
+    if (!['dark', 'light'].includes(theme) || theme === this.config.theme) {
+      return;
+    }
+    const next = structuredClone(this.config);
+    next.theme = theme;
+    try {
+      await this.persist(next);
+      this.setStatus(`Theme „${theme === 'light' ? 'Hell' : 'Dunkel'}“ gespeichert`);
+    } catch (error) {
+      this.setStatus(`Theme konnte nicht gespeichert werden: ${error.message}`);
+    }
   }
 
   // Beendet Timer und Abonnements, damit nach dem Verlassen der Seite nichts weiterläuft.
@@ -594,6 +635,73 @@ class CmsPage {
     }
   }
 
+  showPurgeDialog() {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'cms-dialog';
+    dialog.setAttribute('aria-label', 'CMS-Daten löschen');
+    const form = document.createElement('form');
+    form.method = 'dialog';
+    const heading = document.createElement('h2');
+    heading.textContent = 'CMS-Daten endgültig löschen?';
+    const description = document.createElement('p');
+    description.textContent = 'Konfiguration, Entwurf, Backups, Medien und die CMS-Startseite dieses Devices werden dauerhaft gelöscht:';
+    const paths = document.createElement('ul');
+    const device = this.client.cmsDevice;
+    for (const path of [`<modpath>/fhem-cms-data/${device}/`, `<modpath>/www/fhem-cms/${device}/`]) {
+      const item = document.createElement('li');
+      const code = document.createElement('code');
+      code.textContent = path;
+      item.append(code);
+      paths.append(item);
+    }
+    const note = document.createElement('p');
+    note.textContent = `Anschließend ist das CMS-Device ${device} bis zum Löschen des FHEM-Devices oder einem FHEM-Neustart gesperrt.`;
+    const error = document.createElement('p');
+    error.className = 'cms-dialog-error';
+    error.setAttribute('role', 'alert');
+    const actions = document.createElement('div');
+    actions.className = 'cms-dialog-actions';
+    const close = () => {
+      if (dialog.open) {
+        dialog.close();
+      }
+      dialog.remove();
+    };
+    const remove = this.button('Daten endgültig löschen', async () => {
+      remove.disabled = true;
+      error.textContent = '';
+      try {
+        await this.flushLayout();
+        await this.flushDraftWrites();
+        await this.client.purgeData();
+        close();
+        this.stop();
+        this.setControlsDisabled(true);
+        this.setDraft(false);
+        this.setStatus(`Daten gelöscht. Das FHEM-Device ${device} kann jetzt gelöscht werden.`);
+      } catch (failure) {
+        remove.disabled = false;
+        error.textContent = `Löschen fehlgeschlagen: ${failure.message}`;
+      }
+    });
+    remove.classList.add('cms-purge-confirm');
+    const keep = this.button('Behalten', () => {
+      close();
+      this.setStatus('CMS-Daten wurden beibehalten');
+    });
+    const cancel = this.button('Abbrechen', close);
+    actions.append(remove, keep, cancel);
+    form.append(heading, description, paths, note, error, actions);
+    form.addEventListener('submit', (event) => event.preventDefault());
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      close();
+    });
+    dialog.append(form);
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
   // Verschiebt Kacheln aller Seiten, die mit der Navigation überlappen, nach unten.
   arrangeAround(config, exceptPageId) {
     const nav = { id: NAV_ID, grid: config.navigation.grid };
@@ -761,7 +869,7 @@ class CmsPage {
       next.navigation.orientation = orientation.value;
       next.navigation.grid = orientation.value === 'vertical'
         ? { ...grid, w: Math.min(3, 13 - grid.col), h: Math.max(grid.h, 3) }
-        : { ...grid, col: 1, w: 12, h: 1 };
+        : { ...grid, col: 1, w: 48, h: 1 };
     }));
     const add = this.button('+ Seite', async () => {
       const title = await this.askTitle('Titel der neuen Seite', '');
@@ -1088,8 +1196,9 @@ class CmsPage {
     const layout = this.pendingLayout;
     this.pendingLayout = null;
     if (layout) {
-      this.commitLayout(layout);
+      return this.commitLayout(layout);
     }
+    return this.layoutSaving;
   }
 
   commitLayout(layout) {
@@ -1154,6 +1263,25 @@ class CmsPage {
       element = document.createElement('cms-button');
       element.services = this.services();
       element.config = widget;
+    } else if (widget.type === 'fhem-clock') {
+      element = document.createElement('cms-clock');
+      element.services = this.services();
+      element.config = widget;
+    } else if (widget.type === 'fhem-icon') {
+      element = document.createElement('cms-icon');
+      element.services = this.services();
+      element.config = widget;
+      element.data = this.snapshots.get(widget.device) || null;
+    } else if (widget.type === 'fhem-table') {
+      element = document.createElement('cms-table');
+      element.services = this.services();
+      element.config = widget;
+      element.data = dataFor(widget, this.snapshots);
+    } else if (widget.type === 'fhem-slider') {
+      element = document.createElement('cms-slider');
+      element.services = this.services();
+      element.config = widget;
+      element.data = this.snapshots.get(widget.device) || null;
     } else if (widget.type === 'fhem-html') {
       element = document.createElement('cms-html');
       element.services = this.services();
@@ -1187,9 +1315,9 @@ class CmsPage {
   }
 
   addWidget(type) {
-    const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-switch': 's', 'fhem-button': 'b', 'fhem-html': 'h' }[type] || 't';
+    const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-switch': 's', 'fhem-slider': 'l', 'fhem-button': 'b', 'fhem-html': 'h', 'fhem-clock': 'c', 'fhem-icon': 'i', 'fhem-table': 'r' }[type] || 't';
     const id = this.uniqueId(prefix, new Set(this.page.widgets.map((widget) => widget.id)));
-    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 } }[type] || { w: 16, h: 2 };
+    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 }, 'fhem-clock': { w: 12, h: 4 }, 'fhem-icon': { w: 6, h: 4 }, 'fhem-table': { w: 24, h: 8 }, 'fhem-slider': { w: 12, h: 3 } }[type] || { w: 16, h: 2 };
     const grid = { col: 1, row: this.nextFreeRow(), ...size };
     let widget = { id, type, device: '', readings: { actual: '', target: '' }, grid };
     if (type === 'text') {
@@ -1202,6 +1330,14 @@ class CmsPage {
       widget = { id, type, device: '', command: '', grid };
     } else if (type === 'fhem-html') {
       widget = { id, type, html: '', devices: [], grid };
+    } else if (type === 'fhem-clock') {
+      widget = { id, type, style: 'digital', showSeconds: false, showDate: false, showWeekday: false, grid };
+    } else if (type === 'fhem-icon') {
+      widget = { id, type, device: '', reading: '', states: [], grid };
+    } else if (type === 'fhem-table') {
+      widget = { id, type, rows: [], grid };
+    } else if (type === 'fhem-slider') {
+      widget = { id, type, device: '', command: '', reading: '', grid };
     }
     const element = this.createElementFor(widget);
     element.addEventListener('cms-widget-cancel', () => {
@@ -1213,9 +1349,26 @@ class CmsPage {
   }
 
   async persist(config) {
-    await this.client.saveDraft(config);
+    const saving = this.draftSaving.then(() => this.client.saveDraft(config));
+    this.draftSaving = saving.then(
+      () => {
+        this.draftSaveError = null;
+      },
+      (error) => {
+        this.draftSaveError = error;
+      }
+    );
+    await saving;
     this.config = config;
+    this.applyTheme();
     this.setDraft(true);
+  }
+
+  async flushDraftWrites() {
+    await this.draftSaving;
+    if (this.draftSaveError) {
+      throw this.draftSaveError;
+    }
   }
 
   setDraft(value) {
@@ -1229,8 +1382,9 @@ class CmsPage {
     if (!window.confirm('Den Entwurf jetzt veröffentlichen? Der bisherige Live-Stand wird als Version gesichert und ist über „Backups“ wiederherstellbar.')) {
       return;
     }
-    await this.flushLayout();
     try {
+      await this.flushLayout();
+      await this.flushDraftWrites();
       await this.client.publishDraft();
     } catch (error) {
       this.setStatus(`Veröffentlichen fehlgeschlagen: ${error.message}`);
@@ -1245,12 +1399,15 @@ class CmsPage {
       return;
     }
     try {
+      await this.flushLayout();
+      await this.flushDraftWrites();
       await this.client.discardDraft();
       this.config = await this.loadConfig('draft');
     } catch (error) {
       this.setStatus(`Verwerfen fehlgeschlagen: ${error.message}`);
       return;
     }
+    this.applyTheme();
     this.setDraft(false);
     const target = this.config.pages.some((page) => page.id === this.pageId) ? this.pageId : this.config.pages[0].id;
     if (window.location.hash === `#/${target}`) {

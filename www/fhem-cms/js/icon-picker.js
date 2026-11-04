@@ -2,23 +2,23 @@
 const PAGE = 120;
 
 const STYLE = `
-  .cms-ip-dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
+  .cms-ip-dialog { border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef);
     padding: 1.25rem; width: min(94vw, 34rem); max-height: 94vh; overflow: auto; font: inherit; }
-  .cms-ip-dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+  .cms-ip-dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
   .cms-ip-dialog * { box-sizing: border-box; }
   .cms-ip-dialog form { display: grid; gap: 0.75rem; }
   .cms-ip-dialog h3 { margin: 0; font-size: 1.1rem; }
-  .cms-ip-dialog input { font: inherit; color: inherit; background: #17211d; border: 1px solid #43564a;
+  .cms-ip-dialog input { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
     border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
-  .cms-ip-dialog input:focus-visible, .cms-ip-dialog button:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
+  .cms-ip-dialog input:focus-visible, .cms-ip-dialog button:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
   .cms-ip-dialog .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(3.2rem, 1fr)); gap: 0.35rem;
     max-height: 18rem; overflow: auto; }
-  .cms-ip-dialog button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
-    border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
+  .cms-ip-dialog button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
+    border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
   .cms-ip-dialog .grid button { padding: 0.3rem; display: grid; place-items: center; }
-  .cms-ip-dialog .glyph { width: 1.8rem; height: 1.8rem; background-color: #8fd0a8; display: block;
+  .cms-ip-dialog .glyph { width: 1.8rem; height: 1.8rem; background-color: var(--cms-accent, #8fd0a8); display: block;
     -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
-  .cms-ip-dialog .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
+  .cms-ip-dialog .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
   .cms-ip-dialog .actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
 `;
 

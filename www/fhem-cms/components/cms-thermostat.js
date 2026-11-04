@@ -132,50 +132,50 @@ class FHEMCMSThermostat extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid #7f8c84;
-          border-radius: 1.4rem; background: #202e27; }
+        .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid var(--cms-frame, #7f8c84);
+          border-radius: 1.4rem; background: var(--cms-surface, #202e27); }
         /* Der Inhalt ist rund 10,4 em hoch und 26 em breit, oben ausgerichtet; die Schrift richtet sich nach der knapperen Seite. */
         .body { height: 100%; display: flex; flex-direction: column; justify-content: flex-start;
           font-size: max(4px, min(9.2cqh, 3.6cqw)); }
         header { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
           padding: 0.4em 1.6rem 0 1.3em; flex: none; }
-        h3 { margin: 0; font-size: 1.05em; font-weight: 400; color: #a5c9b2;
+        h3 { margin: 0; font-size: 1.05em; font-weight: 400; color: var(--cms-muted, #a5c9b2);
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         button {
           font: inherit; color: inherit; cursor: pointer;
-          border: 1px solid #43564a; border-radius: 0.4rem;
-          background: #2a3b32; padding: 0.35rem 0.7rem;
+          border: 1px solid var(--cms-border, #43564a); border-radius: 0.4rem;
+          background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem;
         }
-        button:hover { background: #34493e; }
-        button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
+        button:hover { background: var(--cms-surface-hover, #34493e); }
+        button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         .icon { position: absolute; top: 0.2rem; right: 0.3rem; padding: 0 0.35em; line-height: 1.4; font-size: 0.75rem; z-index: 1; }
         :host([view-only]) [data-open-config] { display: none; }
         .boxes { align-self: stretch; margin: 0.4em 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; padding: 0 1em; }
-        .box { border: 1px solid #3a4d42; border-radius: 0.2rem; background: #1a261f; min-width: 0; min-height: 0;
+        .box { border: 1px solid var(--cms-border-subtle, #3a4d42); border-radius: 0.2rem; background: var(--cms-tile-inset, #1a261f); min-width: 0; min-height: 0;
           padding: 0.3em 0.6em 0.4em; display: flex; flex-direction: column; gap: 0.15em; overflow: hidden; }
-        .label { color: #a5c9b2; font-size: 0.78em; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
+        .label { color: var(--cms-muted, #a5c9b2); font-size: 0.78em; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
           overflow: hidden; text-overflow: clip; }
         .num { font-size: 1.9em; font-weight: 700; line-height: 1.05; white-space: nowrap; }
-        .unit { font-size: 0.55em; font-weight: 400; color: #a5c9b2; margin-left: 0.2em; }
+        .unit { font-size: 0.55em; font-weight: 400; color: var(--cms-muted, #a5c9b2); margin-left: 0.2em; }
         input[type="range"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; margin: 0.15em 0 0; padding: 0; height: 1.2em; background: transparent; }
-        input[type="range"]::-webkit-slider-runnable-track { height: 0.35em; border-radius: 0.2em; background: linear-gradient(90deg, #8fd0a8 var(--fill, 50%), #4a5750 var(--fill, 50%)); }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 1em; height: 1em; margin-top: -0.325em; border: 0; border-radius: 50%; background: #8fd0a8; }
-        input[type="range"]::-moz-range-track { height: 0.35em; border-radius: 0.2em; background: #4a5750; }
-        input[type="range"]::-moz-range-progress { height: 0.35em; border-radius: 0.2em; background: #8fd0a8; }
-        input[type="range"]::-moz-range-thumb { width: 1em; height: 1em; border: 0; border-radius: 50%; background: #8fd0a8; }
-        .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
+        input[type="range"]::-webkit-slider-runnable-track { height: 0.35em; border-radius: 0.2em; background: linear-gradient(90deg, var(--cms-accent, #8fd0a8) var(--fill, 50%), var(--cms-track, #4a5750) var(--fill, 50%)); }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 1em; height: 1em; margin-top: -0.325em; border: 0; border-radius: 50%; background: var(--cms-accent, #8fd0a8); }
+        input[type="range"]::-moz-range-track { height: 0.35em; border-radius: 0.2em; background: var(--cms-track, #4a5750); }
+        input[type="range"]::-moz-range-progress { height: 0.35em; border-radius: 0.2em; background: var(--cms-accent, #8fd0a8); }
+        input[type="range"]::-moz-range-thumb { width: 1em; height: 1em; border: 0; border-radius: 50%; background: var(--cms-accent, #8fd0a8); }
+        .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
         .foot { display: flex; align-self: stretch; align-items: center; gap: 0.6em; flex-wrap: nowrap; padding: 0 1em 0.8em; margin-top: 0.5em; flex: none; }
-        .foot select { appearance: none; -webkit-appearance: none; width: auto; flex: none; max-width: 15em; height: 2.1em; padding: 0.1em 2.2em 0.1em 0.75em; border: 1px solid #69796f; border-radius: 0.5em; color: #f4f4e9; font: 0.8em 'Helvetica Neue', sans-serif; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='16'%3E%3Cpath d='M5 1 9 6H1zM5 15 1 10h8z' fill='%23f4f4e9'/%3E%3C/svg%3E") no-repeat right 0.7em center / 0.7em auto, linear-gradient(#7d8a82 0%, #55645b 45%, #26342d 50%, #3a4a41 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+        .foot select { width: auto; flex: none; max-width: 15em; height: 2.1em; padding: 0.1em 0.75em; border: 1px solid var(--cms-border, #43564a); border-radius: 0.5em; color: inherit; font: 0.8em 'Helvetica Neue', sans-serif; background: var(--cms-surface-raised, #2a3b32); }
         .foot [data-mode]:empty, .foot [data-mode-select][hidden], .valve[hidden], .batt:empty { display: none; }
-        .valve { flex: 1; min-width: 3em; position: relative; height: 1.7em; border: 1px solid #3a4d42;
+        .valve { flex: 1; min-width: 3em; position: relative; height: 1.7em; border: 1px solid var(--cms-border-subtle, #3a4d42);
           background: linear-gradient(90deg, #2b7bc0, #2f9b8a 50%, #7a2b3b); display: grid; place-items: center; }
         .valve span.pct { font-weight: 700; font-size: 0.7em; z-index: 1; }
         .marker { position: absolute; top: 0; bottom: 0; width: 0.2em; background: #fff; }
-        .batt { display: inline-flex; align-items: center; gap: 0.3em; color: #5fd08f; white-space: nowrap; }
+        .batt { display: inline-flex; align-items: center; gap: 0.3em; color: var(--cms-success, #5fd08f); white-space: nowrap; }
         .batt svg { width: 1.6em; height: 1em; }
-        .status { margin: 0; padding: 0 0.8em 0.3em; min-height: 0; font-size: 0.8em; color: #a5c9b2; flex: none; }
+        .status { margin: 0; padding: 0 0.8em 0.3em; min-height: 0; font-size: 0.8em; color: var(--cms-muted, #a5c9b2); flex: none; }
         .status:empty { display: none; }
-        .status[data-error] { color: #ffb4a8; }
+        .status[data-error] { color: var(--cms-danger, #ffb4a8); }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         /* Hohe, schmale Kacheln: Boxen untereinander mit gleichmäßig verteiltem Restplatz (untere Zeile am Kachelende), Schrift richtet sich nach dem einspaltigen Inhalt (ca. 15 em hoch, 16 em breit; zweispaltig 10,6 em hoch, 26 em breit). */
         @container (aspect-ratio < 1.7) { .body { font-size: max(4px, min(6.5cqh, 5.8cqw)); } .boxes { grid-template-columns: 1fr; grid-template-rows: auto auto; flex: 1; align-content: space-evenly; margin-top: 0; } }
@@ -185,36 +185,36 @@ class FHEMCMSThermostat extends HTMLElement {
         @container (max-height: 4.8rem) { [data-slider], .box .label { display: none; } }
         @container (max-height: 4.4rem) { header { display: none; } }
         @container (max-width: 9rem) { .boxes { grid-template-columns: 1fr; } .box.ist { display: none; } [data-open-config] { display: none; } }
-        dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
+        dialog { border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef);
           padding: 1.25rem; width: min(92vw, 32rem); }
-        dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+        dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form, .picker-body { display: grid; gap: 0.75rem; }
         .device-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
         dialog.picker { width: min(94vw, 44rem); }
-        .picker-list { max-height: 50vh; overflow: auto; border: 1px solid #43564a; border-radius: 0.5rem; }
+        .picker-list { max-height: 50vh; overflow: auto; border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; }
         .picker-list table { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
         .picker-list th:nth-child(1) { width: 26%; }
         .picker-list th:nth-child(2) { width: 22%; }
         .picker-list th:nth-child(3) { width: 14%; }
         .picker-list th:nth-child(4) { width: 20%; }
         .picker-list td { overflow-wrap: anywhere; }
-        .picker-info { margin: 0; min-height: 1.2em; font-size: 0.85rem; color: #a5c9b2; }
-        .picker-list th { position: sticky; top: 0; background: #17211d; text-align: left; color: #a5c9b2; }
+        .picker-info { margin: 0; min-height: 1.2em; font-size: 0.85rem; color: var(--cms-muted, #a5c9b2); }
+        .picker-list th { position: sticky; top: 0; background: var(--cms-bg, #17211d); text-align: left; color: var(--cms-muted, #a5c9b2); }
         .picker-list tr.filters th { top: 2.1rem; padding-top: 0; font-weight: normal; }
         .picker-list tr.filters input { padding: 0.25rem 0.4rem; font-size: 0.8rem; }
-        .picker-list td.dim { color: #a5c9b2; }
+        .picker-list td.dim { color: var(--cms-muted, #a5c9b2); }
         .picker-list th, .picker-list td { padding: 0.4rem 0.6rem; }
-        .picker-list tbody tr { cursor: pointer; border-top: 1px solid #2f3f36; }
-        .picker-list tbody tr:hover, .picker-list tbody tr:focus { background: #2c3f35; outline: none; }
+        .picker-list tbody tr { cursor: pointer; border-top: 1px solid var(--cms-border-subtle, #3a4d42); }
+        .picker-list tbody tr:hover, .picker-list tbody tr:focus { background: var(--cms-surface-hover, #34493e); outline: none; }
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
-        input, select { font: inherit; color: inherit; background: #17211d;
-          border: 1px solid #43564a; border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
-        fieldset { border: 1px solid #43564a; border-radius: 0.75rem; padding: 0.75rem;
+        input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d);
+          border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
+        fieldset { border: 1px solid var(--cms-border, #43564a); border-radius: 0.75rem; padding: 0.75rem;
           display: grid; gap: 0.75rem; margin: 0; }
-        legend { color: #a5c9b2; font-size: 0.8rem; }
+        legend { color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
-        .danger { margin-right: auto; border-color: #7f3b33; }
-        .error { margin: 0; color: #ffb4a8; min-height: 1.2em; }
+        .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
+        .error { margin: 0; color: var(--cms-danger, #ffb4a8); min-height: 1.2em; }
       </style>
       <article class="tile" data-tile>
         <div class="body">

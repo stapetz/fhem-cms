@@ -28,42 +28,42 @@ class FHEMCMSHtml extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid #7f8c84; border-radius: 1.4rem;
-          background: #202e27; }
+        .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
+          background: var(--cms-surface, #202e27); }
         header { position: absolute; top: 0; left: 0; right: 1.6rem; z-index: 1; padding: 0.4em 0 0 1.1em; font-size: max(5px, min(13cqh, 5cqw)); }
         header[hidden] { display: none; }
-        h3 { margin: 0; font-size: 1.1em; font-weight: 400; color: #a5c9b2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        h3 { margin: 0; font-size: 1.1em; font-weight: 400; color: var(--cms-muted, #a5c9b2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .content { height: 100%; overflow: auto; scrollbar-width: thin; padding: 0.6rem 0.9rem; font-size: 1rem; line-height: 1.3; }
         .tile[data-has-title] .content { padding-top: 1.9rem; }
         .content p, .content h1, .content h2, .content h3, .content h4 { margin: 0 0 0.4em; }
         .content table { border-collapse: collapse; }
         .content th, .content td { padding: 0.15em 0.5em; text-align: left; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
-        button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
-          border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
-        button:hover { background: #34493e; }
-        button:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
+        button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
+          border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
+        button:hover { background: var(--cms-surface-hover, #34493e); }
+        button:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         .gear { position: absolute; top: 0.2rem; right: 0.3rem; z-index: 2; padding: 0 0.35em; font-size: 0.75rem; line-height: 1.4; }
         :host([view-only]) [data-open-config] { display: none; }
-        dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
+        dialog { border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef);
           padding: 1.25rem; width: min(94vw, 46rem); max-height: 94vh; overflow: auto; }
-        dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+        dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form { display: grid; gap: 0.75rem; }
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
-        input, textarea { font: inherit; color: inherit; background: #17211d; border: 1px solid #43564a;
+        input, textarea { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
         textarea { min-height: 14rem; resize: vertical; font-family: ui-monospace, monospace; font-size: 0.85rem; }
-        details { border: 1px solid #43564a; border-radius: 0.75rem; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
-        summary { cursor: pointer; color: #a5c9b2; }
-        details code, details pre { background: #17211d; border-radius: 0.3rem; padding: 0.05rem 0.3rem; font-size: 0.8rem; }
+        details { border: 1px solid var(--cms-border, #43564a); border-radius: 0.75rem; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+        summary { cursor: pointer; color: var(--cms-muted, #a5c9b2); }
+        details code, details pre { background: var(--cms-bg, #17211d); border-radius: 0.3rem; padding: 0.05rem 0.3rem; font-size: 0.8rem; }
         details pre { padding: 0.5rem; overflow: auto; }
         details ul { margin: 0.4rem 0; padding-left: 1.2rem; }
-        a { color: #8fd0a8; }
+        a { color: var(--cms-accent, #8fd0a8); }
         .row { display: flex; }
-        .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
+        .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
-        .danger { margin-right: auto; border-color: #7f3b33; }
-        .error { margin: 0; color: #ffb4a8; min-height: 1.2em; }
+        .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
+        .error { margin: 0; color: var(--cms-danger, #ffb4a8); min-height: 1.2em; }
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>
