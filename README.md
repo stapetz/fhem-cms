@@ -15,6 +15,10 @@ Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freie
 
 Die wiederverwendbaren Web Components liegen unter `www/fhem-cms/components/`; die gemeinsamen Styles und der Modul-Einstieg liegen unter `css/` und `js/`.
 
+## Version
+
+Die aktuelle stabile Version ist **0.1.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
+
 ## Installation und Update in FHEM
 
 fhem-cms wird als **ein gemeinsames Repository** aktualisiert. Die zentrale Controls-Datei umfasst das FHEM-Modul und alle dazugehörigen Frontend-Dateien. Es gibt keine getrennten Update-Quellen für einzelne Module oder Komponenten.
