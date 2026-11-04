@@ -276,7 +276,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] `set discard` und Schaltfläche „Entwurf verwerfen“; Hinweiszeile zeigt, ob ein Entwurf offen ist.
 - [x] `restore` und Backups beziehen sich nur auf den Live-Stand; ein vorhandener Entwurf bleibt unverändert.
 - [ ] Auf der Testinstanz prüfen (Bearbeiten, Veröffentlichen, Verwerfen, Restore mit offenem Entwurf).
-- [ ] Offen: Der Entwurf startet nicht automatisch aus dem Live-Stand neu, wenn per `restore` ein Stand zurückgeholt wird; Hinweis im Dialog prüfen.
+- [x] Bei `restore` bleibt ein vorhandener Entwurf unverändert und wird nicht automatisch aus dem wiederhergestellten Live-Stand neu erzeugt; der Statushinweis erläutert das Verhalten.
 
 **Bewusst akzeptiert:** Zwei Benutzer können denselben Entwurf gleichzeitig bearbeiten; der letzte Speichervorgang gewinnt. Schutz folgt mit S14.
 
@@ -366,10 +366,9 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Ziel:** Das Raster des Seiteninhalts ist beim Platzieren sichtbar.
 
-- [x] Schaltfläche ▦ am Ende der Werkzeugleiste blendet das 12-Spalten-Raster als gestrichelte Gitterlinien ein oder aus. Die Einstellung bleibt pro Browser erhalten.
+- [x] Schaltfläche ▦ am Ende der Werkzeugleiste blendet das 48-Spalten-Raster als gestrichelte Gitterlinien ein oder aus. Die Einstellung bleibt pro Browser erhalten.
 - [x] Das Gitternetz reicht mindestens zwei Zeilen unter den Inhalt und wächst beim Verschieben mit.
 - [x] Nur im Bearbeitungsmodus; Ansicht und Vorschau zeigen kein Gitternetz.
-- Entschieden: Keine einstellbare Rasterfeinheit (bleibt bei 12 Spalten).
 
 ### S24 - Werkzeugleiste links, Meldungsbox
 
@@ -459,17 +458,21 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 
 - [ ] Widget `fhem-select` wie `ftui-select`: Werte aus den Set-Optionen des Devices, Darstellung wie der Modus-Knopf des Thermostats.
 
-### S36 - Status-Symbol (Entwurf)
+### S36 - Status-Symbol (umgesetzt, Prüfung offen)
 
-- [ ] Widget `fhem-icon` wie `ftui-icon`: Icon und Farbe wechseln je nach Wert des Readings (Zuordnung Wert zu Icon/Farbe im Dialog, z. B. Fenster offen rot, zu grün); nur lesend.
+- [x] Widget `fhem-icon`: Device und Reading auswählen; pro Reading-Wert ein Icon aus der FHEM-Bibliothek und eine Farbe zuordnen.
+- [x] Nur lesend; nicht zugeordnete Werte erscheinen als Text. Schema und Zuordnungen werden serverseitig streng validiert.
+- [ ] Anzeige und Icon-Lesbarkeit auf der FHEM-Testinstanz prüfen.
 
 ### S37 - Bild / Kamera (Entwurf)
 
 - [ ] Widget `fhem-image-live` wie `ftui-image`: Bild-URL (aus Reading oder fest), optionales Aktualisierungsintervall; Quelle nur über erlaubte Hosts (Vertrauensgrenze noch festzulegen).
 
-### S38 - Uhr / Datum (Entwurf)
+### S38 - Uhr / Datum (umgesetzt, Prüfung offen)
 
-- [ ] Widget `fhem-clock` wie `ftui-clock`: Uhrzeit und Datum, Format wählbar, optional Sekunden.
+- [x] Widget `fhem-clock` mit digitaler Uhr, digitaler Uhr mit Datum und Analoguhr; Sekunden, Datum und Wochentag optional.
+- [x] Lokale Browserzeit; Schema validiert Darstellungsart und boolesche Optionen.
+- [ ] Darstellung und Skalierung auf FHEM-Testinstanz prüfen.
 
 ### S39 - Anzeigeinstrumente: Fortschrittsbalken, Gauge, Rundregler (Entwurf)
 
@@ -481,7 +484,9 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 
 ### S41 - Readingsgroup / Tabelle (Entwurf)
 
-- [ ] Widget `fhem-table` wie `ftui-readingsgroup`: mehrere Devices und Readings in einer kompakten Tabelle.
+- [x] Widget `fhem-table` zeigt mehrere frei kombinierbare Devices und Readings in einer kompakten Tabelle.
+- [x] Werte werden aus den Live-Snapshots aktualisiert; Schema begrenzt und validiert Zeilen, Device- und Reading-Namen.
+- [ ] Darstellung und Live-Aktualisierung auf FHEM-Testinstanz prüfen.
 
 ### S42 - Link und Popup (Entwurf)
 
@@ -507,9 +512,9 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 - [x] Textbaustein erhält Live-Daten (Abo auf die Devices im Text, Anzeige „veraltet“ bei Verbindungsproblemen).
 - [ ] Offen: Platzhalter in Links und Bildbeschreibungen, Eingabe per Tastatur (Chip ohne Maus bearbeiten).
 
-### S46 - Freieres, feineres Layout (Entwurf, Entscheidung offen)
+### S46 - Freieres, feineres Layout (48-Spalten-Raster beschlossen)
 
-Das grobe Spaltenraster wirkt zu starr; FTUI erlaubt freieres Platzieren. Hauptgeräte: Tablet und Smartphone. Zu entscheiden: A) feineres Raster (z. B. 48 Spalten, kleinere Zeilenhöhe, `col/row/w/h` bleiben; Migration der Altwerte), B) freie Positionierung `x,y,w,h` (px/%), C) feste Designfläche, die als Ganzes skaliert, D) Hybrid aus feinem Raster und freiem Offset. Einordnung: A ist klein und risikoarm; B/C erschweren Zoom, Safari (B05) und das Umbrechen auf dem Smartphone. Vor einer Umsetzung Entscheidung einholen. **Entwurf.** Gemeldet am 2026-10-31.
+Am 04.11.2026 wurde Option A gewählt: 48 Spalten mit kleineren Zellen; das Schema behält `col/row/w/h`. Migration aus Schema-Version 2 skaliert die Spaltenposition und -breite, sodass bestehende Layouts ihre Position und Grösse behalten. Freie Positionen und feste Designflächen sind nicht Teil dieser Änderung. Die Darstellung auf Tablet und Smartphone ist im Review zu prüfen. Gemeldet am 2026-10-31.
 
 ## Buglist
 

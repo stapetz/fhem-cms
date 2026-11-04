@@ -27,6 +27,7 @@ Vor Änderungen [`dev-docs/ENTWICKLUNG.md`](../dev-docs/ENTWICKLUNG.md) lesen.
 - Für Perl-Änderungen mindestens die passende Syntaxprüfung ausführen; vorhandene Tests und projektspezifische Prüfungen ebenfalls ausführen.
 - Commit-Nachrichten kurz und aussagekräftig formulieren. Bei KI-unterstützten Commits den vereinbarten `Co-authored-by`-Trailer ergänzen.
 - Bei funktionalen Änderungen einen datierten Eintrag mit Überschrift und kurzer Beschreibung in der FHEM-Änderungshistorie `CHANGED` ergänzen. Bei jedem Release prüfen, ob Stories neu fertig geworden sind, und diese als Zeilen `S<Nr> - <Titel>` in den Eintrag aufnehmen (siehe `dev-docs/ENTWICKLUNG.md`).
+- Kanban-Workflow für die Umsetzung: Ein auf `Ready` begonnenes Issue auf `In Progress` setzen. Nach Implementierung, passenden lokalen Tests und Dokumentationsänderungen das Issue auf `In Review` setzen, damit der Entwickler die Geräte-/FHEM-Prüfung durchführen kann. Erst nach bestätigter Abnahme schliessen; der Projekt-Workflow setzt geschlossene Issues auf `Done` und wieder geöffnete auf `Backlog`. Offene Anforderungen, fehlende Freigaben oder nicht verfügbare Testumgebungen zuerst klären. Nicht vollständig geprüfte Arbeit nicht als abgeschlossen markieren.
 - Nach jedem erfolgreichen Commit und Push nach `dev` in der Rückmeldung diesen Aktualisierungs-Codeblock anzeigen. Für `dev` kein `update add` als festen Schritt aufnehmen:
 
   ```text

@@ -10,34 +10,34 @@ const PRESETS = [
 ];
 
 const STYLE = `
-  .cms-ph-dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
+  .cms-ph-dialog { border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef);
     padding: 1.25rem; width: min(94vw, 46rem); max-height: 94vh; overflow: auto; font: inherit; }
-  .cms-ph-dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+  .cms-ph-dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
   .cms-ph-dialog * { box-sizing: border-box; }
   .cms-ph-dialog form { display: grid; gap: 0.75rem; }
   .cms-ph-dialog h3 { margin: 0; font-size: 1.1rem; }
   .cms-ph-dialog label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
-  .cms-ph-dialog input, .cms-ph-dialog select { font: inherit; color: inherit; background: #17211d; border: 1px solid #43564a;
+  .cms-ph-dialog input, .cms-ph-dialog select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
     border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
   .cms-ph-dialog .cols { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
   .cms-ph-dialog .cols > div { display: grid; gap: 0.35rem; align-content: start; }
-  .cms-ph-dialog .list { max-height: 12rem; overflow: auto; border: 1px solid #43564a; border-radius: 0.5rem; background: #17211d; }
+  .cms-ph-dialog .list { max-height: 12rem; overflow: auto; border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; background: var(--cms-bg, #17211d); }
   .cms-ph-dialog .list button { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; background: none;
     padding: 0.3rem 0.5rem; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .cms-ph-dialog .list button[aria-selected="true"] { background: #3d5a49; }
-  .cms-ph-dialog button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
-    border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
-  .cms-ph-dialog button:hover { background: #34493e; }
+  .cms-ph-dialog .list button[aria-selected="true"] { background: var(--cms-surface-active, #3d5a49); }
+  .cms-ph-dialog button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
+    border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
+  .cms-ph-dialog button:hover { background: var(--cms-surface-hover, #34493e); }
   .cms-ph-dialog button:disabled { opacity: 0.5; cursor: default; }
   .cms-ph-dialog button:focus-visible, .cms-ph-dialog input:focus-visible, .cms-ph-dialog select:focus-visible {
-    outline: 2px solid #8fd0a8; outline-offset: 2px; }
-  .cms-ph-dialog .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
-  .cms-ph-dialog .result { margin: 0; padding: 0.5rem; border-radius: 0.5rem; background: #17211d; font-family: ui-monospace, monospace;
+    outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
+  .cms-ph-dialog .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
+  .cms-ph-dialog .result { margin: 0; padding: 0.5rem; border-radius: 0.5rem; background: var(--cms-bg, #17211d); font-family: ui-monospace, monospace;
     font-size: 0.85rem; overflow-wrap: anywhere; }
   .cms-ph-dialog .check { display: flex; align-items: center; gap: 0.5rem; }
   .cms-ph-dialog .check input { width: auto; }
   .cms-ph-dialog .row { display: flex; gap: 0.5rem; }
-  .cms-ph-dialog .filter { display: grid; gap: 0.4rem; padding: 0.6rem; border: 1px solid #43564a; border-radius: 0.75rem; }
+  .cms-ph-dialog .filter { display: grid; gap: 0.4rem; padding: 0.6rem; border: 1px solid var(--cms-border, #43564a); border-radius: 0.75rem; }
   .cms-ph-dialog .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
   .cms-ph-dialog .chips button { padding: 0.15rem 0.6rem; font-size: 0.8rem; border-radius: 1rem; font-family: ui-monospace, monospace; }
   .cms-ph-dialog .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }

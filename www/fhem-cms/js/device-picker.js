@@ -2,22 +2,22 @@
 const MAX_ROWS = 60;
 
 const STYLE = `
-  .cms-dp-dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
+  .cms-dp-dialog { border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef);
     padding: 1.25rem; width: min(94vw, 32rem); max-height: 94vh; overflow: auto; font: inherit; }
-  .cms-dp-dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+  .cms-dp-dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
   .cms-dp-dialog * { box-sizing: border-box; }
   .cms-dp-dialog form { display: grid; gap: 0.75rem; }
   .cms-dp-dialog h3 { margin: 0; font-size: 1.1rem; }
-  .cms-dp-dialog input { font: inherit; color: inherit; background: #17211d; border: 1px solid #43564a;
+  .cms-dp-dialog input { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
     border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
-  .cms-dp-dialog .list { max-height: 50vh; overflow: auto; border: 1px solid #43564a; border-radius: 0.5rem; background: #17211d; }
+  .cms-dp-dialog .list { max-height: 50vh; overflow: auto; border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; background: var(--cms-bg, #17211d); }
   .cms-dp-dialog .list button { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; background: none;
     padding: 0.35rem 0.5rem; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .cms-dp-dialog .list button:hover, .cms-dp-dialog .list button:focus-visible { background: #3d5a49; outline: none; }
-  .cms-dp-dialog button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
-    border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
-  .cms-dp-dialog input:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
-  .cms-dp-dialog .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
+  .cms-dp-dialog .list button:hover, .cms-dp-dialog .list button:focus-visible { background: var(--cms-surface-active, #3d5a49); outline: none; }
+  .cms-dp-dialog button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
+    border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
+  .cms-dp-dialog input:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
+  .cms-dp-dialog .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
   .cms-dp-dialog .actions { display: flex; justify-content: flex-end; }
 `;
 

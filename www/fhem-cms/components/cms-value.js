@@ -31,17 +31,17 @@ class FHEMCMSValue extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid #7f8c84; border-radius: 1.4rem;
-          background: #202e27; display: flex; flex-direction: column; }
+        .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
+          background: var(--cms-surface, #202e27); display: flex; flex-direction: column; }
         header { position: absolute; top: 0; left: 0; right: 1.6rem; z-index: 1; display: flex; align-items: center; gap: 0.4rem;
           padding: 0.4em 0 0 1.1em; font-size: max(5px, min(13cqh, 5cqw)); }
         header[hidden] { display: none; }
-        h3 { margin: 0; font-size: 1.1em; font-weight: 400; color: #a5c9b2; font-family: inherit;
+        h3 { margin: 0; font-size: 1.1em; font-weight: 400; color: var(--cms-muted, #a5c9b2); font-family: inherit;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 0.5em; padding: 0 0.8em; }
         .gear.solo { position: absolute; top: 0.2rem; right: 0.3rem; font-size: 0.75rem; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
-        :host { --cms-icon-color: #8fd0a8; }
+        :host { --cms-icon-color: var(--cms-accent, #8fd0a8); }
         .glyph { display: inline-block; background-color: var(--cms-icon-color);
           -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
         .glyph[hidden] { display: none; }
@@ -50,54 +50,54 @@ class FHEMCMSValue extends HTMLElement {
         .value { font-size: max(5px, min(var(--vh, 38cqh), 11cqw)); min-width: 0; line-height: 1.1; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .main { font-size: max(5px, min(var(--vh, 38cqh), 11cqw)); }
         .value { font-size: inherit; flex: 0 1 auto; text-align: center; }
-        .unit { margin-left: 0.25rem; font-size: 0.6em; font-weight: 400; color: #a5c9b2; }
-        button { font: inherit; color: inherit; cursor: pointer; border: 1px solid #43564a;
-          border-radius: 0.5rem; background: #2a3b32; padding: 0.35rem 0.7rem; }
-        button:hover { background: #34493e; }
-        button:focus-visible, input:focus-visible { outline: 2px solid #8fd0a8; outline-offset: 2px; }
+        .unit { margin-left: 0.25rem; font-size: 0.6em; font-weight: 400; color: var(--cms-muted, #a5c9b2); }
+        button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
+          border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
+        button:hover { background: var(--cms-surface-hover, #34493e); }
+        button:focus-visible, input:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         .tile[data-has-title] { --vh: 32cqh; }
         .gear { padding: 0 0.35em; font-size: 1em; line-height: 1.4; flex: none; }
         @container (max-height: 3rem) { header { display: none; } .tile[data-has-title] { --vh: 38cqh; } }
         @container (max-width: 6rem) { .gear { display: none; } }
         :host([view-only]) [data-open-config] { display: none; }
-        dialog { border: 1px solid #43564a; border-radius: 1rem; background: #202e27; color: #edf4ef;
+        dialog { border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef);
           padding: 1.25rem; width: min(94vw, 34rem); max-height: 94vh; overflow: auto; }
-        dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+        dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form, .picker-body { display: grid; gap: 0.75rem; }
         .device-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
         dialog.picker { width: min(94vw, 44rem); }
-        .picker-list { max-height: 50vh; overflow: auto; border: 1px solid #43564a; border-radius: 0.5rem; }
+        .picker-list { max-height: 50vh; overflow: auto; border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; }
         .picker-list table { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
         .picker-list th:nth-child(1) { width: 26%; }
         .picker-list th:nth-child(2) { width: 22%; }
         .picker-list th:nth-child(3) { width: 14%; }
         .picker-list th:nth-child(4) { width: 20%; }
         .picker-list td { overflow-wrap: anywhere; }
-        .picker-list th { position: sticky; top: 0; background: #17211d; text-align: left; color: #a5c9b2; }
+        .picker-list th { position: sticky; top: 0; background: var(--cms-bg, #17211d); text-align: left; color: var(--cms-muted, #a5c9b2); }
         .picker-list tr.filters th { top: 2.1rem; padding-top: 0; font-weight: normal; }
         .picker-list tr.filters input { padding: 0.25rem 0.4rem; font-size: 0.8rem; }
-        .picker-list td.dim { color: #a5c9b2; }
+        .picker-list td.dim { color: var(--cms-muted, #a5c9b2); }
         .picker-list th, .picker-list td { padding: 0.4rem 0.6rem; }
-        .picker-list tbody tr { cursor: pointer; border-top: 1px solid #2f3f36; }
-        .picker-list tbody tr:hover, .picker-list tbody tr:focus { background: #2c3f35; outline: none; }
-        select { font: inherit; color: inherit; background: #17211d; border: 1px solid #43564a;
+        .picker-list tbody tr { cursor: pointer; border-top: 1px solid var(--cms-border-subtle, #3a4d42); }
+        .picker-list tbody tr:hover, .picker-list tbody tr:focus { background: var(--cms-surface-hover, #34493e); outline: none; }
+        select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
-        input { font: inherit; color: inherit; background: #17211d; border: 1px solid #43564a;
+        input { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
         .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
         .chips button { padding: 0.15rem 0.55rem; font-size: 0.85rem; }
-        .hint { margin: 0; color: #a5c9b2; font-size: 0.8rem; }
+        .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
         .icon-row { display: flex; align-items: center; gap: 0.5rem; }
-        .icon-picker { display: grid; gap: 0.5rem; padding: 0.6rem; border: 1px solid #43564a;
+        .icon-picker { display: grid; gap: 0.5rem; padding: 0.6rem; border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.75rem; }
         .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(3.2rem, 1fr)); gap: 0.35rem;
           max-height: 14rem; overflow: auto; }
         .icon-grid button { padding: 0.3rem; display: grid; place-items: center; }
         .icon-grid .glyph { width: 1.8rem; height: 1.8rem; }
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
-        .danger { margin-right: auto; border-color: #7f3b33; }
-        .error { margin: 0; color: #ffb4a8; min-height: 1.2em; }
+        .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
+        .error { margin: 0; color: var(--cms-danger, #ffb4a8); min-height: 1.2em; }
       </style>
       <article class="tile" data-tile>
         <header data-header hidden>

@@ -467,7 +467,8 @@ sub FHEMCMS_CreateDataDir {
 
 sub FHEMCMS_DefaultConfig {
     return {
-        schemaVersion => 2,
+        schemaVersion => 4,
+        theme => 'dark',
         pages => [{id => 'start', title => 'Start', widgets => []}],
     };
 }
@@ -479,22 +480,51 @@ sub FHEMCMS_EnsureConfig {
     return FHEMCMS_WriteConfig($name, $dataDir, FHEMCMS_DefaultConfig());
 }
 
-# Hebt eine Konfiguration der Schema-Version 1 auf Version 2 (Widgets erhalten eine ID).
+# Migriert Version 1 (Widget-IDs), Version 2 (48 Spalten) und Version 3 (Theme-Feld).
 sub FHEMCMS_MigrateConfig {
     my ($config) = @_;
     return $config if (ref($config) ne 'HASH' || !defined($config->{schemaVersion})
-        || ref($config->{schemaVersion}) || $config->{schemaVersion} ne '1');
+        || ref($config->{schemaVersion}));
     return $config if (ref($config->{pages}) ne 'ARRAY');
 
-    for my $page (@{$config->{pages}}) {
-        next if (ref($page) ne 'HASH' || ref($page->{widgets}) ne 'ARRAY');
-        my $n = 0;
-        for my $widget (@{$page->{widgets}}) {
-            $n++;
-            $widget->{id} = "w$n" if (ref($widget) eq 'HASH' && !exists($widget->{id}));
+    if ($config->{schemaVersion} eq '1') {
+        for my $page (@{$config->{pages}}) {
+            next if (ref($page) ne 'HASH' || ref($page->{widgets}) ne 'ARRAY');
+            my $n = 0;
+            for my $widget (@{$page->{widgets}}) {
+                $n++;
+                $widget->{id} = "w$n" if (ref($widget) eq 'HASH' && !exists($widget->{id}));
+            }
         }
+        $config->{schemaVersion} = 2;
     }
-    $config->{schemaVersion} = 2;
+
+    if ($config->{schemaVersion} eq '2') {
+        for my $page (@{$config->{pages}}) {
+            next if (ref($page) ne 'HASH' || ref($page->{widgets}) ne 'ARRAY');
+            for my $widget (@{$page->{widgets}}) {
+                next if (ref($widget) ne 'HASH' || ref($widget->{grid}) ne 'HASH');
+                $widget->{grid}{col} = ($widget->{grid}{col} - 1) * 4 + 1
+                    if (defined($widget->{grid}{col}) && !ref($widget->{grid}{col})
+                        && $widget->{grid}{col} =~ /\A[0-9]+\z/);
+                $widget->{grid}{w} *= 4 if (defined($widget->{grid}{w}) && !ref($widget->{grid}{w})
+                    && $widget->{grid}{w} =~ /\A[0-9]+\z/);
+            }
+        }
+        if (ref($config->{navigation}) eq 'HASH' && ref($config->{navigation}{grid}) eq 'HASH') {
+            $config->{navigation}{grid}{col} = ($config->{navigation}{grid}{col} - 1) * 4 + 1
+                if (defined($config->{navigation}{grid}{col}) && !ref($config->{navigation}{grid}{col})
+                    && $config->{navigation}{grid}{col} =~ /\A[0-9]+\z/);
+            $config->{navigation}{grid}{w} *= 4
+                if (defined($config->{navigation}{grid}{w}) && !ref($config->{navigation}{grid}{w})
+                    && $config->{navigation}{grid}{w} =~ /\A[0-9]+\z/);
+        }
+        $config->{schemaVersion} = 3;
+    }
+    if ($config->{schemaVersion} eq '3') {
+        $config->{theme} = 'dark' if (!exists($config->{theme}));
+        $config->{schemaVersion} = 4;
+    }
     return $config;
 }
 
@@ -523,20 +553,27 @@ sub FHEMCMS_ValidateConfig {
         my ($v) = @_;
         return defined($v) && !ref($v) && $v =~ $fhemName && $v !~ /\A\.{1,2}\z/;
     };
+    my $isBool = sub {
+        my ($v) = @_;
+        return JSON::PP::is_bool($v);
+    };
 
     my $checkGrid = sub {
         my ($grid) = @_;
         my $gridError = $exact->($grid, 'grid', ['col', 'row', 'w', 'h']);
         return $gridError if ($gridError);
         return 'Ungueltige Rasterwerte'
-            if (!$isInt->($grid->{col}, 1, 12) || !$isInt->($grid->{row}, 1, 1000)
-                || !$isInt->($grid->{w}, 1, 12) || !$isInt->($grid->{h}, 1, 1000)
-                || $grid->{col} + $grid->{w} > 13);
+            if (!$isInt->($grid->{col}, 1, 48) || !$isInt->($grid->{row}, 1, 1000)
+                || !$isInt->($grid->{w}, 1, 48) || !$isInt->($grid->{h}, 1, 1000)
+                || $grid->{col} + $grid->{w} > 49);
         return undef;
     };
 
-    my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages'], ['navigation']);
+    my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages'], ['navigation', 'theme']);
     return $err if ($err);
+    return 'Ungueltiges Theme'
+        if (exists($config->{theme}) && (ref($config->{theme}) || !defined($config->{theme})
+            || $config->{theme} !~ /\A(?:dark|light)\z/));
     if (exists($config->{navigation})) {
         $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid'], ['items']);
         return $err if ($err);
@@ -571,7 +608,7 @@ sub FHEMCMS_ValidateConfig {
         }
     }
     return 'Nicht unterstuetzte schemaVersion'
-        if (!$isInt->($config->{schemaVersion}, 2, 2));
+        if (!$isInt->($config->{schemaVersion}, 4, 4));
     return 'pages muss eine Liste mit 1 bis 50 Seiten sein'
         if (ref($config->{pages}) ne 'ARRAY' || @{$config->{pages}} < 1 || @{$config->{pages}} > 50);
 
@@ -596,7 +633,9 @@ sub FHEMCMS_ValidateConfig {
                 if (ref($widget->{type}) || !defined($widget->{type})
                     || ($widget->{type} ne 'fhem-value' && $widget->{type} ne 'thermostat'
                         && $widget->{type} ne 'text' && $widget->{type} ne 'fhem-html'
-                        && $widget->{type} ne 'fhem-switch' && $widget->{type} ne 'fhem-button'));
+                        && $widget->{type} ne 'fhem-switch' && $widget->{type} ne 'fhem-button'
+                        && $widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-icon'
+                        && $widget->{type} ne 'fhem-table'));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -611,6 +650,13 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-button') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'grid'],
                     ['title', 'label', 'icon']);
+            } elsif ($widget->{type} eq 'fhem-clock') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'style', 'showSeconds', 'showDate', 'showWeekday', 'grid'],
+                    ['title']);
+            } elsif ($widget->{type} eq 'fhem-icon') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title']);
+            } elsif ($widget->{type} eq 'fhem-table') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title']);
             } else {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title']);
             }
@@ -644,7 +690,7 @@ sub FHEMCMS_ValidateConfig {
                     return 'Ungueltiger Wert fuer devices' if (!$isName->($name));
                     return 'Doppeltes Device in devices' if ($seenDevice{$name}++);
                 }
-            } else {
+            } elsif ($widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-table') {
                 return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
             }
 
@@ -683,6 +729,47 @@ sub FHEMCMS_ValidateConfig {
                     if (exists($widget->{icon})
                         && (ref($widget->{icon}) || !defined($widget->{icon})
                             || $widget->{icon} !~ $FHEMCMS_ICON_NAME));
+            } elsif ($widget->{type} eq 'fhem-clock') {
+                return 'Ungueltige Uhr-Darstellung'
+                    if (ref($widget->{style}) || !defined($widget->{style})
+                        || $widget->{style} !~ /\A(?:digital|date|analog)\z/);
+                for my $field ('showSeconds', 'showDate', 'showWeekday') {
+                    return "Ungueltiger Wert fuer $field" if (!$isBool->($widget->{$field}));
+                }
+            } elsif ($widget->{type} eq 'fhem-icon') {
+                return 'Ungueltiger Wert fuer reading' if (!$isName->($widget->{reading}));
+                my $states = $widget->{states};
+                return 'states muss eine Liste mit 1 bis 20 Eintraegen sein'
+                    if (ref($states) ne 'ARRAY' || @{$states} < 1 || @{$states} > 20);
+                my %seenValue;
+                for my $state (@{$states}) {
+                    $err = $exact->($state, 'Status-Zuordnung', ['value', 'icon', 'color']);
+                    return $err if ($err);
+                    return 'Ungueltiger Wert fuer states.value'
+                        if (ref($state->{value}) || !defined($state->{value})
+                            || length($state->{value}) < 1 || length($state->{value}) > 64
+                            || $state->{value} =~ /[\x00-\x1f\x7f]/);
+                    return 'Doppelter Wert in states' if ($seenValue{$state->{value}}++);
+                    return 'Ungueltiges Icon'
+                        if (ref($state->{icon}) || !defined($state->{icon})
+                            || $state->{icon} !~ $FHEMCMS_ICON_NAME);
+                    return 'Ungueltige Farbe'
+                        if (ref($state->{color}) || !defined($state->{color})
+                            || $state->{color} !~ /\A#[0-9a-fA-F]{6}\z/);
+                }
+            } elsif ($widget->{type} eq 'fhem-table') {
+                my $rows = $widget->{rows};
+                return 'rows muss eine Liste mit 1 bis 40 Eintraegen sein'
+                    if (ref($rows) ne 'ARRAY' || @{$rows} < 1 || @{$rows} > 40);
+                my %seenReading;
+                for my $row (@{$rows}) {
+                    $err = $exact->($row, 'Tabellenzeile', ['device', 'reading']);
+                    return $err if ($err);
+                    return 'Ungueltiger Wert fuer rows.device' if (!$isName->($row->{device}));
+                    return 'Ungueltiger Wert fuer rows.reading' if (!$isName->($row->{reading}));
+                    my $key = $row->{device} . "\0" . $row->{reading};
+                    return 'Doppelte Device/Reading-Kombination in rows' if ($seenReading{$key}++);
+                }
             } else {
                 return 'Ungueltiger Widget-Titel'
                     if (exists($widget->{title})
