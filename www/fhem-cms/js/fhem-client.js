@@ -179,6 +179,43 @@ export class FhemClient {
     return Array.isArray(list) ? list.filter((name) => ICON_NAME.test(name)) : [];
   }
 
+  async parseJsonResult(text, fallback) {
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (error) {
+      throw new Error(text || fallback);
+    }
+    return result;
+  }
+
+  async logReadings(device, source = 'auto') {
+    if (!isValidName(device) || !/^(?:auto|dblog|filelog)$/.test(source)) {
+      throw new Error('Ungültiges Device');
+    }
+    const result = await this.parseJsonResult(
+      await this.command(`get ${this.cmsDevice} logreadings ${device} ${source}`),
+      'Die geloggten Readings konnten nicht gelesen werden');
+    return {
+      source: result?.source,
+      readings: Array.isArray(result?.readings) ? result.readings.filter(isValidName) : []
+    };
+  }
+
+  async history(device, reading, range = '24h', granularity = 'auto', source = 'auto') {
+    if (!isValidName(device) || !isValidName(reading) || !/^(?:24h|7d|30d|365d)$/.test(range)
+      || !/^(?:auto|raw|15m|1h|1d)$/.test(granularity) || !/^(?:auto|dblog|filelog)$/.test(source)) {
+      throw new Error('Ungültige Verlaufsabfrage');
+    }
+    const result = await this.parseJsonResult(
+      await this.command(`get ${this.cmsDevice} history ${device} ${reading} ${range} ${granularity} ${source}`),
+      'Der Verlauf konnte nicht gelesen werden');
+    const points = Array.isArray(result?.points)
+      ? result.points.filter((p) => Array.isArray(p) && p.length >= 2 && p.slice(0, 4).every((n) => typeof n === 'number' && Number.isFinite(n)))
+      : [];
+    return { ...result, points };
+  }
+
   iconUrl(name) {
     return ICON_NAME.test(name)
       ? `${this.endpoint.pathname}/icons/${name.split('/').map(encodeURIComponent).join('/')}`

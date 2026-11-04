@@ -482,9 +482,15 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 
 - [ ] Widget `fhem-gauge` wie `ftui-gauge`/`ftui-progress`: Wert in einem Bereich (min/max, Farbverlauf) als Balken oder Halbkreis; später ein schreibender Rundregler wie `ftui-knob`.
 
-### S40 - Diagramm (Entwurf)
+### S40 - Diagramm (umgesetzt, Prüfung offen)
 
-- [ ] Widget `fhem-chart` wie `ftui-chart`: Verlauf eines Readings aus FileLog oder DbLog; eigene Story mit Sicherheits- und Performancebetrachtung (Datenmenge, nichtblockierend).
+- [x] Widget `fhem-chart` wie `ftui-chart`: Verlauf eines Readings aus DbLog oder FileLog (wie TemperatureCollector), Quelle wählbar, Einheit einstellbar.
+- [x] Reading-Auswahl aus dem, was zum Device tatsächlich geloggt wird (`get <CMS> logreadings`).
+- [x] Zeitraum (24h, 7d, 30d, 365d) und Granularität (auto, raw, 15m, 1h, 1d) wählbar; Besucher können lokal umschalten.
+- [x] Begrenzung: höchstens 400 Punkte (Aggregation mit Mittel/Min/Max), Zeilen- und Zeitlimits, 30 s Cache, strikte Validierung aller Parameter.
+- [x] Eigenes SVG ohne externe Bibliothek; DbLog-Abfragen sind synchron (in der Anwenderdoku vermerkt).
+- [ ] Darstellung mit echten DbLog-/FileLog-Daten auf FHEM-Testinstanz prüfen.
+- [ ] Mehrere Reihen je Diagramm (spätere Erweiterung).
 
 ### S41 - Readingsgroup / Tabelle (Entwurf)
 
