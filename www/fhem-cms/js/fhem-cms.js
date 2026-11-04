@@ -29,7 +29,7 @@ const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.ty
   ? new Map(devicesOf(widget).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
   : snapshots.get(widget.device) || null);
 const GUIDE_KEY = 'fhem-cms-show-grid';
-const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 12, h: 1 };
+const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 48, h: 1 };
 
 // Ohne Parameter zeigt die Seite nur die fertige Homepage. ?mode=edit startet die Bearbeitung.
 // Das ist keine Zugriffssperre.
@@ -1189,7 +1189,7 @@ class CmsPage {
   addWidget(type) {
     const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-switch': 's', 'fhem-button': 'b', 'fhem-html': 'h' }[type] || 't';
     const id = this.uniqueId(prefix, new Set(this.page.widgets.map((widget) => widget.id)));
-    const size = { text: { w: 6, h: 2 }, 'fhem-value': { w: 3, h: 2 }, 'fhem-switch': { w: 3, h: 2 }, 'fhem-button': { w: 3, h: 2 }, 'fhem-html': { w: 4, h: 3 } }[type] || { w: 4, h: 2 };
+    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 } }[type] || { w: 16, h: 2 };
     const grid = { col: 1, row: this.nextFreeRow(), ...size };
     let widget = { id, type, device: '', readings: { actual: '', target: '' }, grid };
     if (type === 'text') {

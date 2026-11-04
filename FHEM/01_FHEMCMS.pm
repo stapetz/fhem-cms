@@ -12,7 +12,7 @@ use JSON::PP ();
 use MIME::Base64 qw(decode_base64);
 use POSIX qw(strftime);
 
-our $FHEMCMS_VERSION = '0.1.0';
+our $FHEMCMS_VERSION = '0.2.0';
 our ($readingFnAttributes, $FW_ME);
 our (%attr);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -467,7 +467,7 @@ sub FHEMCMS_CreateDataDir {
 
 sub FHEMCMS_DefaultConfig {
     return {
-        schemaVersion => 2,
+        schemaVersion => 3,
         pages => [{id => 'start', title => 'Start', widgets => []}],
     };
 }
@@ -479,22 +479,45 @@ sub FHEMCMS_EnsureConfig {
     return FHEMCMS_WriteConfig($name, $dataDir, FHEMCMS_DefaultConfig());
 }
 
-# Hebt eine Konfiguration der Schema-Version 1 auf Version 2 (Widgets erhalten eine ID).
+# Migriert Version 1 (Widget-IDs) und Version 2 (48-Spalten-Raster) auf Version 3.
 sub FHEMCMS_MigrateConfig {
     my ($config) = @_;
     return $config if (ref($config) ne 'HASH' || !defined($config->{schemaVersion})
-        || ref($config->{schemaVersion}) || $config->{schemaVersion} ne '1');
-    return $config if (ref($config->{pages}) ne 'ARRAY');
+        || ref($config->{schemaVersion}));
 
+    if ($config->{schemaVersion} eq '1') {
+        return $config if (ref($config->{pages}) ne 'ARRAY');
+        for my $page (@{$config->{pages}}) {
+            next if (ref($page) ne 'HASH' || ref($page->{widgets}) ne 'ARRAY');
+            my $n = 0;
+            for my $widget (@{$page->{widgets}}) {
+                $n++;
+                $widget->{id} = "w$n" if (ref($widget) eq 'HASH' && !exists($widget->{id}));
+            }
+        }
+        $config->{schemaVersion} = 2;
+    }
+
+    return $config if ($config->{schemaVersion} ne '2' || ref($config->{pages}) ne 'ARRAY');
+    my @grids;
     for my $page (@{$config->{pages}}) {
         next if (ref($page) ne 'HASH' || ref($page->{widgets}) ne 'ARRAY');
-        my $n = 0;
         for my $widget (@{$page->{widgets}}) {
-            $n++;
-            $widget->{id} = "w$n" if (ref($widget) eq 'HASH' && !exists($widget->{id}));
+            push(@grids, $widget->{grid}) if (ref($widget) eq 'HASH');
         }
     }
-    $config->{schemaVersion} = 2;
+    push(@grids, $config->{navigation}{grid})
+        if (ref($config->{navigation}) eq 'HASH');
+    for my $grid (@grids) {
+        next if (ref($grid) ne 'HASH');
+        if (defined($grid->{col}) && !ref($grid->{col}) && $grid->{col} =~ /\A[0-9]{1,6}\z/) {
+            $grid->{col} = ($grid->{col} - 1) * 4 + 1;
+        }
+        if (defined($grid->{w}) && !ref($grid->{w}) && $grid->{w} =~ /\A[0-9]{1,6}\z/) {
+            $grid->{w} *= 4;
+        }
+    }
+    $config->{schemaVersion} = 3;
     return $config;
 }
 
@@ -529,9 +552,9 @@ sub FHEMCMS_ValidateConfig {
         my $gridError = $exact->($grid, 'grid', ['col', 'row', 'w', 'h']);
         return $gridError if ($gridError);
         return 'Ungueltige Rasterwerte'
-            if (!$isInt->($grid->{col}, 1, 12) || !$isInt->($grid->{row}, 1, 1000)
-                || !$isInt->($grid->{w}, 1, 12) || !$isInt->($grid->{h}, 1, 1000)
-                || $grid->{col} + $grid->{w} > 13);
+            if (!$isInt->($grid->{col}, 1, 48) || !$isInt->($grid->{row}, 1, 1000)
+                || !$isInt->($grid->{w}, 1, 48) || !$isInt->($grid->{h}, 1, 1000)
+                || $grid->{col} + $grid->{w} > 49);
         return undef;
     };
 
@@ -571,7 +594,7 @@ sub FHEMCMS_ValidateConfig {
         }
     }
     return 'Nicht unterstuetzte schemaVersion'
-        if (!$isInt->($config->{schemaVersion}, 2, 2));
+        if (!$isInt->($config->{schemaVersion}, 3, 3));
     return 'pages muss eine Liste mit 1 bis 50 Seiten sein'
         if (ref($config->{pages}) ne 'ARRAY' || @{$config->{pages}} < 1 || @{$config->{pages}} > 50);
 

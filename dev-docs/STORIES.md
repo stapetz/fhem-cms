@@ -297,7 +297,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 **Ziel:** Position und Größe der Kacheln nur noch direkt auf der Seite ändern, nicht über Zahlenfelder.
 
 - [x] Größengriff unten rechts an jeder Kachel im Layout-Modus (ziehen oder Umschalt+Pfeiltasten), Einrasten im Raster, überlappende Kacheln rutschen nach unten.
-- [x] Die Felder „Position im 12-Spalten-Raster“ sind aus den Dialogen entfernt. Neue Kacheln starten in Spalte 1 in der ersten freien Zeile mit Standardgröße.
+- [x] Die Felder „Position im Raster“ sind aus den Dialogen entfernt. Neue Kacheln starten in Spalte 1 in der ersten freien Zeile mit Standardgröße; seit S46 gilt das 48-Spalten-Raster.
 - [ ] Touch-Bedienung auf einem echten Gerät prüfen.
 
 ### S17 - Schlanke Seite ohne Kopfbereich
@@ -362,10 +362,10 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 
 **Ziel:** Das Raster des Seiteninhalts ist beim Platzieren sichtbar.
 
-- [x] Schaltfläche ▦ am Ende der Werkzeugleiste blendet das 12-Spalten-Raster als gestrichelte Gitterlinien ein oder aus. Die Einstellung bleibt pro Browser erhalten.
+- [x] Schaltfläche ▦ am Ende der Werkzeugleiste blendet das 48-Spalten-Raster als gestrichelte Gitterlinien ein oder aus. Die Einstellung bleibt pro Browser erhalten.
 - [x] Das Gitternetz reicht mindestens zwei Zeilen unter den Inhalt und wächst beim Verschieben mit.
 - [x] Nur im Bearbeitungsmodus; Ansicht und Vorschau zeigen kein Gitternetz.
-- Entschieden: Keine einstellbare Rasterfeinheit (bleibt bei 12 Spalten).
+- Entschieden: Keine einstellbare Rasterfeinheit; die Rasterfeinheit wurde mit S46 auf 48 Spalten erhöht.
 
 ### S24 - Werkzeugleiste links, Meldungsbox
 
@@ -503,9 +503,9 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 - [x] Textbaustein erhält Live-Daten (Abo auf die Devices im Text, Anzeige „veraltet“ bei Verbindungsproblemen).
 - [ ] Offen: Platzhalter in Links und Bildbeschreibungen, Eingabe per Tastatur (Chip ohne Maus bearbeiten).
 
-### S46 - Freieres, feineres Layout (Entwurf, Entscheidung offen)
+### S46 - Freieres, feineres Layout (umgesetzt)
 
-Das grobe Spaltenraster wirkt zu starr; FTUI erlaubt freieres Platzieren. Hauptgeräte: Tablet und Smartphone. Zu entscheiden: A) feineres Raster (z. B. 48 Spalten, kleinere Zeilenhöhe, `col/row/w/h` bleiben; Migration der Altwerte), B) freie Positionierung `x,y,w,h` (px/%), C) feste Designfläche, die als Ganzes skaliert, D) Hybrid aus feinem Raster und freiem Offset. Einordnung: A ist klein und risikoarm; B/C erschweren Zoom, Safari (B05) und das Umbrechen auf dem Smartphone. Vor einer Umsetzung Entscheidung einholen. **Entwurf.** Gemeldet am 2026-10-31.
+Am 04.11.2026 wurde Option A gewählt: ein feineres 48-Spalten-Raster; `col/row/w/h` bleiben erhalten. Schema-Version 2 wird automatisch migriert: `col` wird mit `(col - 1) * 4 + 1`, `w` mit `w * 4` skaliert; `row` und `h` bleiben unverändert. Freie Positionen und feste Designflächen sind nicht Teil dieser Änderung. Die Migration, Rastergrenzen und Erhaltung der bestehenden Kachel- und Navigationsgrößen sind durch Tests abgesichert. Gemeldet am 2026-10-31.
 
 ## Buglist
 

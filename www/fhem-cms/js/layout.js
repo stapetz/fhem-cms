@@ -1,4 +1,4 @@
-export const GRID_COLUMNS = 12;
+export const GRID_COLUMNS = 48;
 export const MAX_ROW = 1000;
 
 function overlaps(a, b) {

@@ -2,6 +2,8 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
+**Aktuelle stabile Version: 0.2.0**
+
 ## Repositorystruktur
 
 | Pfad | Zweck |

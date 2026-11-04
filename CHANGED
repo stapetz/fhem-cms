@@ -1,3 +1,8 @@
+2026-11-04 - 48-Spalten-Raster (0.2.0)
+
+Das Layout-Raster wurde auf 48 Spalten verfeinert. Bestehende Konfigurationen werden automatisch migriert; Position und Größe von Kacheln und Navigation bleiben erhalten.
+S46 - Freieres, feineres Layout
+
 2026-10-31 - First release 0.1.0
 
 First public version of fhem-cms: pages with navigation, text blocks with placeholders, thermostat, value, free HTML, switch and button widgets, draft and publish workflow.
