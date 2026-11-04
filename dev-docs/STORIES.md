@@ -293,7 +293,7 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 **Ziel:** Bilder im Editor direkt am Rahmen größer und kleiner ziehen, ohne Prozentangaben.
 
 - [x] Ziehpunkt unten rechts am gewählten Bild, Seitenverhältnis bleibt erhalten (Maus, Touch, Pfeiltasten).
-- [x] Breite in 5-%-Schritten (`cms-w-5` bis `cms-w-100`); Frontend-Cleaner und Modul-Validierung angepasst. Die festen Prozent-Schaltflächen entfallen.
+- [x] Breite in 1-%-Schritten (`cms-w-1` bis `cms-w-100`); Frontend-Cleaner und Modul-Validierung angepasst. Die festen Prozent-Schaltflächen entfallen.
 - [ ] Touch-Ziehen auf einem echten Gerät prüfen (Konflikt mit Scrollen).
 
 ### S16 - Kachelgröße im Layout-Modus
@@ -450,9 +450,10 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 
 - [x] Widget `fhem-button` wie `ftui-button`: Beschriftung, Icon, ein fester, aus den Set-Befehlen des Devices gewählter Befehl (z. B. `on`, `toggle`, `up`); keine freien Befehle.
 
-### S34 - Schieberegler (Entwurf)
+### S34 - Schieberegler (umgesetzt, Prüfung offen)
 
-- [ ] Widget `fhem-slider` wie `ftui-slider`: Device, Set-Befehl und Bereich aus der Set-Beschreibung (`slider,min,step,max`), Anzeige des Werts, Senden nach kurzer Verzögerung (wie beim Thermostat).
+- [x] Widget `fhem-slider`: Device, Slider-Set-Befehl und Bereich aus der Set-Beschreibung (`slider,min,step,max`), aktuelles Reading, Wertanzeige und Senden 1,5 Sekunden nach der letzten Änderung.
+- [ ] Auf der FHEM-Testinstanz prüfen (Set-Befehl, Schrittweite, Rückmeldung des Readings).
 
 ### S35 - Auswahlliste (Entwurf)
 
@@ -462,6 +463,7 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 
 - [x] Widget `fhem-icon`: Device und Reading auswählen; pro Reading-Wert ein Icon aus der FHEM-Bibliothek und eine Farbe zuordnen.
 - [x] Nur lesend; nicht zugeordnete Werte erscheinen als Text. Schema und Zuordnungen werden serverseitig streng validiert.
+- [x] Icongröße skaliert mit der Kachel; Device-Picker öffnet sich sowohl per Klick auf die Eingabezeile als auch über die Schaltfläche.
 - [ ] Anzeige und Icon-Lesbarkeit auf der FHEM-Testinstanz prüfen.
 
 ### S37 - Bild / Kamera (Entwurf)
@@ -472,6 +474,7 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 
 - [x] Widget `fhem-clock` mit digitaler Uhr, digitaler Uhr mit Datum und Analoguhr; Sekunden, Datum und Wochentag optional.
 - [x] Lokale Browserzeit; Schema validiert Darstellungsart und boolesche Optionen.
+- [x] Digitale und analoge Darstellung skalieren anhand der Kachelgröße; das analoge Zifferblatt zeigt Minutenpunkte sowie hervorgehobene Fünf-Minuten- und Viertelstundenstriche.
 - [ ] Darstellung und Skalierung auf FHEM-Testinstanz prüfen.
 
 ### S39 - Anzeigeinstrumente: Fortschrittsbalken, Gauge, Rundregler (Entwurf)

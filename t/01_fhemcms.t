@@ -392,6 +392,7 @@ my @validHtml = (
     '<p><a href="https://example.org/a?x=1&amp;y=2">Link</a> <a href="#/start">Seite</a></p>',
     '<table><thead><tr><th>A</th></tr></thead><tbody><tr><td class="cms-align-right">1</td></tr></tbody></table>',
     "<p><img src=\"media/$md5.png\" alt=\"Bild\" class=\"cms-img-left cms-w-50\"><br></p>",
+    "<p><img src=\"media/$md5.png\" class=\"cms-w-33\"><br></p>",
     "<p><img src=\"media/$md5.png\" class=\"cms-w-35\"><br></p>",
     '<p><span style="color:#ff0000">rot</span> <span style="background-color:#ffe066">gelb</span> <span style="color:#00ff00;background-color:#000000">beides</span></p>',
     "<p>Zeile 1\n\tZeile 2 \"zitiert\" it's</p>",
@@ -420,8 +421,8 @@ my @badHtml = (
     ['<p>&copy;</p>', 'unknown entity'],
     ['<p class="evil">a</p>', 'unknown class'],
     ['<img src="media/' . $md5 . '.png" class="cms-align-left">', 'wrong class for image'],
-    ['<img src="media/' . $md5 . '.png" class="cms-w-33">', 'width not in 5 percent steps'],
-    ['<img src="media/' . $md5 . '.png" class="cms-w-105">', 'width above 100 percent'],
+    ['<img src="media/' . $md5 . '.png" class="cms-w-0">', 'width below 1 percent'],
+    ['<img src="media/' . $md5 . '.png" class="cms-w-101">', 'width above 100 percent'],
     ['<br/>', 'self closing syntax'],
     ['<p href="#/x">a</p>', 'attribute on wrong tag'],
     ["<p>a\x01</p>", 'control character'],
@@ -569,6 +570,24 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     delete $w->{value};
     delete $w->{command};
     isnt(FHEMCMS_ValidateConfig($bcfg), undef, 'fhem-button requires command');
+}
+
+# fhem-slider: Set-Befehl und angezeigtes Reading
+{
+    my $scfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 's1', type => 'fhem-slider',
+        device => 'Dimmer', command => 'pct', reading => 'pct', title => 'Helligkeit',
+        grid => {col => 1, row => 1, w => 12, h => 3}}]}]};
+    is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-slider accepts a complete config');
+    my $w = $scfg->{pages}[0]{widgets}[0];
+    for my $case (['device', 'bad device'], ['command', 'pct;shutdown'], ['reading', 'bad reading']) {
+        my ($field, $bad) = @$case;
+        my $old = $w->{$field};
+        $w->{$field} = $bad;
+        isnt(FHEMCMS_ValidateConfig($scfg), undef, "fhem-slider rejects invalid $field");
+        $w->{$field} = $old;
+    }
+    delete $w->{command};
+    isnt(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-slider requires a set command');
 }
 
 # fhem-value: Einheit und Icon

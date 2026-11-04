@@ -635,7 +635,7 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'text' && $widget->{type} ne 'fhem-html'
                         && $widget->{type} ne 'fhem-switch' && $widget->{type} ne 'fhem-button'
                         && $widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-icon'
-                        && $widget->{type} ne 'fhem-table'));
+                        && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-slider'));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -657,6 +657,8 @@ sub FHEMCMS_ValidateConfig {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title']);
             } elsif ($widget->{type} eq 'fhem-table') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title']);
+            } elsif ($widget->{type} eq 'fhem-slider') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title']);
             } else {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title']);
             }
@@ -729,6 +731,10 @@ sub FHEMCMS_ValidateConfig {
                     if (exists($widget->{icon})
                         && (ref($widget->{icon}) || !defined($widget->{icon})
                             || $widget->{icon} !~ $FHEMCMS_ICON_NAME));
+            } elsif ($widget->{type} eq 'fhem-slider') {
+                for my $field ('command', 'reading') {
+                    return "Ungueltiger Wert fuer $field" if (!$isName->($widget->{$field}));
+                }
             } elsif ($widget->{type} eq 'fhem-clock') {
                 return 'Ungueltige Uhr-Darstellung'
                     if (ref($widget->{style}) || !defined($widget->{style})
@@ -853,7 +859,7 @@ sub FHEMCMS_ValidateHtml {
 
     my %align = map { $_ => 1 } qw(cms-align-left cms-align-center cms-align-right);
     my %imageClass = map { $_ => 1 } qw(cms-img-left cms-img-right cms-img-center cms-img-full),
-        map { 'cms-w-' . ($_ * 5) } 1 .. 20;
+        map { 'cms-w-' . $_ } 1 .. 100;
     my %tags = (
         p => {class => \%align}, h1 => {class => \%align}, h2 => {class => \%align},
         h3 => {class => \%align}, blockquote => {class => \%align},

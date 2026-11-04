@@ -18,22 +18,27 @@ class FHEMCMSClock extends HTMLElement {
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
         .tile { position: relative; display: flex; height: 100%; align-items: center; justify-content: center;
-          overflow: hidden; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
+          overflow: hidden; container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
           background: var(--cms-surface, #202e27); padding: 0.8rem; text-align: center; }
-        .content { display: grid; justify-items: center; gap: 0.3em; min-width: 0; }
+        .content { display: grid; width: 100%; height: 100%; align-content: center; justify-items: center; gap: 0.3em; min-width: 0; }
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.75em; font-weight: 400; overflow-wrap: anywhere; }
-        .time { font-size: clamp(1.2rem, min(18cqh, 10cqw), 4rem); font-variant-numeric: tabular-nums; line-height: 1; }
+        .time { font-size: max(4px, min(18cqh, 10cqw)); font-variant-numeric: tabular-nums; line-height: 1; }
         .date { color: var(--cms-muted-strong, #c4d0c8); font-size: 0.8em; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-        .face { position: relative; width: min(60cqh, 45cqw, 9rem); aspect-ratio: 1; border: 2px solid var(--cms-accent, #8fd0a8);
+        .face { position: relative; width: min(60cqh, 45cqw); aspect-ratio: 1; border: 2px solid var(--cms-accent, #8fd0a8);
           border-radius: 50%; }
         .face[hidden], .date[hidden], h3[hidden] { display: none; }
-        .hand { position: absolute; left: 50%; bottom: 50%; width: 2px; border-radius: 2px; background: var(--cms-text, #edf4ef);
+        .mark-rotor { position: absolute; inset: 0; transform: rotate(var(--angle)); }
+        .mark { position: absolute; top: 2%; left: 50%; transform: translateX(-50%); background: var(--cms-accent, #8fd0a8); }
+        .mark.minute { top: 2.5%; width: 1.3%; aspect-ratio: 1; border-radius: 50%; }
+        .mark.five-minute { top: 2%; width: 1%; height: 5%; }
+        .mark.quarter-hour { top: 2%; width: 1.5%; height: 9%; }
+        .hand { position: absolute; left: 50%; bottom: 50%; width: 1%; border-radius: 2px; background: var(--cms-text, #edf4ef);
           transform: translateX(-50%) rotate(var(--angle)); transform-origin: center bottom; }
-        .hour { height: 25%; width: 3px; }
-        .minute { height: 36%; }
-        .second { height: 40%; width: 1px; background: var(--cms-danger, #ffb4a8); }
-        .center { position: absolute; top: 50%; left: 50%; width: 0.45rem; height: 0.45rem; border-radius: 50%;
+        .hand.hour { height: 25%; width: 1.8%; }
+        .hand.minute { height: 36%; }
+        .hand.second { height: 40%; width: 0.6%; background: var(--cms-danger, #ffb4a8); }
+        .center { position: absolute; top: 50%; left: 50%; width: 4%; aspect-ratio: 1; border-radius: 50%;
           background: var(--cms-accent, #8fd0a8); transform: translate(-50%, -50%); }
         .gear, button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.3rem 0.55rem; }
@@ -64,6 +69,10 @@ class FHEMCMSClock extends HTMLElement {
           <h3 data-title hidden></h3>
           <div class="time" data-time></div>
           <div class="face" data-face hidden aria-hidden="true">
+            ${Array.from({ length: 60 }, (_, minute) => {
+    const type = minute % 15 === 0 ? 'quarter-hour' : minute % 5 === 0 ? 'five-minute' : 'minute';
+    return `<span class="mark-rotor" style="--angle:${minute * 6}deg"><span class="mark ${type}"></span></span>`;
+  }).join('')}
             <span class="hand hour" data-hour></span><span class="hand minute" data-minute></span>
             <span class="hand second" data-second></span><span class="center"></span>
           </div>

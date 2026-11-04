@@ -9,8 +9,8 @@ export const MAX_HTML = 50000;
 export const MAX_IMAGE_BYTES = 3145728;
 
 const ALIGN = ['cms-align-left', 'cms-align-center', 'cms-align-right'];
-// Bildbreiten in 5-%-Schritten (cms-w-5 bis cms-w-100).
-const WIDTH_STEP = 5;
+// Ganzzahlige Bildbreiten (cms-w-1 bis cms-w-100) für feine, sichere Größenänderung.
+const WIDTH_STEP = 1;
 const WIDTH_CLASSES = Array.from({ length: 100 / WIDTH_STEP }, (_, i) => `cms-w-${(i + 1) * WIDTH_STEP}`);
 const IMAGE_CLASSES = ['cms-img-left', 'cms-img-right', 'cms-img-center', 'cms-img-full', ...WIDTH_CLASSES];
 const ALIGNABLE = new Set(['p', 'h1', 'h2', 'h3', 'blockquote', 'th', 'td']);
@@ -843,7 +843,7 @@ export function createEditor({ root, services, html, onError }) {
   handle.type = 'button';
   handle.className = 'rt-handle';
   handle.hidden = true;
-  handle.setAttribute('aria-label', 'Bildgröße ändern (Pfeiltasten: 5 Prozent)');
+  handle.setAttribute('aria-label', 'Bildgröße ändern (Pfeiltasten: 1 Prozent)');
   handle.title = 'Bildgröße ziehen';
 
   const contentWidth = () => {
@@ -858,7 +858,7 @@ export function createEditor({ root, services, html, onError }) {
     return Math.round((selectedImage.getBoundingClientRect().width / contentWidth()) * 100);
   };
   const applyPercent = (percent) => {
-    const snapped = Math.min(100, Math.max(WIDTH_STEP, Math.round(percent / WIDTH_STEP) * WIDTH_STEP));
+    const snapped = Math.min(100, Math.max(1, Math.round(percent / WIDTH_STEP) * WIDTH_STEP));
     const kept = [...selectedImage.classList].filter((name) => !name.startsWith('cms-w-'));
     selectedImage.setAttribute('class', [...kept, `cms-w-${snapped}`].join(' '));
     placeHandle();

@@ -7,6 +7,7 @@ import '../components/cms-html.js';
 import '../components/cms-clock.js';
 import '../components/cms-icon.js';
 import '../components/cms-table.js';
+import '../components/cms-slider.js';
 import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { GRID_COLUMNS, cellFromPoint, moveWidget, resizeWidget } from './layout.js';
@@ -28,7 +29,7 @@ const devicesOf = (widget) => {
   }
   return [widget.device];
 };
-const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table'].includes(widget.type)
+const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider'].includes(widget.type)
   || (widget.type === 'text' && devicesOf(widget).length > 0);
 // Daten einer Kachel: ein Device oder (freies HTML, Text) die Map aller verwendeten Devices.
 const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.type === 'text' || widget.type === 'fhem-table'
@@ -123,6 +124,7 @@ class CmsPage {
       this.button('Uhr / Datum', () => this.addWidget('fhem-clock')),
       this.button('Status-Symbol', () => this.addWidget('fhem-icon')),
       this.button('Tabelle', () => this.addWidget('fhem-table')),
+      this.button('Schieberegler', () => this.addWidget('fhem-slider')),
       this.button('Textbaustein', () => this.addWidget('text'))
     ];
     // Menüs wie in klassischen Programmen: Datei, Bearbeiten, Einfügen, Ansicht.
@@ -1204,6 +1206,11 @@ class CmsPage {
       element.services = this.services();
       element.config = widget;
       element.data = dataFor(widget, this.snapshots);
+    } else if (widget.type === 'fhem-slider') {
+      element = document.createElement('cms-slider');
+      element.services = this.services();
+      element.config = widget;
+      element.data = this.snapshots.get(widget.device) || null;
     } else if (widget.type === 'fhem-html') {
       element = document.createElement('cms-html');
       element.services = this.services();
@@ -1237,9 +1244,9 @@ class CmsPage {
   }
 
   addWidget(type) {
-    const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-switch': 's', 'fhem-button': 'b', 'fhem-html': 'h', 'fhem-clock': 'c', 'fhem-icon': 'i', 'fhem-table': 'r' }[type] || 't';
+    const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-switch': 's', 'fhem-slider': 'l', 'fhem-button': 'b', 'fhem-html': 'h', 'fhem-clock': 'c', 'fhem-icon': 'i', 'fhem-table': 'r' }[type] || 't';
     const id = this.uniqueId(prefix, new Set(this.page.widgets.map((widget) => widget.id)));
-    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 }, 'fhem-clock': { w: 12, h: 4 }, 'fhem-icon': { w: 6, h: 4 }, 'fhem-table': { w: 24, h: 8 } }[type] || { w: 16, h: 2 };
+    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 }, 'fhem-clock': { w: 12, h: 4 }, 'fhem-icon': { w: 6, h: 4 }, 'fhem-table': { w: 24, h: 8 }, 'fhem-slider': { w: 12, h: 3 } }[type] || { w: 16, h: 2 };
     const grid = { col: 1, row: this.nextFreeRow(), ...size };
     let widget = { id, type, device: '', readings: { actual: '', target: '' }, grid };
     if (type === 'text') {
@@ -1258,6 +1265,8 @@ class CmsPage {
       widget = { id, type, device: '', reading: '', states: [], grid };
     } else if (type === 'fhem-table') {
       widget = { id, type, rows: [], grid };
+    } else if (type === 'fhem-slider') {
+      widget = { id, type, device: '', command: '', reading: '', grid };
     }
     const element = this.createElementFor(widget);
     element.addEventListener('cms-widget-cancel', () => {

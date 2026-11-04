@@ -22,12 +22,12 @@ class FHEMCMSIcon extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; display: grid; height: 100%; place-items: center; overflow: hidden;
+        .tile { position: relative; display: grid; height: 100%; place-items: center; overflow: hidden; container-type: size;
           border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem; background: var(--cms-surface, #202e27); padding: 0.6rem; }
         header { position: absolute; top: 0.4rem; left: 0.7rem; right: 2rem; }
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         header[hidden] { display: none; }
-        .glyph { width: min(45cqh, 45cqw, 5rem); height: min(45cqh, 45cqw, 5rem); background-color: var(--state-color, var(--cms-accent, #8fd0a8));
+        .glyph { width: min(42cqh, 42cqw); height: min(42cqh, 42cqw); background-color: var(--state-color, var(--cms-accent, #8fd0a8));
           -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
         .glyph[hidden] { display: none; }
         .state { max-width: 100%; overflow-wrap: anywhere; text-align: center; font-size: 0.85em; }
@@ -85,6 +85,7 @@ class FHEMCMSIcon extends HTMLElement {
       </dialog>`;
     this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
     this.shadowRoot.querySelector('[data-pick-device]').addEventListener('click', () => this.pickDevice());
+    this.shadowRoot.querySelector('[name="device"]').addEventListener('click', () => this.pickDevice());
     this.shadowRoot.querySelector('[data-add]').addEventListener('click', () => this.addMapping());
     this.shadowRoot.querySelector('[data-cancel]').addEventListener('click', () => this.closeConfig(false));
     this.shadowRoot.querySelector('[data-delete]').addEventListener('click', () => this.deleteWidget());
