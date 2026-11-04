@@ -138,10 +138,10 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [x] Eine zentrale `controls_fhem-cms.txt` für das gesamte Repository generieren und über GitHub Actions nach Branch-Updates aktualisieren.
 - [x] FHEM-Installationsbefehle für `dev` und `main` in der README dokumentieren; alle Laufzeitdateien werden über eine gemeinsame Update-Quelle installiert.
 - [x] Die erste wiederverwendbare Web Component `cms-device-card.js` erstellen und in das Testfrontend integrieren (mit S17 wieder entfernt).
-- [ ] JSON-Lese-/Schreib-API mit Schema- und Pfadvalidierung umsetzen.
-- [ ] FHEM-Sitzung und Berechtigungen serverseitig prüfen.
-- [ ] Fehlerfälle nachvollziehbar protokollieren, ohne sensible Werte zu loggen.
-- [ ] Perl-Syntaxprüfung und passende Tests hinzufügen.
+- [x] JSON-Lese-/Schreib-API mit Schema- und Pfadvalidierung umsetzen: `get`/`set` über FHEMWEB (`config`, `draft`, `publish`, `restore`, `media`), kein eigener Web-Endpunkt.
+- [x] FHEM-Sitzung und Berechtigungen serverseitig prüfen: Entscheidung (Option A) – Anmeldung und `allowed`-Regeln übernimmt FHEMWEB; wer `set` auf dem Device darf, darf schreiben.
+- [x] Fehlerfälle nachvollziehbar protokollieren, ohne sensible Werte zu loggen: abgewiesene Schreibbefehle erscheinen mit Befehl und gekürztem Fehlertext (Log 3), nie mit Inhalten.
+- [x] Perl-Syntaxprüfung und passende Tests hinzufügen.
 
 **Akzeptanzkriterien**
 

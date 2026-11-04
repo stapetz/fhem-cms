@@ -130,7 +130,20 @@ sub FHEMCMS_Get {
     return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg';
 }
 
+# Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
 sub FHEMCMS_Set {
+    my ($hash, $name, $cmd, @args) = @_;
+    my $result = FHEMCMS_SetCommand($hash, $name, $cmd, @args);
+    if (defined($result) && length($result) && defined($cmd)
+        && $cmd =~ /\A(?:config|draft|restore|publish|discard|media|purge|rebuild)\z/) {
+        my $reason = substr($result, 0, 200);
+        $reason =~ s/[\x00-\x1f\x7f]/ /g;
+        Log3($name, 3, "FHEMCMS ($name): set $cmd abgewiesen: $reason");
+    }
+    return $result;
+}
+
+sub FHEMCMS_SetCommand {
     my ($hash, $name, $cmd, @args) = @_;
     $cmd //= '';
 

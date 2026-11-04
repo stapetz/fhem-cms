@@ -192,6 +192,11 @@ is(FHEMCMS_Set($hash, $name, 'config', $payload), undef, 'set config stores a Ba
 my $stored = JSON::PP::decode_json(FHEMCMS_Get($hash, $name, 'config'));
 is(scalar(@{$stored->{pages}[0]{widgets}}), 0, 'set config replaced the config');
 like(FHEMCMS_Set($hash, $name, 'config', 'not base64!'), qr/Base64/, 'set config rejects non-Base64 input');
+{
+    my $last = $logged[-1];
+    like($last->[2] // '', qr/set config abgewiesen: .*Base64/, 'rejected set is logged with command and reason');
+    unlike($last->[2] // '', qr/not base64!/, 'rejected set does not log the submitted content');
+}
 like(FHEMCMS_Set($hash, $name, 'config', MIME::Base64::encode_base64('{"schemaVersion":4}', '')),
     qr/Pflichtfeld 'pages'/, 'set config validates the payload');
 my ($latest) = FHEMCMS_ListBackups($dataDir);
