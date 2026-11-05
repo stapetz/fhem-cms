@@ -326,7 +326,7 @@ body {
 .cms-drag-handle {
   position: absolute;
   top: 0;
-  left: 0;
+  left: 1.8rem;
   right: 3rem;
   display: flex;
   align-items: center;
@@ -343,6 +343,65 @@ body {
 }
 
 /* Nur ein kleiner Griff am rechten Rand, damit er die Navigationspunkte nicht überdeckt. */
+.cms-move-button {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1.8rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.9rem 0 0.6rem 0;
+  background: transparent;
+  color: var(--cms-muted);
+  opacity: 0.35;
+  font-size: 0.95rem;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.cms-drag-layer:hover .cms-move-button,
+.cms-move-button:focus-visible {
+  opacity: 1;
+}
+
+.cms-move-button:disabled {
+  display: none;
+}
+
+.cms-move-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.cms-move-list[hidden] {
+  display: none;
+}
+
+.cms-dialog .cms-move-choice label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cms-dialog .cms-move-choice input {
+  width: auto;
+  margin: 0;
+}
+
+.cms-move-choice {
+  display: grid;
+  gap: 0.3rem;
+  border: 0;
+  padding: 0;
+}
+
+.cms-dialog-hint {
+  margin: 0;
+  color: var(--cms-muted);
+  font-size: 0.85rem;
+}
+
 .cms-drag-handle.is-nav {
   top: 0;
   left: auto;

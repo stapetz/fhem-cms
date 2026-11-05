@@ -682,7 +682,7 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-icon') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title']);
             } elsif ($widget->{type} eq 'fhem-table') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title', 'deviceLabel', 'sum', 'sumLabel']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title', 'deviceLabel', 'sum', 'sumLabel', 'hideHeader', 'valueLabel', 'hideValueLabel', 'hideSumLabel', 'sumUnit']);
             } elsif ($widget->{type} eq 'fhem-chart') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
                     ['title', 'unit', 'range', 'granularity', 'source']);
@@ -842,6 +842,18 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-table') {
                 return 'Ungueltiger Wert fuer sum'
                     if (exists($widget->{sum}) && !$isBool->($widget->{sum}));
+                for my $flag ('hideHeader', 'hideValueLabel', 'hideSumLabel') {
+                    return "Ungueltiger Wert fuer $flag" if (exists($widget->{$flag}) && !$isBool->($widget->{$flag}));
+                }
+                return 'Ungueltige Wertespalten-Beschriftung'
+                    if (exists($widget->{valueLabel})
+                        && (ref($widget->{valueLabel}) || !defined($widget->{valueLabel})
+                            || length($widget->{valueLabel}) < 1 || length($widget->{valueLabel}) > 32
+                            || $widget->{valueLabel} =~ /[\x00-\x1f\x7f]/));
+                return 'Ungueltige Summen-Einheit'
+                    if (exists($widget->{sumUnit})
+                        && (ref($widget->{sumUnit}) || !defined($widget->{sumUnit})
+                            || length($widget->{sumUnit}) > 16 || $widget->{sumUnit} =~ /[\x00-\x1f\x7f]/));
                 return 'Ungueltige Summen-Beschriftung'
                     if (exists($widget->{sumLabel})
                         && (ref($widget->{sumLabel}) || !defined($widget->{sumLabel})

@@ -66,6 +66,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
         th, td { padding: 0.25rem 0.4rem; border-bottom: 1px solid var(--cms-border-subtle, #3a4d42); text-align: left; overflow-wrap: anywhere; }
         tfoot th { position: static; text-align: left; border-top: 1px solid var(--cms-border, #3a4a40); color: var(--cms-text, inherit); font-weight: 700; }
         tfoot th[data-sum-value] { text-align: right; }
+        thead th:last-child { text-align: right; }
+        th:last-child, td:last-child { padding-right: 2rem; }
+        thead[hidden] { display: none; }
         th { position: sticky; top: 0; background: var(--cms-surface, #202e27); color: var(--cms-muted-strong, #c4d0c8); font-weight: 500; }
         td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
         .gear, button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
@@ -103,7 +106,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config aria-label="Tabelle konfigurieren">⚙</button>
         <table>
-          <thead><tr><th data-device-heading>Device</th><th>Wert</th></tr></thead>
+          <thead data-head><tr><th data-device-heading>Device</th><th data-value-heading>Wert</th></tr></thead>
           <tbody data-rows></tbody>
           <tfoot data-sum hidden><tr><th data-sum-label>Summe</th><th data-sum-value></th></tr></tfoot>
         </table>
@@ -112,9 +115,21 @@ class FHEMCMSReadingsTable extends HTMLElement {
         <form method="dialog" data-form novalidate>
           <h3 id="table-dialog-title">Tabelle konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-          <label>Bezeichnungsspalte<input name="deviceLabel" type="text" maxlength="32" placeholder="Device" autocomplete="off"></label>
-          <label class="check"><input name="sum" type="checkbox">Summenzeile unter der Tabelle anzeigen</label>
-          <label data-sum-field hidden>Beschriftung der Summenzeile<input name="sumLabel" type="text" maxlength="32" placeholder="Summe" autocomplete="off"></label>
+          <fieldset class="mode"><legend>Tabellenüberschrift</legend>
+            <label class="check"><input name="header" type="checkbox" checked>Überschrift anzeigen</label>
+            <div data-header-fields>
+              <label>Bezeichnungsspalte<input name="deviceLabel" type="text" maxlength="32" placeholder="Device" autocomplete="off"></label>
+              <label>Wertespalte<input name="valueLabel" type="text" maxlength="32" placeholder="Wert" autocomplete="off"></label>
+              <label class="check"><input name="showValueLabel" type="checkbox" checked>Wertespalten-Überschrift anzeigen</label>
+            </div></fieldset>
+          <fieldset class="mode"><legend>Summenzeile</legend>
+            <label class="check"><input name="sum" type="checkbox">Summenzeile unter der Tabelle anzeigen</label>
+            <div data-sum-field hidden>
+              <label>Beschriftung<input name="sumLabel" type="text" maxlength="32" placeholder="Summe" autocomplete="off"></label>
+              <label class="check"><input name="showSumLabel" type="checkbox" checked>Beschriftung anzeigen</label>
+              <label>Einheit<span class="unit-fields"><select name="sumUnitSelect" data-sum-unit></select>
+                <input name="sumUnitCustom" type="text" maxlength="16" placeholder="Eigene Einheit" autocomplete="off" hidden></span></label>
+            </div></fieldset>
           <fieldset class="mode"><legend>Herkunft der Werte</legend>
             <label class="check"><input type="radio" name="mode" value="single" checked>Werte kommen aus einem Device</label>
             <label class="check"><input type="radio" name="mode" value="multi">Werte kommen aus mehreren Devices</label></fieldset>
@@ -134,6 +149,25 @@ class FHEMCMSReadingsTable extends HTMLElement {
     this.shadowRoot.querySelector('[data-add]').addEventListener('click', () => this.addRow());
     this.shadowRoot.querySelector('[name="sum"]').addEventListener('change', (event) => {
       this.shadowRoot.querySelector('[data-sum-field]').hidden = !event.target.checked;
+    });
+    this.shadowRoot.querySelector('[name="header"]').addEventListener('change', (event) => {
+      this.shadowRoot.querySelector('[data-header-fields]').hidden = !event.target.checked;
+    });
+    const sumUnit = this.shadowRoot.querySelector('[data-sum-unit]');
+    sumUnit.replaceChildren(...[['auto', 'Automatisch (wie die Einzelwerte)'], ...UNITS].map(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      return option;
+    }));
+    sumUnit.addEventListener('change', () => {
+      const custom = this.shadowRoot.querySelector('[name="sumUnitCustom"]');
+      custom.hidden = sumUnit.value !== 'custom';
+      if (custom.hidden) {
+        custom.value = '';
+      } else {
+        custom.focus();
+      }
     });
     const pickSingle = () => this.pickSingleDevice();
     this.shadowRoot.querySelector('[data-pick-single]').addEventListener('click', pickSingle);
@@ -185,6 +219,23 @@ class FHEMCMSReadingsTable extends HTMLElement {
     form.elements.sum.checked = this.widgetConfig.sum === true;
     form.elements.sumLabel.value = this.widgetConfig.sumLabel || '';
     this.shadowRoot.querySelector('[data-sum-field]').hidden = !form.elements.sum.checked;
+    form.elements.showSumLabel.checked = this.widgetConfig.hideSumLabel !== true;
+    form.elements.header.checked = this.widgetConfig.hideHeader !== true;
+    this.shadowRoot.querySelector('[data-header-fields]').hidden = !form.elements.header.checked;
+    form.elements.valueLabel.value = this.widgetConfig.valueLabel || '';
+    form.elements.showValueLabel.checked = this.widgetConfig.hideValueLabel !== true;
+    const unitSelect = form.elements.sumUnitSelect;
+    const customUnit = form.elements.sumUnitCustom;
+    const savedUnit = this.widgetConfig.sumUnit;
+    if (savedUnit === undefined) {
+      unitSelect.value = 'auto';
+    } else if (UNITS.some(([value]) => value === savedUnit && value !== 'custom')) {
+      unitSelect.value = savedUnit;
+    } else {
+      unitSelect.value = 'custom';
+    }
+    customUnit.hidden = unitSelect.value !== 'custom';
+    customUnit.value = unitSelect.value === 'custom' ? savedUnit : '';
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
     const container = this.shadowRoot.querySelector('[data-config-rows]');
@@ -403,8 +454,13 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const title = form.elements.title.value.trim();
     const deviceLabel = form.elements.deviceLabel.value.trim();
     const sumLabel = form.elements.sumLabel.value.trim();
-    if (form.elements.sum.checked && (sumLabel.length > 32 || /[\u0000-\u001f\u007f]/.test(sumLabel))) {
-      this.shadowRoot.querySelector('[data-error]').textContent = 'Die Beschriftung der Summenzeile ist ungültig (max. 32 Zeichen).';
+    const valueLabel = form.elements.valueLabel.value.trim();
+    const sumUnitChoice = form.elements.sumUnitSelect.value;
+    const sumUnit = sumUnitChoice === 'custom' ? form.elements.sumUnitCustom.value.trim() : sumUnitChoice;
+    const badText = (text, max) => text.length > max || /[\u0000-\u001f\u007f]/.test(text);
+    if (badText(sumLabel, 32) || badText(valueLabel, 32) || badText(sumUnit, 16)
+      || (form.elements.sum.checked && sumUnitChoice === 'custom' && !sumUnit)) {
+      this.shadowRoot.querySelector('[data-error]').textContent = 'Beschriftung oder Einheit der Tabelle ist ungültig (Überschriften max. 32, Einheit max. 16 Zeichen, eigene Einheit nicht leer).';
       return;
     }
     const sharedDevice = form.elements.deviceSingle.value.trim();
@@ -456,6 +512,22 @@ class FHEMCMSReadingsTable extends HTMLElement {
       if (sumLabel) {
         next.sumLabel = sumLabel;
       }
+      if (!form.elements.showSumLabel.checked) {
+        next.hideSumLabel = true;
+      }
+      if (sumUnitChoice !== 'auto') {
+        next.sumUnit = sumUnit;
+      }
+    }
+    if (!form.elements.header.checked) {
+      next.hideHeader = true;
+    } else {
+      if (valueLabel) {
+        next.valueLabel = valueLabel;
+      }
+      if (!form.elements.showValueLabel.checked) {
+        next.hideValueLabel = true;
+      }
     }
     try {
       await this.services.saveWidget(next);
@@ -495,6 +567,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
     title.textContent = this.widgetConfig.title || '';
     title.parentElement.hidden = !this.widgetConfig.title;
     this.shadowRoot.querySelector('[data-device-heading]').textContent = this.widgetConfig.deviceLabel || 'Device';
+    this.shadowRoot.querySelector('[data-head]').hidden = this.widgetConfig.hideHeader === true;
+    this.shadowRoot.querySelector('[data-value-heading]').textContent = this.widgetConfig.hideValueLabel === true
+      ? '' : (this.widgetConfig.valueLabel || 'Wert');
     const body = this.shadowRoot.querySelector('[data-rows]');
     const numbers = [];
     const units = new Set();
@@ -516,10 +591,13 @@ class FHEMCMSReadingsTable extends HTMLElement {
     }));
     const foot = this.shadowRoot.querySelector('[data-sum]');
     foot.hidden = this.widgetConfig.sum !== true;
-    this.shadowRoot.querySelector('[data-sum-label]').textContent = this.widgetConfig.sumLabel || 'Summe';
+    this.shadowRoot.querySelector('[data-sum-label]').textContent = this.widgetConfig.hideSumLabel === true
+      ? '' : (this.widgetConfig.sumLabel || 'Summe');
     const total = Math.round(numbers.reduce((acc, value) => acc + value, 0) * 100) / 100;
-    // Eine Einheit wird nur gezeigt, wenn alle summierten Werte dieselbe haben.
-    const unit = units.size === 1 ? [...units][0] : '';
+    // Automatisch: Einheit nur, wenn alle summierten Werte dieselbe haben.
+    const unit = this.widgetConfig.sumUnit !== undefined
+      ? this.widgetConfig.sumUnit
+      : (units.size === 1 ? [...units][0] : '');
     this.shadowRoot.querySelector('[data-sum-value]').textContent = numbers.length ? `${total}${unit ? ` ${unit}` : ''}` : '–';
   }
 }
