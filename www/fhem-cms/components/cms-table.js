@@ -43,6 +43,8 @@ class FHEMCMSReadingsTable extends HTMLElement {
     this.widgetConfig = null;
     this.services = null;
     this.snapshots = new Map();
+    this.devices = [];
+    this.mode = 'single';
     this.isNew = false;
   }
 
@@ -78,14 +80,19 @@ class FHEMCMSReadingsTable extends HTMLElement {
         input[type="text"], select { width: 100%; }
         .row { display: grid; grid-template-columns: minmax(9rem, 1.2fr) minmax(7rem, 0.9fr) minmax(7rem, 1fr) minmax(8rem, 0.8fr) auto; align-items: end; gap: 0.45rem;
           padding: 0.5rem 0; border-top: 1px solid var(--cms-border-subtle, #3a4d42); }
-        .device { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.3rem; }
+        [hidden] { display: none !important; }
+        fieldset.mode { display: grid; gap: 0.4rem; }
+        label.check { display: flex; align-items: center; gap: 0.5rem; }
+        .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
+        .single .row { grid-template-columns: minmax(7rem, 1fr) minmax(8rem, 1fr) minmax(7rem, 0.8fr) auto; }
+        .device, .single-device { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.3rem; }
         .device input { min-width: 0; }
         .unit-fields { display: grid; gap: 0.3rem; }
         .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { min-height: 1.2em; margin: 0; color: var(--cms-danger, #ffb4a8); }
         @media (max-width: 36rem) {
-          .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+          .row, .single .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
           .row > button { grid-column: 2; justify-self: end; }
           .unit-label { grid-column: 1 / -1; }
         }
@@ -103,7 +110,15 @@ class FHEMCMSReadingsTable extends HTMLElement {
           <h3 id="table-dialog-title">Tabelle konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
           <label>Bezeichnungsspalte<input name="deviceLabel" type="text" maxlength="32" placeholder="Device" autocomplete="off"></label>
-          <fieldset><legend>Devices und Readings</legend><div data-config-rows></div>
+          <fieldset class="mode"><legend>Herkunft der Werte</legend>
+            <label class="check"><input type="radio" name="mode" value="single" checked>Werte kommen aus einem Device</label>
+            <label class="check"><input type="radio" name="mode" value="multi">Werte kommen aus mehreren Devices</label></fieldset>
+          <div data-single>
+            <span class="single-device"><input name="deviceSingle" type="text" readonly placeholder="Device wählen" aria-label="Device für alle Werte">
+              <button type="button" data-pick-single>Wählen …</button></span>
+            <span class="hint" data-alias></span>
+          </div>
+          <fieldset><legend>Readings</legend><div data-config-rows></div>
             <button type="button" data-add>Reading hinzufügen</button></fieldset>
           <p class="error" data-error role="alert"></p>
           <div class="actions"><button type="button" class="danger" data-delete>Entfernen</button>
@@ -112,6 +127,12 @@ class FHEMCMSReadingsTable extends HTMLElement {
       </dialog>`;
     this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
     this.shadowRoot.querySelector('[data-add]').addEventListener('click', () => this.addRow());
+    const pickSingle = () => this.pickSingleDevice();
+    this.shadowRoot.querySelector('[data-pick-single]').addEventListener('click', pickSingle);
+    this.shadowRoot.querySelector('[name="deviceSingle"]').addEventListener('click', pickSingle);
+    for (const radio of this.shadowRoot.querySelectorAll('[name="mode"]')) {
+      radio.addEventListener('change', () => this.setMode(radio.value));
+    }
     this.shadowRoot.querySelector('[data-cancel]').addEventListener('click', () => this.closeConfig(false));
     this.shadowRoot.querySelector('[data-delete]').addEventListener('click', () => this.deleteWidget());
     this.shadowRoot.querySelector('[data-form]').addEventListener('submit', (event) => {
@@ -157,6 +178,19 @@ class FHEMCMSReadingsTable extends HTMLElement {
     this.shadowRoot.querySelector('[data-error]').textContent = '';
     const container = this.shadowRoot.querySelector('[data-config-rows]');
     container.replaceChildren();
+    try {
+      this.devices = await this.services.listAllDevices();
+    } catch (error) {
+      this.devices = [];
+      this.shadowRoot.querySelector('[data-error]').textContent = `Devices konnten nicht geladen werden: ${error.message}`;
+    }
+    // Bestehende Tabellen mit Zeilen aus mehreren Devices öffnen im Mehr-Device-Modus.
+    const used = [...new Set((this.widgetConfig.rows || []).map((row) => row.device))];
+    this.mode = used.length > 1 ? 'multi' : 'single';
+    form.elements.mode.value = this.mode;
+    form.elements.deviceSingle.value = used.length === 1 ? used[0] : '';
+    this.showAlias(form.elements.deviceSingle.value);
+    this.applyMode();
     for (const row of this.widgetConfig.rows || []) {
       await this.addRow(row);
     }
@@ -166,15 +200,76 @@ class FHEMCMSReadingsTable extends HTMLElement {
     this.shadowRoot.querySelector('[data-dialog]').showModal();
   }
 
+  showAlias(name) {
+    this.shadowRoot.querySelector('[data-alias]').textContent = this.devices.find((item) => item.name === name)?.alias || '';
+  }
+
+  applyMode() {
+    const single = this.mode !== 'multi';
+    this.shadowRoot.querySelector('[data-single]').hidden = !single;
+    this.shadowRoot.querySelector('[data-config-rows]').classList.toggle('single', single);
+    for (const label of this.shadowRoot.querySelectorAll('[data-device-field]')) {
+      label.hidden = single;
+    }
+  }
+
+  rowsInDialog() {
+    return [...this.shadowRoot.querySelectorAll('[data-config-rows] .row')];
+  }
+
+  // Beim Umschalten bleiben die Zeilen erhalten; das Reading bleibt, wenn das Device es kennt.
+  setMode(mode) {
+    const form = this.shadowRoot.querySelector('[data-form]');
+    const previous = this.mode;
+    this.mode = mode;
+    if (mode === 'single' && previous !== 'single') {
+      const name = this.rowsInDialog().map((row) => row.querySelector('.device input').value).find(Boolean) || '';
+      form.elements.deviceSingle.value = name;
+      this.showAlias(name);
+      this.applySharedDevice(name);
+    }
+    this.applyMode();
+  }
+
+  applySharedDevice(name) {
+    const device = this.devices.find((item) => item.name === name);
+    for (const row of this.rowsInDialog()) {
+      this.setRowDevice(row, device, row.querySelector('select:not([data-unit-select])').value);
+    }
+  }
+
+  async pickSingleDevice() {
+    try {
+      const device = await openDevicePicker({ services: this.services });
+      if (!device) {
+        return;
+      }
+      if (!this.devices.some((item) => item.name === device.name)) {
+        this.devices = [...this.devices, device];
+      }
+      const form = this.shadowRoot.querySelector('[data-form]');
+      form.elements.deviceSingle.value = device.name;
+      this.showAlias(device.name);
+      this.applySharedDevice(device.name);
+    } catch (error) {
+      this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
+    }
+  }
+
   async addRow(initial = {}) {
     const container = this.shadowRoot.querySelector('[data-config-rows]');
     if (container.children.length >= MAX_ROWS) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Höchstens ${MAX_ROWS} Tabellenzeilen`;
       return;
     }
+    if (this.mode !== 'multi' && !initial.device) {
+      initial = { ...initial, device: this.shadowRoot.querySelector('[name="deviceSingle"]').value };
+    }
     const row = document.createElement('div');
     row.className = 'row';
     const deviceLabel = document.createElement('label');
+    deviceLabel.dataset.deviceField = '';
+    deviceLabel.hidden = this.mode !== 'multi';
     deviceLabel.textContent = 'Device';
     const deviceBox = document.createElement('span');
     deviceBox.className = 'device';
@@ -241,6 +336,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
       try {
         const device = await openDevicePicker({ services: this.services });
         if (device) {
+          if (!this.devices.some((item) => item.name === device.name)) {
+            this.devices = [...this.devices, device];
+          }
           this.setRowDevice(row, device, '');
         }
       } catch (error) {
@@ -252,7 +350,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     this.setRowUnit(row, initial.unit || '');
     if (initial.device) {
       try {
-        const devices = await this.services.listAllDevices();
+        const devices = this.devices.length ? this.devices : await this.services.listAllDevices();
         const device = devices.find((item) => item.name === initial.device);
         this.setRowDevice(row, device, initial.reading);
       } catch (error) {
@@ -293,12 +391,17 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const form = this.shadowRoot.querySelector('[data-form]');
     const title = form.elements.title.value.trim();
     const deviceLabel = form.elements.deviceLabel.value.trim();
+    const sharedDevice = form.elements.deviceSingle.value.trim();
+    if (this.mode !== 'multi' && !sharedDevice) {
+      this.shadowRoot.querySelector('[data-error]').textContent = 'Bitte zuerst das Device wählen.';
+      return;
+    }
     const rows = [...this.shadowRoot.querySelectorAll('[data-config-rows] .row')].map((row) => {
       const unitSelect = row.querySelector('[data-unit-select]');
       const customUnit = row.querySelector('[data-custom-unit]').value.trim();
       const label = row.querySelector('[data-row-label]').value.trim();
       return {
-        device: row.querySelector('.device input').value,
+        device: this.mode === 'multi' ? row.querySelector('.device input').value : sharedDevice,
         ...(label ? { label } : {}),
         reading: row.querySelector('select:not([data-unit-select])').value,
         ...(unitSelect.value === 'custom' ? (customUnit ? { unit: customUnit } : {}) : (unitSelect.value ? { unit: unitSelect.value } : {}))
