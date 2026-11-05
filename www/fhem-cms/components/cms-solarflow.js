@@ -10,19 +10,42 @@ const READING_FIELDS = [
   { key: 'battery', label: 'Batterieleistung (+ Laden, − Entladen)' },
   { key: 'soc', label: 'Batterie-Ladestand (%)' }
 ];
-const STATIONS = {
-  pv: { x: 200, y: 58, label: 'PV' },
-  home: { x: 200, y: 190, label: 'Haus' },
-  grid: { x: 60, y: 305, label: 'Netz' },
-  bat: { x: 340, y: 305, label: 'Batterie' }
+// Die Stationen liegen auf einem Kreis um das Haus; die Verbindungen PV, Netz und Batterie sind Bögen dieses Kreises.
+const CENTER = { x: 200, y: 205 };
+const RADIUS = 150;
+const STATION_R = 46;
+const GAP = 6;
+const ANGLES = { pv: -90, bat: 30, grid: 150 };
+const point = (angle, radius = RADIUS) => ({
+  x: CENTER.x + radius * Math.cos(angle * Math.PI / 180),
+  y: CENTER.y + radius * Math.sin(angle * Math.PI / 180)
+});
+const STATIONS = { home: { ...CENTER }, pv: point(ANGLES.pv), grid: point(ANGLES.grid), bat: point(ANGLES.bat) };
+const fixed = (value) => value.toFixed(1);
+const arcPath = (from, to) => {
+  const offset = (2 * Math.asin((STATION_R + GAP) / (2 * RADIUS))) * 180 / Math.PI;
+  // Kürzester Weg auf dem Kreis (bei 120° Abstand nie der große Bogen).
+  const direction = ((ANGLES[to] - ANGLES[from] + 540) % 360) - 180 > 0 ? 1 : -1;
+  const start = point(ANGLES[from] + direction * offset);
+  const end = point(ANGLES[to] - direction * offset);
+  return `M${fixed(start.x)} ${fixed(start.y)} A${RADIUS} ${RADIUS} 0 0 ${direction > 0 ? 1 : 0} ${fixed(end.x)} ${fixed(end.y)}`;
+};
+const linePath = (from, to) => {
+  const a = STATIONS[from];
+  const b = STATIONS[to];
+  const length = Math.hypot(b.x - a.x, b.y - a.y);
+  const ux = (b.x - a.x) / length;
+  const uy = (b.y - a.y) / length;
+  const inset = STATION_R + GAP;
+  return `M${fixed(a.x + ux * inset)} ${fixed(a.y + uy * inset)} L${fixed(b.x - ux * inset)} ${fixed(b.y - uy * inset)}`;
 };
 const EDGES = [
-  { a: 'pv', b: 'home', d: 'M200 112 L200 136' },
-  { a: 'pv', b: 'grid', d: 'M158 48 Q60 80 60 250' },
-  { a: 'pv', b: 'bat', d: 'M242 48 Q340 80 340 250' },
-  { a: 'home', b: 'grid', d: 'M158 224 L102 271' },
-  { a: 'home', b: 'bat', d: 'M242 224 L298 271' },
-  { a: 'grid', b: 'bat', d: 'M108 330 Q200 385 292 330' }
+  { a: 'pv', b: 'home', d: linePath('pv', 'home') },
+  { a: 'pv', b: 'grid', d: arcPath('pv', 'grid') },
+  { a: 'pv', b: 'bat', d: arcPath('pv', 'bat') },
+  { a: 'home', b: 'grid', d: linePath('home', 'grid') },
+  { a: 'home', b: 'bat', d: linePath('home', 'bat') },
+  { a: 'grid', b: 'bat', d: arcPath('grid', 'bat') }
 ];
 
 const ICONS = {
@@ -152,6 +175,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
         input[type="text"], input[type="number"], select { width: 100%; }
         .device-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
+        [hidden] { display: none !important; }
         fieldset { display: grid; gap: 0.4rem; margin: 0; border: 1px solid var(--cms-border-subtle, #3a4d42); border-radius: 0.5rem; }
         .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
         .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
@@ -161,18 +185,26 @@ class FHEMCMSSolarFlow extends HTMLElement {
       <article class="tile">
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config aria-label="SolarFlow konfigurieren">⚙</button>
-        <svg data-svg viewBox="0 0 400 380" preserveAspectRatio="xMidYMid meet" role="img"></svg>
+        <svg data-svg viewBox="0 0 400 375" preserveAspectRatio="xMidYMid meet" role="img"></svg>
         <span class="sr-only" data-accessible></span>
       </article>
       <dialog data-dialog aria-labelledby="solarflow-dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="solarflow-dialog-title">SolarFlow konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+          <fieldset class="mode"><legend>Herkunft der Werte</legend>
+            <label class="check"><input type="radio" name="mode" value="single" checked>Werte kommen aus einem Device</label>
+            <label class="check"><input type="radio" name="mode" value="multi">Werte kommen aus mehreren Devices</label></fieldset>
+          <div data-single>
+            <span class="device-row"><input name="device-single" readonly placeholder="Device wählen …" aria-label="Device für alle Werte">
+              <button type="button" data-pick="single">Device …</button></span>
+            <span class="hint" data-alias></span>
+          </div>
           ${READING_FIELDS.map((field) => `<fieldset data-field="${field.key}"><legend>${field.label}${field.required ? '' : ' (optional)'}</legend>
-            <span class="device-row"><input name="device-${field.key}" readonly placeholder="Device wählen …" aria-label="Device für ${field.label}">
+            <span class="device-row" data-multi><input name="device-${field.key}" readonly placeholder="Device wählen …" aria-label="Device für ${field.label}">
               <button type="button" data-pick="${field.key}">Device …</button></span>
             <select name="reading-${field.key}" aria-label="Reading für ${field.label}"></select>
-            ${field.required ? '' : `<button type="button" data-clear="${field.key}">Nicht verwenden</button>`}</fieldset>`).join('')}
+</fieldset>`).join('')}
           <label>Einheit der Leistungs-Readings
             <select name="unit"><option value="W">Watt (W)</option><option value="kW">Kilowatt (kW)</option></select></label>
           <label class="check"><input name="invertGrid" type="checkbox">Vorzeichen der Netzleistung umkehren</label>
@@ -185,11 +217,16 @@ class FHEMCMSSolarFlow extends HTMLElement {
         </form>
       </dialog>`;
     this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
+    const single = () => this.pickDevice('single');
+    this.shadowRoot.querySelector('[data-pick="single"]').addEventListener('click', single);
+    this.shadowRoot.querySelector('[name="device-single"]').addEventListener('click', single);
+    for (const radio of this.shadowRoot.querySelectorAll('[name="mode"]')) {
+      radio.addEventListener('change', () => this.setMode(radio.value));
+    }
     for (const field of READING_FIELDS) {
       const pick = () => this.pickDevice(field.key);
       this.shadowRoot.querySelector(`[data-pick="${field.key}"]`).addEventListener('click', pick);
       this.shadowRoot.querySelector(`[name="device-${field.key}"]`).addEventListener('click', pick);
-      this.shadowRoot.querySelector(`[data-clear="${field.key}"]`)?.addEventListener('click', () => this.setSource(field.key, null, ''));
     }
     this.shadowRoot.querySelector('[data-cancel]').addEventListener('click', () => this.closeConfig(false));
     this.shadowRoot.querySelector('[data-delete]').addEventListener('click', () => this.deleteWidget());
@@ -241,11 +278,50 @@ class FHEMCMSSolarFlow extends HTMLElement {
     } catch (error) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Devices konnten nicht geladen werden: ${error.message}`;
     }
+    const multi = READING_FIELDS.some((field) => typeof config.readings?.[field.key] === 'object');
+    form.elements.mode.value = multi ? 'multi' : 'single';
+    this.mode = multi ? 'multi' : 'single';
+    form.elements['device-single'].value = multi ? '' : (config.device || '');
+    this.showAlias(form.elements['device-single'].value);
     for (const field of READING_FIELDS) {
       const source = sourceOf(config, field.key);
-      this.setSource(field.key, source?.device || null, source?.reading || '');
+      this.setSource(field.key, multi ? (source?.device || null) : (config.device || null), source?.reading || '');
     }
+    this.applyMode();
     this.shadowRoot.querySelector('[data-dialog]').showModal();
+  }
+
+  showAlias(name) {
+    this.shadowRoot.querySelector('[data-alias]').textContent = (this.devices || []).find((item) => item.name === name)?.alias || '';
+  }
+
+  applyMode() {
+    const single = this.mode !== 'multi';
+    this.shadowRoot.querySelector('[data-single]').hidden = !single;
+    for (const row of this.shadowRoot.querySelectorAll('[data-multi]')) {
+      row.hidden = single;
+    }
+  }
+
+  // Beim Umschalten bleiben die gewählten Readings erhalten, soweit das Device sie kennt.
+  setMode(mode) {
+    const form = this.shadowRoot.querySelector('[data-form]');
+    const previous = this.mode;
+    this.mode = mode;
+    if (mode === 'single' && previous !== 'single') {
+      const name = form.elements['device-pv'].value || READING_FIELDS.map((field) => form.elements[`device-${field.key}`].value).find(Boolean) || '';
+      form.elements['device-single'].value = name;
+      this.showAlias(name);
+      for (const field of READING_FIELDS) {
+        this.setSource(field.key, name || null, name ? form.elements[`reading-${field.key}`].value : '');
+      }
+    } else if (mode === 'multi' && previous !== 'multi') {
+      const name = form.elements['device-single'].value;
+      for (const field of READING_FIELDS) {
+        this.setSource(field.key, name || null, form.elements[`reading-${field.key}`].value);
+      }
+    }
+    this.applyMode();
   }
 
   setSource(key, deviceName, selected) {
@@ -255,12 +331,14 @@ class FHEMCMSSolarFlow extends HTMLElement {
     const select = form.elements[`reading-${key}`];
     const names = Object.keys(device?.readings || {}).sort();
     const all = selected && !names.includes(selected) ? [selected, ...names] : names;
-    select.replaceChildren(...all.map((name) => new Option(name, name)));
-    select.value = selected || (deviceName ? (names[0] || '') : '');
+    const required = READING_FIELDS.find((field) => field.key === key).required;
+    select.replaceChildren(...(required ? [] : [new Option('– nicht verwenden –', '')]), ...all.map((name) => new Option(name, name)));
+    select.value = selected || (required && deviceName ? (names[0] || '') : '');
     select.disabled = !deviceName;
   }
 
   async pickDevice(key) {
+    const form = this.shadowRoot.querySelector('[data-form]');
     try {
       const device = await openDevicePicker({ services: this.services });
       if (!device) {
@@ -269,7 +347,15 @@ class FHEMCMSSolarFlow extends HTMLElement {
       if (!(this.devices || []).some((item) => item.name === device.name)) {
         this.devices = [...(this.devices || []), device];
       }
-      this.setSource(key, device.name, '');
+      if (key === 'single') {
+        form.elements['device-single'].value = device.name;
+        this.showAlias(device.name);
+        for (const field of READING_FIELDS) {
+          this.setSource(field.key, device.name, '');
+        }
+      } else {
+        this.setSource(key, device.name, '');
+      }
     } catch (error) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
     }
@@ -278,17 +364,19 @@ class FHEMCMSSolarFlow extends HTMLElement {
   async saveConfig() {
     const form = this.shadowRoot.querySelector('[data-form]');
     const title = form.elements.title.value.trim();
+    const multi = form.elements.mode.value === 'multi';
+    const sharedDevice = form.elements['device-single'].value.trim();
     const readings = {};
     for (const field of READING_FIELDS) {
-      const device = form.elements[`device-${field.key}`].value.trim();
+      const device = multi ? form.elements[`device-${field.key}`].value.trim() : sharedDevice;
       const reading = form.elements[`reading-${field.key}`].value;
       if (device && reading) {
-        readings[field.key] = { device, reading };
+        readings[field.key] = multi ? { device, reading } : reading;
       }
     }
     const threshold = Number.parseInt(form.elements.threshold.value, 10);
     if (!readings.pv) {
-      this.shadowRoot.querySelector('[data-error]').textContent = 'Device und Reading für die PV-Leistung sind erforderlich.';
+      this.shadowRoot.querySelector('[data-error]').textContent = multi ? 'Device und Reading für die PV-Leistung sind erforderlich.' : 'Device und Reading für die PV-Leistung sind erforderlich (Device oben wählen).';
       return;
     }
     if (!Number.isInteger(threshold) || threshold < 0 || threshold > 1000) {
@@ -298,6 +386,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
     const next = {
       id: this.widgetConfig.id,
       type: 'fhem-solarflow',
+      ...(multi ? {} : { device: sharedDevice }),
       readings,
       unit: form.elements.unit.value === 'kW' ? 'kW' : 'W',
       invertGrid: form.elements.invertGrid.checked,
@@ -350,7 +439,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
       const ratio = Math.min(1, edge.power / MAX_POWER);
       const width = (5 + 9 * ratio).toFixed(1);
       const duration = (3.2 - 2.2 * ratio).toFixed(2);
-      const count = edge.power < 300 ? 1 : edge.power < 1500 ? 2 : 3;
+      const count = Math.min(edge.d.includes('L') ? 2 : 3, edge.power < 300 ? 1 : edge.power < 1500 ? 2 : 3);
       const dots = reduced
         ? `<circle class="dot" r="${(width * 0.5).toFixed(1)}"><animateMotion dur="1s" repeatCount="1" fill="freeze" keyPoints="0.5;0.5" keyTimes="0;1" calcMode="linear" path="${edge.d}"/></circle>`
         : Array.from({ length: count }, (_, dot) => `<circle class="dot" r="${(width * 0.55).toFixed(1)}">
@@ -364,7 +453,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
       }
       const { x, y } = STATIONS[key];
       return `<g transform="translate(${x} ${y})" data-station="${key}">
-        <circle r="46" fill="url(#ring-grey)" data-ring/>
+        <circle r="${STATION_R}" fill="url(#ring-grey)" data-ring/>
         <circle r="36" fill="#fafafa"/>
         <g class="icon" transform="translate(0 -9) scale(0.85)">${ICONS[key]}${key === 'bat' ? '<rect data-level x="-8" width="16" rx="1.500" stroke="none"/>' : ''}</g>
         <text class="value" y="${key === 'bat' ? 22 : 28}" data-value="${key}">–</text>
