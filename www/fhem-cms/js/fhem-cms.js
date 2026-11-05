@@ -9,7 +9,7 @@ import '../components/cms-icon.js';
 import '../components/cms-table.js';
 import '../components/cms-slider.js';
 import '../components/cms-chart.js';
-import '../components/cms-solarflow.js';
+import { devicesOfSolarFlow } from '../components/cms-solarflow.js';
 import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { GRID_COLUMNS, cellFromPoint, moveWidget, resizeWidget } from './layout.js';
@@ -26,6 +26,9 @@ const devicesOf = (widget) => {
   if (widget.type === 'fhem-chart') {
     return [];
   }
+  if (widget.type === 'fhem-solarflow') {
+    return devicesOfSolarFlow(widget);
+  }
   if (widget.type === 'fhem-html') {
   }
   if (widget.type === 'text') {
@@ -36,7 +39,7 @@ const devicesOf = (widget) => {
 const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-solarflow'].includes(widget.type)
   || (widget.type === 'text' && devicesOf(widget).length > 0);
 // Daten einer Kachel: ein Device oder (freies HTML, Text) die Map aller verwendeten Devices.
-const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.type === 'text' || widget.type === 'fhem-table'
+const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.type === 'text' || widget.type === 'fhem-table' || widget.type === 'fhem-solarflow'
   ? new Map(devicesOf(widget).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
   : snapshots.get(widget.device) || null);
 const GUIDE_KEY = 'fhem-cms-show-grid';
@@ -1289,7 +1292,7 @@ class CmsPage {
       element = document.createElement('cms-solarflow');
       element.services = this.services();
       element.config = widget;
-      element.data = this.snapshots.get(widget.device) || null;
+      element.data = dataFor(widget, this.snapshots);
     } else if (widget.type === 'fhem-chart') {
       element = document.createElement('cms-chart');
       element.services = this.services();
@@ -1356,7 +1359,7 @@ class CmsPage {
     } else if (type === 'fhem-slider') {
       widget = { id, type, device: '', command: '', reading: '', grid };
     } else if (type === 'fhem-solarflow') {
-      widget = { id, type, device: '', readings: { pv: '' }, grid };
+      widget = { id, type, readings: {}, grid };
     } else if (type === 'fhem-chart') {
       widget = { id, type, device: '', reading: '', grid };
     }
