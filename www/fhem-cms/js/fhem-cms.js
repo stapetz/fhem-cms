@@ -42,6 +42,7 @@ const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fh
 const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.type === 'text' || widget.type === 'fhem-table' || widget.type === 'fhem-solarflow'
   ? new Map(devicesOf(widget).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
   : snapshots.get(widget.device) || null);
+const THEMES = [['dark', 'Dunkel'], ['light', 'Hell']];
 const GUIDE_KEY = 'fhem-cms-show-grid';
 const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 48, h: 1 };
 
@@ -111,9 +112,8 @@ class CmsPage {
     this.gridButton = this.button('Raster anzeigen', () => this.toggleGuides());
     this.gridButton.classList.add('cms-grid-toggle');
     this.gridButton.setAttribute('aria-pressed', String(this.showGrid));
-    this.darkThemeButton = this.button('Dunkles Theme', () => this.setTheme('dark'));
-    this.lightThemeButton = this.button('Helles Theme', () => this.setTheme('light'));
-    this.pageButtons = [this.navButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton, this.gridButton];
+    this.setupButton = this.button('Seite einrichten …', () => this.showSetupDialog());
+    this.pageButtons = [this.setupButton, this.navButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton, this.gridButton];
     this.publishButton.classList.add('cms-publish');
     this.hasDraft = false;
     this.statusText = '';
@@ -180,10 +180,10 @@ class CmsPage {
       this.menus.push(menu);
       return menu;
     };
-    const fileMenu = makeMenu('Datei', [this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton]);
+    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton]);
     const editMenu = makeMenu('Bearbeiten', [this.navButton]);
     this.menu = makeMenu('Einfügen', this.menuButtons);
-    const viewMenu = makeMenu('Ansicht', [this.darkThemeButton, this.lightThemeButton, this.gridButton]);
+    const viewMenu = makeMenu('Ansicht', [this.gridButton]);
     document.addEventListener('click', (event) => {
       if (!this.toolbar.contains(event.target)) {
         this.closeMenus();
@@ -315,22 +315,52 @@ class CmsPage {
   applyTheme() {
     const theme = this.config?.theme === 'light' ? 'light' : 'dark';
     document.documentElement.dataset.cmsTheme = theme;
-    this.darkThemeButton?.setAttribute('aria-pressed', String(theme === 'dark'));
-    this.lightThemeButton?.setAttribute('aria-pressed', String(theme === 'light'));
+    document.documentElement.dataset.cmsFrames = this.config?.settings?.showFrames === false ? 'off' : 'on';
   }
 
-  async setTheme(theme) {
-    if (!['dark', 'light'].includes(theme) || theme === this.config.theme) {
-      return;
+  // Seitenübergreifende Einstellungen (gelten für alle Seiten).
+  showSetupDialog() {
+    const { dialog, body, actions, finish } = this.dialogShell('Seite einrichten');
+    const error = document.createElement('p');
+    error.className = 'cms-dialog-error';
+    error.setAttribute('role', 'alert');
+    const themeLabel = document.createElement('label');
+    themeLabel.textContent = 'Theme';
+    const theme = document.createElement('select');
+    for (const [value, text] of THEMES) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = text;
+      theme.append(option);
     }
-    const next = structuredClone(this.config);
-    next.theme = theme;
-    try {
-      await this.persist(next);
-      this.setStatus(`Theme „${theme === 'light' ? 'Hell' : 'Dunkel'}“ gespeichert`);
-    } catch (error) {
-      this.setStatus(`Theme konnte nicht gespeichert werden: ${error.message}`);
-    }
+    theme.value = this.config.theme;
+    themeLabel.append(theme);
+    const widgets = document.createElement('fieldset');
+    widgets.className = 'cms-move-choice';
+    const legend = document.createElement('legend');
+    legend.textContent = 'Widgets (für alle Seiten)';
+    const frameLabel = document.createElement('label');
+    const frames = document.createElement('input');
+    frames.type = 'checkbox';
+    frames.checked = this.config.settings?.showFrames !== false;
+    frameLabel.append(frames, ' Rahmen am Widget anzeigen');
+    widgets.append(legend, frameLabel);
+    body.append(themeLabel, widgets, error);
+    actions.append(this.button('Abbrechen', () => finish(null)), this.button('Speichern', async () => {
+      const next = structuredClone(this.config);
+      next.theme = theme.value;
+      next.settings = { ...next.settings, showFrames: frames.checked };
+      try {
+        await this.persist(next);
+      } catch (failure) {
+        error.textContent = `Speichern fehlgeschlagen: ${failure.message}`;
+        return;
+      }
+      finish(true);
+      this.setStatus('Seiteneinstellungen gespeichert');
+    }));
+    document.body.append(dialog);
+    dialog.showModal();
   }
 
   // Beendet Timer und Abonnements, damit nach dem Verlassen der Seite nichts weiterläuft.
