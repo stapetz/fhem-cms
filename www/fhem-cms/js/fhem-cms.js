@@ -12,6 +12,7 @@ import '../components/cms-chart.js';
 import { devicesOfSolarFlow } from '../components/cms-solarflow.js';
 import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
 import { FhemClient, isValidName } from './fhem-client.js';
+import { DevicePreview } from './device-preview.js';
 import {
   GRID_COLUMNS, GRID_COLUMN_CHOICES, LAYOUT_MODES, cellFromPoint, configureLayout, effectiveLayout, flowLayout,
   layoutMode, layoutStep, moveWidget, normalizeLayout, resizeWidget
@@ -106,6 +107,7 @@ function layoutPreview(mode, columns) {
 }
 
 const THEMES = [['dark', 'Dunkel'], ['light', 'Hell']];
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
 const GUIDE_KEY = 'fhem-cms-show-grid';
 const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 48, h: 1 };
 
@@ -370,6 +372,20 @@ class CmsPage {
         this.refresh();
       }
     });
+    if (!VIEW_MODE) {
+      this.devicePreview = new DevicePreview({
+        getUrl: () => {
+          const url = new URL(window.location.href);
+          url.search = '?mode=preview';
+          url.hash = window.location.hash;
+          return url.href;
+        },
+        beforeOpen: async () => {
+          await this.flushLayout();
+          await this.flushDraftWrites();
+        }
+      });
+    }
     this.setDraft(this.hasDraft);
     this.startPolling();
     await this.showPage(this.pageFromHash());
@@ -1388,15 +1404,19 @@ class CmsPage {
         && this.config.navigation.orientation !== 'vertical';
       tracks.push(navOnly ? 'auto' : 'minmax(var(--cms-row-h), auto)');
     }
-    this.grid.style.gridTemplateRows = tracks.join(' ');
+    const template = tracks.join(' ');
+    if (this.grid.style.gridTemplateRows !== template) {
+      this.grid.style.gridTemplateRows = template;
+    }
   }
 
   // Gitternetzlinien: eine leere Zelle je Rasterfeld, mindestens bis zwei Zeilen unter dem Inhalt.
   syncGuides(layout) {
-    this.guides?.remove();
-    this.guides = null;
     this.syncRowHeights(layout);
     if (VIEW_MODE || !this.showGrid) {
+      this.guides?.remove();
+      this.guides = null;
+      this.guidesKey = '';
       return;
     }
     const items = this.layoutItems();
@@ -1404,6 +1424,13 @@ class CmsPage {
       const grid = (layout && layout.get(item.id)) || item.grid;
       return Math.max(max, grid.row + grid.h - 1);
     }, 1) + 2;
+    // Beim Ziehen ändert sich meist nur die Position, nicht die Zeilenzahl: Linien dann nicht neu aufbauen.
+    const key = `${rows}/${layoutStep()}`;
+    if (this.guides?.isConnected && this.guidesKey === key) {
+      return;
+    }
+    this.guides?.remove();
+    this.guidesKey = key;
     const guides = document.createElement('div');
     guides.className = 'cms-guides';
     guides.setAttribute('aria-hidden', 'true');
@@ -1475,15 +1502,38 @@ class CmsPage {
     if (this.showGrid) {
       this.syncGuides(layout);
     }
+    const moving = [];
+    const before = new Map();
     for (const widget of this.layoutItems()) {
       const grid = layout.get(widget.id);
       const element = this.elements.get(widget.id);
-      const overlay = this.overlays.get(widget.id);
+      if (grid && element && !this.dragging?.has(widget.id) && !REDUCED_MOTION.matches) {
+        before.set(widget.id, element.getBoundingClientRect());
+      }
+      moving.push([widget.id, grid, element, this.overlays.get(widget.id)]);
+    }
+    for (const [, grid, element, overlay] of moving) {
       if (grid && element) {
         this.place(element, { grid });
         if (overlay) {
           this.place(overlay, { grid });
         }
+      }
+    }
+    // Verdrängte Kacheln gleiten an ihren neuen Platz (FLIP) statt zu springen.
+    for (const [id, from] of before) {
+      const targets = [this.elements.get(id), this.overlays.get(id)].filter(Boolean);
+      const to = targets[0].getBoundingClientRect();
+      const dx = from.left - to.left;
+      const dy = from.top - to.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+        continue;
+      }
+      for (const target of targets) {
+        target.animate(
+          [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
+          { duration: 160, easing: 'ease-out' }
+        );
       }
     }
   }
@@ -1502,13 +1552,31 @@ class CmsPage {
       overlay.classList.add('is-dragging');
       let last = null;
 
-      const move = (moveEvent) => {
-        const cell = cellFromPoint(this.grid, moveEvent.clientX, moveEvent.clientY);
-        const layout = moveWidget(this.layoutItems(), id, cell.col - offset.col, cell.row - offset.row);
+      this.dragging = new Set([id]);
+      let frame = 0;
+      let pointer = null;
+      const update = () => {
+        frame = 0;
+        const cell = cellFromPoint(this.grid, pointer.x, pointer.y);
+        // Nur neu berechnen, wenn der Zeiger eine andere Rasterzelle erreicht.
+        const cellKey = `${cell.col}/${cell.row}`;
+        if (cellKey === lastCell) {
+          return;
+        }
+        lastCell = cellKey;
+        const layout = moveWidget(items, id, cell.col - offset.col, cell.row - offset.row);
         const key = layout && JSON.stringify([...layout]);
         if (layout && key !== last) {
           last = key;
           this.previewLayout(layout);
+        }
+      };
+      let lastCell = '';
+      const items = this.layoutItems();
+      const move = (moveEvent) => {
+        pointer = { x: moveEvent.clientX, y: moveEvent.clientY };
+        if (!frame) {
+          frame = window.requestAnimationFrame(update);
         }
       };
       const finish = (commit) => {
@@ -1516,6 +1584,11 @@ class CmsPage {
         overlay.removeEventListener('pointerup', up);
         overlay.removeEventListener('pointercancel', cancel);
         overlay.classList.remove('is-dragging');
+        if (frame) {
+          window.cancelAnimationFrame(frame);
+          update();
+        }
+        this.dragging = null;
         if (commit && last) {
           this.commitLayout(this.pendingLayout);
         } else {
@@ -1563,13 +1636,30 @@ class CmsPage {
       overlay.classList.add('is-dragging');
       let last = null;
 
-      const move = (moveEvent) => {
-        const cell = cellFromPoint(this.grid, moveEvent.clientX, moveEvent.clientY);
-        const layout = resizeWidget(this.layoutItems(), id, cell.col - widget.grid.col + 1, cell.row - widget.grid.row + 1);
+      this.dragging = new Set([id]);
+      let frame = 0;
+      let pointer = null;
+      let lastCell = '';
+      const items = this.layoutItems();
+      const update = () => {
+        frame = 0;
+        const cell = cellFromPoint(this.grid, pointer.x, pointer.y);
+        const cellKey = `${cell.col}/${cell.row}`;
+        if (cellKey === lastCell) {
+          return;
+        }
+        lastCell = cellKey;
+        const layout = resizeWidget(items, id, cell.col - widget.grid.col + 1, cell.row - widget.grid.row + 1);
         const key = layout && JSON.stringify([...layout]);
         if (layout && key !== last) {
           last = key;
           this.previewLayout(layout);
+        }
+      };
+      const move = (moveEvent) => {
+        pointer = { x: moveEvent.clientX, y: moveEvent.clientY };
+        if (!frame) {
+          frame = window.requestAnimationFrame(update);
         }
       };
       const finish = (commit) => {
@@ -1577,6 +1667,11 @@ class CmsPage {
         grip.removeEventListener('pointerup', up);
         grip.removeEventListener('pointercancel', cancel);
         overlay.classList.remove('is-dragging');
+        if (frame) {
+          window.cancelAnimationFrame(frame);
+          update();
+        }
+        this.dragging = null;
         if (commit && last) {
           this.commitLayout(this.pendingLayout);
         } else {
