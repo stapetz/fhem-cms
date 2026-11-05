@@ -597,8 +597,16 @@ sub FHEMCMS_ValidateConfig {
     my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages'], ['navigation', 'theme', 'settings']);
     return $err if ($err);
     if (exists($config->{settings})) {
-        $err = $exact->($config->{settings}, 'settings', [], ['showFrames']);
+        $err = $exact->($config->{settings}, 'settings', [], ['showFrames', 'layoutMode', 'gridColumns']);
         return $err if ($err);
+        return 'Ungueltiger Wert fuer layoutMode'
+            if (exists($config->{settings}{layoutMode}) && (ref($config->{settings}{layoutMode})
+                || !defined($config->{settings}{layoutMode})
+                || $config->{settings}{layoutMode} !~ /\A(?:grid|flow|masonry|free)\z/));
+        return 'Ungueltiger Wert fuer gridColumns'
+            if (exists($config->{settings}{gridColumns}) && (ref($config->{settings}{gridColumns})
+                || !defined($config->{settings}{gridColumns})
+                || $config->{settings}{gridColumns} !~ /\A(?:12|24|48)\z/));
         return 'Ungueltiger Wert fuer showFrames'
             if (exists($config->{settings}{showFrames}) && !$isBool->($config->{settings}{showFrames}));
     }

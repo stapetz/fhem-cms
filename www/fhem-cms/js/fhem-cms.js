@@ -12,7 +12,10 @@ import '../components/cms-chart.js';
 import { devicesOfSolarFlow } from '../components/cms-solarflow.js';
 import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
 import { FhemClient, isValidName } from './fhem-client.js';
-import { GRID_COLUMNS, cellFromPoint, moveWidget, resizeWidget } from './layout.js';
+import {
+  GRID_COLUMNS, GRID_COLUMN_CHOICES, LAYOUT_MODES, cellFromPoint, configureLayout, effectiveLayout, flowLayout,
+  layoutMode, layoutStep, moveWidget, normalizeLayout, resizeWidget
+} from './layout.js';
 
 const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
@@ -42,6 +45,66 @@ const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fh
 const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.type === 'text' || widget.type === 'fhem-table' || widget.type === 'fhem-solarflow'
   ? new Map(devicesOf(widget).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
   : snapshots.get(widget.device) || null);
+const LAYOUT_INFO = {
+  grid: {
+    title: 'Raster',
+    text: 'Widgets sitzen auf festen Rasterzellen. Überlappende Widgets rutschen nach unten. Volle Kontrolle über jede Position.'
+  },
+  flow: {
+    title: 'Fluss',
+    text: 'Widgets reihen sich in Reihenfolge von links nach rechts und brechen automatisch um. Passt sich jeder Breite an.'
+  },
+  masonry: {
+    title: 'Spalten (Masonry)',
+    text: 'Widgets füllen die Spalten lückenlos von oben nach unten, wie Kacheln bei Pinterest. Ohne Leerräume.'
+  },
+  free: {
+    title: 'Frei',
+    text: 'Widgets stehen genau dort, wo Sie sie ablegen, und dürfen sich überlappen. Feinste Auflösung, keine Verdrängung.'
+  }
+};
+
+// Kleine Vorschau: dieselben Beispiel-Widgets, angeordnet nach dem jeweiligen Modus.
+function layoutPreview(mode, columns) {
+  const samples = [
+    { id: 'a', grid: { col: 1, row: 1, w: 24, h: 4 } },
+    { id: 'b', grid: { col: 25, row: 1, w: 12, h: 4 } },
+    { id: 'c', grid: { col: 37, row: 1, w: 12, h: 7 } },
+    { id: 'd', grid: { col: 1, row: 5, w: 12, h: 3 } },
+    { id: 'e', grid: { col: 13, row: 5, w: 24, h: 3 } },
+    { id: 'f', grid: { col: 1, row: 8, w: 24, h: 3 } }
+  ];
+  let placed = new Map(samples.map((item) => [item.id, item.grid]));
+  if (mode === 'flow' || mode === 'masonry') {
+    const shuffled = [samples[0], samples[1], samples[2], samples[3], samples[4], samples[5]]
+      .map((item, index) => ({ ...item, grid: { ...item.grid, h: [3, 5, 3, 4, 3, 4][index], w: [20, 16, 12, 20, 24, 16][index] } }));
+    placed = flowLayout(shuffled, mode);
+  } else if (mode === 'free') {
+    placed = new Map([
+      ['a', { col: 1, row: 1, w: 24, h: 5 }], ['b', { col: 18, row: 3, w: 16, h: 5 }],
+      ['c', { col: 38, row: 1, w: 11, h: 4 }], ['d', { col: 5, row: 8, w: 16, h: 3 }],
+      ['e', { col: 24, row: 8, w: 20, h: 3 }], ['f', { col: 30, row: 5, w: 12, h: 3 }]
+    ]);
+  }
+  const preview = document.createElement('div');
+  preview.className = `cms-lm-preview is-${mode}`;
+  preview.setAttribute('aria-hidden', 'true');
+  if (mode === 'grid') {
+    const step = 48 / columns;
+    preview.style.backgroundSize = `calc(100% / ${columns}) 100%`;
+    preview.dataset.step = String(step);
+  }
+  const rows = Math.max(...[...placed.values()].map((grid) => grid.row + grid.h - 1));
+  preview.style.gridTemplateRows = `repeat(${rows}, 4px)`;
+  for (const grid of placed.values()) {
+    const tile = document.createElement('span');
+    tile.style.gridColumn = `${grid.col} / span ${grid.w}`;
+    tile.style.gridRow = `${grid.row} / span ${grid.h}`;
+    preview.append(tile);
+  }
+  return preview;
+}
+
 const THEMES = [['dark', 'Dunkel'], ['light', 'Hell']];
 const GUIDE_KEY = 'fhem-cms-show-grid';
 const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 48, h: 1 };
@@ -316,6 +379,7 @@ class CmsPage {
     const theme = this.config?.theme === 'light' ? 'light' : 'dark';
     document.documentElement.dataset.cmsTheme = theme;
     document.documentElement.dataset.cmsFrames = this.config?.settings?.showFrames === false ? 'off' : 'on';
+    configureLayout(this.config?.settings);
   }
 
   // Seitenübergreifende Einstellungen (gelten für alle Seiten).
@@ -361,26 +425,108 @@ class CmsPage {
     const frames = document.createElement('input');
     frames.type = 'checkbox';
     frames.checked = this.config.settings?.showFrames !== false;
+    const modeValue = { current: LAYOUT_MODES.includes(this.config.settings?.layoutMode) ? this.config.settings.layoutMode : 'grid' };
+    const columns = document.createElement('select');
+    for (const count of GRID_COLUMN_CHOICES) {
+      const option = document.createElement('option');
+      option.value = String(count);
+      option.textContent = { 12: '12 Spalten (grob)', 24: '24 Spalten (mittel)', 48: '48 Spalten (fein)' }[count];
+      columns.append(option);
+    }
+    columns.value = String(GRID_COLUMN_CHOICES.includes(this.config.settings?.gridColumns) ? this.config.settings.gridColumns : 48);
+    const cards = document.createElement('div');
+    cards.className = 'cms-lm-cards';
+    cards.setAttribute('role', 'radiogroup');
+    cards.setAttribute('aria-label', 'Positionierung');
+    const previews = new Map();
+    const refreshCards = () => {
+      for (const [mode, card] of previews) {
+        card.classList.toggle('is-selected', mode === modeValue.current);
+        card.querySelector('input').checked = mode === modeValue.current;
+        card.querySelector('.cms-lm-preview').replaceWith(layoutPreview(mode, Number(columns.value)));
+      }
+      columns.disabled = modeValue.current === 'free';
+    };
+    for (const [mode, info] of Object.entries(LAYOUT_INFO)) {
+      const card = document.createElement('label');
+      card.className = 'cms-lm-card';
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'layoutMode';
+      radio.value = mode;
+      radio.addEventListener('change', () => {
+        modeValue.current = mode;
+        refreshCards();
+      });
+      const name = document.createElement('strong');
+      name.textContent = info.title;
+      const hint = document.createElement('span');
+      hint.className = 'cms-dialog-hint';
+      hint.textContent = info.text;
+      const preview = document.createElement('div');
+      preview.className = 'cms-lm-preview';
+      card.append(preview, radio, name, hint);
+      previews.set(mode, card);
+      cards.append(card);
+    }
+    columns.addEventListener('change', refreshCards);
+    refreshCards();
+    const arrangement = section('Positionierung', 'Wie Widgets auf der Seite angeordnet werden (alle Seiten). Vorhandene Layouts werden beim Wechsel umgerechnet.');
+    arrangement.append(cards, field('Rastergröße', 'Feinheit beim Verschieben und Skalieren (nicht bei „Frei“, dort immer fein)', columns));
     const look = section('Darstellung', 'Gilt für alle Seiten.');
     look.append(field('Theme', 'Farbschema der Seite', theme));
     const widgets = section('Widgets', 'Allgemeine Einstellungen für alle Widgets.');
     widgets.append(field('Rahmen anzeigen', 'Zeichnet einen Rahmen um jedes Widget', frames));
-    body.append(look, widgets, error);
+    body.append(look, arrangement, widgets, error);
     actions.append(this.button('Abbrechen', () => finish(null)), this.button('Speichern', async () => {
       const next = structuredClone(this.config);
       next.theme = theme.value;
-      next.settings = { ...next.settings, showFrames: frames.checked };
+      next.settings = {
+        ...next.settings,
+        showFrames: frames.checked,
+        layoutMode: modeValue.current,
+        gridColumns: Number(columns.value)
+      };
+      const layoutChanged = next.settings.layoutMode !== layoutMode()
+        || next.settings.gridColumns !== (this.config.settings?.gridColumns || 48);
       try {
+        if (layoutChanged) {
+          this.convertLayouts(next);
+        }
         await this.persist(next);
       } catch (failure) {
         error.textContent = `Speichern fehlgeschlagen: ${failure.message}`;
         return;
       }
       finish(true);
+      this.renderWidgets();
       this.setStatus('Seiteneinstellungen gespeichert');
     }));
     document.body.append(dialog);
     dialog.showModal();
+  }
+
+  // Rechnet die Positionen aller Seiten auf Modus und Rastergröße der neuen Einstellungen um.
+  convertLayouts(next) {
+    const previous = this.config.settings;
+    configureLayout(next.settings);
+    try {
+      const navLayout = normalizeLayout([{ id: NAV_ID, grid: next.navigation.grid }]);
+      next.navigation.grid = { ...navLayout.get(NAV_ID) };
+      for (const page of next.pages) {
+        const layout = normalizeLayout([{ id: NAV_ID, grid: next.navigation.grid }, ...page.widgets]);
+        if (!layout) {
+          throw new Error(`Kein Platz im Raster (Seite ${page.title})`);
+        }
+        for (const widget of page.widgets) {
+          const { col, row, w, h } = layout.get(widget.id);
+          widget.grid = { col, row, w, h };
+        }
+      }
+    } catch (failure) {
+      configureLayout(previous);
+      throw failure;
+    }
   }
 
   // Beendet Timer und Abonnements, damit nach dem Verlassen der Seite nichts weiterläuft.
@@ -1214,7 +1360,7 @@ class CmsPage {
     this.elements.clear();
     this.overlays.clear();
     this.elements.set(NAV_ID, this.nav);
-    this.place(this.nav, this.config.navigation);
+    this.place(this.nav, { grid: this.effectiveGrid(NAV_ID) });
     this.grid.append(this.nav);
     this.sizeNav();
     for (const widget of this.page.widgets) {
@@ -1263,9 +1409,9 @@ class CmsPage {
     guides.setAttribute('aria-hidden', 'true');
     guides.style.gridRow = `1 / span ${rows}`;
     for (let row = 1; row <= rows; row += 1) {
-      for (let col = 1; col <= GRID_COLUMNS; col += 1) {
+      for (let col = 1; col <= GRID_COLUMNS; col += layoutStep()) {
         const cell = document.createElement('span');
-        cell.style.gridColumn = String(col);
+        cell.style.gridColumn = `${col} / span ${layoutStep()}`;
         cell.style.gridRow = String(row);
         guides.append(cell);
       }
@@ -1510,8 +1656,15 @@ class CmsPage {
     return this.layoutSaving;
   }
 
+  // Positionen, wie sie im aktuellen Positionierungsmodus angezeigt werden.
   layoutItems() {
-    return [{ id: NAV_ID, grid: this.config.navigation.grid }, ...this.page.widgets];
+    const items = [{ id: NAV_ID, grid: this.config.navigation.grid }, ...this.page.widgets];
+    const shown = effectiveLayout(items);
+    return items.map((item) => ({ ...item, grid: shown.get(item.id) || item.grid }));
+  }
+
+  effectiveGrid(id) {
+    return this.layoutItems().find((item) => item.id === id)?.grid;
   }
 
   createElementFor(widget) {
@@ -1581,7 +1734,7 @@ class CmsPage {
     if (VIEW_MODE) {
       element.setAttribute('view-only', '');
     }
-    this.place(element, widget);
+    this.place(element, { grid: this.effectiveGrid(widget.id) || widget.grid });
     this.elements.set(widget.id, element);
     return element;
   }
@@ -1717,7 +1870,7 @@ class CmsPage {
     if (element) {
       element.config = widget;
       element.data = dataFor(widget, this.snapshots);
-      this.place(element, widget);
+      this.place(element, { grid: this.effectiveGrid(widget.id) || widget.grid });
     }
     this.syncOverlays();
     await this.refresh();
