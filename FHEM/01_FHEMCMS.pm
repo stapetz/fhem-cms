@@ -687,8 +687,9 @@ sub FHEMCMS_ValidateConfig {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
                     ['title', 'unit', 'range', 'granularity', 'source']);
             } elsif ($widget->{type} eq 'fhem-solarflow') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'readings', 'grid'],
-                    ['title', 'unit', 'invertGrid', 'invertBattery', 'threshold']);
+                # 'device' mit Reading-Namen als Text ist das aeltere Format (ein gemeinsames Device).
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'grid'],
+                    ['title', 'device', 'unit', 'invertGrid', 'invertBattery', 'threshold']);
             } elsif ($widget->{type} eq 'fhem-slider') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title']);
             } else {
@@ -724,7 +725,8 @@ sub FHEMCMS_ValidateConfig {
                     return 'Ungueltiger Wert fuer devices' if (!$isName->($name));
                     return 'Doppeltes Device in devices' if ($seenDevice{$name}++);
                 }
-            } elsif ($widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-table') {
+            } elsif ($widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-table'
+                && !($widget->{type} eq 'fhem-solarflow' && !exists($widget->{device}))) {
                 return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
             }
 
@@ -793,10 +795,20 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-solarflow') {
                 $err = $exact->($widget->{readings}, 'readings', ['pv'], ['home', 'grid', 'battery', 'soc']);
                 return $err if ($err);
-                for my $field (keys %{$widget->{readings}}) {
-                    return "Ungueltiger Wert fuer readings.$field"
-                        if (!$isName->($widget->{readings}{$field}));
+                my %seenSource;
+                for my $field (sort keys %{$widget->{readings}}) {
+                    my $source = $widget->{readings}{$field};
+                    if (exists($widget->{device})) {
+                        return "Ungueltiger Wert fuer readings.$field" if (!$isName->($source));
+                        next;
+                    }
+                    $err = $exact->($source, "readings.$field", ['device', 'reading']);
+                    return $err if ($err);
+                    return "Ungueltiger Wert fuer readings.$field.device" if (!$isName->($source->{device}));
+                    return "Ungueltiger Wert fuer readings.$field.reading" if (!$isName->($source->{reading}));
+                    $seenSource{$source->{device}} = 1;
                 }
+                return 'Zu viele Devices (hoechstens 5)' if (keys(%seenSource) > 5);
                 return 'Ungueltige Einheit'
                     if (exists($widget->{unit})
                         && (ref($widget->{unit}) || !defined($widget->{unit}) || $widget->{unit} !~ /\A(?:W|kW)\z/));

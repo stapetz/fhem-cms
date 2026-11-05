@@ -61,26 +61,37 @@ export const computeFlows = (values) => {
   return flows;
 };
 
-export const computeModel = (config, snapshot) => {
-  const readings = config.readings || {};
-  const item = (snapshot || []).find((entry) => entry.name === config.device) || (snapshot || [])[0];
+// Jede Station nennt Device und Reading; ältere Konfigurationen hatten ein gemeinsames Device und Reading-Namen als Text.
+export const sourceOf = (config, key) => {
+  const entry = config.readings?.[key];
+  if (typeof entry === 'string') {
+    return entry && config.device ? { device: config.device, reading: entry } : null;
+  }
+  return entry?.device && entry?.reading ? entry : null;
+};
+
+export const devicesOfSolarFlow = (config) => [...new Set(READING_FIELDS.map((field) => sourceOf(config, field.key)?.device).filter(Boolean))];
+
+export const computeModel = (config, snapshots) => {
   const scale = config.unit === 'kW' ? 1000 : 1;
-  const read = (name, factor = 1) => {
-    const number = name ? parseNumber(item?.readings?.[name]) : null;
+  const read = (key, factor = 1) => {
+    const source = sourceOf(config, key);
+    const item = source ? (snapshots?.get(source.device) || []).find((entry) => entry.readings?.[source.reading] !== undefined) : null;
+    const number = item ? parseNumber(item.readings[source.reading]) : null;
     return number === null ? null : number * factor;
   };
-  const pv = read(readings.pv, scale);
-  const grid = read(readings.grid, config.invertGrid ? -scale : scale);
-  const bat = read(readings.battery, config.invertBattery ? -scale : scale);
-  const soc = read(readings.soc);
-  let home = read(readings.home, scale);
+  const pv = read('pv', scale);
+  const grid = read('grid', config.invertGrid ? -scale : scale);
+  const bat = read('battery', config.invertBattery ? -scale : scale);
+  const soc = read('soc');
+  let home = read('home', scale);
   if (home === null && pv !== null) {
     home = Math.max(0, pv + (grid || 0) - (bat || 0));
   }
   const values = { pv: pv === null ? null : Math.max(0, pv), home: home === null ? null : Math.max(0, home), grid, bat };
   const threshold = Number.isFinite(config.threshold) ? config.threshold : DEFAULT_THRESHOLD;
   const flows = computeFlows(values);
-  const visible = { pv: true, home: true, grid: Boolean(readings.grid), bat: Boolean(readings.battery) };
+  const visible = { pv: true, home: true, grid: Boolean(sourceOf(config, 'grid')), bat: Boolean(sourceOf(config, 'battery')) };
   const edges = EDGES.filter((edge) => visible[edge.a] && visible[edge.b]).map((edge) => {
     const forward = flows[`${edge.a}>${edge.b}`] || 0;
     const backward = flows[`${edge.b}>${edge.a}`] || 0;
@@ -141,6 +152,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
         input[type="text"], input[type="number"], select { width: 100%; }
         .device-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
+        fieldset { display: grid; gap: 0.4rem; margin: 0; border: 1px solid var(--cms-border-subtle, #3a4d42); border-radius: 0.5rem; }
         .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
         .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
@@ -156,13 +168,11 @@ class FHEMCMSSolarFlow extends HTMLElement {
         <form method="dialog" data-form novalidate>
           <h3 id="solarflow-dialog-title">SolarFlow konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-          <label>SolarDevice
-            <span class="device-row"><input name="device" readonly required placeholder="Noch kein Device gewählt">
-              <button type="button" data-pick-device>Auswählen …</button></span>
-          </label>
-          <span class="hint" data-alias></span>
-          ${READING_FIELDS.map((field) => `<label>${field.label}${field.required ? '' : ' (optional)'}
-            <select name="reading-${field.key}"></select></label>`).join('')}
+          ${READING_FIELDS.map((field) => `<fieldset data-field="${field.key}"><legend>${field.label}${field.required ? '' : ' (optional)'}</legend>
+            <span class="device-row"><input name="device-${field.key}" readonly placeholder="Device wählen …" aria-label="Device für ${field.label}">
+              <button type="button" data-pick="${field.key}">Device …</button></span>
+            <select name="reading-${field.key}" aria-label="Reading für ${field.label}"></select>
+            ${field.required ? '' : `<button type="button" data-clear="${field.key}">Nicht verwenden</button>`}</fieldset>`).join('')}
           <label>Einheit der Leistungs-Readings
             <select name="unit"><option value="W">Watt (W)</option><option value="kW">Kilowatt (kW)</option></select></label>
           <label class="check"><input name="invertGrid" type="checkbox">Vorzeichen der Netzleistung umkehren</label>
@@ -175,8 +185,12 @@ class FHEMCMSSolarFlow extends HTMLElement {
         </form>
       </dialog>`;
     this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
-    this.shadowRoot.querySelector('[data-pick-device]').addEventListener('click', () => this.pickDevice());
-    this.shadowRoot.querySelector('[name="device"]').addEventListener('click', () => this.pickDevice());
+    for (const field of READING_FIELDS) {
+      const pick = () => this.pickDevice(field.key);
+      this.shadowRoot.querySelector(`[data-pick="${field.key}"]`).addEventListener('click', pick);
+      this.shadowRoot.querySelector(`[name="device-${field.key}"]`).addEventListener('click', pick);
+      this.shadowRoot.querySelector(`[data-clear="${field.key}"]`)?.addEventListener('click', () => this.setSource(field.key, null, ''));
+    }
     this.shadowRoot.querySelector('[data-cancel]').addEventListener('click', () => this.closeConfig(false));
     this.shadowRoot.querySelector('[data-delete]').addEventListener('click', () => this.deleteWidget());
     this.shadowRoot.querySelector('[data-form]').addEventListener('submit', (event) => {
@@ -215,48 +229,47 @@ class FHEMCMSSolarFlow extends HTMLElement {
     const form = this.shadowRoot.querySelector('[data-form]');
     const config = this.widgetConfig;
     form.elements.title.value = config.title || '';
-    form.elements.device.value = config.device || '';
     form.elements.unit.value = config.unit === 'kW' ? 'kW' : 'W';
     form.elements.invertGrid.checked = config.invertGrid === true;
     form.elements.invertBattery.checked = config.invertBattery === true;
     form.elements.threshold.value = Number.isFinite(config.threshold) ? config.threshold : DEFAULT_THRESHOLD;
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
-    this.device = null;
+    this.devices = [];
     try {
-      const devices = await this.services.listAllDevices();
-      this.device = devices.find((item) => item.name === config.device) || null;
-      this.setReadings(this.device, config.readings || {});
-      this.shadowRoot.querySelector('[data-alias]').textContent = this.device?.alias || '';
+      this.devices = await this.services.listAllDevices();
     } catch (error) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Devices konnten nicht geladen werden: ${error.message}`;
+    }
+    for (const field of READING_FIELDS) {
+      const source = sourceOf(config, field.key);
+      this.setSource(field.key, source?.device || null, source?.reading || '');
     }
     this.shadowRoot.querySelector('[data-dialog]').showModal();
   }
 
-  setReadings(device, selected) {
+  setSource(key, deviceName, selected) {
+    const form = this.shadowRoot.querySelector('[data-form]');
+    form.elements[`device-${key}`].value = deviceName || '';
+    const device = (this.devices || []).find((item) => item.name === deviceName);
+    const select = form.elements[`reading-${key}`];
     const names = Object.keys(device?.readings || {}).sort();
-    for (const field of READING_FIELDS) {
-      const select = this.shadowRoot.querySelector(`[name="reading-${field.key}"]`);
-      const options = field.required ? [] : [new Option('– nicht verwendet –', '')];
-      const current = selected[field.key] || '';
-      const all = current && !names.includes(current) ? [current, ...names] : names;
-      options.push(...all.map((name) => new Option(name, name)));
-      select.replaceChildren(...options);
-      select.value = current || (field.required ? (names[0] || '') : '');
-    }
+    const all = selected && !names.includes(selected) ? [selected, ...names] : names;
+    select.replaceChildren(...all.map((name) => new Option(name, name)));
+    select.value = selected || (deviceName ? (names[0] || '') : '');
+    select.disabled = !deviceName;
   }
 
-  async pickDevice() {
+  async pickDevice(key) {
     try {
       const device = await openDevicePicker({ services: this.services });
       if (!device) {
         return;
       }
-      this.device = device;
-      this.shadowRoot.querySelector('[name="device"]').value = device.name;
-      this.shadowRoot.querySelector('[data-alias]').textContent = device.alias || '';
-      this.setReadings(device, {});
+      if (!(this.devices || []).some((item) => item.name === device.name)) {
+        this.devices = [...(this.devices || []), device];
+      }
+      this.setSource(key, device.name, '');
     } catch (error) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
     }
@@ -265,17 +278,17 @@ class FHEMCMSSolarFlow extends HTMLElement {
   async saveConfig() {
     const form = this.shadowRoot.querySelector('[data-form]');
     const title = form.elements.title.value.trim();
-    const device = form.elements.device.value.trim();
     const readings = {};
     for (const field of READING_FIELDS) {
-      const value = form.elements[`reading-${field.key}`].value;
-      if (value) {
-        readings[field.key] = value;
+      const device = form.elements[`device-${field.key}`].value.trim();
+      const reading = form.elements[`reading-${field.key}`].value;
+      if (device && reading) {
+        readings[field.key] = { device, reading };
       }
     }
     const threshold = Number.parseInt(form.elements.threshold.value, 10);
-    if (!device || !readings.pv) {
-      this.shadowRoot.querySelector('[data-error]').textContent = 'Device und PV-Reading sind erforderlich.';
+    if (!readings.pv) {
+      this.shadowRoot.querySelector('[data-error]').textContent = 'Device und Reading für die PV-Leistung sind erforderlich.';
       return;
     }
     if (!Number.isInteger(threshold) || threshold < 0 || threshold > 1000) {
@@ -285,7 +298,6 @@ class FHEMCMSSolarFlow extends HTMLElement {
     const next = {
       id: this.widgetConfig.id,
       type: 'fhem-solarflow',
-      device,
       readings,
       unit: form.elements.unit.value === 'kW' ? 'kW' : 'W',
       invertGrid: form.elements.invertGrid.checked,

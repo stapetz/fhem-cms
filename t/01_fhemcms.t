@@ -648,24 +648,32 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     like(FHEMCMS_ValidateConfig($ccfg), qr/Unbekanntes Feld/, 'fhem-clock rejects device fields');
 }
 
-# fhem-solarflow: lesender Energiefluss
+# fhem-solarflow: lesender Energiefluss, Device und Reading je Station
 {
+    my $src = sub { return {device => $_[0], reading => $_[1]} };
     my $scfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'f1', type => 'fhem-solarflow',
-        device => 'Solix', readings => {pv => 'solar_power', home => 'home_power', grid => 'grid_power', battery => 'battery_power', soc => 'soc'},
+        readings => {pv => $src->('Inverter', 'power'), home => $src->('Meter', 'home'), grid => $src->('Meter', 'grid'),
+            battery => $src->('Battery', 'power'), soc => $src->('Battery', 'soc')},
         unit => 'W', invertGrid => JSON::PP::false, invertBattery => JSON::PP::true, threshold => 10,
         grid => {col => 1, row => 1, w => 20, h => 14}}]}]};
-    is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-solarflow accepts a complete config');
+    is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-solarflow accepts readings from different devices');
     my $w = $scfg->{pages}[0]{widgets}[0];
-    $w->{readings} = {pv => 'solar_power'};
+    $w->{readings} = {pv => $src->('Inverter', 'power')};
     delete @{$w}{qw(unit invertGrid invertBattery threshold)};
-    is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-solarflow accepts only the PV reading');
-    $w->{readings} = {home => 'home_power'};
-    like(FHEMCMS_ValidateConfig($scfg), qr/Pflichtfeld 'pv'/, 'fhem-solarflow requires the PV reading');
-    $w->{readings} = {pv => 'a b'};
-    like(FHEMCMS_ValidateConfig($scfg), qr/readings\.pv/, 'fhem-solarflow rejects invalid reading names');
-    $w->{readings} = {pv => 'p', extra => 'x'};
-    like(FHEMCMS_ValidateConfig($scfg), qr/Unbekanntes Feld/, 'fhem-solarflow rejects unknown readings');
-    $w->{readings} = {pv => 'p'};
+    is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-solarflow accepts only the PV source');
+    $w->{readings} = {home => $src->('Meter', 'home')};
+    like(FHEMCMS_ValidateConfig($scfg), qr/Pflichtfeld 'pv'/, 'fhem-solarflow requires the PV source');
+    $w->{readings} = {pv => $src->('a b', 'power')};
+    like(FHEMCMS_ValidateConfig($scfg), qr/readings\.pv\.device/, 'fhem-solarflow rejects an invalid device name');
+    $w->{readings} = {pv => $src->('Inverter', 'a b')};
+    like(FHEMCMS_ValidateConfig($scfg), qr/readings\.pv\.reading/, 'fhem-solarflow rejects an invalid reading name');
+    $w->{readings} = {pv => {device => 'Inverter'}};
+    like(FHEMCMS_ValidateConfig($scfg), qr/Pflichtfeld 'reading'/, 'fhem-solarflow requires device and reading');
+    $w->{readings} = {pv => 'power'};
+    like(FHEMCMS_ValidateConfig($scfg), qr/muss ein Objekt sein/, 'fhem-solarflow requires objects without a shared device');
+    $w->{readings} = {pv => $src->('I', 'p'), extra => $src->('I', 'x')};
+    like(FHEMCMS_ValidateConfig($scfg), qr/Unbekanntes Feld/, 'fhem-solarflow rejects unknown stations');
+    $w->{readings} = {pv => $src->('I', 'p')};
     $w->{unit} = 'MW';
     like(FHEMCMS_ValidateConfig($scfg), qr/Einheit/, 'fhem-solarflow rejects an unsupported unit');
     delete $w->{unit};
@@ -675,8 +683,12 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     $w->{threshold} = 5000;
     like(FHEMCMS_ValidateConfig($scfg), qr/Schwellwert/, 'fhem-solarflow rejects an out-of-range threshold');
     delete $w->{threshold};
-    $w->{device} = '';
-    like(FHEMCMS_ValidateConfig($scfg), qr/device/, 'fhem-solarflow requires a device');
+    # Aelteres Format mit gemeinsamem Device bleibt lesbar
+    $w->{device} = 'Solix';
+    $w->{readings} = {pv => 'solar_power', soc => 'soc'};
+    is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-solarflow still accepts the legacy single-device format');
+    $w->{device} = 'a b';
+    like(FHEMCMS_ValidateConfig($scfg), qr/device/, 'fhem-solarflow rejects an invalid legacy device');
 }
 
 # fhem-icon: lesende Statuszuordnungen
