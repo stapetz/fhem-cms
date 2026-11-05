@@ -104,8 +104,8 @@ export const computeModel = (config, snapshots) => {
     return number === null ? null : number * factor;
   };
   const pv = read('pv', scale);
-  const grid = read('grid', config.invertGrid ? -scale : scale);
-  const bat = read('battery', config.invertBattery ? -scale : scale);
+  const grid = read('grid', scale);
+  const bat = read('battery', scale);
   const soc = read('soc');
   let home = read('home', scale);
   if (home === null && pv !== null) {
@@ -209,10 +209,8 @@ class FHEMCMSSolarFlow extends HTMLElement {
 </fieldset>`).join('')}
           <label>Einheit der Leistungs-Readings
             <select name="unit"><option value="W">Watt (W)</option><option value="kW">Kilowatt (kW)</option></select></label>
-          <label class="check"><input name="invertGrid" type="checkbox">Vorzeichen der Netzleistung umkehren</label>
-          <label class="check"><input name="invertBattery" type="checkbox">Vorzeichen der Batterieleistung umkehren</label>
           <label>Schwellwert „inaktiv“ in Watt<input name="threshold" type="number" min="0" max="1000" step="1"></label>
-          <p class="hint">Netz: Bezug negativ, Einspeisung positiv. Batterie: Laden positiv, Entladen negativ. Bei anderer Vorzeichenlogik des Devices die Vorzeichen umkehren. Fehlt das Reading für Hausverbrauch, wird er aus den übrigen Werten berechnet. Ohne Netz- oder Batterie-Reading entfällt die jeweilige Station. Das Widget liest nur und sendet keine FHEM-Befehle.</p>
+          <p class="hint">Netz: Bezug negativ, Einspeisung positiv. Batterie: Laden positiv, Entladen negativ. Fehlt das Reading für Hausverbrauch, wird er aus den übrigen Werten berechnet. Ohne Netz- oder Batterie-Reading entfällt die jeweilige Station. Das Widget liest nur und sendet keine FHEM-Befehle.</p>
           <p class="error" data-error role="alert"></p>
           <div class="actions"><button type="button" class="danger" data-delete>Entfernen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>
@@ -269,8 +267,6 @@ class FHEMCMSSolarFlow extends HTMLElement {
     const config = this.widgetConfig;
     form.elements.title.value = config.title || '';
     form.elements.unit.value = config.unit === 'kW' ? 'kW' : 'W';
-    form.elements.invertGrid.checked = config.invertGrid === true;
-    form.elements.invertBattery.checked = config.invertBattery === true;
     form.elements.threshold.value = Number.isFinite(config.threshold) ? config.threshold : DEFAULT_THRESHOLD;
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
@@ -391,8 +387,6 @@ class FHEMCMSSolarFlow extends HTMLElement {
       ...(multi ? {} : { device: sharedDevice }),
       readings,
       unit: form.elements.unit.value === 'kW' ? 'kW' : 'W',
-      invertGrid: form.elements.invertGrid.checked,
-      invertBattery: form.elements.invertBattery.checked,
       threshold,
       grid: { ...this.widgetConfig.grid }
     };

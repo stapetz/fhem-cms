@@ -687,7 +687,8 @@ sub FHEMCMS_ValidateConfig {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
                     ['title', 'unit', 'range', 'granularity', 'source']);
             } elsif ($widget->{type} eq 'fhem-solarflow') {
-                # 'device' mit Reading-Namen als Text ist das aeltere Format (ein gemeinsames Device).
+                # 'device' mit Reading-Namen als Text ist das aeltere Format (ein gemeinsames Device);
+                # invertGrid/invertBattery sind veraltet und wirkungslos, bleiben aber fuer gespeicherte Entwuerfe gueltig.
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'grid'],
                     ['title', 'device', 'unit', 'invertGrid', 'invertBattery', 'threshold']);
             } elsif ($widget->{type} eq 'fhem-slider') {
