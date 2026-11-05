@@ -11,7 +11,7 @@ UPD 2026-11-05_15:13:47 28121 www/fhem-cms/components/cms-table.js
 UPD 2026-11-05_15:13:47 8979 www/fhem-cms/components/cms-text.js
 UPD 2026-11-05_15:13:47 36376 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-05_15:13:47 23850 www/fhem-cms/components/cms-value.js
-UPD 2026-11-05_15:42:16 15507 www/fhem-cms/css/fhem-cms.css
+UPD 2026-11-05_15:46:51 15717 www/fhem-cms/css/fhem-cms.css
 UPD 2026-11-04_21:52:16 5087 www/fhem-cms/js/device-picker.js
 UPD 2026-11-05_15:42:16 6579 www/fhem-cms/js/device-preview.js
 UPD 2026-11-05_00:03:04 11439 www/fhem-cms/js/fhem-client.js
