@@ -124,6 +124,9 @@ export const computeModel = (config, snapshots) => {
   return { values, soc: soc === null ? null : Math.min(100, Math.max(0, soc)), visible, edges, threshold };
 };
 
+// Unter 30 % rot, ab 30 % bis unter 65 % gelb, ab 65 % grün.
+export const batteryColor = (soc) => (soc < 30 ? '#e53935' : soc < 65 ? '#f0c020' : '#43c04a');
+
 const formatPower = (value) => (value === null ? '–' : `${Math.round(value)}W`);
 
 class FHEMCMSSolarFlow extends HTMLElement {
@@ -154,7 +157,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
         svg { width: 100%; height: 100%; min-height: 0; }
         .link { fill: none; stroke-linecap: round; stroke: #c9c9c9; }
         .link[data-idle] { stroke: var(--cms-border, #43564a); stroke-width: 3; opacity: 0.6; }
-        .dot { fill: #f6c945; stroke: #fff7d0; stroke-width: 0.8; }
+        .dot { fill: #f6c945; stroke: #fff7d0; stroke-width: 0.4; }
         .value { fill: #d4a030; font-size: 14px; text-anchor: middle; }
         .soc { fill: #d4a030; font-size: 11px; text-anchor: middle; }
         .icon { fill: none; stroke: #8a8a8a; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
@@ -438,11 +441,12 @@ class FHEMCMSSolarFlow extends HTMLElement {
       }
       const ratio = Math.min(1, edge.power / MAX_POWER);
       const width = (5 + 9 * ratio).toFixed(1);
+      const dotRadius = (2 + 1.2 * ratio).toFixed(1);
       const duration = (3.2 - 2.2 * ratio).toFixed(2);
       const count = Math.min(edge.d.includes('L') ? 2 : 3, edge.power < 300 ? 1 : edge.power < 1500 ? 2 : 3);
       const dots = reduced
-        ? `<circle class="dot" r="${(width * 0.5).toFixed(1)}"><animateMotion dur="1s" repeatCount="1" fill="freeze" keyPoints="0.5;0.5" keyTimes="0;1" calcMode="linear" path="${edge.d}"/></circle>`
-        : Array.from({ length: count }, (_, dot) => `<circle class="dot" r="${(width * 0.55).toFixed(1)}">
+        ? `<circle class="dot" r="${dotRadius}"><animateMotion dur="1s" repeatCount="1" fill="freeze" keyPoints="0.5;0.5" keyTimes="0;1" calcMode="linear" path="${edge.d}"/></circle>`
+        : Array.from({ length: count }, (_, dot) => `<circle class="dot" r="${dotRadius}">
             <animateMotion dur="${duration}s" begin="-${((dot * duration) / count).toFixed(2)}s" repeatCount="indefinite" path="${edge.d}"
               ${edge.reverse ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}/></circle>`).join('');
       return `<path class="link" id="e${index}" d="${edge.d}" stroke-width="${width}"/>${dots}`;
@@ -455,7 +459,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
       return `<g transform="translate(${x} ${y})" data-station="${key}">
         <circle r="${STATION_R}" fill="url(#ring-grey)" data-ring/>
         <circle r="36" fill="#fafafa"/>
-        <g class="icon" transform="translate(0 -9) scale(0.85)">${ICONS[key]}${key === 'bat' ? '<rect data-level x="-8" width="16" rx="1.500" stroke="none"/>' : ''}</g>
+        <g class="icon" transform="translate(0 -9) scale(0.85)">${ICONS[key]}${key === 'bat' ? [0, 1, 2, 3, 4].map((index) => `<rect data-segment="${index}" x="-8" y="${(10.8 - index * 6.8).toFixed(1)}" width="16" height="5.2" rx="1" fill="none" stroke="none"/>`).join('') : ''}</g>
         <text class="value" y="${key === 'bat' ? 22 : 28}" data-value="${key}">–</text>
         ${key === 'bat' ? '<text class="soc" y="34" data-soc>–</text>' : ''}
       </g>`;
@@ -496,12 +500,11 @@ class FHEMCMSSolarFlow extends HTMLElement {
     if (soc) {
       soc.textContent = model.soc === null ? '' : `${Math.round(model.soc)}%`;
     }
-    const level = root.querySelector('[data-level]');
-    if (level) {
-      const height = model.soc === null ? 0 : 34 * model.soc / 100;
-      level.setAttribute('y', String(17 - height));
-      level.setAttribute('height', String(height));
-      level.setAttribute('fill', model.soc === null ? 'none' : model.soc < 25 ? '#e53935' : model.soc < 50 ? '#f0a020' : '#43c04a');
+    const segments = root.querySelectorAll('[data-segment]');
+    if (segments.length) {
+      const filled = model.soc === null ? 0 : model.soc > 0 ? Math.ceil(model.soc / 20) : 0;
+      const color = model.soc === null ? 'none' : batteryColor(model.soc);
+      segments.forEach((segment, index) => segment.setAttribute('fill', index < filled ? color : 'none'));
     }
     const parts = [`PV ${formatPower(model.values.pv)}`, `Haus ${formatPower(model.values.home)}`];
     if (model.visible.grid) {
