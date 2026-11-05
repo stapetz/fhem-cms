@@ -502,6 +502,85 @@ body {
   background: var(--cms-bg);
 }
 
+.cms-dialog select {
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--cms-border);
+  border-radius: 0.5rem;
+  background: var(--cms-bg);
+}
+
+.cms-dialog select:focus-visible,
+.cms-dialog input:focus-visible {
+  outline: 2px solid var(--cms-accent);
+  outline-offset: 2px;
+}
+
+.cms-dialog.cms-setup {
+  width: min(94vw, 30rem);
+}
+
+.cms-setup .cms-move-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.cms-setup-section {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--cms-border-subtle);
+  border-radius: 0.8rem;
+  background: var(--cms-bg);
+}
+
+.cms-setup-section h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.cms-setup-section > .cms-dialog-hint {
+  margin-bottom: 0.4rem;
+}
+
+.cms-dialog .cms-setup-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 12rem);
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--cms-border-subtle);
+}
+
+.cms-setup-text {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.cms-dialog .cms-setup-field input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  justify-self: end;
+  margin: 0;
+}
+
+.cms-dialog .cms-setup-section select {
+  background: var(--cms-surface);
+}
+
+@media (max-width: 30rem) {
+  .cms-dialog .cms-setup-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.4rem;
+  }
+
+  .cms-dialog .cms-setup-field input[type="checkbox"] {
+    justify-self: start;
+  }
+}
+
 .cms-dialog-error {
   min-height: 1.2em;
   margin: 0;

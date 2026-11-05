@@ -324,8 +324,32 @@ class CmsPage {
     const error = document.createElement('p');
     error.className = 'cms-dialog-error';
     error.setAttribute('role', 'alert');
-    const themeLabel = document.createElement('label');
-    themeLabel.textContent = 'Theme';
+    dialog.classList.add('cms-setup');
+    const section = (title, description) => {
+      const box = document.createElement('section');
+      box.className = 'cms-setup-section';
+      const heading = document.createElement('h4');
+      heading.textContent = title;
+      const intro = document.createElement('p');
+      intro.className = 'cms-dialog-hint';
+      intro.textContent = description;
+      box.append(heading, intro);
+      return box;
+    };
+    const field = (title, description, control) => {
+      const row = document.createElement('label');
+      row.className = 'cms-setup-field';
+      const text = document.createElement('span');
+      text.className = 'cms-setup-text';
+      const name = document.createElement('strong');
+      name.textContent = title;
+      const hint = document.createElement('span');
+      hint.className = 'cms-dialog-hint';
+      hint.textContent = description;
+      text.append(name, hint);
+      row.append(text, control);
+      return row;
+    };
     const theme = document.createElement('select');
     for (const [value, text] of THEMES) {
       const option = document.createElement('option');
@@ -334,18 +358,14 @@ class CmsPage {
       theme.append(option);
     }
     theme.value = this.config.theme;
-    themeLabel.append(theme);
-    const widgets = document.createElement('fieldset');
-    widgets.className = 'cms-move-choice';
-    const legend = document.createElement('legend');
-    legend.textContent = 'Widgets (für alle Seiten)';
-    const frameLabel = document.createElement('label');
     const frames = document.createElement('input');
     frames.type = 'checkbox';
     frames.checked = this.config.settings?.showFrames !== false;
-    frameLabel.append(frames, ' Rahmen am Widget anzeigen');
-    widgets.append(legend, frameLabel);
-    body.append(themeLabel, widgets, error);
+    const look = section('Darstellung', 'Gilt für alle Seiten.');
+    look.append(field('Theme', 'Farbschema der Seite', theme));
+    const widgets = section('Widgets', 'Allgemeine Einstellungen für alle Widgets.');
+    widgets.append(field('Rahmen anzeigen', 'Zeichnet einen Rahmen um jedes Widget', frames));
+    body.append(look, widgets, error);
     actions.append(this.button('Abbrechen', () => finish(null)), this.button('Speichern', async () => {
       const next = structuredClone(this.config);
       next.theme = theme.value;
