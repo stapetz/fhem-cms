@@ -682,7 +682,7 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-icon') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title']);
             } elsif ($widget->{type} eq 'fhem-table') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title', 'deviceLabel']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title', 'deviceLabel', 'sum', 'sumLabel']);
             } elsif ($widget->{type} eq 'fhem-chart') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
                     ['title', 'unit', 'range', 'granularity', 'source']);
@@ -840,6 +840,13 @@ sub FHEMCMS_ValidateConfig {
                             || $state->{color} !~ /\A#[0-9a-fA-F]{6}\z/);
                 }
             } elsif ($widget->{type} eq 'fhem-table') {
+                return 'Ungueltiger Wert fuer sum'
+                    if (exists($widget->{sum}) && !$isBool->($widget->{sum}));
+                return 'Ungueltige Summen-Beschriftung'
+                    if (exists($widget->{sumLabel})
+                        && (ref($widget->{sumLabel}) || !defined($widget->{sumLabel})
+                            || length($widget->{sumLabel}) < 1 || length($widget->{sumLabel}) > 32
+                            || $widget->{sumLabel} =~ /[\x00-\x1f\x7f]/));
                 return 'Ungueltige Tabellen-Bezeichnung'
                     if (exists($widget->{deviceLabel})
                         && (ref($widget->{deviceLabel}) || !defined($widget->{deviceLabel})

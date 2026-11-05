@@ -720,6 +720,15 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
         rows => [{device => 'Temp', reading => 'temperature', unit => '°C'}, {device => 'Lamp', reading => 'state'}],
         grid => {col => 1, row => 1, w => 24, h => 8}}]}]};
     is(FHEMCMS_ValidateConfig($rcfg), undef, 'fhem-table accepts multiple devices and readings');
+    my $tw = $rcfg->{pages}[0]{widgets}[0];
+    @{$tw}{qw(sum sumLabel)} = (JSON::PP::true, 'Gesamt');
+    is(FHEMCMS_ValidateConfig($rcfg), undef, 'fhem-table accepts sum and sumLabel');
+    $tw->{sum} = 'ja';
+    like(FHEMCMS_ValidateConfig($rcfg), qr/sum/, 'fhem-table rejects non-boolean sum');
+    $tw->{sum} = JSON::PP::true;
+    $tw->{sumLabel} = '';
+    like(FHEMCMS_ValidateConfig($rcfg), qr/Summen/, 'fhem-table rejects empty sumLabel');
+    delete @{$tw}{qw(sum sumLabel)};
     my $w = $rcfg->{pages}[0]{widgets}[0];
     $w->{deviceLabel} = "bad\nlabel";
     like(FHEMCMS_ValidateConfig($rcfg), qr/Tabellen-Bezeichnung/, 'fhem-table rejects control characters in its column heading');
