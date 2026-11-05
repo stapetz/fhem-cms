@@ -75,7 +75,7 @@ class FHEMCMSButton extends HTMLElement {
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>
-        <button type="button" class="gear" data-open-config aria-label="Taster konfigurieren">⚙</button>
+        <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Taster konfigurieren">⚙</button>
         <div class="main">
           <button type="button" class="push" data-push>
             <span class="glyph" data-icon aria-hidden="true" hidden></span>

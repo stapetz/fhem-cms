@@ -86,7 +86,7 @@ class FHEMCMSSwitch extends HTMLElement {
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>
-        <button type="button" class="gear" data-open-config aria-label="Schalter konfigurieren">⚙</button>
+        <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Schalter konfigurieren">⚙</button>
         <div class="main">
           <span class="glyph" data-icon aria-hidden="true" hidden></span>
           <button type="button" class="toggle" role="switch" aria-checked="false" data-toggle aria-label="Schalter"></button>

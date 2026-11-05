@@ -1294,7 +1294,7 @@ class CmsPage {
       handle.setAttribute('role', 'button');
       handle.setAttribute('aria-label',
         `${widget.id === NAV_ID ? 'Navigation' : `Kachel ${widget.title || widget.device || widget.id}`} verschieben: ziehen oder Pfeiltasten verwenden`);
-      handle.title = 'Verschieben';
+      handle.title = widget.id === NAV_ID ? 'Navigation verschieben' : 'Widget auf dieser Seite verschieben';
       handle.textContent = '⠿';
       const grip = document.createElement('span');
       grip.className = 'cms-resize-grip';
@@ -1306,7 +1306,7 @@ class CmsPage {
         move.type = 'button';
         move.className = 'cms-move-button';
         move.textContent = '⇄';
-        move.title = 'Auf andere Seite verschieben';
+        move.title = 'Widget auf andere Seite verschieben';
         move.setAttribute('aria-label', `${this.widgetName(widget)} auf andere Seite verschieben`);
         move.disabled = this.config.pages.length < 2;
         move.addEventListener('click', () => this.moveWidgetToPage(widget.id));

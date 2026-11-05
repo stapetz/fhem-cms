@@ -103,7 +103,7 @@ class FHEMCMSlider extends HTMLElement {
       </style>
       <article class="tile" data-tile>
         <header><h3 data-title></h3></header>
-        <button type="button" class="gear" data-open-config aria-label="Schieberegler konfigurieren">⚙</button>
+        <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Schieberegler konfigurieren">⚙</button>
         <div class="value"><output data-value>–</output><span class="reading" data-reading></span></div>
         <input type="range" data-slider aria-label="FHEM-Wert" disabled>
         <div class="range"><span data-min>–</span><span data-max>–</span></div>

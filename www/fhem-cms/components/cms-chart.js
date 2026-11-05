@@ -109,7 +109,7 @@ class FHEMCMSChart extends HTMLElement {
         <header><h3 data-title></h3>
           <span class="controls"><select data-range aria-label="Zeitraum"></select>
             <select data-granularity aria-label="Granularität"></select></span></header>
-        <button type="button" class="gear" data-open-config aria-label="Diagramm konfigurieren">⚙</button>
+        <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Diagramm konfigurieren">⚙</button>
         <div class="plot"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" data-svg role="img" aria-label="Verlaufsdiagramm"></svg>
           <div class="message" data-message role="status"></div></div>
         <div class="stats" data-stats></div>

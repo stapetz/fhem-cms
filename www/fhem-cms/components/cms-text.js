@@ -55,7 +55,7 @@ class FHEMCMSText extends HTMLElement {
       <article class="tile">
         <header>
           <h3 data-title hidden></h3>
-          <button type="button" class="icon" data-open-config aria-label="Textbaustein konfigurieren">⚙</button>
+          <button type="button" class="icon" data-open-config title="Widget konfigurieren" aria-label="Textbaustein konfigurieren">⚙</button>
         </header>
         <div class="body" data-body></div>
       </article>

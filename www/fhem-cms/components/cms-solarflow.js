@@ -186,7 +186,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
       </style>
       <article class="tile">
         <header data-header hidden><h3 data-title></h3></header>
-        <button type="button" class="gear" data-open-config aria-label="SolarFlow konfigurieren">⚙</button>
+        <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="SolarFlow konfigurieren">⚙</button>
         <svg data-svg viewBox="0 0 400 375" preserveAspectRatio="xMidYMid meet" role="img"></svg>
         <span class="sr-only" data-accessible></span>
       </article>

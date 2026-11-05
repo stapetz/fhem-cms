@@ -58,7 +58,7 @@ class FHEMCMSIcon extends HTMLElement {
       </style>
       <article class="tile">
         <header data-header hidden><h3 data-title></h3></header>
-        <button type="button" class="gear" data-open-config aria-label="Status-Symbol konfigurieren">⚙</button>
+        <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Status-Symbol konfigurieren">⚙</button>
         <span class="glyph" data-icon aria-hidden="true" hidden></span>
         <span class="state" data-state>–</span>
         <span class="sr-only" data-accessible></span>

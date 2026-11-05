@@ -67,7 +67,7 @@ class FHEMCMSHtml extends HTMLElement {
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>
-        <button type="button" class="gear" data-open-config aria-label="HTML-Kachel konfigurieren">⚙</button>
+        <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="HTML-Kachel konfigurieren">⚙</button>
         <div class="content" data-content></div>
       </article>
       <dialog data-dialog aria-labelledby="html-dialog-title">

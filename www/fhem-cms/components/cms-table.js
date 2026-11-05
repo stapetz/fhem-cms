@@ -104,7 +104,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>
-        <button type="button" class="gear" data-open-config aria-label="Tabelle konfigurieren">⚙</button>
+        <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Tabelle konfigurieren">⚙</button>
         <table>
           <thead data-head><tr><th data-device-heading>Device</th><th data-value-heading>Wert</th></tr></thead>
           <tbody data-rows></tbody>
