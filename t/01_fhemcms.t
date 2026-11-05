@@ -188,6 +188,12 @@ $themeConfig->{settings}{showFrames} = 'nein';
 like(FHEMCMS_ValidateConfig($themeConfig), qr/showFrames/, 'rejects non-boolean showFrames');
 $themeConfig->{settings} = {showFrames => JSON::PP::true, extra => 1};
 isnt(FHEMCMS_ValidateConfig($themeConfig), undef, 'rejects unknown page settings');
+$themeConfig->{settings} = {layoutMode => 'masonry', gridColumns => 24};
+is(FHEMCMS_ValidateConfig($themeConfig), undef, 'accepts layoutMode and gridColumns');
+$themeConfig->{settings}{layoutMode} = 'zufall';
+like(FHEMCMS_ValidateConfig($themeConfig), qr/layoutMode/, 'rejects unknown layoutMode');
+$themeConfig->{settings} = {layoutMode => 'free', gridColumns => 7};
+like(FHEMCMS_ValidateConfig($themeConfig), qr/gridColumns/, 'rejects unsupported gridColumns');
 delete $themeConfig->{settings};
 
 my $json = FHEMCMS_Get($hash, $name, 'config');

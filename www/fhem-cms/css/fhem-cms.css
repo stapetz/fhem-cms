@@ -569,6 +569,65 @@ body {
   background: var(--cms-surface);
 }
 
+.cms-lm-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.cms-dialog label.cms-lm-card {
+  position: relative;
+  align-content: start;
+  gap: 0.3rem;
+  padding: 0.6rem;
+  border: 1px solid var(--cms-border);
+  border-radius: 0.7rem;
+  background: var(--cms-surface);
+  cursor: pointer;
+}
+
+.cms-lm-card.is-selected {
+  border-color: var(--cms-accent);
+  box-shadow: 0 0 0 1px var(--cms-accent);
+}
+
+.cms-dialog .cms-lm-card input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.cms-lm-card:focus-within {
+  outline: 2px solid var(--cms-accent);
+  outline-offset: 2px;
+}
+
+.cms-lm-preview {
+  display: grid;
+  grid-template-columns: repeat(48, minmax(0, 1fr));
+  gap: 1px;
+  height: 3.6rem;
+  align-content: start;
+  padding: 3px;
+  border-radius: 0.4rem;
+  background-color: var(--cms-bg);
+  background-image: linear-gradient(to right, var(--cms-guide) 1px, transparent 1px);
+  background-size: 0 0;
+}
+
+.cms-lm-preview span {
+  border-radius: 2px;
+  background: var(--cms-accent);
+  opacity: 0.75;
+}
+
+.cms-lm-preview.is-free span {
+  opacity: 0.55;
+  outline: 1px solid var(--cms-accent);
+}
+
 @media (max-width: 30rem) {
   .cms-dialog .cms-setup-field {
     grid-template-columns: minmax(0, 1fr);
