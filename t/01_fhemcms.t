@@ -648,6 +648,37 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     like(FHEMCMS_ValidateConfig($ccfg), qr/Unbekanntes Feld/, 'fhem-clock rejects device fields');
 }
 
+# fhem-solarflow: lesender Energiefluss
+{
+    my $scfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'f1', type => 'fhem-solarflow',
+        device => 'Solix', readings => {pv => 'solar_power', home => 'home_power', grid => 'grid_power', battery => 'battery_power', soc => 'soc'},
+        unit => 'W', invertGrid => JSON::PP::false, invertBattery => JSON::PP::true, threshold => 10,
+        grid => {col => 1, row => 1, w => 20, h => 14}}]}]};
+    is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-solarflow accepts a complete config');
+    my $w = $scfg->{pages}[0]{widgets}[0];
+    $w->{readings} = {pv => 'solar_power'};
+    delete @{$w}{qw(unit invertGrid invertBattery threshold)};
+    is(FHEMCMS_ValidateConfig($scfg), undef, 'fhem-solarflow accepts only the PV reading');
+    $w->{readings} = {home => 'home_power'};
+    like(FHEMCMS_ValidateConfig($scfg), qr/Pflichtfeld 'pv'/, 'fhem-solarflow requires the PV reading');
+    $w->{readings} = {pv => 'a b'};
+    like(FHEMCMS_ValidateConfig($scfg), qr/readings\.pv/, 'fhem-solarflow rejects invalid reading names');
+    $w->{readings} = {pv => 'p', extra => 'x'};
+    like(FHEMCMS_ValidateConfig($scfg), qr/Unbekanntes Feld/, 'fhem-solarflow rejects unknown readings');
+    $w->{readings} = {pv => 'p'};
+    $w->{unit} = 'MW';
+    like(FHEMCMS_ValidateConfig($scfg), qr/Einheit/, 'fhem-solarflow rejects an unsupported unit');
+    delete $w->{unit};
+    $w->{invertGrid} = 'yes';
+    like(FHEMCMS_ValidateConfig($scfg), qr/invertGrid/, 'fhem-solarflow requires boolean options');
+    delete $w->{invertGrid};
+    $w->{threshold} = 5000;
+    like(FHEMCMS_ValidateConfig($scfg), qr/Schwellwert/, 'fhem-solarflow rejects an out-of-range threshold');
+    delete $w->{threshold};
+    $w->{device} = '';
+    like(FHEMCMS_ValidateConfig($scfg), qr/device/, 'fhem-solarflow requires a device');
+}
+
 # fhem-icon: lesende Statuszuordnungen
 {
     my $icfg = {schemaVersion => 4, pages => [{id => 'p', title => 'P', widgets => [{id => 'i1', type => 'fhem-icon',

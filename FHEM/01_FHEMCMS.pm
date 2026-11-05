@@ -661,7 +661,7 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'fhem-switch' && $widget->{type} ne 'fhem-button'
                         && $widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-icon'
                         && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-slider'
-                        && $widget->{type} ne 'fhem-chart'));
+                        && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -686,6 +686,9 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-chart') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
                     ['title', 'unit', 'range', 'granularity', 'source']);
+            } elsif ($widget->{type} eq 'fhem-solarflow') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'readings', 'grid'],
+                    ['title', 'unit', 'invertGrid', 'invertBattery', 'threshold']);
             } elsif ($widget->{type} eq 'fhem-slider') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title']);
             } else {
@@ -787,6 +790,21 @@ sub FHEMCMS_ValidateConfig {
                 for my $field ('showSeconds', 'showDate', 'showWeekday') {
                     return "Ungueltiger Wert fuer $field" if (!$isBool->($widget->{$field}));
                 }
+            } elsif ($widget->{type} eq 'fhem-solarflow') {
+                $err = $exact->($widget->{readings}, 'readings', ['pv'], ['home', 'grid', 'battery', 'soc']);
+                return $err if ($err);
+                for my $field (keys %{$widget->{readings}}) {
+                    return "Ungueltiger Wert fuer readings.$field"
+                        if (!$isName->($widget->{readings}{$field}));
+                }
+                return 'Ungueltige Einheit'
+                    if (exists($widget->{unit})
+                        && (ref($widget->{unit}) || !defined($widget->{unit}) || $widget->{unit} !~ /\A(?:W|kW)\z/));
+                for my $field ('invertGrid', 'invertBattery') {
+                    return "Ungueltiger Wert fuer $field" if (exists($widget->{$field}) && !$isBool->($widget->{$field}));
+                }
+                return 'Ungueltiger Schwellwert'
+                    if (exists($widget->{threshold}) && !$isInt->($widget->{threshold}, 0, 1000));
             } elsif ($widget->{type} eq 'fhem-icon') {
                 return 'Ungueltiger Wert fuer reading' if (!$isName->($widget->{reading}));
                 my $states = $widget->{states};

@@ -9,6 +9,7 @@ import '../components/cms-icon.js';
 import '../components/cms-table.js';
 import '../components/cms-slider.js';
 import '../components/cms-chart.js';
+import '../components/cms-solarflow.js';
 import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { GRID_COLUMNS, cellFromPoint, moveWidget, resizeWidget } from './layout.js';
@@ -32,7 +33,7 @@ const devicesOf = (widget) => {
   }
   return [widget.device];
 };
-const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider'].includes(widget.type)
+const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-solarflow'].includes(widget.type)
   || (widget.type === 'text' && devicesOf(widget).length > 0);
 // Daten einer Kachel: ein Device oder (freies HTML, Text) die Map aller verwendeten Devices.
 const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.type === 'text' || widget.type === 'fhem-table'
@@ -132,6 +133,7 @@ class CmsPage {
       this.button('Tabelle', () => this.addWidget('fhem-table')),
       this.button('Schieberegler', () => this.addWidget('fhem-slider')),
       this.button('Diagramm', () => this.addWidget('fhem-chart')),
+      this.button('SolarFlow', () => this.addWidget('fhem-solarflow')),
       this.button('Textbaustein', () => this.addWidget('text'))
     ];
     // Menüs wie in klassischen Programmen: Datei, Bearbeiten, Einfügen, Ansicht.
@@ -1283,6 +1285,11 @@ class CmsPage {
       element.services = this.services();
       element.config = widget;
       element.data = dataFor(widget, this.snapshots);
+    } else if (widget.type === 'fhem-solarflow') {
+      element = document.createElement('cms-solarflow');
+      element.services = this.services();
+      element.config = widget;
+      element.data = this.snapshots.get(widget.device) || null;
     } else if (widget.type === 'fhem-chart') {
       element = document.createElement('cms-chart');
       element.services = this.services();
@@ -1325,9 +1332,9 @@ class CmsPage {
   }
 
   addWidget(type) {
-    const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-switch': 's', 'fhem-slider': 'l', 'fhem-button': 'b', 'fhem-html': 'h', 'fhem-clock': 'c', 'fhem-icon': 'i', 'fhem-table': 'r', 'fhem-chart': 'g' }[type] || 't';
+    const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-switch': 's', 'fhem-slider': 'l', 'fhem-button': 'b', 'fhem-html': 'h', 'fhem-clock': 'c', 'fhem-icon': 'i', 'fhem-table': 'r', 'fhem-chart': 'g', 'fhem-solarflow': 'f' }[type] || 't';
     const id = this.uniqueId(prefix, new Set(this.page.widgets.map((widget) => widget.id)));
-    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 }, 'fhem-clock': { w: 12, h: 4 }, 'fhem-icon': { w: 6, h: 4 }, 'fhem-table': { w: 24, h: 8 }, 'fhem-slider': { w: 16, h: 6 }, 'fhem-chart': { w: 24, h: 10 } }[type] || { w: 16, h: 2 };
+    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 }, 'fhem-clock': { w: 12, h: 4 }, 'fhem-icon': { w: 6, h: 4 }, 'fhem-table': { w: 24, h: 8 }, 'fhem-slider': { w: 16, h: 6 }, 'fhem-chart': { w: 24, h: 10 }, 'fhem-solarflow': { w: 20, h: 14 } }[type] || { w: 16, h: 2 };
     const grid = { col: 1, row: this.nextFreeRow(), ...size };
     let widget = { id, type, device: '', readings: { actual: '', target: '' }, grid };
     if (type === 'text') {
@@ -1348,6 +1355,8 @@ class CmsPage {
       widget = { id, type, rows: [], grid };
     } else if (type === 'fhem-slider') {
       widget = { id, type, device: '', command: '', reading: '', grid };
+    } else if (type === 'fhem-solarflow') {
+      widget = { id, type, device: '', readings: { pv: '' }, grid };
     } else if (type === 'fhem-chart') {
       widget = { id, type, device: '', reading: '', grid };
     }
