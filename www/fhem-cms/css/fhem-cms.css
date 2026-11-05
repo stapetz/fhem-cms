@@ -729,3 +729,81 @@ html:not(.cms-view) .cms-status::before {
 .cms-menu-items .cms-grid-toggle[aria-pressed="true"]::before {
   content: "✓";
 }
+
+/* Geräte-Vorschau (Bearbeitungsmodus): Auswahl links neben dem roten Ausrufezeichen, Rahmen über der Seite. */
+.cms-device-bar {
+  position: fixed;
+  top: 0.5rem;
+  right: 3rem;
+  z-index: 41;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.cms-device-bar select,
+.cms-device-bar button {
+  font: inherit;
+  font-size: 0.85rem;
+  color: inherit;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--cms-toolbar-border);
+  border-radius: 0.5rem;
+  background: var(--cms-toolbar);
+  cursor: pointer;
+}
+
+.cms-device-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cms-device-bar select:focus-visible,
+.cms-device-bar button:focus-visible {
+  outline: 2px solid var(--cms-accent);
+  outline-offset: 2px;
+}
+
+.cms-device-overlay {
+  position: fixed;
+  inset: 2.6rem 0 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--cms-backdrop);
+  backdrop-filter: blur(2px);
+}
+
+.cms-device-stage {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cms-device-frame {
+  position: relative;
+  box-sizing: content-box;
+  overflow: hidden;
+  border: 12px solid #1b1b1d;
+  border-radius: 1.6rem;
+  background: var(--cms-bg);
+  box-shadow: 0 0 0 1px var(--cms-border), 0 12px 32px rgb(0 0 0 / 0.5);
+}
+
+.cms-device-screen {
+  display: block;
+  border: 0;
+  background: var(--cms-bg);
+  transform-origin: 0 0;
+}
+
+.cms-device-label {
+  margin: 0;
+  padding: 0.4rem;
+  text-align: center;
+  color: var(--cms-text);
+  font-size: 0.85rem;
+}
