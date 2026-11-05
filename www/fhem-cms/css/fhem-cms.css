@@ -323,45 +323,41 @@ body {
   pointer-events: none;
 }
 
-.cms-drag-handle {
+.cms-drag-handle,
+.cms-move-button {
   position: absolute;
-  top: 0;
-  left: 1.8rem;
-  right: 3rem;
+  top: 0.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 1.6rem;
-  border-radius: 0.9rem 0.9rem 0 0;
+  width: 1.6rem;
+  height: 1.4rem;
+  padding: 0;
+  border: 1px solid var(--cms-border);
+  border-radius: 0.5rem;
+  background: var(--cms-surface-raised);
   color: var(--cms-muted);
   opacity: 0.35;
-  font-size: 0.9rem;
-  cursor: grab;
+  font-size: 0.8rem;
+  line-height: 1;
   pointer-events: auto;
-  touch-action: none;
   user-select: none;
 }
 
-/* Nur ein kleiner Griff am rechten Rand, damit er die Navigationspunkte nicht überdeckt. */
-:root[data-cms-frames="off"][data-cms-theme] {
-  --cms-frame: transparent;
+/* Rechts neben dem Bearbeiten-Zahnrad der Kachel (Zahnrad: right 0.3rem, ca. 1.6rem breit). */
+.cms-drag-handle {
+  right: 2.3rem;
+  cursor: grab;
+  touch-action: none;
 }
 
 .cms-move-button {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1.8rem;
-  height: 1.6rem;
-  padding: 0;
-  border: 0;
-  border-radius: 0.9rem 0 0.6rem 0;
-  background: transparent;
-  color: var(--cms-muted);
-  opacity: 0.35;
-  font-size: 0.95rem;
+  right: 4.2rem;
   cursor: pointer;
-  pointer-events: auto;
+}
+
+:root[data-cms-frames="off"][data-cms-theme] {
+  --cms-frame: transparent;
 }
 
 .cms-drag-layer:hover .cms-move-button,
@@ -406,13 +402,16 @@ body {
   font-size: 0.85rem;
 }
 
+/* Nur ein kleiner Griff am rechten Rand, damit er die Navigationspunkte nicht überdeckt. */
 .cms-drag-handle.is-nav {
   top: 0;
   left: auto;
   right: 1.4rem;
   width: 2rem;
   height: 1.2rem;
+  border: 0;
   border-radius: 0.4rem;
+  background: transparent;
 }
 
 .cms-drag-layer:hover .cms-drag-handle,
