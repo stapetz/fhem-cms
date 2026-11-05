@@ -1,3 +1,12 @@
+2026-11-05 - SolarFlow, Tabelle, Seite einrichten, Positionierung und Geräte-Vorschau (0.5.0)
+
+Neues Widget SolarFlow mit animiertem Energiefluss (ein oder mehrere Devices, segmentierte Batterieanzeige). Die Tabelle liest Werte aus einem oder mehreren Devices und hat eine optionale Summenzeile sowie konfigurierbare Kopfzeile. Widgets lassen sich auf andere Seiten verschieben, beim Löschen einer Seite können sie umziehen. Neuer Dialog Datei › Seite einrichten mit Theme, Widget-Rahmen, Positionierung (Raster, Fluss, Spalten, Frei) und Rastergröße. Im Bearbeitungsmodus zeigt eine Geräte-Vorschau die Seite in der Größe von iPhone, iPad, Android und Desktop. Kachel-Symbole liegen einheitlich oben rechts mit Tooltips, das Verschieben ist flüssiger.
+S47 - SolarFlow-Widget: animierter Energiefluss (PV, Haus, Netz, Batterie)
+S48 - Tabelle: Werte aus einem oder mehreren Devices
+S49 - Tabelle: optionale Summenzeile
+S50 - Widgets auf andere Seite verschieben und beim Seitenloeschen umziehen
+S51 - Seite einrichten: Theme und allgemeine Widget-Einstellungen
+
 2026-11-05 - Diagramm-Widget, Tabelle mit Alias und Bezeichnern, Schreibfehler-Protokoll (0.4.0)
 
 Neues Widget Diagramm: Verlauf eines geloggten Readings aus DbLog oder FileLog mit Einheit, wählbarem Zeitraum und Granularität. Die Tabelle zeigt den FHEM-Alias und erlaubt eigene Zeilenbezeichner. Abgewiesene Schreibbefehle werden protokolliert, die Schieberegler-Kachel ist in kleiner Größe lesbar.
