@@ -6,7 +6,7 @@ const DEFAULT_THRESHOLD = 10;
 const READING_FIELDS = [
   { key: 'pv', label: 'PV-Leistung', required: true },
   { key: 'home', label: 'Hausverbrauch' },
-  { key: 'grid', label: 'Netzleistung (+ Bezug, − Einspeisung)' },
+  { key: 'grid', label: 'Netzleistung (− Bezug, + Einspeisung)' },
   { key: 'battery', label: 'Batterieleistung (+ Laden, − Entladen)' },
   { key: 'soc', label: 'Batterie-Ladestand (%)' }
 ];
@@ -67,8 +67,8 @@ const parseNumber = (value) => {
 
 // Verteilt die Leistungen auf die Verbindungen: PV versorgt zuerst das Haus, dann die Batterie, dann das Netz.
 export const computeFlows = (values) => {
-  const supply = { pv: values.pv || 0, bat: values.bat < 0 ? -values.bat : 0, grid: values.grid > 0 ? values.grid : 0 };
-  const demand = { home: values.home || 0, bat: values.bat > 0 ? values.bat : 0, grid: values.grid < 0 ? -values.grid : 0 };
+  const supply = { pv: values.pv || 0, bat: values.bat < 0 ? -values.bat : 0, grid: values.grid < 0 ? -values.grid : 0 };
+  const demand = { home: values.home || 0, bat: values.bat > 0 ? values.bat : 0, grid: values.grid > 0 ? values.grid : 0 };
   const order = { pv: ['home', 'bat', 'grid'], bat: ['home', 'grid'], grid: ['home', 'bat'] };
   const flows = {};
   for (const source of ['pv', 'bat', 'grid']) {
@@ -109,7 +109,7 @@ export const computeModel = (config, snapshots) => {
   const soc = read('soc');
   let home = read('home', scale);
   if (home === null && pv !== null) {
-    home = Math.max(0, pv + (grid || 0) - (bat || 0));
+    home = Math.max(0, pv - (grid || 0) - (bat || 0));
   }
   const values = { pv: pv === null ? null : Math.max(0, pv), home: home === null ? null : Math.max(0, home), grid, bat };
   const threshold = Number.isFinite(config.threshold) ? config.threshold : DEFAULT_THRESHOLD;
@@ -155,8 +155,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         header[hidden] { display: none; }
         svg { width: 100%; height: 100%; min-height: 0; }
-        .link { fill: none; stroke-linecap: round; stroke: #c9c9c9; }
-        .link[data-idle] { stroke: var(--cms-border, #43564a); stroke-width: 3; opacity: 0.6; }
+        .link { fill: none; stroke-linecap: round; stroke: #c9c9c9; stroke-width: 9; }
         .dot { fill: #f6c945; stroke: #fff7d0; stroke-width: 0.4; }
         .value { fill: #d4a030; font-size: 14px; text-anchor: middle; }
         .soc { fill: #d4a030; font-size: 11px; text-anchor: middle; }
@@ -213,7 +212,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
           <label class="check"><input name="invertGrid" type="checkbox">Vorzeichen der Netzleistung umkehren</label>
           <label class="check"><input name="invertBattery" type="checkbox">Vorzeichen der Batterieleistung umkehren</label>
           <label>Schwellwert „inaktiv“ in Watt<input name="threshold" type="number" min="0" max="1000" step="1"></label>
-          <p class="hint">Netz: Bezug positiv, Einspeisung negativ. Batterie: Laden positiv, Entladen negativ. Fehlt das Reading für Hausverbrauch, wird er aus den übrigen Werten berechnet. Ohne Netz- oder Batterie-Reading entfällt die jeweilige Station. Das Widget liest nur und sendet keine FHEM-Befehle.</p>
+          <p class="hint">Netz: Bezug negativ, Einspeisung positiv. Batterie: Laden positiv, Entladen negativ. Bei anderer Vorzeichenlogik des Devices die Vorzeichen umkehren. Fehlt das Reading für Hausverbrauch, wird er aus den übrigen Werten berechnet. Ohne Netz- oder Batterie-Reading entfällt die jeweilige Station. Das Widget liest nur und sendet keine FHEM-Befehle.</p>
           <p class="error" data-error role="alert"></p>
           <div class="actions"><button type="button" class="danger" data-delete>Entfernen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>
@@ -435,12 +434,13 @@ class FHEMCMSSolarFlow extends HTMLElement {
   buildStructure(model) {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const svg = this.shadowRoot.querySelector('[data-svg]');
-    const links = model.edges.map((edge, index) => {
+    // Die Verbindungen sind immer gleich dick und grau; nur die Punkte zeigen den Fluss.
+    const links = model.edges.map((edge) => {
+      const path = `<path class="link" d="${edge.d}"/>`;
       if (edge.power === 0) {
-        return `<path class="link" data-idle d="${edge.d}"/>`;
+        return path;
       }
       const ratio = Math.min(1, edge.power / MAX_POWER);
-      const width = (5 + 9 * ratio).toFixed(1);
       const dotRadius = (2 + 1.2 * ratio).toFixed(1);
       const duration = (3.2 - 2.2 * ratio).toFixed(2);
       const count = Math.min(edge.d.includes('L') ? 2 : 3, edge.power < 300 ? 1 : edge.power < 1500 ? 2 : 3);
@@ -449,7 +449,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
         : Array.from({ length: count }, (_, dot) => `<circle class="dot" r="${dotRadius}">
             <animateMotion dur="${duration}s" begin="-${((dot * duration) / count).toFixed(2)}s" repeatCount="indefinite" path="${edge.d}"
               ${edge.reverse ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}/></circle>`).join('');
-      return `<path class="link" id="e${index}" d="${edge.d}" stroke-width="${width}"/>${dots}`;
+      return path + dots;
     }).join('');
     const station = (key) => {
       if (!model.visible[key]) {
@@ -494,7 +494,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
     }
     const { grid, bat } = model.values;
     const active = (value) => value !== null && Math.abs(value) >= Math.max(model.threshold, 1);
-    ring('grid', !active(grid) ? 'grey' : grid > 0 ? 'red' : 'green');
+    ring('grid', !active(grid) ? 'grey' : grid < 0 ? 'red' : 'green');
     ring('bat', !active(bat) ? 'grey' : bat > 0 ? 'green' : 'red');
     const soc = root.querySelector('[data-soc]');
     if (soc) {
