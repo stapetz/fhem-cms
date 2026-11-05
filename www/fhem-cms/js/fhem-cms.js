@@ -503,6 +503,185 @@ class CmsPage {
     return id;
   }
 
+  widgetName(widget) {
+    return `${widget.title || widget.device || widget.id} (${widget.type})`;
+  }
+
+  // Hängt Widgets unten an eine Zielseite an; IDs sind global eindeutig und bleiben erhalten.
+  appendWidgets(page, widgets) {
+    let row = page.widgets.reduce((max, widget) => Math.max(max, widget.grid.row + widget.grid.h), 1);
+    for (const widget of widgets) {
+      widget.grid = { ...widget.grid, col: 1, row };
+      row += widget.grid.h;
+      page.widgets.push(widget);
+    }
+  }
+
+  dialogShell(message) {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'cms-dialog';
+    dialog.setAttribute('aria-label', message);
+    const form = document.createElement('form');
+    form.method = 'dialog';
+    const heading = document.createElement('h3');
+    heading.textContent = message;
+    const body = document.createElement('div');
+    body.className = 'cms-move-body';
+    const actions = document.createElement('div');
+    actions.className = 'cms-dialog-actions';
+    form.append(heading, body, actions);
+    dialog.append(form);
+    form.addEventListener('submit', (event) => event.preventDefault());
+    let finishFn = () => {};
+    let done = false;
+    const finish = (value) => {
+      if (done) {
+        return;
+      }
+      done = true;
+      if (dialog.open) {
+        dialog.close();
+      }
+      dialog.remove();
+      finishFn(value);
+    };
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      finish(null);
+    });
+    const result = new Promise((resolve) => {
+      finishFn = resolve;
+    });
+    return { dialog, body, actions, finish, result };
+  }
+
+  pageSelect(pages, noneLabel) {
+    const select = document.createElement('select');
+    if (noneLabel) {
+      const none = document.createElement('option');
+      none.value = '';
+      none.textContent = noneLabel;
+      select.append(none);
+    }
+    for (const page of pages) {
+      const option = document.createElement('option');
+      option.value = page.id;
+      option.textContent = page.title;
+      select.append(option);
+    }
+    return select;
+  }
+
+  // Liefert die ID der Zielseite oder null bei Abbruch.
+  askTargetPage(widget, pages) {
+    const { dialog, body, actions, finish, result } = this.dialogShell('Widget auf andere Seite verschieben');
+    const label = document.createElement('label');
+    label.textContent = `Zielseite für ${this.widgetName(widget)}`;
+    const select = this.pageSelect(pages);
+    label.append(select);
+    body.append(label);
+    actions.append(this.button('Abbrechen', () => finish(null)), this.button('Verschieben', () => finish(select.value)));
+    document.body.append(dialog);
+    dialog.showModal();
+    select.focus();
+    return result;
+  }
+
+  // Liefert null (abbrechen) oder { moves: Map(widgetId -> pageId) }; Widgets ohne Eintrag werden gelöscht.
+  askDeletePage(page, others) {
+    const { dialog, body, actions, finish, result } = this.dialogShell(`Seite „${page.title}“ löschen`);
+    const intro = document.createElement('p');
+    intro.textContent = `Die Seite enthält ${page.widgets.length} Widget(s). Möchten Sie die Widgets vor dem Löschen der Seite verschieben?`;
+    const choice = document.createElement('fieldset');
+    choice.className = 'cms-move-choice';
+    const radios = {};
+    for (const [value, text] of [['yes', 'Ja, Widgets verschieben'], ['no', 'Nein, alle Widgets mit der Seite löschen']]) {
+      const label = document.createElement('label');
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'move';
+      radio.value = value;
+      radio.checked = value === 'yes';
+      radios[value] = radio;
+      label.append(radio, ` ${text}`);
+      choice.append(label);
+    }
+    const list = document.createElement('div');
+    list.className = 'cms-move-list';
+    const selects = new Map();
+    for (const widget of page.widgets) {
+      const label = document.createElement('label');
+      label.textContent = this.widgetName(widget);
+      const select = this.pageSelect(others, '– löschen –');
+      selects.set(widget.id, select);
+      label.append(select);
+      list.append(label);
+    }
+    const hint = document.createElement('p');
+    hint.className = 'cms-dialog-hint';
+    hint.textContent = 'Widgets ohne neue Zielseite werden gelöscht.';
+    list.append(hint);
+    const sync = () => {
+      list.hidden = !radios.yes.checked;
+    };
+    radios.yes.addEventListener('change', sync);
+    radios.no.addEventListener('change', sync);
+    sync();
+    body.append(intro, choice, list);
+    actions.append(this.button('Abbrechen', () => finish(null)), this.button('Seite löschen', () => {
+      const moves = new Map();
+      if (radios.yes.checked) {
+        for (const [id, select] of selects) {
+          if (select.value) {
+            moves.set(id, select.value);
+          }
+        }
+      }
+      finish({ moves });
+    }));
+    document.body.append(dialog);
+    dialog.showModal();
+    return result;
+  }
+
+  async moveWidgetToPage(id) {
+    const others = this.config.pages.filter((page) => page.id !== this.page.id);
+    if (!others.length) {
+      this.setStatus('Zum Verschieben wird eine weitere Seite benötigt');
+      return;
+    }
+    const widget = this.page.widgets.find((item) => item.id === id);
+    if (!widget) {
+      return;
+    }
+    const targetId = await this.askTargetPage(widget, others);
+    if (!targetId) {
+      return;
+    }
+    try {
+      await this.flushLayout();
+      const next = structuredClone(this.config);
+      const source = next.pages[this.pageIndex];
+      const target = next.pages.find((page) => page.id === targetId);
+      if (target.widgets.length >= 200) {
+        this.setStatus(`Die Seite „${target.title}“ ist voll (200 Widgets)`);
+        return;
+      }
+      const [moved] = source.widgets.splice(source.widgets.findIndex((item) => item.id === id), 1);
+      this.appendWidgets(target, [moved]);
+      await this.persist(next);
+      this.elements.get(id)?.remove();
+      this.elements.delete(id);
+      this.syncOverlays();
+      this.previewLayout(this.currentLayout());
+      this.resubscribe();
+      await this.refresh();
+      this.setStatus(`Widget nach „${target.title}“ verschoben`);
+    } catch (error) {
+      this.setStatus(`Verschieben fehlgeschlagen: ${error.message}`);
+    }
+  }
+
   askTitle(message, initial) {
     return new Promise((resolve) => {
       const dialog = document.createElement('dialog');
@@ -854,18 +1033,39 @@ class CmsPage {
               });
             }
           }, false),
-          rowButton('✕', `„${page.title}“ löschen`, () => {
-            if (window.confirm(`Seite „${page.title}“ mit ${page.widgets.length} Widget(s) wirklich löschen?`)) {
-              run((next) => {
-                next.pages.splice(index, 1);
-                if (next.navigation.items) {
-                  next.navigation.items = next.navigation.items.filter((entry) => entry.page !== page.id);
-                  if (!next.navigation.items.length) {
-                    delete next.navigation.items;
-                  }
-                }
-              });
+          rowButton('✕', `„${page.title}“ löschen`, async () => {
+            const others = work.pages.filter((entry) => entry.id !== page.id);
+            let moves = new Map();
+            if (page.widgets.length) {
+              const answer = await this.askDeletePage(page, others);
+              if (!answer) {
+                return;
+              }
+              moves = answer.moves;
+              const full = others.find((entry) => entry.widgets.length
+                + [...moves.values()].filter((target) => target === entry.id).length > 200);
+              if (full) {
+                error.textContent = `Die Seite „${full.title}“ würde mehr als 200 Widgets enthalten.`;
+                return;
+              }
+            } else if (!window.confirm(`Seite „${page.title}“ wirklich löschen?`)) {
+              return;
             }
+            run((next) => {
+              for (const target of next.pages) {
+                const incoming = next.pages[index].widgets.filter((widget) => moves.get(widget.id) === target.id);
+                if (incoming.length) {
+                  this.appendWidgets(target, incoming);
+                }
+              }
+              next.pages.splice(index, 1);
+              if (next.navigation.items) {
+                next.navigation.items = next.navigation.items.filter((entry) => entry.page !== page.id);
+                if (!next.navigation.items.length) {
+                  delete next.navigation.items;
+                }
+              }
+            });
           }, pages.length < 2)
         );
         list.append(row);
@@ -1051,6 +1251,17 @@ class CmsPage {
       grip.setAttribute('aria-hidden', 'true');
       grip.title = 'Größe ändern (Umschalt+Pfeiltasten am Griff)';
       overlay.append(handle, grip);
+      if (widget.id !== NAV_ID) {
+        const move = document.createElement('button');
+        move.type = 'button';
+        move.className = 'cms-move-button';
+        move.textContent = '⇄';
+        move.title = 'Auf andere Seite verschieben';
+        move.setAttribute('aria-label', `${this.widgetName(widget)} auf andere Seite verschieben`);
+        move.disabled = this.config.pages.length < 2;
+        move.addEventListener('click', () => this.moveWidgetToPage(widget.id));
+        overlay.append(move);
+      }
       this.place(overlay, widget);
       this.attachDrag(handle, widget.id);
       this.attachResize(handle, grip, widget.id);
