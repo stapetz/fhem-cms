@@ -103,7 +103,7 @@ class FHEMCMSValue extends HTMLElement {
         <header data-header hidden>
           <h3 data-title></h3>
         </header>
-        <button type="button" class="gear solo" data-open-config aria-label="Wert-Anzeige konfigurieren">⚙</button>
+        <button type="button" class="gear solo" data-open-config title="Widget konfigurieren" aria-label="Wert-Anzeige konfigurieren">⚙</button>
         <div class="main">
           <span class="glyph icon" data-icon aria-hidden="true" hidden></span>
           <div class="value"><span data-value>–</span><span class="unit" data-unit></span></div>

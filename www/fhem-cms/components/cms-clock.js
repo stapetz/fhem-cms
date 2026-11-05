@@ -64,7 +64,7 @@ class FHEMCMSClock extends HTMLElement {
         .error { min-height: 1.2em; margin: 0; color: var(--cms-danger, #ffb4a8); }
       </style>
       <article class="tile">
-        <button type="button" class="gear" data-open-config aria-label="Uhr konfigurieren">⚙</button>
+        <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Uhr konfigurieren">⚙</button>
         <div class="content">
           <h3 data-title hidden></h3>
           <div class="time" data-time></div>

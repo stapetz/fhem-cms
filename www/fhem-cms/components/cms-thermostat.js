@@ -220,7 +220,7 @@ class FHEMCMSThermostat extends HTMLElement {
         <div class="body">
           <header>
             <h3 data-title></h3>
-            <button type="button" class="icon" data-open-config aria-label="Kachel konfigurieren">⚙</button>
+            <button type="button" class="icon" data-open-config title="Widget konfigurieren" aria-label="Kachel konfigurieren">⚙</button>
           </header>
           <div class="boxes">
             <div class="box ist">
