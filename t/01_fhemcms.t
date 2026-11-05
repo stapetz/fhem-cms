@@ -181,6 +181,14 @@ my $themeConfig = FHEMCMS_DefaultConfig();
 is(FHEMCMS_ValidateConfig($themeConfig), undef, 'accepts the default theme');
 $themeConfig->{theme} = 'system';
 like(FHEMCMS_ValidateConfig($themeConfig), qr/Ungueltiges Theme/, 'rejects an unsupported theme');
+$themeConfig->{theme} = 'light';
+$themeConfig->{settings} = {showFrames => JSON::PP::false};
+is(FHEMCMS_ValidateConfig($themeConfig), undef, 'accepts page settings with showFrames');
+$themeConfig->{settings}{showFrames} = 'nein';
+like(FHEMCMS_ValidateConfig($themeConfig), qr/showFrames/, 'rejects non-boolean showFrames');
+$themeConfig->{settings} = {showFrames => JSON::PP::true, extra => 1};
+isnt(FHEMCMS_ValidateConfig($themeConfig), undef, 'rejects unknown page settings');
+delete $themeConfig->{settings};
 
 my $json = FHEMCMS_Get($hash, $name, 'config');
 my $decoded = JSON::PP::decode_json($json);

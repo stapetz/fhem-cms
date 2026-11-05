@@ -594,8 +594,14 @@ sub FHEMCMS_ValidateConfig {
         return undef;
     };
 
-    my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages'], ['navigation', 'theme']);
+    my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages'], ['navigation', 'theme', 'settings']);
     return $err if ($err);
+    if (exists($config->{settings})) {
+        $err = $exact->($config->{settings}, 'settings', [], ['showFrames']);
+        return $err if ($err);
+        return 'Ungueltiger Wert fuer showFrames'
+            if (exists($config->{settings}{showFrames}) && !$isBool->($config->{settings}{showFrames}));
+    }
     return 'Ungueltiges Theme'
         if (exists($config->{theme}) && (ref($config->{theme}) || !defined($config->{theme})
             || $config->{theme} !~ /\A(?:dark|light)\z/));

@@ -343,6 +343,10 @@ body {
 }
 
 /* Nur ein kleiner Griff am rechten Rand, damit er die Navigationspunkte nicht überdeckt. */
+:root[data-cms-frames="off"][data-cms-theme] {
+  --cms-frame: transparent;
+}
+
 .cms-move-button {
   position: absolute;
   top: 0;
