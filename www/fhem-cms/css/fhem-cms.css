@@ -807,3 +807,13 @@ html:not(.cms-view) .cms-status::before {
   color: var(--cms-text);
   font-size: 0.85rem;
 }
+
+/* Bearbeitungsmodus: Menüleiste auf Höhe der Geräte-Auswahl am oberen Rand. */
+html:not(.cms-view) body {
+  padding-top: 0.5rem;
+}
+
+.cms-device-bar select,
+.cms-device-bar button {
+  min-height: 2.3rem;
+}
