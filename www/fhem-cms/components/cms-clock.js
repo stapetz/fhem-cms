@@ -23,14 +23,14 @@ class FHEMCMSClock extends HTMLElement {
         .content { display: grid; width: 100%; height: 100%; align-content: center; justify-items: center; gap: 0.3em; min-width: 0; }
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 1.05rem; font-weight: 400; overflow-wrap: anywhere; }
         h3[data-title] { font-size: max(5px, min(11cqh, 5cqw)); }
-        .time { font-size: max(4px, min(30cqh, 13cqw)); font-variant-numeric: tabular-nums; line-height: 1; }
+        .time { font-size: max(4px, min(38cqh, 16cqw)); font-variant-numeric: tabular-nums; line-height: 1; }
         /* Ohne Datum/Wochentag füllt die Uhr das Widget aus. */
-        .content[data-time-only] .time { font-size: max(4px, min(62cqh, 19cqw)); }
-        .date { color: var(--cms-muted-strong, #c4d0c8); font-size: max(5px, min(9cqh, 4.5cqw)); }
+        .content[data-time-only] .time { font-size: max(4px, min(72cqh, 22cqw)); }
+        .date { color: var(--cms-muted-strong, #c4d0c8); font-size: max(5px, min(11cqh, 5cqw)); }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-        .face { position: relative; width: min(68cqh, 52cqw); aspect-ratio: 1; border: 2px solid var(--cms-accent, #8fd0a8);
+        .face { position: relative; width: min(78cqh, 62cqw); aspect-ratio: 1; border: 2px solid var(--cms-accent, #8fd0a8);
           border-radius: 50%; }
-        .content[data-time-only] .face { width: min(86cqh, 72cqw); }
+        .content[data-time-only] .face { width: min(92cqh, 80cqw); }
         .face[hidden], .date[hidden], h3[hidden] { display: none; }
         .mark-rotor { position: absolute; inset: 0; transform: rotate(var(--angle)); }
         .mark { position: absolute; top: 2%; left: 50%; transform: translateX(-50%); background: var(--cms-accent, #8fd0a8); }
