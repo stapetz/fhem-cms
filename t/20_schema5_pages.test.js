@@ -41,7 +41,7 @@ if ($operation eq 'read') {
 print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error});
 `;
 
-test('page management protects unsaved forms, live bytes and stale tabs through real Perl', async () => {
+test('page management collects changes locally and saves them once through real Perl', async () => {
   const previous = globalThis.document;
   const dir = await mkdtemp(join(tmpdir(), 'cms-v5-pages-panel-'));
   globalThis.document = { createElement: (tag) => new Element(tag) };
@@ -63,9 +63,11 @@ test('page management protects unsaved forms, live bytes and stale tabs through 
     return result;
   };
   let gate;
+  let writes = 0;
   const transport = {
     read: async () => invoke('read'),
     save: async (value, token) => {
+      writes += 1;
       if (gate) await new Promise((resolve) => { gate.resolve = resolve; });
       invoke('save', Buffer.from(JSON.stringify(value)).toString('base64'), token);
     },
@@ -79,74 +81,99 @@ test('page management protects unsaved forms, live bytes and stale tabs through 
     const controller = new Schema5DraftController(transport);
     const state = await controller.reload();
     const root = new Element('section');
-    const panel = new Schema5PagesPanel({ root, controller, token: state.token, browser,
+    new Schema5PagesPanel({ root, controller, token: state.token, browser,
       onClose: (outcome) => { closed = outcome; } });
     const status = root.children[2];
     const controls = root.children[3];
-    const first = controls.children[0].children[0];
-    assert.equal(first.children[3].disabled, true, 'nonempty last page cannot be deleted');
+    const footer = root.children[4];
+    const [save, close] = footer.children;
+    assert.equal(save.textContent, 'Speichern');
+    assert.equal(close.textContent, 'Abbrechen');
+    let list = () => root.children[3].children[0];
+    let row = (index) => list().children[index];
+    assert.equal(row(0).children[3].disabled, true, 'nonempty last page cannot be deleted');
+
+    // Seite lokal anlegen: kein Schreibzugriff, Entwurf bleibt leer
     const create = controls.children[1];
-    create.children[0].children[0].value = 'second';
+    create.children[0].children[0].value = 'bad id!';
     create.children[1].children[0].value = 'Zweite';
-    const rename = first.children[0];
-    rename.children[0].children[0].value = 'Änderung';
     await create.fire('submit');
-    assert.match(status.textContent, /Andere Eingaben/);
-    root.children[4].fire('click');
-    assert.equal(closed, undefined, 'cancelled close keeps uncommitted inputs');
-    rename.children[0].children[0].value = 'Start';
-    await create.fire('submit');
-    assert.equal(controller.snapshot().draft.pages.length, 2);
-    assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
-    const second = controls.children[0].children[1];
-    assert.equal(second.children[3].disabled, false);
+    assert.match(status.textContent, /Seitenkennung/);
+    assert.equal(writes, 0);
+    const createAgain = root.children[3].children[1];
+    createAgain.children[0].children[0].value = 'second';
+    createAgain.children[1].children[0].value = 'Zweite';
+    await createAgain.fire('submit');
+    assert.equal(writes, 0, 'adding a page is collected locally');
+    assert.equal(controller.snapshot().draft, null);
+    assert.match(root.children[2].textContent, /Noch nicht gespeicherte/);
+
+    // Abbrechen mit offenen Änderungen erfordert Bestätigung
     confirm = false;
-    await second.children[3].fire('click');
-    assert.equal(controller.snapshot().draft.pages.length, 2);
-    await second.children[1].fire('click');
-    assert.deepEqual(controller.snapshot().draft.pages.map((page) => page.id), ['second', 'start']);
-    const secondForm = controls.children[0].children[0].children[0];
-    secondForm.children[0].children[0].value = 'Handbuch';
-    await secondForm.fire('submit');
-    assert.equal(controller.snapshot().draft.pages[0].title, 'Handbuch');
-    const move = controls.children[0].children[1].children[4].children[1];
-    await move.fire('submit');
-    assert.equal(controller.snapshot().draft.pages[0].widgets[0].html, '{{Temp:state}}');
-    assert.equal(controls.children[0].children[0].children[3].disabled, true, 'page with a widget cannot be deleted');
-    const moveBack = controls.children[0].children[0].children[4].children[1];
-    await moveBack.fire('submit');
-    assert.equal(controller.snapshot().draft.pages[1].widgets.at(-1).html, '{{Temp:state}}');
-    const other = new Schema5DraftController(transport);
-    const otherState = await other.reload();
-    await other.renamePage('start', 'Anderer Tab', otherState.token);
-    confirm = true;
-    await controls.children[0].children[0].children[3].fire('click');
-    assert.match(status.textContent, /veraltet/);
-    assert.equal(controls.inert, true);
-    root.children[4].fire('click');
-    assert.equal(closed.requiresReload, true);
-    const refreshed = await controller.reload();
-    assert.equal(refreshed.draft.pages[1].title, 'Anderer Tab');
-    assert.equal(refreshed.draft.pages[1].widgets[1].html, '{{Temp:state}}');
-    assert.equal(refreshed.draft.pages[1].widgets[0].html, '<span device="Temp" reading="state"></span>');
+    close.fire('click');
+    assert.equal(closed, undefined, 'cancelled close keeps local changes');
+
+    // Titel ändern, Reihenfolge tauschen, Widget verschieben – alles lokal
+    row(0).children[0].children[0].value = 'Haupt';
+    row(0).children[0].children[0].fire('input');
+    await row(1).children[1].fire('click');
+    assert.equal(writes, 0);
+    assert.equal(row(0).children[0].children[0].value, 'Zweite');
+    const moves = row(1).children[4];
+    const moveForm = moves.children[1];
+    await moveForm.fire('submit');
+    assert.equal(writes, 0);
+    assert.equal(row(0).children[3].disabled, true, 'page with a widget cannot be deleted');
+
+    // Speichern schreibt genau einmal und schließt den Dialog
+    await save.fire('click');
+    assert.equal(writes, 1);
+    assert.deepEqual(closed, { requiresReload: false });
+    assert.equal(root.children.length, 0);
+    const draft = controller.snapshot().draft;
+    assert.deepEqual(draft.pages.map((page) => page.id), ['second', 'start']);
+    assert.equal(draft.pages[1].title, 'Haupt');
+    assert.equal(draft.pages[0].widgets[0].html, '{{Temp:state}}');
+    assert.equal(draft.pages[1].widgets.length, 1);
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
 
+    // Veralteter Tab: Speichern schlägt fehl und sperrt weitere Bearbeitung
+    const other = new Schema5DraftController(transport);
+    const otherState = await other.reload();
+    const staleRoot = new Element('section');
+    let staleClosed;
+    new Schema5PagesPanel({ root: staleRoot, controller: other, token: otherState.token, browser,
+      onClose: (outcome) => { staleClosed = outcome; } });
+    await controller.renamePage('start', 'Anderer Tab', controller.snapshot().token);
+    staleRoot.children[3].children[0].children[0].children[0].children[0].value = 'Konflikt';
+    staleRoot.children[3].children[0].children[0].children[0].children[0].fire('input');
+    await staleRoot.children[4].children[0].fire('click');
+    assert.match(staleRoot.children[2].textContent, /nicht bestätigt/);
+    assert.equal(staleRoot.children[3].inert, true);
+    staleRoot.children[4].children[1].fire('click');
+    assert.equal(staleClosed.requiresReload, true);
+    assert.equal((await controller.reload()).draft.pages[1].title, 'Anderer Tab');
+    assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
+
+    // Unterbrechung während eines laufenden Speicherns schließt still
+    const fresh = await controller.reload();
     const root2 = new Element('section');
     let late = false;
-    const pending = new Schema5PagesPanel({ root: root2, controller, token: refreshed.token, browser,
+    const pending = new Schema5PagesPanel({ root: root2, controller, token: fresh.token, browser,
       onClose: () => { late = true; } });
+    root2.children[3].children[0].children[1].children[0].children[0].value = 'Spät';
+    root2.children[3].children[0].children[1].children[0].children[0].fire('input');
     gate = {};
-    const deleting = root2.children[3].children[0].children[0].children[3].fire('click');
-    assert.equal(root2.children[4].disabled, true);
+    const saving = root2.children[4].children[0].fire('click');
+    assert.equal(root2.children[4].children[1].disabled, true);
     pending.suspend();
     assert.equal(root2.hidden, true);
     gate.resolve();
-    await deleting;
+    await saving;
     assert.equal(root2.children.length, 0);
     assert.equal(late, false);
-    assert.equal((await controller.reload()).draft.pages.length, 1);
+    assert.equal((await controller.reload()).draft.pages[1].title, 'Spät');
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
-    panel.close();
   } finally {
     globalThis.document = previous;
     await rm(dir, { recursive: true });

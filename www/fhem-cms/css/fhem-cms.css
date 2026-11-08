@@ -339,10 +339,26 @@ body {
   text-align: left;
 }
 
-.cms-panel-close {
-  position: sticky;
-  bottom: 0;
-  float: right;
+/* Einheitliche Dialog-Fußzeile: Speichern und Abbrechen nebeneinander direkt unter dem Inhalt. */
+.cms-panel-footer {
+  display: flex;
+  gap: .6rem;
+  align-items: center;
+  margin-top: 1.1rem;
+}
+
+.cms-panel-footer button {
+  margin: 0;
+}
+
+.cms-panel-footer .cms-panel-save:not(:disabled) {
+  background: var(--cms-accent-strong);
+  border-color: var(--cms-accent-strong);
+  color: var(--cms-on-accent);
+}
+
+.cms-panel-footer .cms-panel-save:hover:not(:disabled) {
+  background: var(--cms-accent-hover);
 }
 
 .cms-position-grid .grid-stack-item-content {

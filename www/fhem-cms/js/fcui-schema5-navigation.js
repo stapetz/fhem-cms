@@ -74,14 +74,14 @@ export class Schema5NavigationPanel {
       this.#fields.set(page.id, fields);
       this.#form.append(group);
     }
-    const save = element('button', 'Navigation als Entwurf speichern');
+    const save = element('button', 'Speichern');
     save.type = 'submit';
-    this.#form.append(save);
+    save.className = 'cms-button cms-panel-save';
     this.#form.addEventListener('submit', (event) => {
       event.preventDefault();
       return this.#save();
     });
-    this.#close = element('button', 'Schließen');
+    this.#close = element('button', 'Abbrechen');
     this.#close.className = 'cms-button cms-panel-close';
     this.#close.type = 'button';
     this.#close.addEventListener('click', () => {
@@ -92,10 +92,17 @@ export class Schema5NavigationPanel {
       this.close();
       this.#onClose(result);
     });
+    const footer = element('div');
+    footer.className = 'cms-panel-footer';
+    save.addEventListener('click', (event) => {
+      event.preventDefault();
+      return this.#save();
+    });
+    footer.append(save, this.#close);
     this.#original = this.#values();
     root.append(element('h2', 'Navigation bearbeiten'),
       element('p', 'Leere Felder verwenden die Seitentitel beziehungsweise Standardgrößen. Die Rasterposition bleibt unverändert.'),
-      this.#status, this.#form, this.#close);
+      this.#status, this.#form, footer);
   }
 
   #values() {
@@ -149,11 +156,11 @@ export class Schema5NavigationPanel {
     this.#status.textContent = 'Entwurf wird gespeichert …';
     try {
       const state = await this.#controller.saveNavigation(candidate, this.#token);
-      if (this.#closed) return;
-      this.#navigation = structuredClone((state.draft || state.live).navigation);
-      this.#token = state.token;
-      this.#original = this.#values();
-      this.#status.textContent = 'Navigation als Entwurf gespeichert.';
+      if (this.#closed || !state) return;
+      this.#busy = false;
+      this.close();
+      this.#onClose({ requiresReload: false });
+      return;
     } catch (error) {
       if (this.#closed) return;
       this.#requiresReload = true;

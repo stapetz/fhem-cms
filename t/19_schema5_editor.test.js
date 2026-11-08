@@ -244,7 +244,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const navigationPanel = content.children[0];
     assert.equal(navigationPanel.children[0].textContent, 'Navigation bearbeiten');
     assert.equal(edit.disabled, true);
-    navigationPanel.children[4].fire('click');
+    navigationPanel.children[4].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(mode.textContent, 'Live');
     assert.equal(navigationButton.disabled, false);
@@ -436,9 +436,9 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     createPage.children[0].children[0].value = 'second';
     createPage.children[1].children[0].value = 'Zweite';
     await createPage.fire('submit');
-    assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages.length, 2);
-    pagesPanel.children[4].fire('click');
+    await pagesPanel.children[4].children[0].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages.length, 2);
     assert.equal(mode.textContent, 'Entwurf');
     toolbar.children[8].fire('click');
     const appearancePanel = content.children[0];

@@ -9,11 +9,13 @@ export class Schema5PagesPanel {
   #controller;
   #browser;
   #onClose;
-  #state;
+  #token;
+  #candidate;
+  #baseline;
   #status;
   #controls;
+  #save;
   #close;
-  #inputs = [];
   #busy = false;
   #closed = false;
   #suspended = false;
@@ -21,6 +23,7 @@ export class Schema5PagesPanel {
 
   constructor({ root, controller, token, browser = window, onClose }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
+      || typeof controller.saveDraft !== 'function'
       || typeof browser.confirm !== 'function' || typeof onClose !== 'function') {
       throw new Error('Dienste und leerer Container für Seitenverwaltung erforderlich');
     }
@@ -30,30 +33,49 @@ export class Schema5PagesPanel {
     this.#controller = controller;
     this.#browser = browser;
     this.#onClose = onClose;
-    this.#state = state;
+    this.#token = token;
+    this.#candidate = structuredClone(state.draft || state.live);
+    this.#baseline = JSON.stringify(this.#candidate);
     const heading = element('h2', 'Seiten verwalten');
-    const hint = element('p', 'Änderungen werden sofort als Entwurf gespeichert. Nur leere Seiten können gelöscht werden.');
+    const hint = element('p', 'Änderungen werden erst mit „Speichern“ als Entwurf übernommen. Nur leere Seiten können gelöscht werden.');
     this.#status = element('p');
     this.#status.setAttribute('role', 'status');
     this.#controls = element('div');
-    this.#close = element('button', 'Schließen');
+    this.#save = element('button', 'Speichern');
+    this.#save.className = 'cms-button cms-panel-save';
+    this.#save.type = 'button';
+    this.#save.addEventListener('click', () => this.#saveAll());
+    this.#close = element('button', 'Abbrechen');
     this.#close.className = 'cms-button cms-panel-close';
     this.#close.type = 'button';
     this.#close.addEventListener('click', () => {
-      if (this.#inputs.some((entry) => entry.input.value !== entry.original)
-        && !this.#browser.confirm('Nicht gespeicherte Eingaben verwerfen?')) return;
+      if (this.#busy || this.#closed) return;
+      if (!this.#requiresReload && this.#dirty()
+        && !this.#browser.confirm('Nicht gespeicherte Änderungen verwerfen?')) return;
       const outcome = { requiresReload: this.#requiresReload };
       this.close();
       this.#onClose(outcome);
     });
-    root.append(heading, hint, this.#status, this.#controls, this.#close);
+    const footer = element('div');
+    footer.className = 'cms-panel-footer';
+    footer.append(this.#save, this.#close);
+    root.append(heading, hint, this.#status, this.#controls, footer);
     this.#render();
+  }
+
+  #dirty() {
+    return JSON.stringify(this.#candidate) !== this.#baseline;
   }
 
   #message(text, error = false) {
     this.#status.textContent = text;
     if (error) this.#status.setAttribute('data-error', '');
     else this.#status.removeAttribute('data-error');
+  }
+
+  #changed() {
+    this.#render();
+    this.#message(this.#dirty() ? 'Noch nicht gespeicherte Änderungen.' : '');
   }
 
   #button(text, callback, disabled = false) {
@@ -66,40 +88,37 @@ export class Schema5PagesPanel {
 
   #render() {
     this.#controls.replaceChildren();
-    this.#inputs = [];
-    const pages = (this.#state.draft || this.#state.live).pages;
+    const pages = this.#candidate.pages;
     const list = element('ol');
     for (const [index, page] of pages.entries()) {
       const row = element('li');
       row.className = 'cms-page-card';
-      const form = element('form');
       const label = element('label', 'Seitentitel ');
       const title = element('input');
       title.value = page.title;
       title.required = true;
       title.maxLength = 128;
-      label.append(title);
-      this.#inputs.push({ input: title, original: page.title, group: form });
-      const rename = element('button', 'Umbenennen');
-      rename.type = 'submit';
-      form.append(label, rename);
-      form.addEventListener('submit', (event) => {
-        event.preventDefault();
-        return this.#change((token) => this.#controller.renamePage(page.id, title.value, token), form);
+      title.addEventListener('input', () => {
+        page.title = title.value;
+        this.#message(this.#dirty() ? 'Noch nicht gespeicherte Änderungen.' : '');
       });
+      label.append(title);
       const reorder = (offset) => {
-        const ids = pages.map((item) => item.id);
         const destination = index + offset;
-        [ids[index], ids[destination]] = [ids[destination], ids[index]];
-        return this.#change((token) => this.#controller.reorderPages(ids, token));
+        [pages[index], pages[destination]] = [pages[destination], pages[index]];
+        this.#changed();
       };
-      row.append(form,
+      row.append(label,
         this.#button('Nach oben', () => reorder(-1), index === 0),
         this.#button('Nach unten', () => reorder(1), index === pages.length - 1),
         this.#button('Leere Seite löschen', () => {
-          if (this.#browser.confirm(`Leere Seite „${page.title}“ (${page.id}) aus dem Entwurf löschen?`)) {
-            return this.#change((token) => this.#controller.deleteEmptyPage(page.id, token));
+          pages.splice(index, 1);
+          if (this.#candidate.navigation.items) {
+            this.#candidate.navigation.items = this.#candidate.navigation.items
+              .filter((item) => item.page !== page.id);
+            if (!this.#candidate.navigation.items.length) delete this.#candidate.navigation.items;
           }
+          this.#changed();
         }, pages.length === 1 || page.widgets.length > 0));
       if (pages.length > 1 && page.widgets.length) {
         const moves = element('details');
@@ -123,7 +142,6 @@ export class Schema5PagesPanel {
     title.required = true;
     title.maxLength = 128;
     titleLabel.append(title);
-    this.#inputs.push({ input: id, original: '', group: add }, { input: title, original: '', group: add });
     const submit = element('button', 'Seite hinzufügen');
     submit.type = 'submit';
     add.append(idLabel, titleLabel, submit);
@@ -132,7 +150,17 @@ export class Schema5PagesPanel {
       const existing = new Set(pages.map((page) => page.id));
       let number = 1;
       while (existing.has(`page${number}`)) number++;
-      return this.#change((token) => this.#controller.addPage(id.value || `page${number}`, title.value, token), add);
+      const pageId = id.value || `page${number}`;
+      if (!/^[A-Za-z0-9_-]{1,64}$/.test(pageId) || existing.has(pageId)) {
+        this.#message('Ungültige oder bereits vorhandene Seitenkennung.', true);
+        return;
+      }
+      if (!title.value.length || title.value.length > 128 || /[\x00-\x1f\x7f]/.test(title.value)) {
+        this.#message('Ungültiger Seitentitel.', true);
+        return;
+      }
+      pages.push({ id: pageId, title: title.value, widgets: [] });
+      this.#changed();
     });
     this.#controls.append(list, add);
   }
@@ -148,7 +176,6 @@ export class Schema5PagesPanel {
       target.append(option);
     }
     targetLabel.append(target);
-    this.#inputs.push({ input: target, original: target.value, group: form });
     form.append(heading, targetLabel);
     const fields = {};
     for (const [key, name, max] of [
@@ -164,7 +191,6 @@ export class Schema5PagesPanel {
       input.value = String(widget.grid[key]);
       label.append(input);
       fields[key] = input;
-      this.#inputs.push({ input, original: input.value, group: form });
       form.append(label);
     }
     const move = element('button', 'Widget verschieben');
@@ -172,36 +198,70 @@ export class Schema5PagesPanel {
     form.append(move);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
+      const destination = pages.find((entry) => entry.id === target.value);
+      if (!destination || destination.id === page.id) {
+        this.#message('Ungültige Zielseite.', true);
+        return;
+      }
       const grid = Object.fromEntries(Object.entries(fields).map(([key, input]) => [key, input.valueAsNumber]));
-      return this.#change((token) => this.#controller.moveWidget(page.id, target.value, widget.id, grid, token), form);
+      if (!['col', 'row', 'w', 'h'].every((key) => Number.isInteger(grid[key]) && grid[key] >= 1)) {
+        this.#message('Ungültige Rasterposition.', true);
+        return;
+      }
+      const index = page.widgets.findIndex((entry) => entry.id === widget.id);
+      if (index < 0 || destination.widgets.some((entry) => entry.id === widget.id)) {
+        this.#message('Widget kann nicht verschoben werden.', true);
+        return;
+      }
+      const moved = page.widgets.splice(index, 1)[0];
+      moved.grid = grid;
+      destination.widgets.push(moved);
+      this.#changed();
     });
     return form;
   }
 
-  async #change(operation, group = null) {
+  async #saveAll() {
     if (this.#busy || this.#closed || this.#requiresReload) return;
-    if (this.#inputs.some((entry) => entry.group !== group && entry.input.value !== entry.original)) {
-      this.#message('Andere Eingaben zuerst speichern oder zurücksetzen.', true);
+    if (!this.#dirty()) {
+      const outcome = { requiresReload: false };
+      this.close();
+      this.#onClose(outcome);
       return;
     }
     this.#busy = true;
     this.#controls.inert = true;
+    this.#save.disabled = true;
     this.#close.disabled = true;
     this.#message('Entwurf wird gespeichert …');
+    let pending;
     try {
-      this.#state = await operation(this.#state.token);
-      if (this.#suspended) return;
-      this.#render();
-      this.#message('Änderung als Entwurf gespeichert.');
+      pending = this.#controller.saveDraft(structuredClone(this.#candidate), this.#token);
     } catch (error) {
-      if (this.#suspended) return;
+      this.#busy = false;
+      this.#controls.inert = false;
+      this.#save.disabled = false;
+      this.#close.disabled = false;
+      this.#message(`Änderung ungültig: ${error.message || String(error)}`, true);
+      return;
+    }
+    try {
+      await pending;
+      if (this.#suspended || this.#closed) return;
+      this.#busy = false;
+      const outcome = { requiresReload: false };
+      this.close();
+      this.#onClose(outcome);
+    } catch (error) {
+      if (this.#suspended || this.#closed) return;
       this.#requiresReload = true;
       this.#message(`Änderung nicht bestätigt: ${error.message || String(error)}. Vor weiterer Bearbeitung Zustand erneut laden.`, true);
     } finally {
       this.#busy = false;
       if (this.#suspended) this.close();
-      else {
+      else if (!this.#closed) {
         this.#controls.inert = this.#requiresReload;
+        this.#save.disabled = this.#requiresReload;
         this.#close.disabled = false;
       }
     }

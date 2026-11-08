@@ -76,9 +76,12 @@ test('navigation panel saves against real Perl, preserves positions and handles 
     const root = new Element();
     let allowClose = false;
     let closed;
-    const panel = new Schema5NavigationPanel({ root, controller, token: state.token,
+    new Schema5NavigationPanel({ root, controller, token: state.token,
       browser: { confirm: () => allowClose }, onClose: (outcome) => { closed = outcome; } });
-    const [, , status, form, close] = root.children;
+    const [, , status, form, footer] = root.children;
+    const [save, close] = footer.children;
+    assert.equal(save.textContent, 'Speichern');
+    assert.equal(close.textContent, 'Abbrechen');
     const orientation = form.children[0].children[0];
     const first = form.children[1];
     const label = first.children[1].children[0];
@@ -95,6 +98,9 @@ test('navigation panel saves against real Perl, preserves positions and handles 
     width.value = '040';
     height.value = '60';
     await form.fire('submit');
+    assert.deepEqual(closed, { requiresReload: false }, 'successful save closes the dialog');
+    assert.equal(root.children.length, 0);
+    closed = undefined;
     assert.equal(controller.snapshot().draft.navigation.orientation, 'vertical');
     assert.deepEqual(controller.snapshot().draft.navigation.grid, config.navigation.grid);
     assert.deepEqual(controller.snapshot().draft.navigation.items,
@@ -109,20 +115,26 @@ test('navigation panel saves against real Perl, preserves positions and handles 
     await staleRoot.children[3].fire('submit');
     assert.match(staleRoot.children[2].textContent, /erneut laden/);
     assert.equal(staleRoot.children[3].inert, true);
-    staleRoot.children[4].fire('click');
+    staleRoot.children[4].children[1].fire('click');
     assert.deepEqual(staleClosed, { requiresReload: true });
 
-    label.value = 'Später';
+    const latest = controller.snapshot();
+    const root2 = new Element();
+    const panel2 = new Schema5NavigationPanel({ root: root2, controller, token: latest.token,
+      browser: { confirm: () => allowClose }, onClose: (outcome) => { closed = outcome; } });
+    const form2 = root2.children[3];
+    const close2 = root2.children[4].children[1];
+    form2.children[1].children[1].children[0].value = 'Später';
     gate = {};
-    const saving = form.fire('submit');
-    assert.equal(form.inert, true);
-    assert.equal(close.disabled, true);
-    panel.suspend();
-    assert.equal(root.children.length, 0);
+    const saving = form2.fire('submit');
+    assert.equal(form2.inert, true);
+    assert.equal(close2.disabled, true);
+    panel2.suspend();
+    assert.equal(root2.children.length, 0);
     gate.resolve();
     await saving;
-    assert.equal(root.children.length, 0);
-    assert.equal(closed, undefined);
+    assert.equal(root2.children.length, 0);
+    assert.equal(closed, undefined, 'suspended save never reports completion');
     assert.equal((await controller.reload()).draft.navigation.items[1].label, 'Später');
     assert.equal(await readFile(path, 'utf8'), original);
     assert.equal(writes, 3);
