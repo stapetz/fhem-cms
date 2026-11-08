@@ -156,6 +156,16 @@ Funktionen:
   Schutzmaßnahmen nicht vorausgesetzt werden: Nur zusammengehörige Code-,
   Asset- und Datensicherungen auf einer isolierten Instanz wiederherstellen.
 
+Die interne, noch nicht in die Oberfläche eingebundene Rasteranalyse
+`fcui/layout-migration.js` ermittelt für Schema 4 die exakt umrechenbaren
+gespeicherten Koordinaten und markiert die übrigen Positionen und Breiten.
+Sie meldet außerdem Überlappungen der gespeicherten Raster pro Seite. Sie
+verändert und speichert keine Daten und ersetzt weder die serverseitige
+Validierung noch die Migrationsvorschau. Ohne gespeicherte Navigation meldet sie
+ausdrücklich, dass die vom Bestandsfrontend ergänzte Navigation und die
+verschobenen Zeilen separat zu berücksichtigen sind. Auch abweichende effektive
+Layoutmodi sind vor einer tatsächlichen Vorschau zu behandeln.
+
 Das ist kein Nachweis einer vollständigen FHEMWEB-Autorisierung, Migration oder
 Geräteabnahme. Insbesondere Testinstanz-Rechte, CSRF, externer Ressourcenzugriff,
 Verlustfreiheit und Rollback sind vor Einsatz auf der Referenzumgebung zu prüfen.
