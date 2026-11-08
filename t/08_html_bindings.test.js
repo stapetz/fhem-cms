@@ -75,3 +75,59 @@ test('free HTML devices receive snapshots, channel readings and live subscriptio
     globalThis.customElements = previous.customElements;
   }
 });
+
+test('shared widget factory preserves legacy types, data and view mode', async () => {
+  const previous = {
+    window: globalThis.window, document: globalThis.document,
+    HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
+  };
+  globalThis.window = { location: { href: 'https://example.test/' } };
+  globalThis.document = {
+    createElement(tag) {
+      return { tag, attributes: {}, setAttribute(name, value) { this.attributes[name] = value; } };
+    },
+  };
+  globalThis.HTMLElement = class {};
+  const registry = new Map();
+  globalThis.customElements = {
+    define(name, element) { registry.set(name, element); },
+    get(name) { return registry.get(name); },
+  };
+  try {
+    const { createWidgetElement, devicesOf } = await import('../www/fhem-cms/js/widget-factory.js');
+    const services = {};
+    const snapshots = new Map([['Temp', { name: 'Temp' }]]);
+    const types = {
+      thermostat: 'cms-thermostat', 'fhem-value': 'cms-value', 'fhem-switch': 'cms-switch',
+      'fhem-button': 'cms-button', 'fhem-clock': 'cms-clock', 'fhem-icon': 'cms-icon',
+      'fhem-table': 'cms-table', 'fhem-solarflow': 'cms-solarflow', 'fhem-chart': 'cms-chart',
+      'fhem-slider': 'cms-slider', 'fhem-html': 'cms-html', text: 'cms-text',
+    };
+    const grouped = new Set(['fhem-table', 'fhem-solarflow', 'fhem-html', 'text']);
+    const withoutData = new Set(['fhem-button', 'fhem-clock', 'fhem-chart']);
+    for (const [type, tag] of Object.entries(types)) {
+      const widget = {
+        type, device: 'Temp', devices: ['Temp'], rows: [{ device: 'Temp' }],
+        readings: { pv: { device: 'Temp', reading: 'state' } }, html: '{{Temp:state}}',
+      };
+      const element = createWidgetElement(widget, services, snapshots, true);
+      assert.equal(element.tag, tag);
+      assert.equal(element.services, services);
+      assert.equal(element.config, widget);
+      assert.deepEqual(element.attributes, { 'view-only': '' });
+      if (withoutData.has(type)) assert.equal('data' in element, false, type);
+      else if (grouped.has(type)) assert.equal(element.data.get('Temp'), snapshots.get('Temp'), type);
+      else assert.equal(element.data, snapshots.get('Temp'), type);
+      assert.ok(Array.isArray(devicesOf(widget)), type);
+    }
+    const unsupported = createWidgetElement({ type: 'toString' }, services, snapshots, false);
+    assert.equal(unsupported.tag, 'p');
+    assert.equal(unsupported.className, 'cms-unsupported');
+    assert.deepEqual(unsupported.attributes, {});
+  } finally {
+    globalThis.window = previous.window;
+    globalThis.document = previous.document;
+    globalThis.HTMLElement = previous.HTMLElement;
+    globalThis.customElements = previous.customElements;
+  }
+});

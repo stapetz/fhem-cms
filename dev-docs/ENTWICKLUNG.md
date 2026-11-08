@@ -265,6 +265,12 @@ beim Initialisieren durch Gridstack veränderte Positionen ab. Die Prüfung umfa
 nur den Rastervertrag und ersetzt nicht die vollständige serverseitige
 Validierung. Das Modul wird noch nicht vom Device-Einstieg verwendet und bietet
 weder eine vollständige Widget-Oberfläche noch Speicherung oder Umstellung.
+Die bestehende Oberfläche verwendet zur Erzeugung ihrer Widget-Elemente die
+gemeinsame `www/fhem-cms/js/widget-factory.js`. Sie erhält die bisherigen
+Widget-Typen und Datenzuordnungen und kann später auch vom neuen Raster genutzt
+werden. Sie stellt selbst keine Vorschau-Sicherheitsgrenze dar: Komponenten
+können beim Verbinden Timer starten oder Dienste aufrufen; eine spätere Vorschau
+muss diese Lebenszyklen und verfügbare Dienste ausdrücklich absichern.
 Ein interner Schema-5-Entwurfsvertrag validiert Live und Entwurf gemeinsam und
 verknüpft ihre tatsächlichen Bytes mit einer Zustandskennung. Ein Entwurf wird
 nur gegen den unveränderten Stand atomar gespeichert; andere Schemata, ungültige

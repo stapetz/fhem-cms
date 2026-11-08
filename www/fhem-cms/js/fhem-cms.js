@@ -1,16 +1,4 @@
-import '../components/cms-thermostat.js';
-import '../components/cms-text.js';
-import '../components/cms-value.js';
-import '../components/cms-switch.js';
-import '../components/cms-button.js';
-import '../components/cms-html.js';
-import '../components/cms-clock.js';
-import '../components/cms-icon.js';
-import '../components/cms-table.js';
-import '../components/cms-slider.js';
-import '../components/cms-chart.js';
-import { devicesOfSolarFlow } from '../components/cms-solarflow.js';
-import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
+import { createWidgetElement, dataFor, devicesOf } from './widget-factory.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { DevicePreview } from './device-preview.js';
 import {
@@ -22,31 +10,8 @@ const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
 const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
 const NAV_ID = '__nav';
-// Devices einer Kachel: Thermostat und Wert haben eines, freies HTML eine Liste, Texte nennen sie in Platzhaltern.
-const devicesOf = (widget) => {
-  if (widget.type === 'fhem-table') {
-    return [...new Set((widget.rows || []).map((row) => row.device).filter(isValidName))];
-  }
-  if (widget.type === 'fhem-chart') {
-    return [];
-  }
-  if (widget.type === 'fhem-solarflow') {
-    return devicesOfSolarFlow(widget);
-  }
-  if (widget.type === 'fhem-html') {
-    return widget.devices;
-  }
-  if (widget.type === 'text') {
-    return extractDevices(widget.html || '').slice(0, MAX_FREE_DEVICES);
-  }
-  return [widget.device];
-};
 const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-solarflow'].includes(widget.type)
   || (widget.type === 'text' && devicesOf(widget).length > 0);
-// Daten einer Kachel: ein Device oder (freies HTML, Text) die Map aller verwendeten Devices.
-const dataFor = (widget, snapshots) => (widget.type === 'fhem-html' || widget.type === 'text' || widget.type === 'fhem-table' || widget.type === 'fhem-solarflow'
-  ? new Map(devicesOf(widget).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
-  : snapshots.get(widget.device) || null);
 const LAYOUT_INFO = {
   grid: {
     title: 'Raster',
@@ -1764,72 +1729,7 @@ export class CmsPage {
   }
 
   createElementFor(widget) {
-    let element;
-    if (widget.type === 'thermostat') {
-      element = document.createElement('cms-thermostat');
-      element.services = this.services();
-      element.config = widget;
-      element.data = this.snapshots.get(widget.device) || null;
-    } else if (widget.type === 'fhem-value') {
-      element = document.createElement('cms-value');
-      element.services = this.services();
-      element.config = widget;
-      element.data = this.snapshots.get(widget.device) || null;
-    } else if (widget.type === 'fhem-switch') {
-      element = document.createElement('cms-switch');
-      element.services = this.services();
-      element.config = widget;
-      element.data = this.snapshots.get(widget.device) || null;
-    } else if (widget.type === 'fhem-button') {
-      element = document.createElement('cms-button');
-      element.services = this.services();
-      element.config = widget;
-    } else if (widget.type === 'fhem-clock') {
-      element = document.createElement('cms-clock');
-      element.services = this.services();
-      element.config = widget;
-    } else if (widget.type === 'fhem-icon') {
-      element = document.createElement('cms-icon');
-      element.services = this.services();
-      element.config = widget;
-      element.data = this.snapshots.get(widget.device) || null;
-    } else if (widget.type === 'fhem-table') {
-      element = document.createElement('cms-table');
-      element.services = this.services();
-      element.config = widget;
-      element.data = dataFor(widget, this.snapshots);
-    } else if (widget.type === 'fhem-solarflow') {
-      element = document.createElement('cms-solarflow');
-      element.services = this.services();
-      element.config = widget;
-      element.data = dataFor(widget, this.snapshots);
-    } else if (widget.type === 'fhem-chart') {
-      element = document.createElement('cms-chart');
-      element.services = this.services();
-      element.config = widget;
-    } else if (widget.type === 'fhem-slider') {
-      element = document.createElement('cms-slider');
-      element.services = this.services();
-      element.config = widget;
-      element.data = this.snapshots.get(widget.device) || null;
-    } else if (widget.type === 'fhem-html') {
-      element = document.createElement('cms-html');
-      element.services = this.services();
-      element.config = widget;
-      element.data = dataFor(widget, this.snapshots);
-    } else if (widget.type === 'text') {
-      element = document.createElement('cms-text');
-      element.services = this.services();
-      element.config = widget;
-      element.data = dataFor(widget, this.snapshots);
-    } else {
-      element = document.createElement('p');
-      element.className = 'cms-unsupported';
-      element.textContent = `Widget-Typ „${widget.type}“ wird noch nicht angezeigt.`;
-    }
-    if (VIEW_MODE) {
-      element.setAttribute('view-only', '');
-    }
+    const element = createWidgetElement(widget, this.services(), this.snapshots, VIEW_MODE);
     this.place(element, { grid: this.effectiveGrid(widget.id) || widget.grid });
     this.elements.set(widget.id, element);
     return element;
