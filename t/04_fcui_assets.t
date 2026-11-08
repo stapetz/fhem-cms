@@ -13,6 +13,7 @@ my @assets = (
     'www/fhem-cms/js/fcui-runtime.js',
     'www/fhem-cms/css/fcui-gridstack.css',
     'www/fhem-cms/FCUI-LICENSES.txt',
+    'www/fhem-cms/examples/fcui-check.html',
 );
 for my $asset (@assets) {
     ok(-s $asset, "$asset exists and is not empty");

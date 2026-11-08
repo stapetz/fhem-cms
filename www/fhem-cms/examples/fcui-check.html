@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FCUI-Bibliotheken prüfen</title>
+</head>
+<body>
+  <main>
+    <h1>FCUI-Bibliotheken prüfen</h1>
+    <p id="status" role="status">Prüfung wird geladen …</p>
+    <p>Diese Prüfung verändert keine CMS-Daten und benötigt keine FHEM-Befehle.</p>
+    <div id="probe"></div>
+  </main>
+  <script nomodule>
+    document.getElementById('status').textContent =
+      'Fehler: Dieser Browser unterstützt die benötigten JavaScript-Module nicht.';
+  </script>
+  <script type="module">
+    const status = document.getElementById('status');
+    const cacheKey = String(Date.now());
+    const url = (path) => {
+      const result = new URL(path, location.href);
+      result.searchParams.set('v', cacheKey);
+      return result.href;
+    };
+
+    function loadStylesheet() {
+      return new Promise((resolve, reject) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = url('../css/fcui-gridstack.css');
+        const timer = setTimeout(() => reject(new Error('Gridstack-CSS antwortet nicht')), 15000);
+        link.onload = () => { clearTimeout(timer); resolve(); };
+        link.onerror = () => { clearTimeout(timer); reject(new Error('Gridstack-CSS konnte nicht geladen werden')); };
+        document.head.append(link);
+      });
+    }
+
+    try {
+      const [runtime] = await Promise.all([
+        import(url('../js/fcui-runtime.js')),
+        loadStylesheet(),
+      ]);
+      const { LitElement, html, GridStack } = runtime;
+      class Probe extends LitElement {
+        render() { return html`<span>Lit funktioniert.</span>`; }
+      }
+      if (!customElements.get('fcui-build-probe')) customElements.define('fcui-build-probe', Probe);
+      const element = document.createElement('fcui-build-probe');
+      document.getElementById('probe').append(element);
+      await element.updateComplete;
+      if (!element.shadowRoot || element.shadowRoot.textContent.trim() !== 'Lit funktioniert.') {
+        throw new Error('Lit-Komponente konnte nicht dargestellt werden');
+      }
+      const container = document.createElement('div');
+      container.className = 'grid-stack';
+      document.getElementById('probe').append(container);
+      const grid = GridStack.init({ column: 12 }, container);
+      grid.addWidget({ x: 0, y: 0, w: 2, h: 1 });
+      if (grid.getColumn() !== 12 || grid.getGridItems().length !== 1) {
+        throw new Error('Gridstack konnte kein 12-Spalten-Raster erzeugen');
+      }
+      grid.destroy();
+      status.textContent = 'Erfolg: Lit, Gridstack und Gridstack-CSS wurden lokal geladen.';
+    } catch (error) {
+      status.textContent = `Fehler beim Laden oder Prüfen der FCUI-Dateien: ${error.message}`;
+    }
+  </script>
+</body>
+</html>

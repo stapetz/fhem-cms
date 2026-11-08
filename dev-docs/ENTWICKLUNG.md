@@ -189,6 +189,10 @@ Leerraum innerhalb von Template-Literalen, der nicht entfernt werden darf.
 Dies ist lediglich die Build-Grundlage: Der bisherige Einstieg lädt die neuen
 Dateien noch nicht. FCUI-Oberfläche, Versionsvertrag und browserseitige
 Integration werden in den Folgeaufgaben umgesetzt und geprüft.
+Die separat aufrufbare Seite `fhem-cms/examples/fcui-check.html` prüft das
+Laden der lokalen Bibliotheken mit Lit und einem 12-Spalten-Gridstack-Raster
+und zeigt Ladefehler an. Sie sendet keine FHEM-Befehle und verändert keine
+CMS-Daten. Sie ersetzt nicht die Prüfung der später integrierten Oberfläche.
 
 ### Sicherung und Regression vor Umbauten
 

@@ -126,6 +126,13 @@ Das CMS speichert keine Zugangsdaten und erlaubt keine fremden Origins (kein COR
 | `update` entfernt gelöschte Dateien nicht | Bekanntes FHEM-Verhalten; veraltete Dateien unter `www/fhem-cms/` bei Bedarf von Hand löschen. |
 | Startseite nicht neu erzeugt | Eine Datei ohne Modul-Marker wird nie überschrieben. Datei entfernen und `set <CMS> rebuild` ausführen. |
 
+Für die noch nicht integrierte FCUI-Oberfläche lässt sich die Bereitstellung
+der Bibliotheken separat prüfen: Im Browser unter dem FHEMWEB-Pfad
+`fhem-cms/examples/fcui-check.html` öffnen, zum Beispiel
+`/fhem/fhem-cms/examples/fcui-check.html`. Die Seite meldet Erfolg oder einen
+Ladefehler. Sie ändert keine CMS-Daten und ersetzt keinen Test der späteren
+Oberfläche.
+
 ## Fragen, Fehler und Ideen
 
 Fragen, Fehler und Ideen bitte als [GitHub-Issue](https://github.com/stapetz/fhem-cms/issues/new/choose) melden. Issues sind öffentlich sichtbar und können von Suchmaschinen gefunden werden; bitte keine Passwörter, Tokens oder Adressen posten.
