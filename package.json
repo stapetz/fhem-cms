@@ -1,0 +1,19 @@
+{
+  "name": "fhem-cms-fcui",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-fcui.mjs",
+    "build:check": "node scripts/build-fcui.mjs --check"
+  },
+  "dependencies": {
+    "gridstack": "14.1.0",
+    "lit": "3.3.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "engines": {
+    "node": ">=24 <27"
+  }
+}

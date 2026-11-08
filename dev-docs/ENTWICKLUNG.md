@@ -160,6 +160,26 @@ Das ist kein Nachweis einer vollständigen FHEMWEB-Autorisierung, Migration oder
 Geräteabnahme. Insbesondere Testinstanz-Rechte, CSRF, externer Ressourcenzugriff,
 Verlustfreiheit und Rollback sind vor Einsatz auf der Referenzumgebung zu prüfen.
 
+#### FCUI-Build-Grundlage
+
+Für die Entwicklung werden Node.js 24–26 und npm benötigt, auf dem FHEM-Server
+und im Browser dagegen nicht. Nach `npm ci --ignore-scripts` erzeugt `npm run
+build` aus den durch `package-lock.json` festgelegten Abhängigkeiten das lokale
+ESM-Bundle `www/fhem-cms/js/fcui-runtime.js`, das Gridstack-CSS und die
+Lizenzhinweise `www/fhem-cms/FCUI-LICENSES.txt`. `npm run build:check` prüft,
+ob die eingecheckten Dateien genau diesem Build entsprechen. Externe Importe
+werden beim Build abgewiesen; eingebettete Data-URLs sind erlaubt.
+Die Controls-Generierung nimmt die Dateien auf, und das bestehende Cache-Token
+berücksichtigt JavaScript und CSS. Bibliotheks-Updates erfolgen bewusst durch
+Versionsänderung, erneuten Build und Prüfung; sie werden nicht zur Laufzeit
+aus einem CDN geladen. Für das generierte JavaScript deaktiviert
+`.gitattributes` die Prüfung auf Zeilenend-Leerraum: Das Bundle enthält
+Leerraum innerhalb von Template-Literalen, der nicht entfernt werden darf.
+
+Dies ist lediglich die Build-Grundlage: Der bisherige Einstieg lädt die neuen
+Dateien noch nicht. FCUI-Oberfläche, Versionsvertrag und browserseitige
+Integration werden in den Folgeaufgaben umgesetzt und geprüft.
+
 ### Sicherung und Regression vor Umbauten
 
 Vor Tests mit Änderungen an einer ausdrücklich freigegebenen **Testinstanz**

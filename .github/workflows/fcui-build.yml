@@ -1,0 +1,22 @@
+name: Verify FCUI build
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build:check
+      - run: prove t/01_fhemcms.t t/02_refactoring_legacy.t t/03_refactoring_migration.t t/04_fcui_assets.t
