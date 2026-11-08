@@ -85,12 +85,12 @@ test('navigation panel manages pages, order, shared sizes and files against real
     new Schema5NavigationPanel({ root, controller, token: state.token,
       browser: { confirm: () => allowClose }, onClose: (outcome) => { closed = outcome; } });
     const [, , status, form, footer] = root.children;
-    const [save, close] = footer.children;
+    const [close, save] = footer.children;
     assert.equal(save.textContent, 'Speichern');
     assert.equal(close.textContent, 'Abbrechen');
     const orientation = form.children[0].children[0];
     const shared = form.children[1];
-    const rows = () => form.children[2].children;
+    const rows = () => form.children[2].children.slice(1);
     const add = form.children[3];
 
     // Zeile eins: Griff, Dateiname, Titel, Beschriftung, Breite, Höhe, Löschen
@@ -157,8 +157,8 @@ test('navigation panel manages pages, order, shared sizes and files against real
       browser: { confirm: () => true }, onClose: (outcome) => { closed2 = outcome; } });
     const form2 = root2.children[3];
     form2.children[1].children[1].children[0].checked = false;
-    form2.children[2].children[2].children[6].fire('click');
-    await root2.children[4].children[0].fire('click');
+    form2.children[2].children[3].children[6].fire('click');
+    await root2.children[4].children[1].fire('click');
     assert.deepEqual(closed2, { requiresReload: false });
     const draft2 = controller.snapshot().draft;
     assert.equal(draft2.navigation.itemWidth, undefined);
@@ -176,10 +176,10 @@ test('navigation panel manages pages, order, shared sizes and files against real
     changedDraft.pages[0].title = 'Konflikt';
     await controller.saveDraft(changedDraft, mid.token);
     staleRoot.children[3].children[0].children[0].value = 'horizontal';
-    await staleRoot.children[4].children[0].fire('click');
+    await staleRoot.children[4].children[1].fire('click');
     assert.match(staleRoot.children[2].textContent, /nicht bestätigt/);
     assert.equal(staleRoot.children[3].inert, true);
-    staleRoot.children[4].children[1].fire('click');
+    staleRoot.children[4].children[0].fire('click');
     assert.deepEqual(staleClosed, { requiresReload: true });
 
     // Unterbrechung während eines laufenden Speicherns schließt still
@@ -188,12 +188,12 @@ test('navigation panel manages pages, order, shared sizes and files against real
     let late = false;
     const pending = new Schema5NavigationPanel({ root: root3, controller, token: fresh.token,
       browser: { confirm: () => true }, onClose: () => { late = true; } });
-    const title3 = root3.children[3].children[2].children[0].children[2].children[0];
+    const title3 = root3.children[3].children[2].children[1].children[2].children[0];
     title3.value = 'Später';
     title3.fire('input');
     gate = {};
-    const saving = root3.children[4].children[0].fire('click');
-    assert.equal(root3.children[4].children[1].disabled, true);
+    const saving = root3.children[4].children[1].fire('click');
+    assert.equal(root3.children[4].children[0].disabled, true);
     pending.suspend();
     assert.equal(root3.children.length, 0);
     gate.resolve();

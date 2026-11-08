@@ -65,7 +65,7 @@ export class Schema5NavigationPanel {
     this.#form.append(orientationLabel);
 
     const shared = element('fieldset');
-    shared.className = 'cms-nav-shared';
+    shared.className = 'cms-navedit-shared';
     shared.append(element('legend', 'Größe für alle Navigationspunkte'));
     const sharedToggleLabel = element('label', ' Für alle verwenden');
     this.#sharedEnabled = element('input');
@@ -105,11 +105,11 @@ export class Schema5NavigationPanel {
       };
     });
     this.#rowsBox = element('div');
-    this.#rowsBox.className = 'cms-nav-rows';
+    this.#rowsBox.className = 'cms-navedit-rows';
     this.#form.append(this.#rowsBox);
 
     const add = element('div');
-    add.className = 'cms-nav-add';
+    add.className = 'cms-navedit-add';
     const addTitleLabel = element('label', 'Seitentitel ');
     const addTitle = element('input');
     addTitle.maxLength = 128;
@@ -169,7 +169,7 @@ export class Schema5NavigationPanel {
     });
     const footer = element('div');
     footer.className = 'cms-panel-footer';
-    footer.append(this.#save, this.#close);
+    footer.append(this.#close, this.#save);
 
     this.#renderRows();
     this.#baseline = this.#values();
@@ -200,23 +200,38 @@ export class Schema5NavigationPanel {
 
   #renderRows() {
     this.#rowsBox.replaceChildren();
+    const head = element('div');
+    head.className = 'cms-navedit-row cms-navedit-head';
+    const gripSpace = element('span');
+    gripSpace.className = 'cms-navedit-gripspace';
+    head.append(gripSpace);
+    for (const [key, name] of [['file', 'Dateiname'], ['title', 'Seitentitel'], ['label', 'Beschriftung'],
+      ['width', 'Breite'], ['height', 'Höhe']]) {
+      const span = element('span', name);
+      span.className = `cms-navedit-${key}`;
+      head.append(span);
+    }
+    const removeSpace = element('span');
+    removeSpace.className = 'cms-navedit-removespace';
+    head.append(removeSpace);
+    this.#rowsBox.append(head);
     this.#rows.forEach((row, index) => {
       const box = element('div');
-      box.className = 'cms-nav-row';
+      box.className = 'cms-navedit-row';
       const grip = element('button', '≡');
       grip.type = 'button';
-      grip.className = 'cms-nav-grip';
+      grip.className = 'cms-navedit-grip';
       grip.title = `„${row.title}“ verschieben (Pfeiltasten oder ziehen)`;
       grip.setAttribute('aria-label', grip.title);
       grip.addEventListener('keydown', (event) => {
         if (event.key === 'ArrowUp') {
           event.preventDefault();
           this.#moveRow(index, index - 1);
-          this.#rowsBox.children[Math.max(0, index - 1)]?.querySelector?.('.cms-nav-grip')?.focus?.();
+          this.#rowsBox.children[Math.max(1, index)]?.querySelector?.('.cms-navedit-grip')?.focus?.();
         } else if (event.key === 'ArrowDown') {
           event.preventDefault();
           this.#moveRow(index, index + 1);
-          this.#rowsBox.children[Math.min(this.#rows.length - 1, index + 1)]?.querySelector?.('.cms-nav-grip')?.focus?.();
+          this.#rowsBox.children[Math.min(this.#rows.length, index + 2)]?.querySelector?.('.cms-navedit-grip')?.focus?.();
         }
       });
       grip.addEventListener('pointerdown', (event) => this.#drag(event, box));
@@ -227,9 +242,10 @@ export class Schema5NavigationPanel {
         ['width', 'Breite', 'number', null],
         ['height', 'Höhe', 'number', null],
       ].map(([key, name, type, max]) => {
-        const label = element('label', `${name} `);
-        label.className = `cms-nav-${key}`;
+        const label = element('label');
+        label.className = `cms-navedit-${key}`;
         const input = element('input');
+        input.setAttribute('aria-label', `${name} für „${row.title || row.file}“`);
         if (type === 'number') {
           input.type = 'number';
           input.min = key === 'width' ? '40' : '24';
@@ -241,6 +257,17 @@ export class Schema5NavigationPanel {
         input.value = row[key];
         input.addEventListener('input', () => {
           row[key] = input.value;
+          if (key === 'file') {
+            // Doppelte oder ungültige Dateinamen sofort melden, nicht erst beim Speichern.
+            const duplicate = this.#rows.some((other) => other !== row && other.file === input.value);
+            const invalid = !FILE_NAME.test(input.value);
+            if (duplicate || invalid) {
+              input.setAttribute('aria-invalid', 'true');
+              this.#message(duplicate ? `Dateiname „${input.value}“ ist bereits vergeben.` : FILE_NAME_HINT, true);
+              return;
+            }
+            input.removeAttribute('aria-invalid');
+          }
           this.#message(this.#values() !== this.#baseline ? 'Noch nicht gespeicherte Änderungen.' : '');
         });
         label.append(input);
@@ -248,7 +275,7 @@ export class Schema5NavigationPanel {
       });
       const remove = element('button', '✕');
       remove.type = 'button';
-      remove.className = 'cms-nav-remove';
+      remove.className = 'cms-navedit-remove';
       remove.title = 'Leere Seite löschen';
       remove.setAttribute('aria-label', `Leere Seite „${row.title}“ löschen`);
       remove.disabled = this.#rows.length === 1 || row.page.widgets.length > 0;
@@ -262,12 +289,14 @@ export class Schema5NavigationPanel {
     });
   }
 
-  // Zeilen per Zeiger ziehen: beim Überqueren der Mitte anderer Zeilen einsortieren.
+  // Zeilen per Zeiger ziehen: beim Überqueren der Mitte einsortieren; Geschwister gleiten (FLIP).
   #drag(event, box) {
     if (typeof box.getBoundingClientRect !== 'function' || event.pointerId === undefined) return;
     event.preventDefault();
+    box.classList.add('is-dragging');
+    const dataRows = () => Array.from(this.#rowsBox.children).filter((child) => child !== this.#rowsBox.children[0]);
     const onMove = (move) => {
-      const rows = Array.from(this.#rowsBox.children);
+      const rows = dataRows();
       const from = rows.indexOf(box);
       if (from < 0) return;
       for (const [index, other] of rows.entries()) {
@@ -275,10 +304,22 @@ export class Schema5NavigationPanel {
         const rect = other.getBoundingClientRect();
         const middle = rect.top + rect.height / 2;
         if ((index < from && move.clientY < middle) || (index > from && move.clientY > middle)) {
+          const before = new Map(rows.map((row) => [row, row.getBoundingClientRect().top]));
           const [row] = this.#rows.splice(from, 1);
           this.#rows.splice(index, 0, row);
           if (index < from) this.#rowsBox.insertBefore(box, other);
           else other.after(box);
+          for (const sibling of rows) {
+            if (sibling === box) continue;
+            const delta = before.get(sibling) - sibling.getBoundingClientRect().top;
+            if (!delta) continue;
+            sibling.style.transition = 'none';
+            sibling.style.transform = `translateY(${delta}px)`;
+            requestAnimationFrame(() => {
+              sibling.style.transition = 'transform .15s ease';
+              sibling.style.transform = '';
+            });
+          }
           this.#message('Noch nicht gespeicherte Änderungen.');
           break;
         }
@@ -287,6 +328,7 @@ export class Schema5NavigationPanel {
     const onUp = () => {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
+      box.classList.remove('is-dragging');
       this.#renderRows();
     };
     document.addEventListener('pointermove', onMove);
@@ -362,6 +404,7 @@ export class Schema5NavigationPanel {
       pending = this.#controller.saveDraft(this.#candidate(), this.#token);
     } catch (error) {
       this.#message(error.message || String(error), true);
+      this.#status.scrollIntoView?.({ block: 'nearest' });
       return;
     }
     this.#busy = true;

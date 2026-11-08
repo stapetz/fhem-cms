@@ -372,56 +372,83 @@ body {
   background-size: calc(100% / 12) var(--gs-cell-height, 3rem);
 }
 
-/* Navigation bearbeiten: kompakte Zeile je Seite mit Griff, Dateiname und Größen. */
-.cms-nav-rows {
+/* Navigation bearbeiten: kompakte Zeile je Seite; Spaltentitel stehen einmal in der Kopfzeile. */
+.cms-navedit-rows {
   display: grid;
   gap: .4rem;
   width: 100%;
 }
 
-.cms-nav-row {
+.cms-navedit-row {
   display: flex;
-  flex-wrap: wrap;
   gap: .5rem;
-  align-items: end;
+  align-items: center;
   width: 100%;
-  padding: .5rem .6rem;
+  padding: .45rem .6rem;
   border: 1px solid var(--cms-border-subtle);
   border-radius: .5rem;
   background: var(--cms-surface-raised);
 }
 
-.cms-nav-row label {
+.cms-navedit-row.is-dragging {
+  opacity: .85;
+  box-shadow: 0 4px 14px rgb(0 0 0 / .45);
+  outline: 1px solid var(--cms-accent);
+  z-index: 2;
+}
+
+.cms-navedit-head {
+  padding-block: 0;
+  border-color: transparent;
+  background: none;
+  color: var(--cms-muted-strong);
+  font-size: .8rem;
+}
+
+.cms-navedit-row label,
+.cms-navedit-head span {
   flex: 1 1 8rem;
+  min-width: 0;
   margin: 0;
 }
 
-.cms-nav-row .cms-nav-width,
-.cms-nav-row .cms-nav-height {
+.cms-navedit-row .cms-navedit-width,
+.cms-navedit-row .cms-navedit-height,
+.cms-navedit-head .cms-navedit-width,
+.cms-navedit-head .cms-navedit-height {
   flex: 0 1 5.5rem;
 }
 
-.cms-nav-grip {
-  flex: 0 0 auto;
+.cms-navedit-gripspace,
+.cms-navedit-removespace {
+  flex: 0 0 2.1rem;
+}
+
+.cms-navedit-head .cms-navedit-gripspace,
+.cms-navedit-head .cms-navedit-removespace {
+  flex: 0 0 2.1rem;
+}
+
+.cms-navedit-grip {
+  flex: 0 0 2.1rem;
   cursor: grab;
   touch-action: none;
   font-size: 1.1rem;
   line-height: 1;
-  padding: .45rem .55rem;
-  align-self: center;
+  padding: .45rem 0;
 }
 
-.cms-nav-grip:active {
+.cms-navedit-grip:active {
   cursor: grabbing;
 }
 
-.cms-nav-remove {
-  flex: 0 0 auto;
+.cms-navedit-remove {
+  flex: 0 0 2.1rem;
   color: var(--cms-danger);
-  align-self: center;
+  padding-inline: 0;
 }
 
-.cms-nav-add {
+.cms-navedit-add {
   display: flex;
   flex-wrap: wrap;
   gap: .5rem;
@@ -432,7 +459,12 @@ body {
   border-top: 1px solid var(--cms-border-subtle);
 }
 
-.cms-nav-shared {
+.cms-navedit-add button {
+  margin: 0;
+  padding: .5rem .8rem;
+}
+
+.cms-navedit-shared {
   width: 100%;
 }
 
