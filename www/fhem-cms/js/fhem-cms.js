@@ -2034,14 +2034,6 @@ async function startSchema5Device(client, shell, card, isSuspended) {
   if (isSuspended()) return;
   const liveClient = new FhemClient(client.cmsDevice, client.endpoint);
   if (!VIEW_MODE) {
-    const migrationLink = document.createElement('a');
-    const migrationUrl = new URL('../examples/migration-preview.html', window.location.href);
-    migrationUrl.searchParams.set('device', client.cmsDevice);
-    migrationLink.href = migrationUrl.href;
-    migrationLink.target = '_blank';
-    migrationLink.rel = 'noopener';
-    migrationLink.textContent = 'Sicherungen / Wiederherstellung';
-    shell.append(migrationLink);
     const root = document.createElement('section');
     shell.append(root);
     const editor = editorModule.createSchema5Editor({

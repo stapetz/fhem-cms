@@ -70,7 +70,7 @@ nur Konfigurationsdateien und ist keine Zusicherung gegen Stromausfall oder
 gleichzeitige externe Dateischreiber.
 
 Für eine Wiederherstellung im Schema-5-Editor **Sicherungen / Wiederherstellung**
-öffnen, `Backups laden`, ein Backup auswählen und `Backup prüfen` wählen.
+im Menü **Datei** öffnen, `Backups laden`, ein Backup auswählen und `Backup prüfen` wählen.
 Live und Backup vergleichen, die geprüfte externe Sicherung bestätigen und
 `Backup wiederherstellen` bestätigen. Ein vorhandener Entwurf muss nur für diese
 Wiederherstellung vorher veröffentlicht oder verworfen werden.
@@ -86,6 +86,29 @@ Für einen Rollback auf eine ältere CMS-Version ausschließlich eine zusammenge
 vollständige Code-, Asset- und Datensicherung auf einer isolierten Instanz
 wiederherstellen: Ältere Module können Schema 5 nicht sicher interpretieren.
 Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfiguration.
+
+## Schema-5-Editor bedienen
+
+- **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
+- **Bearbeiten:** Seiten, Widgets und Navigation einstellen.
+- **Ansicht:** Darstellung und die numerische Rasterbearbeitung.
+
+Widgets am Punktgriff oben rechts ziehen. Am markierten Griff unten rechts
+Breite und Höhe ändern. Das Stiftsymbol öffnet direkt die Widgeteinstellungen;
+bei der Navigation deren Einstellungen. Auch die Navigation ist verschiebbar
+und skalierbar. Änderungen werden automatisch **nur als Entwurf** gespeichert.
+Erst **Datei → Entwurf veröffentlichen** ändert die Homepage.
+Andere Widgets derselben Seite können beim Ziehen ausweichen; ihre neuen
+Positionen werden gemeinsam gespeichert. Die Navigation gilt für alle Seiten:
+Würde ihre neue Position dort kollidieren, wird die Änderung sichtbar abgelehnt
+und das vorherige Raster wieder angezeigt.
+
+Während der Speicherung sind weitere Änderungen gesperrt. Bei einer verlorenen
+oder unklaren Antwort zuerst **Zustand erneut laden**, nicht blind wiederholen.
+Für genaue Koordinaten und Tastaturbedienung **Ansicht → Raster bearbeiten**
+verwenden. Einstellungen öffnen als kompakte Dialoge; **Schließen** oder Escape
+schließt sie, bei ungespeicherten Änderungen mit Rückfrage. In der Seitenverwaltung
+sind die Formulare zum Verschieben auf andere Seiten zunächst eingeklappt.
 
 ## Sicherheit: FHEMWEB absichern
 

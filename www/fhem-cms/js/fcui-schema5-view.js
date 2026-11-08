@@ -3,7 +3,7 @@ import { Schema5LivePage } from './fcui-schema5-live.js';
 import { mountSchema5Widgets } from './fcui-schema5-widgets.js';
 
 export class Schema5View {
-  constructor({ GridStack, root, status, config, client, services, browser = window }) {
+  constructor({ GridStack, root, status, config, client, services, browser = window, editing }) {
     if (!GridStack || !root || !status || !config || !client || !services || !browser
       || typeof browser.addEventListener !== 'function' || typeof browser.removeEventListener !== 'function') {
       throw new Error('Ungültige Dienste für die Schema-5-Ansicht');
@@ -15,6 +15,8 @@ export class Schema5View {
     this.client = client;
     this.services = services;
     this.browser = browser;
+    this.editing = editing;
+    this.locked = false;
     this.current = null;
     this.live = null;
     this.view = null;
@@ -22,7 +24,7 @@ export class Schema5View {
     this.active = false;
     this.suspended = false;
     this.onHashChange = () => {
-      if (this.suspended) return;
+      if (this.suspended || this.locked) return;
       this.showPage(this.pageFromHash()).catch((error) => this.showError(error));
     };
     this.onPageHide = () => {
@@ -102,7 +104,10 @@ export class Schema5View {
     try {
       const page = this.config.pages.find((entry) => entry.id === pageId);
       this.view = mountSchema5Widgets(this.GridStack, this.root, this.config, pageId,
-        this.navigation(pageId), this.services, new Map());
+        this.navigation(pageId), this.services, new Map(), this.editing && {
+          onChange: (items) => this.editing.onChange(pageId, items),
+          onEdit: (id) => this.editing.onEdit(pageId, id),
+        });
       const view = this.view;
       this.live = new Schema5LivePage(this.client, page.widgets,
         (snapshots, stale) => view.update(snapshots, stale),
@@ -135,6 +140,11 @@ export class Schema5View {
     this.browser.removeEventListener('pagehide', this.onPageHide);
     this.browser.removeEventListener('pageshow', this.onPageShow);
     this.clearPage();
+  }
+
+  lock() {
+    this.locked = true;
+    this.view?.lock();
   }
 
   clearPage() {

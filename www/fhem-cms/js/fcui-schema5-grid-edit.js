@@ -40,6 +40,7 @@ export class Schema5GridEdit {
     this.#config = config;
     this.#grid = createSchema5Grid(GridStack, root, config, pageId, (id) => {
       const label = document.createElement('span');
+      label.className = 'cms-widget-drag';
       label.textContent = labels.get(id);
       return label;
     });

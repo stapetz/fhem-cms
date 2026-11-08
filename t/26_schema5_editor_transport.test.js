@@ -23,8 +23,23 @@ class Element {
   setAttribute(name, value) { this.attributes[name] = value; }
   getAttribute(name) { return Object.hasOwn(this.attributes, name) ? this.attributes[name] : null; }
   removeAttribute(name) { delete this.attributes[name]; }
-  addEventListener(name, callback) { this.listeners[name] = callback; }
-  fire(name) { return this.listeners[name]({ preventDefault() {} }); }
+  addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); }
+  fire(name) {
+    let result;
+    for (const callback of this.listeners[name] || []) result = callback({ preventDefault() {} });
+    return result;
+  }
+  showModal() { this.open = true; }
+}
+
+function toolbarControls(toolbar) {
+  const all = (node) => [node, ...node.children.flatMap(all)];
+  const nodes = all(toolbar);
+  return [
+    'Raster bearbeiten', null, 'Entwurf veröffentlichen', 'Entwurf verwerfen',
+    'Zustand erneut laden', 'Seiten verwalten', 'Widgets bearbeiten',
+    'Navigation bearbeiten', 'Darstellung einstellen',
+  ].map((label) => nodes.find((node) => label ? node.textContent === label : node.className === 'cms-editor-mode'));
 }
 
 const script = `
@@ -115,12 +130,19 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
       },
       removeEventListener(name, handler) { listeners.get(name)?.delete(handler); },
     };
+    const grids = [];
     const GridStack = { init() {
-      return {
+      const grid = {
         items: [], getColumn() { return 12; },
         makeWidget(wrapper, item) { wrapper.gridstackNode = { id: item.id }; this.items.push({ ...item }); },
         save() { return structuredClone(this.items); }, destroy() {},
+        setStatic(value) { this.static = value; },
+        enableMove(value) { this.canMove = value; },
+        enableResize(value) { this.canResize = value; },
+        on(events, callback) { this.onStop = callback; },
       };
+      grids.push(grid);
+      return grid;
     } };
     const { createSchema5Editor } = await import('../www/fhem-cms/js/fcui-schema5-editor.js');
     const root = new Element('section');
@@ -140,7 +162,8 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
       liveClient: new FhemClient('CMS', 'https://example.test/fhem/'), browser,
     });
     await editor.start();
-    const [toolbar, status, content] = root.children;
+    const [, status, content] = root.children;
+    const toolbar = { children: toolbarControls(root.children[0]) };
     assert.equal(toolbar.children[1].textContent, 'Live');
     toolbar.children[8].fire('click');
     const form = content.children[0].children[2];
@@ -180,12 +203,62 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
     assert.equal(toolbar.children[1].textContent, 'Entwurf');
     assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'dark');
     assert.deepEqual(JSON.parse(await readFile(livePath, 'utf8')), current);
+
     await toolbar.children[3].fire('click');
     assert.equal(toolbar.children[1].textContent, 'Live');
     assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'light');
     assert.deepEqual(JSON.parse(await readFile(livePath, 'utf8')), current);
     assert.equal((await readdir(dataDir)).includes('draft.json'), false);
     assert.match(invoke('public', 'discard', 'a'.repeat(64)).error, /veraltet/);
+
+    const dragGrid = grids.at(-1);
+    assert.equal(dragGrid.static, false);
+    dragGrid.items.find((item) => item.id === 'text').y = 4;
+    dragGrid.onStop();
+    assert.equal(content.children[0].inert, true, 'saving locks pointer edits synchronously');
+    assert.equal(toolbar.children[8].disabled, true);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const moved = JSON.parse(await readFile(join(dataDir, 'draft.json'), 'utf8'));
+    assert.equal(moved.pages[0].widgets[0].grid.row, 5);
+    assert.deepEqual(JSON.parse(await readFile(livePath, 'utf8')), current);
+    const resizeGrid = grids.at(-1);
+    resizeGrid.items.find((item) => item.id === 'text').h = 3;
+    resizeGrid.onStop();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const resized = JSON.parse(await readFile(join(dataDir, 'draft.json'), 'utf8'));
+    assert.equal(resized.pages[0].widgets[0].grid.h, 3);
+    assert.equal(resized.pages[0].widgets[0].html, '{{Temp:state}}');
+    assert.equal(resized.pages[0].widgets[1].html, '<span device="Temp" reading="state"></span>');
+    assert.deepEqual(JSON.parse(await readFile(livePath, 'utf8')), current);
+
+    const noChange = commands.filter((command) => command.startsWith('set ')).length;
+    grids.at(-1).onStop();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(commands.filter((command) => command.startsWith('set ')).length, noChange,
+      'a grip click without geometry change does not write');
+    const draftBytes = await readFile(join(dataDir, 'draft.json'), 'utf8');
+    grids.at(-1).items.find((item) => item.id === '__nav').y = 4;
+    grids.at(-1).onStop();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.match(status.textContent, /Position nicht übernommen.*überschneidung/);
+    assert.equal(toolbar.children[8].disabled, false, 'invalid geometry restores a usable editor');
+    assert.equal(await readFile(join(dataDir, 'draft.json'), 'utf8'), draftBytes);
+
+    failAfterWrite = true;
+    grids.at(-1).items.find((item) => item.id === 'text').y = 7;
+    grids.at(-1).onStop();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.match(status.textContent, /Antwort verloren/);
+    assert.equal(toolbar.children[8].disabled, true);
+    assert.deepEqual(JSON.parse(await readFile(livePath, 'utf8')), current);
+    failAfterWrite = false;
+    await toolbar.children[4].fire('click');
+    const beforeHide = commands.length;
+    grids.at(-1).items.find((item) => item.id === 'text').y = 10;
+    grids.at(-1).onStop();
+    for (const handler of [...listeners.get('pagehide')]) handler({});
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(commands.length, beforeHide, 'pagehide before deferred pointer completion prevents a write');
   } finally {
     if (editor) editor.stop();
     Object.assign(globalThis, previous);

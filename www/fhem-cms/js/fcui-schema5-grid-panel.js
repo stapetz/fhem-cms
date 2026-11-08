@@ -47,7 +47,7 @@ export class Schema5GridPanel {
     status.setAttribute('role', 'status');
     this.#status = status;
     const grid = make('div');
-    grid.className = 'grid-stack';
+    grid.className = 'grid-stack cms-position-grid';
     const form = make('form');
     this.#form = form;
     const selectLabel = make('label', 'Element ');
@@ -87,6 +87,7 @@ export class Schema5GridPanel {
     const cancel = make('button', 'Abbrechen');
     cancel.type = 'button';
     this.#cancel = cancel;
+    cancel.className = 'cms-button cms-panel-close';
     root.append(heading, hint, status, grid, form, save, cancel);
 
     try {

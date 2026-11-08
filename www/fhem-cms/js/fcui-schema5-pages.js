@@ -37,6 +37,7 @@ export class Schema5PagesPanel {
     this.#status.setAttribute('role', 'status');
     this.#controls = element('div');
     this.#close = element('button', 'Schließen');
+    this.#close.className = 'cms-button cms-panel-close';
     this.#close.type = 'button';
     this.#close.addEventListener('click', () => {
       if (this.#inputs.some((entry) => entry.input.value !== entry.original)
@@ -70,8 +71,9 @@ export class Schema5PagesPanel {
     const list = element('ol');
     for (const [index, page] of pages.entries()) {
       const row = element('li');
+      row.className = 'cms-page-card';
       const form = element('form');
-      const label = element('label', `Titel für ${page.id} `);
+      const label = element('label', 'Seitentitel ');
       const title = element('input');
       title.value = page.title;
       title.required = true;
@@ -99,15 +101,20 @@ export class Schema5PagesPanel {
             return this.#change((token) => this.#controller.deleteEmptyPage(page.id, token));
           }
         }, pages.length === 1 || page.widgets.length > 0));
-      if (pages.length > 1) {
-        for (const widget of page.widgets) row.append(this.#moveForm(page, widget, pages));
+      if (pages.length > 1 && page.widgets.length) {
+        const moves = element('details');
+        moves.className = 'cms-page-moves';
+        moves.append(element('summary', `Widgets auf andere Seiten verschieben (${page.widgets.length})`));
+        for (const widget of page.widgets) moves.append(this.#moveForm(page, widget, pages));
+        row.append(moves);
       }
       list.append(row);
     }
     const add = element('form');
-    const idLabel = element('label', 'Neue Seiten-ID ');
+    add.className = 'cms-page-add';
+    const idLabel = element('label', 'Seitenkennung (optional) ');
     const id = element('input');
-    id.required = true;
+    id.placeholder = 'automatisch';
     id.maxLength = 64;
     id.pattern = '[A-Za-z0-9_\\-]{1,64}';
     idLabel.append(id);
@@ -122,7 +129,10 @@ export class Schema5PagesPanel {
     add.append(idLabel, titleLabel, submit);
     add.addEventListener('submit', (event) => {
       event.preventDefault();
-      return this.#change((token) => this.#controller.addPage(id.value, title.value, token), add);
+      const existing = new Set(pages.map((page) => page.id));
+      let number = 1;
+      while (existing.has(`page${number}`)) number++;
+      return this.#change((token) => this.#controller.addPage(id.value || `page${number}`, title.value, token), add);
     });
     this.#controls.append(list, add);
   }

@@ -40,7 +40,7 @@ export class Schema5WidgetPanel {
   #requiresReload = false;
   #createElement;
 
-  constructor({ root, controller, services, pageId, token, onClose, createElement = createWidgetElement }) {
+  constructor({ root, controller, services, pageId, token, onClose, widgetId, createElement = createWidgetElement }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
       || !services || typeof onClose !== 'function' || typeof createElement !== 'function') {
       throw new Error('Dienste und leerer Container für Widget-Verwaltung erforderlich');
@@ -60,7 +60,9 @@ export class Schema5WidgetPanel {
     this.#status.setAttribute('role', 'status');
     this.#list = element('div');
     this.#host = element('div');
+    this.#host.className = 'cms-widget-dialog-host';
     this.#close = element('button', 'Schließen');
+    this.#close.className = 'cms-button cms-panel-close';
     this.#close.type = 'button';
     this.#close.addEventListener('click', () => {
       if (this.#busy || this.#session || this.#closed) return;
@@ -71,6 +73,11 @@ export class Schema5WidgetPanel {
     root.append(element('h2', `Widgets auf ${page.title} bearbeiten`),
       element('p', 'Änderungen werden als Entwurf gespeichert.'), this.#status, this.#list, this.#host, this.#close);
     this.#render();
+    if (widgetId) {
+      const widget = page.widgets.find((entry) => entry.id === widgetId);
+      if (!widget) throw new Error('Unbekanntes Widget');
+      this.#open(widget);
+    }
   }
 
   #render() {
@@ -79,6 +86,7 @@ export class Schema5WidgetPanel {
     if (!page.widgets.length) this.#list.append(element('p', 'Diese Seite enthält noch keine Widgets.'));
     for (const widget of page.widgets) {
       const button = element('button', `${widget.title || widget.id} (${widget.type}) bearbeiten`);
+      button.className = 'cms-button cms-widget-choice';
       button.type = 'button';
       button.addEventListener('click', () => this.#open(widget));
       this.#list.append(button);
@@ -162,6 +170,8 @@ export class Schema5WidgetPanel {
         throw new Error('Widget unterstützt keinen Konfigurationsdialog');
       }
       tile.inert = true;
+      tile.hidden = true;
+      tile.style.display = 'none';
       dialog.addEventListener('cancel', (event) => {
         if (this.#busy) {
           event.preventDefault();
@@ -175,11 +185,13 @@ export class Schema5WidgetPanel {
       await item.openConfig({ isNew: action === 'create' });
       if (this.#closed || this.#session !== session) return;
       if (!dialog.open) throw new Error('Widgetdialog wurde nicht geöffnet');
+      this.#root.setAttribute('data-widget-open', '');
       this.#status.textContent = '';
     } catch (error) {
       if (this.#closed) return;
       if (session) session.close();
       this.#session = null;
+      this.#root.removeAttribute('data-widget-open');
       this.#host.replaceChildren();
       this.#list.inert = true;
       this.#requiresReload = true;
@@ -192,6 +204,7 @@ export class Schema5WidgetPanel {
   #finish(session, outcome) {
     if (this.#closed || this.#session !== session) return;
     this.#session = null;
+    this.#root.removeAttribute('data-widget-open');
     this.#host.replaceChildren();
     this.#close.disabled = false;
     if (outcome.error) {
@@ -217,6 +230,7 @@ export class Schema5WidgetPanel {
     this.#closed = true;
     if (this.#session) this.#session.close();
     this.#session = null;
+    this.#root.removeAttribute('data-widget-open');
     this.#root.replaceChildren();
   }
 }

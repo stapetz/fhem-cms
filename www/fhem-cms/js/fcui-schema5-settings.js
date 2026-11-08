@@ -51,7 +51,7 @@ export class Schema5SettingsPanel {
     this.#frames.type = 'checkbox';
     this.#frames.checked = config.settings.showFrames !== false;
     framesLabel.append(this.#frames);
-    const save = element('button', 'Einstellungen als Entwurf speichern');
+    const save = element('button', 'Als Entwurf speichern');
     save.type = 'submit';
     this.#form.append(themeLabel, framesLabel, save);
     this.#form.addEventListener('submit', (event) => {
@@ -59,6 +59,7 @@ export class Schema5SettingsPanel {
       return this.#save();
     });
     this.#close = element('button', 'Schließen');
+    this.#close.className = 'cms-button cms-panel-close';
     this.#close.type = 'button';
     this.#close.addEventListener('click', () => {
       if (this.#busy || this.#closed) return;

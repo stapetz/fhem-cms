@@ -1,7 +1,7 @@
 import { createSchema5Grid, schema5GridItems } from './fcui-schema5-layout.js';
 import { createWidgetElement, dataFor, isLiveWidget } from './widget-factory.js';
 
-export function mountSchema5Widgets(GridStack, root, config, pageId, navigation, services, snapshots) {
+export function mountSchema5Widgets(GridStack, root, config, pageId, navigation, services, snapshots, editing) {
   if (!navigation || !services || typeof services !== 'object' || !(snapshots instanceof Map)) {
     throw new Error('Navigation, Widget-Dienste und Snapshot-Map erforderlich');
   }
@@ -15,9 +15,48 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     const element = createWidgetElement(widget, services, snapshots, true);
     elements.set(id, element);
     return element;
-  });
+  }, Boolean(editing));
   let destroyed = false;
+  if (editing) {
+    root.classList.toggle('cms-grid-editable', true);
+    for (const wrapper of Array.from(root.children)) {
+      const id = wrapper.gridstackNode?.id;
+      const widget = widgets.get(id);
+      const controls = document.createElement('div');
+      controls.className = 'cms-widget-tools';
+      const drag = document.createElement('button');
+      drag.type = 'button';
+      drag.className = 'cms-widget-drag';
+      drag.textContent = '⠿';
+      drag.title = `${widget?.title || widget?.id || 'Navigation'} verschieben`;
+      drag.setAttribute('aria-label', drag.title);
+      controls.append(drag);
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'cms-widget-config';
+      edit.textContent = '✎';
+      edit.title = widget ? 'Widget einstellen' : 'Navigation einstellen';
+      edit.setAttribute('aria-label', edit.title);
+      edit.addEventListener('click', () => editing.onEdit(id));
+      controls.append(edit);
+      wrapper.append(controls);
+    }
+    grid.setStatic(false);
+    grid.on('dragstop resizestop', () => {
+      if (!destroyed) editing.onChange(grid.save(false));
+    });
+  }
   return {
+    lock() {
+      if (destroyed) return;
+      root.inert = true;
+      // Gridstack must finish its pointer-stop cleanup before DD is disabled.
+      queueMicrotask(() => {
+        if (destroyed) return;
+        grid.enableMove(false);
+        grid.enableResize(false);
+      });
+    },
     update(nextSnapshots, staleSince = null) {
       if (destroyed) throw new Error('Raster wurde bereits entfernt');
       if (!(nextSnapshots instanceof Map)) throw new Error('Snapshot-Map erforderlich');
@@ -33,6 +72,10 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       destroyed = true;
       grid.destroy(false);
       root.replaceChildren();
+      if (editing) {
+        root.classList.toggle('cms-grid-editable', false);
+        root.inert = false;
+      }
       elements.clear();
     },
   };

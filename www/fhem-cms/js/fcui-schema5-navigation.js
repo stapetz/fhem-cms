@@ -52,7 +52,7 @@ export class Schema5NavigationPanel {
     for (const page of config.pages) {
       const original = (this.#navigation.items || []).find((item) => item.page === page.id) || {};
       const group = element('fieldset');
-      group.append(element('legend', `${page.title} (${page.id})`));
+      group.append(element('legend', page.title));
       const fields = {};
       for (const [key, title, min, max] of [
         ['label', 'Beschriftung', null, 64], ['width', 'Breite in Pixeln', 40, 600], ['height', 'Höhe in Pixeln', 24, 200],
@@ -82,6 +82,7 @@ export class Schema5NavigationPanel {
       return this.#save();
     });
     this.#close = element('button', 'Schließen');
+    this.#close.className = 'cms-button cms-panel-close';
     this.#close.type = 'button';
     this.#close.addEventListener('click', () => {
       if (this.#busy || this.#closed) return;

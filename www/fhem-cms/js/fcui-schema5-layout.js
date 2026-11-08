@@ -94,12 +94,13 @@ export function applySchema5GridItems(config, pageId, items) {
   return result;
 }
 
-export function createSchema5Grid(GridStack, element, config, pageId, renderContent) {
+export function createSchema5Grid(GridStack, element, config, pageId, renderContent, editable = false) {
   const items = schema5GridItems(config, pageId);
   if (!element || element.children.length || element.gridstack || typeof renderContent !== 'function') {
     throw new Error('Leeres Rasterelement und Inhaltsfunktion erforderlich');
   }
-  const grid = GridStack.init({ column: 12, maxRow: 1000, mode: 'float', staticGrid: true }, element);
+  const grid = GridStack.init({ column: 12, maxRow: 1000, minRow: editable ? 8 : 0, mode: 'float', staticGrid: true,
+    draggable: { handle: '.cms-widget-drag' }, resizable: { handles: 'se' } }, element);
   if (!grid) throw new Error('12-Spalten-Raster konnte nicht angelegt werden');
   try {
     if (grid.getColumn() !== 12) throw new Error('12-Spalten-Raster konnte nicht angelegt werden');

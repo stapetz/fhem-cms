@@ -12,6 +12,7 @@ class Element {
     this.children = [];
     this.listeners = {};
     this.attributes = {};
+    this.style = {};
   }
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children; }

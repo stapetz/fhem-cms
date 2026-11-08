@@ -83,6 +83,20 @@ Neue Datenverzeichnisse erhalten eine validierte Schema-5-Startkonfiguration.
 Eine fehlende Live-Datei in einem bereits vorhandenen Datenverzeichnis wird
 nicht automatisch ersetzt.
 
+Der Schema-5-Editor verwendet wieder die gemeinsamen `cms-toolbar`-/`cms-menu`-
+Klassen und modale Einstellungsdialoge. Nur seine Widgetansicht aktiviert
+Gridstack-Drag/Resize; die Homepage bleibt statisch. Punktgriff und Eckgriff
+bearbeiten die echten Widgets, das Stiftsymbol öffnet deren Konfiguration.
+Nach `dragstop`/`resizestop` wird das Raster synchron `inert` gesetzt, weitere
+Editoraktionen werden gesperrt und die DD-Deaktivierung/Speicherung erst nach
+Gridstacks Pointer-Cleanup ausgeführt. Das vollständige Raster wird über
+`saveLayout` zustandsgebunden als Entwurf gespeichert und zurückgelesen.
+Vor dem Schreiben werden alle Seiten einschließlich globaler Navigation geprüft.
+Bekannte Layoutfehler setzen das Raster mit sichtbarer Meldung zurück;
+unklare Schreibantworten erfordern explizites Neuladen. `pagehide` verhindert
+noch nicht gestartete Pointer-Schreibaktionen und unterdrückt späte Antworten.
+Die numerische Rastermaske bleibt als präzise Tastaturbedienung erhalten.
+
 Am 08.11.2026 wurde für den Rasterübergang festgelegt: **Bestehende Layouts
 bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen
 12 Spalten.** Nach späterer ausdrücklicher Entscheidung des Entwicklers werden

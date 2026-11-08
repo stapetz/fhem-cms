@@ -109,11 +109,11 @@ test('page management protects unsaved forms, live bytes and stale tabs through 
     secondForm.children[0].children[0].value = 'Handbuch';
     await secondForm.fire('submit');
     assert.equal(controller.snapshot().draft.pages[0].title, 'Handbuch');
-    const move = controls.children[0].children[1].children[4];
+    const move = controls.children[0].children[1].children[4].children[1];
     await move.fire('submit');
     assert.equal(controller.snapshot().draft.pages[0].widgets[0].html, '{{Temp:state}}');
     assert.equal(controls.children[0].children[0].children[3].disabled, true, 'page with a widget cannot be deleted');
-    const moveBack = controls.children[0].children[0].children[4];
+    const moveBack = controls.children[0].children[0].children[4].children[1];
     await moveBack.fire('submit');
     assert.equal(controller.snapshot().draft.pages[1].widgets.at(-1).html, '{{Temp:state}}');
     const other = new Schema5DraftController(transport);

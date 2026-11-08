@@ -24,9 +24,26 @@ class Element {
   setAttribute(name, value) { this.attributes[name] = value; }
   getAttribute(name) { return Object.hasOwn(this.attributes, name) ? this.attributes[name] : null; }
   removeAttribute(name) { delete this.attributes[name]; }
-  addEventListener(name, callback) { this.listeners[name] = callback; }
-  fire(name) { return this.listeners[name]({ preventDefault() {} }); }
+  addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); }
+  fire(name, event = {}) {
+    let result;
+    for (const callback of this.listeners[name] || []) result = callback({ preventDefault() {}, ...event });
+    return result;
+  }
+  contains(node) { return this === node || this.children.some((child) => child.contains(node)); }
+  focus() { this.focused = true; }
+  showModal() { this.open = true; }
   get valueAsNumber() { return this.value === '' ? NaN : Number(this.value); }
+}
+
+function toolbarControls(toolbar) {
+  const all = (node) => [node, ...node.children.flatMap(all)];
+  const nodes = all(toolbar);
+  return [
+    'Raster bearbeiten', null, 'Entwurf veröffentlichen', 'Entwurf verwerfen',
+    'Zustand erneut laden', 'Seiten verwalten', 'Widgets bearbeiten',
+    'Navigation bearbeiten', 'Darstellung einstellen',
+  ].map((label) => nodes.find((node) => label ? node.textContent === label : node.className === 'cms-editor-mode'));
 }
 
 test('editor connects view and grid draft, and suspends in-flight writes on pagehide', async () => {
@@ -109,6 +126,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
         save() { return structuredClone(this.items); },
         update(wrapper, position) { Object.assign(this.items.find((item) => item.id === wrapper.gridstackNode.id), position); },
         setStatic() {},
+        on() {},
         destroy() { this.destroyed = true; },
       };
       grids.push(grid);
@@ -125,7 +143,19 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     await editor.start();
     assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'dark');
     assert.equal(document.documentElement.getAttribute('data-cms-frames'), 'on');
-    const [toolbar, , content] = root.children;
+    const [, , content] = root.children;
+    const toolbar = { children: toolbarControls(root.children[0]) };
+    assert.equal(root.children[0].className, 'cms-toolbar');
+    const [fileMenu, editMenu, viewMenu] = root.children[0].children;
+    assert.deepEqual([fileMenu, editMenu, viewMenu].map((menu) => menu.children[0].textContent),
+      ['Datei', 'Bearbeiten', 'Ansicht']);
+    fileMenu.open = true;
+    editMenu.open = true;
+    editMenu.fire('toggle');
+    assert.equal(fileMenu.open, false);
+    editMenu.fire('keydown', { key: 'Escape' });
+    assert.equal(editMenu.open, false);
+    assert.equal(editMenu.children[0].focused, true);
     const [edit, mode, publish, discard, reload] = toolbar.children;
     assert.equal(mode.textContent, 'Live');
     assert.equal(edit.disabled, false);
@@ -350,7 +380,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
       makeWidget(wrapper, item) { wrapper.gridstackNode = { id: item.id }; this.items.push({ ...item }); },
       save() { return structuredClone(this.items); },
       update(wrapper, position) { Object.assign(this.items.find((item) => item.id === wrapper.gridstackNode.id), position); },
-      setStatic() {}, destroy() {},
+      setStatic() {}, on() {}, destroy() {},
     };
   } };
   const client = {
@@ -363,7 +393,8 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     const root = new Element('section');
     editor = new Schema5Editor({ GridStack, root, controller, client, services: {}, browser });
     await editor.start();
-    const [toolbar, status, content] = root.children;
+    const [, status, content] = root.children;
+    const toolbar = { children: toolbarControls(root.children[0]) };
     const [edit, mode, publish, discard, reload, pagesButton] = toolbar.children;
     edit.fire('click');
     const form = content.children[0].children[4];
