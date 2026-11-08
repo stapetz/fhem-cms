@@ -282,6 +282,9 @@ Aufrufer bereitgestellt; der Adapter führt selbst keine FHEM-Anfragen aus, aber
 Widgets dürfen die übergebenen Dienste nutzen. `view-only` ist keine Schreib-
 oder Netzwerk-Sperre. Der Adapter ist noch nicht mit dem Device-Einstieg, einer
 Vorschau, Live-Abonnements oder versionierter Speicherung verbunden.
+Beim Entfernen einer Diagrammkomponente werden laufende Verlaufsergebnisse
+verworfen; beim erneuten Verbinden wird der Verlauf neu angefordert. Das
+verhindert die Übernahme verspäteter Antworten nach einem Seitenwechsel.
 Ein interner Schema-5-Entwurfsvertrag validiert Live und Entwurf gemeinsam und
 verknüpft ihre tatsächlichen Bytes mit einer Zustandskennung. Ein Entwurf wird
 nur gegen den unveränderten Stand atomar gespeichert; andere Schemata, ungültige

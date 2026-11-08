@@ -56,6 +56,7 @@ class FHEMCMSChart extends HTMLElement {
 
   connectedCallback() {
     if (this.shadowRoot.childElementCount) {
+      this.load();
       this.scheduleRefresh();
       return;
     }
@@ -167,6 +168,7 @@ class FHEMCMSChart extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.requestId += 1;
     window.clearInterval(this.timer);
     this.timer = null;
   }
@@ -182,7 +184,7 @@ class FHEMCMSChart extends HTMLElement {
     this.granularity = value?.granularity || 'auto';
     if (this.shadowRoot.childElementCount) {
       this.render();
-      this.load();
+      if (this.isConnected) this.load();
     }
   }
 
