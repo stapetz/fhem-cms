@@ -70,6 +70,31 @@ test('migration preview sends a read-only encoded plan and validates the reply',
   await assert.rejects(client.previewMigration(plan), /Unerwartete Antwort/);
 });
 
+test('versioned state uses a read-only command and checks the response shape', async () => {
+  const calls = [];
+  let answer = { live: { schemaVersion: 5 }, draft: null, token: 'a'.repeat(64) };
+  globalThis.fetch = async (url, options) => {
+    calls.push(options);
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    return new Response(JSON.stringify(answer));
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.deepEqual(await client.getVersion5State(), answer);
+  assert.equal(calls[1].body.get('cmd'), 'get cms version5state');
+  assert.equal(calls[1].body.get('fwcsrf'), 'token');
+  answer = { live: { schemaVersion: '05' }, draft: { schemaVersion: 5 }, token: 'b'.repeat(64) };
+  assert.deepEqual(await client.getVersion5State(), answer);
+  for (const invalid of [
+    { live: { schemaVersion: 4 }, draft: null, token: 'a'.repeat(64) },
+    { live: { schemaVersion: 5 }, draft: { schemaVersion: 4 }, token: 'a'.repeat(64) },
+    { live: { schemaVersion: 5 }, token: 'a'.repeat(64) },
+    { live: { schemaVersion: 5 }, draft: null, token: 'invalid' },
+  ]) {
+    answer = invalid;
+    await assert.rejects(client.getVersion5State(), /Unerwartete Antwort/);
+  }
+});
+
 test('subscriptions filter names, reconnect after close, and stop after unsubscribe', () => {
   const sockets = [];
   const timers = new Map();

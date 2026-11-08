@@ -120,6 +120,19 @@ export class FhemClient {
     return result;
   }
 
+  async getVersion5State() {
+    const text = await this.command(`get ${this.cmsDevice} version5state`);
+    const state = await this.parseJsonResult(text, 'Der versionierte Zustand konnte nicht gelesen werden');
+    const isVersion5 = (config) => config && typeof config === 'object' && !Array.isArray(config)
+      && /^[0-9]{1,6}$/.test(String(config.schemaVersion)) && Number(config.schemaVersion) === 5;
+    if (!state || typeof state !== 'object' || Array.isArray(state)
+      || !isVersion5(state.live) || (state.draft !== null && !isVersion5(state.draft))
+      || typeof state.token !== 'string' || !/^[0-9a-f]{64}$/.test(state.token)) {
+      throw new Error('Unerwartete Antwort für den versionierten Zustand');
+    }
+    return state;
+  }
+
   async saveDraft(config) {
     const result = await this.command(`set ${this.cmsDevice} draft ${toBase64(JSON.stringify(config))}`);
     if (result) {

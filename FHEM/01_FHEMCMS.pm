@@ -126,6 +126,16 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->canonical->encode({config => $candidate, source => $source, token => $token});
     }
 
+    if ($cmd eq 'version5state') {
+        return 'version5state erwartet keine Parameter' if (@args);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
+        return $error if (defined($error));
+        my ($state, $stateError) = FHEMCMS_ReadVersion5State($dataDir);
+        return $stateError if (defined($stateError));
+        return JSON::PP->new->utf8->canonical->encode($state);
+    }
+
     if ($cmd eq 'config' || $cmd eq 'backups' || $cmd eq 'draft' || $cmd eq 'status') {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
         my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
@@ -158,7 +168,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history migrationpreview';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history migrationpreview version5state:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -486,7 +496,7 @@ sub FHEMCMS_AssetInfo {
 }
 
 sub FHEMCMS_CreateDataDir {
-    my ($name) = @_;
+    my ($name, $existingOnly) = @_;
     my $modPath = $main::attr{global}{modpath};
     return ('FHEM global modpath ist nicht gesetzt')
         if (!defined($modPath) || $modPath eq '');
@@ -498,6 +508,7 @@ sub FHEMCMS_CreateDataDir {
     my $dataPath = File::Spec->catdir($root, 'fhem-cms-data');
     my $devicePath = File::Spec->catdir($dataPath, $name);
     if (!-d $devicePath) {
+        return ('CMS-Datenverzeichnis existiert nicht') if ($existingOnly);
         my $errors;
         make_path($devicePath, {mode => 0750, error => \$errors});
         return (FHEMCMS_PathError('Datenverzeichnis konnte nicht angelegt werden', $devicePath, $errors))
@@ -1577,7 +1588,7 @@ sub FHEMCMS_PreviewLayoutMigration {
     return ($candidate, $token, undef, $source);
 }
 
-# Der versionierte Vertrag bleibt intern, bis die passende Runtime nutzbar ist.
+# Der Lesevertrag ist getrennt versioniert; Schreiboperationen bleiben intern.
 sub FHEMCMS_ReadVersion5State {
     my ($dataDir) = @_;
     my $json = JSON::PP->new->utf8->canonical;

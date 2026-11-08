@@ -209,7 +209,7 @@ Anzeige entspricht; dafür fehlt noch ein manipulations- und veraltungssicherer
 Transaktionsvertrag. Der Kandidat wird nicht gespeichert und Schema 5 bleibt
 über alle bestehenden Schnittstellen gesperrt. Die Struktur ist vor der
 Freischaltung mit der künftigen Layout-Engine abzugleichen.
-Der interne Schema-5-Validierungsvertrag prüft zusätzlich die vollständigen
+Der Schema-5-Validierungsvertrag prüft zusätzlich die vollständigen
 Widget-Daten, Navigations- und 12-Spalten-Grenzen sowie Kollisionen. Die
 bisherigen Lese- und Schreibwege akzeptieren weiterhin ausschließlich Schema 4;
 die neue explizite Vorschau gibt einen Kandidaten zurück, speichert ihn aber nicht.
@@ -228,8 +228,14 @@ ausschließlich isolierte temporäre Verzeichnisse. Die Dateisynchronisierung un
 das atomare Umbenennen ersetzen keine vollständige externe Sicherung von
 Konfiguration, Medien, Modul und Assets; insbesondere sind Stromausfall und
 unkoordinierte externe Dateischreiber damit nicht vollständig abgesichert.
-Die Bausteine sind keine freigeschaltete Umstellung: Versionierte API,
+Die Bausteine sind keine freigeschaltete Umstellung: Versionierte Schreib-API,
 Benutzerbestätigung und kompatible Oberfläche fehlen weiterhin.
+Der getrennte, schreibfreie Befehl `get <CMS> version5state` validiert Live
+und einen vorhandenen Entwurf als Schema 5 und liefert beide zusammen mit einer
+Zustandskennung. Er weist Schema 4, gemischte Formate und beschädigte Daten ab;
+die bisherigen Lesewege bleiben unverändert. Damit kann eine zukünftige
+versionierte Oberfläche den Zustand abrufen, aber weder Migration noch
+Schema-5-Entwürfe auslösen. Die Kennung ist keine Autorisierung.
 Ein interner Schema-5-Entwurfsvertrag validiert Live und Entwurf gemeinsam und
 verknüpft ihre tatsächlichen Bytes mit einer Zustandskennung. Ein Entwurf wird
 nur gegen den unveränderten Stand atomar gespeichert; andere Schemata, ungültige

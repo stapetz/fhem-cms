@@ -650,8 +650,14 @@ subtest 'internal version 5 draft contract rejects stale and mixed states' => su
     my $draftPath = File::Spec->catfile($dir, 'draft.json');
     my $tmp = File::Spec->catfile($dir, 'draft.json.v5.tmp');
     my $legacy = read_bytes($livePath);
+    my $missing = File::Spec->catdir($modPath, 'fhem-cms-data', 'MissingVersion5');
+    like(FHEMCMS_Get({NAME => 'MissingVersion5'}, 'MissingVersion5', 'version5state'),
+        qr/Datenverzeichnis existiert nicht/, 'versioned get rejects missing data directory');
+    ok(!-e $missing, 'versioned get does not create missing data directory');
     my ($state, $error) = FHEMCMS_ReadVersion5State($dir);
     like($error, qr/schemaVersion/, 'legacy state is not accepted by version 5 contract');
+    like(FHEMCMS_Get($hash, $name, 'version5state'), qr/schemaVersion/, 'versioned get rejects legacy live');
+    like(FHEMCMS_Get($hash, $name, 'version5state', 'extra'), qr/keine Parameter/, 'versioned get rejects arguments');
     my $plan = {navigation => {col => 1, row => 1, w => 12, h => 1},
         pages => [{id => 'start', widgets => []}]};
     my ($candidate, $previewToken, $previewError) = FHEMCMS_PreviewLayoutMigration($dir, $plan);
@@ -664,6 +670,10 @@ subtest 'internal version 5 draft contract rejects stale and mixed states' => su
     is_deeply($state->{live}, $candidate, 'live is unchanged');
     ok(!defined($state->{draft}), 'initial state has no draft');
     like($state->{token}, qr/\A[0-9a-f]{64}\z/, 'returns state token');
+    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'version5state')), $state,
+        'versioned get returns live, null draft and state token');
+    is(read_bytes($livePath), $liveBytes, 'versioned get does not change live bytes');
+    ok(!-e $draftPath, 'versioned get does not create draft');
     my $oldToken = $state->{token};
     my $draft = $json->decode($json->encode($candidate));
     $draft->{pages}[0]{title} = 'Draft';
@@ -674,6 +684,9 @@ subtest 'internal version 5 draft contract rejects stale and mixed states' => su
     is_deeply($state->{draft}, $draft, 'draft roundtrips');
     isnt($state->{token}, $oldToken, 'draft changes state token');
     my $draftBytes = read_bytes($draftPath);
+    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'version5state')), $state,
+        'versioned get returns current live and draft together');
+    is(read_bytes($draftPath), $draftBytes, 'versioned get does not change draft bytes');
     my $next = $json->decode($json->encode($draft));
     $next->{pages}[0]{title} = 'New';
     like(FHEMCMS_WriteVersion5Draft($dir, $next, $oldToken), qr/veraltet/, 'stale client cannot replace draft');
@@ -699,6 +712,8 @@ subtest 'internal version 5 draft contract rejects stale and mixed states' => su
             'late incompatible draft aborts write');
     }
     is(read_bytes($draftPath), $legacy, 'late change preserved');
+    like(FHEMCMS_Get($hash, $name, 'version5state'), qr/schemaVersion/, 'versioned get rejects mixed formats');
+    is(read_bytes($draftPath), $legacy, 'rejected versioned get preserves incompatible draft');
     ok(!-e $tmp, 'aborted write cleans up own temporary file');
     like(FHEMCMS_Get($hash, $name, 'config'), qr/schemaVersion/, 'legacy read rejects migrated live');
     like(FHEMCMS_Set($hash, $name, 'draft', encode_base64($legacy, '')), qr/schemaVersion/,
