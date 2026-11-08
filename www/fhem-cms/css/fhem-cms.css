@@ -197,6 +197,42 @@ body {
   width: min(94vw, 26rem);
 }
 
+/* Seite bearbeiten: kompakte einzeilige Formulare. */
+.cms-editor-dialog[data-panel="page"] form {
+  gap: .4rem .5rem;
+  margin-block: .5rem;
+}
+
+.cms-editor-dialog[data-panel="page"] label {
+  flex: 1 1 8rem;
+  gap: .2rem;
+  font-size: .8rem;
+}
+
+.cms-editor-dialog[data-panel="page"] form label:has(input[type="number"]) {
+  flex: 0 1 4.5rem;
+}
+
+.cms-editor-dialog[data-panel="page"] input,
+.cms-editor-dialog[data-panel="page"] select {
+  padding: .35rem .5rem;
+}
+
+.cms-editor-dialog[data-panel="page"] select {
+  padding-right: 1.5rem;
+}
+
+.cms-editor-dialog[data-panel="page"] form button {
+  margin: 0;
+  padding: .4rem .6rem;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-position-grid {
+  margin-block: .25rem;
+}
+
 .cms-editor-dialog[data-widget-open] {
   background: transparent;
   border-color: transparent;
