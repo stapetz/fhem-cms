@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { inspectLegacyLayout } from '../fcui/layout-migration.js';
+import { inspectLegacyLayout, planLegacyLayout } from '../fcui/layout-migration.js';
 
 const grid = (col, row, w, h) => ({ col, row, w, h });
 
@@ -70,5 +70,66 @@ test('rejects invalid schema, geometry and ambiguous identifiers', () => {
     const bad = structuredClone(config);
     change(bad);
     assert.throws(() => inspectLegacyLayout(bad), /Schema|Ungültig/);
+  }
+});
+
+test('planning requires explicit adjustment and reports collisions on each page', () => {
+  const source = {
+    schemaVersion: 4, settings: { layoutMode: 'free' },
+    navigation: { grid: grid(1, 1, 48, 1) },
+    pages: [
+      { id: 'a', widgets: [{ id: 'w', grid: grid(2, 2, 3, 1) }] },
+      { id: 'b', widgets: [{ id: 'w', grid: grid(1, 1, 4, 1) }] },
+    ],
+  };
+  const original = structuredClone(source);
+  const first = planLegacyLayout(source);
+  assert.equal(first.pages[0].widgets[0].grid, null);
+  assert.deepEqual(first.pages[1].collisions, [[
+    { type: 'navigation', id: null }, { type: 'widget', id: 'w' },
+  ]]);
+  const adjustments = [
+    { type: 'widget', page: 'a', id: 'w', grid: grid(2, 2, 1, 1) },
+    { type: 'widget', page: 'b', id: 'w', grid: grid(1, 2, 1, 1) },
+  ];
+  const before = structuredClone(adjustments);
+  const plan = planLegacyLayout(source, adjustments);
+  assert.deepEqual(plan.pages[0].widgets[0].grid, grid(2, 2, 1, 1));
+  assert.deepEqual(plan.pages[1].collisions, []);
+  assert.equal(plan.requiresEffectiveLayout, false);
+  assert.deepEqual(source, original);
+  assert.deepEqual(adjustments, before);
+  assert.equal(planLegacyLayout(source).pages[0].widgets[0].grid, null);
+});
+
+test('planning exposes unresolved effective layout and row overflow', () => {
+  const source = { schemaVersion: 4, settings: { layoutMode: 'flow' }, pages: [
+    { id: 'a', widgets: [{ id: 'w', grid: grid(1, 1000, 4, 2) }] },
+  ] };
+  const plan = planLegacyLayout(source);
+  assert.equal(plan.requiresEffectiveNavigation, true);
+  assert.equal(plan.requiresEffectiveLayout, true);
+  assert.equal(plan.pages[0].widgets[0].grid, null);
+  source.settings.layoutMode = 'unknown';
+  assert.throws(() => planLegacyLayout(source), /Layoutmodus/);
+});
+
+test('planning rejects malformed, duplicate and out-of-range adjustments', () => {
+  const source = { schemaVersion: 4, pages: [
+    { id: 'a', widgets: [{ id: 'w', grid: grid(1, 1, 4, 1) }] },
+  ] };
+  const valid = { type: 'widget', page: 'a', id: 'w', grid: grid(1, 1, 1, 1) };
+  for (const adjustments of [
+    [valid, valid],
+    [{ ...valid, page: 'unknown' }],
+    [{ ...valid, id: 'unknown' }],
+    [{ type: 'navigation', grid: grid(1, 1, 1, 1) }],
+    [{ ...valid, grid: grid(12, 1, 2, 1) }],
+    [{ ...valid, grid: grid(1, 1000, 1, 2) }],
+    [{ ...valid, grid: { ...grid(1, 1, 1, 1), extra: 1 } }],
+    [{ ...valid, grid: grid('1', 1, 1, 1) }],
+    [{ ...valid, extra: 1 }],
+  ]) {
+    assert.throws(() => planLegacyLayout(source, adjustments), /Anpassung|Position/);
   }
 });

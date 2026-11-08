@@ -77,3 +77,81 @@ export function inspectLegacyLayout(config) {
   });
   return { navigation, pages, requiresEffectiveNavigation: navigation === null };
 }
+
+function adjustedGrid(grid) {
+  if (!grid || typeof grid !== 'object' || Array.isArray(grid)
+    || Object.keys(grid).sort().join(',') !== 'col,h,row,w'
+    || !Number.isInteger(grid.col) || grid.col < 1 || grid.col > 12
+    || !Number.isInteger(grid.row) || grid.row < 1 || grid.row > 1000
+    || !Number.isInteger(grid.w) || grid.w < 1 || grid.col + grid.w > 13
+    || !Number.isInteger(grid.h) || grid.h < 1 || grid.row + grid.h > 1001) {
+    throw new Error('Ungültige manuelle 12-Spalten-Position');
+  }
+  return { col: grid.col, row: grid.row, w: grid.w, h: grid.h };
+}
+
+// Internal preview data only; the server must independently validate any future write.
+export function planLegacyLayout(config, adjustments = []) {
+  const analysis = inspectLegacyLayout(config);
+  const layoutMode = config.settings?.layoutMode ?? 'grid';
+  if (!['grid', 'free', 'flow', 'masonry'].includes(layoutMode)) {
+    throw new Error('Ungültiger Layoutmodus');
+  }
+  if (!Array.isArray(adjustments)) throw new Error('Anpassungen müssen eine Liste sein');
+  const pages = new Map(analysis.pages.map((page) => [page.id, page]));
+  const overrides = new Map();
+  for (const item of adjustments) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error('Ungültige Anpassung');
+    }
+    let key;
+    if (item.type === 'navigation' && Object.keys(item).sort().join(',') === 'grid,type'
+      && analysis.navigation) {
+      key = 'navigation';
+    } else if (item.type === 'widget'
+      && Object.keys(item).sort().join(',') === 'grid,id,page,type'
+      && pages.get(item.page)?.widgets.some((widget) => widget.id === item.id)) {
+      key = `widget/${item.page}/${item.id}`;
+    } else {
+      throw new Error('Unbekannte oder ungültige Anpassung');
+    }
+    if (overrides.has(key)) throw new Error('Doppelte Anpassung');
+    overrides.set(key, adjustedGrid(item.grid));
+  }
+  const resolve = (entry, key) => {
+    if (!entry) return null;
+    const grid = overrides.get(key) || entry.exact;
+    if (!grid || grid.row + grid.h > 1001) return null;
+    return { ...grid };
+  };
+  const navigation = resolve(analysis.navigation, 'navigation');
+  const resultPages = analysis.pages.map((page) => {
+    const widgets = page.widgets.map((widget) => ({
+      id: widget.id,
+      grid: resolve(widget, `widget/${page.id}/${widget.id}`),
+    }));
+    const elements = [
+      ...(navigation ? [{ type: 'navigation', id: null, grid: navigation }] : []),
+      ...widgets.filter((widget) => widget.grid)
+        .map((widget) => ({ type: 'widget', id: widget.id, grid: widget.grid })),
+    ];
+    const collisions = [];
+    for (let i = 0; i < elements.length; i += 1) {
+      for (let j = i + 1; j < elements.length; j += 1) {
+        if (overlaps(elements[i].grid, elements[j].grid)) {
+          collisions.push([
+            { type: elements[i].type, id: elements[i].id },
+            { type: elements[j].type, id: elements[j].id },
+          ]);
+        }
+      }
+    }
+    return { id: page.id, widgets, collisions };
+  });
+  return {
+    navigation,
+    pages: resultPages,
+    requiresEffectiveNavigation: analysis.requiresEffectiveNavigation,
+    requiresEffectiveLayout: layoutMode === 'flow' || layoutMode === 'masonry',
+  };
+}

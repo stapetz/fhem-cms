@@ -164,7 +164,12 @@ verändert und speichert keine Daten und ersetzt weder die serverseitige
 Validierung noch die Migrationsvorschau. Ohne gespeicherte Navigation meldet sie
 ausdrücklich, dass die vom Bestandsfrontend ergänzte Navigation und die
 verschobenen Zeilen separat zu berücksichtigen sind. Auch abweichende effektive
-Layoutmodi sind vor einer tatsächlichen Vorschau zu behandeln.
+Layoutmodi sind vor einer tatsächlichen Vorschau zu behandeln. Die interne
+Planungsfunktion akzeptiert geprüfte manuelle 12-Spalten-Positionen, meldet
+noch ungelöste Positionen und Überschneidungen und speichert nichts; fehlende
+Navigation und die effektive Darstellung der Modi `flow` und `masonry` werden
+als offene Voraussetzungen ausgewiesen. Dies ist weder ein Formatvertrag noch
+eine Freigabe zur Speicherung.
 
 Das ist kein Nachweis einer vollständigen FHEMWEB-Autorisierung, Migration oder
 Geräteabnahme. Insbesondere Testinstanz-Rechte, CSRF, externer Ressourcenzugriff,
