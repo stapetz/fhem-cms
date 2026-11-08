@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Cwd qw(abs_path);
 use Digest::MD5 qw(md5_hex);
+use Digest::SHA qw(sha256_hex);
 use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
 use File::Copy qw(copy);
 use File::Path qw(make_path remove_tree);
@@ -558,7 +559,10 @@ sub FHEMCMS_MigrateConfig {
 }
 
 sub FHEMCMS_ValidateConfig {
-    my ($config) = @_;
+    my ($config, $targetSchema) = @_;
+    $targetSchema //= 4;
+    return 'Nicht unterstuetzter Validierungsvertrag'
+        if ($targetSchema ne '4' && $targetSchema ne '5');
     my $id = qr/\A[A-Za-z0-9_-]{1,64}\z/;
     my $fhemName = qr/\A[A-Za-z0-9_.-]{1,128}\z/;
 
@@ -591,10 +595,12 @@ sub FHEMCMS_ValidateConfig {
         my ($grid) = @_;
         my $gridError = $exact->($grid, 'grid', ['col', 'row', 'w', 'h']);
         return $gridError if ($gridError);
+        my $columns = $targetSchema == 5 ? 12 : 48;
         return 'Ungueltige Rasterwerte'
-            if (!$isInt->($grid->{col}, 1, 48) || !$isInt->($grid->{row}, 1, 1000)
-                || !$isInt->($grid->{w}, 1, 48) || !$isInt->($grid->{h}, 1, 1000)
-                || $grid->{col} + $grid->{w} > 49);
+            if (!$isInt->($grid->{col}, 1, $columns) || !$isInt->($grid->{row}, 1, 1000)
+                || !$isInt->($grid->{w}, 1, $columns) || !$isInt->($grid->{h}, 1, 1000)
+                || $grid->{col} + $grid->{w} > $columns + 1
+                || ($targetSchema == 5 && $grid->{row} + $grid->{h} > 1001));
         return undef;
     };
 
@@ -651,7 +657,15 @@ sub FHEMCMS_ValidateConfig {
         }
     }
     return 'Nicht unterstuetzte schemaVersion'
-        if (!$isInt->($config->{schemaVersion}, 4, 4));
+        if (!$isInt->($config->{schemaVersion}, $targetSchema, $targetSchema));
+    if ($targetSchema == 5) {
+        return 'Schema 5 erfordert Navigation und 12-Spalten-Raster'
+            if (!exists($config->{navigation}) || !exists($config->{settings})
+                || !defined($config->{settings}{layoutMode})
+                || $config->{settings}{layoutMode} ne 'grid'
+                || !defined($config->{settings}{gridColumns})
+                || $config->{settings}{gridColumns} ne '12');
+    }
     return 'pages muss eine Liste mit 1 bis 50 Seiten sein'
         if (ref($config->{pages}) ne 'ARRAY' || @{$config->{pages}} < 1 || @{$config->{pages}} > 50);
 
@@ -670,6 +684,7 @@ sub FHEMCMS_ValidateConfig {
             if (ref($page->{widgets}) ne 'ARRAY' || @{$page->{widgets}} > 200);
 
         my %widgetIds;
+        my @targetGrids = $targetSchema == 5 ? ($config->{navigation}{grid}) : ();
         for my $widget (@{$page->{widgets}}) {
             return 'Widget muss ein Objekt sein' if (ref($widget) ne 'HASH');
             return 'Unbekannter Widget-Typ'
@@ -718,6 +733,8 @@ sub FHEMCMS_ValidateConfig {
 
             return 'Ungueltige Widget-ID'
                 if (ref($widget->{id}) || !defined($widget->{id}) || $widget->{id} !~ $id);
+            return 'Widget-ID __nav ist fuer die Navigation reserviert'
+                if ($targetSchema == 5 && $widget->{id} eq '__nav');
             return "Doppelte Widget-ID '$widget->{id}'" if ($widgetIds{$widget->{id}}++);
             return 'Ungueltiger Widget-Titel'
                 if (exists($widget->{title})
@@ -920,6 +937,17 @@ sub FHEMCMS_ValidateConfig {
 
             $err = $checkGrid->($widget->{grid});
             return $err if ($err);
+            if ($targetSchema == 5) {
+                my $grid = $widget->{grid};
+                for my $other (@targetGrids) {
+                    return 'Ueberschneidung im 12-Spalten-Raster'
+                        if ($grid->{col} < $other->{col} + $other->{w}
+                            && $other->{col} < $grid->{col} + $grid->{w}
+                            && $grid->{row} < $other->{row} + $other->{h}
+                            && $other->{row} < $grid->{row} + $grid->{h});
+                }
+                push(@targetGrids, $grid);
+            }
         }
     }
     return undef;
@@ -1508,7 +1536,25 @@ sub FHEMCMS_PrepareLayoutMigration {
     }
     return (undef, 'Konfiguration ist zu gross')
         if (length($json->encode($candidate)) > $FHEMCMS_MAX_CONFIG_BYTES);
+    $error = FHEMCMS_ValidateConfig($candidate, 5);
+    return (undef, "Zielkonfiguration ist ungueltig: $error") if (defined($error));
     return ($candidate, undef);
+}
+
+# Nur Vorschau: Ein spaeterer Schreibpfad muss denselben Zustand erneut pruefen.
+sub FHEMCMS_PreviewLayoutMigration {
+    my ($dataDir, $positions) = @_;
+    my $draft = File::Spec->catfile($dataDir, 'draft.json');
+    return (undef, undef, 'Entwurf vorhanden: zuerst veroeffentlichen oder verwerfen') if (-e $draft || -l $draft);
+    my ($bytes, $error) = FHEMCMS_ReadFile(File::Spec->catfile($dataDir, 'config.json'));
+    return (undef, undef, $error) if (defined($error));
+    my ($source, $parseError) = FHEMCMS_ParseConfig($bytes);
+    return (undef, undef, "Live-Konfiguration ist ungueltig: $parseError") if (defined($parseError));
+    my ($candidate, $planError) = FHEMCMS_PrepareLayoutMigration($source, $positions);
+    return (undef, undef, $planError) if (defined($planError));
+    my $target = JSON::PP->new->utf8->canonical->encode($candidate);
+    my $token = sha256_hex(length($bytes) . ':' . $bytes . length($target) . ':' . $target);
+    return ($candidate, $token, undef);
 }
 
 sub FHEMCMS_ReadFile {

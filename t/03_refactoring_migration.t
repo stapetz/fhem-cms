@@ -181,6 +181,28 @@ subtest 'prepares a fully specified target without writing or accepting schema 5
     is($json->encode($source), $before_source, 'source is unchanged');
     is($json->encode($plan), $before_plan, 'plan is unchanged');
     like(FHEMCMS_ValidateConfig($candidate), qr/schemaVersion/, 'existing validator does not accept candidate');
+    is(FHEMCMS_ValidateConfig($candidate, 5), undef, 'explicit internal validator accepts the candidate');
+    is_deeply($json->decode($json->encode($candidate)), $candidate, 'target JSON roundtrip preserves content');
+    my $target_bytes = $json->encode($candidate);
+    for my $case (
+        ['missing navigation', sub { delete $_[0]{navigation} }],
+        ['missing settings', sub { delete $_[0]{settings} }],
+        ['wrong layout', sub { $_[0]{settings}{layoutMode} = 'flow' }],
+        ['wrong column count', sub { $_[0]{settings}{gridColumns} = 48 }],
+        ['wrong schema', sub { $_[0]{schemaVersion} = 4 }],
+        ['column overflow', sub { $_[0]{pages}[0]{widgets}[0]{grid}{col} = 12 }],
+        ['row overflow', sub { $_[0]{pages}[0]{widgets}[0]{grid}{row} = 1000 }],
+        ['navigation collision', sub { $_[0]{pages}[0]{widgets}[0]{grid}{row} = 1 }],
+        ['widget collision', sub { $_[0]{pages}[0]{widgets}[1]{grid}{col} = 2 }],
+        ['reserved ID', sub { $_[0]{pages}[0]{widgets}[0]{id} = '__nav' }],
+        ['unknown widget field', sub { $_[0]{pages}[0]{widgets}[0]{unexpected} = 1 }],
+        ['invalid HTML', sub { $_[0]{pages}[0]{widgets}[1]{html} = '<script>x</script>' }],
+    ) {
+        my $bad = $json->decode($target_bytes);
+        $case->[1]->($bad);
+        ok(defined(FHEMCMS_ValidateConfig($bad, 5)), "target rejects $case->[0]");
+    }
+    like(FHEMCMS_ValidateConfig($candidate, 6), qr/Validierungsvertrag/, 'unknown validation contract is rejected');
     my (undef, $parse_error) = FHEMCMS_ParseConfig($json->encode($candidate));
     like($parse_error, qr/schemaVersion/, 'existing API parser does not accept candidate');
 
@@ -263,6 +285,48 @@ subtest 'legacy commands cannot overwrite or discard a future format' => sub {
     is_deeply($json->decode(read_bytes($live)), $json->decode($old), 'restore recovers the legacy configuration');
     my @corrupt = grep { read_bytes(File::Spec->catfile($dir, $_)) eq '{' } FHEMCMS_ListBackups($dir);
     is(scalar(@corrupt), 1, 'restore backs up the corrupt live bytes before replacement');
+};
+
+subtest 'preview binds both source bytes and target while refusing a draft' => sub {
+    my $name = 'SnapshotPreview';
+    my $hash = {NAME => $name};
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    my $live = File::Spec->catfile($dir, 'config.json');
+    my $draft = File::Spec->catfile($dir, 'draft.json');
+    my $before = read_bytes($live);
+    my @backups = FHEMCMS_ListBackups($dir);
+    my $positions = {navigation => {col => 1, row => 1, w => 12, h => 1},
+        pages => [{id => 'start', widgets => []}]};
+    my ($candidate, $token, $error) = FHEMCMS_PreviewLayoutMigration($dir, $positions);
+    is($error, undef, 'complete preview succeeds');
+    like($token, qr/\A[0-9a-f]{64}\z/, 'returns SHA-256 confirmation digest');
+    is($candidate->{schemaVersion}, 5, 'returns internally validated target');
+    is(read_bytes($live), $before, 'preview does not rewrite live bytes');
+    is_deeply([FHEMCMS_ListBackups($dir)], \@backups, 'preview creates no backup');
+    my (undef, $again) = FHEMCMS_PreviewLayoutMigration($dir, $positions);
+    is($again, $token, 'same source and plan give same digest');
+    my $changed_plan = $json->decode($json->encode($positions));
+    $changed_plan->{navigation}{w} = 11;
+    my (undef, $other) = FHEMCMS_PreviewLayoutMigration($dir, $changed_plan);
+    isnt($other, $token, 'target change invalidates digest');
+    write_bytes($live, $before . "\n");
+    (undef, $other) = FHEMCMS_PreviewLayoutMigration($dir, $positions);
+    isnt($other, $token, 'even a byte-only source change invalidates digest');
+    write_bytes($live, $before);
+    write_bytes($draft, $before);
+    my $draft_before = read_bytes($draft);
+    (my $blocked, my $blocked_token, $error) = FHEMCMS_PreviewLayoutMigration($dir, $positions);
+    like($error, qr/Entwurf vorhanden/, 'draft blocks preview');
+    ok(!defined($blocked) && !defined($blocked_token), 'blocked preview returns no candidate or digest');
+    is(read_bytes($draft), $draft_before, 'draft is not changed');
+    is(read_bytes($live), $before, 'live is not changed');
+    unlink($draft) or die "Cannot remove test draft: $!";
+    write_bytes($live, '{');
+    (undef, undef, $error) = FHEMCMS_PreviewLayoutMigration($dir, $positions);
+    like($error, qr/ungueltig/, 'invalid live is rejected');
+    is(read_bytes($live), '{', 'invalid live is not changed');
+    is_deeply([FHEMCMS_ListBackups($dir)], \@backups, 'failed previews create no backup');
 };
 
 done_testing();

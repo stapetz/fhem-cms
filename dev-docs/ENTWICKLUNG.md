@@ -204,6 +204,15 @@ Anzeige entspricht; dafür fehlt noch ein manipulations- und veraltungssicherer
 Transaktionsvertrag. Der Kandidat wird nicht gespeichert und Schema 5 bleibt
 über alle bestehenden Schnittstellen gesperrt. Die Struktur ist vor der
 Freischaltung mit der künftigen Layout-Engine abzugleichen.
+Der interne Schema-5-Validierungsvertrag prüft zusätzlich die vollständigen
+Widget-Daten, Navigations- und 12-Spalten-Grenzen sowie Kollisionen. Er wird
+nicht von den bestehenden Ein- und Ausgabewegen aufgerufen; diese akzeptieren
+weiterhin ausschließlich Schema 4.
+Eine ebenfalls interne Vorschaufunktion lehnt vorhandene Entwürfe ab und bindet
+die gelesenen Live-Bytes und den vollständigen geprüften Zielkandidaten an einen
+SHA-256-Wert. Der Wert allein ist keine Autorisierung oder Bestätigung und
+beweist keine Vorschau im Browser. Ein späterer Schreibpfad muss den aktuellen
+Entwurf und beide Inhalte unmittelbar vor der Transaktion erneut prüfen.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
 Positionsplan um; sie speichert und überträgt ihn nicht.
