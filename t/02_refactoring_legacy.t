@@ -193,4 +193,33 @@ subtest 'representative widgets survive migration, versioned draft and restore' 
     is($readBytes->($testMedia), $png, 'migration and restore leave media untouched');
 };
 
+subtest 'one-click upgrade preserves every legacy widget and independent draft' => sub {
+    my $upgradeName = 'AllWidgetsOneClick';
+    my $upgradeDir = File::Spec->catdir($modPath, 'fhem-cms-data', $upgradeName);
+    make_path($upgradeDir);
+    is(FHEMCMS_WriteConfig($upgradeName, $upgradeDir, $live), undef, 'prepares all widget types');
+    my $copy = clone_config($live);
+    $copy->{pages}[0]{title} = 'Unpublished';
+    $copy->{pages}[1]{widgets}[0]{rows}[0]{reading} = 'humidity';
+    is(FHEMCMS_WriteConfig($upgradeName, $upgradeDir, $copy, 'draft.json'), undef, 'prepares independent draft');
+    my ($result, $error) = FHEMCMS_UpgradeLayout($upgradeDir);
+    is($error, undef, 'upgrades all widget types without preview');
+    my ($state, $stateError) = FHEMCMS_ReadVersion5State($upgradeDir);
+    is($stateError, undef, 'upgraded live and draft pass validation');
+    for my $pair ([$state->{live}, $live], [$state->{draft}, $copy]) {
+        my ($converted, $original) = @{$pair};
+        my $content = clone_config($converted);
+        $content->{schemaVersion} = 4;
+        $content->{settings} = clone_config($original->{settings});
+        $content->{navigation}{grid} = clone_config($original->{navigation}{grid});
+        for my $p (0 .. $#{$content->{pages}}) {
+            for my $w (0 .. $#{$content->{pages}[$p]{widgets}}) {
+                $content->{pages}[$p]{widgets}[$w]{grid} = clone_config($original->{pages}[$p]{widgets}[$w]{grid});
+            }
+        }
+        is_deeply($content, $original, 'only layout format and geometry change; all content preserved exactly');
+    }
+    ok($result->{backup} && $result->{draftBackup}, 'both originals backed up');
+};
+
 done_testing();

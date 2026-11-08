@@ -1,212 +1,103 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
 
 class Element {
-  constructor(tag = 'div') {
-    this.tag = tag;
-    this.children = [];
-    this.listeners = {};
-    this.style = {};
-    this.textContent = '';
-    this.value = '';
-    this.hidden = false;
-    this.files = [];
-  }
-
-  append(...children) { this.children.push(...children); }
-  replaceChildren(...children) { this.children = children; }
+  constructor() { this.listeners = {}; this.children = []; this.value = ''; this.hidden = false; }
+  append(child) { this.children.push(child); this.value ||= child.value; }
+  replaceChildren() { this.children = []; this.value = ''; }
   addEventListener(type, handler) { this.listeners[type] = handler; }
-  async fire(type) {
-    assert.ok(this.listeners[type], `missing ${type} listener on ${this.tag}`);
-    return this.listeners[type]({ preventDefault() {} });
-  }
-  get valueAsNumber() { return this.value === '' ? NaN : Number(this.value); }
+  fire(type) { return this.listeners[type]({ preventDefault() {} }); }
 }
 
-test('migration preview requires backup and confirmation, handles adjustments and rejects stale data', async () => {
-  const ids = ['file', 'status', 'preview', 'page', 'summary', 'canvas', 'forms', 'device-form', 'device', 'validate',
-    'load-backups', 'backup-controls', 'backup', 'preview-backup', 'backup-status', 'backup-result', 'backup-live', 'backup-data',
-    'show-target', 'target', 'target-grid', 'target-status', 'grid-css',
-    'show-widgets', 'widget-target', 'widget-grid', 'widget-status'];
-  ids.push('commit-migration', 'commit-restore', 'external-backup', 'migration-ready');
-  const elements = Object.fromEntries(ids.map((id) => [id, new Element(id)]));
-  const previous = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch };
-  let confirmed = false;
-  let changed = false;
+test('one-button upgrade preserves separate draft and retains verified restore', async () => {
+  const ids = ['device-form', 'device', 'upgrade', 'status', 'open-cms', 'load-backups',
+    'backup', 'preview-backup', 'backup-status', 'backup-result', 'backup-live', 'backup-data',
+    'external-backup', 'commit-restore'];
+  const elements = Object.fromEntries(ids.map((id) => [id, new Element()]));
+  const original = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch };
   globalThis.document = {
-    getElementById(id) { return elements[id]; },
-    createElement(tag) { return new Element(tag); },
+    getElementById: (id) => elements[id],
+    createElement: () => new Element(),
   };
+  let confirmed = false;
+  let restores = 0;
   globalThis.window = {
-    location: { href: 'https://example.test/fhem/fhem-cms/examples/migration-preview.html' },
+    location: { href: 'https://example.test/fhem/fhem-cms/examples/migration-preview.html?device=CMS' },
     addEventListener() {},
     confirm() { return confirmed; },
   };
-  const source = {
-    schemaVersion: 4, pages: [
-      { id: 'one', title: 'One', widgets: [
-        { id: 'html', type: 'text', html: '<img src=x onerror=alert(1)> {{Dev:state}}',
-          grid: { col: 2, row: 1, w: 3, h: 1 } },
-      ] },
-      { id: 'two', title: 'Two', widgets: [] },
-    ],
-  };
-  let stale = false;
-  let draft = false;
-  let invalidSource = false;
-  let delayedBackup;
   const commands = [];
+  const config = { schemaVersion: 5, pages: [] };
+  const state = { live: config, draft: config, token: 'a'.repeat(64) };
+  const backupName = 'config.json.20000101-000000.bak';
+  let fail = false;
+  let pending;
   globalThis.fetch = async (url, options) => {
-    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'test-token' } });
-    const command = options.body.get('cmd');
-    commands.push(command);
-    if (command === 'get CMS migrationstate') {
-      return new Response(draft ? 'Entwurf vorhanden: zuerst veroeffentlichen oder verwerfen'
-        : JSON.stringify(invalidSource ? {} : source));
-    }
-    if (command === 'get CMS migrationbackups') return new Response(JSON.stringify(['config.json.20000101-000000.bak']));
-    if (/^get CMS migrationrestorepreview config\.json\.20000101-00000[01]\.bak$/.test(command)) {
-      if (delayedBackup) return new Promise((resolve) => {
-        delayedBackup.resolve = resolve;
-        delayedBackup.started();
-      });
-      return new Response(JSON.stringify({ live: changed ? { schemaVersion: 5 } : source,
-        backup: source, token: 'b'.repeat(64) }));
-    }
-    if (command.startsWith('get CMS migrationpreview ')) {
-      return new Response(JSON.stringify({
-        source: stale ? { ...source, theme: 'light' } : source,
-        config: { schemaVersion: 5 }, token: 'a'.repeat(64),
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'test' } });
+    const cmd = options.body.get('cmd');
+    commands.push(cmd);
+    if (cmd === 'set CMS layoutupgrade') {
+      if (pending) await pending;
+      return new Response(fail ? 'Sicherung fehlgeschlagen' : JSON.stringify({
+        schemaVersion: 5, backup: backupName, draftBackup: 'config.json.20000101-000001.bak',
       }));
     }
-    if (command.startsWith('set CMS migrationcommit ')) {
-      changed = true;
-      return new Response(JSON.stringify({ backup: 'config.json.20000101-000001.bak' }));
+    if (cmd === 'get CMS version5state') return new Response(JSON.stringify(state));
+    if (cmd === 'get CMS migrationbackups') return new Response(JSON.stringify([backupName]));
+    if (cmd.startsWith('get CMS migrationrestorepreview ')) {
+      return new Response(JSON.stringify({ live: config, backup: config, token: 'b'.repeat(64) }));
     }
-    throw new Error(`unexpected command: ${command}`);
+    if (cmd.startsWith('set CMS migrationcommit restore ')) {
+      restores += 1;
+      return new Response(JSON.stringify({ backup: backupName }));
+    }
+    throw new Error(`Unexpected command ${cmd}`);
   };
   try {
     await import('../fcui/migration-preview.js');
-    assert.equal(elements.validate.disabled, true);
-    assert.equal(elements['commit-migration'].disabled, true);
-    assert.match(elements['migration-ready'].textContent, /Live-Daten/);
-    elements.file.files = [{ size: 1048577 }];
-    await elements.file.fire('change');
-    assert.match(elements.status.textContent, /höchstens 1 MiB/);
-    assert.equal(elements.preview.hidden, true);
-    elements.file.files = [{ size: 1, text: async () => '{' }];
-    await elements.file.fire('change');
-    assert.match(elements.status.textContent, /nicht analysiert/);
-    elements.file.files = [{ size: 1, text: async () => JSON.stringify(source) }];
-    await elements.file.fire('change');
-    assert.equal(elements.preview.hidden, false);
-    assert.equal(elements.validate.disabled, true, 'local file cannot be sent for migration');
-    assert.equal(elements['commit-migration'].disabled, true, 'local file cannot be migrated');
-
-    elements.device.value = 'CMS';
+    assert.equal(elements.device.value, 'CMS');
+    assert.deepEqual(commands, [], 'loading the page does not migrate');
+    let release;
+    pending = new Promise((resolve) => { release = resolve; });
+    const upgrade = elements['device-form'].fire('submit');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(elements.upgrade.disabled, true);
     await elements['device-form'].fire('submit');
-    assert.equal(elements.preview.hidden, false);
-    assert.equal(elements.validate.disabled, false);
-    assert.equal(elements['commit-migration'].disabled, true);
-    assert.match(elements['migration-ready'].textContent, /serverseitig prüfen/);
-    assert.match(elements.summary.textContent, /Offene Positionen: 0/);
-    const widgetForm = elements.forms.children[1];
-    const fieldset = widgetForm.children[0];
-    const original = fieldset.children.find((child) => child.tag === 'details').children[1];
-    assert.match(original.textContent, /<img src=x onerror=alert\(1\)>/);
-    assert.deepEqual(original.children, [], 'source HTML is inserted as text, not markup');
-    const labels = fieldset.children.filter((child) => child.tag === 'label');
-    assert.deepEqual(labels.map((label) => label.children[0].value), ['1', '2', '1', '1']);
-    labels[1].children[0].value = '1';
-    await widgetForm.fire('submit');
-    await elements.validate.fire('click');
-    assert.match(elements.status.textContent, /überschneiden/);
-    assert.equal(commands.length, 1, 'colliding manual positions are not sent');
-    const resetFieldset = elements.forms.children[1].children[0];
-    await resetFieldset.children.find((child) => child.textContent === 'Anpassung zurücksetzen').fire('click');
-    assert.match(elements.status.textContent, /Automatischer Vorschlag wiederhergestellt/);
-    await elements.validate.fire('click');
-    assert.match(elements.status.textContent, /serverseitig geprüft/);
-    assert.equal(elements['commit-migration'].disabled, true);
-    assert.match(elements['migration-ready'].textContent, /Sicherung bestätigen/);
-    elements['external-backup'].checked = true;
-    await elements['external-backup'].fire('change');
-    assert.equal(elements['commit-migration'].disabled, false);
-    elements['external-backup'].checked = false;
-    await elements['external-backup'].fire('change');
-    assert.equal(elements['commit-migration'].disabled, true, 'removing backup confirmation blocks migration');
-    assert.equal(elements['show-target'].hidden, false);
-    assert.equal(elements['show-widgets'].hidden, false);
-    await elements['show-widgets'].fire('click');
-    assert.match(elements['widget-status'].textContent, /Gridstack-CSS konnte nicht geladen werden/);
-    await elements['show-target'].fire('click');
-    assert.equal(elements.target.hidden, false);
-    assert.match(elements['target-status'].textContent, /Gridstack-CSS konnte nicht geladen werden/);
-    await elements.page.fire('change');
-    assert.match(elements['target-status'].textContent, /Gridstack-CSS konnte nicht geladen werden/);
+    release();
+    await upgrade;
+    pending = undefined;
+    assert.deepEqual(commands, ['set CMS layoutupgrade', 'get CMS version5state'], 'one click uses only upgrade and verification');
+    assert.match(elements.status.textContent, /Live-Sicherung.*Entwurfssicherung/);
+    assert.match(elements['open-cms'].href, /CMS\/index\.html\?mode=edit/);
     await elements['load-backups'].fire('click');
-    assert.equal(elements['backup-controls'].hidden, false);
-    elements.backup.value = 'config.json.20000101-000000.bak';
+    assert.equal(elements.backup.children.length, 1);
     await elements['preview-backup'].fire('click');
     assert.equal(elements['backup-result'].hidden, false);
-    assert.match(elements['backup-data'].textContent, /<img src=x onerror=alert\(1\)>/);
-    assert.deepEqual(elements['backup-data'].children, [], 'backup HTML is shown as text');
-    assert.match(elements['backup-status'].textContent, /nichts wiederhergestellt/);
-    stale = true;
-    await elements.validate.fire('click');
-    assert.match(elements.status.textContent, /Migrationsquelle hat sich geändert/);
-    assert.equal(elements['show-target'].hidden, true, 'stale validation clears target preview');
-    assert.equal(elements['show-widgets'].hidden, true, 'stale validation clears widget preview');
-    assert.equal(elements.target.hidden, true, 'stale validation hides target preview');
-    assert.equal(elements['widget-target'].hidden, true, 'stale validation hides widget preview');
-    assert.ok(commands.every((command) => command.startsWith('get ')), 'only read commands are sent');
-    stale = false;
-    await elements.validate.fire('click');
-    await elements['commit-migration'].fire('click');
-    assert.match(elements.status.textContent, /vollständige externe Sicherung/);
-    assert.ok(commands.every((command) => command.startsWith('get ')), 'missing external backup blocks writes');
-    await elements.validate.fire('click');
+    assert.match(elements['backup-live'].textContent, /schemaVersion/);
     elements['external-backup'].checked = true;
     await elements['external-backup'].fire('change');
-    assert.equal(elements['commit-migration'].disabled, false);
-    await elements['commit-migration'].fire('click');
-    assert.ok(commands.every((command) => command.startsWith('get ')), 'cancelled confirmation sends no write');
+    assert.equal(elements['commit-restore'].disabled, false);
+    await elements['commit-restore'].fire('click');
+    assert.equal(restores, 0, 'cancelled restore sends no write');
+    assert.equal(elements['commit-restore'].disabled, false, 'cancel leaves verified restore usable');
     confirmed = true;
-    await elements['commit-migration'].fire('click');
-    assert.match(elements.status.textContent, /Umstellung abgeschlossen.*config\.json/);
-    assert.equal(commands.filter((command) => command.startsWith('set CMS migrationcommit migrate ')).length, 1);
-    assert.equal(elements.preview.hidden, true);
-    assert.equal(elements['commit-migration'].disabled, true);
-
+    await elements['commit-restore'].fire('click');
+    assert.equal(restores, 1);
+    assert.match(elements['backup-status'].textContent, /Wiederherstellung abgeschlossen/);
+    fail = true;
+    await elements['device-form'].fire('submit');
+    assert.match(elements.status.textContent, /Sicherung fehlgeschlagen.*neu laden/);
+    assert.equal(elements.upgrade.disabled, true, 'uncertain response locks further actions');
+    const count = commands.length;
+    await elements['device-form'].fire('submit');
     await elements['load-backups'].fire('click');
-    elements.backup.value = 'config.json.20000101-000000.bak';
-    delayedBackup = {};
-    const started = new Promise((resolve) => { delayedBackup.started = resolve; });
-    const pending = elements['preview-backup'].fire('click');
-    await started;
-    elements.device.value = 'Other';
-    await elements.device.fire('input');
-    delayedBackup.resolve(new Response(JSON.stringify({ live: source, backup: source, token: 'b'.repeat(64) })));
-    await pending;
-    assert.equal(elements.preview.hidden, true, 'changing device clears displayed data');
-    assert.equal(elements['backup-result'].hidden, true, 'changing device clears backup preview');
-    assert.equal(elements['backup-controls'].hidden, true, 'changing device clears backup choices');
-    assert.equal(elements['backup-data'].textContent, '', 'late backup response cannot expose old content');
-    draft = true;
-    elements.device.value = 'CMS';
-    await elements['device-form'].fire('submit');
-    assert.match(elements.status.textContent, /Entwurf vorhanden/);
-    assert.equal(elements.preview.hidden, true);
-    draft = false;
-    invalidSource = true;
-    const before = commands.length;
-    await elements['device-form'].fire('submit');
-    assert.match(elements.status.textContent, /Unerwartete Antwort für die Migrationsquelle/);
-    assert.deepEqual(commands.slice(before), ['get CMS migrationstate'], 'invalid source is rejected');
-    assert.equal(elements.preview.hidden, true);
+    assert.equal(commands.length, count, 'failed action never retried silently');
+    const html = await readFile(new URL('../www/fhem-cms/examples/migration-preview.html', import.meta.url), 'utf8');
+    assert.match(html, /id="upgrade" type="submit">Jetzt umstellen/);
+    assert.doesNotMatch(html, /id="validate"|id="file"|id="forms"|id="commit-migration"/,
+      'old migration workflow has been removed');
   } finally {
-    globalThis.document = previous.document;
-    globalThis.window = previous.window;
-    globalThis.fetch = previous.fetch;
+    Object.assign(globalThis, original);
   }
 });

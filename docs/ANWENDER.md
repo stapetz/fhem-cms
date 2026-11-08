@@ -39,43 +39,48 @@ Nach `update all …` hängt das weitere Vorgehen davon ab, was sich geändert h
 
 ## Umstellung und Wiederherstellung testen
 
-Die Umstellung betrifft alle Seiten eines CMS-Devices. Bestehende Layouts bleiben
-im 48-Spalten-Format, bis die Umstellung ausdrücklich bestätigt wird. Für das
-12-Spalten-Raster werden automatisch gerundete, überschneidungsfreie Positionen
-vorgeschlagen. Das Erscheinungsbild kann sich dabei deutlich ändern; Inhalte,
-Seiten und Widget-Einstellungen bleiben erhalten.
+Im Bearbeitungsmodus steht bei alten CMS-Devices **Jetzt umstellen** direkt über
+dem Editor. Ein Klick stellt alle Seiten auf Schema 5 mit 12 Spalten um.
+Es gibt keine Rastervorschau, Sicherungs-Checkbox oder Einzelbestätigung mehr.
+Alternativ `/fhem/fhem-cms/examples/migration-preview.html` öffnen, das CMS-Device
+eingeben und denselben Button wählen (FHEMWEB-Webnamen gegebenenfalls anpassen).
+In FHEM ist auch `set <CMS> layoutupgrade` möglich.
 
-1. Vor dem Test eine vollständige externe Sicherung von FHEM-Konfiguration,
-   CMS-Datenverzeichnis einschließlich Live, Entwurf und Backups, Medien, Modul
-   und gemeinsamen Assets erstellen und deren Wiederherstellbarkeit prüfen.
-   Auf einer isolierten Testinstanz und nur mit freigegebenen Testgeräten testen.
-2. Einen vorhandenen Entwurf bewusst veröffentlichen oder verwerfen. Solange ein
-   Entwurf existiert, sind Migration und Wiederherstellung gesperrt.
-3. Im Bearbeitungsmodus `Datei → Migration / Restore …` öffnen oder
-   `/fhem/fhem-cms/examples/migration-preview.html` aufrufen. Bei abweichendem
-   FHEMWEB-Webnamen beginnt der Pfad entsprechend anders. Das CMS-Device
-   eingeben und `Live-Daten laden` wählen.
-4. Die automatisch vorgeschlagenen Positionen bei Bedarf auf einzelnen Seiten
-   anpassen. `Positionen serverseitig prüfen` anklicken und das Zielraster sowie
-   die optionale schreibfreie Widget-Ansicht prüfen. Die Ansicht zeigt einmalig
-   gelesene Werte, keine laufenden Aktualisierungen; Geräteaktionen sind dort
-   gesperrt. Eine lokal geladene JSON-Datei kann nur untersucht werden.
-   Falls sehr große Widgets nicht in das Zielraster passen, werden die Höhen im
-   Vorschlag verkleinert; die Anordnung kann später im Editor korrigiert werden.
-5. Erst nach geprüfter externer Sicherung das entsprechende Kästchen markieren,
-   `Jetzt migrieren` und den Bestätigungsdialog wählen. Die Schaltfläche ist
-   bereits vorher sichtbar, aber bis zur Prüfung und Sicherungsbestätigung gesperrt.
-   Das Modul sichert den bisherigen Live-Stand zusätzlich bytegenau. Der
-   angezeigte Backup-Name muss notiert werden. CMS-Seite neu laden und
-   Navigation, Widgets, Medien und beide Platzhalterformen kontrollieren.
+Alle gespeicherten Widgets, Einstellungen, Seiten und beide Platzhalterformen
+bleiben erhalten. Live und ein vorhandener Entwurf werden **getrennt** umgestellt:
+Der Entwurf wird weder veröffentlicht noch verworfen. Die Navigation erhält die
+erste Rasterzeile; Widgets werden in ihrer bisherigen Reihenfolge mit drei Kacheln
+je Zeile neu angeordnet. Positionen und Größen danach im Editor anpassen.
+Medien werden nicht verändert. Neue Devices starten bereits in Schema 5.
 
-Für eine Wiederherstellung auf derselben Seite `Backups des CMS-Devices laden`,
-das Backup auswählen und `Backup prüfen` wählen. Live und Backup vergleichen,
-die externe Sicherung bestätigen und `Geprüftes Backup wiederherstellen`
-bestätigen. Der vorherige Live-Stand wird ebenfalls gesichert. Nach einem Fehler
-oder einer verlorenen Antwort zuerst aktuellen Zustand und Backups prüfen, statt
-den Schreibvorgang blind zu wiederholen. Die Vorschau und ungespeicherte
-Positionsänderungen gehen beim Schließen verloren.
+Vor dem Austausch prüft das Modul beide Konfigurationen und erstellt bytegenaue
+Sicherungen. Auf der separaten Umstellungsseite werden Live- und Entwurfssicherung
+mit ihren jeweiligen Dateinamen angezeigt; beim Button direkt im Editor stehen
+die Namen im FHEM-Log. Die Dateien liegen im CMS-Datenverzeichnis.
+Ein kleines `layout-upgrade.json`-Journal hält einen begonnenen Auftrag fest.
+Bei einem Abbruch bleiben die Sicherungen erhalten; Zugriffe auf ein gemischtes
+Layout werden gesperrt. Beim Neustart wird derselbe Auftrag abgeschlossen.
+Extern veränderte oder ungültige Daten werden nicht überschrieben.
+Bei einer Fehlermeldung zuerst Zustand, Journal und Sicherungen prüfen; nicht
+blind weitere Schreibbefehle ausführen.
+
+Eine vollständige externe Sicherung von FHEM-Konfiguration, CMS-Daten, Medien,
+Modul und Assets bleibt vor Tests empfohlen. Die automatische Sicherung umfasst
+nur Konfigurationsdateien und ist keine Zusicherung gegen Stromausfall oder
+gleichzeitige externe Dateischreiber.
+
+Für eine Wiederherstellung im Schema-5-Editor **Sicherungen / Wiederherstellung**
+öffnen, `Backups laden`, ein Backup auswählen und `Backup prüfen` wählen.
+Live und Backup vergleichen, die geprüfte externe Sicherung bestätigen und
+`Backup wiederherstellen` bestätigen. Ein vorhandener Entwurf muss nur für diese
+Wiederherstellung vorher veröffentlicht oder verworfen werden.
+Eine Entwurfssicherung wird beim Restore nicht automatisch als Entwurf erkannt:
+Die ausgewählte Datei ersetzt immer den Live-Stand. Für einen vollständigen
+Rollback mit Entwurf beide Originaldateien bei gestopptem FHEM aus den jeweils
+zugehörigen Sicherungen wiederherstellen.
+
+`version5draft` und `migrationcommit` sind interne Schnittstellen für die Oberfläche,
+keine direkt auszuführenden Set-Menüpunkte.
 
 Für einen Rollback auf eine ältere CMS-Version ausschließlich eine zusammengehörige
 vollständige Code-, Asset- und Datensicherung auf einer isolierten Instanz

@@ -133,6 +133,40 @@ test('device entry dispatches validated formats and displays format errors', asy
     await loadingDraft;
     assert.equal(waitingDraft.config, undefined, 'late draft status cannot start the hidden editor');
     assert.equal(listeners.has('hashchange'), false);
+
+    const upgrading = Object.create(CmsPage.prototype);
+    const upgradeCalls = [];
+    let finishUpgrade;
+    Object.assign(upgrading, {
+      stopped: false, migrationButton: {}, upgradeMessage: {}, toolbar: {}, grid: {},
+      flushLayout: async () => { upgradeCalls.push('layout'); },
+      flushDraftWrites: async () => { upgradeCalls.push('draft'); },
+      stop() { this.stopped = true; upgradeCalls.push('stop'); },
+      client: { upgradeLayout: async () => {
+        upgradeCalls.push('upgrade');
+        await new Promise((resolve) => { finishUpgrade = resolve; });
+      } },
+    });
+    const upgradingNow = upgrading.upgradeLayout();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await upgrading.upgradeLayout();
+    assert.equal(upgrading.toolbar.inert, true, 'editing frozen during upgrade');
+    assert.equal(upgrading.grid.inert, true);
+    assert.deepEqual(upgradeCalls, ['layout', 'draft', 'stop', 'upgrade'], 'pending edits flushed before one write');
+    finishUpgrade();
+    await upgradingNow;
+    assert.equal(reloads, 3, 'successful upgrade reloads into schema 5');
+    const failedUpgrade = Object.create(CmsPage.prototype);
+    Object.assign(failedUpgrade, {
+      stopped: false, migrationButton: {}, upgradeMessage: {}, toolbar: {}, grid: {},
+      flushLayout: async () => {}, flushDraftWrites: async () => {},
+      stop() { this.stopped = true; },
+      client: { upgradeLayout: async () => { throw new Error('lost answer'); } },
+    });
+    await failedUpgrade.upgradeLayout();
+    assert.match(failedUpgrade.upgradeMessage.textContent, /lost answer.*neu laden/);
+    assert.equal(failedUpgrade.migrationButton.disabled, true, 'uncertain upgrade stays blocked');
+    assert.equal(reloads, 3, 'failed upgrade never reports success by reloading');
   } finally {
     Object.assign(globalThis, previous);
   }

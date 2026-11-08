@@ -121,6 +121,18 @@ export class FhemClient {
     return result.schemaVersion;
   }
 
+  async upgradeLayout() {
+    const text = await this.command(`set ${this.cmsDevice} layoutupgrade`);
+    const result = await this.parseJsonResult(text, 'Die Umstellung wurde nicht bestätigt');
+    if (!result || typeof result !== 'object' || Array.isArray(result) || result.schemaVersion !== 5
+      || ![result.backup, result.draftBackup].every((name) => name === null
+        || (typeof name === 'string' && BACKUP_NAME.test(name)))) {
+      throw new Error('Ungültige Bestätigung der Umstellung; Zustand und Sicherungen prüfen');
+    }
+    await this.getVersion5State();
+    return result;
+  }
+
   async getMigrationSource() {
     const text = await this.command(`get ${this.cmsDevice} migrationstate`);
     const source = await this.parseJsonResult(text, 'Die Migrationsquelle konnte nicht gelesen werden');

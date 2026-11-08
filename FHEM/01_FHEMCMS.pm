@@ -15,7 +15,7 @@ use MIME::Base64 qw(decode_base64 encode_base64);
 use POSIX qw(strftime);
 use Time::Local ();
 
-our $FHEMCMS_VERSION = '0.5.3-dev';
+our $FHEMCMS_VERSION = '0.5.4-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -68,6 +68,11 @@ sub FHEMCMS_Define {
 
     my ($dataError, $dataDir, $created) = FHEMCMS_CreateDataDir($name);
     return $dataError if (defined($dataError));
+    if (FHEMCMS_UpgradePending($dataDir)) {
+        my (undef, $upgradeError) = FHEMCMS_FinishLayoutUpgrade($dataDir);
+        return $upgradeError if (defined($upgradeError));
+        Log3($name, 3, "FHEMCMS ($name): unterbrochene Layoutumstellung abgeschlossen");
+    }
     $error = FHEMCMS_EnsureConfig($name, $dataDir, $created);
     return $error if (defined($error));
 
@@ -196,6 +201,7 @@ sub FHEMCMS_Get {
         if ($cmd eq 'backups') {
             return JSON::PP->new->utf8->canonical->encode([FHEMCMS_ListBackups($dataDir)]);
         }
+        return FHEMCMS_UpgradePending($dataDir) if (FHEMCMS_UpgradePending($dataDir));
         my $draftFile = File::Spec->catfile($dataDir, 'draft.json');
         if ($cmd eq 'status') {
             return JSON::PP->new->utf8->canonical->encode({draft => (-f $draftFile ? JSON::PP::true : JSON::PP::false)});
@@ -234,7 +240,8 @@ sub FHEMCMS_Set {
     my ($hash, $name, $cmd, @args) = @_;
     my $result = FHEMCMS_SetCommand($hash, $name, $cmd, @args);
     if (defined($result) && length($result) && defined($cmd)
-        && $cmd =~ /\A(?:config|draft|restore|publish|discard|media|purge|rebuild|version5draft|migrationcommit)\z/
+        && $cmd =~ /\A(?:config|draft|restore|publish|discard|media|purge|rebuild|version5draft|migrationcommit|layoutupgrade)\z/
+        && !($cmd eq 'layoutupgrade' && $result =~ /\A\{.*"schemaVersion":5\}\z/)
         && !($cmd eq 'migrationcommit'
             && $result =~ /\A\{"backup":"config\.json\.\d{8}-\d{6}(?:-\d+)?\.bak"\}\z/)) {
         my $reason = substr($result, 0, 200);
@@ -262,6 +269,20 @@ sub FHEMCMS_SetCommand {
 
     return 'Die Daten dieses Devices wurden geloescht; bitte das Device loeschen oder FHEM neu starten'
         if (defined($name) && $FHEMCMS_PURGED{$name});
+
+    if ($cmd eq 'layoutupgrade') {
+        return 'layoutupgrade erwartet keine Parameter' if (@args);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
+        return $error if (defined($error));
+        my ($result, $upgradeError) = FHEMCMS_UpgradeLayout($dataDir);
+        return $upgradeError if (defined($upgradeError));
+        my $backups = defined($result->{backup}) ? "Live-Sicherung: $result->{backup}"
+            : 'Schema 5 bereits aktiv';
+        $backups .= "; Entwurfssicherung: $result->{draftBackup}" if (defined($result->{draftBackup}));
+        Log3($name, 3, "FHEMCMS ($name): $backups; Live und Entwurf getrennt erhalten");
+        return JSON::PP->new->utf8->canonical->encode($result);
+    }
 
     if ($cmd eq 'version5draft' || $cmd eq 'migrationcommit') {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
@@ -349,7 +370,7 @@ sub FHEMCMS_SetUsage {
         splice(@backups, $FHEMCMS_USAGE_BACKUPS) if (@backups > $FHEMCMS_USAGE_BACKUPS);
     }
     my $restore = @backups ? 'restore:' . join(',', @backups) : 'restore';
-    return "config draft publish:noArg discard:noArg $restore rebuild:noArg media purge version5draft migrationcommit";
+    return "config draft publish:noArg discard:noArg $restore rebuild:noArg media purge layoutupgrade:noArg";
 }
 
 sub FHEMCMS_Summary {
@@ -1566,6 +1587,7 @@ sub FHEMCMS_ParseConfig {
 
 sub FHEMCMS_ReadLayoutFormat {
     my ($dataDir) = @_;
+    return (undef, FHEMCMS_UpgradePending($dataDir)) if (FHEMCMS_UpgradePending($dataDir));
     my $path = File::Spec->catfile($dataDir, 'config.json');
     return (undef, 'Live-Konfiguration darf kein Symlink sein') if (-l $path);
     my ($bytes, $readError) = FHEMCMS_ReadFile($path);
@@ -1586,6 +1608,7 @@ sub FHEMCMS_ReadLayoutFormat {
 # Alte Schreibbefehle duerfen unbekannte Formate nicht ersetzen oder verwerfen.
 sub FHEMCMS_LegacyWriteGuard {
     my ($name, $dataDir, $command) = @_;
+    return FHEMCMS_UpgradePending($dataDir) if (FHEMCMS_UpgradePending($dataDir));
     for my $entry (['config.json', 'Live-Konfiguration'], ['draft.json', 'Entwurf']) {
         my ($file, $label) = @{$entry};
         my $path = File::Spec->catfile($dataDir, $file);
@@ -1688,6 +1711,7 @@ sub FHEMCMS_PrepareLayoutMigration {
 
 sub FHEMCMS_ReadMigrationSource {
     my ($dataDir) = @_;
+    return (undef, undef, FHEMCMS_UpgradePending($dataDir)) if (FHEMCMS_UpgradePending($dataDir));
     my $draft = File::Spec->catfile($dataDir, 'draft.json');
     return (undef, undef, 'Entwurf vorhanden: zuerst veroeffentlichen oder verwerfen') if (-e $draft || -l $draft);
     my $live = File::Spec->catfile($dataDir, 'config.json');
@@ -1714,6 +1738,7 @@ sub FHEMCMS_PreviewLayoutMigration {
 # Der Lesevertrag ist getrennt versioniert.
 sub FHEMCMS_ReadVersion5State {
     my ($dataDir) = @_;
+    return (undef, FHEMCMS_UpgradePending($dataDir)) if (FHEMCMS_UpgradePending($dataDir));
     my $json = JSON::PP->new->utf8->canonical;
     my @entries;
     for my $file ('config.json', 'draft.json') {
@@ -1839,6 +1864,8 @@ sub FHEMCMS_PublishVersion5Draft {
 # Versionierter Entwurfsvertrag.
 sub FHEMCMS_Version5DraftCommand {
     my ($dataDir, $action, @args) = @_;
+    return 'version5draft ist ein interner Befehl; bitte den CMS-Editor verwenden'
+        if (!defined($action) || (!ref($action) && $action eq ''));
     return 'Unbekannte versionierte Entwurfsaktion'
         if (!defined($action) || ref($action) || $action !~ /\A(?:save|publish|discard)\z/);
     my $required = $action eq 'save' ? 2 : 1;
@@ -1862,6 +1889,162 @@ sub FHEMCMS_Version5DraftCommand {
     return FHEMCMS_DiscardVersion5Draft($dataDir, $token) if ($action eq 'discard');
     my (undef, $error) = FHEMCMS_PublishVersion5Draft($dataDir, $token);
     return $error;
+}
+
+sub FHEMCMS_UpgradePending {
+    my ($dataDir) = @_;
+    my $journal = File::Spec->catfile($dataDir, 'layout-upgrade.json');
+    return (-e $journal || -l $journal)
+        ? 'Layoutumstellung unvollstaendig; layoutupgrade erneut ausfuehren oder FHEM neu starten; Sicherungen pruefen'
+        : undef;
+}
+
+sub FHEMCMS_AutomaticLayout {
+    my ($bytes) = @_;
+    my ($source, $error) = FHEMCMS_ParseConfig($bytes);
+    return (undef, $error) if (defined($error));
+    my @pages;
+    for my $page (@{$source->{pages}}) {
+        my @widgets;
+        my $index = 0;
+        for my $widget (@{$page->{widgets}}) {
+            push(@widgets, {id => $widget->{id}, grid => {
+                col => 1 + 4 * ($index % 3), row => 2 + 3 * int($index / 3), w => 4, h => 3,
+            }});
+            $index++;
+        }
+        push(@pages, {id => $page->{id}, widgets => \@widgets});
+    }
+    my ($config, $planError) = FHEMCMS_PrepareLayoutMigration($source, {
+        navigation => {col => 1, row => 1, w => 12, h => 1}, pages => \@pages,
+    });
+    return (undef, $planError) if (defined($planError));
+    return (JSON::PP->new->utf8->canonical->pretty->encode($config), undef);
+}
+
+sub FHEMCMS_WriteUpgradeFile {
+    my ($path, $bytes, $replace) = @_;
+    my $tmp = "$path.upgrade.tmp";
+    if (-e $tmp || -l $tmp) {
+        return 'Temporaere Umstellungsdatei darf kein Symlink sein' if (-l $tmp);
+        my ($partial, $partialError) = FHEMCMS_ReadFile($tmp);
+        return $partialError if (defined($partialError));
+        return 'Fremde temporaere Umstellungsdatei; Sicherungen pruefen' if (index($bytes, $partial) != 0);
+        return "Unterbrochene Umstellungsdatei konnte nicht entfernt werden: $!" if (!unlink($tmp));
+        Log3('FHEMCMS', 3, 'FHEMCMS: unterbrochene temporaere Umstellungsdatei wird neu geschrieben');
+    }
+    my $out;
+    return "Umstellungsdatei konnte nicht angelegt werden: $!"
+        if (!sysopen($out, $tmp, O_WRONLY | O_CREAT | O_EXCL, 0640));
+    binmode($out, ':raw');
+    my $written = print {$out} $bytes;
+    my $synced = $written && $out->sync();
+    my $closed = close($out);
+    my ($verify, $readError) = FHEMCMS_ReadFile($tmp);
+    my $error = (!$written || !$synced || !$closed) ? "Umstellungsdatei konnte nicht geschrieben werden: $!"
+        : defined($readError) ? $readError
+        : $verify ne $bytes ? 'Umstellungsdatei stimmt nicht ueberein'
+        : (-l $path) ? 'Symlink fuer Umstellungsdatei ist nicht erlaubt'
+        : undef;
+    if (!defined($error)) {
+        if ($replace) {
+            $error = "Umstellungsdatei konnte nicht gespeichert werden: $!" if (!rename($tmp, $path));
+        } else {
+            $error = "Umstellungsjournal konnte nicht gespeichert werden: $!" if (!link($tmp, $path));
+        }
+    }
+    if (-e $tmp) {
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Umstellungsdatei konnte nicht entfernt werden: $!");
+    }
+    return $error;
+}
+
+sub FHEMCMS_UpgradeLayout {
+    my ($dataDir) = @_;
+    return FHEMCMS_FinishLayoutUpgrade($dataDir) if (FHEMCMS_UpgradePending($dataDir));
+    my ($format, $formatError) = FHEMCMS_ReadLayoutFormat($dataDir);
+    return (undef, $formatError) if (defined($formatError));
+    if ($format == 5) {
+        my (undef, $stateError) = FHEMCMS_ReadVersion5State($dataDir);
+        return (undef, $stateError) if (defined($stateError));
+        return ({schemaVersion => 5, backup => undef, draftBackup => undef}, undef);
+    }
+    my @originals;
+    for my $file ('config.json', 'draft.json') {
+        my $path = File::Spec->catfile($dataDir, $file);
+        return (undef, "Symlink fuer $file ist nicht erlaubt") if (-l $path);
+        next if ($file eq 'draft.json' && !-e $path);
+        my ($bytes, $readError) = FHEMCMS_ReadFile($path);
+        return (undef, "$file: $readError") if (defined($readError));
+        my (undef, $conversionError) = FHEMCMS_AutomaticLayout($bytes);
+        return (undef, "$file: $conversionError") if (defined($conversionError));
+        push(@originals, $bytes);
+    }
+    my @backups;
+    for my $bytes (@originals) {
+        my ($backup, $backupError) = FHEMCMS_CreateMigrationBackup($dataDir, $bytes);
+        return (undef, $backupError) if (defined($backupError));
+        push(@backups, $backup);
+    }
+    my $journal = {backup => $backups[0], draftBackup => $backups[1]};
+    my $error = FHEMCMS_WriteUpgradeFile(File::Spec->catfile($dataDir, 'layout-upgrade.json'),
+        JSON::PP->new->utf8->canonical->encode($journal), 0);
+    return (undef, $error) if (defined($error));
+    return FHEMCMS_FinishLayoutUpgrade($dataDir);
+}
+
+# Das Journal bindet beide Originale. Nach einem Abbruch wird nur derselbe Auftrag fortgesetzt.
+sub FHEMCMS_FinishLayoutUpgrade {
+    my ($dataDir) = @_;
+    my $journalPath = File::Spec->catfile($dataDir, 'layout-upgrade.json');
+    return (undef, 'Umstellungsjournal darf kein Symlink sein') if (-l $journalPath);
+    my ($bytes, $readError) = FHEMCMS_ReadFile($journalPath);
+    return (undef, $readError) if (defined($readError));
+    my $journal = eval { JSON::PP->new->utf8->decode($bytes) };
+    return (undef, 'Ungueltiges Umstellungsjournal; Sicherungen pruefen')
+        if ($@ || ref($journal) ne 'HASH' || keys(%{$journal}) != 2
+            || !exists($journal->{backup}) || !exists($journal->{draftBackup}));
+    my @entries;
+    for my $pair (['config.json', 'backup'], ['draft.json', 'draftBackup']) {
+        my ($file, $key) = @{$pair};
+        my $path = File::Spec->catfile($dataDir, $file);
+        return (undef, "Symlink fuer $file ist nicht erlaubt") if (-l $path);
+        my $backup = $journal->{$key};
+        if ($file eq 'draft.json' && !defined($backup)) {
+            return (undef, 'Entwurf wurde nach Beginn der Umstellung angelegt; Sicherungen pruefen') if (-e $path);
+            next;
+        }
+        return (undef, 'Ungueltige Sicherung im Umstellungsjournal')
+            if (!defined($backup) || ref($backup)
+                || $backup !~ /\Aconfig\.json\.\d{8}-\d{6}(?:-\d+)?\.bak\z/);
+        my $backupPath = File::Spec->catfile($dataDir, $backup);
+        return (undef, 'Umstellungssicherung darf kein Symlink sein') if (-l $backupPath);
+        my ($original, $backupError) = FHEMCMS_ReadFile($backupPath);
+        return (undef, $backupError) if (defined($backupError));
+        my ($target, $conversionError) = FHEMCMS_AutomaticLayout($original);
+        return (undef, $conversionError) if (defined($conversionError));
+        my ($current, $currentError) = FHEMCMS_ReadFile($path);
+        return (undef, $currentError) if (defined($currentError));
+        return (undef, "$file wurde ausserhalb der Umstellung geaendert; Sicherungen pruefen")
+            if ($current ne $original && $current ne $target);
+        push(@entries, {path => $path, original => $original, target => $target});
+    }
+    for my $entry (@entries) {
+        my ($current, $error) = FHEMCMS_ReadFile($entry->{path});
+        return (undef, $error) if (defined($error));
+        next if ($current eq $entry->{target});
+        return (undef, 'Zustand waehrend der Umstellung geaendert; Sicherungen pruefen')
+            if (-l $entry->{path} || $current ne $entry->{original});
+        $error = FHEMCMS_WriteUpgradeFile($entry->{path}, $entry->{target}, 1);
+        return (undef, "$error; Umstellung unvollstaendig, Sicherungen und Journal erhalten") if (defined($error));
+    }
+    for my $entry (@entries) {
+        my ($current, $error) = FHEMCMS_ReadFile($entry->{path});
+        return (undef, defined($error) ? $error : 'Umstellung konnte nicht verifiziert werden')
+            if (defined($error) || $current ne $entry->{target});
+    }
+    return (undef, "Umstellungsjournal konnte nicht entfernt werden: $!") if (!unlink($journalPath));
+    return ({%{$journal}, schemaVersion => 5}, undef);
 }
 
 # Zustandsgebundener Migrations- und Restore-Vertrag.
@@ -1966,6 +2149,7 @@ sub FHEMCMS_ReplaceMigrationLive {
 # Die Vorschau ist lesend; der Schreibbefehl prueft sie erneut.
 sub FHEMCMS_PreviewMigrationRestore {
     my ($dataDir, $backupName) = @_;
+    return (undef, undef, FHEMCMS_UpgradePending($dataDir)) if (FHEMCMS_UpgradePending($dataDir));
     return (undef, undef, 'Ungueltiger Backup-Name')
         if (!defined($backupName) || ref($backupName)
             || $backupName !~ /\Aconfig\.json\.\d{8}-\d{6}(?:-\d+)?\.bak\z/);

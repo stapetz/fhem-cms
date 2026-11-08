@@ -3,95 +3,46 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CMS-Rastervorschau</title>
-  <link id="grid-css" rel="stylesheet" href="../css/fcui-gridstack.css">
+  <title>CMS umstellen / Sicherungen</title>
   <style>
-    body { font: 1rem sans-serif; max-width: 70rem; margin: 1rem auto; padding: 0 1rem; }
-    label { display: inline-block; margin: .4rem; }
-    input[type=number] { width: 5rem; }
+    body { font: 1rem sans-serif; max-width: 60rem; margin: 1rem auto; padding: 0 1rem; }
     button, select, input { font: inherit; }
-    .canvas { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr));
-      grid-auto-rows: 1.5rem; gap: 2px; max-height: 28rem; overflow: auto; border: 1px solid; }
-    .tile { overflow: hidden; background: #d7e8f6; border: 1px solid #345; padding: 2px; }
-    fieldset { margin-block: .8rem; }
+    label { display: block; margin-block: .8rem; }
     pre { max-height: 20rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .target-scroll { max-height: 28rem; overflow: auto; border: 1px solid; }
-    .target-grid .grid-stack-item-content { background: #d7e8f6; border: 1px solid #345; padding: 2px; }
-    .widget-nav { display: flex; flex-wrap: wrap; gap: .5rem; }
-    .widget-nav.vertical { flex-direction: column; }
-    .widget-nav span { border: 1px solid; border-radius: .5rem; padding: .5rem; }
-    .widget-grid .grid-stack-item-content > * { height: 100%; }
   </style>
 </head>
 <body>
   <main>
-    <h1>CMS-Rastervorschau</h1>
-    <p>Geometrische Vorschau einer Schema-4-JSON-Datei oder eines CMS-Devices.
-      Die gespeicherte Konfiguration ist als Text einsehbar. Optional können
-      nach der Serverprüfung Widgets schreibfrei dargestellt werden. Nur beim Laden eines CMS-Devices
-      können Positionen serverseitig geprüft und nach ausdrücklicher Bestätigung
-      umgestellt werden. Änderungen an der Vorschau gehen beim Schließen verloren.</p>
-    <p>Alle Positionen werden automatisch vorgeschlagen. Dabei können Größen und
-      Anordnung vom bisherigen Layout abweichen; prüfen und korrigieren Sie die
-      Vorschau bei Bedarf. Inhalte und Widget-Einstellungen bleiben erhalten.</p>
-    <p><strong>Vor Umstellung oder Wiederherstellung:</strong> Eine vollständige externe Sicherung
-      von FHEM-Konfiguration, CMS-Daten, Medien, Modul und Assets erstellen und prüfen.
-      Ein vorhandener Entwurf muss vorher veröffentlicht oder verworfen werden.</p>
-    <label><input id="external-backup" type="checkbox">
-      Ich habe eine vollständige externe Sicherung erstellt und geprüft.</label>
-    <label>JSON-Datei auswählen <input id="file" type="file" accept=".json,application/json"></label>
+    <h1>CMS umstellen</h1>
+    <p>Alle Widgets bleiben mit ihren Einstellungen auf den jeweiligen Seiten erhalten.
+      Live und ein vorhandener Entwurf werden getrennt gesichert und auf 12 Spalten
+      umgestellt. Positionen und Größen werden neu vergeben und können danach im
+      Editor angepasst werden. Medien und bestehende Sicherungen bleiben unverändert.</p>
     <form id="device-form">
       <label>CMS-Device <input id="device" required maxlength="128" autocomplete="off"></label>
-      <button type="submit">Live-Daten laden</button>
+      <button id="upgrade" type="submit">Jetzt umstellen</button>
     </form>
-    <section aria-labelledby="migration-heading">
-      <h2 id="migration-heading">Migration auf Schema 5</h2>
-      <p>1. Live-Daten laden. 2. Vorschlag prüfen und bei Bedarf unten anpassen.
-        3. Positionen serverseitig prüfen. 4. Externe Sicherung bestätigen und Migration starten.</p>
-      <button id="validate" type="button" disabled>Positionen serverseitig prüfen</button>
-      <button id="commit-migration" type="button" disabled>Jetzt migrieren</button>
-      <p id="migration-ready" role="status">Bitte zuerst die Live-Daten eines CMS-Devices laden.</p>
-    </section>
-    <section aria-labelledby="restore-heading">
-      <h2 id="restore-heading">Wiederherstellung prüfen</h2>
-      <p>Live und Backup vor einer ausdrücklich bestätigten Wiederherstellung prüfen.</p>
-      <button id="load-backups" type="button">Backups des CMS-Devices laden</button>
-      <div id="backup-controls" hidden>
-        <label>Backup <select id="backup"></select></label>
-        <button id="preview-backup" type="button">Backup prüfen</button>
-      </div>
+    <p id="status" role="status">Die Umstellung startet erst beim Klick auf „Jetzt umstellen“.</p>
+    <a id="open-cms" hidden>CMS-Editor öffnen</a>
+    <details>
+      <summary>Sicherungen / Wiederherstellung</summary>
+      <p>Für eine Wiederherstellung vorher eine vollständige externe Sicherung erstellen
+        und prüfen. Ein vorhandener Entwurf muss veröffentlicht oder verworfen werden.
+        Live- und Entwurfssicherungen sind getrennte Dateien; Namen nach der Umstellung notieren.</p>
+      <button id="load-backups" type="button">Backups laden</button>
+      <label>Backup <select id="backup" disabled></select></label>
+      <button id="preview-backup" type="button" disabled>Backup prüfen</button>
       <p id="backup-status" role="status"></p>
-      <div id="backup-result" hidden>
-        <h3>Aktueller Live-Stand</h3><pre id="backup-live"></pre>
-        <h3>Ausgewähltes Backup</h3><pre id="backup-data"></pre>
-        <button id="commit-restore" type="button" hidden>Geprüftes Backup wiederherstellen</button>
-      </div>
-    </section>
-    <p id="status" role="status">Bitte eine Datei auswählen.</p>
-    <section id="preview" hidden>
-      <label>Seite <select id="page"></select></label>
-      <p id="summary"></p>
-      <div id="canvas" class="canvas" aria-label="12-Spalten-Rastervorschau"></div>
-      <div id="forms"></div>
-      <button id="show-target" type="button" hidden>Geprüftes Zielraster mit Gridstack anzeigen</button>
-      <button id="show-widgets" type="button" hidden>Geprüfte Widgets schreibfrei anzeigen</button>
-      <section id="target" hidden>
-        <h2>Geprüftes Gridstack-Zielraster</h2>
-        <p>Nur Positionen und Bezeichnungen; keine Widget-Darstellung, Live-Werte oder Aktionen.</p>
-        <p id="target-status" role="status"></p>
-        <div class="target-scroll"><div id="target-grid" class="grid-stack target-grid"></div></div>
+      <section id="backup-result" hidden>
+        <h2>Aktueller Live-Stand</h2><pre id="backup-live"></pre>
+        <h2>Ausgewähltes Backup</h2><pre id="backup-data"></pre>
+        <label><input id="external-backup" type="checkbox">
+          Ich habe eine vollständige externe Sicherung erstellt und geprüft.</label>
+        <button id="commit-restore" type="button" disabled>Backup wiederherstellen</button>
       </section>
-      <section id="widget-target" hidden>
-        <h2>Schreibfreie Widget-Ansicht</h2>
-        <p>Annäherung der Zielansicht mit einmalig gelesenen Werten. Aktionen und Bearbeitung sind deaktiviert.
-          Diagramme lesen historische Daten; Medien und Icons werden vom FHEM-Server geladen.
-          Die Ansicht aktualisiert Readings nicht automatisch und ist kein Nachweis einer vollständigen Oberfläche.</p>
-        <p id="widget-status" role="status"></p>
-        <div class="target-scroll" inert><div id="widget-grid" class="grid-stack widget-grid"></div></div>
-      </section>
-    </section>
+    </details>
   </main>
-  <script type="module" src="../js/fcui-migration-preview.js?v=0.5.3"
-    onerror="document.getElementById('status').textContent='Fehler: Vorschau konnte nicht geladen werden.'"></script>
+  <script type="module" src="../js/fcui-migration-preview.js?v=0.5.4"
+    onerror="document.getElementById('status').textContent='Fehler: CMS-Umstellung konnte nicht geladen werden.'"></script>
 </body>
 </html>

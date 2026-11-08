@@ -60,22 +60,28 @@ stehen in [ABNAHME.md](./ABNAHME.md).
 
 ### FCUI-Übergangsarchitektur
 
-**Aktueller Entwicklungsstand:** Die nachfolgenden historischen Abschnitte
-beschreiben teilweise frühere Schutzsperren. Inzwischen sind `version5draft`
-und `migrationcommit` registriert, die Schema-5-Ansicht und der Editor über den
-Device-Einstieg angeschlossen und Migration sowie Restore in der Vorschauseite
-nach expliziter Bestätigung möglich. Der Server prüft Zustand und Entwurf erneut
-und erstellt vor dem Austausch ein byteweise geprüftes Backup. Der Browser verlangt
-zusätzlich die Bestätigung einer externen vollständigen Sicherung; diese Aussage
-kann der Server nicht selbst verifizieren. Lokale isolierte Browser- und
-Transaktionstests ersetzen keine FHEMWEB-/Geräteabnahme auf gesicherten Testdaten.
+**Aktueller Entwicklungsstand:** Die Umstellung erfolgt auf ausdrücklichen
+Entwicklerwunsch über einen einzigen Button `Jetzt umstellen` bzw.
+`set <CMS> layoutupgrade`, ohne Vorschau, Sicherungs-Checkbox oder weitere
+Bestätigung. Widgets und Konfiguration bleiben auf ihren Seiten erhalten;
+Positionen und Größen dürfen vollständig neu vergeben werden. Live und ein
+vorhandener Entwurf werden getrennt umgestellt und bytegenau gesichert.
+Das `layout-upgrade.json`-Journal bindet die Originale über ihre Backup-Dateien.
+Ein unterbrochener Auftrag wird beim Neustart fortgesetzt; bis zum Abschluss
+bleiben Layout-Leseverträge und konkurrierende Konfigurationsschreibwege gesperrt.
+Bei externen Änderungen wird sichtbar abgelehnt statt überschrieben.
+Die internen Verträge `version5draft` und `migrationcommit` bleiben für Editor
+und Restore registriert, werden aber nicht im Set-Menü angeboten.
+Die folgenden Vorschau-/Entwurfssperren beschreiben den abgelösten historischen
+Migrationsablauf und gelten nicht für `layoutupgrade`. Für Restore bleibt die
+Entwurfssperre bestehen. Lokale isolierte Browser- und Transaktionstests ersetzen
+keine FHEMWEB-/Geräteabnahme auf gesicherten Testdaten.
 Ältere Stände benötigen für Rollback eine zusammengehörige Code-, Asset- und
 Datensicherung.
 
 Neue Datenverzeichnisse erhalten eine validierte Schema-5-Startkonfiguration.
 Eine fehlende Live-Datei in einem bereits vorhandenen Datenverzeichnis wird
-nicht automatisch ersetzt. In der Vorschau sind Prüfung und `Jetzt migrieren`
-stets sichtbar, aber bis zur jeweiligen Voraussetzung deaktiviert.
+nicht automatisch ersetzt.
 
 Am 08.11.2026 wurde für den Rasterübergang festgelegt: **Bestehende Layouts
 bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen
@@ -106,18 +112,11 @@ Funktionen:
 2. **Live, Entwurf und Backup:** Live-Konfiguration, Entwurf, Medien und alte
    Backups bleiben getrennt erhalten. Laden oder Anzeigen eines Altbestands darf
    ihn nicht umschreiben. Änderungen an alten Layouts dürfen nicht implizit auf
-   12 Spalten runden. Für die spätere explizite Umstellung sind eine geprüfte
-   Sicherung, eine Vorschau der Auswirkungen und eine Bestätigung vorgesehen.
-   Nicht exakt darstellbare Positionen und Breiten werden für die Vorschau
-   automatisch gerundet und kollisionsfrei angeordnet. Bei Platzmangel dürfen
-   die Höhen verkleinert werden. Die Vorschau weist auf sichtbare Änderungen hin
-   und erlaubt manuelle Korrekturen. Navigation und alle Seiten sind einzubeziehen.
-   Bis zur bestätigten Umstellung bleiben
-   die ursprünglichen Daten unverändert; ein Abbruch verwirft die Vorschau.
-   Solange ein Entwurf existiert, ist die Umstellung gesperrt: Er muss vorher
-   ausdrücklich veröffentlicht oder verworfen werden. Die Umstellung selbst
-   darf keinen Entwurf veröffentlichen, verwerfen oder überschreiben. Diese
-   Sperre muss auch serverseitig unmittelbar vor der Umstellung geprüft werden.
+   12 Spalten runden. Die explizite Umstellung benötigt nur einen Button;
+   Validierung und geprüfte Konfigurationssicherungen laufen serverseitig.
+   Navigation und alle Seiten werden einbezogen; Widgets werden deterministisch
+   neu angeordnet. Live und Entwurf bleiben getrennt mit ihren jeweiligen Inhalten
+   erhalten. Die Umstellung darf keinen Entwurf veröffentlichen oder verwerfen.
    Wiederherstellung muss
    das Format des Backups respektieren; ein älterer Programmstand kann ein neues
    Format möglicherweise nicht lesen, deshalb beim Rollback die dazu passende

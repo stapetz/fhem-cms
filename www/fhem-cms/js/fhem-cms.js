@@ -137,11 +137,14 @@ export class CmsPage {
     this.publishButton = this.button('Veröffentlichen', () => this.publish());
     this.discardButton = this.button('Entwurf verwerfen', () => this.discard());
     this.backupsButton = this.button('Backups …', () => this.showBackups());
-    this.migrationButton = this.button('Migration / Restore …', () => {
-      const url = new URL('../examples/migration-preview.html', window.location.href);
-      url.searchParams.set('device', this.client.cmsDevice);
-      window.open(url.href, '_blank', 'noopener');
-    });
+    this.migrationButton = this.button('Jetzt umstellen', () => this.upgradeLayout());
+    this.upgradeNotice = document.createElement('section');
+    this.upgradeNotice.hidden = VIEW_MODE;
+    this.upgradeMessage = document.createElement('p');
+    this.upgradeMessage.setAttribute('role', 'status');
+    this.upgradeMessage.textContent = 'Neues 12-Spalten-Layout: Widgets und Einstellungen bleiben erhalten. '
+      + 'Live und Entwurf werden getrennt gesichert und umgestellt; Positionen danach manuell anpassen.';
+    this.upgradeNotice.append(this.upgradeMessage, this.migrationButton);
     this.purgeButton = this.button('Daten löschen …', () => this.showPurgeDialog());
     this.showGrid = !VIEW_MODE && window.localStorage.getItem(GUIDE_KEY) === '1';
     this.gridButton = this.button('Raster anzeigen', () => this.toggleGuides());
@@ -215,7 +218,7 @@ export class CmsPage {
       this.menus.push(menu);
       return menu;
     };
-    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.migrationButton, this.purgeButton]);
+    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton]);
     const editMenu = makeMenu('Bearbeiten', [this.navButton]);
     this.menu = makeMenu('Einfügen', this.menuButtons);
     const viewMenu = makeMenu('Ansicht', [this.gridButton]);
@@ -233,7 +236,7 @@ export class CmsPage {
     this.grid.setAttribute('aria-label', 'Widgets');
     this.grid.setAttribute('aria-live', 'polite');
 
-    shell.append(this.toolbar, this.grid);
+    shell.append(this.upgradeNotice, this.toolbar, this.grid);
   }
 
   button(label, onClick) {
@@ -1806,6 +1809,27 @@ export class CmsPage {
     }
   }
 
+  async upgradeLayout() {
+    if (this.upgrading || this.stopped) return;
+    this.upgrading = true;
+    this.migrationButton.disabled = true;
+    this.toolbar.inert = true;
+    this.grid.inert = true;
+    this.upgradeMessage.textContent = 'Live und Entwurf werden gesichert und umgestellt …';
+    try {
+      await this.flushLayout();
+      await this.flushDraftWrites();
+      if (this.stopped) return;
+      this.stop();
+      await this.client.upgradeLayout();
+      window.location.reload();
+    } catch (error) {
+      this.stop();
+      this.upgradeMessage.textContent = `Umstellung nicht bestätigt: ${error.message}. `
+        + 'Zustand und Sicherungen prüfen, dann Seite neu laden. Die Bearbeitung bleibt gesperrt.';
+    }
+  }
+
   setDraft(value) {
     this.hasDraft = value;
     this.publishButton.disabled = !value;
@@ -2016,7 +2040,7 @@ async function startSchema5Device(client, shell, card, isSuspended) {
     migrationLink.href = migrationUrl.href;
     migrationLink.target = '_blank';
     migrationLink.rel = 'noopener';
-    migrationLink.textContent = 'Migration / Restore';
+    migrationLink.textContent = 'Sicherungen / Wiederherstellung';
     shell.append(migrationLink);
     const root = document.createElement('section');
     shell.append(root);
