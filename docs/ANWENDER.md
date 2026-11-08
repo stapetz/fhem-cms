@@ -92,7 +92,8 @@ Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfigu
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
 - **Bearbeiten:** Widget hinzufügen (mit Suche).
 - **Ansicht:** Seite bearbeiten (Theme, Widget-Rahmen, Rasterart mit Vorschau und
-  numerische Positionseingabe) und Raster anzeigen.
+  numerische Positionseingabe), Vorschau (zeigt die Seite ohne Bearbeitungselemente)
+  und Raster anzeigen.
 
 Das Stiftsymbol an der Navigation öffnet **Navigation bearbeiten** – die zentrale
 Seitenverwaltung: Reihenfolge am ≡-Griff ziehen (oder Pfeiltasten), je Seite

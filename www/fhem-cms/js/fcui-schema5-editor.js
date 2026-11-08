@@ -35,6 +35,7 @@ export class Schema5Editor {
   #widgets;
   #backup;
   #gridToggle;
+  #previewToggle;
   #publish;
   #discard;
   #reloadButton;
@@ -48,6 +49,7 @@ export class Schema5Editor {
   #appearance = null;
   #menus = [];
   #showGrid = false;
+  #previewMode = false;
   #gridElement = null;
   #layoutSaving = false;
 
@@ -106,9 +108,14 @@ export class Schema5Editor {
     this.#gridToggle.textContent = 'Raster anzeigen';
     this.#gridToggle.className = 'cms-button cms-grid-toggle';
     this.#gridToggle.setAttribute('aria-pressed', 'false');
+    this.#previewToggle = document.createElement('button');
+    this.#previewToggle.type = 'button';
+    this.#previewToggle.textContent = 'Vorschau';
+    this.#previewToggle.className = 'cms-button cms-grid-toggle';
+    this.#previewToggle.setAttribute('aria-pressed', 'false');
     this.#menu('Datei', [this.#publish, this.#discard, this.#backup]);
     this.#menu('Bearbeiten', [this.#widgets]);
-    this.#menu('Ansicht', [this.#page, this.#gridToggle]);
+    this.#menu('Ansicht', [this.#page, this.#previewToggle, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
     this.#status = document.createElement('p');
@@ -118,6 +125,13 @@ export class Schema5Editor {
     this.#page.addEventListener('click', () => this.#openPage());
     this.#widgets.addEventListener('click', () => this.#openWidgets());
     this.#backup.addEventListener('click', () => this.#openBackup());
+    this.#previewToggle.addEventListener('click', () => {
+      this.#previewMode = !this.#previewMode;
+      this.#previewToggle.setAttribute('aria-pressed', this.#previewMode ? 'true' : 'false');
+      if (!this.#active || this.#suspended || !this.#view) return;
+      this.#generation += 1;
+      this.#display(this.#controller.snapshot(), this.#generation).catch((error) => this.#error(error));
+    });
     this.#gridToggle.addEventListener('click', () => {
       this.#showGrid = !this.#showGrid;
       this.#gridToggle.setAttribute('aria-pressed', this.#showGrid ? 'true' : 'false');
@@ -198,6 +212,7 @@ export class Schema5Editor {
     this.#widgets.disabled = !enabled;
     this.#backup.disabled = !enabled;
     this.#gridToggle.disabled = !enabled;
+    this.#previewToggle.disabled = !enabled;
     this.#publish.disabled = !enabled || !hasDraft;
     this.#discard.disabled = !enabled || !hasDraft;
   }
@@ -264,7 +279,7 @@ export class Schema5Editor {
     this.#content.append(grid);
     const view = new Schema5View({ GridStack: this.#GridStack, root: grid, status: this.#status,
       config, client: this.#client, services: this.#services, browser: this.#browser,
-      editing: {
+      editing: this.#previewMode ? undefined : {
         onChange: (pageId, items) => this.#saveLayout(pageId, items),
         onEdit: (pageId, id) => id === '__nav' ? this.#openNavigation() : this.#openWidgets(id),
         onMove: (pageId, id) => this.#openMove(id),

@@ -251,6 +251,17 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     assert.equal(mode.textContent, 'Live');
     assert.equal(widgetButton.disabled, false);
 
+    // Vorschau blendet die Bearbeitungswerkzeuge aus und wieder ein
+    const previewButton = toolbarControls(root.children[0]).length && [root.children[0], ...root.children[0].children.flatMap(function all(n) { return [n, ...n.children.flatMap(all)]; })]
+      .find((node) => node.textContent === 'Vorschau');
+    previewButton.fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const previewWrapper = content.children[0].children[0];
+    assert.equal(previewWrapper.children.some?.((c) => c.className === 'cms-widget-tools') ?? previewWrapper.children.filter((c) => c.className === 'cms-widget-tools').length > 0, false, 'preview hides widget tools');
+    previewButton.fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(content.children[0].children[0].children.at(-1).className, 'cms-widget-tools');
+
     edit.fire('click');
     const pendingPanel = content.children[0];
     const pendingGrid = grids.at(-1);
