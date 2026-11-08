@@ -90,6 +90,7 @@ class FHEMCMSButton extends HTMLElement {
           <label>Titel (optional)
             <input name="title" maxlength="64" autocomplete="off">
           </label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <label>FHEM-Device
             <span class="device-row">
               <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
@@ -166,7 +167,7 @@ class FHEMCMSButton extends HTMLElement {
     }
     const config = this.widgetConfig;
     this.shadowRoot.querySelector('[data-label]').textContent = config.label || config.command || '';
-    const title = config.title || '';
+    const title = config.showTitle === false ? '' : (config.title || '');
     this.shadowRoot.querySelector('[data-title]').textContent = title;
     this.shadowRoot.querySelector('[data-header]').hidden = !title;
     const tile = this.shadowRoot.querySelector('[data-tile]');
@@ -220,6 +221,7 @@ class FHEMCMSButton extends HTMLElement {
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
+    form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.device.value = this.widgetConfig.device || '';
     form.elements.label.value = this.widgetConfig.label || '';
     this.setIcon(this.widgetConfig.icon || '');
@@ -309,6 +311,9 @@ class FHEMCMSButton extends HTMLElement {
       if (value(field)) {
         widget[field] = value(field);
       }
+    }
+    if (!form.elements.showTitle.checked) {
+      widget.showTitle = false;
     }
     if (this.icon) {
       widget.icon = this.icon;

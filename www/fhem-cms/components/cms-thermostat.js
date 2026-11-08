@@ -248,6 +248,7 @@ class FHEMCMSThermostat extends HTMLElement {
           <label>Titel (optional)
             <input name="title" maxlength="64" autocomplete="off">
           </label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <label>FHEM-Device
             <span class="device-row">
               <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
@@ -385,7 +386,8 @@ class FHEMCMSThermostat extends HTMLElement {
       return found ? found.value : undefined;
     };
     const alias = (group && group[0].alias) || '';
-    root.querySelector('[data-title]').textContent = config.title || alias || config.device || 'Thermostat';
+    root.querySelector('[data-title]').textContent = config.showTitle === false ? ''
+      : config.title || alias || config.device || 'Thermostat';
 
     const actualRaw = read(config.readings.actual);
     const actual = toNumber(actualRaw);
@@ -556,6 +558,7 @@ class FHEMCMSThermostat extends HTMLElement {
     const config = this.widgetConfig;
 
     form.elements.title.value = config.title || '';
+    form.elements.showTitle.checked = config.showTitle !== false;
     form.elements.device.value = config.device || '';
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.setDialogError('');
@@ -765,6 +768,9 @@ class FHEMCMSThermostat extends HTMLElement {
     const widget = { id: this.widgetConfig.id, type: 'thermostat', device, readings, grid };
     if (title) {
       widget.title = title;
+    }
+    if (!form.elements.showTitle.checked) {
+      widget.showTitle = false;
     }
     return widget;
   }

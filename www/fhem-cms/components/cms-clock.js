@@ -87,6 +87,7 @@ class FHEMCMSClock extends HTMLElement {
         <form method="dialog" data-form novalidate>
           <h3 id="clock-dialog-title">Uhr / Datum konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <fieldset>
             <legend>Darstellung wählen</legend>
             <div class="presets">
@@ -145,6 +146,7 @@ class FHEMCMSClock extends HTMLElement {
     this.isNew = isNew;
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
+    form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.style.value = this.widgetConfig.style || 'digital';
     form.elements.showSeconds.checked = this.widgetConfig.showSeconds === true;
     form.elements.showDate.checked = this.widgetConfig.showDate === true || form.elements.style.value === 'date';
@@ -177,6 +179,9 @@ class FHEMCMSClock extends HTMLElement {
     };
     if (title) {
       next.title = title;
+    }
+    if (!form.elements.showTitle.checked) {
+      next.showTitle = false;
     }
     try {
       await this.services.saveWidget(next);
@@ -214,7 +219,7 @@ class FHEMCMSClock extends HTMLElement {
     }
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
-    title.hidden = !this.widgetConfig.title;
+    title.hidden = !this.widgetConfig.title || this.widgetConfig.showTitle === false;
     const time = this.shadowRoot.querySelector('[data-time]');
     const face = this.shadowRoot.querySelector('[data-face]');
     const date = this.shadowRoot.querySelector('[data-date]');

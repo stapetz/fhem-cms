@@ -166,9 +166,10 @@ export class Schema5PagesPanel {
   }
 
   #moveForm(page, widget, pages) {
+    const name = widget.title || widget.id;
     const form = element('form');
-    const heading = element('p', `Widget ${widget.id} verschieben`);
-    const targetLabel = element('label', `Zielseite für ${widget.id} `);
+    const heading = element('p', `Widget ${name} verschieben`);
+    const targetLabel = element('label', `Zielseite für ${name} `);
     const target = element('select');
     for (const other of pages.filter((entry) => entry.id !== page.id)) {
       const option = element('option', other.title);
@@ -181,7 +182,7 @@ export class Schema5PagesPanel {
     for (const [key, name, max] of [
       ['col', 'Spalte', 12], ['row', 'Zeile', 1000], ['w', 'Breite', 12], ['h', 'Höhe', 1000],
     ]) {
-      const label = element('label', `${name} für ${widget.id} `);
+      const label = element('label', `${name} für ${widget.title || widget.id} `);
       const input = element('input');
       input.type = 'number';
       input.min = '1';

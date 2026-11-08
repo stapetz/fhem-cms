@@ -845,36 +845,36 @@ sub FHEMCMS_ValidateConfig {
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
-                $err = $exact->($widget, 'Widget', ['id', 'type', $body, 'grid'], ['title']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', $body, 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-html') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'html', 'devices', 'grid'], ['title']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'html', 'devices', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-value') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['title', 'unit', 'icon']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['title', 'showTitle', 'unit', 'icon']);
             } elsif ($widget->{type} eq 'fhem-switch') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'on', 'off', 'grid'],
-                    ['title', 'icon', 'iconOff']);
+                    ['title', 'showTitle', 'icon', 'iconOff']);
             } elsif ($widget->{type} eq 'fhem-button') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'grid'],
-                    ['title', 'label', 'icon']);
+                    ['title', 'showTitle', 'label', 'icon']);
             } elsif ($widget->{type} eq 'fhem-clock') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'style', 'showSeconds', 'showDate', 'showWeekday', 'grid'],
-                    ['title']);
+                    ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-icon') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-table') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title', 'deviceLabel', 'sum', 'sumLabel', 'hideHeader', 'valueLabel', 'hideValueLabel', 'hideSumLabel', 'sumUnit']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title', 'showTitle', 'deviceLabel', 'sum', 'sumLabel', 'hideHeader', 'valueLabel', 'hideValueLabel', 'hideSumLabel', 'sumUnit']);
             } elsif ($widget->{type} eq 'fhem-chart') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
-                    ['title', 'unit', 'range', 'granularity', 'source']);
+                    ['title', 'showTitle', 'unit', 'range', 'granularity', 'source']);
             } elsif ($widget->{type} eq 'fhem-solarflow') {
                 # 'device' mit Reading-Namen als Text ist das aeltere Format (ein gemeinsames Device);
                 # invertGrid/invertBattery sind veraltet und wirkungslos, bleiben aber fuer gespeicherte Entwuerfe gueltig.
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'grid'],
-                    ['title', 'device', 'unit', 'invertGrid', 'invertBattery', 'threshold']);
+                    ['title', 'showTitle', 'device', 'unit', 'invertGrid', 'invertBattery', 'threshold']);
             } elsif ($widget->{type} eq 'fhem-slider') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title', 'showTitle']);
             } else {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title', 'showTitle']);
             }
             return $err if ($err);
 
@@ -887,6 +887,8 @@ sub FHEMCMS_ValidateConfig {
                 if (exists($widget->{title})
                     && (ref($widget->{title}) || !defined($widget->{title})
                         || length($widget->{title}) > 64 || $widget->{title} =~ /[\x00-\x1f\x7f]/));
+            return 'Ungueltiger Wert fuer showTitle'
+                if (exists($widget->{showTitle}) && !$isBool->($widget->{showTitle}));
 
             if ($widget->{type} eq 'text' && exists($widget->{html})) {
                 my $htmlError = FHEMCMS_ValidateHtml($widget->{html});

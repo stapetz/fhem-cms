@@ -65,6 +65,7 @@ class FHEMCMSText extends HTMLElement {
           <label>Titel (optional)
             <input name="title" maxlength="64" autocomplete="off">
           </label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <div data-editor></div>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
@@ -120,7 +121,7 @@ class FHEMCMSText extends HTMLElement {
     }
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
-    title.hidden = !this.widgetConfig.title;
+    title.hidden = !this.widgetConfig.title || this.widgetConfig.showTitle === false;
     if (typeof this.widgetConfig.html === 'string') {
       const fragment = renderHtml(this.widgetConfig.html);
       substituteIn(fragment, (device, reading) => lookupValue(this.groups, device, reading));
@@ -134,6 +135,7 @@ class FHEMCMSText extends HTMLElement {
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
+    form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     const initial = typeof this.widgetConfig.html === 'string'
       ? this.widgetConfig.html
       : markdownToHtml(renderMarkdown(this.widgetConfig.markdown || ''));
@@ -168,6 +170,9 @@ class FHEMCMSText extends HTMLElement {
     const widget = { id: this.widgetConfig.id, type: 'text', html, grid: { ...this.widgetConfig.grid } };
     if (title) {
       widget.title = title;
+    }
+    if (!form.elements.showTitle.checked) {
+      widget.showTitle = false;
     }
     return widget;
   }

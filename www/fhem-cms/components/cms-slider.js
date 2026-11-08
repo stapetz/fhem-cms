@@ -113,6 +113,7 @@ class FHEMCMSlider extends HTMLElement {
         <form method="dialog" data-form novalidate>
           <h3 id="slider-dialog-title">Schieberegler konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <label>FHEM-Device
             <span class="device-row"><input name="device" readonly required placeholder="Noch kein Device gewählt">
               <button type="button" data-pick-device>Auswählen …</button></span>
@@ -175,6 +176,7 @@ class FHEMCMSlider extends HTMLElement {
     this.isNew = isNew;
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
+    form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.device.value = this.widgetConfig.device || '';
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
@@ -276,7 +278,8 @@ class FHEMCMSlider extends HTMLElement {
         value = this.sent.value;
       }
     }
-    this.shadowRoot.querySelector('[data-title]').textContent = this.widgetConfig.title || this.widgetConfig.device || 'Schieberegler';
+    this.shadowRoot.querySelector('[data-title]').textContent = this.widgetConfig.showTitle === false ? ''
+      : this.widgetConfig.title || this.widgetConfig.device || 'Schieberegler';
     this.shadowRoot.querySelector('[data-reading]').textContent = this.widgetConfig.reading || '';
     this.shadowRoot.querySelector('[data-value]').textContent = value === null
       ? (reading || '–')
@@ -362,6 +365,9 @@ class FHEMCMSlider extends HTMLElement {
     };
     if (title) {
       next.title = title;
+    }
+    if (!form.elements.showTitle.checked) {
+      next.showTitle = false;
     }
     return next;
   }

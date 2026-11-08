@@ -67,6 +67,7 @@ class FHEMCMSIcon extends HTMLElement {
         <form method="dialog" data-form novalidate>
           <h3 id="icon-dialog-title">Status-Symbol konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <label>FHEM-Device
             <span class="device-row"><input name="device" readonly required placeholder="Noch kein Device gewählt">
               <button type="button" data-pick-device>Auswählen …</button></span>
@@ -124,6 +125,7 @@ class FHEMCMSIcon extends HTMLElement {
     this.isNew = isNew;
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
+    form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.device.value = this.widgetConfig.device || '';
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
@@ -240,6 +242,9 @@ class FHEMCMSIcon extends HTMLElement {
     if (title) {
       next.title = title;
     }
+    if (!form.elements.showTitle.checked) {
+      next.showTitle = false;
+    }
     try {
       await this.services.saveWidget(next);
       this.closeConfig(true);
@@ -276,7 +281,7 @@ class FHEMCMSIcon extends HTMLElement {
     }
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
-    title.parentElement.hidden = !this.widgetConfig.title;
+    title.parentElement.hidden = !this.widgetConfig.title || this.widgetConfig.showTitle === false;
     const current = (this.snapshot || []).find((item) => item.readings?.[this.widgetConfig.reading] !== undefined);
     const readingValue = current ? String(current.readings[this.widgetConfig.reading]) : '';
     const mapping = (this.widgetConfig.states || []).find((item) => item.value === readingValue);

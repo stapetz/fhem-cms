@@ -115,6 +115,7 @@ class FHEMCMSValue extends HTMLElement {
           <label>Titel (optional)
             <input name="title" maxlength="64" autocomplete="off">
           </label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <label>FHEM-Device
             <span class="device-row">
               <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
@@ -245,8 +246,9 @@ class FHEMCMSValue extends HTMLElement {
     tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''}`;
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
-    this.shadowRoot.querySelector('[data-header]').hidden = !this.widgetConfig.title;
-    tile.toggleAttribute('data-has-title', Boolean(this.widgetConfig.title));
+    const titleShown = Boolean(this.widgetConfig.title) && this.widgetConfig.showTitle !== false;
+    this.shadowRoot.querySelector('[data-header]').hidden = !titleShown;
+    tile.toggleAttribute('data-has-title', titleShown);
     const icon = this.shadowRoot.querySelector('[data-icon]');
     const url = this.widgetConfig.icon && this.services ? this.services.iconUrl(this.widgetConfig.icon) : '';
     icon.hidden = !url;
@@ -276,6 +278,7 @@ class FHEMCMSValue extends HTMLElement {
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.device.value = this.widgetConfig.device || '';
     form.elements.title.value = this.widgetConfig.title || '';
+    form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     this.showAlias();
     form.elements.unit.value = this.widgetConfig.unit || '';
     this.setIcon(this.widgetConfig.icon || '');
@@ -474,6 +477,9 @@ class FHEMCMSValue extends HTMLElement {
     const title = form.elements.title.value.trim();
     if (title) {
       widget.title = title;
+    }
+    if (!form.elements.showTitle.checked) {
+      widget.showTitle = false;
     }
     if (unit) {
       widget.unit = unit;

@@ -115,6 +115,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         <form method="dialog" data-form novalidate>
           <h3 id="table-dialog-title">Tabelle konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <fieldset class="mode"><legend>Tabellenüberschrift</legend>
             <label class="check"><input name="header" type="checkbox" checked>Überschrift anzeigen</label>
             <div data-header-fields>
@@ -215,6 +216,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     this.isNew = isNew;
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
+    form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.deviceLabel.value = this.widgetConfig.deviceLabel || '';
     form.elements.sum.checked = this.widgetConfig.sum === true;
     form.elements.sumLabel.value = this.widgetConfig.sumLabel || '';
@@ -504,6 +506,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
     if (title) {
       next.title = title;
     }
+    if (!form.elements.showTitle.checked) {
+      next.showTitle = false;
+    }
     if (deviceLabel) {
       next.deviceLabel = deviceLabel;
     }
@@ -565,7 +570,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     }
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
-    title.parentElement.hidden = !this.widgetConfig.title;
+    title.parentElement.hidden = !this.widgetConfig.title || this.widgetConfig.showTitle === false;
     this.shadowRoot.querySelector('[data-device-heading]').textContent = this.widgetConfig.deviceLabel || 'Device';
     this.shadowRoot.querySelector('[data-head]').hidden = this.widgetConfig.hideHeader === true;
     this.shadowRoot.querySelector('[data-value-heading]').textContent = this.widgetConfig.hideValueLabel === true

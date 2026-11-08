@@ -194,6 +194,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
         <form method="dialog" data-form novalidate>
           <h3 id="solarflow-dialog-title">SolarFlow konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <fieldset class="mode"><legend>Herkunft der Werte</legend>
             <label class="check"><input type="radio" name="mode" value="single" checked>Werte kommen aus einem Device</label>
             <label class="check"><input type="radio" name="mode" value="multi">Werte kommen aus mehreren Devices</label></fieldset>
@@ -266,6 +267,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
     const form = this.shadowRoot.querySelector('[data-form]');
     const config = this.widgetConfig;
     form.elements.title.value = config.title || '';
+    form.elements.showTitle.checked = config.showTitle !== false;
     form.elements.unit.value = config.unit === 'kW' ? 'kW' : 'W';
     form.elements.threshold.value = Number.isFinite(config.threshold) ? config.threshold : DEFAULT_THRESHOLD;
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
@@ -393,6 +395,9 @@ class FHEMCMSSolarFlow extends HTMLElement {
     if (title) {
       next.title = title;
     }
+    if (!form.elements.showTitle.checked) {
+      next.showTitle = false;
+    }
     try {
       await this.services.saveWidget(next);
       this.closeConfig(true);
@@ -471,7 +476,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
     }
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
-    title.parentElement.hidden = !this.widgetConfig.title;
+    title.parentElement.hidden = !this.widgetConfig.title || this.widgetConfig.showTitle === false;
     const model = computeModel(this.widgetConfig, this.snapshot);
     const key = JSON.stringify([model.visible, model.edges.map((edge) => [edge.a, edge.b, edge.reverse, Math.round(edge.power > 0 ? Math.min(1, edge.power / MAX_POWER) * 10 : -1), edge.power < 300 ? 0 : edge.power < 1500 ? 1 : 2])]);
     if (key !== this.structureKey) {

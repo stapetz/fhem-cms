@@ -142,11 +142,13 @@ test('widget panel binds real draft controller, cancellation, failures and lifec
         await list.children[0].fire('click');
         await tick();
         const html = '<span device="Temp" reading="state">{{Temp:state|upper}}</span>';
-        await widget.services.saveWidget({ ...widget.config, html, devices: ['Temp'] });
+        await widget.services.saveWidget({ ...widget.config, html, devices: ['Temp'], showTitle: false });
         await tick();
         assert.deepEqual(closed, { requiresReload: false }, 'saving a new widget closes the dialog');
         assert.equal(root.children.length, 0);
         assert.equal(controller.snapshot().draft.pages[0].widgets[0].html, html);
+        assert.equal(controller.snapshot().draft.pages[0].widgets[0].showTitle, false,
+          'the Perl module accepts the showTitle flag');
         assert.equal(await readFile(path, 'utf8'), original);
 
         const editRoot = new Element('section');

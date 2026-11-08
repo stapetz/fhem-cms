@@ -76,6 +76,7 @@ class FHEMCMSHtml extends HTMLElement {
           <label>Titel (optional)
             <input name="title" maxlength="64" autocomplete="off">
           </label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <label>HTML-Code
             <textarea name="html" spellcheck="false" autocomplete="off" placeholder="${EXAMPLE.replace(/"/g, '&quot;')}"></textarea>
           </label>
@@ -154,7 +155,7 @@ class FHEMCMSHtml extends HTMLElement {
       this.templateSource = html;
     }
     content.replaceChildren(renderTemplate(this.template, (device, reading) => this.lookup(device, reading)));
-    const title = this.widgetConfig.title || '';
+    const title = this.widgetConfig.showTitle === false ? '' : (this.widgetConfig.title || '');
     this.shadowRoot.querySelector('[data-title]').textContent = title;
     this.shadowRoot.querySelector('[data-header]').hidden = !title;
     this.shadowRoot.querySelector('[data-tile]').toggleAttribute('data-has-title', Boolean(title));
@@ -190,6 +191,7 @@ class FHEMCMSHtml extends HTMLElement {
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
+    form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.html.value = this.widgetConfig.html || '';
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.showDevices();
@@ -219,6 +221,9 @@ class FHEMCMSHtml extends HTMLElement {
     const widget = { id: this.widgetConfig.id, type: 'fhem-html', html, devices, grid: { ...this.widgetConfig.grid } };
     if (title) {
       widget.title = title;
+    }
+    if (!form.elements.showTitle.checked) {
+      widget.showTitle = false;
     }
     return widget;
   }

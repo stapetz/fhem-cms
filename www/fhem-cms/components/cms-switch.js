@@ -99,6 +99,7 @@ class FHEMCMSSwitch extends HTMLElement {
           <label>Titel (optional)
             <input name="title" maxlength="64" autocomplete="off">
           </label>
+          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
           <label>FHEM-Device
             <span class="device-row">
               <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
@@ -223,7 +224,7 @@ class FHEMCMSSwitch extends HTMLElement {
     const state = this.currentState();
     toggle.setAttribute('aria-checked', String(state === 'on'));
     toggle.toggleAttribute('data-unknown', state === null);
-    const title = this.widgetConfig.title || '';
+    const title = this.widgetConfig.showTitle === false ? '' : (this.widgetConfig.title || '');
     toggle.setAttribute('aria-label', title || `${this.widgetConfig.device || 'Schalter'}`);
     const raw = this.readingValue();
     const tile = this.shadowRoot.querySelector('[data-tile]');
@@ -289,6 +290,7 @@ class FHEMCMSSwitch extends HTMLElement {
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
+    form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.device.value = this.widgetConfig.device || '';
     this.setIcon('on', this.widgetConfig.icon || '');
     this.setIcon('off', this.widgetConfig.iconOff || '');
@@ -392,6 +394,9 @@ class FHEMCMSSwitch extends HTMLElement {
     };
     if (value('title')) {
       widget.title = value('title');
+    }
+    if (!form.elements.showTitle.checked) {
+      widget.showTitle = false;
     }
     if (this.iconOn) {
       widget.icon = this.iconOn;

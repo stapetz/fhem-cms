@@ -100,7 +100,9 @@ die Eingaben. In „Seiten verwalten“ wirken Anlegen, Umbenennen, Verschieben 
 Löschen erst mit Speichern.
 
 Widgets am Punktgriff oben rechts ziehen. Am markierten Griff unten rechts
-Breite und Höhe ändern. Das Stiftsymbol öffnet direkt die Widgeteinstellungen;
+Breite und Höhe ändern. Der Widget-Titel ist zugleich der interne Name in den
+Verwaltungsdialogen; der Haken „Titel anzeigen“ im Widget-Dialog blendet ihn
+auf der Kachel ein oder aus. Das Stiftsymbol öffnet direkt die Widgeteinstellungen;
 bei der Navigation deren Einstellungen. Auch die Navigation ist verschiebbar
 und skalierbar. Änderungen werden automatisch **nur als Entwurf** gespeichert.
 Erst **Datei → Entwurf veröffentlichen** ändert die Homepage.
