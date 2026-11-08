@@ -791,7 +791,7 @@ sub FHEMCMS_ValidateConfig {
                 : ();
             my %seenItem;
             for my $item (@{$items}) {
-                $err = $exact->($item, 'Navigationseintrag', ['page'], ['label', 'width', 'height']);
+                $err = $exact->($item, 'Navigationseintrag', ['page'], ['label', 'width', 'height', 'hidden']);
                 return $err if ($err);
                 return 'Navigationseintrag verweist auf eine unbekannte Seite'
                     if (ref($item->{page}) || !defined($item->{page}) || !$known{$item->{page}});
@@ -804,6 +804,8 @@ sub FHEMCMS_ValidateConfig {
                     if (exists($item->{width}) && !$isInt->($item->{width}, 40, 600));
                 return 'Ungueltige Hoehe'
                     if (exists($item->{height}) && !$isInt->($item->{height}, 24, 200));
+                return 'Ungueltiger Wert fuer hidden'
+                    if (exists($item->{hidden}) && !$isBool->($item->{hidden}));
             }
         }
     }

@@ -424,6 +424,24 @@ body {
   flex: 0 0 2.1rem;
 }
 
+.cms-navedit-row .cms-navedit-show,
+.cms-navedit-head .cms-navedit-show {
+  flex: 0 0 4.2rem;
+  text-align: center;
+}
+
+.cms-navedit-row .cms-navedit-show input {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: var(--cms-accent);
+}
+
+/* Versteckte Seiten sind nur im Bearbeitungsmodus sichtbar, gedimmt markiert. */
+.cms-nav-link.cms-nav-hiddenpage {
+  opacity: .5;
+  border-style: dashed;
+}
+
 .cms-navedit-head .cms-navedit-gripspace,
 .cms-navedit-head .cms-navedit-removespace {
   flex: 0 0 2.1rem;

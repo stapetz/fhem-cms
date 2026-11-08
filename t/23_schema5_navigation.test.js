@@ -100,8 +100,8 @@ test('navigation panel manages pages, order, shared sizes and files against real
     assert.equal(row0.children[2].children[0].value, 'Eins');
     assert.equal(row0.children[3].children[0].value, 'Start');
     assert.equal(row0.children[4].children[0].value, '40');
-    assert.equal(row0.children[6].disabled, true, 'page with widgets cannot be deleted');
-    assert.equal(rows()[1].children[6].disabled, false);
+    assert.equal(row0.children[7].disabled, true, 'page with widgets cannot be deleted');
+    assert.equal(rows()[1].children[7].disabled, false);
 
     // Abbrechen mit Änderungen erfordert Bestätigung
     orientation.value = 'vertical';
@@ -127,6 +127,12 @@ test('navigation panel manages pages, order, shared sizes and files against real
     assert.equal(rows().length, 3);
     assert.equal(writes, 0, 'all edits stay local until saving');
 
+    // Anzeigen-Flag: Punkt verstecken (Parkplatz)
+    const showBox = rows()[1].children[6].children[0];
+    assert.equal(showBox.checked, true, 'Anzeigen ist standardmäßig aktiv');
+    showBox.checked = false;
+    showBox.fire('change');
+
     // Ungültige gemeinsame Größe wird abgewiesen
     shared.children[1].children[0].checked = true;
     shared.children[2].children[0].value = '39';
@@ -145,7 +151,8 @@ test('navigation panel manages pages, order, shared sizes and files against real
     assert.equal(draft.pages[2].title, 'Dritte');
     assert.equal(draft.navigation.orientation, 'vertical');
     assert.equal(draft.navigation.itemWidth, 120);
-    assert.deepEqual(draft.navigation.items, [{ page: 'one', label: 'Home', width: 40 }]);
+    assert.deepEqual(draft.navigation.items,
+      [{ page: 'one', label: 'Home', width: 40, hidden: true }]);
     assert.equal(draft.pages[1].widgets[0].html, '{{Temp:state}}');
     assert.equal(await readFile(path, 'utf8'), original);
 
@@ -157,7 +164,7 @@ test('navigation panel manages pages, order, shared sizes and files against real
       browser: { confirm: () => true }, onClose: (outcome) => { closed2 = outcome; } });
     const form2 = root2.children[3];
     form2.children[1].children[1].children[0].checked = false;
-    form2.children[2].children[3].children[6].fire('click');
+    form2.children[2].children[3].children[7].fire('click');
     await root2.children[4].children[1].fire('click');
     assert.deepEqual(closed2, { requiresReload: false });
     const draft2 = controller.snapshot().draft;

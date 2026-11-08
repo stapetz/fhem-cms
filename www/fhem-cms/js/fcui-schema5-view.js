@@ -90,8 +90,10 @@ export class Schema5View {
     nav.append(burger);
     for (const page of this.config.pages) {
       const item = (this.config.navigation.items || []).find((entry) => entry.page === page.id) || {};
+      if (item.hidden === true && !this.editing) continue;
       const link = document.createElement('a');
       link.className = 'cms-nav-link';
+      if (item.hidden === true) link.classList.add('cms-nav-hiddenpage');
       link.href = `#/${page.id}`;
       link.textContent = item.label || page.title;
       const width = this.config.navigation.itemWidth || item.width;

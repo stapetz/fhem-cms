@@ -102,6 +102,7 @@ export class Schema5NavigationPanel {
         label: item.label === undefined ? '' : String(item.label),
         width: item.width === undefined ? '' : String(item.width),
         height: item.height === undefined ? '' : String(item.height),
+        show: item.hidden !== true,
       };
     });
     this.#rowsBox = element('div');
@@ -140,7 +141,7 @@ export class Schema5NavigationPanel {
         this.#message(`Dateiname „${file}“ ist bereits vergeben.`, true);
         return;
       }
-      this.#rows.push({ page: { id: file, title, widgets: [] }, file, title, label: '', width: '', height: '' });
+      this.#rows.push({ page: { id: file, title, widgets: [] }, file, title, label: '', width: '', height: '', show: true });
       addTitle.value = '';
       addFile.value = '';
       this.#renderRows();
@@ -187,7 +188,7 @@ export class Schema5NavigationPanel {
   #values() {
     return JSON.stringify([this.#orientation.value, this.#sharedEnabled.checked,
       this.#shared.itemWidth.value, this.#shared.itemHeight.value,
-      this.#rows.map((row) => [row.file, row.title, row.label, row.width, row.height])]);
+      this.#rows.map((row) => [row.file, row.title, row.label, row.width, row.height, row.show])]);
   }
 
   #moveRow(from, to) {
@@ -206,7 +207,7 @@ export class Schema5NavigationPanel {
     gripSpace.className = 'cms-navedit-gripspace';
     head.append(gripSpace);
     for (const [key, name] of [['file', 'Dateiname'], ['title', 'Seitentitel'], ['label', 'Beschriftung'],
-      ['width', 'Breite'], ['height', 'Höhe']]) {
+      ['width', 'Breite'], ['height', 'Höhe'], ['show', 'Anzeigen']]) {
       const span = element('span', name);
       span.className = `cms-navedit-${key}`;
       head.append(span);
@@ -273,6 +274,17 @@ export class Schema5NavigationPanel {
         label.append(input);
         return label;
       });
+      const showLabel = element('label');
+      showLabel.className = 'cms-navedit-show';
+      const show = element('input');
+      show.type = 'checkbox';
+      show.checked = row.show;
+      show.setAttribute('aria-label', `„${row.title || row.file}“ in der Navigation anzeigen`);
+      show.addEventListener('change', () => {
+        row.show = show.checked;
+        this.#message(this.#values() !== this.#baseline ? 'Noch nicht gespeicherte Änderungen.' : '');
+      });
+      showLabel.append(show);
       const remove = element('button', '✕');
       remove.type = 'button';
       remove.className = 'cms-navedit-remove';
@@ -284,7 +296,7 @@ export class Schema5NavigationPanel {
         this.#renderRows();
         this.#message('Noch nicht gespeicherte Änderungen.');
       });
-      box.append(grip, ...fields, remove);
+      box.append(grip, ...fields, showLabel, remove);
       this.#rowsBox.append(box);
     });
   }
@@ -390,6 +402,7 @@ export class Schema5NavigationPanel {
       if (row.label) item.label = row.label;
       if (row.width !== '') item.width = Number(row.width);
       if (row.height !== '') item.height = Number(row.height);
+      if (!row.show) item.hidden = true;
       if (Object.keys(item).length > 1) items.push(item);
     }
     if (items.length) navigation.items = items;
