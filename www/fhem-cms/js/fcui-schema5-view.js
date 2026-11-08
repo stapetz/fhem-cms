@@ -98,8 +98,9 @@ export class Schema5View {
       link.textContent = item.label || page.title;
       const width = this.config.navigation.itemWidth || item.width;
       const height = this.config.navigation.itemHeight || item.height;
-      if (width) link.style.width = `${width}px`;
-      if (height) link.style.height = `${height}px`;
+      // Feste Größen gelten als Maximum und schrumpfen mit der Kachel mit.
+      if (width) link.style.width = `min(${Number(width)}px, 100%)`;
+      if (height) link.style.height = `min(${Number(height)}px, 100%)`;
       if (page.id === pageId) link.setAttribute('aria-current', 'page');
       nav.append(link);
     }
