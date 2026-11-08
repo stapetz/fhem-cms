@@ -216,4 +216,53 @@ subtest 'prepares a fully specified target without writing or accepting schema 5
     ok(!defined($result) && $reason =~ /__nav/, 'rejects ambiguous legacy navigation ID');
 };
 
+subtest 'legacy commands cannot overwrite or discard a future format' => sub {
+    my $name = 'FutureGuard';
+    my $hash = {NAME => $name};
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    my $live = File::Spec->catfile($dir, 'config.json');
+    my $draft = File::Spec->catfile($dir, 'draft.json');
+    my $old = read_bytes($live);
+    my $future = $json->decode($old);
+    $future->{schemaVersion} = 5;
+    my $future_bytes = $json->encode($future);
+    my $backup_name = 'config.json.20000101-000000.bak';
+    write_bytes(File::Spec->catfile($dir, $backup_name), $old);
+    my $payload = encode_base64($old, '');
+    for my $location ('live', 'draft') {
+        write_bytes($live, $location eq 'live' ? $future_bytes : $old);
+        write_bytes($draft, $location eq 'draft' ? $future_bytes : $old);
+        my $before_live = read_bytes($live);
+        my $before_draft = read_bytes($draft);
+        my @backups = FHEMCMS_ListBackups($dir);
+        for my $action (
+            ['config', $payload], ['draft', $payload], ['publish'], ['discard'], ['restore', $backup_name],
+        ) {
+            like(FHEMCMS_Set($hash, $name, @{$action}), qr/schemaVersion/,
+                "$location: legacy $action->[0] is rejected");
+            is(read_bytes($live), $before_live, "$location: $action->[0] preserves live bytes");
+            is(read_bytes($draft), $before_draft, "$location: $action->[0] preserves draft bytes");
+            is_deeply([FHEMCMS_ListBackups($dir)], \@backups, "$location: $action->[0] creates no backup");
+        }
+    }
+    for my $version ('0', '000001', '99', 'unknown') {
+        my $unknown = $json->decode($old);
+        $unknown->{schemaVersion} = $version;
+        my $bytes = $json->encode($unknown);
+        write_bytes($live, $bytes);
+        write_bytes($draft, $old);
+        like(FHEMCMS_Set($hash, $name, 'config', $payload), qr/schemaVersion/,
+            "unknown version $version is protected");
+        is(read_bytes($live), $bytes, "unknown version $version remains unchanged");
+    }
+    unlink($draft) or die "Cannot remove test draft: $!";
+    write_bytes($live, '{');
+    is(FHEMCMS_Set($hash, $name, 'restore', $backup_name), undef,
+        'explicit restore remains possible when live JSON is corrupt');
+    is_deeply($json->decode(read_bytes($live)), $json->decode($old), 'restore recovers the legacy configuration');
+    my @corrupt = grep { read_bytes(File::Spec->catfile($dir, $_)) eq '{' } FHEMCMS_ListBackups($dir);
+    is(scalar(@corrupt), 1, 'restore backs up the corrupt live bytes before replacement');
+};
+
 done_testing();

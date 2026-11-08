@@ -207,6 +207,12 @@ Freischaltung mit der künftigen Layout-Engine abzugleichen.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
 Positionsplan um; sie speichert und überträgt ihn nicht.
+Die bisherigen Schreibbefehle prüfen vor Änderungen die Schema-Version von
+Live- und gegebenenfalls Entwurfsdatei. Bei einem unbekannten Format lehnen sie
+auch Verwerfen und Restore ab, statt Daten mit einem älteren Client zu ersetzen.
+Bei beschädigtem JSON bleiben explizites Verwerfen und Restore möglich; der
+Vorgang wird protokolliert. Diese Sperre ersetzt weder eine versionierte API
+noch den Schutz bei einem Rollback auf älteren Backend-Code.
 
 Das ist kein Nachweis einer vollständigen FHEMWEB-Autorisierung, Migration oder
 Geräteabnahme. Insbesondere Testinstanz-Rechte, CSRF, externer Ressourcenzugriff,

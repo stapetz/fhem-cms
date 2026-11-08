@@ -187,6 +187,8 @@ sub FHEMCMS_SetCommand {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
         my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
         return $error if (defined($error));
+        $error = FHEMCMS_LegacyWriteGuard($name, $dataDir, $cmd);
+        return $error if (defined($error));
         my $draftFile = File::Spec->catfile($dataDir, 'draft.json');
         if ($cmd eq 'discard') {
             return undef if (!-e $draftFile);
@@ -210,6 +212,8 @@ sub FHEMCMS_SetCommand {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
         return "$cmd erwartet genau einen Parameter" if (@args != 1);
         my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
+        return $error if (defined($error));
+        $error = FHEMCMS_LegacyWriteGuard($name, $dataDir, $cmd);
         return $error if (defined($error));
 
         if ($cmd eq 'restore') {
@@ -1404,6 +1408,33 @@ sub FHEMCMS_ParseConfig {
     my $error = FHEMCMS_ValidateConfig($config);
     return (undef, $error) if (defined($error));
     return ($config, undef);
+}
+
+# Alte Schreibbefehle duerfen unbekannte Formate nicht ersetzen oder verwerfen.
+sub FHEMCMS_LegacyWriteGuard {
+    my ($name, $dataDir, $command) = @_;
+    for my $entry (['config.json', 'Live-Konfiguration'], ['draft.json', 'Entwurf']) {
+        my ($file, $label) = @{$entry};
+        my $path = File::Spec->catfile($dataDir, $file);
+        next if (!-e $path);
+        my ($text, $error) = FHEMCMS_ReadFile($path);
+        return "$label kann nicht geprueft werden: $error" if (defined($error));
+        my $config = eval { JSON::PP->new->utf8->decode($text) };
+        my $decodeFailed = $@ ne '';
+        if ($decodeFailed || !defined($config) || ref($config) ne 'HASH') {
+            # Wiederherstellen und explizites Verwerfen bleiben bei kaputtem JSON moeglich.
+            if ($command eq 'restore' || $command eq 'discard') {
+                Log3($name, 3, "FHEMCMS ($name): Format von $label nicht pruefbar; $command wird weiter geprueft");
+                next;
+            }
+            return "$label ist ungueltig: Konfiguration ist kein gueltiges JSON";
+        }
+        my $version = $config->{schemaVersion};
+        return "$label hat eine nicht unterstuetzte schemaVersion; alter Schreibbefehl abgelehnt"
+            if (!defined($version) || ref($version) || $version !~ /\A[0-9]{1,6}\z/
+                || !($version eq '1' || $version eq '2' || $version eq '3' || $version == 4));
+    }
+    return undef;
 }
 
 # Rein vorbereitend: Schema 5 wird weder von der bestehenden API angenommen noch gespeichert.
