@@ -110,6 +110,16 @@ export class FhemClient {
     }
   }
 
+  async getLayoutFormat() {
+    const text = await this.command(`get ${this.cmsDevice} layoutformat`);
+    const result = await this.parseJsonResult(text, 'Das Layoutformat konnte nicht gelesen werden');
+    if (!result || typeof result !== 'object' || Array.isArray(result)
+      || (result.schemaVersion !== 4 && result.schemaVersion !== 5)) {
+      throw new Error('Unerwartete Antwort für das Layoutformat');
+    }
+    return result.schemaVersion;
+  }
+
   async getMigrationSource() {
     const text = await this.command(`get ${this.cmsDevice} migrationstate`);
     const source = await this.parseJsonResult(text, 'Die Migrationsquelle konnte nicht gelesen werden');

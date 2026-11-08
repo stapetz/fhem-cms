@@ -273,6 +273,14 @@ Zustandskennung. Er weist Schema 4, gemischte Formate und beschädigte Daten ab;
 die bisherigen Lesewege bleiben unverändert. Damit kann eine zukünftige
 versionierte Oberfläche den Zustand abrufen, aber weder Migration noch
 Schema-5-Entwürfe auslösen. Die Kennung ist keine Autorisierung.
+`get <CMS> layoutformat` liefert für eine validierte Live-Konfiguration die
+Layoutkennung 4 (auch für beim Lesen nach Schema 4 migrierte historische
+Schemata) oder 5. Der Befehl legt keine Datenverzeichnisse an und verändert
+weder Live noch Entwurf; beschädigte, unbekannte oder symbolisch verlinkte
+Live-Dateien werden abgewiesen. Er prüft keinen Entwurf und ist nur eine
+Momentaufnahme: Die nachfolgende formatspezifische Lese- und Schreib-API muss
+den Zustand erneut prüfen und bei zwischenzeitlichem Formatwechsel scheitern.
+Der Device-Einstieg verwendet diesen Vertrag noch nicht.
 Das vorbereitete Modul `www/fhem-cms/js/fcui-schema5-layout.js` übersetzt
 Schema-5-Positionen zwischen den einbasierten Daten und Gridstacks nullbasierten
 Koordinaten. Es erhält Inhalte und Seitenreihenfolge, prüft Grenzen sowie

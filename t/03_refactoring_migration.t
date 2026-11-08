@@ -66,6 +66,8 @@ for my $version (1 .. 3) {
         my $draftBytes = $json->encode($draft);
         write_bytes($livePath, $liveBytes);
         write_bytes($draftPath, $draftBytes);
+        is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 4},
+            'format detection preserves historical 48-column semantics even with a draft');
 
         my $expectedGrid = $version < 3
             ? {col => 9, row => 2, w => 20, h => 3}
@@ -163,6 +165,49 @@ subtest 'unsupported and invalid persisted data fails closed' => sub {
         is(read_bytes($livePath), $bytes, "$label failed read leaves live bytes unchanged");
         write_bytes($livePath, $original);
     }
+};
+
+subtest 'layout format is validated without writing or creating directories' => sub {
+    my $name = 'FormatRead';
+    my $hash = {NAME => $name};
+    my $missing = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    like(FHEMCMS_Get($hash, $name, 'layoutformat'), qr/Datenverzeichnis existiert nicht/,
+        'missing directory is reported');
+    ok(!-e $missing, 'format detection does not create directory');
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    my $live = File::Spec->catfile($missing, 'config.json');
+    my $draft = File::Spec->catfile($missing, 'draft.json');
+    my $legacy = read_bytes($live);
+    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 4},
+        'recognises legacy format');
+    like(FHEMCMS_Get($hash, $name, 'layoutformat', 'extra'), qr/keine Parameter/, 'rejects extra arguments');
+    like(FHEMCMS_Get({NAME => '../bad'}, '../bad', 'layoutformat'), qr/Ungueltiges Device/, 'rejects invalid name');
+    write_bytes($draft, '{');
+    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 4},
+        'detection only reports live format and does not hide a draft');
+    is(read_bytes($draft), '{', 'draft is unchanged');
+    my $plan = {navigation => {col => 1, row => 1, w => 12, h => 1},
+        pages => [{id => 'start', widgets => []}]};
+    my ($candidate, $candidateError) = FHEMCMS_PrepareLayoutMigration($json->decode($legacy), $plan);
+    is($candidateError, undef, 'prepares valid schema 5');
+    my $five = $json->encode($candidate);
+    write_bytes($live, $five);
+    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 5},
+        'recognises valid schema 5 independently of draft');
+    is(read_bytes($live), $five, 'schema 5 bytes remain untouched');
+    my $invalid = $json->decode($five);
+    $invalid->{navigation}{grid}{w} = 13;
+    write_bytes($live, $json->encode($invalid));
+    like(FHEMCMS_Get($hash, $name, 'layoutformat'), qr/ungueltig/, 'invalid schema 5 is rejected');
+    $invalid->{schemaVersion} = 99;
+    write_bytes($live, $json->encode($invalid));
+    like(FHEMCMS_Get($hash, $name, 'layoutformat'), qr/schemaVersion/, 'unknown schema is rejected');
+    write_bytes($live, '{');
+    like(FHEMCMS_Get($hash, $name, 'layoutformat'), qr/JSON/, 'invalid JSON is rejected');
+    unlink($live) or die "Cannot remove test live file: $!";
+    symlink($draft, $live) or die "Cannot create test symlink: $!";
+    like(FHEMCMS_Get($hash, $name, 'layoutformat'), qr/Symlink/, 'live symlink is rejected');
+    is(read_bytes($draft), '{', 'rejected reads do not modify target');
 };
 
 subtest 'prepares a fully specified target without writing or accepting schema 5' => sub {

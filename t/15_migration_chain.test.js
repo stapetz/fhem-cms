@@ -114,10 +114,11 @@ test('isolated migration, restart, versioned draft and restore form one protecte
       }
       const parts = command.split(' ');
       assert.deepEqual(parts.slice(0, 2), ['get', 'CMS']);
-      assert.ok(['migrationstate', 'migrationpreview', 'version5state', 'migrationrestorepreview'].includes(parts[2]));
+      assert.ok(['layoutformat', 'migrationstate', 'migrationpreview', 'version5state', 'migrationrestorepreview'].includes(parts[2]));
       return new Response(invoke('get', ...parts.slice(2)).value);
     };
     const client = new FhemClient('CMS', 'https://example.test/fhem/');
+    assert.equal(await client.getLayoutFormat(), 4);
     const source = await client.getMigrationSource();
     const positions = migrationPositions(source);
     const preview = await client.previewMigration(positions);
@@ -135,6 +136,7 @@ test('isolated migration, restart, versioned draft and restore form one protecte
     const version5Bytes = await readFile(livePath, 'utf8');
     assert.equal(invoke('restart').error, null, 'device restarts without replacing schema 5');
     assert.equal(await readFile(livePath, 'utf8'), version5Bytes);
+    assert.equal(await client.getLayoutFormat(), 5);
     assert.match(invoke('get', 'config').value, /schemaVersion/);
     for (const command of ['publish', 'discard']) {
       assert.match(invoke('set', command).error, /schemaVersion/);
@@ -223,6 +225,7 @@ test('isolated migration, restart, versioned draft and restore form one protecte
     assert.match(invoke('draft', encoded(draft), afterPublish.token).error, /config\.json:/);
     assert.equal(invoke('restart').error, null);
     assert.equal(await readFile(livePath, 'utf8'), original);
+    assert.equal(await client.getLayoutFormat(), 4);
     assert.deepEqual(await client.getMigrationSource(), legacy);
     assert.deepEqual(await readFile(join(mediaDir, mediaName)), media);
     assert.deepEqual(await readdir(mediaDir), [mediaName]);

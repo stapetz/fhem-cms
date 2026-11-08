@@ -109,6 +109,16 @@ sub FHEMCMS_Get {
         return $basePath . '/fhem-cms/' . $name . '/index.html';
     }
 
+    if ($cmd eq 'layoutformat') {
+        return 'layoutformat erwartet keine Parameter' if (@args);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
+        return $error if (defined($error));
+        my ($format, $formatError) = FHEMCMS_ReadLayoutFormat($dataDir);
+        return $formatError if (defined($formatError));
+        return JSON::PP->new->utf8->canonical->encode({schemaVersion => $format});
+    }
+
     if ($cmd eq 'migrationstate') {
         return 'migrationstate erwartet keine Parameter' if (@args);
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
@@ -203,7 +213,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -1500,6 +1510,25 @@ sub FHEMCMS_ParseConfig {
     my $error = FHEMCMS_ValidateConfig($config);
     return (undef, $error) if (defined($error));
     return ($config, undef);
+}
+
+sub FHEMCMS_ReadLayoutFormat {
+    my ($dataDir) = @_;
+    my $path = File::Spec->catfile($dataDir, 'config.json');
+    return (undef, 'Live-Konfiguration darf kein Symlink sein') if (-l $path);
+    my ($bytes, $readError) = FHEMCMS_ReadFile($path);
+    return (undef, $readError) if (defined($readError));
+    my $raw = eval { JSON::PP->new->utf8->decode($bytes) };
+    return (undef, 'Live-Konfiguration ist kein gueltiges JSON') if ($@ || ref($raw) ne 'HASH');
+    my $version = $raw->{schemaVersion};
+    if (defined($version) && !ref($version) && $version =~ /\A[0-9]{1,6}\z/ && $version == 5) {
+        my $error = FHEMCMS_ValidateConfig($raw, 5);
+        return (undef, "Live-Konfiguration ist ungueltig: $error") if (defined($error));
+        return (5, undef);
+    }
+    my (undef, $error) = FHEMCMS_ParseConfig($bytes);
+    return (undef, "Live-Konfiguration ist ungueltig: $error") if (defined($error));
+    return (4, undef);
 }
 
 # Alte Schreibbefehle duerfen unbekannte Formate nicht ersetzen oder verwerfen.

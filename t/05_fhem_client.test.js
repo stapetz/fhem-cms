@@ -178,6 +178,27 @@ test('versioned state uses a read-only command and checks the response shape', a
   }
 });
 
+test('layout format uses a read-only command and rejects ambiguous responses', async () => {
+  let answer = '{"schemaVersion":4}';
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    calls.push(options.body.get('cmd'));
+    return new Response(answer);
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.equal(await client.getLayoutFormat(), 4);
+  answer = '{"schemaVersion":5}';
+  assert.equal(await client.getLayoutFormat(), 5);
+  for (const invalid of ['null', '[]', '{}', '{"schemaVersion":"5"}', '{"schemaVersion":6}', '{"schemaVersion":true}']) {
+    answer = invalid;
+    await assert.rejects(client.getLayoutFormat(), /Unerwartete Antwort/);
+  }
+  answer = 'Zugriff verweigert';
+  await assert.rejects(client.getLayoutFormat(), /Zugriff verweigert/);
+  assert.ok(calls.every((command) => command === 'get cms layoutformat'));
+});
+
 test('migration restore preview validates backup name and response without writes', async () => {
   const calls = [];
   let answer = { live: { schemaVersion: 5 }, backup: { schemaVersion: 1 }, token: 'c'.repeat(64) };
