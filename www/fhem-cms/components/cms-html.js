@@ -36,6 +36,11 @@ class FHEMCMSHtml extends HTMLElement {
         .content { height: 100%; overflow: auto; scrollbar-width: thin; padding: 0.6rem 0.9rem; font-size: 1rem; line-height: 1.3; }
         .tile[data-has-title] .content { padding-top: 1.9rem; }
         .content p, .content h1, .content h2, .content h3, .content h4 { margin: 0 0 0.4em; }
+        /* Feste Größen statt Browser-Vorgabe: Safari und Chromium rendern verschachtelte h1 sonst unterschiedlich. */
+        .content h1 { font-size: 1.4em; font-weight: 700; }
+        .content h2 { font-size: 1.2em; font-weight: 700; }
+        .content h3 { font-size: 1.05em; font-weight: 700; color: inherit; overflow: visible; text-overflow: clip; white-space: normal; }
+        .content h4 { font-size: 1em; font-weight: 700; }
         .content table { border-collapse: collapse; }
         .content th, .content td { padding: 0.15em 0.5em; text-align: left; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
