@@ -26,6 +26,13 @@ function validateState(state) {
   if (state.draft !== null) validateConfig(state.draft);
 }
 
+function requireToken(state, token) {
+  if (typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) {
+    throw new Error('Zustandskennung erforderlich');
+  }
+  if (state.token !== token) throw new Error('Zustand ist veraltet; bitte erneut laden');
+}
+
 export class Schema5DraftController {
   #transport;
   #state = null;
@@ -68,29 +75,61 @@ export class Schema5DraftController {
     });
   }
 
-  saveDraft(config) {
+  saveDraft(config, expectedToken) {
     const candidate = structuredClone(config);
     validateConfig(candidate);
-    return this.#change('save', candidate);
+    return this.#change('save', candidate, expectedToken);
   }
 
-  saveLayout(pageId, items) {
+  saveLayout(pageId, items, expectedToken) {
     const state = this.snapshot();
+    requireToken(state, expectedToken);
     const candidate = applySchema5GridItems(state.draft || state.live, pageId, items);
-    return this.saveDraft(candidate);
+    return this.saveDraft(candidate, expectedToken);
   }
 
-  publishDraft() {
-    return this.#change('publish');
+  saveWidget(pageId, widget, expectedToken, action) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    const candidate = state.draft || state.live;
+    const page = candidate.pages.find((entry) => entry.id === pageId);
+    if (!page) throw new Error('Unbekannte Seite');
+    if (!widget || typeof widget !== 'object' || Array.isArray(widget)
+      || typeof widget.id !== 'string') throw new Error('Ungültiges Widget');
+    if (action !== 'create' && action !== 'update') throw new Error('Widget-Aktion erforderlich');
+    const copy = structuredClone(widget);
+    const index = page.widgets.findIndex((entry) => entry.id === copy.id);
+    if (action === 'create' && index >= 0) throw new Error('Widget-ID ist bereits vorhanden');
+    if (action === 'update' && index < 0) throw new Error('Unbekanntes Widget');
+    if (action === 'create') page.widgets.push(copy);
+    else page.widgets[index] = copy;
+    return this.saveDraft(candidate, expectedToken);
   }
 
-  discardDraft() {
-    return this.#change('discard');
+  deleteWidget(pageId, widgetId, expectedToken) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    const candidate = state.draft || state.live;
+    const page = candidate.pages.find((entry) => entry.id === pageId);
+    if (!page) throw new Error('Unbekannte Seite');
+    const index = page.widgets.findIndex((entry) => entry.id === widgetId);
+    if (index < 0) throw new Error('Unbekanntes Widget');
+    page.widgets.splice(index, 1);
+    return this.saveDraft(candidate, expectedToken);
   }
 
-  #change(action, candidate) {
+  publishDraft(expectedToken) {
+    return this.#change('publish', undefined, expectedToken);
+  }
+
+  discardDraft(expectedToken) {
+    return this.#change('discard', undefined, expectedToken);
+  }
+
+  #change(action, candidate, expectedToken) {
     return this.#run(async () => {
       const before = this.snapshot();
+      requireToken(before, expectedToken);
       if (action !== 'save' && before.draft === null) {
         throw new Error('Es gibt keinen Entwurf');
       }

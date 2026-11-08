@@ -334,7 +334,10 @@ Teilzustand ausdrücklich als Fehler gemeldet. Dies ist noch kein Schutz gegenü
 unkoordinierten externen Dateischreibern und keine öffentliche API.
 Der vorbereitete Browserbaustein `www/fhem-cms/js/fcui-schema5-draft.js`
 führt jeweils höchstens eine Entwurfsaktion aus und verwendet die Kennung des
-zuletzt gelesenen Zustands. Nach jedem Schreibversuch sperrt er weitere Aktionen
+zuletzt gelesenen Zustands. Jede Aktion verlangt ausdrücklich die Kennung, auf
+deren Stand die Bearbeitung oder Bestätigung beruht; veraltete Dialoge dürfen
+auch nach einem lokalen Neuladen keine neueren Änderungen überschreiben.
+Nach jedem Schreibversuch sperrt er weitere Aktionen
 bis zum bestätigten erneuten Lesen; bei Fehlern, widersprüchlichem Ergebnis oder
 verlorener Antwort muss ausdrücklich neu geladen werden. Er vergleicht dabei
 Live und Entwurf mit dem erwarteten Ergebnis und gibt nur Kopien aus. Die
@@ -344,6 +347,11 @@ internen Perl-Transaktionen auf isolierten Dateien, aber keinen FHEMWEB-Transpor
 Ein Raster-Roundtrip wendet Gridstack-Positionen auf den aktuellen Entwurf oder
 bei fehlendem Entwurf auf Live an, prüft auch seitenübergreifende Kollisionen der
 globalen Navigation und speichert ausschließlich über diesen Entwurfsvertrag.
+Widget-Änderungen und explizites Löschen werden ebenfalls auf einer Kopie des
+aktuellen Entwurfs vorbereitet und über dieselbe Zustandssperre gespeichert;
+unbekannte Seiten oder Widget-IDs beim Löschen werden abgewiesen.
+Das Anlegen und Ändern eines Widgets sind ausdrücklich getrennte Aktionen:
+Vorhandene IDs dürfen nicht versehentlich überschrieben werden.
 Der Baustein selbst bietet weder einen Editor noch einen öffentlichen Schreibweg.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
