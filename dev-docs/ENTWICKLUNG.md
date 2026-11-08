@@ -4,6 +4,21 @@ Diese Dokumentation richtet sich an Entwickler und KI-Agenten. Sie ist nicht fü
 
 Die bekannten, nach Abhängigkeiten geordneten Umsetzungsstories stehen in der [Story- und Aufgabenliste](./STORIES.md). Diese Dokumentation beschreibt das Zielbild und die Anforderungen; die Storyliste verfolgt deren schrittweise Umsetzung.
 
+## Führendes Zielbild und bisheriger Stand
+
+Für neue CMS-Entwicklungen und das Refactoring ist die
+[Entwicklerdoku und der Styleguide](./entwicklerdoku_und_styleguides.md) führend.
+Bei abweichenden Architektur- und Gestaltungsvorgaben in dieser Datei gilt das
+neue Dokument als Ziel. Die nachfolgenden Beschreibungen dokumentieren teilweise
+den bisherigen oder einen früher geplanten Stand; sie sind kein Nachweis, dass das
+neue Ziel bereits umgesetzt ist. Übergang, Datenmigration und abweichendes Verhalten
+werden vor der jeweiligen Umsetzung geklärt und in den Issues festgehalten.
+
+Die hier dokumentierten Sicherheits-, Test-, Branch- und Freigabeverfahren bleiben
+verbindlich. Insbesondere bleiben bestehende Daten und die beiden
+[Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) erhalten; Codebeispiele des
+Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherung.
+
 ## Repositorystruktur
 
 | Pfad | Zweck |
@@ -196,7 +211,10 @@ Für die Verknüpfung von FHEM und dem CMS-Frontend wird ein deklaratives Prinzi
 
 ## Konkretisierung und Status der Anforderungen
 
-Dieser Abschnitt konkretisiert das vorangehende Zielbild. Bei Widersprüchen haben die nachfolgenden Statusangaben Vorrang: breit formulierte Visionen und frühere Beispiele sind keine bereits beschlossenen Implementierungsdetails. Offene Entscheidungen werden zuerst in der Storyliste bearbeitet und nach Beschluss hier festgehalten.
+Dieser Abschnitt konkretisiert den bisherigen Stand und frühere Anforderungen. Für
+das neue Zielbild hat der FCUI-Styleguide Vorrang; Statusangaben beschreiben den
+Bestand und ändern sich erst mit der Umsetzung. Offene Entscheidungen werden in
+Issues bearbeitet und nach Beschluss hier festgehalten.
 
 ### Architektur und Verantwortlichkeiten
 

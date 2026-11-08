@@ -1,8 +1,15 @@
 # Hinweise für KI-Agenten
 
 Vor Änderungen lesen:
-1. **Projektdokumentation**: [`dev-docs/ENTWICKLUNG.md`](../dev-docs/ENTWICKLUNG.md) für Anforderungen, Ziele und Roadmap.
-2. **Bindender Styleguide** (ab sofort): [`dev-docs/entwicklerdoku_und_styleguides.md`](./dev-docs/entwicklerdoku_und_styleguides.md) — Vereinheitlichte Standards für alle Repositories, Code-Qualität, Sicherheit, Testing, Versioning, und Modul-Architektur.
+1. **Führendes Zielbild** für CMS-Neuentwicklung und Refactoring:
+   [`dev-docs/entwicklerdoku_und_styleguides.md`](../dev-docs/entwicklerdoku_und_styleguides.md).
+2. **Projektdokumentation**: [`dev-docs/ENTWICKLUNG.md`](../dev-docs/ENTWICKLUNG.md)
+   für bisherigen Stand, Sicherheitsanforderungen sowie Entwicklungs-, Test- und Freigabeprozess.
+
+Bei abweichenden Architektur- und Designvorgaben ist der Styleguide führend.
+Seine Beispiele ersetzen keine Sicherheitsprüfungen. Bestand und Nutzerdaten
+schrittweise und kompatibel umstellen; beide vorhandenen
+[Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) beibehalten.
 
 Details:
 - Das Projektziel, die dokumentierten Anforderungen und Entwicklungswissen werden in `dev-docs/ENTWICKLUNG.md` als gemeinsamer Informationsraum gepflegt.

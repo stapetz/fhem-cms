@@ -2,6 +2,14 @@
 
 Dieses Dokument definiert die vollständige Architektur, die Implementierungs-Standards und die Schnittstellen-Spezifikationen für das *FHEM Custom UI Framework (FCUI)*. Dieses Framework dient als hochperformante, responsive und interaktive Alternative zu bestehenden FHEM-Frontends (wie FTUI).
 
+Dieses Dokument ist für die zukünftige Entwicklung und das Refactoring von fhem-cms
+führend. Es beschreibt das Zielbild; bestehende Funktionen und Daten werden
+schrittweise und unter Wahrung ihrer Kompatibilität umgestellt. Die
+[Entwicklungsdokumentation](./ENTWICKLUNG.md) beschreibt den bisherigen Stand,
+Sicherheitsanforderungen und den Entwicklungs- und Freigabeprozess. Die folgenden
+Codebeispiele sind Implementierungsmuster und dürfen bestehende Sicherheitsprüfungen
+nicht ersetzen.
+
 ---
 
 ## 1. Technologische Kern-Architektur
@@ -209,7 +217,15 @@ function saveLayoutToFhem() {
 ## 4. Freies HTML-Widget & Universelles Navigations-Widget
 
 ### 4.1 Freies HTML-Widget (`fcui-html-widget`)
-Um dem Anwender die Möglichkeit zu geben, völlig freien Code analog zu FTUI einzubinden, deaktiviert dieses Widget gezielt das Shadow DOM. Dadurch fließen alle globalen CSS-Klassen und Theme-Variablen ungehindert in das Widget.
+Um benutzerdefiniertes HTML analog zu FTUI einzubinden, deaktiviert dieses Widget
+gezielt das Shadow DOM. Dadurch fließen globale CSS-Klassen und Theme-Variablen in
+das Widget. Der zulässige HTML- und CSS-Umfang bleibt durch die unten genannte
+Sicherheitsgrenze eingeschränkt.
+
+Die bisherige Sicherheitsgrenze bleibt auch im Light DOM bestehen: Erlaubtes HTML
+wird serverseitig validiert und clientseitig bereinigt; Skripte und Ereignisattribute
+werden nicht ausgeführt. FHEM-Werte werden als Text, nicht als HTML eingesetzt.
+Das Beispiel zeigt nur die Rendering-Struktur, nicht die erforderliche Validierung.
 
 ```javascript
 class FcuiHtmlWidget extends LitElement {
@@ -223,6 +239,24 @@ class FcuiHtmlWidget extends LitElement {
 }
 customElements.define('fcui-html-widget', FcuiHtmlWidget);
 ```
+
+#### Bestehende Platzhalter beibehalten
+
+FHEM-Werte können im Textbaustein und im freien HTML an beliebigen unterstützten
+Textpositionen mit `{{Device:reading|filter}}` eingefügt werden. Der Filter ist
+optional; mehrere Filter können kombiniert werden. Im freien HTML ist zusätzlich
+die Elementvariante möglich:
+
+```html
+<span device="Garten" reading="temperature" filter="round(1)"></span>
+```
+
+Dabei müssen `device` und `reading` gemeinsam angegeben werden; der Elementinhalt
+wird durch den Wert ersetzt. Beide Schreibweisen dürfen im freien HTML gemischt
+werden. Die Elementvariante ist dort verfügbar, nicht im Textbaustein. Auch
+Suchdialog, Filter, Alias- und Kanalauflösung sowie Live-Aktualisierung bleiben
+erhalten. Zulässige Elemente, Attribute und weitere Grenzen stehen in der
+[Platzhalter-Dokumentation](../docs/PLATZHALTER.md).
 
 ### 4.2 Universelles Navigations-Widget (`fcui-nav-widget`)
 Dieses Widget kann vom Benutzer frei an jeder Stelle im Grid platziert werden, um komplexe Navigationsstrukturen innerhalb von Seiten oder Absprünge ins Web zu realisieren.
