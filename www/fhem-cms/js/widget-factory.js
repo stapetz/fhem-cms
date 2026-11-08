@@ -47,6 +47,11 @@ export function dataFor(widget, snapshots) {
     : snapshots.get(widget.device) || null;
 }
 
+export function isLiveWidget(widget) {
+  return ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-solarflow'].includes(widget.type)
+    || (widget.type === 'text' && devicesOf(widget).length > 0);
+}
+
 export function createWidgetElement(widget, services, snapshots, viewOnly) {
   const tag = tags.get(widget.type);
   const element = document.createElement(tag || 'p');

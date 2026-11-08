@@ -1,4 +1,4 @@
-import { createWidgetElement, dataFor, devicesOf } from './widget-factory.js';
+import { createWidgetElement, dataFor, devicesOf, isLiveWidget } from './widget-factory.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { DevicePreview } from './device-preview.js';
 import {
@@ -10,8 +10,6 @@ const POLL_INTERVAL_MS = 30000;
 const REFRESH_DEBOUNCE_MS = 300;
 const DEVICE_TYPES = 'TYPE=MAX,TYPE=CUL_HM';
 const NAV_ID = '__nav';
-const isLiveWidget = (widget) => ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-solarflow'].includes(widget.type)
-  || (widget.type === 'text' && devicesOf(widget).length > 0);
 const LAYOUT_INFO = {
   grid: {
     title: 'Raster',

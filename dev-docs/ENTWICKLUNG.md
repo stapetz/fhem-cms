@@ -275,6 +275,13 @@ Widget-Typen und Datenzuordnungen und kann später auch vom neuen Raster genutzt
 werden. Sie stellt selbst keine Vorschau-Sicherheitsgrenze dar: Komponenten
 können beim Verbinden Timer starten oder Dienste aufrufen; eine spätere Vorschau
 muss diese Lebenszyklen und verfügbare Dienste ausdrücklich absichern.
+Der vorbereitete Adapter `www/fhem-cms/js/fcui-schema5-widgets.js` verbindet
+eine validierte Gridstack-Seite mit diesen Widgets und übernimmt Snapshot-Updates
+und das Entfernen des Rasters. Navigation, Dienste und Snapshots werden vom
+Aufrufer bereitgestellt; der Adapter führt selbst keine FHEM-Anfragen aus, aber
+Widgets dürfen die übergebenen Dienste nutzen. `view-only` ist keine Schreib-
+oder Netzwerk-Sperre. Der Adapter ist noch nicht mit dem Device-Einstieg, einer
+Vorschau, Live-Abonnements oder versionierter Speicherung verbunden.
 Ein interner Schema-5-Entwurfsvertrag validiert Live und Entwurf gemeinsam und
 verknüpft ihre tatsächlichen Bytes mit einer Zustandskennung. Ein Entwurf wird
 nur gegen den unveränderten Stand atomar gespeichert; andere Schemata, ungültige

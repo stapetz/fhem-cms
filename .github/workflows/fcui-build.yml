@@ -20,4 +20,4 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build:check
       - run: prove t/01_fhemcms.t t/02_refactoring_legacy.t t/03_refactoring_migration.t t/04_fcui_assets.t
-      - run: node --test t/05_fhem_client.test.js t/06_layout_migration.test.js t/07_migration_preview.test.js t/08_html_bindings.test.js t/09_restore_client_integration.test.js t/10_schema5_layout.test.js
+      - run: node --test t/05_fhem_client.test.js t/06_layout_migration.test.js t/07_migration_preview.test.js t/08_html_bindings.test.js t/09_restore_client_integration.test.js t/10_schema5_layout.test.js t/11_schema5_widgets.test.js
