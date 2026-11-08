@@ -152,7 +152,8 @@ class FHEMCMSSolarFlow extends HTMLElement {
         .tile { position: relative; display: grid; height: 100%; overflow: hidden; container-type: size;
           border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem; background: var(--cms-surface, #202e27); padding: 0.4rem; }
         header { position: absolute; top: 0.4rem; left: 0.7rem; right: 2rem; }
-        h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: max(5px, min(9cqh, 4cqw)); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 1.05rem; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        h3[data-title] { font-size: max(5px, min(9cqh, 4cqw)); }
         header[hidden] { display: none; }
         svg { width: 100%; height: 100%; min-height: 0; }
         .link { fill: none; stroke-linecap: round; stroke: #c9c9c9; stroke-width: 9; }

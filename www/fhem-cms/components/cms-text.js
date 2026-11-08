@@ -24,7 +24,8 @@ class FHEMCMSText extends HTMLElement {
         .tile { height: 100%; padding: 1rem; border: 1px solid var(--cms-border, #43564a); border-radius: 1rem;
           background: var(--cms-surface, #202e27); display: grid; gap: 0.5rem; align-content: start; }
         header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-        h3 { margin: 0; font-size: max(6px, min(10cqh, 4.5cqw)); overflow-wrap: anywhere; }
+        h3 { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+        h3[data-title] { font-size: max(6px, min(10cqh, 4.5cqw)); }
         ${contentCss('.body')}
         .body h4, .body h5 { margin: 0.8rem 0 0.4rem; }
         ${editorCss()}
