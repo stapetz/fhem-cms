@@ -350,6 +350,13 @@ body {
   margin: 0;
 }
 
+/* Ansicht > Raster anzeigen: 12-Spalten-Hilfsraster, nur Darstellung. */
+.cms-schema5-grid.cms-grid-guides {
+  background-image: linear-gradient(to right, var(--cms-guide) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--cms-guide) 1px, transparent 1px);
+  background-size: calc(100% / 12) var(--gs-cell-height, 3rem);
+}
+
 /* Sicherungen / Wiederherstellung im Editor-Dialog. */
 .cms-backup-controls {
   display: flex;

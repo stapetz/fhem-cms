@@ -36,6 +36,7 @@ export class Schema5Editor {
   #widgets;
   #navigation;
   #backup;
+  #gridToggle;
   #publish;
   #discard;
   #reloadButton;
@@ -48,6 +49,8 @@ export class Schema5Editor {
   #suspended = false;
   #appearance = null;
   #menus = [];
+  #showGrid = false;
+  #gridElement = null;
   #layoutSaving = false;
 
   constructor({ GridStack, root, controller, client, services, browser = window }) {
@@ -107,9 +110,14 @@ export class Schema5Editor {
     this.#backup.type = 'button';
     this.#backup.textContent = 'Sicherungen / Wiederherstellung';
     this.#backup.className = 'cms-button';
+    this.#gridToggle = document.createElement('button');
+    this.#gridToggle.type = 'button';
+    this.#gridToggle.textContent = 'Raster anzeigen';
+    this.#gridToggle.className = 'cms-button cms-grid-toggle';
+    this.#gridToggle.setAttribute('aria-pressed', 'false');
     this.#menu('Datei', [this.#publish, this.#discard, this.#backup]);
     this.#menu('Bearbeiten', [this.#pages, this.#widgets, this.#navigation]);
-    this.#menu('Ansicht', [this.#page]);
+    this.#menu('Ansicht', [this.#page, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
     this.#status = document.createElement('p');
@@ -121,6 +129,11 @@ export class Schema5Editor {
     this.#widgets.addEventListener('click', () => this.#openWidgets());
     this.#navigation.addEventListener('click', () => this.#openNavigation());
     this.#backup.addEventListener('click', () => this.#openBackup());
+    this.#gridToggle.addEventListener('click', () => {
+      this.#showGrid = !this.#showGrid;
+      this.#gridToggle.setAttribute('aria-pressed', this.#showGrid ? 'true' : 'false');
+      this.#applyGridGuides();
+    });
     this.#publish.addEventListener('click', () => this.#draftAction('publish'));
     this.#discard.addEventListener('click', () => this.#draftAction('discard'));
     this.#reloadButton.addEventListener('click', () => this.#reload().catch((error) => this.#error(error)));
@@ -197,6 +210,7 @@ export class Schema5Editor {
     this.#widgets.disabled = !enabled;
     this.#navigation.disabled = !enabled;
     this.#backup.disabled = !enabled;
+    this.#gridToggle.disabled = !enabled;
     this.#publish.disabled = !enabled || !hasDraft;
     this.#discard.disabled = !enabled || !hasDraft;
   }
@@ -259,6 +273,7 @@ export class Schema5Editor {
     this.#content.replaceChildren();
     const grid = document.createElement('div');
     grid.className = 'grid-stack cms-schema5-grid';
+    this.#gridElement = grid;
     this.#content.append(grid);
     const view = new Schema5View({ GridStack: this.#GridStack, root: grid, status: this.#status,
       config, client: this.#client, services: this.#services, browser: this.#browser,
@@ -268,6 +283,7 @@ export class Schema5Editor {
       } });
     this.#view = view;
     await view.start();
+    this.#applyGridGuides();
     if (this.#active && !this.#suspended && generation === this.#generation && this.#view === view) {
       this.#setActions(true, state.draft !== null);
       this.#reloadButton.hidden = true;
@@ -349,6 +365,10 @@ export class Schema5Editor {
     } catch (error) {
       if (actionGeneration === this.#generation) this.#error(error);
     }
+  }
+
+  #applyGridGuides() {
+    if (this.#gridElement) this.#gridElement.classList.toggle('cms-grid-guides', this.#showGrid);
   }
 
   #openBackup() {
