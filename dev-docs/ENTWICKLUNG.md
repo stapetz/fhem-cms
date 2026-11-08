@@ -333,6 +333,11 @@ keine Schreibsperre. Beide Bausteine werden nur im synthetischen Bibliothekstest
 verwendet, nicht im Device-Einstieg oder in der schreibfreien Migrationsvorschau.
 Sie sind weder eine vollständige Oberfläche noch der angestrebte zentrale
 Pub/Sub-Controller.
+Ein Integrationstest verbindet den echten Perl-Lesevertrag über den
+FHEM-Client mit dieser Ansicht und prüft auf isolierten Dateien getrennte
+Live- und Entwurfsdaten sowie unveränderte Quelldateien. Gridstack, DOM und
+Gerätesnapshots sind dabei Test-Stubs; ein echter FHEMWEB- oder Browsertest
+ist dies nicht.
 Die bisherigen Schreibbefehle prüfen vor Änderungen die Schema-Version von
 Live- und gegebenenfalls Entwurfsdatei. Bei einem unbekannten Format lehnen sie
 auch Verwerfen und Restore ab, statt Daten mit einem älteren Client zu ersetzen.

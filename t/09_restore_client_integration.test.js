@@ -199,3 +199,114 @@ test('versioned state client reads actual live and draft data without modifying 
     await rm(root, { recursive: true });
   }
 });
+
+test('real versioned state reaches schema 5 view for live and draft without writes', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fhem-cms-version5-view-'));
+  const dir = join(root, 'fhem-cms-data', 'CMS');
+  const previous = {
+    fetch: globalThis.fetch, window: globalThis.window, document: globalThis.document,
+    HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
+  };
+  class Element {
+    constructor(tag) {
+      this.tag = tag;
+      this.children = [];
+      this.attributes = {};
+      this.style = {};
+      this.classList = { toggle() {} };
+    }
+    append(child) { this.children.push(child); }
+    replaceChildren(...children) { this.children = children; }
+    setAttribute(name, value) { this.attributes[name] = value; }
+    removeAttribute(name) { delete this.attributes[name]; }
+  }
+  const live = {
+    schemaVersion: 5, theme: 'light', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'one', title: 'Live', widgets: [
+      { id: 'text', type: 'text', html: '<p>{{Temp:state}}</p>',
+        grid: { col: 1, row: 2, w: 2, h: 1 } },
+    ] }],
+  };
+  const draft = structuredClone(live);
+  draft.pages[0].title = 'Entwurf';
+  draft.pages[0].widgets[0].html = '<p>Entwurf: {{Temp:state}}</p>';
+  const liveBytes = JSON.stringify(live);
+  const draftBytes = JSON.stringify(draft);
+  const calls = [];
+  try {
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'config.json'), liveBytes);
+    await writeFile(join(dir, 'draft.json'), draftBytes);
+    globalThis.fetch = async (url, options) => {
+      if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'test-token' } });
+      const command = options.body.get('cmd');
+      calls.push(command);
+      if (command === 'jsonlist2 Temp,device=Temp') {
+        return new Response(JSON.stringify({ Results: [
+          { Name: 'Temp', Readings: { state: { Value: 'Beispiel' } } },
+        ] }));
+      }
+      assert.equal(command, 'get CMS version5state');
+      const result = spawnSync('perl', ['-e', script, root, 'version5state'], { encoding: 'utf8' });
+      assert.equal(result.error, undefined);
+      assert.equal(result.status, 0, result.stderr);
+      return new Response(result.stdout);
+    };
+    globalThis.window = { location: { href: 'https://example.test/fhem/' }, clearTimeout };
+    globalThis.document = { createElement: (tag) => new Element(tag) };
+    globalThis.HTMLElement = class {};
+    const registry = new Map();
+    globalThis.customElements = {
+      define(name, element) { registry.set(name, element); },
+      get(name) { return registry.get(name); },
+    };
+    const { Schema5View } = await import('../www/fhem-cms/js/fcui-schema5-view.js');
+    const client = new FhemClient('CMS', 'https://example.test/fhem/');
+    const state = await client.getVersion5State();
+    const browser = {
+      location: { hash: '#/one' },
+      addEventListener() {},
+      removeEventListener() {},
+    };
+    const GridStack = { init() {
+      return {
+        items: [],
+        getColumn() { return 12; },
+        makeWidget(wrapper, item) { this.items.push({ ...item }); },
+        save() { return this.items; },
+        destroy() {},
+      };
+    } };
+    for (const [config, title, html] of [
+      [state.live, 'Live', live.pages[0].widgets[0].html],
+      [state.draft, 'Entwurf', draft.pages[0].widgets[0].html],
+    ]) {
+      const grid = new Element('grid');
+      const view = new Schema5View({
+        GridStack, root: grid, status: new Element('status'), config, client, services: {}, browser,
+      });
+      try {
+        await view.start();
+        const nav = grid.children[0].children[0].children[0];
+        const text = grid.children[1].children[0].children[0];
+        assert.equal(nav.children[0].textContent, title);
+        assert.equal(text.config.html, html);
+        assert.equal(text.data.get('Temp')[0].readings.state, 'Beispiel');
+      } finally {
+        view.stop();
+      }
+    }
+    assert.deepEqual(calls, ['get CMS version5state', 'jsonlist2 Temp,device=Temp', 'jsonlist2 Temp,device=Temp']);
+    assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), liveBytes);
+    assert.equal(await readFile(join(dir, 'draft.json'), 'utf8'), draftBytes);
+    assert.deepEqual((await readdir(dir)).sort(), ['config.json', 'draft.json']);
+  } finally {
+    globalThis.fetch = previous.fetch;
+    globalThis.window = previous.window;
+    globalThis.document = previous.document;
+    globalThis.HTMLElement = previous.HTMLElement;
+    globalThis.customElements = previous.customElements;
+    await rm(root, { recursive: true });
+  }
+});
