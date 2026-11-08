@@ -324,9 +324,15 @@ zeigen den Fehler und behalten bekannte Werte mit Veraltungszeitpunkt.
 Nach dem Stop werden Timer, Abos und verspätete Ergebnisse verworfen.
 Der Baustein benötigt einen eigenen Client, da dessen Subscription beim Wechsel
 und Stop ersetzt beziehungsweise abgemeldet wird.
-Der Baustein wird nur im synthetischen Bibliothekstest verwendet, nicht im
-Device-Einstieg oder in der schreibfreien Migrationsvorschau. Er ist weder
-eine vollständige Oberfläche noch der angestrebte zentrale Pub/Sub-Controller.
+Der Live-Baustein wird von der vorbereiteten `Schema5View` mit Raster, Widgets
+und bestehendem Hash-Seitenrouting verbunden. Beim Seitenwechsel beendet sie
+zuerst das alte Abo und Raster; verspätete Ergebnisse dürfen die neue Seite
+nicht verändern. Fehler und veraltete Werte werden sichtbar angezeigt. Die
+Ansicht erhält einen exklusiven Client und Widget-Dienste vom Aufrufer; sie ist
+keine Schreibsperre. Beide Bausteine werden nur im synthetischen Bibliothekstest
+verwendet, nicht im Device-Einstieg oder in der schreibfreien Migrationsvorschau.
+Sie sind weder eine vollständige Oberfläche noch der angestrebte zentrale
+Pub/Sub-Controller.
 Die bisherigen Schreibbefehle prüfen vor Änderungen die Schema-Version von
 Live- und gegebenenfalls Entwurfsdatei. Bei einem unbekannten Format lehnen sie
 auch Verwerfen und Restore ab, statt Daten mit einem älteren Client zu ersetzen.
@@ -362,7 +368,8 @@ Laden der lokalen Bibliotheken mit Lit und einem 12-Spalten-Gridstack-Raster
 und zeigt Ladefehler an. Zusätzlich prüft sie alle zwölf Widgettypen mit
 künstlichen Snapshots, beide Platzhalterformen, die Aktualisierung und eine
 explizit gesperrte Testaktion im Schema-5-Widget-Adapter. Der Live-Seitenbaustein
-aktualisiert die Widgets dabei mit einem künstlichen Client. Die verwendeten
+aktualisiert die Widgets dabei mit einem künstlichen Client; die vorbereitete
+Ansicht prüft einen Seitenwechsel mit synthetischen Daten. Die verwendeten
 Dienste sind Test-Stubs. Sie sendet keine FHEM-Befehle und verändert keine
 CMS-Daten. Sie ersetzt nicht die Prüfung der später integrierten Oberfläche.
 

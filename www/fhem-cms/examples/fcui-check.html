@@ -38,11 +38,12 @@
     }
 
     try {
-      const [runtime, schema5, widgets, live] = await Promise.all([
+      const [runtime, schema5, widgets, live, shell] = await Promise.all([
         import(url('../js/fcui-runtime.js')),
         import(url('../js/fcui-schema5-layout.js')),
         import(url('../js/fcui-schema5-widgets.js')),
         import(url('../js/fcui-schema5-live.js')),
+        import(url('../js/fcui-schema5-view.js')),
         loadStylesheet(),
       ]);
       const { LitElement, html, GridStack } = runtime;
@@ -170,7 +171,62 @@
         view.destroy();
         widgetRoot.remove();
       }
-      status.textContent = 'Erfolg: Lit, Gridstack, Schema-5-Raster und synthetische Live-Widget-Bindings wurden lokal geprüft.';
+      const shellConfig = structuredClone(widgetConfig);
+      shellConfig.pages[0].title = 'Erste Seite';
+      shellConfig.pages.push({
+        id: 'second', title: 'Zweite Seite', widgets: [{
+          id: 'second-value', type: 'fhem-value', device: 'Other', reading: 'state',
+          grid: { col: 1, row: 2, w: 4, h: 2 },
+        }],
+      });
+      shellConfig.navigation.items = [{ page: 'second', label: 'Weitere Seite' }];
+      const shellRoot = document.createElement('div');
+      shellRoot.className = 'grid-stack';
+      document.getElementById('probe').append(shellRoot);
+      const shellStatus = document.createElement('p');
+      const listeners = new Map();
+      const browser = {
+        location: { hash: '#/check' },
+        addEventListener: (name, callback) => listeners.set(name, callback),
+        removeEventListener: (name) => listeners.delete(name),
+      };
+      let shellRequests = 0;
+      let unsubscribed = 0;
+      const shellClient = {
+        jsonlist: async (spec) => {
+          shellRequests += 1;
+          const name = spec.startsWith('Other,') ? 'Other' : 'Test';
+          return [{ name, readings: { state: name === 'Other' ? 'zweiter Wert' : 'erster Wert' } }];
+        },
+        subscribe: (names, onEvent, onState) => onState('polling'),
+        unsubscribe: () => { unsubscribed += 1; },
+      };
+      const shellView = new shell.Schema5View({
+        GridStack, root: shellRoot, status: shellStatus, config: shellConfig,
+        client: shellClient, services, browser,
+      });
+      try {
+        await shellView.start();
+        if (shellRoot.querySelector('cms-text')?.shadowRoot.querySelector('[data-body]')?.textContent.trim() !== 'erster Wert'
+          || shellRoot.querySelector('nav a[aria-current="page"]')?.textContent !== 'Erste Seite') {
+          throw new Error('Erste Schema-5-Seite konnte nicht geladen werden');
+        }
+        browser.location.hash = '#/second';
+        listeners.get('hashchange')();
+        await shellView.live.inFlight;
+        if (shellRoot.querySelector('cms-value')?.shadowRoot.textContent.includes('zweiter Wert') !== true
+          || shellRoot.querySelector('nav a[aria-current="page"]')?.textContent !== 'Weitere Seite'
+          || shellRequests !== 2) {
+          throw new Error('Schema-5-Seitenwechsel konnte nicht geprüft werden');
+        }
+      } finally {
+        shellView.stop();
+        shellRoot.remove();
+      }
+      if (listeners.size !== 0 || unsubscribed !== 2) {
+        throw new Error('Schema-5-Seite räumt Live-Abos nicht auf');
+      }
+      status.textContent = 'Erfolg: Lit, Gridstack, Schema-5-Raster, Live-Widgets und Seitenwechsel wurden synthetisch geprüft.';
     } catch (error) {
       status.textContent = `Fehler beim Laden oder Prüfen der FCUI-Dateien: ${error.message}`;
     }
