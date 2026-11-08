@@ -359,11 +359,13 @@ export class FhemClient {
     this.socket = socket;
 
     socket.addEventListener('open', () => {
+      if (this.subscription !== subscription || this.socket !== socket) return;
       subscription.attempt = 0;
       subscription.onState('live');
     });
 
     socket.addEventListener('message', (event) => {
+      if (this.subscription !== subscription || this.socket !== socket) return;
       for (const line of String(event.data).split('\n')) {
         if (!line) {
           continue;
@@ -381,10 +383,12 @@ export class FhemClient {
     });
 
     socket.addEventListener('close', () => {
-      if (this.subscription !== subscription) {
+      if (this.subscription !== subscription || this.socket !== socket) {
         return;
       }
+      this.socket = null;
       subscription.onState('polling');
+      if (this.subscription !== subscription) return;
       const delay = Math.min(30000, 1000 * 2 ** subscription.attempt);
       subscription.attempt += 1;
       this.reconnectTimer = window.setTimeout(() => this.connect(), delay);

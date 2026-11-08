@@ -522,6 +522,7 @@ export class CmsPage {
 
   stop() {
     this.stopped = true;
+    this.loadToken += 1;
     window.clearInterval(this.pollTimer);
     window.clearTimeout(this.refreshTimer);
     this.client.unsubscribe();
@@ -1981,6 +1982,9 @@ export class CmsPage {
   }
 
   resubscribe() {
+    if (this.stopped) {
+      return;
+    }
     const names = this.watchedNames();
     const key = names.join('|');
     if (key === this.subscribedKey) {

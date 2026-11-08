@@ -10,6 +10,8 @@ test('free HTML devices receive snapshots, channel readings and live subscriptio
   globalThis.window = {
     matchMedia: () => ({}),
     location: { search: '', href: 'https://example.test/fhem/fhem-cms/CMS/index.html' },
+    clearInterval() {},
+    clearTimeout() {},
   };
   globalThis.document = { addEventListener() {} };
   globalThis.HTMLElement = class {};
@@ -68,6 +70,16 @@ test('free HTML devices receive snapshots, channel readings and live subscriptio
     assert.equal(lookupValue(page.elements.get('html').data, 'Temp', 'temperature'), '19.9');
     assert.equal(page.elements.get('html').stale, lastSuccess);
     assert.match(page.statusLine.textContent, /Verbindung verloren/);
+    let resolve;
+    page.client.jsonlist = () => new Promise((done) => { resolve = done; });
+    page.client.unsubscribe = () => subscriptions.push('unsubscribed');
+    const pending = page.refresh();
+    page.stop();
+    resolve([{ name: 'Temp', parent: '', readings: { temperature: '99' } }]);
+    await pending;
+    page.resubscribe();
+    assert.equal(lookupValue(page.elements.get('html').data, 'Temp', 'temperature'), '19.9');
+    assert.equal(subscriptions.at(-1), 'unsubscribed', 'late result cannot restart subscription');
   } finally {
     globalThis.window = previous.window;
     globalThis.document = previous.document;

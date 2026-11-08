@@ -287,6 +287,10 @@ Vorschau, Live-Abonnements oder versionierter Speicherung verbunden.
 Beim Entfernen einer Diagrammkomponente werden laufende Verlaufsergebnisse
 verworfen; beim erneuten Verbinden wird der Verlauf neu angefordert. Das
 verhindert die Übernahme verspäteter Antworten nach einem Seitenwechsel.
+Beim Verlassen der bestehenden Oberfläche werden ausstehende Snapshots und
+Ereignisse geschlossener WebSockets verworfen; sie dürfen keine Abonnements
+erneut starten. Eine vollständige Umstellung auf den zentralen FCUI-Controller
+ist damit noch nicht implementiert.
 Ein interner Schema-5-Entwurfsvertrag validiert Live und Entwurf gemeinsam und
 verknüpft ihre tatsächlichen Bytes mit einer Zustandskennung. Ein Entwurf wird
 nur gegen den unveränderten Stand atomar gespeichert; andere Schemata, ungültige

@@ -192,9 +192,38 @@ test('subscriptions filter names, reconnect after close, and stop after unsubscr
   timers.clear();
   timer.callback();
   assert.equal(sockets.length, 2);
+  sockets[0].emit('open');
+  sockets[0].emit('message', { data: '["lamp","old"]' });
+  sockets[0].emit('close');
+  assert.deepEqual(states, ['live', 'polling'], 'events from old sockets are ignored');
+  assert.deepEqual(events, ['lamp']);
+  assert.equal(timers.size, 0, 'old socket does not schedule another reconnect');
   client.unsubscribe();
+  sockets[1].emit('open');
+  sockets[1].emit('message', { data: '["lamp","old"]' });
   assert.equal(timers.size, 0);
   assert.deepEqual(states, ['live', 'polling']);
+  assert.deepEqual(events, ['lamp'], 'unsubscribed socket events are ignored');
+});
+
+test('unsubscribe inside polling callback does not schedule reconnection', () => {
+  const timers = [];
+  class Socket {
+    constructor() { this.listeners = {}; }
+    addEventListener(type, callback) { this.listeners[type] = callback; }
+    close() { this.listeners.close?.(); }
+  }
+  globalThis.WebSocket = Socket;
+  globalThis.window = {
+    WebSocket: Socket,
+    setTimeout(callback) { timers.push(callback); return timers.length; },
+    clearTimeout() {},
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  client.subscribe(['lamp'], () => {}, (state) => { if (state === 'polling') client.unsubscribe(); });
+  client.socket.listeners.close();
+  assert.equal(client.subscription, null);
+  assert.equal(timers.length, 0);
 });
 
 test('missing WebSocket reports polling without connecting', () => {
