@@ -93,7 +93,7 @@ export class Schema5Editor {
     this.#pages.textContent = 'Seiten verwalten';
     this.#widgets = document.createElement('button');
     this.#widgets.type = 'button';
-    this.#widgets.textContent = 'Widgets bearbeiten';
+    this.#widgets.textContent = 'Widget hinzufügen';
     this.#navigation = document.createElement('button');
     this.#navigation.type = 'button';
     this.#navigation.textContent = 'Navigation bearbeiten';

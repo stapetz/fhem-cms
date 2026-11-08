@@ -34,6 +34,9 @@ export class Schema5WidgetPanel {
   #status;
   #close;
   #host;
+  #mode;
+  #search;
+  #searchLabel;
   #session = null;
   #busy = false;
   #closed = false;
@@ -56,12 +59,21 @@ export class Schema5WidgetPanel {
     this.#page = pageId;
     this.#onClose = onClose;
     this.#createElement = createElement;
+    this.#mode = widgetId ? 'edit' : 'add';
     this.#status = element('p');
     this.#status.setAttribute('role', 'status');
+    this.#searchLabel = element('label', 'Suche ');
+    this.#search = element('input');
+    this.#search.type = 'search';
+    this.#search.placeholder = 'Widget-Typ suchen …';
+    this.#search.addEventListener('input', () => this.#render());
+    this.#searchLabel.append(this.#search);
+    this.#searchLabel.className = 'cms-widget-search';
     this.#list = element('div');
+    this.#list.className = 'cms-widget-add-list';
     this.#host = element('div');
     this.#host.className = 'cms-widget-dialog-host';
-    this.#close = element('button', 'Schließen');
+    this.#close = element('button', 'Abbrechen');
     this.#close.className = 'cms-button cms-panel-close';
     this.#close.type = 'button';
     this.#close.addEventListener('click', () => {
@@ -70,8 +82,19 @@ export class Schema5WidgetPanel {
       this.close();
       this.#onClose(outcome);
     });
-    root.append(element('h2', `Widgets auf ${page.title} bearbeiten`),
-      element('p', 'Änderungen werden als Entwurf gespeichert.'), this.#status, this.#list, this.#host, this.#close);
+    const footer = element('div');
+    footer.className = 'cms-panel-footer';
+    footer.append(this.#close);
+    const heading = this.#mode === 'edit' ? 'Widget bearbeiten' : 'Widget hinzufügen';
+    const hint = this.#mode === 'edit'
+      ? 'Änderungen werden als Entwurf gespeichert.'
+      : 'Widget-Typ wählen; das neue Widget wird als Entwurf gespeichert.';
+    if (this.#mode === 'edit') {
+      this.#searchLabel.hidden = true;
+      this.#list.hidden = true;
+    }
+    root.append(element('h2', heading), element('p', hint),
+      this.#status, this.#searchLabel, this.#list, this.#host, footer);
     this.#render();
     if (widgetId) {
       const widget = page.widgets.find((entry) => entry.id === widgetId);
@@ -82,38 +105,27 @@ export class Schema5WidgetPanel {
 
   #render() {
     this.#list.replaceChildren();
-    const page = (this.#state.draft || this.#state.live).pages.find((entry) => entry.id === this.#page);
-    if (!page.widgets.length) this.#list.append(element('p', 'Diese Seite enthält noch keine Widgets.'));
-    for (const widget of page.widgets) {
-      const button = element('button', `${widget.title || widget.id} (${widget.type}) bearbeiten`);
+    if (this.#mode === 'edit') return;
+    const query = this.#search.value.trim().toLowerCase();
+    let matches = 0;
+    for (const [type, name] of WIDGET_TYPES) {
+      if (query && !name.toLowerCase().includes(query)) continue;
+      matches += 1;
+      const button = element('button', name);
       button.className = 'cms-button cms-widget-choice';
       button.type = 'button';
-      button.addEventListener('click', () => this.#open(widget));
+      button.addEventListener('click', () => {
+        if (this.#closed || this.#busy || this.#session || this.#requiresReload) return;
+        try {
+          this.#open(this.#newWidget(type), 'create');
+        } catch (error) {
+          this.#status.setAttribute('data-error', '');
+          this.#status.textContent = `Widget kann nicht angelegt werden: ${error.message || String(error)}`;
+        }
+      });
       this.#list.append(button);
     }
-    const form = element('form');
-    const label = element('label', 'Widget-Typ ');
-    const select = element('select');
-    for (const [type, name] of WIDGET_TYPES) {
-      const option = element('option', name);
-      option.value = type;
-      select.append(option);
-    }
-    label.append(select);
-    const add = element('button', 'Widget hinzufügen');
-    add.type = 'submit';
-    form.append(label, add);
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      if (this.#closed || this.#busy || this.#session || this.#requiresReload) return;
-      try {
-        this.#open(this.#newWidget(select.value), 'create');
-      } catch (error) {
-        this.#status.setAttribute('data-error', '');
-        this.#status.textContent = `Widget kann nicht angelegt werden: ${error.message || String(error)}`;
-      }
-    });
-    this.#list.append(form);
+    if (!matches) this.#list.append(element('p', 'Kein Widget-Typ gefunden.'));
   }
 
   #newWidget(type) {
@@ -212,13 +224,19 @@ export class Schema5WidgetPanel {
       this.#list.inert = true;
       this.#status.setAttribute('data-error', '');
       this.#status.textContent = `Änderung nicht bestätigt: ${outcome.error.message || String(outcome.error)}. Bitte Zustand erneut laden.`;
-    } else {
-      if (outcome.state) this.#state = outcome.state;
-      this.#render();
-      this.#list.inert = false;
-      this.#status.removeAttribute('data-error');
-      this.#status.textContent = outcome.state ? 'Änderung als Entwurf gespeichert.' : 'Widgetdialog abgebrochen.';
+      return;
     }
+    if (outcome.state || this.#mode === 'edit') {
+      // Gespeichert oder Direktbearbeitung beendet: Dialog schließen, Editor zeigt den Stand.
+      const result = { requiresReload: false };
+      this.close();
+      this.#onClose(result);
+      return;
+    }
+    this.#render();
+    this.#list.inert = false;
+    this.#status.removeAttribute('data-error');
+    this.#status.textContent = 'Widgetdialog abgebrochen.';
   }
 
   suspend() {

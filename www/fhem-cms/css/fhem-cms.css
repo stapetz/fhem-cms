@@ -339,6 +339,25 @@ body {
   text-align: left;
 }
 
+/* Widget hinzufügen: Suchfeld und Typauswahl in Spalten. */
+.cms-widget-search {
+  display: grid;
+  gap: .3rem;
+  margin-block: .5rem .75rem;
+  color: var(--cms-muted-strong);
+}
+
+.cms-widget-add-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: .4rem;
+}
+
+.cms-widget-add-list .cms-widget-choice {
+  width: 100%;
+  margin: 0;
+}
+
 /* Einheitliche Dialog-Fußzeile: Speichern und Abbrechen nebeneinander direkt unter dem Inhalt. */
 .cms-panel-footer {
   display: flex;

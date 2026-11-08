@@ -41,7 +41,7 @@ function toolbarControls(toolbar) {
   const nodes = all(toolbar);
   return [
     'Raster bearbeiten', null, 'Entwurf veröffentlichen', 'Entwurf verwerfen',
-    'Zustand erneut laden', 'Seiten verwalten', 'Widgets bearbeiten',
+    'Zustand erneut laden', 'Seiten verwalten', 'Widget hinzufügen',
     'Navigation bearbeiten', 'Darstellung einstellen',
   ].map((label) => nodes.find((node) => label ? node.textContent === label : node.className === 'cms-editor-mode'));
 }
@@ -232,9 +232,9 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const widgetButton = toolbar.children[6];
     widgetButton.fire('click');
     const widgetPanel = content.children[0];
-    assert.match(widgetPanel.children[0].textContent, /Widgets auf A/);
+    assert.match(widgetPanel.children[0].textContent, /Widget hinzufügen/);
     assert.equal(edit.disabled, true);
-    widgetPanel.children[5].fire('click');
+    widgetPanel.children[6].children[0].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(mode.textContent, 'Live');
     assert.equal(widgetButton.disabled, false);
