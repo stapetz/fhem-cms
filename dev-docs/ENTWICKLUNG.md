@@ -288,7 +288,10 @@ gemeinsames Update von Modul und Assets. Der Legacy-Entwurfsleser prüft bei
 vorhandenem Entwurf den Live-Stand erneut und lehnt ungültige oder andere Formate
 ab; damit kann ein Formatwechsel nach der ersten Abfrage keinen alten Entwurf
 als aktuellen Zustand ausliefern. Für die Wiederherstellung eines beschädigten
-Live-Stands bleibt der explizite Restore-Weg erhalten.
+Live-Stands bleibt der explizite Restore-Weg erhalten. Wird der Browser-Tab
+während des Starts verlassen, wird der angefangene Einstieg nicht fortgesetzt.
+Nach einer Rückkehr aus dem Browser-Cache lädt auch die Bestandsoberfläche die
+Seite vollständig neu und prüft das Format erneut.
 Das vorbereitete Modul `www/fhem-cms/js/fcui-schema5-layout.js` übersetzt
 Schema-5-Positionen zwischen den einbasierten Daten und Gridstacks nullbasierten
 Koordinaten. Es erhält Inhalte und Seitenreihenfolge, prüft Grenzen sowie

@@ -311,10 +311,19 @@ export class CmsPage {
   }
 
   async start() {
+    window.addEventListener('pagehide', () => this.stop());
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) window.location.reload();
+    });
     try {
-      this.config = await this.loadConfig(VIEW_MODE && !PREVIEW_MODE ? 'config' : 'draft');
-      this.hasDraft = VIEW_MODE ? false : await this.client.hasDraft();
+      const config = await this.loadConfig(VIEW_MODE && !PREVIEW_MODE ? 'config' : 'draft');
+      if (this.stopped) return;
+      const hasDraft = VIEW_MODE ? false : await this.client.hasDraft();
+      if (this.stopped) return;
+      this.config = config;
+      this.hasDraft = hasDraft;
     } catch (error) {
+      if (this.stopped) return;
       this.statusLine.setAttribute('data-error', '');
       this.setStatus(`Konfiguration konnte nicht geladen werden: ${error.message}`);
       this.setControlsDisabled(true);
@@ -324,13 +333,6 @@ export class CmsPage {
     window.addEventListener('hashchange', () => this.showPage(this.pageFromHash()));
     window.addEventListener('online', () => this.refresh());
     window.addEventListener('offline', () => this.markStale('Offline'));
-    window.addEventListener('pagehide', () => this.stop());
-    window.addEventListener('pageshow', (event) => {
-      if (event.persisted) {
-        this.startPolling();
-        this.refresh();
-      }
-    });
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
         this.refresh();
@@ -2021,10 +2023,29 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
 
   card.textContent = 'Konfiguration wird geladen ...';
+  let suspended = false;
+  const onPageHide = () => { suspended = true; };
+  const onPageShow = (event) => {
+    if (suspended && event.persisted) window.location.reload();
+  };
+  const removeStartupListeners = () => {
+    window.removeEventListener('pagehide', onPageHide);
+    window.removeEventListener('pageshow', onPageShow);
+  };
+  window.addEventListener('pagehide', onPageHide);
+  window.addEventListener('pageshow', onPageShow);
   try {
     const client = new FhemClient(cmsDevice);
-    await startCmsDevice(client, () => new CmsPage(cmsDevice, shell, card).start());
+    await startCmsDevice(client, () => {
+      if (suspended) return;
+      const page = new CmsPage(cmsDevice, shell, card);
+      const started = page.start();
+      removeStartupListeners();
+      return started;
+    });
   } catch (error) {
+    if (suspended) return;
+    removeStartupListeners();
     document.documentElement.classList.add('cms-view');
     card.setAttribute('data-error', '');
     card.textContent = `Konfiguration konnte nicht geladen werden: ${error.message || String(error)}`;

@@ -9,6 +9,8 @@ test('device entry starts only the validated legacy format and displays format e
   };
   let onReady;
   const classes = new Set();
+  const listeners = new Map();
+  let reloads = 0;
   const card = {
     attributes: {},
     setAttribute(name, value) { this.attributes[name] = value; },
@@ -16,7 +18,17 @@ test('device entry starts only the validated legacy format and displays format e
   };
   globalThis.window = {
     matchMedia: () => ({}),
-    location: { search: '?mode=edit', href: 'https://example.test/fhem/fhem-cms/CMS/index.html' },
+    location: {
+      search: '?mode=edit', href: 'https://example.test/fhem/fhem-cms/CMS/index.html',
+      reload() { reloads += 1; },
+    },
+    addEventListener(name, callback) {
+      if (!listeners.has(name)) listeners.set(name, new Set());
+      listeners.get(name).add(callback);
+    },
+    removeEventListener(name, callback) { listeners.get(name)?.delete(callback); },
+    clearInterval() {},
+    clearTimeout() {},
   };
   globalThis.document = {
     addEventListener(name, callback) { if (name === 'DOMContentLoaded') onReady = callback; },
@@ -35,7 +47,7 @@ test('device entry starts only the validated legacy format and displays format e
     get(name) { return registry.get(name); },
   };
   try {
-    const { startCmsDevice } = await import('../www/fhem-cms/js/fhem-cms.js');
+    const { CmsPage, startCmsDevice } = await import('../www/fhem-cms/js/fhem-cms.js');
     let started = 0;
     await startCmsDevice({ getLayoutFormat: async () => 4 }, async () => { started += 1; });
     assert.equal(started, 1);
@@ -68,6 +80,55 @@ test('device entry starts only the validated legacy format and displays format e
     await onReady();
     assert.deepEqual(commands, ['get CMS layoutformat']);
     assert.match(card.textContent, /Unknown argument layoutformat/);
+
+    commands.length = 0;
+    let resolveFormat;
+    globalThis.fetch = async (url, options) => {
+      if (!options.method) return new Response('');
+      commands.push(options.body.get('cmd'));
+      return new Promise((resolve) => { resolveFormat = resolve; });
+    };
+    const startup = onReady();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (const listener of listeners.get('pagehide')) listener();
+    resolveFormat(new Response('{"schemaVersion":4}'));
+    await startup;
+    assert.deepEqual(commands, ['get CMS layoutformat'], 'hidden startup does not load or edit a stale format');
+    for (const listener of listeners.get('pageshow')) listener({ persisted: true });
+    assert.equal(reloads, 1, 'restoring an interrupted startup reloads the format');
+    listeners.clear();
+
+    const legacy = Object.create(CmsPage.prototype);
+    let resolveConfig;
+    let draftReads = 0;
+    legacy.loadConfig = () => new Promise((resolve) => { resolveConfig = resolve; });
+    legacy.client = { hasDraft: () => { draftReads += 1; }, unsubscribe() {} };
+    legacy.loadToken = 0;
+    legacy.stopped = false;
+    const loading = legacy.start();
+    for (const listener of listeners.get('pagehide')) listener();
+    resolveConfig({ schemaVersion: 4, pages: [] });
+    await loading;
+    assert.equal(draftReads, 0, 'a page hidden during configuration loading does not continue startup');
+    for (const listener of listeners.get('pageshow')) listener({ persisted: true });
+    assert.equal(reloads, 2, 'restoring the legacy page rechecks its format');
+    listeners.clear();
+    const waitingDraft = Object.create(CmsPage.prototype);
+    let resolveDraft;
+    waitingDraft.loadConfig = async () => ({ schemaVersion: 4, pages: [] });
+    waitingDraft.client = {
+      hasDraft: () => new Promise((resolve) => { resolveDraft = resolve; }),
+      unsubscribe() {},
+    };
+    waitingDraft.loadToken = 0;
+    waitingDraft.stopped = false;
+    const loadingDraft = waitingDraft.start();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (const listener of listeners.get('pagehide')) listener();
+    resolveDraft(false);
+    await loadingDraft;
+    assert.equal(waitingDraft.config, undefined, 'late draft status cannot start the hidden editor');
+    assert.equal(listeners.has('hashchange'), false);
   } finally {
     Object.assign(globalThis, previous);
   }
