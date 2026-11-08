@@ -355,12 +355,20 @@ test('grid editing is explicit, state-bound and never changes live bytes', async
   globalThis.document = { createElement: () => new Element() };
   let grid;
   let changeOnEnable = false;
+  let changeOtherOnUpdate = false;
   const GridStack = { init() {
     grid = {
       items: [], columns: 12, destroyed: 0, static: true,
       getColumn() { return this.columns; },
-      makeWidget(wrapper, item) { this.items.push({ ...item }); },
+      makeWidget(wrapper, item) {
+        wrapper.gridstackNode = { id: item.id };
+        this.items.push({ ...item });
+      },
       save() { return structuredClone(this.items); },
+      update(wrapper, position) {
+        Object.assign(this.items.find((item) => item.id === wrapper.gridstackNode.id), position);
+        if (changeOtherOnUpdate) this.items[0].y += 1;
+      },
       setStatic(value) {
         this.static = value;
         if (!value && changeOnEnable) this.items[0].y += 1;
@@ -424,6 +432,25 @@ test('grid editing is explicit, state-bound and never changes live bytes', async
     grid.columns = 1;
     await assert.rejects(narrow.save(), /12-Spalten/);
     narrow.close();
+    assert.equal(controller.snapshot().draft, null);
+
+    const precise = new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: state.token });
+    assert.throws(() => precise.setPosition('missing', { col: 1, row: 4, w: 1, h: 1 }), /Unbekannt/);
+    assert.throws(() => precise.setPosition('text', { col: '9', row: 2, w: 4, h: 2 }), /Ungültige/);
+    assert.throws(() => precise.setPosition('text', { col: 5, row: 2, w: 4, h: 2 }), /überschneidung/);
+    assert.throws(() => precise.setPosition('__nav', { col: 1, row: 5, w: 12, h: 1 }), /Seite second/);
+    precise.setPosition('text', { col: 9, row: 2, w: 4, h: 2 });
+    assert.deepEqual(grid.items[1], { id: 'text', x: 8, y: 1, w: 4, h: 2 });
+    precise.close();
+    assert.equal(controller.snapshot().draft, null, 'position changes are not persisted until save');
+
+    const altered = new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: state.token });
+    changeOtherOnUpdate = true;
+    assert.throws(() => altered.setPosition('text', { col: 9, row: 2, w: 4, h: 2 }), /weitere Rasterpositionen/);
+    changeOtherOnUpdate = false;
+    assert.equal(grid.static, true);
+    await assert.rejects(altered.save(), /nicht mehr aktiv/);
+    altered.close();
     assert.equal(controller.snapshot().draft, null);
 
     delaySave = true;

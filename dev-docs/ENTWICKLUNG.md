@@ -369,6 +369,22 @@ seitenübergreifender Kollisionen. Nach jedem Versuch bleibt das Raster bis zum
 Schließen gesperrt; bei unklarem Fehler ist der Entwurfszustand neu zu laden.
 Abbrechen entfernt nur das Raster und speichert nichts. Dieser Baustein ist
 nicht an den Device-Einstieg oder eine öffentliche Schreib-API angebunden.
+Zusätzlich kann ein Aufrufer eine Position mit ganzzahligen Koordinaten setzen:
+Kollisionen werden vorab über alle Seiten geprüft. Verändert Gridstack dabei
+weitere Positionen, wird die Bearbeitung gesperrt statt gespeichert.
+Der vorbereitete Oberflächenbaustein `www/fhem-cms/js/fcui-schema5-grid-panel.js`
+bietet Ziehen und numerische Eingabe sowie ausdrückliches Speichern oder
+Abbrechen. Nicht übernommene Eingaben verhindern Speichern und Elementwechsel;
+zwischenzeitlich veränderte Positionen müssen erneut geladen werden. Nach einem
+fehlgeschlagenen Speicherversuch wird die weitere Bearbeitung gesperrt, und der
+Aufrufer erhält beim Schließen einen Hinweis auf das notwendige Neuladen.
+Der Baustein benötigt einen vom Aufrufer geladenen Entwurfscontroller und ist
+noch nicht an die Device-Oberfläche oder einen öffentlichen Transport angebunden.
+Ein automatisierter Test verbindet die Bedienoberfläche über den Controller mit
+internen Perl-Entwurfstransaktionen auf temporären Dateien; das DOM und Gridstack
+sind dabei Test-Stubs. Ein separater lokaler Browsertest verwendet echtes
+Gridstack und einen simulierten Transport. Beide sind kein FHEMWEB- oder
+Geräte-Abnahmetest.
 Ein lokaler Browsertest mit echtem Gridstack hat Ziehen und Speichern gegen
 einen simulierten Transport geprüft; der automatisierte Integrationstest nutzt
 isolierte Perl-Transaktionen und Gridstack-Stubs. Beides ersetzt keinen

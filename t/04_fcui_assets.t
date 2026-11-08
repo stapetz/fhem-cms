@@ -21,6 +21,7 @@ my @assets = (
     'www/fhem-cms/js/fcui-schema5-view.js',
     'www/fhem-cms/js/fcui-schema5-draft.js',
     'www/fhem-cms/js/fcui-schema5-grid-edit.js',
+    'www/fhem-cms/js/fcui-schema5-grid-panel.js',
 );
 for my $asset (@assets) {
     ok(-s $asset, "$asset exists and is not empty");
