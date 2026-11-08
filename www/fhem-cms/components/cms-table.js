@@ -56,7 +56,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; height: 100%; overflow: auto; border: 1px solid var(--cms-frame, #7f8c84);
+        .tile { position: relative; height: 100%; overflow: auto; container-type: size; border: 1px solid var(--cms-frame, #7f8c84);
           border-radius: 1.2rem; background: var(--cms-surface, #202e27); padding: 0.6rem; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         header { padding: 0.1rem 2rem 0.4rem 0.2rem; }

@@ -21,12 +21,13 @@ class FHEMCMSText extends HTMLElement {
       <style>
         :host { display: block; min-width: 0; }
         * { box-sizing: border-box; }
-        .tile { height: 100%; padding: 1rem; border: 1px solid var(--cms-border, #43564a); border-radius: 1rem;
+        .tile { height: 100%; padding: 1rem; container-type: size; overflow: hidden; border: 1px solid var(--cms-border, #43564a); border-radius: 1rem;
           background: var(--cms-surface, #202e27); display: grid; gap: 0.5rem; align-content: start; }
         header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
         h3 { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
         h3[data-title] { font-size: max(6px, min(10cqh, 4.5cqw)); }
         ${contentCss('.body')}
+        .body { overflow-y: auto; min-height: 0; }
         .body h4, .body h5 { margin: 0.8rem 0 0.4rem; }
         ${editorCss()}
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
