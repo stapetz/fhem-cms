@@ -177,6 +177,14 @@ Navigation und die effektive Darstellung der Modi `flow` und `masonry` werden
 als offene Voraussetzungen ausgewiesen. Dies ist weder ein Formatvertrag noch
 eine Freigabe zur Speicherung.
 
+Die separate Funktion `planEffectiveLegacyLayout` plant aus den effektiv
+angezeigten Positionen. Bei seitenabhängig unterschiedlichen Positionen der
+Navigation verlangt sie eine explizite gemeinsame Zielposition. Nicht exakt
+darstellbare Kacheln bleiben ohne manuelle Anpassung ungelöst; Zielkollisionen
+werden pro Seite gemeldet. Auch diese Funktion ist nicht in eine Oberfläche
+eingebunden; ihre Ergebnisse ersetzen keine serverseitigen Prüfungen und
+ermöglichen keine Speicherung oder Umstellung.
+
 Das ist kein Nachweis einer vollständigen FHEMWEB-Autorisierung, Migration oder
 Geräteabnahme. Insbesondere Testinstanz-Rechte, CSRF, externer Ressourcenzugriff,
 Verlustfreiheit und Rollback sind vor Einsatz auf der Referenzumgebung zu prüfen.

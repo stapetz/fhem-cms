@@ -1,3 +1,5 @@
+import { effectiveLayoutFor } from '../www/fhem-cms/js/layout.js';
+
 function integer(value, min, max) {
   if ((typeof value !== 'number' && typeof value !== 'string')
     || !/^[0-9]{1,6}$/.test(String(value))) return null;
@@ -129,15 +131,9 @@ function adjustedGrid(grid) {
   return { col: grid.col, row: grid.row, w: grid.w, h: grid.h };
 }
 
-// Internal preview data only; the server must independently validate any future write.
-export function planLegacyLayout(config, adjustments = []) {
-  const analysis = inspectLegacyLayout(config);
-  const layoutMode = config.settings?.layoutMode ?? 'grid';
-  if (!['grid', 'free', 'flow', 'masonry'].includes(layoutMode)) {
-    throw new Error('Ungültiger Layoutmodus');
-  }
+function parseAdjustments(adjustments, pageList, hasNavigation) {
   if (!Array.isArray(adjustments)) throw new Error('Anpassungen müssen eine Liste sein');
-  const pages = new Map(analysis.pages.map((page) => [page.id, page]));
+  const pages = new Map(pageList.map((page) => [page.id, page]));
   const overrides = new Map();
   for (const item of adjustments) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
@@ -145,7 +141,7 @@ export function planLegacyLayout(config, adjustments = []) {
     }
     let key;
     if (item.type === 'navigation' && Object.keys(item).sort().join(',') === 'grid,type'
-      && analysis.navigation) {
+      && hasNavigation) {
       key = 'navigation';
     } else if (item.type === 'widget'
       && Object.keys(item).sort().join(',') === 'grid,id,page,type'
@@ -157,6 +153,37 @@ export function planLegacyLayout(config, adjustments = []) {
     if (overrides.has(key)) throw new Error('Doppelte Anpassung');
     overrides.set(key, adjustedGrid(item.grid));
   }
+  return overrides;
+}
+
+function findCollisions(navigation, widgets) {
+  const elements = [
+    ...(navigation ? [{ type: 'navigation', id: null, grid: navigation }] : []),
+    ...widgets.filter((widget) => widget.grid)
+      .map((widget) => ({ type: 'widget', id: widget.id, grid: widget.grid })),
+  ];
+  const collisions = [];
+  for (let i = 0; i < elements.length; i += 1) {
+    for (let j = i + 1; j < elements.length; j += 1) {
+      if (overlaps(elements[i].grid, elements[j].grid)) {
+        collisions.push([
+          { type: elements[i].type, id: elements[i].id },
+          { type: elements[j].type, id: elements[j].id },
+        ]);
+      }
+    }
+  }
+  return collisions;
+}
+
+// Internal preview data only; the server must independently validate any future write.
+export function planLegacyLayout(config, adjustments = []) {
+  const analysis = inspectLegacyLayout(config);
+  const layoutMode = config.settings?.layoutMode ?? 'grid';
+  if (!['grid', 'free', 'flow', 'masonry'].includes(layoutMode)) {
+    throw new Error('Ungültiger Layoutmodus');
+  }
+  const overrides = parseAdjustments(adjustments, analysis.pages, Boolean(analysis.navigation));
   const resolve = (entry, key) => {
     if (!entry) return null;
     const grid = overrides.get(key) || entry.exact;
@@ -169,23 +196,7 @@ export function planLegacyLayout(config, adjustments = []) {
       id: widget.id,
       grid: resolve(widget, `widget/${page.id}/${widget.id}`),
     }));
-    const elements = [
-      ...(navigation ? [{ type: 'navigation', id: null, grid: navigation }] : []),
-      ...widgets.filter((widget) => widget.grid)
-        .map((widget) => ({ type: 'widget', id: widget.id, grid: widget.grid })),
-    ];
-    const collisions = [];
-    for (let i = 0; i < elements.length; i += 1) {
-      for (let j = i + 1; j < elements.length; j += 1) {
-        if (overlaps(elements[i].grid, elements[j].grid)) {
-          collisions.push([
-            { type: elements[i].type, id: elements[i].id },
-            { type: elements[j].type, id: elements[j].id },
-          ]);
-        }
-      }
-    }
-    return { id: page.id, widgets, collisions };
+    return { id: page.id, widgets, collisions: findCollisions(navigation, widgets) };
   });
   return {
     navigation,
@@ -194,4 +205,38 @@ export function planLegacyLayout(config, adjustments = []) {
     requiresEffectiveLayout: layoutMode === 'flow' || layoutMode === 'masonry',
   };
 }
-import { effectiveLayoutFor } from '../www/fhem-cms/js/layout.js';
+
+// Planning remains read-only. An effective navigation that differs between
+// pages requires an explicit global target, even when each position is exact.
+export function planEffectiveLegacyLayout(config, adjustments = []) {
+  const analysis = inspectEffectiveLegacyLayout(config);
+  const overrides = parseAdjustments(adjustments, analysis.pages, true);
+
+  const nav = analysis.pages[0].navigation;
+  const navDiffers = analysis.pages.some((page) =>
+    ['col', 'row', 'w', 'h'].some((field) => page.navigation.source[field] !== nav.source[field]));
+  const fit = (grid) => grid && grid.row + grid.h <= 1001 ? { ...grid } : null;
+  const navigation = fit(overrides.get('navigation') || (!navDiffers ? nav.exact : null));
+  const resultPages = analysis.pages.map((page) => {
+    const widgets = page.widgets.map((widget) => ({
+      id: widget.id,
+      source: { ...widget.source },
+      issues: [...widget.issues],
+      grid: fit(overrides.get(`widget/${page.id}/${widget.id}`) || widget.exact),
+    }));
+    return {
+      id: page.id,
+      navigationSource: { ...page.navigation.source },
+      widgets,
+      collisions: findCollisions(navigation, widgets),
+    };
+  });
+  return {
+    defaultNavigation: analysis.defaultNavigation,
+    navigationDiffersBetweenPages: navDiffers,
+    navigation,
+    pages: resultPages,
+    allPositionsResolved: navigation !== null
+      && resultPages.every((page) => page.widgets.every((widget) => widget.grid !== null)),
+  };
+}

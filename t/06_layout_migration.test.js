@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { inspectEffectiveLegacyLayout, inspectLegacyLayout, planLegacyLayout } from '../fcui/layout-migration.js';
+import { inspectEffectiveLegacyLayout, inspectLegacyLayout, planEffectiveLegacyLayout, planLegacyLayout } from '../fcui/layout-migration.js';
 import { configureLayout, effectiveLayout, layoutMode, layoutStep } from '../www/fhem-cms/js/layout.js';
 
 const grid = (col, row, w, h) => ({ col, row, w, h });
@@ -206,4 +206,59 @@ test('effective flow fallback and masonry keep legacy positions at row limits', 
   config.navigation.grid.h = 1;
   result = inspectEffectiveLegacyLayout(config);
   assert.deepEqual(result.pages[0].widgets[0].source, grid(1, 2, 4, 2));
+});
+
+test('effective planning requires a global navigation choice when pages differ', () => {
+  const source = {
+    schemaVersion: 4, settings: { layoutMode: 'flow' },
+    navigation: { grid: grid(1, 5, 4, 1) },
+    pages: [
+      { id: 'a', widgets: [{ id: 'w', grid: grid(1, 1, 4, 1) }] },
+      { id: 'b', widgets: [] },
+    ],
+  };
+  const before = structuredClone(source);
+  const result = planEffectiveLegacyLayout(source);
+  assert.equal(result.navigationDiffersBetweenPages, true);
+  assert.equal(result.navigation, null);
+  assert.equal(result.allPositionsResolved, false);
+  const adjusted = planEffectiveLegacyLayout(source, [
+    { type: 'navigation', grid: grid(1, 3, 1, 1) },
+  ]);
+  assert.deepEqual(adjusted.navigation, grid(1, 3, 1, 1));
+  assert.equal(adjusted.allPositionsResolved, true);
+  assert.deepEqual(source, before);
+});
+
+test('effective planning respects default navigation and refuses to round', () => {
+  const source = { schemaVersion: 4, pages: [
+    { id: 'a', widgets: [{ id: 'w', grid: grid(2, 1, 3, 1) }] },
+  ] };
+  const first = planEffectiveLegacyLayout(source);
+  assert.equal(first.defaultNavigation, true);
+  assert.deepEqual(first.navigation, grid(1, 1, 12, 1));
+  assert.deepEqual(first.pages[0].widgets[0].source, grid(2, 2, 3, 1));
+  assert.equal(first.pages[0].widgets[0].grid, null);
+  assert.deepEqual(first.pages[0].widgets[0].issues, ['col', 'w']);
+  const result = planEffectiveLegacyLayout(source, [
+    { type: 'widget', page: 'a', id: 'w', grid: grid(1, 1, 1, 1) },
+  ]);
+  assert.equal(result.allPositionsResolved, true);
+  assert.equal(result.pages[0].collisions.length, 1);
+  assert.equal(planEffectiveLegacyLayout(source).pages[0].widgets[0].grid, null);
+});
+
+test('effective planning rejects invalid, unknown and duplicate overrides', () => {
+  const source = { schemaVersion: 4, pages: [
+    { id: 'a', widgets: [{ id: 'w', grid: grid(1, 1, 4, 1) }] },
+  ] };
+  const valid = { type: 'widget', page: 'a', id: 'w', grid: grid(1, 2, 1, 1) };
+  for (const changes of [
+    [valid, valid],
+    [{ ...valid, id: 'missing' }],
+    [{ ...valid, grid: grid(12, 1, 2, 1) }],
+    [{ type: 'navigation', grid: grid(1, 1000, 1, 2) }],
+  ]) {
+    assert.throws(() => planEffectiveLegacyLayout(source, changes), /Anpassung|Position/);
+  }
 });
