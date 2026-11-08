@@ -1,3 +1,4 @@
+import { Schema5BackupPanel } from './fcui-schema5-backup-panel.js';
 import { Schema5PagePanel } from './fcui-schema5-page-panel.js';
 import { Schema5PagesPanel } from './fcui-schema5-pages.js';
 import { Schema5View } from './fcui-schema5-view.js';
@@ -34,6 +35,7 @@ export class Schema5Editor {
   #pages;
   #widgets;
   #navigation;
+  #backup;
   #publish;
   #discard;
   #reloadButton;
@@ -101,21 +103,13 @@ export class Schema5Editor {
     }
     this.#publish.className = 'cms-button cms-publish';
     this.#mode.className = 'cms-editor-mode';
-    const fileMenu = this.#menu('Datei', [this.#publish, this.#discard]);
+    this.#backup = document.createElement('button');
+    this.#backup.type = 'button';
+    this.#backup.textContent = 'Sicherungen / Wiederherstellung';
+    this.#backup.className = 'cms-button';
+    this.#menu('Datei', [this.#publish, this.#discard, this.#backup]);
     this.#menu('Bearbeiten', [this.#pages, this.#widgets, this.#navigation]);
     this.#menu('Ansicht', [this.#page]);
-    const backup = document.createElement('a');
-    backup.className = 'cms-button';
-    backup.textContent = 'Sicherungen / Wiederherstellung';
-    if (client.endpoint instanceof URL) {
-      const url = new URL(`${client.endpoint.pathname.replace(/\/$/, '')}/fhem-cms/examples/migration-preview.html`,
-        client.endpoint);
-      url.searchParams.set('device', client.cmsDevice);
-      backup.href = url.href;
-      backup.target = '_blank';
-      backup.rel = 'noopener';
-      fileMenu.append(backup);
-    }
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
     this.#status = document.createElement('p');
@@ -126,6 +120,7 @@ export class Schema5Editor {
     this.#pages.addEventListener('click', () => this.#openPages());
     this.#widgets.addEventListener('click', () => this.#openWidgets());
     this.#navigation.addEventListener('click', () => this.#openNavigation());
+    this.#backup.addEventListener('click', () => this.#openBackup());
     this.#publish.addEventListener('click', () => this.#draftAction('publish'));
     this.#discard.addEventListener('click', () => this.#draftAction('discard'));
     this.#reloadButton.addEventListener('click', () => this.#reload().catch((error) => this.#error(error)));
@@ -201,6 +196,7 @@ export class Schema5Editor {
     this.#pages.disabled = !enabled;
     this.#widgets.disabled = !enabled;
     this.#navigation.disabled = !enabled;
+    this.#backup.disabled = !enabled;
     this.#publish.disabled = !enabled || !hasDraft;
     this.#discard.disabled = !enabled || !hasDraft;
   }
@@ -352,6 +348,30 @@ export class Schema5Editor {
       await this.#display(result, actionGeneration);
     } catch (error) {
       if (actionGeneration === this.#generation) this.#error(error);
+    }
+  }
+
+  #openBackup() {
+    if (!this.#active || this.#suspended || !this.#view || this.#backup.disabled) return;
+    try {
+      this.#generation += 1;
+      this.#setActions(false, false);
+      this.#view.stop();
+      this.#view = null;
+      this.#content.replaceChildren();
+      const container = this.#panelContainer('backup');
+      this.#panel = new Schema5BackupPanel({
+        root: container, client: this.#client, browser: this.#browser,
+        onClose: ({ requiresReload }) => {
+          this.#panel = null;
+          Promise.resolve().then(() => requiresReload
+            ? this.#reload() : this.#display(this.#controller.snapshot(), this.#generation))
+            .catch((error) => this.#error(error));
+        },
+      });
+    } catch (error) {
+      this.#content.replaceChildren();
+      this.#error(error);
     }
   }
 

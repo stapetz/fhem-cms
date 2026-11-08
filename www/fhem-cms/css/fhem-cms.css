@@ -350,6 +350,41 @@ body {
   margin: 0;
 }
 
+/* Sicherungen / Wiederherstellung im Editor-Dialog. */
+.cms-backup-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: .75rem;
+  margin-block: .75rem;
+}
+
+.cms-backup-controls label {
+  display: grid;
+  gap: .3rem;
+  flex: 1 1 14rem;
+  color: var(--cms-muted-strong);
+}
+
+.cms-editor-panel h3 {
+  margin: .8rem 0 .3rem;
+  font-size: 1rem;
+}
+
+.cms-editor-panel pre {
+  max-height: 14rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+  padding: .6rem .8rem;
+  border: 1px solid var(--cms-border-subtle);
+  border-radius: .5rem;
+  background: var(--cms-tile-inset);
+  color: var(--cms-muted-strong);
+  font-size: .8rem;
+}
+
 /* Einheitliche Dialog-Fußzeile: Speichern und Abbrechen nebeneinander direkt unter dem Inhalt. */
 .cms-panel-footer {
   display: flex;
