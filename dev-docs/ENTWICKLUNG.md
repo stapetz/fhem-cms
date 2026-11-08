@@ -193,6 +193,12 @@ der vollständige Positionsplan über `get <CMS> migrationpreview <Base64-JSON>`
 serverseitig geprüft werden; der dabei erneut gelesene Live-Stand muss mit dem
 angezeigten Stand übereinstimmen. Bei vorhandenem Entwurf wird die Prüfung
 abgelehnt. Eine lokale JSON-Datei wird weiterhin nur geometrisch analysiert.
+Nach erfolgreicher Serverprüfung kann das geprüfte Zielraster zusätzlich mit
+Gridstack angezeigt werden. Es enthält nur Navigation und Widget-Bezeichnungen,
+keine ausgeführten Widgets oder Live-Werte. Bei Positionsänderungen oder einem
+erneuten Prüflauf wird diese Anzeige verworfen; ein Seitenwechsel zeigt dieselbe
+geprüfte Konfiguration für die gewählte Seite. Fehler beim Laden von Gridstack
+oder Änderungen der Positionen durch Gridstack werden angezeigt.
 Manuelle Positionen bleiben nur bis zum Schließen der Seite im Browser. Die
 Seite führt keine Umstellung durch.
 Die spätere Migrationsfunktion muss vor dem Schreiben alle serverseitigen

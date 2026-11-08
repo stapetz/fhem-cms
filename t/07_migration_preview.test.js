@@ -25,7 +25,8 @@ class Element {
 
 test('migration preview is read-only, handles adjustments and rejects stale live data', async () => {
   const ids = ['file', 'status', 'preview', 'page', 'summary', 'canvas', 'forms', 'device-form', 'device', 'validate',
-    'load-backups', 'backup-controls', 'backup', 'preview-backup', 'backup-status', 'backup-result', 'backup-live', 'backup-data'];
+    'load-backups', 'backup-controls', 'backup', 'preview-backup', 'backup-status', 'backup-result', 'backup-live', 'backup-data',
+    'show-target', 'target', 'target-grid', 'target-status', 'grid-css'];
   const elements = Object.fromEntries(ids.map((id) => [id, new Element(id)]));
   const previous = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch };
   globalThis.document = {
@@ -98,6 +99,12 @@ test('migration preview is read-only, handles adjustments and rejects stale live
     assert.match(elements.summary.textContent, /Offene Positionen: 0/);
     await elements.validate.fire('click');
     assert.match(elements.status.textContent, /serverseitig geprüft/);
+    assert.equal(elements['show-target'].hidden, false);
+    await elements['show-target'].fire('click');
+    assert.equal(elements.target.hidden, false);
+    assert.match(elements['target-status'].textContent, /Gridstack-CSS konnte nicht geladen werden/);
+    await elements.page.fire('change');
+    assert.match(elements['target-status'].textContent, /Gridstack-CSS konnte nicht geladen werden/);
     await elements['load-backups'].fire('click');
     assert.equal(elements['backup-controls'].hidden, false);
     elements.backup.value = 'config.json.20000101-000000.bak';
@@ -109,6 +116,8 @@ test('migration preview is read-only, handles adjustments and rejects stale live
     stale = true;
     await elements.validate.fire('click');
     assert.match(elements.status.textContent, /Live-Daten wurden geändert/);
+    assert.equal(elements['show-target'].hidden, true, 'stale validation clears target preview');
+    assert.equal(elements.target.hidden, true, 'stale validation hides target preview');
     assert.ok(commands.every((command) => command.startsWith('get ')), 'only read commands are sent');
 
     delayedBackup = {};

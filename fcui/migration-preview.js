@@ -11,6 +11,10 @@ const forms = document.getElementById('forms');
 const deviceForm = document.getElementById('device-form');
 const device = document.getElementById('device');
 const validate = document.getElementById('validate');
+const showTarget = document.getElementById('show-target');
+const target = document.getElementById('target');
+const targetGrid = document.getElementById('target-grid');
+const targetStatus = document.getElementById('target-status');
 const loadBackups = document.getElementById('load-backups');
 const backupControls = document.getElementById('backup-controls');
 const backupSelect = document.getElementById('backup');
@@ -25,6 +29,10 @@ let changes = new Map();
 let sequence = 0;
 let backupSequence = 0;
 let backupClient;
+let targetConfig;
+let targetInstance;
+let targetGeneration = 0;
+let targetVisible = false;
 
 const keyOf = (item) => item.type === 'navigation' ? 'navigation' : `${item.page}/${item.id}`;
 const describe = (grid) => `Spalte ${grid.col}, Zeile ${grid.row}, Breite ${grid.w}, Höhe ${grid.h}`;
@@ -82,6 +90,7 @@ function formFor(item, current, source, original) {
   reset.type = 'button';
   reset.addEventListener('click', () => {
     sequence += 1;
+    clearTarget();
     changes.delete(keyOf(item));
     render();
     status.textContent = 'Anpassung in dieser Vorschau zurückgesetzt.';
@@ -96,6 +105,7 @@ function formFor(item, current, source, original) {
     try {
       planEffectiveLegacyLayout(config, [...next.values()]);
       sequence += 1;
+      clearTarget();
       changes = next;
       render();
       status.textContent = 'Anpassung nur in dieser Vorschau übernommen.';
@@ -131,6 +141,7 @@ function render() {
 }
 
 function clearPreview() {
+  clearTarget();
   config = undefined;
   client = undefined;
   changes = new Map();
@@ -139,6 +150,46 @@ function clearPreview() {
   pageSelect.replaceChildren();
   canvas.replaceChildren();
   forms.replaceChildren();
+}
+
+function clearTarget() {
+  targetGeneration += 1;
+  targetConfig = undefined;
+  targetVisible = false;
+  showTarget.hidden = true;
+  target.hidden = true;
+  if (targetInstance) targetInstance.destroy(false);
+  targetInstance = undefined;
+  targetGrid.replaceChildren();
+  targetStatus.textContent = '';
+}
+
+async function renderTarget() {
+  const generation = ++targetGeneration;
+  const currentConfig = targetConfig;
+  const currentPage = pageSelect.value;
+  if (targetInstance) targetInstance.destroy(false);
+  targetInstance = undefined;
+  targetGrid.replaceChildren();
+  targetStatus.textContent = 'Gridstack-Zielraster wird geladen …';
+  try {
+    if (!document.getElementById('grid-css').sheet) throw new Error('Gridstack-CSS konnte nicht geladen werden');
+    const url = (path) => new URL(path, window.location.href).href;
+    const [runtime, layout] = await Promise.all([
+      import(url('../js/fcui-runtime.js')), import(url('../js/fcui-schema5-layout.js')),
+    ]);
+    if (generation !== targetGeneration) return;
+    const current = currentConfig.pages.find((page) => page.id === currentPage);
+    if (!current) throw new Error('Unbekannte Seite');
+    targetInstance = layout.createSchema5Grid(runtime.GridStack, targetGrid, currentConfig, currentPage, (id) => {
+      const widget = current.widgets.find((entry) => entry.id === id);
+      return make('span', id === '__nav' ? 'Navigation' : `${id} (${widget.type})`);
+    });
+    targetStatus.textContent = 'Gridstack hat die geprüften Positionen unverändert übernommen.';
+  } catch (error) {
+    if (generation !== targetGeneration) return;
+    targetStatus.textContent = `Gridstack-Zielraster konnte nicht angezeigt werden: ${error.message}`;
+  }
 }
 
 function clearBackups() {
@@ -274,6 +325,7 @@ previewBackup.addEventListener('click', async () => {
 
 validate.addEventListener('click', async () => {
   const current = ++sequence;
+  clearTarget();
   try {
     const positions = migrationPositions(config, [...changes.values()]);
     const result = await client.previewMigration(positions);
@@ -281,6 +333,8 @@ validate.addEventListener('click', async () => {
     if (JSON.stringify(normalized(result.source)) !== JSON.stringify(normalized(config))) {
       throw new Error('Die Live-Daten wurden geändert. Bitte erneut laden und prüfen.');
     }
+    targetConfig = result.config;
+    showTarget.hidden = false;
     status.textContent = 'Positionen und Konfiguration serverseitig geprüft. Es wurde nichts gespeichert.';
   } catch (error) {
     if (current !== sequence) return;
@@ -288,4 +342,13 @@ validate.addEventListener('click', async () => {
   }
 });
 
-pageSelect.addEventListener('change', render);
+showTarget.addEventListener('click', () => {
+  targetVisible = true;
+  target.hidden = false;
+  renderTarget();
+});
+
+pageSelect.addEventListener('change', () => {
+  render();
+  if (targetVisible) renderTarget();
+});
