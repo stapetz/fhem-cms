@@ -193,6 +193,10 @@ body {
   width: min(94vw, 36rem);
 }
 
+.cms-editor-dialog[data-panel="move"] {
+  width: min(94vw, 26rem);
+}
+
 .cms-editor-dialog[data-widget-open] {
   background: transparent;
   border-color: transparent;

@@ -39,6 +39,16 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       edit.setAttribute('aria-label', edit.title);
       edit.addEventListener('click', () => editing.onEdit(id));
       controls.append(edit);
+      if (widget && typeof editing.onMove === 'function') {
+        const move = document.createElement('button');
+        move.type = 'button';
+        move.className = 'cms-widget-move';
+        move.textContent = '⇄';
+        move.title = 'Auf andere Seite verschieben';
+        move.setAttribute('aria-label', move.title);
+        move.addEventListener('click', () => editing.onMove(id));
+        controls.append(move);
+      }
       wrapper.append(controls);
     }
     grid.setStatic(false);

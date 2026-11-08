@@ -1,4 +1,5 @@
 import { Schema5BackupPanel } from './fcui-schema5-backup-panel.js';
+import { Schema5MovePanel } from './fcui-schema5-move-panel.js';
 import { Schema5PagePanel } from './fcui-schema5-page-panel.js';
 import { Schema5PagesPanel } from './fcui-schema5-pages.js';
 import { Schema5View } from './fcui-schema5-view.js';
@@ -280,6 +281,7 @@ export class Schema5Editor {
       editing: {
         onChange: (pageId, items) => this.#saveLayout(pageId, items),
         onEdit: (pageId, id) => id === '__nav' ? this.#openNavigation() : this.#openWidgets(id),
+        onMove: (pageId, id) => this.#openMove(id),
       } });
     this.#view = view;
     await view.start();
@@ -369,6 +371,32 @@ export class Schema5Editor {
 
   #applyGridGuides() {
     if (this.#gridElement) this.#gridElement.classList.toggle('cms-grid-guides', this.#showGrid);
+  }
+
+  #openMove(widgetId) {
+    if (!this.#active || this.#suspended || !this.#view || this.#widgets.disabled) return;
+    try {
+      const pageId = this.#view.current;
+      const state = this.#controller.snapshot();
+      this.#generation += 1;
+      this.#setActions(false, false);
+      this.#view.stop();
+      this.#view = null;
+      this.#content.replaceChildren();
+      const container = this.#panelContainer('move');
+      this.#panel = new Schema5MovePanel({
+        root: container, controller: this.#controller, pageId, widgetId, token: state.token,
+        onClose: ({ requiresReload }) => {
+          this.#panel = null;
+          Promise.resolve().then(() => requiresReload
+            ? this.#reload() : this.#display(this.#controller.snapshot(), this.#generation))
+            .catch((error) => this.#error(error));
+        },
+      });
+    } catch (error) {
+      this.#content.replaceChildren();
+      this.#error(error);
+    }
   }
 
   #openBackup() {

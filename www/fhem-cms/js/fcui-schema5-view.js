@@ -109,6 +109,8 @@ export class Schema5View {
         this.navigation(pageId), this.services, new Map(), this.editing && {
           onChange: (items) => this.editing.onChange(pageId, items),
           onEdit: (id) => this.editing.onEdit(pageId, id),
+          onMove: typeof this.editing.onMove === 'function'
+            ? (id) => this.editing.onMove(pageId, id) : undefined,
         });
       const view = this.view;
       this.live = new Schema5LivePage(this.client, page.widgets,
