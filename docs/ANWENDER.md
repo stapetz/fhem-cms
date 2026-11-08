@@ -97,8 +97,15 @@ Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfigu
 
 Das Stiftsymbol an der Navigation öffnet **Navigation bearbeiten** – die zentrale
 Seitenverwaltung: Reihenfolge am ≡-Griff ziehen (oder Pfeiltasten), je Seite
-Dateiname, Seitentitel, Beschriftung und Größe, dazu „Neue Seite erstellen“ und
-das Löschen leerer Seiten.
+Dateiname, Seitentitel, Beschriftung, Größe und der Haken **Anzeigen**, dazu
+„Neue Seite erstellen“ und das Löschen leerer Seiten. Ohne „Anzeigen“ erscheint
+eine Seite nicht in der veröffentlichten Navigation, bleibt im Bearbeitungsmodus
+aber gedimmt erreichbar – zum Vorbereiten neuer Seiten oder als Parkplatz für
+gerade nicht benötigte Widgets. Unter „Größe für alle Navigationspunkte“
+überstimmen gemeinsame Werte die Einzelgrößen, bis die Option wieder
+deaktiviert wird. Feste Größen wirken als Maximum: Auf schmalen Kacheln und
+Fenstern schrumpfen die Punkte mit, unter etwa 640 Pixeln Fensterbreite wird
+die Navigation zum ☰-Menü.
 
 Alle Dialoge haben unten die Knöpfe **Speichern** und **Abbrechen**: Speichern
 übernimmt die Änderungen als Entwurf und schließt den Dialog, Abbrechen verwirft
@@ -107,9 +114,11 @@ die Eingaben.
 Widgets am Punktgriff oben rechts ziehen. Am markierten Griff unten rechts
 Breite und Höhe ändern. Der Widget-Titel ist zugleich der interne Name in den
 Verwaltungsdialogen; der Haken „Titel anzeigen“ im Widget-Dialog blendet ihn
-auf der Kachel ein oder aus. Das Stiftsymbol öffnet direkt die Widgeteinstellungen;
-bei der Navigation deren Einstellungen. Auch die Navigation ist verschiebbar
-und skalierbar. Änderungen werden automatisch **nur als Entwurf** gespeichert.
+auf der Kachel ein oder aus. Das Stiftsymbol öffnet direkt die Widgeteinstellungen
+(einheitlich mit „Widget löschen“ zum Entfernen); das ⇄-Symbol verschiebt das
+Widget auf eine andere Seite, wo es unterhalb der vorhandenen Inhalte einsortiert
+wird. Bei der Navigation öffnet das Stiftsymbol deren Einstellungen. Auch die
+Navigation ist verschiebbar und skalierbar. Änderungen werden automatisch **nur als Entwurf** gespeichert.
 Erst **Datei → Entwurf veröffentlichen** ändert die Homepage.
 Andere Widgets derselben Seite können beim Ziehen ausweichen; ihre neuen
 Positionen werden gemeinsam gespeichert. Die Navigation gilt für alle Seiten:
@@ -118,10 +127,10 @@ und das vorherige Raster wieder angezeigt.
 
 Während der Speicherung sind weitere Änderungen gesperrt. Bei einer verlorenen
 oder unklaren Antwort zuerst **Zustand erneut laden**, nicht blind wiederholen.
-Für genaue Koordinaten und Tastaturbedienung **Ansicht → Raster bearbeiten**
-verwenden. Einstellungen öffnen als kompakte Dialoge; **Schließen** oder Escape
-schließt sie, bei ungespeicherten Änderungen mit Rückfrage. In der Seitenverwaltung
-sind die Formulare zum Verschieben auf andere Seiten zunächst eingeklappt.
+Für genaue Koordinaten und Tastaturbedienung die Positionseingabe in
+**Ansicht → Seite bearbeiten** verwenden. Einstellungen öffnen als kompakte
+Dialoge; **Abbrechen** oder Escape schließt sie, bei ungespeicherten Änderungen
+mit Rückfrage.
 
 ## Sicherheit: FHEMWEB absichern
 
