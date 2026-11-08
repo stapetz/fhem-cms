@@ -89,8 +89,13 @@ Funktionen:
    ihn nicht umschreiben. Änderungen an alten Layouts dürfen nicht implizit auf
    12 Spalten runden. Für die spätere explizite Umstellung sind eine geprüfte
    Sicherung, eine Vorschau der Auswirkungen und eine Bestätigung vorgesehen.
-   Der genaue Umgang mit nicht exakt darstellbaren Positionen, bestehenden
-   Entwürfen und Abbrüchen ist noch festzulegen. Wiederherstellung muss
+   Nicht exakt darstellbare Positionen und Breiten werden in der Vorschau
+   gekennzeichnet und von der bearbeitenden Person manuell angepasst, nicht
+   stillschweigend gerundet. Auch Navigation, alle Seiten und mögliche
+   Überschneidungen sind einzubeziehen. Bis zur bestätigten Umstellung bleiben
+   die ursprünglichen Daten unverändert; ein Abbruch verwirft die Vorschau.
+   Der genaue Umgang mit bestehenden Entwürfen ist noch festzulegen.
+   Wiederherstellung muss
    das Format des Backups respektieren; ein älterer Programmstand kann ein neues
    Format möglicherweise nicht lesen, deshalb beim Rollback die dazu passende
    vollständige Datensicherung verwenden.
