@@ -25,7 +25,7 @@ UPD 2026-11-08_12:55:40 4931 www/fhem-cms/js/fcui-schema5-live.js
 UPD 2026-11-08_13:06:21 5464 www/fhem-cms/js/fcui-schema5-view.js
 UPD 2026-11-08_12:26:48 1589 www/fhem-cms/js/fcui-schema5-widgets.js
 UPD 2026-11-08_13:20:00 15742 www/fhem-cms/js/fhem-client.js
-UPD 2026-11-08_13:27:37 75904 www/fhem-cms/js/fhem-cms.js
+UPD 2026-11-08_13:30:51 76659 www/fhem-cms/js/fhem-cms.js
 UPD 2026-10-31_16:30:23 12159 www/fhem-cms/js/freehtml.js
 UPD 2026-11-04_21:52:16 4898 www/fhem-cms/js/icon-picker.js
 UPD 2026-11-08_11:00:11 7487 www/fhem-cms/js/layout.js
