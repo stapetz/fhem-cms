@@ -98,6 +98,31 @@ for my $version (1 .. 3) {
         is(FHEMCMS_Set($hash, $name, 'restore', $original[0]), undef, 'restores legacy backup');
         is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'config')), $migrated, 'restored live matches migrated original');
         is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'draft')), $draftV4, 'restore leaves draft intact');
+        is(FHEMCMS_Set($hash, $name, 'discard'), undef, 'explicitly discards draft before migration');
+        write_bytes($livePath, $liveBytes);
+        my $positions = {
+            navigation => {col => 1, row => 1, w => 12, h => 1},
+            pages => [{id => 'start', widgets => [{
+                id => $version == 1 ? 'w1' : 'value',
+                grid => {col => 1, row => 2, w => 5, h => 3},
+            }]}],
+        };
+        my ($candidate, $token, $previewError) = FHEMCMS_PreviewLayoutMigration($dir, $positions);
+        is($previewError, undef, 'previews direct migration from legacy bytes');
+        is($candidate->{schemaVersion}, 5, 'preview has target version');
+        is($candidate->{pages}[0]{widgets}[0]{reading}, 'state', 'preview preserves widget content');
+        is(read_bytes($livePath), $liveBytes, 'preview leaves legacy source bytes untouched');
+        my ($migrationBackup, $migrationError) = FHEMCMS_CommitLayoutMigration($dir, $positions, $token);
+        is($migrationError, undef, 'commits migration on isolated legacy data');
+        is(read_bytes(File::Spec->catfile($dir, $migrationBackup)), $liveBytes,
+            'migration backs up original historical bytes');
+        my (undef, $restoreToken, $restoreError) = FHEMCMS_PreviewMigrationRestore($dir, $migrationBackup);
+        is($restoreError, undef, 'previews historical restore');
+        my (undef, $commitError) = FHEMCMS_CommitMigrationRestore($dir, $migrationBackup, $restoreToken);
+        is($commitError, undef, 'restores historical bytes from version 5');
+        is(read_bytes($livePath), $liveBytes, 'restored historical source is byte-exact');
+        is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'config')), $migrated,
+            'historical source remains readable after restore');
     };
 }
 
