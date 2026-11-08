@@ -20,7 +20,7 @@ UPD 2026-11-04_21:52:16 5087 www/fhem-cms/js/device-picker.js
 UPD 2026-11-05_15:42:16 6579 www/fhem-cms/js/device-preview.js
 UPD 2026-11-08_13:20:00 25411 www/fhem-cms/js/fcui-migration-preview.js
 UPD 2026-11-08_10:43:57 111967 www/fhem-cms/js/fcui-runtime.js
-UPD 2026-11-08_13:35:42 3249 www/fhem-cms/js/fcui-schema5-draft.js
+UPD 2026-11-08_13:37:13 5257 www/fhem-cms/js/fcui-schema5-draft.js
 UPD 2026-11-08_12:24:41 5889 www/fhem-cms/js/fcui-schema5-layout.js
 UPD 2026-11-08_12:55:40 4931 www/fhem-cms/js/fcui-schema5-live.js
 UPD 2026-11-08_13:06:21 5464 www/fhem-cms/js/fcui-schema5-view.js
