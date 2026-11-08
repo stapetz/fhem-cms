@@ -1,13 +1,16 @@
 # Hinweise für KI-Agenten
 
-Vor Änderungen [`dev-docs/ENTWICKLUNG.md`](../dev-docs/ENTWICKLUNG.md) lesen.
+Vor Änderungen lesen:
+1. **Projektdokumentation**: [`dev-docs/ENTWICKLUNG.md`](../dev-docs/ENTWICKLUNG.md) für Anforderungen, Ziele und Roadmap.
+2. **Bindender Styleguide** (ab sofort): [`dev-docs/entwicklerdoku_und_styleguides.md`](./dev-docs/entwicklerdoku_und_styleguides.md) — Vereinheitlichte Standards für alle Repositories, Code-Qualität, Sicherheit, Testing, Versioning, und Modul-Architektur.
 
+Details:
 - Das Projektziel, die dokumentierten Anforderungen und Entwicklungswissen werden in `dev-docs/ENTWICKLUNG.md` als gemeinsamer Informationsraum gepflegt.
 - Anforderungen können dort im Rahmen der Entwicklung dokumentiert und angepasst werden. Prüfe sie vor der Umsetzung und halte Änderungen an Projektzielen oder Anforderungen dort fest.
 - Vision und Roadmap sind Zielbild, nicht automatisch bereits implementierte oder verbindliche Details. Kläre offene Anforderungen, bevor du daraus konkrete Architektur- oder Verhaltensentscheidungen ableitest.
 - Entwicklungsarbeit findet auf `dev` statt.
 - `main` enthält nur ausdrücklich freigegebene Stände. Ohne konkrete Freigabe nicht nach `main` pushen, mergen oder veröffentlichen.
-- Der CMS-Branch `main` existiert bereits und enthält Version `0.1.0`; keinen weiteren Branch gleichen Namens anlegen. Ein ausdrückliches „Go“ für einen neuen `main`-Release gibt den aktuellen Umfang aus `Ready to publish` frei. Den bestehenden Branch niemals löschen oder per Force-Push überschreiben; falls sich `dev` nicht nachvollziehbar und sicher integrieren lässt, vor Änderungen an `main` mit dem Entwickler klären.
+- Der CMS-Branch `main` existiert bereits und enthält Version `0.1.0`; keinen weiteren Branch gleichen Namens anlegen. Ein ausdrückliches „Go" für einen neuen `main`-Release gibt den aktuellen Umfang aus `Ready to publish` frei. Den bestehenden Branch niemals löschen oder per Force-Push überschreiben; falls sich `dev` nicht nachvollziehbar und sicher integrieren lässt, vor Änderungen an `main` mit dem Entwickler klären.
 - Diese Anweisungen werden auf `dev` gepflegt und nicht ohne ausdrücklichen Auftrag nach `main` übernommen.
 - Änderungen an FHEM-Modulen müssen die FHEM-Architektur und die Sicherheitsrichtlinien unten einhalten.
 - Kommunikation mit dem Entwickler auf Deutsch.
