@@ -88,6 +88,17 @@ export class Schema5DraftController {
     return this.saveDraft(candidate, expectedToken);
   }
 
+  saveNavigation(navigation, expectedToken) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    if (!navigation || typeof navigation !== 'object' || Array.isArray(navigation)) {
+      throw new Error('Ungültige Navigation');
+    }
+    const candidate = state.draft || state.live;
+    candidate.navigation = structuredClone(navigation);
+    return this.saveDraft(candidate, expectedToken);
+  }
+
   saveWidget(pageId, widget, expectedToken, action) {
     const state = this.snapshot();
     requireToken(state, expectedToken);

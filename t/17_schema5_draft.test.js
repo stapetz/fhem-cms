@@ -53,6 +53,7 @@ test('controller blocks concurrent and uncertain actions until explicit reload',
   await assert.rejects(controller.saveDraft(config(), 'a'.repeat(64)), /veraltet/);
   await assert.rejects(controller.publishDraft('a'.repeat(64)), /veraltet/);
   assert.throws(() => controller.saveLayout('start', schema5GridItems(saved.draft, 'start'), 'a'.repeat(64)), /veraltet/);
+  assert.throws(() => controller.saveNavigation(saved.draft.navigation, 'a'.repeat(64)), /veraltet/);
   assert.throws(() => controller.deleteWidget('start', 'text', 'a'.repeat(64)), /veraltet/);
   assert.throws(() => controller.saveWidget('start', saved.draft.pages[0].widgets[0], 'a'.repeat(64), 'update'), /veraltet/);
   assert.equal(controller.snapshot().token, saved.token, 'stale local dialogs do not invalidate the current state');
@@ -209,8 +210,15 @@ test('controller runs against isolated real Perl draft transactions and rejects 
     assert.equal(moved.draft.pages[0].widgets[0].html, draft.pages[0].widgets[0].html);
     assert.equal(moved.draft.pages[0].title, 'Entwurf');
     assert.equal(await readFile(livePath, 'utf8'), original);
+    const unsafe = { ...moved.draft.pages[0].widgets[0], html: '<script>alert(1)</script>' };
+    const beforeUnsafe = await readFile(draftPath, 'utf8');
+    await assert.rejects(first.saveWidget('start', unsafe, moved.token, 'update'), /HTML|Element|Tag/i);
+    assert.equal(await readFile(draftPath, 'utf8'), beforeUnsafe, 'server rejects unsafe HTML without overwriting draft');
+    assert.throws(() => first.snapshot(), /nicht geladen/);
+    const afterUnsafe = await first.reload();
+    assert.deepEqual(afterUnsafe.draft, moved.draft);
     const newWidget = { id: 'new', type: 'text', html: '<p>Neu</p>', grid: { col: 1, row: 7, w: 4, h: 1 } };
-    const added = await first.saveWidget('start', newWidget, moved.token, 'create');
+    const added = await first.saveWidget('start', newWidget, afterUnsafe.token, 'create');
     assert.equal(added.draft.pages[0].widgets[2].id, 'new');
     assert.throws(() => first.saveWidget('start', newWidget, moved.token, 'update'), /veraltet/);
     assert.throws(() => first.saveWidget('start', newWidget, added.token, 'create'), /bereits vorhanden/);
@@ -222,6 +230,13 @@ test('controller runs against isolated real Perl draft transactions and rejects 
     assert.throws(() => first.deleteWidget('missing', 'new', updated.token), /Unbekannte Seite/);
     const removed = await first.deleteWidget('start', 'new', updated.token);
     assert.deepEqual(removed.draft, moved.draft);
+    const navigation = { ...removed.draft.navigation, orientation: 'vertical' };
+    const changedNav = await first.saveNavigation(navigation, removed.token);
+    assert.equal(changedNav.draft.navigation.orientation, 'vertical');
+    assert.deepEqual(changedNav.draft.pages, removed.draft.pages);
+    assert.throws(() => first.saveNavigation(navigation, removed.token), /veraltet/);
+    const restoredNav = await first.saveNavigation(removed.draft.navigation, changedNav.token);
+    assert.deepEqual(restoredNav.draft, moved.draft);
     const movedBytes = await readFile(draftPath, 'utf8');
     const secondReload = await second.reload();
     const published = await second.publishDraft(secondReload.token);
@@ -232,7 +247,7 @@ test('controller runs against isolated real Perl draft transactions and rejects 
     assert.ok(backup);
     assert.equal(await readFile(join(dir, backup), 'utf8'), original);
     assert.equal(await readFile(livePath, 'utf8'), movedBytes);
-    await assert.rejects(first.discardDraft(removed.token), /veraltet/);
+    await assert.rejects(first.discardDraft(restoredNav.token), /veraltet/);
     const reloaded = await first.reload();
     const fresh = structuredClone(moved.draft);
     fresh.pages[0].title = 'Nicht veröffentlicht';

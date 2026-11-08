@@ -352,6 +352,8 @@ aktuellen Entwurfs vorbereitet und über dieselbe Zustandssperre gespeichert;
 unbekannte Seiten oder Widget-IDs beim Löschen werden abgewiesen.
 Das Anlegen und Ändern eines Widgets sind ausdrücklich getrennte Aktionen:
 Vorhandene IDs dürfen nicht versehentlich überschrieben werden.
+Auch die deviceweite Navigation wird nur gegen die beim Öffnen verwendete
+Zustandskennung und nach Rasterprüfung aller Seiten als Entwurf übernommen.
 Der Baustein selbst bietet weder einen Editor noch einen öffentlichen Schreibweg.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
