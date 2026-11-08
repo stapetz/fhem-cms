@@ -184,6 +184,12 @@ Sobald die Viewport-Breite **`768px`** unterschreitet (Smartphones oder Tablets 
 
 Der Bearbeitungsmodus schaltet die Oberfläche von einem statischen Zustand in ein dynamisch veränderbares Grid auf Basis von **Gridstack.js** (12-Spalten-Raster).
 
+Für bestehende CMS-Layouts gilt die abgestimmte Übergangsregel: Ihre
+48-Spalten-Koordinaten und Bearbeitbarkeit bleiben erhalten; neue FCUI-Layouts
+nutzen das 12-Spalten-Raster. Eine automatische verlustbehaftete Umrechnung
+findet nicht statt. Einzelheiten und noch ausstehende Implementierungsschritte
+stehen in der [Entwicklungsdokumentation](./ENTWICKLUNG.md#fcui-übergangsarchitektur).
+
 ### 3.1 Implementierungs-Muster & JSON-Export
 Im aktiven Bearbeitungsmodus (`.fcui-edit-active`) wird der CSS-Selektor genutzt, um die Kacheln visuell zu verändern (gestrichelter Rahmen, verschiebbarer Mauszeiger). Über das Abspeichern des Grids wird ein JSON-Array extrahiert, das an FHEM zurückgegeben werden kann.
 

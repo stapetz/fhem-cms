@@ -58,6 +58,62 @@ stehen in [ABNAHME.md](./ABNAHME.md).
   Widget-Vertrag, SPA und Abnahme sind auch die bestehenden Issues #2, #3, #4, #5,
   #7 und #8 zu berücksichtigen; der Übergang wird in #59 und #65 geklärt.
 
+### FCUI-Übergangsarchitektur
+
+Am 08.11.2026 wurde für den Rasterübergang festgelegt: **Bestehende Layouts
+bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen
+12 Spalten.** Es gibt keine automatische verlustbehaftete Umrechnung. Ein
+gespeichertes `settings.gridColumns` von 12 oder 24 ändert daran nichts: Im
+Bestand sind alle gespeicherten Koordinaten trotzdem 48-Spalten-Einheiten.
+
+Für den Übergang gelten folgende Anforderungen, nicht bereits implementierte
+Funktionen:
+
+1. **Daten und Kompatibilität:** Schema 1–3 bleibt über die bestehende Migration
+   auf Schema 4 lesbar; Schema 4 behält seine bestehende 48-Spalten-Semantik.
+   Für neue 12-Spalten-Layouts muss ein ausdrücklich versioniertes,
+   serverseitig validiertes Format die Auswahl der richtigen Layout-Engine
+   ermöglichen. Unbekannte Formate sind sichtbar abzulehnen. Der konkrete
+   Formatvertrag und seine Implementierung gehören zu #65 und #67; allein
+   `settings.gridColumns` darf nicht als Unterscheidungsmerkmal dienen.
+2. **Live, Entwurf und Backup:** Live-Konfiguration, Entwurf, Medien und alte
+   Backups bleiben getrennt erhalten. Laden oder Anzeigen eines Altbestands darf
+   ihn nicht umschreiben. Änderungen an alten Layouts dürfen nicht implizit auf
+   12 Spalten runden. Vor jeder künftigen Konvertierungsfunktion sind Verhalten,
+   Datensicherung und Zustimmung gesondert festzulegen. Wiederherstellung muss
+   das Format des Backups respektieren; ein älterer Programmstand kann ein neues
+   Format möglicherweise nicht lesen, deshalb beim Rollback die dazu passende
+   vollständige Datensicherung verwenden.
+3. **Runtime und Auslieferung:** Lit-Komponenten und ESM-Bundle werden
+   schrittweise neben den Bestandskomponenten eingeführt; Bootstrap und Assets
+   bleiben über FHEMWEB installierbar. Versionierte Abhängigkeiten sollen beim
+   Build bereitgestellt und mit den Assets ausgeliefert werden, statt zur
+   Laufzeit ungeprüft aus einem CDN geladen zu werden. Build, Lizenzprüfung,
+   Paketierung und Cache-Busting sind in #62 umzusetzen.
+4. **Daten und Aktionen:** Ein zentraler Controller verwaltet Snapshots und
+   Abonnements; bis zur geprüften Ablösung bleibt der FHEMWEB-Inform-Weg mit
+   Snapshot-Refresh, Reconnect, Fehlerzuständen und Polling-Fallback erhalten.
+   Widgets melden sich beim Entfernen ab. Aktionen nutzen weiterhin die geprüften
+   FHEMWEB-Clientwege mit Session, Rechten und CSRF; das Beispiel mit
+   interpoliertem `sendCmd` ist kein freigegebener Befehlsvertrag. Der Nachweis
+   von Rechten und Transport bleibt in #2, #3 und #66 offen.
+5. **Shell und Widgets:** Die drei FCUI-Shell-Modi werden in #63 und die
+   Gridstack-Bearbeitung in #67 umgesetzt. Bestehende Navigation, Routing,
+   Widgets und Platzhalter bleiben bis zu ihrem kompatiblen Ersatz nutzbar.
+   Der Widget-/Binding-Vertrag und Fehlerzustände werden mit #5, #64 und #69
+   abgestimmt. Bei freiem HTML bleiben serverseitige Validierung und
+   clientseitige Bereinigung auch im Light DOM bestehen.
+6. **Reihenfolge und Freigabe:** Architektur und Datenvertrag vor Runtime,
+   Shell und Layout-Editor klären; danach Widgets und Design schrittweise
+   umstellen und die Gesamtregression (#61) durchführen. Jeder Schritt erhält
+   eigene Tests und eine Geräteabnahme. Abhängige Commits nur gemeinsam
+   freigeben, wenn eine unabhängige Übernahme nicht sicher möglich ist;
+   `main` bleibt bis zum ausdrücklichen Release-Go unverändert.
+
+Das ist kein Nachweis einer vollständigen FHEMWEB-Autorisierung, Migration oder
+Geräteabnahme. Insbesondere Testinstanz-Rechte, CSRF, externer Ressourcenzugriff,
+Verlustfreiheit und Rollback sind vor Einsatz auf der Referenzumgebung zu prüfen.
+
 ### Sicherung und Regression vor Umbauten
 
 Vor Tests mit Änderungen an einer ausdrücklich freigegebenen **Testinstanz**
