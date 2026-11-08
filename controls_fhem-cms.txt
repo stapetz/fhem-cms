@@ -3,7 +3,7 @@ UPD 2026-11-08_10:43:57 7458 www/fhem-cms/FCUI-LICENSES.txt
 UPD 2026-11-08_21:07:16 16233 www/fhem-cms/components/cms-button.js
 UPD 2026-11-08_21:07:16 20186 www/fhem-cms/components/cms-chart.js
 UPD 2026-11-08_21:07:16 13856 www/fhem-cms/components/cms-clock.js
-UPD 2026-11-08_20:31:10 13417 www/fhem-cms/components/cms-html.js
+UPD 2026-11-08_21:18:38 13854 www/fhem-cms/components/cms-html.js
 UPD 2026-11-08_21:07:16 15371 www/fhem-cms/components/cms-icon.js
 UPD 2026-11-08_21:07:16 18533 www/fhem-cms/components/cms-slider.js
 UPD 2026-11-08_21:07:16 27593 www/fhem-cms/components/cms-solarflow.js
@@ -44,6 +44,6 @@ UPD 2026-11-04_21:52:16 4898 www/fhem-cms/js/icon-picker.js
 UPD 2026-11-08_11:00:11 7487 www/fhem-cms/js/layout.js
 UPD 2026-10-31_10:55:33 3145 www/fhem-cms/js/markdown.js
 UPD 2026-11-04_21:52:16 12908 www/fhem-cms/js/placeholder-picker.js
-UPD 2026-11-04_22:28:40 36545 www/fhem-cms/js/richtext.js
+UPD 2026-11-08_21:18:38 37808 www/fhem-cms/js/richtext.js
 UPD 2026-11-08_12:37:55 3127 www/fhem-cms/js/widget-factory.js
 UPD 2026-11-08_15:33:41 1733 www/fhem-cms/js/widget-services.js
