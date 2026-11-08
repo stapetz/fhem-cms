@@ -19,6 +19,125 @@ verbindlich. Insbesondere bleiben bestehende Daten und die beiden
 [Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) erhalten; Codebeispiele des
 Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherung.
 
+## Ausgangsbasis für das FCUI-Refactoring
+
+Der Git-Tag `before-fcui-refactoring` bezeichnet den vollständigen
+CMS-Repository-Stand auf `dev` vor dem Umbau (Commit `0253d7d`). Die folgende
+Bestandsaufnahme beschreibt diesen Stand und ist keine Zusicherung einer
+abgeschlossenen Geräteabnahme. Historische Testergebnisse und offene Prüfungen
+stehen in [ABNAHME.md](./ABNAHME.md).
+
+| Bereich | Bestand vor dem Refactoring |
+|---|---|
+| Einstieg und Assets | `FHEM/01_FHEMCMS.pm` erzeugt je Device `www/fhem-cms/<Device>/index.html`; gemeinsame CSS- und ES-Module werden über FHEMWEB ausgeliefert, einschließlich Cache-Busting. |
+| Seiten und Navigation | JSON-Seiten, Hash-Routing und ein globales, im Raster platzierbares Navigations-Widget; Seitenverwaltung im Bearbeitungsmodus. |
+| Widgets | Thermostat, `fhem-value`, `fhem-clock`, `fhem-icon`, `fhem-table`, `fhem-slider`, `fhem-switch`, `fhem-button`, `fhem-html`, `text`, `fhem-chart` und `fhem-solarflow`. Diagramme nutzen historische Daten; SolarFlow liest mehrere Werte. |
+| Bearbeitung | Texteditor und Medien, Widget-Dialoge, eigenes Raster mit Ziehen und Größenänderung; Entwurf, Vorschau, Veröffentlichen und Verwerfen sind getrennt. |
+| Darstellung | Dark-/Light-Theme, responsives Layout und 48-spaltiges Raster; auf schmalen Ansichten einspaltig. |
+| Daten und Aktionen | `FhemClient` nutzt FHEMWEB-Sitzung und CSRF für Abfragen und erlaubte Schreibbefehle; WebSocket-Inform löst Refreshes aus, Polling dient als Rückfall. |
+| Speicherung | Je Device `fhem-cms-data/<Device>/config.json`, optional `draft.json` und konfigurierte Backups; Medien unter `www/fhem-cms/<Device>/media/`. Schema 4; ältere Schema-Versionen 1–3 werden beim Lesen migriert. |
+| Platzhalter | `{{Device:reading|filter}}` in Text und freiem HTML; die `device`-/`reading`-Elementvariante zusätzlich im freien HTML. Details und Grenzen: [PLATZHALTER.md](../docs/PLATZHALTER.md). |
+
+### Abweichungen und Abhängigkeiten
+
+- Der Styleguide gibt Lit/TypeScript bzw. ESM und ein Bundle vor; der Bestand
+  verwendet native Web Components und einzelne JavaScript-Module.
+- Gridstack mit 12 Spalten ersetzt nicht automatisch das bisherige 48-Spalten-Raster:
+  Eine verlustfreie Behandlung nicht passend ausgerichteter Positionen muss erst
+  entschieden und getestet werden.
+- Die vorgesehenen App-Shell-Modi und das Navigations-Widget unterscheiden sich
+  von der bestehenden Raster-Navigation. Das bestehende Seitenrouting und
+  gespeicherte Layouts sind beim Übergang zu berücksichtigen.
+- Der zentrale Pub/Sub-Controller ist Zielbild; bisher liefert FHEMWEB Inform-Hinweise,
+  woraufhin der Client Zustände erneut liest. Sicherheits-, Reconnect- und
+  Fallback-Verhalten dürfen nicht stillschweigend entfallen.
+- Light DOM und freies HTML dürfen die bestehenden serverseitigen und clientseitigen
+  Prüfungen nicht umgehen. Die Styleguide-Beispiele für Befehle und externe Assets
+  sind keine Freigabe ungeprüfter Befehle oder einer CDN-Pflicht.
+- #58 beschreibt den Dokumentationsabgleich. Für Transport, Sicherheit, Persistenz,
+  Widget-Vertrag, SPA und Abnahme sind auch die bestehenden Issues #2, #3, #4, #5,
+  #7 und #8 zu berücksichtigen; der Übergang wird in #59 und #65 geklärt.
+
+### Sicherung und Regression vor Umbauten
+
+Vor Tests mit Änderungen an einer ausdrücklich freigegebenen **Testinstanz**
+den vollständigen Device-Datenordner einschließlich Live-Konfiguration,
+Entwurf und Backups sowie den Device-Medienordner extern und geschützt sichern.
+Zusätzlich installierte Modul- und gemeinsame Frontend-Dateien samt Version sichern;
+auch FHEM-Konfiguration und weitere benötigte Daten müssen nach dem Backup-Verfahren
+des Betreibers gesichert werden. Ein Git-Tag enthält keine dieser Nutzerdaten.
+Sicherung auf Vollständigkeit und Lesbarkeit prüfen und eine Wiederherstellung
+zuerst auf einer isolierten Testkopie erproben. Kein `purge` auf Nutzerdaten.
+
+Für einen Rollback das gesicherte Modul und die passenden gemeinsamen Assets
+gemeinsam mit der **zu diesem Stand passenden** Daten- und Mediensicherung auf
+einer isolierten Testinstanz wiederherstellen, FHEM neu starten und das Ergebnis
+prüfen. Neuere Daten nicht ungeprüft mit altem Code öffnen oder überschreiben;
+aktuellere Änderungen vorher separat sichern. Der Tag ermöglicht den Abruf des
+Quellstands, ersetzt aber weder installierte Dateien noch eine Datensicherung.
+Die konkrete Durchführung auf einem FHEM-System und die Freigabe erfolgen mit dem
+Betreiber; die Wiederherstellung ist hier noch nicht praktisch nachgewiesen.
+
+Für die Regression werden künstliche, nicht personenbezogene Testdaten benötigt:
+
+1. **Live-Konfiguration:** Schema 4 mit mindestens zwei Seiten und Navigation,
+   sämtlichen zwölf obigen Widgettypen und 48-Spalten-Randpositionen, darunter
+   eine nicht durch vier teilbare Spalte und Breite. Ein Textbaustein enthält
+   `{{TestThermostat:temperature|round(1)}}` im formatierten Text; freies HTML
+   enthält diesen Textplatzhalter und ein Element mit `device` und `reading`.
+   Ein weiteres Reading stammt aus einem Testkanal; Medienreferenzen zeigen auf
+   künstlich erzeugte Testbilder. Testgeräte und Kommandos müssen auf der
+   isolierten Testinstanz existieren.
+2. **Entwurf und Backup:** Ein Entwurf mit einer gegenüber Live sichtbar
+   geänderten Seite und ein Backup des ursprünglichen Live-Stands. Live und
+   Entwurf müssen nach erneutem Laden unterscheidbar bleiben.
+3. **Grenzfälle:** Gültige Schema-1-, -2- und -3-Beispiele sowie ungültiges JSON,
+   unbekannte Felder und ein zu großes Dokument. Keine produktiven Daten oder
+   echten personenbezogenen Inhalte ins Repository übernehmen.
+
+Für spätere automatisierte Regressionstests ist folgender Umfang festgelegt:
+
+| Prüfung | Vorgehen und erwartetes Ergebnis |
+|---|---|
+| Schema und Layout | Beispiele laden und erneut speichern; Seiten, Widgettypen, Einstellungen und 48-Spalten-Koordinaten bleiben erhalten. Schema 1–3 wird auf 4 migriert; ungültige Daten werden erkennbar abgewiesen. |
+| Entwurf und Veröffentlichung | Live und abweichenden Entwurf lesen; Vorschau zeigt Entwurf, Ansicht Live. Veröffentlichen übernimmt den Entwurf und erzeugt ein Live-Backup. Fehlgeschlagenes Speichern oder Publish darf Live nicht überschreiben. |
+| Backup und Restore | Auf isolierter Testkopie einen bekannten Live-Stand sichern, verändern und per Restore zurückholen; Werte und Medienreferenzen stimmen wieder, ein bestehender Entwurf bleibt unverändert. |
+| Browser und Bindings | Beide Seiten und alle Widgets rendern; beide Platzhaltervarianten inklusive Filter zeigen dieselben erwarteten Testwerte, Änderungen aktualisieren sich. Seitenwechsel und Entfernen räumen Abos auf; Offline/Fehler und Wiederverbindung sind sichtbar. |
+| Sicherheit | Unzulässiges HTML und Schemafelder werden serverseitig abgelehnt; Daten erscheinen nur als Text. Session-/CSRF- und Rechtefehler sowie unerlaubte Befehle werden erkennbar behandelt. |
+
+Die Testbeispiele und automatisierten Browserprüfungen sind **noch nicht erstellt**;
+dieser Plan ist kein Nachweis ihrer erfolgreichen Ausführung. Bestehende
+Backendtests sind separat unten aufgeführt.
+
+Basisprüfung für das Backend: `prove t/01_fhemcms.t` aus dem Repository-Root.
+Am 08.11.2026 lokal bestanden: 363 Tests; dabei wird ein temporäres FHEM-Umfeld
+mit Stubs verwendet, keine echte FHEM-Instanz. Die Tests decken unter anderem
+Schema-Migration, Validierung, Entwurf/Publish und Restore ab; sie ersetzen keine
+Browser-, Berechtigungs-, Geräte- oder vollständigen Migrationsprüfungen.
+
+Manuelle Abnahme auf einer freigegebenen isolierten Testinstanz mit zuvor
+geprüfter Sicherung:
+
+1. Live-Seiten und alle Widgets öffnen; Navigation, Randpositionen, Medien und
+   beide Platzhaltervarianten mit den erwarteten Werten vergleichen.
+2. Entwurf ändern und speichern: Live bleibt unverändert, Vorschau zeigt den
+   Entwurf. Nach Veröffentlichen und Neuladen ist der Entwurf Live; nach Restore
+   entspricht Live wieder dem gesicherten Stand.
+3. Test-Reading ändern, Netzwerkverbindung unterbrechen und wiederherstellen:
+   Aktualisierung, sichtbarer Offline-/Fehlerzustand und erneuter Datenstand
+   müssen erkennbar sein. Schreibaktionen nur an freigegebenen Testgeräten prüfen.
+4. Touch, Tastatur und Fokus sowie die Performanceziele mit 20 Widgets prüfen:
+   höchstens 2 Sekunden bis bedienbar und höchstens 500 ms bis zur sichtbaren
+   Reading-Änderung. Bedingungen, Messwerte und Abweichungen protokollieren.
+
+**Referenzumgebung:** Schwerpunkt sind aktuelle Apple-iPhones und iPads mit ihren
+jeweiligen aktuellen Betriebssystemen sowie Firefox, Safari, Edge und Chrome auf
+macOS. Die genaue Geräteauswahl und Browser-/Betriebssystemversionen werden beim
+Test dokumentiert; konkrete Modelle sind noch offen. FHEM ist in der aktuellen
+stabilen Version zu prüfen; verwendete FHEM-Version und Plattform werden beim
+Test festgehalten. Die unten beschriebene breitere Browsermatrix bleibt bestehen.
+Ohne dokumentierte Durchführung und Messwerte ist keine Geräteabnahme erfolgt.
+
 ## Repositorystruktur
 
 | Pfad | Zweck |
