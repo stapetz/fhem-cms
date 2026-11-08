@@ -24,7 +24,8 @@ class Element {
 }
 
 test('migration preview is read-only, handles adjustments and rejects stale live data', async () => {
-  const ids = ['file', 'status', 'preview', 'page', 'summary', 'canvas', 'forms', 'device-form', 'device', 'validate'];
+  const ids = ['file', 'status', 'preview', 'page', 'summary', 'canvas', 'forms', 'device-form', 'device', 'validate',
+    'load-backups', 'backup-controls', 'backup', 'preview-backup', 'backup-status', 'backup-result', 'backup-live', 'backup-data'];
   const elements = Object.fromEntries(ids.map((id) => [id, new Element(id)]));
   const previous = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch };
   globalThis.document = {
@@ -43,6 +44,7 @@ test('migration preview is read-only, handles adjustments and rejects stale live
   };
   let stale = false;
   let draft = false;
+  let delayedBackup;
   const commands = [];
   globalThis.fetch = async (url, options) => {
     if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'test-token' } });
@@ -50,6 +52,14 @@ test('migration preview is read-only, handles adjustments and rejects stale live
     commands.push(command);
     if (command === 'get CMS status') return new Response(JSON.stringify({ draft }));
     if (command === 'get CMS config') return new Response(JSON.stringify(source));
+    if (command === 'get CMS migrationbackups') return new Response(JSON.stringify(['config.json.20000101-000000.bak']));
+    if (command === 'get CMS migrationrestorepreview config.json.20000101-000000.bak') {
+      if (delayedBackup) return new Promise((resolve) => {
+        delayedBackup.resolve = resolve;
+        delayedBackup.started();
+      });
+      return new Response(JSON.stringify({ live: source, backup: source, token: 'b'.repeat(64) }));
+    }
     if (command.startsWith('get CMS migrationpreview ')) {
       return new Response(JSON.stringify({
         source: stale ? { ...source, theme: 'light' } : source,
@@ -88,14 +98,31 @@ test('migration preview is read-only, handles adjustments and rejects stale live
     assert.match(elements.summary.textContent, /Offene Positionen: 0/);
     await elements.validate.fire('click');
     assert.match(elements.status.textContent, /serverseitig geprüft/);
+    await elements['load-backups'].fire('click');
+    assert.equal(elements['backup-controls'].hidden, false);
+    elements.backup.value = 'config.json.20000101-000000.bak';
+    await elements['preview-backup'].fire('click');
+    assert.equal(elements['backup-result'].hidden, false);
+    assert.match(elements['backup-data'].textContent, /<img src=x onerror=alert\(1\)>/);
+    assert.deepEqual(elements['backup-data'].children, [], 'backup HTML is shown as text');
+    assert.match(elements['backup-status'].textContent, /nichts wiederhergestellt/);
     stale = true;
     await elements.validate.fire('click');
     assert.match(elements.status.textContent, /Live-Daten wurden geändert/);
     assert.ok(commands.every((command) => command.startsWith('get ')), 'only read commands are sent');
 
+    delayedBackup = {};
+    const started = new Promise((resolve) => { delayedBackup.started = resolve; });
+    const pending = elements['preview-backup'].fire('click');
+    await started;
     elements.device.value = 'Other';
     await elements.device.fire('input');
+    delayedBackup.resolve(new Response(JSON.stringify({ live: source, backup: source, token: 'b'.repeat(64) })));
+    await pending;
     assert.equal(elements.preview.hidden, true, 'changing device clears displayed data');
+    assert.equal(elements['backup-result'].hidden, true, 'changing device clears backup preview');
+    assert.equal(elements['backup-controls'].hidden, true, 'changing device clears backup choices');
+    assert.equal(elements['backup-data'].textContent, '', 'late backup response cannot expose old content');
     draft = true;
     elements.device.value = 'CMS';
     await elements['device-form'].fire('submit');

@@ -136,6 +136,31 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->canonical->encode($state);
     }
 
+    if ($cmd eq 'migrationbackups') {
+        return 'migrationbackups erwartet keine Parameter' if (@args);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
+        return $error if (defined($error));
+        my $listError;
+        my @backups = FHEMCMS_ListBackups($dataDir, \$listError);
+        return $listError if (defined($listError));
+        return JSON::PP->new->utf8->canonical->encode(\@backups);
+    }
+
+    if ($cmd eq 'migrationrestorepreview') {
+        return 'migrationrestorepreview erwartet genau einen Backup-Namen' if (@args != 1);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
+        return $error if (defined($error));
+        my ($backupBytes, $token, $previewError, $liveBytes) =
+            FHEMCMS_PreviewMigrationRestore($dataDir, $args[0]);
+        return $previewError if (defined($previewError));
+        my $json = JSON::PP->new->utf8->canonical;
+        return $json->encode({
+            live => $json->decode($liveBytes), backup => $json->decode($backupBytes), token => $token,
+        });
+    }
+
     if ($cmd eq 'config' || $cmd eq 'backups' || $cmd eq 'draft' || $cmd eq 'status') {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
         my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
@@ -168,7 +193,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history migrationpreview version5state:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -1785,7 +1810,7 @@ sub FHEMCMS_ReplaceMigrationLive {
     return ($backup, undef);
 }
 
-# Wiederherstellung ist nur intern vorbereitet, bis die versionierte UI existiert.
+# Die Vorschau ist lesend; die Wiederherstellung bleibt intern.
 sub FHEMCMS_PreviewMigrationRestore {
     my ($dataDir, $backupName) = @_;
     return (undef, undef, 'Ungueltiger Backup-Name')
@@ -1814,7 +1839,7 @@ sub FHEMCMS_PreviewMigrationRestore {
         return (undef, undef, "$label ist ungueltig: $error") if (defined($error));
     }
     my $token = sha256_hex(length($liveBytes) . ':' . $liveBytes . length($backupBytes) . ':' . $backupBytes);
-    return ($backupBytes, $token, undef);
+    return ($backupBytes, $token, undef, $liveBytes);
 }
 
 sub FHEMCMS_CommitMigrationRestore {
@@ -1935,10 +1960,17 @@ sub FHEMCMS_WriteConfig {
 }
 
 sub FHEMCMS_ListBackups {
-    my ($dataDir) = @_;
-    opendir(my $dh, $dataDir) or return ();
+    my ($dataDir, $error) = @_;
+    my $dh;
+    if (!opendir($dh, $dataDir)) {
+        $$error = "Backup-Verzeichnis konnte nicht gelesen werden: $!" if (defined($error));
+        return ();
+    }
     my @files = grep { /\Aconfig\.json\.\d{8}-\d{6}(?:-\d+)?\.bak\z/ } readdir($dh);
-    closedir($dh);
+    if (!closedir($dh) && defined($error)) {
+        $$error = "Backup-Verzeichnis konnte nicht geschlossen werden: $!";
+        return ();
+    }
     return sort { $b cmp $a } @files;
 }
 

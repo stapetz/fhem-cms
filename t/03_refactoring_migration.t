@@ -568,9 +568,18 @@ subtest 'versioned restore accepts and preserves historical schema bytes' => sub
         my $bytes = $json->pretty->encode($legacy);
         my $backupName = sprintf('config.json.2000010%d-000000.bak', $version);
         write_bytes(File::Spec->catfile($dir, $backupName), $bytes);
+        my $listed = $json->decode(FHEMCMS_Get($hash, $name, 'migrationbackups'));
+        ok(grep($_ eq $backupName, @{$listed}), "schema $version backup appears in read-only list");
         my ($read, $token, $error) = FHEMCMS_PreviewMigrationRestore($dir, $backupName);
         is($error, undef, "schema $version backup validates");
         is($read, $bytes, "schema $version preview preserves bytes");
+        my $beforeLive = read_bytes($live);
+        my $response = $json->decode(FHEMCMS_Get($hash, $name, 'migrationrestorepreview', $backupName));
+        is_deeply($response->{live}, $json->decode($beforeLive), "schema $version preview returns exact live data");
+        is_deeply($response->{backup}, $legacy, "schema $version preview returns original backup data");
+        is($response->{token}, $token, "schema $version preview binds the same bytes");
+        is(read_bytes($live), $beforeLive, "schema $version public preview leaves live untouched");
+        is(read_bytes(File::Spec->catfile($dir, $backupName)), $bytes, "schema $version public preview leaves backup untouched");
         my ($newBackup, $commitError) = FHEMCMS_CommitMigrationRestore($dir, $backupName, $token);
         is($commitError, undef, "schema $version restores");
         is(read_bytes($live), $bytes, "schema $version restored without rewriting");
@@ -580,6 +589,12 @@ subtest 'versioned restore accepts and preserves historical schema bytes' => sub
     symlink('missing', $draft) or die "Cannot create draft symlink: $!";
     my (undef, undef, $error) = FHEMCMS_PreviewMigrationRestore($dir, 'config.json.20000101-000000.bak');
     like($error, qr/Entwurf/, 'dangling draft symlink blocks restore');
+    like(FHEMCMS_Get($hash, $name, 'migrationrestorepreview', 'config.json.20000101-000000.bak'),
+        qr/Entwurf/, 'public restore preview rejects draft');
+    like(FHEMCMS_Get($hash, $name, 'migrationrestorepreview', '../config.json'),
+        qr/Backup-Name/, 'public restore preview rejects path traversal');
+    like(FHEMCMS_Get($hash, $name, 'migrationrestorepreview'),
+        qr/genau einen/, 'public restore preview requires a backup');
     unlink($draft) or die "Cannot remove draft symlink: $!";
     unlink($live) or die "Cannot remove live file: $!";
     symlink('config.json.20000101-000000.bak', $live) or die "Cannot create live symlink: $!";
@@ -653,6 +668,10 @@ subtest 'internal version 5 draft contract rejects stale and mixed states' => su
     my $missing = File::Spec->catdir($modPath, 'fhem-cms-data', 'MissingVersion5');
     like(FHEMCMS_Get({NAME => 'MissingVersion5'}, 'MissingVersion5', 'version5state'),
         qr/Datenverzeichnis existiert nicht/, 'versioned get rejects missing data directory');
+    like(FHEMCMS_Get({NAME => 'MissingVersion5'}, 'MissingVersion5', 'migrationbackups'),
+        qr/Datenverzeichnis existiert nicht/, 'migration backup list rejects missing directory');
+    like(FHEMCMS_Get({NAME => 'MissingVersion5'}, 'MissingVersion5', 'migrationrestorepreview', 'config.json.20000101-000000.bak'),
+        qr/Datenverzeichnis existiert nicht/, 'restore preview rejects missing directory');
     ok(!-e $missing, 'versioned get does not create missing data directory');
     my ($state, $error) = FHEMCMS_ReadVersion5State($dir);
     like($error, qr/schemaVersion/, 'legacy state is not accepted by version 5 contract');

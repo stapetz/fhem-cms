@@ -11,10 +11,20 @@ const forms = document.getElementById('forms');
 const deviceForm = document.getElementById('device-form');
 const device = document.getElementById('device');
 const validate = document.getElementById('validate');
+const loadBackups = document.getElementById('load-backups');
+const backupControls = document.getElementById('backup-controls');
+const backupSelect = document.getElementById('backup');
+const previewBackup = document.getElementById('preview-backup');
+const backupStatus = document.getElementById('backup-status');
+const backupResult = document.getElementById('backup-result');
+const backupLive = document.getElementById('backup-live');
+const backupData = document.getElementById('backup-data');
 let config;
 let client;
 let changes = new Map();
 let sequence = 0;
+let backupSequence = 0;
+let backupClient;
 
 const keyOf = (item) => item.type === 'navigation' ? 'navigation' : `${item.page}/${item.id}`;
 const describe = (grid) => `Spalte ${grid.col}, Zeile ${grid.row}, Breite ${grid.w}, Höhe ${grid.h}`;
@@ -131,6 +141,16 @@ function clearPreview() {
   forms.replaceChildren();
 }
 
+function clearBackups() {
+  backupSequence += 1;
+  backupClient = undefined;
+  backupControls.hidden = true;
+  backupResult.hidden = true;
+  backupSelect.replaceChildren();
+  backupLive.textContent = '';
+  backupData.textContent = '';
+}
+
 function showConfig(candidate, fhemClient) {
   const plan = planEffectiveLegacyLayout(candidate);
   config = candidate;
@@ -148,6 +168,8 @@ function showConfig(candidate, fhemClient) {
 file.addEventListener('change', async () => {
   const current = ++sequence;
   clearPreview();
+  clearBackups();
+  backupStatus.textContent = 'Für die Backup-Prüfung ein CMS-Device angeben.';
   device.value = '';
   const selected = file.files[0];
   if (!selected) {
@@ -196,6 +218,58 @@ device.addEventListener('input', () => {
   sequence += 1;
   clearPreview();
   status.textContent = 'CMS-Device geändert. Bitte Live-Daten erneut laden.';
+  clearBackups();
+  backupStatus.textContent = 'CMS-Device geändert. Bitte Backups erneut laden.';
+});
+
+loadBackups.addEventListener('click', async () => {
+  const current = ++backupSequence;
+  backupClient = undefined;
+  backupControls.hidden = true;
+  backupResult.hidden = true;
+  backupSelect.replaceChildren();
+  try {
+    const candidateClient = new FhemClient(device.value.trim());
+    const backups = await candidateClient.getMigrationBackups();
+    if (current !== backupSequence) return;
+    if (!backups.length) {
+      backupStatus.textContent = 'Keine Backups vorhanden.';
+      return;
+    }
+    for (const name of backups) {
+      const option = make('option', name);
+      option.value = name;
+      backupSelect.append(option);
+    }
+    backupClient = candidateClient;
+    backupControls.hidden = false;
+    backupStatus.textContent = 'Backup auswählen und prüfen. Es werden keine Daten gespeichert.';
+  } catch (error) {
+    if (current !== backupSequence) return;
+    backupStatus.textContent = `Backups konnten nicht geladen werden: ${error.message}`;
+  }
+});
+
+backupSelect.addEventListener('change', () => {
+  backupSequence += 1;
+  backupResult.hidden = true;
+  backupStatus.textContent = 'Backup geändert. Bitte erneut prüfen.';
+});
+
+previewBackup.addEventListener('click', async () => {
+  const current = ++backupSequence;
+  backupResult.hidden = true;
+  try {
+    const result = await backupClient.previewMigrationRestore(backupSelect.value);
+    if (current !== backupSequence) return;
+    backupLive.textContent = JSON.stringify(result.live, null, 2);
+    backupData.textContent = JSON.stringify(result.backup, null, 2);
+    backupResult.hidden = false;
+    backupStatus.textContent = 'Live und Backup serverseitig geprüft. Es wurde nichts wiederhergestellt.';
+  } catch (error) {
+    if (current !== backupSequence) return;
+    backupStatus.textContent = `Backup konnte nicht geprüft werden: ${error.message}`;
+  }
 });
 
 validate.addEventListener('click', async () => {

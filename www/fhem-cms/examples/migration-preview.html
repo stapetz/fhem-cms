@@ -30,6 +30,20 @@
       <label>CMS-Device <input id="device" required maxlength="128" autocomplete="off"></label>
       <button type="submit">Live-Daten laden</button>
     </form>
+    <section aria-labelledby="restore-heading">
+      <h2 id="restore-heading">Wiederherstellung prüfen</h2>
+      <p>Backups und Live-Daten werden nur als Text verglichen. Eine Wiederherstellung wird nicht ausgeführt.</p>
+      <button id="load-backups" type="button">Backups des CMS-Devices laden</button>
+      <div id="backup-controls" hidden>
+        <label>Backup <select id="backup"></select></label>
+        <button id="preview-backup" type="button">Backup prüfen</button>
+      </div>
+      <p id="backup-status" role="status"></p>
+      <div id="backup-result" hidden>
+        <h3>Aktueller Live-Stand</h3><pre id="backup-live"></pre>
+        <h3>Ausgewähltes Backup</h3><pre id="backup-data"></pre>
+      </div>
+    </section>
     <p id="status" role="status">Bitte eine Datei auswählen.</p>
     <section id="preview" hidden>
       <label>Seite <select id="page"></select></label>

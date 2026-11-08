@@ -198,6 +198,15 @@ Seite führt keine Umstellung durch.
 Die spätere Migrationsfunktion muss vor dem Schreiben alle serverseitigen
 Sicherungen und Prüfungen unabhängig von dieser Vorschau durchsetzen.
 
+Die Vorschauseite kann auch über `get <CMS> migrationbackups` vorhandene
+Backup-Namen laden und mit `get <CMS> migrationrestorepreview <Backup>` den
+validierten Live-Stand und das Backup der Schemata 1–5 als Text anzeigen. Die
+Befehle legen kein Datenverzeichnis an und ändern keine Konfiguration. Ein
+vorhandener Entwurf, ungültige Daten oder Symlinks sperren die Backup-Prüfung.
+Die Zustandskennung bindet beide Dateiinhalte, ist aber keine Benutzerbestätigung
+oder Autorisierung. Es gibt weiterhin keinen öffentlichen Restore-Schreibpfad
+für Schema 5; die Anzeige allein ersetzt keine externe vollständige Sicherung.
+
 Die interne Perl-Funktion `FHEMCMS_PrepareLayoutMigration` erstellt aus einer
 vollständig validierten Schema-4-Konfiguration und einem vollständig angegebenen
 12-Spalten-Positionsplan einen Schema-5-Kandidaten im Speicher. Sie erhält

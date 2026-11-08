@@ -184,6 +184,32 @@ export class FhemClient {
     return list.filter((name) => typeof name === 'string' && BACKUP_NAME.test(name));
   }
 
+  async previewMigrationRestore(name) {
+    if (typeof name !== 'string' || !BACKUP_NAME.test(name)) {
+      throw new Error('Ungültiger Backup-Name');
+    }
+    const text = await this.command(`get ${this.cmsDevice} migrationrestorepreview ${name}`);
+    const result = await this.parseJsonResult(text, 'Die Wiederherstellungsvorschau konnte nicht gelesen werden');
+    const isSupported = (config) => config && typeof config === 'object' && !Array.isArray(config)
+      && /^[0-9]{1,6}$/.test(String(config.schemaVersion))
+      && Number(config.schemaVersion) >= 1 && Number(config.schemaVersion) <= 5;
+    if (!result || typeof result !== 'object' || Array.isArray(result)
+      || !isSupported(result.live) || !isSupported(result.backup)
+      || typeof result.token !== 'string' || !/^[0-9a-f]{64}$/.test(result.token)) {
+      throw new Error('Unerwartete Antwort für die Wiederherstellungsvorschau');
+    }
+    return result;
+  }
+
+  async getMigrationBackups() {
+    const text = await this.command(`get ${this.cmsDevice} migrationbackups`);
+    const list = await this.parseJsonResult(text, 'Die Backup-Liste konnte nicht gelesen werden');
+    if (!Array.isArray(list) || list.some((name) => typeof name !== 'string' || !BACKUP_NAME.test(name))) {
+      throw new Error('Unerwartete Antwort für die Backup-Liste');
+    }
+    return list;
+  }
+
   async restoreBackup(name) {
     if (!BACKUP_NAME.test(name)) {
       throw new Error('Ungültiger Backup-Name');

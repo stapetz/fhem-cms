@@ -95,6 +95,34 @@ test('versioned state uses a read-only command and checks the response shape', a
   }
 });
 
+test('migration restore preview validates backup name and response without writes', async () => {
+  const calls = [];
+  let answer = { live: { schemaVersion: 5 }, backup: { schemaVersion: 1 }, token: 'c'.repeat(64) };
+  globalThis.fetch = async (url, options) => {
+    calls.push(options);
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    return new Response(JSON.stringify(answer));
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  await assert.rejects(client.previewMigrationRestore('../config.json'), /Ungültiger Backup/);
+  assert.equal(calls.length, 0);
+  assert.deepEqual(await client.previewMigrationRestore('config.json.20000101-000000.bak'), answer);
+  assert.equal(calls[1].body.get('cmd'), 'get cms migrationrestorepreview config.json.20000101-000000.bak');
+  for (const invalid of [
+    { live: { schemaVersion: 6 }, backup: { schemaVersion: 1 }, token: 'c'.repeat(64) },
+    { live: { schemaVersion: 5 }, backup: null, token: 'c'.repeat(64) },
+    { live: { schemaVersion: 5 }, backup: { schemaVersion: 1 }, token: 'bad' },
+  ]) {
+    answer = invalid;
+    await assert.rejects(client.previewMigrationRestore('config.json.20000101-000000.bak'), /Unerwartete Antwort/);
+  }
+  answer = ['config.json.20000101-000000.bak'];
+  assert.deepEqual(await client.getMigrationBackups(), answer);
+  assert.equal(calls.at(-1).body.get('cmd'), 'get cms migrationbackups');
+  answer = ['../config.json'];
+  await assert.rejects(client.getMigrationBackups(), /Unerwartete Antwort/);
+});
+
 test('subscriptions filter names, reconnect after close, and stop after unsubscribe', () => {
   const sockets = [];
   const timers = new Map();
