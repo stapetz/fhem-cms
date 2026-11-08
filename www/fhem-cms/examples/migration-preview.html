@@ -4,11 +4,59 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CMS umstellen / Sicherungen</title>
+  <link rel="stylesheet" href="../css/fhem-cms.css">
   <style>
-    body { font: 1rem sans-serif; max-width: 60rem; margin: 1rem auto; padding: 0 1rem; }
+    /* Seitenstil im CMS-Design: nutzt die Farbvariablen aus fhem-cms.css. */
+    body { max-width: 60rem; margin: 1rem auto; padding: 0 1rem 2rem; }
+    main > h1 {
+      margin: 0.5rem 0 1rem;
+      font-size: 1.4rem;
+      color: var(--cms-text);
+    }
+    main > p, .cms-card > p { color: var(--cms-muted-strong); line-height: 1.5; }
+    .cms-card {
+      margin-block: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--cms-border);
+      border-radius: 0.5rem;
+      background: var(--cms-surface);
+    }
+    .cms-card > summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--cms-text);
+    }
+    .cms-card > summary:focus-visible { outline: 2px solid var(--cms-accent); outline-offset: 2px; }
     button, select, input { font: inherit; }
-    label { display: block; margin-block: .8rem; }
-    pre { max-height: 20rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+    input[type="text"], input:not([type]), select {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid var(--cms-border);
+      border-radius: 0.5rem;
+      background: var(--cms-tile-inset);
+      color: var(--cms-text);
+      min-width: 14rem;
+      max-width: 100%;
+    }
+    input:focus-visible, select:focus-visible { outline: 2px solid var(--cms-accent); outline-offset: 1px; }
+    label { display: block; margin-block: .8rem; color: var(--cms-muted-strong); }
+    label > input, label > select { display: block; margin-top: 0.3rem; }
+    label:has(> input[type="checkbox"]) { display: flex; align-items: center; gap: 0.5rem; }
+    label > input[type="checkbox"] { min-width: 0; accent-color: var(--cms-accent); }
+    p[role="status"] { color: var(--cms-muted); }
+    h2 { font-size: 1.05rem; color: var(--cms-text); margin-bottom: 0.4rem; }
+    pre {
+      max-height: 20rem;
+      overflow: auto;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid var(--cms-border-subtle);
+      border-radius: 0.5rem;
+      background: var(--cms-tile-inset);
+      color: var(--cms-muted-strong);
+      font-size: 0.85rem;
+    }
+    a { color: var(--cms-accent); }
   </style>
 </head>
 <body>
@@ -18,27 +66,27 @@
       Live und ein vorhandener Entwurf werden getrennt gesichert und auf 12 Spalten
       umgestellt. Positionen und Größen werden neu vergeben und können danach im
       Editor angepasst werden. Medien und bestehende Sicherungen bleiben unverändert.</p>
-    <form id="device-form">
+    <form id="device-form" class="cms-card">
       <label>CMS-Device <input id="device" required maxlength="128" autocomplete="off"></label>
-      <button id="upgrade" type="submit">Jetzt umstellen</button>
+      <button class="cms-button" id="upgrade" type="submit">Jetzt umstellen</button>
+      <p id="status" role="status">Die Umstellung startet erst beim Klick auf „Jetzt umstellen“.</p>
+      <a id="open-cms" hidden>CMS-Editor öffnen</a>
     </form>
-    <p id="status" role="status">Die Umstellung startet erst beim Klick auf „Jetzt umstellen“.</p>
-    <a id="open-cms" hidden>CMS-Editor öffnen</a>
-    <details>
+    <details class="cms-card">
       <summary>Sicherungen / Wiederherstellung</summary>
       <p>Für eine Wiederherstellung vorher eine vollständige externe Sicherung erstellen
         und prüfen. Ein vorhandener Entwurf muss veröffentlicht oder verworfen werden.
         Live- und Entwurfssicherungen sind getrennte Dateien; Namen nach der Umstellung notieren.</p>
-      <button id="load-backups" type="button">Backups laden</button>
+      <button class="cms-button" id="load-backups" type="button">Backups laden</button>
       <label>Backup <select id="backup" disabled></select></label>
-      <button id="preview-backup" type="button" disabled>Backup prüfen</button>
+      <button class="cms-button" id="preview-backup" type="button" disabled>Backup prüfen</button>
       <p id="backup-status" role="status"></p>
       <section id="backup-result" hidden>
         <h2>Aktueller Live-Stand</h2><pre id="backup-live"></pre>
         <h2>Ausgewähltes Backup</h2><pre id="backup-data"></pre>
         <label><input id="external-backup" type="checkbox">
           Ich habe eine vollständige externe Sicherung erstellt und geprüft.</label>
-        <button id="commit-restore" type="button" disabled>Backup wiederherstellen</button>
+        <button class="cms-button" id="commit-restore" type="button" disabled>Backup wiederherstellen</button>
       </section>
     </details>
   </main>
