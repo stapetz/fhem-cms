@@ -15,11 +15,11 @@ UPD 2026-11-05_15:13:47 23850 www/fhem-cms/components/cms-value.js
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
 UPD 2026-11-08_15:33:41 15806 www/fhem-cms/css/fhem-cms.css
 UPD 2026-11-08_13:06:21 12309 www/fhem-cms/examples/fcui-check.html
-UPD 2026-11-08_15:33:41 5216 www/fhem-cms/examples/migration-preview.html
+UPD 2026-11-08_15:48:55 5463 www/fhem-cms/examples/migration-preview.html
 UPD 2026-11-04_21:52:16 5087 www/fhem-cms/js/device-picker.js
 UPD 2026-11-05_15:42:16 6579 www/fhem-cms/js/device-preview.js
 UPD 2026-11-08_15:33:41 3422 www/fhem-cms/js/fcui-migration-controller.js
-UPD 2026-11-08_15:33:41 31324 www/fhem-cms/js/fcui-migration-preview.js
+UPD 2026-11-08_15:48:55 32578 www/fhem-cms/js/fcui-migration-preview.js
 UPD 2026-11-08_15:33:41 2186 www/fhem-cms/js/fcui-migration-transport.js
 UPD 2026-11-08_10:43:57 111967 www/fhem-cms/js/fcui-runtime.js
 UPD 2026-11-08_14:00:37 9170 www/fhem-cms/js/fcui-schema5-draft.js
