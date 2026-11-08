@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { Schema5GridEdit } from '../www/fhem-cms/js/fcui-schema5-grid-edit.js';
 import { schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
 
 const config = () => ({
@@ -110,7 +111,8 @@ test('successful writes with failed or conflicting verification require explicit
 test('first layout edit copies live and rejects a navigation collision on another page', async () => {
   const live = config();
   live.pages.push({ id: 'second', title: 'Zweite', widgets: [
-    { id: 'clock', type: 'fhem-clock', style: 'digital', grid: { col: 1, row: 5, w: 2, h: 1 } },
+    { id: 'clock', type: 'fhem-clock', style: 'digital', showSeconds: false, showDate: false, showWeekday: false,
+      grid: { col: 1, row: 5, w: 2, h: 1 } },
   ] });
   let state = { live, draft: null, token: 'a'.repeat(64) };
   let writes = 0;
@@ -259,6 +261,212 @@ test('controller runs against isolated real Perl draft transactions and rejects 
     assert.match(discarded.live.pages[0].widgets[0].html, /\{\{Temp:state\}\}/);
     assert.match(discarded.live.pages[0].widgets[1].html, /device="Temp" reading="state"/);
   } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('page management preserves content and rejects stale or destructive operations with real Perl', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-pages-'));
+  const initial = config();
+  const original = JSON.stringify(initial, null, 2);
+  const livePath = join(dir, 'config.json');
+  const invoke = (operation, ...args) => {
+    const process = spawnSync('perl', ['-e', perl, dir, operation, ...args], { encoding: 'utf8' });
+    assert.equal(process.error, undefined);
+    assert.equal(process.status, 0, process.stderr);
+    const { result, error } = JSON.parse(process.stdout);
+    if (error) throw new Error(error);
+    return result;
+  };
+  const transport = {
+    read: async () => invoke('read'),
+    save: async (value, token) => invoke('save', Buffer.from(JSON.stringify(value)).toString('base64'), token),
+    publish: async (token) => invoke('publish', token),
+    discard: async (token) => invoke('discard', token),
+  };
+  try {
+    await writeFile(livePath, original);
+    const editor = new Schema5DraftController(transport);
+    const initialState = await editor.reload();
+    assert.throws(() => editor.deleteEmptyPage('start', initialState.token), /letzte Seite/);
+    assert.throws(() => editor.addPage('bad/id', 'Seite', initialState.token), /Seiten-ID/);
+    assert.throws(() => editor.addPage('second', '', initialState.token), /Seitentitel/);
+    const added = await editor.addPage('second', 'Zweite', initialState.token);
+    assert.deepEqual(added.live, initial);
+    assert.throws(() => editor.addPage('third', 'Alt', initialState.token), /veraltet/);
+    assert.throws(() => editor.addPage('second', 'Doppelt', added.token), /bereits vorhanden/);
+    assert.throws(() => editor.deleteEmptyPage('start', added.token), /enthält Widgets/);
+    assert.throws(() => editor.reorderPages(['start', 'start'], added.token), /Seitenreihenfolge/);
+    assert.throws(() => editor.reorderPages(['start'], added.token), /Seitenreihenfolge/);
+    assert.throws(() => editor.moveWidget('start', 'second', 'text',
+      { col: 1, row: 1, w: 4, h: 2 }, added.token), /überschneidung/);
+    assert.deepEqual(editor.snapshot(), added, 'rejected local edits do not mutate saved state');
+    const moved = await editor.moveWidget('start', 'second', 'text',
+      { col: 1, row: 2, w: 4, h: 2 }, added.token);
+    assert.deepEqual(moved.draft.pages[0].widgets, [initial.pages[0].widgets[1]]);
+    assert.deepEqual(moved.draft.pages[1].widgets, [initial.pages[0].widgets[0]]);
+    const duplicate = await editor.saveWidget('start', {
+      ...initial.pages[0].widgets[0], grid: { col: 1, row: 4, w: 4, h: 2 },
+    }, moved.token, 'create');
+    assert.throws(() => editor.moveWidget('second', 'start', 'text',
+      { col: 1, row: 2, w: 4, h: 2 }, duplicate.token), /Widget-ID/);
+    assert.deepEqual(editor.snapshot(), duplicate, 'duplicate destination does not remove either widget');
+    const unique = await editor.deleteWidget('start', 'text', duplicate.token);
+    assert.throws(() => editor.deleteEmptyPage('second', unique.token), /enthält Widgets/);
+    const renamed = await editor.renamePage('second', 'Handbuch', unique.token);
+    const reordered = await editor.reorderPages(['second', 'start'], renamed.token);
+    assert.deepEqual(reordered.draft.pages.map((page) => page.id), ['second', 'start']);
+    assert.equal(reordered.draft.pages[0].title, 'Handbuch');
+    assert.equal(reordered.draft.pages[0].widgets[0].html, '<p>{{Temp:state}}</p>');
+    assert.equal(reordered.draft.pages[1].widgets[0].html, '<span device="Temp" reading="state"></span>');
+    assert.equal(await readFile(livePath, 'utf8'), original);
+    const back = await editor.moveWidget('second', 'start', 'text',
+      { col: 1, row: 2, w: 4, h: 2 }, reordered.token);
+    const withNav = await editor.saveNavigation({
+      ...back.draft.navigation, items: [{ page: 'second', label: 'Handbuch' }],
+    }, back.token);
+    const deleted = await editor.deleteEmptyPage('second', withNav.token);
+    assert.equal(deleted.draft.navigation.items, undefined);
+    assert.deepEqual(deleted.draft.pages.map((page) => page.id), ['start']);
+    assert.deepEqual(deleted.draft.pages[0].widgets, [
+      initial.pages[0].widgets[1], initial.pages[0].widgets[0],
+    ]);
+    assert.equal(await readFile(livePath, 'utf8'), original);
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('grid editing is explicit, state-bound and never changes live bytes', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-grid-edit-'));
+  const originalDocument = globalThis.document;
+  const initial = config();
+  initial.pages.push({ id: 'second', title: 'Zweite', widgets: [
+    { id: 'clock', type: 'fhem-clock', style: 'digital', showSeconds: false, showDate: false, showWeekday: false,
+      grid: { col: 1, row: 5, w: 2, h: 1 } },
+  ] });
+  const original = JSON.stringify(initial, null, 2);
+  const livePath = join(dir, 'config.json');
+  class Element {
+    constructor() { this.children = []; }
+    append(child) { this.children.push(child); }
+    replaceChildren(...children) { this.children = children; }
+  }
+  globalThis.document = { createElement: () => new Element() };
+  let grid;
+  let changeOnEnable = false;
+  const GridStack = { init() {
+    grid = {
+      items: [], columns: 12, destroyed: 0, static: true,
+      getColumn() { return this.columns; },
+      makeWidget(wrapper, item) { this.items.push({ ...item }); },
+      save() { return structuredClone(this.items); },
+      setStatic(value) {
+        this.static = value;
+        if (!value && changeOnEnable) this.items[0].y += 1;
+      },
+      destroy() { this.destroyed += 1; },
+    };
+    return grid;
+  } };
+  const invoke = (operation, ...args) => {
+    const process = spawnSync('perl', ['-e', perl, dir, operation, ...args], { encoding: 'utf8' });
+    assert.equal(process.error, undefined);
+    assert.equal(process.status, 0, process.stderr);
+    const { result, error } = JSON.parse(process.stdout);
+    if (error) throw new Error(error);
+    return result;
+  };
+  let release;
+  let delaySave = false;
+  let loseResponse = false;
+  const transport = {
+    read: async () => invoke('read'),
+    save: async (value, token) => {
+      if (delaySave) await new Promise((resolve) => { release = resolve; });
+      invoke('save', Buffer.from(JSON.stringify(value)).toString('base64'), token);
+      if (loseResponse) throw new Error('Antwort verloren');
+    },
+    publish: async (token) => invoke('publish', token),
+    discard: async (token) => invoke('discard', token),
+  };
+  try {
+    await writeFile(livePath, original);
+    const controller = new Schema5DraftController(transport);
+    const state = await controller.reload();
+    const root = new Element();
+    assert.throws(() => new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: 'a'.repeat(64) }), /veraltet/);
+    changeOnEnable = true;
+    assert.throws(() => new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: state.token }), /Aktivieren/);
+    assert.equal(grid.destroyed, 1);
+    assert.equal(root.children.length, 0);
+    changeOnEnable = false;
+    const cancelled = new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: state.token });
+    assert.equal(grid.static, false);
+    assert.equal(root.children[0].children[0].children[0].textContent, 'Navigation');
+    assert.equal(root.children[1].children[0].children[0].textContent, 'text: text');
+    grid.items[1].y = 3;
+    cancelled.close();
+    cancelled.close();
+    assert.equal(root.children.length, 0);
+    assert.equal((await controller.reload()).draft, null);
+    await assert.rejects(cancelled.save(), /nicht mehr aktiv/);
+
+    const collision = new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: state.token });
+    grid.items[0].y = 4;
+    await assert.rejects(collision.save(), /Seite second/);
+    assert.equal(grid.static, true);
+    await assert.rejects(collision.save(), /nicht mehr aktiv/);
+    collision.close();
+    assert.equal(controller.snapshot().draft, null);
+
+    const narrow = new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: state.token });
+    grid.columns = 1;
+    await assert.rejects(narrow.save(), /12-Spalten/);
+    narrow.close();
+    assert.equal(controller.snapshot().draft, null);
+
+    delaySave = true;
+    const editor = new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: state.token });
+    grid.items[1].y = 3;
+    const saving = editor.save();
+    assert.equal(grid.static, true);
+    assert.throws(() => editor.close(), /läuft noch/);
+    await assert.rejects(editor.save(), /nicht mehr aktiv/);
+    release();
+    const saved = await saving;
+    assert.equal(saved.draft.pages[0].widgets[0].grid.row, 4);
+    assert.equal(saved.draft.pages[0].widgets[0].html, '<p>{{Temp:state}}</p>');
+    assert.equal(saved.draft.pages[0].widgets[1].html, '<span device="Temp" reading="state"></span>');
+    assert.deepEqual(saved.draft.pages[1], initial.pages[1]);
+    assert.equal(await readFile(livePath, 'utf8'), original);
+    editor.close();
+    assert.equal(root.children.length, 0);
+
+    delaySave = false;
+    const stale = new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: saved.token });
+    const other = new Schema5DraftController(transport);
+    const otherState = await other.reload();
+    await other.renamePage('second', 'Anderer Tab', otherState.token);
+    await assert.rejects(stale.save(), /veraltet|geändert/i);
+    assert.throws(() => controller.snapshot(), /nicht geladen/);
+    stale.close();
+    const refreshed = await controller.reload();
+    assert.equal(refreshed.draft.pages[1].title, 'Anderer Tab');
+    loseResponse = true;
+    const uncertain = new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: refreshed.token });
+    grid.items[1].x = 8;
+    await assert.rejects(uncertain.save(), /Antwort verloren/);
+    assert.equal(grid.static, true);
+    await assert.rejects(uncertain.save(), /nicht mehr aktiv/);
+    assert.throws(() => controller.snapshot(), /nicht geladen/);
+    uncertain.close();
+    const verified = await controller.reload();
+    assert.equal(verified.draft.pages[0].widgets[0].grid.col, 9);
+    assert.equal(verified.draft.pages[1].title, 'Anderer Tab');
+    assert.equal(await readFile(livePath, 'utf8'), original);
+  } finally {
+    globalThis.document = originalDocument;
     await rm(dir, { recursive: true });
   }
 });

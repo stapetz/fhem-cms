@@ -354,7 +354,27 @@ Das Anlegen und Ändern eines Widgets sind ausdrücklich getrennte Aktionen:
 Vorhandene IDs dürfen nicht versehentlich überschrieben werden.
 Auch die deviceweite Navigation wird nur gegen die beim Öffnen verwendete
 Zustandskennung und nach Rasterprüfung aller Seiten als Entwurf übernommen.
-Der Baustein selbst bietet weder einen Editor noch einen öffentlichen Schreibweg.
+Der Controller unterstützt zudem das Anlegen, Umbenennen und Umsortieren von
+Seiten sowie das Verschieben von Widgets mit expliziter Zielposition. Dabei
+werden Kollisionen und doppelte Widget-IDs abgewiesen. Nur leere Seiten dürfen
+gelöscht werden; vorhandene Navigationseinträge für diese Seite werden entfernt.
+Dies ist weiterhin nur ein interner Baustein ohne öffentliche Oberfläche.
+Der separate Rasterbearbeitungsbaustein `www/fhem-cms/js/fcui-schema5-grid-edit.js`
+öffnet ausschließlich gegen die ausdrücklich angegebene aktuelle Zustandskennung
+ein Gridstack-Raster mit Textbezeichnungen statt aktiver Widgets. Er prüft beim
+Aktivieren, ob alle Positionen unverändert übernommen wurden, und akzeptiert
+Speichern nur in der 12-Spalten-Ansicht. Der explizite Speicherversuch friert
+das Raster ein und nutzt die zustandsgebundene Entwurfsprüfung einschließlich
+seitenübergreifender Kollisionen. Nach jedem Versuch bleibt das Raster bis zum
+Schließen gesperrt; bei unklarem Fehler ist der Entwurfszustand neu zu laden.
+Abbrechen entfernt nur das Raster und speichert nichts. Dieser Baustein ist
+nicht an den Device-Einstieg oder eine öffentliche Schreib-API angebunden.
+Ein lokaler Browsertest mit echtem Gridstack hat Ziehen und Speichern gegen
+einen simulierten Transport geprüft; der automatisierte Integrationstest nutzt
+isolierte Perl-Transaktionen und Gridstack-Stubs. Beides ersetzt keinen
+FHEMWEB- oder Geräte-Abnahmetest.
+Der Entwurfscontroller selbst bietet weder eine Oberfläche noch einen
+öffentlichen Schreibweg.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
 Positionsplan um; sie speichert und überträgt ihn nicht.

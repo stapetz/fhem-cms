@@ -129,6 +129,80 @@ export class Schema5DraftController {
     return this.saveDraft(candidate, expectedToken);
   }
 
+  addPage(id, title, expectedToken) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) throw new Error('Ungültige Seiten-ID');
+    this.#validateTitle(title);
+    const candidate = state.draft || state.live;
+    if (candidate.pages.some((page) => page.id === id)) throw new Error('Seiten-ID ist bereits vorhanden');
+    candidate.pages.push({ id, title, widgets: [] });
+    return this.saveDraft(candidate, expectedToken);
+  }
+
+  renamePage(pageId, title, expectedToken) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    this.#validateTitle(title);
+    const candidate = state.draft || state.live;
+    const page = candidate.pages.find((entry) => entry.id === pageId);
+    if (!page) throw new Error('Unbekannte Seite');
+    page.title = title;
+    return this.saveDraft(candidate, expectedToken);
+  }
+
+  reorderPages(ids, expectedToken) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    const candidate = state.draft || state.live;
+    if (!Array.isArray(ids) || ids.length !== candidate.pages.length) throw new Error('Unvollständige Seitenreihenfolge');
+    const pages = new Map(candidate.pages.map((page) => [page.id, page]));
+    if (new Set(ids).size !== ids.length || ids.some((id) => !pages.has(id))) {
+      throw new Error('Ungültige Seitenreihenfolge');
+    }
+    candidate.pages = ids.map((id) => pages.get(id));
+    return this.saveDraft(candidate, expectedToken);
+  }
+
+  deleteEmptyPage(pageId, expectedToken) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    const candidate = state.draft || state.live;
+    const index = candidate.pages.findIndex((page) => page.id === pageId);
+    if (index < 0) throw new Error('Unbekannte Seite');
+    if (candidate.pages.length === 1) throw new Error('Die letzte Seite darf nicht gelöscht werden');
+    if (candidate.pages[index].widgets.length) throw new Error('Seite enthält Widgets');
+    candidate.pages.splice(index, 1);
+    if (candidate.navigation.items) {
+      candidate.navigation.items = candidate.navigation.items.filter((item) => item.page !== pageId);
+      if (!candidate.navigation.items.length) delete candidate.navigation.items;
+    }
+    return this.saveDraft(candidate, expectedToken);
+  }
+
+  moveWidget(sourceId, targetId, widgetId, grid, expectedToken) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    const candidate = state.draft || state.live;
+    const source = candidate.pages.find((page) => page.id === sourceId);
+    const target = candidate.pages.find((page) => page.id === targetId);
+    if (!source || !target) throw new Error('Unbekannte Seite');
+    if (sourceId === targetId) throw new Error('Zielseite muss verschieden sein');
+    const index = source.widgets.findIndex((widget) => widget.id === widgetId);
+    if (index < 0) throw new Error('Unbekanntes Widget');
+    if (target.widgets.some((widget) => widget.id === widgetId)) throw new Error('Widget-ID ist auf der Zielseite vorhanden');
+    const widget = source.widgets.splice(index, 1)[0];
+    widget.grid = structuredClone(grid);
+    target.widgets.push(widget);
+    return this.saveDraft(candidate, expectedToken);
+  }
+
+  #validateTitle(title) {
+    if (typeof title !== 'string' || !title.length || title.length > 128 || /[\x00-\x1f\x7f]/.test(title)) {
+      throw new Error('Ungültiger Seitentitel');
+    }
+  }
+
   publishDraft(expectedToken) {
     return this.#change('publish', undefined, expectedToken);
   }
