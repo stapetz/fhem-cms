@@ -37,8 +37,7 @@ function toolbarControls(toolbar) {
   const nodes = all(toolbar);
   return [
     'Seite bearbeiten', null, 'Entwurf veröffentlichen', 'Entwurf verwerfen',
-    'Zustand erneut laden', 'Seiten verwalten', 'Widget hinzufügen',
-    'Navigation bearbeiten',
+    'Zustand erneut laden', 'Widget hinzufügen',
   ].map((label) => nodes.find((node) => label ? node.textContent === label : node.className === 'cms-editor-mode'));
 }
 

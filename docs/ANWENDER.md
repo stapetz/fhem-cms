@@ -90,14 +90,18 @@ Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfigu
 ## Schema-5-Editor bedienen
 
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
-- **Bearbeiten:** Seiten verwalten, Widget hinzufügen (mit Suche) und Navigation bearbeiten.
-- **Ansicht:** Seite bearbeiten – Theme, Widget-Rahmen, Rasterart mit Vorschau und
-  die numerische Positionseingabe in einem Dialog.
+- **Bearbeiten:** Widget hinzufügen (mit Suche).
+- **Ansicht:** Seite bearbeiten (Theme, Widget-Rahmen, Rasterart mit Vorschau und
+  numerische Positionseingabe) und Raster anzeigen.
+
+Das Stiftsymbol an der Navigation öffnet **Navigation bearbeiten** – die zentrale
+Seitenverwaltung: Reihenfolge am ≡-Griff ziehen (oder Pfeiltasten), je Seite
+Dateiname, Seitentitel, Beschriftung und Größe, dazu „Neue Seite erstellen“ und
+das Löschen leerer Seiten.
 
 Alle Dialoge haben unten die Knöpfe **Speichern** und **Abbrechen**: Speichern
 übernimmt die Änderungen als Entwurf und schließt den Dialog, Abbrechen verwirft
-die Eingaben. In „Seiten verwalten“ wirken Anlegen, Umbenennen, Verschieben und
-Löschen erst mit Speichern.
+die Eingaben.
 
 Widgets am Punktgriff oben rechts ziehen. Am markierten Griff unten rechts
 Breite und Höhe ändern. Der Widget-Titel ist zugleich der interne Name in den

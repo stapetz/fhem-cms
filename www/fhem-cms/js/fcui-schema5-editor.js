@@ -1,7 +1,6 @@
 import { Schema5BackupPanel } from './fcui-schema5-backup-panel.js';
 import { Schema5MovePanel } from './fcui-schema5-move-panel.js';
 import { Schema5PagePanel } from './fcui-schema5-page-panel.js';
-import { Schema5PagesPanel } from './fcui-schema5-pages.js';
 import { Schema5View } from './fcui-schema5-view.js';
 import { Schema5WidgetPanel } from './fcui-schema5-widget-panel.js';
 import { Schema5NavigationPanel } from './fcui-schema5-navigation.js';
@@ -33,9 +32,7 @@ export class Schema5Editor {
   #toolbar;
   #page;
   #mode;
-  #pages;
   #widgets;
-  #navigation;
   #backup;
   #gridToggle;
   #publish;
@@ -92,17 +89,10 @@ export class Schema5Editor {
     this.#reloadButton.type = 'button';
     this.#reloadButton.textContent = 'Zustand erneut laden';
     this.#reloadButton.hidden = true;
-    this.#pages = document.createElement('button');
-    this.#pages.type = 'button';
-    this.#pages.textContent = 'Seiten verwalten';
     this.#widgets = document.createElement('button');
     this.#widgets.type = 'button';
     this.#widgets.textContent = 'Widget hinzufügen';
-    this.#navigation = document.createElement('button');
-    this.#navigation.type = 'button';
-    this.#navigation.textContent = 'Navigation bearbeiten';
-    for (const button of [this.#page, this.#publish, this.#discard, this.#reloadButton,
-      this.#pages, this.#widgets, this.#navigation]) {
+    for (const button of [this.#page, this.#publish, this.#discard, this.#reloadButton, this.#widgets]) {
       button.className = 'cms-button';
     }
     this.#publish.className = 'cms-button cms-publish';
@@ -117,7 +107,7 @@ export class Schema5Editor {
     this.#gridToggle.className = 'cms-button cms-grid-toggle';
     this.#gridToggle.setAttribute('aria-pressed', 'false');
     this.#menu('Datei', [this.#publish, this.#discard, this.#backup]);
-    this.#menu('Bearbeiten', [this.#pages, this.#widgets, this.#navigation]);
+    this.#menu('Bearbeiten', [this.#widgets]);
     this.#menu('Ansicht', [this.#page, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
@@ -126,9 +116,7 @@ export class Schema5Editor {
     this.#status.setAttribute('role', 'status');
     this.#content = document.createElement('div');
     this.#page.addEventListener('click', () => this.#openPage());
-    this.#pages.addEventListener('click', () => this.#openPages());
     this.#widgets.addEventListener('click', () => this.#openWidgets());
-    this.#navigation.addEventListener('click', () => this.#openNavigation());
     this.#backup.addEventListener('click', () => this.#openBackup());
     this.#gridToggle.addEventListener('click', () => {
       this.#showGrid = !this.#showGrid;
@@ -207,9 +195,7 @@ export class Schema5Editor {
 
   #setActions(enabled, hasDraft) {
     this.#page.disabled = !enabled;
-    this.#pages.disabled = !enabled;
     this.#widgets.disabled = !enabled;
-    this.#navigation.disabled = !enabled;
     this.#backup.disabled = !enabled;
     this.#gridToggle.disabled = !enabled;
     this.#publish.disabled = !enabled || !hasDraft;
@@ -450,31 +436,6 @@ export class Schema5Editor {
     }
   }
 
-  #openPages() {
-    if (!this.#active || this.#suspended || !this.#view || this.#pages.disabled) return;
-    try {
-      const state = this.#controller.snapshot();
-      this.#generation += 1;
-      this.#setActions(false, false);
-      this.#view.stop();
-      this.#view = null;
-      this.#content.replaceChildren();
-      const container = this.#panelContainer('pages');
-      this.#panel = new Schema5PagesPanel({
-        root: container, controller: this.#controller, token: state.token, browser: this.#browser,
-        onClose: ({ requiresReload }) => {
-          this.#panel = null;
-          Promise.resolve().then(() => requiresReload
-            ? this.#reload() : this.#display(this.#controller.snapshot(), this.#generation))
-            .catch((error) => this.#error(error));
-        },
-      });
-    } catch (error) {
-      this.#content.replaceChildren();
-      this.#error(error);
-    }
-  }
-
   #openWidgets(widgetId) {
     if (!this.#active || this.#suspended || !this.#view || this.#widgets.disabled) return;
     try {
@@ -502,7 +463,7 @@ export class Schema5Editor {
   }
 
   #openNavigation() {
-    if (!this.#active || this.#suspended || !this.#view || this.#navigation.disabled) return;
+    if (!this.#active || this.#suspended || !this.#view || this.#widgets.disabled) return;
     try {
       const state = this.#controller.snapshot();
       this.#generation += 1;

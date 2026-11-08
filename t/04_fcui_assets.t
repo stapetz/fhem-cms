@@ -25,7 +25,6 @@ my @assets = (
     'www/fhem-cms/js/fcui-schema5-move-panel.js',
     'www/fhem-cms/js/fcui-schema5-page-panel.js',
     'www/fhem-cms/js/fcui-schema5-editor.js',
-    'www/fhem-cms/js/fcui-schema5-pages.js',
     'www/fhem-cms/js/fcui-schema5-widget-session.js',
     'www/fhem-cms/js/fcui-schema5-widget-panel.js',
     'www/fhem-cms/js/fcui-schema5-navigation.js',

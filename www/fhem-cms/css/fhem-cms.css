@@ -372,6 +372,70 @@ body {
   background-size: calc(100% / 12) var(--gs-cell-height, 3rem);
 }
 
+/* Navigation bearbeiten: kompakte Zeile je Seite mit Griff, Dateiname und Größen. */
+.cms-nav-rows {
+  display: grid;
+  gap: .4rem;
+  width: 100%;
+}
+
+.cms-nav-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: end;
+  width: 100%;
+  padding: .5rem .6rem;
+  border: 1px solid var(--cms-border-subtle);
+  border-radius: .5rem;
+  background: var(--cms-surface-raised);
+}
+
+.cms-nav-row label {
+  flex: 1 1 8rem;
+  margin: 0;
+}
+
+.cms-nav-row .cms-nav-width,
+.cms-nav-row .cms-nav-height {
+  flex: 0 1 5.5rem;
+}
+
+.cms-nav-grip {
+  flex: 0 0 auto;
+  cursor: grab;
+  touch-action: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: .45rem .55rem;
+  align-self: center;
+}
+
+.cms-nav-grip:active {
+  cursor: grabbing;
+}
+
+.cms-nav-remove {
+  flex: 0 0 auto;
+  color: var(--cms-danger);
+  align-self: center;
+}
+
+.cms-nav-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: end;
+  width: 100%;
+  margin-top: .25rem;
+  padding-top: .6rem;
+  border-top: 1px solid var(--cms-border-subtle);
+}
+
+.cms-nav-shared {
+  width: 100%;
+}
+
 /* Sicherungen / Wiederherstellung im Editor-Dialog. */
 .cms-backup-controls {
   display: flex;

@@ -41,8 +41,7 @@ function toolbarControls(toolbar) {
   const nodes = all(toolbar);
   return [
     'Seite bearbeiten', null, 'Entwurf veröffentlichen', 'Entwurf verwerfen',
-    'Zustand erneut laden', 'Seiten verwalten', 'Widget hinzufügen',
-    'Navigation bearbeiten',
+    'Zustand erneut laden', 'Widget hinzufügen',
   ].map((label) => nodes.find((node) => label ? node.textContent === label : node.className === 'cms-editor-mode'));
 }
 
@@ -230,7 +229,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     assert.equal(mode.textContent, 'Live');
     assert.equal(edit.disabled, false);
 
-    const widgetButton = toolbar.children[6];
+    const widgetButton = toolbar.children[5];
     widgetButton.fire('click');
     const widgetPanel = content.children[0];
     assert.match(widgetPanel.children[0].textContent, /Widget hinzufügen/);
@@ -240,15 +239,17 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     assert.equal(mode.textContent, 'Live');
     assert.equal(widgetButton.disabled, false);
 
-    const navigationButton = toolbar.children[7];
-    navigationButton.fire('click');
+    // Navigation bearbeiten öffnet über das Stiftsymbol an der Navigationskachel
+    const navWrapper = content.children[0].children[0];
+    const navTools = navWrapper.children.at(-1);
+    navTools.children[1].fire('click');
     const navigationPanel = content.children[0];
     assert.equal(navigationPanel.children[0].textContent, 'Navigation bearbeiten');
     assert.equal(edit.disabled, true);
     navigationPanel.children[4].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(mode.textContent, 'Live');
-    assert.equal(navigationButton.disabled, false);
+    assert.equal(widgetButton.disabled, false);
 
     edit.fire('click');
     const pendingPanel = content.children[0];
@@ -388,7 +389,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     await editor.start();
     const [, status, content] = root.children;
     const toolbar = { children: toolbarControls(root.children[0]) };
-    const [edit, mode, publish, discard, reload, pagesButton] = toolbar.children;
+    const [edit, mode, publish, discard, reload] = toolbar.children;
     edit.fire('click');
     const form = content.children[0].children[5];
     form.children[0].children[0].value = 'text';
@@ -423,13 +424,14 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     edit.fire('click');
     await content.children[0].children[6].children[0].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
-    pagesButton.fire('click');
-    const pagesPanel = content.children[0];
-    const createPage = pagesPanel.children[3].children[1];
-    createPage.children[0].children[0].value = 'second';
-    createPage.children[1].children[0].value = 'Zweite';
-    await createPage.fire('submit');
-    await pagesPanel.children[4].children[0].fire('click');
+    const navWrapper2 = content.children[0].children[0];
+    navWrapper2.children.at(-1).children[1].fire('click');
+    const navPanel = content.children[0];
+    const addSection = navPanel.children[3].children[3];
+    addSection.children[0].children[0].value = 'Zweite';
+    addSection.children[1].children[0].value = 'second';
+    addSection.children[2].fire('click');
+    await navPanel.children[4].children[0].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages.length, 2);
     assert.equal(mode.textContent, 'Entwurf');
