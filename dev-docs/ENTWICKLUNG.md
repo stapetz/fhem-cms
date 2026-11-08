@@ -60,6 +60,18 @@ stehen in [ABNAHME.md](./ABNAHME.md).
 
 ### FCUI-Übergangsarchitektur
 
+**Aktueller Entwicklungsstand:** Die nachfolgenden historischen Abschnitte
+beschreiben teilweise frühere Schutzsperren. Inzwischen sind `version5draft`
+und `migrationcommit` registriert, die Schema-5-Ansicht und der Editor über den
+Device-Einstieg angeschlossen und Migration sowie Restore in der Vorschauseite
+nach expliziter Bestätigung möglich. Der Server prüft Zustand und Entwurf erneut
+und erstellt vor dem Austausch ein byteweise geprüftes Backup. Der Browser verlangt
+zusätzlich die Bestätigung einer externen vollständigen Sicherung; diese Aussage
+kann der Server nicht selbst verifizieren. Lokale isolierte Browser- und
+Transaktionstests ersetzen keine FHEMWEB-/Geräteabnahme auf gesicherten Testdaten.
+Ältere Stände benötigen für Rollback eine zusammengehörige Code-, Asset- und
+Datensicherung.
+
 Am 08.11.2026 wurde für den Rasterübergang festgelegt: **Bestehende Layouts
 bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen
 12 Spalten.** Es gibt keine automatische verlustbehaftete Umrechnung. Ein
@@ -71,8 +83,7 @@ und die Navigation einer Instanz gehören derselben Layout-Engine an. Eine
 Mischung alter und neuer Layoutformate innerhalb einer Instanz ist nicht
 vorgesehen. Bestehende Instanzen bleiben zunächst im alten Format bearbeitbar;
 neue FCUI-Instanzen sollen das neue Format verwenden. Auch bestehende Instanzen
-sollen später ausdrücklich auf das neue Format umgestellt werden können. Eine
-solche Umstellung ist noch nicht implementiert.
+können ausdrücklich auf das neue Format umgestellt werden.
 
 Für den Übergang gelten folgende Anforderungen, nicht bereits implementierte
 Funktionen:
@@ -224,8 +235,8 @@ validierten Live-Stand und das Backup der Schemata 1–5 als Text anzeigen. Die
 Befehle legen kein Datenverzeichnis an und ändern keine Konfiguration. Ein
 vorhandener Entwurf, ungültige Daten oder Symlinks sperren die Backup-Prüfung.
 Die Zustandskennung bindet beide Dateiinhalte, ist aber keine Benutzerbestätigung
-oder Autorisierung. Es gibt weiterhin keinen öffentlichen Restore-Schreibpfad
-für Schema 5; die Anzeige allein ersetzt keine externe vollständige Sicherung.
+oder Autorisierung. Der versionierte Restore-Schreibpfad prüft den Zustand erneut; die Anzeige
+allein ersetzt keine externe vollständige Sicherung.
 Der Integrationstest `t/09_restore_client_integration.test.js` verbindet den
 JavaScript-Client mit dem echten Perl-Get auf isolierten Testdateien. Er prüft
 auch den Übergang vom Legacy-Positionsplan über den serverseitigen Schema-5-
@@ -241,11 +252,8 @@ vollständig validierten Schema-4-Konfiguration und einem vollständig angegeben
 Widget-Inhalte und Reihenfolge, ergänzt bei Bedarf die bisherige Standardnavigation
 und stellt den Ziel-Layoutmodus auf `grid`. Sie weist unbekannte, doppelte,
 fehlende oder kollidierende Positionen und die mehrdeutige Widget-ID `__nav` ab.
-Weder diese Funktion noch die Vorschau beweisen, dass der Plan der bestätigten
-Anzeige entspricht; dafür fehlt noch ein manipulations- und veraltungssicherer
-Transaktionsvertrag. Der Kandidat wird nicht gespeichert und Schema 5 bleibt
-über alle bestehenden Schnittstellen gesperrt. Die Struktur ist vor der
-Freischaltung mit der künftigen Layout-Engine abzugleichen.
+Die Vorschau selbst speichert den Kandidaten nicht. Der getrennte Schreibpfad
+bindet den bestätigten Kandidaten an die Live-Bytes und prüft ihn erneut.
 Der Schema-5-Validierungsvertrag prüft zusätzlich die vollständigen
 Widget-Daten, Navigations- und 12-Spalten-Grenzen sowie Kollisionen. Die
 bisherigen Lese- und Schreibwege akzeptieren weiterhin ausschließlich Schema 4;
@@ -255,7 +263,7 @@ die gelesenen Live-Bytes und den vollständigen geprüften Zielkandidaten an ein
 SHA-256-Wert. Der Wert allein ist keine Autorisierung oder Bestätigung und
 beweist keine Vorschau im Browser. Ein späterer Schreibpfad muss den aktuellen
 Entwurf und beide Inhalte unmittelbar vor der Transaktion erneut prüfen.
-Interne, nicht als FHEM-Befehle registrierte Transaktionsbausteine prüfen diese
+Die über versionierte FHEM-Befehle aufgerufenen Transaktionsbausteine prüfen diese
 Bindung erneut, erstellen vor dem atomaren Austausch eine exklusive,
 byteweise überprüfte Sicherung und prüfen Live-Datei und Entwurf unmittelbar
 vor dem Austausch nochmals. Ein vorbereiteter Restore akzeptiert validierte
@@ -265,14 +273,24 @@ ausschließlich isolierte temporäre Verzeichnisse. Die Dateisynchronisierung un
 das atomare Umbenennen ersetzen keine vollständige externe Sicherung von
 Konfiguration, Medien, Modul und Assets; insbesondere sind Stromausfall und
 unkoordinierte externe Dateischreiber damit nicht vollständig abgesichert.
-Die Bausteine sind keine freigeschaltete Umstellung: Versionierte Schreib-API,
-Benutzerbestätigung und kompatible Oberfläche fehlen weiterhin.
+Der interne `FHEMCMS_MigrationCommand` und die vorbereiteten JavaScript-Module
+`fcui-migration-transport.js` und `fcui-migration-controller.js` verbinden
+Migrations- und Restore-Vorschauen mit diesen Transaktionen. Der Controller
+vergleicht die angezeigte Migrationsquelle mit der Serverantwort, hält den
+geprüften Plan unveränderlich und verlangt eine ausdrückliche Bestätigung.
+Nach jedem Schreibversuch, auch bei verlorener Antwort oder Fehler, ist eine
+neue Vorschau erforderlich. Veraltete oder während des Ladens verworfene
+Vorschauen und parallele Aktionen werden abgelehnt. Die Tests
+`t/28_migration_transport.test.js` und `t/29_migration_controller.test.js`
+prüfen den Vertrag mit isolierten Daten und simuliertem FHEMWEB-Transport.
+Der Schreibvorgang wird anhand des anschließend erneut gelesenen Live-Stands
+verifiziert; bei widersprüchlicher oder fehlgeschlagener Prüfung wird keine
+Erfolgsmeldung ausgegeben. Die Bestätigung einer externen Sicherung und eine
+tatsächliche FHEMWEB- und Geräteabnahme bleiben Aufgabe des Entwicklers.
 Der getrennte, schreibfreie Befehl `get <CMS> version5state` validiert Live
 und einen vorhandenen Entwurf als Schema 5 und liefert beide zusammen mit einer
 Zustandskennung. Er weist Schema 4, gemischte Formate und beschädigte Daten ab;
-die bisherigen Lesewege bleiben unverändert. Damit kann eine zukünftige
-versionierte Oberfläche den Zustand abrufen, aber weder Migration noch
-Schema-5-Entwürfe auslösen. Die Kennung ist keine Autorisierung.
+die bisherigen Lesewege bleiben unverändert. Die Kennung ist keine Autorisierung.
 `get <CMS> layoutformat` liefert für eine validierte Live-Konfiguration die
 Layoutkennung 4 (auch für beim Lesen nach Schema 4 migrierte historische
 Schemata) oder 5. Der Befehl legt keine Datenverzeichnisse an und verändert
@@ -281,9 +299,9 @@ Live-Dateien werden abgewiesen. Er prüft keinen Entwurf und ist nur eine
 Momentaufnahme: Die nachfolgende formatspezifische Lese- und Schreib-API muss
 den Zustand erneut prüfen und bei zwischenzeitlichem Formatwechsel scheitern.
 Der Device-Einstieg fragt diesen Vertrag vor dem Start der Bestandsoberfläche ab.
-Format 4 startet wie bisher; Format 5 und fehlgeschlagene oder unverständliche
-Antworten werden sichtbar abgewiesen, solange die passende Oberfläche nicht
-vollständig verfügbar ist. Ein altes Backend ohne `layoutformat` benötigt ein
+Format 4 startet wie bisher, Format 5 startet die versionierte Ansicht bzw.
+den Editor. Fehlgeschlagene oder unverständliche Antworten werden sichtbar
+abgewiesen. Ein altes Backend ohne `layoutformat` benötigt ein
 gemeinsames Update von Modul und Assets. Der Legacy-Entwurfsleser prüft bei
 vorhandenem Entwurf den Live-Stand erneut und lehnt ungültige oder andere Formate
 ab; damit kann ein Formatwechsel nach der ersten Abfrage keinen alten Entwurf
@@ -298,8 +316,7 @@ Koordinaten. Es erhält Inhalte und Seitenreihenfolge, prüft Grenzen sowie
 Kollisionen einschließlich der globalen Navigation auf allen Seiten und weist
 beim Initialisieren durch Gridstack veränderte Positionen ab. Die Prüfung umfasst
 nur den Rastervertrag und ersetzt nicht die vollständige serverseitige
-Validierung. Das Modul wird noch nicht vom Device-Einstieg verwendet und bietet
-weder eine vollständige Widget-Oberfläche noch Speicherung oder Umstellung.
+Validierung. Der Device-Einstieg verwendet das Modul für Schema 5.
 Inhalte werden erst erzeugt und verbunden, nachdem Gridstack alle Positionen
 übernommen hat; ein fehlerhaftes Raster startet keine Widget-Lebenszyklen.
 Die bestehende Oberfläche verwendet zur Erzeugung ihrer Widget-Elemente die
@@ -314,8 +331,7 @@ und das Entfernen des Rasters. Navigation, Dienste und Snapshots werden vom
 Aufrufer bereitgestellt; der Adapter führt selbst keine FHEM-Anfragen aus, aber
 Widgets dürfen die übergebenen Dienste nutzen. `view-only` ist keine Schreib-
 oder Netzwerk-Sperre. Der Adapter wird in der gesondert abgesicherten
-Widget-Vorschau verwendet, ist aber noch nicht mit dem Device-Einstieg,
-Live-Abonnements oder versionierter Speicherung verbunden.
+Widget-Vorschau und im Schema-5-Device-Einstieg verwendet.
 Beim Entfernen einer Diagrammkomponente werden laufende Verlaufsergebnisse
 verworfen; beim erneuten Verbinden wird der Verlauf neu angefordert. Das
 verhindert die Übernahme verspäteter Antworten nach einem Seitenwechsel.
@@ -385,12 +401,101 @@ internen Perl-Entwurfstransaktionen auf temporären Dateien; das DOM und Gridsta
 sind dabei Test-Stubs. Ein separater lokaler Browsertest verwendet echtes
 Gridstack und einen simulierten Transport. Beide sind kein FHEMWEB- oder
 Geräte-Abnahmetest.
+Der vorbereitete `Schema5Editor` verbindet die Live-/Entwurfsansicht mit dem
+Rasterpanel. Er zeigt an, ob Live oder Entwurf dargestellt wird, beendet vor
+der Bearbeitung die bisherigen Live-Abos und lädt nach unklaren Speicherfehlern
+den Zustand erneut. Beim Verlassen des Tabs wird die Ansicht beendet; ein
+bereits laufender Speichervorgang kann noch abgeschlossen werden, aber kein
+verspätetes Ergebnis darf die Oberfläche wieder starten. Bei Rückkehr aus dem
+Browser-Cache wird die Seite vollständig neu geladen. Der Editor benötigt
+weiterhin einen vom Aufrufer bereitgestellten versionierten Schreibtransport;
+er ist nicht im Device-Einstieg registriert und ersetzt weder Migration noch
+Restore. Die vorbereitete Seitenverwaltung kann Seiten
+anlegen, umbenennen, sortieren und leere Seiten nach Bestätigung löschen.
+Widgets lassen sich mit ausdrücklich angegebenem Zielraster auf eine andere
+Seite verschieben; Inhalte bleiben erhalten, Kollisionen werden abgewiesen.
+Jede Änderung wird getrennt mit Zustandskennung als Entwurf gespeichert;
+andere noch nicht gespeicherte Eingaben blockieren die Aktion. Beim Schließen
+solcher Eingaben wird nachgefragt. Fehlerhafte oder veraltete Schreibvorgänge
+sperren weitere Änderungen bis zum Neuladen. Ein Integrationstest verwendet
+echte interne Perl-Transaktionen auf temporären Dateien, während ein lokaler
+Browsertest die Oberfläche mit simuliertem Transport prüft.
+Der vorbereitete Widget-Dialogvertrag `Schema5WidgetSession` bindet eine
+einzelne Aktion an Seite, Widget-ID, Typ, Raster und die beim Öffnen angezeigte
+Zustandskennung. Er ersetzt nur die Widget-Speicher- und Löschdienste; die
+übrigen vom Aufrufer übergebenen Dienste bleiben unverändert und stellen keine
+Sicherheitssperre dar. Mehrfachaktionen und veränderte Identität oder
+Rasterposition werden abgewiesen. Beim Schließen wird die Bearbeitung
+ungültig; ein bereits begonnener Schreibvorgang darf noch abgeschlossen werden,
+sein Ergebnis darf aber die geschlossene Oberfläche nicht erneut öffnen.
+Aufrufer müssen dafür auch nach Erhalt des Ergebnisses ihren eigenen
+Oberflächen-Lebenszyklus prüfen; ein bereits aufgelöstes Ergebnis lässt sich
+durch nachträgliches Schließen nicht zurückziehen.
+Fehler und veraltete Dialoge erfordern einen neuen Zustand und eine neue
+Dialogsession. Das vorbereitete Widgetpanel verbindet diesen Vertrag mit den
+Bestandsdialogen: Widgets der angezeigten Seite können angelegt, bearbeitet und
+nach der jeweiligen Dialogbestätigung gelöscht werden. Neue Widgets erhalten
+eine auf der Seite eindeutige Widget-ID und eine freie Startposition unterhalb des bestehenden
+Rasters; wenn dort kein Platz bleibt, wird das Anlegen sichtbar abgewiesen.
+Der Rastereditor kann die Position später ändern. Während des Dialogs werden
+die Widget-Kachel und Geräteaktionen über `setCommand` und `setTarget` gesperrt;
+andere übergebene Dienste bleiben verfügbar und sind keine allgemeine
+Sicherheitsgrenze. Laufende Schreibvorgänge sperren den Dialog und dürfen bei
+Tabende zwar abgeschlossen werden, aber die Ansicht nicht wieder öffnen.
+Die Tests verwenden auch interne Perl-Transaktionen auf temporären Dateien.
+Ein lokaler Browsertest öffnete alle zwölf Bestandsdialoge und prüfte Anlegen,
+Abbrechen und HTML-Speichern mit simuliertem Transport. Das Panel ist noch nicht
+mit dem Device-Einstieg oder einem öffentlichen Schreibtransport verbunden.
+Das vorbereitete Navigationspanel bearbeitet Ausrichtung sowie optionale
+Beschriftungen und Pixelgrößen der Seiteneinträge. Die Rasterposition bleibt
+unverändert; sie wird getrennt im Rastereditor bearbeitet. Nicht gespeicherte
+Eingaben erfordern beim Schließen eine Bestätigung. Gespeichert wird über die
+angezeigte Zustandskennung; ein Fehler sperrt die Bearbeitung bis zum Neuladen.
+Ein Test nutzt echte interne Perl-Entwurfstransaktionen auf temporären Dateien.
+Das vorbereitete Darstellungspanel speichert Theme und Rahmenanzeige über den
+zustandsgebundenen Entwurfsvertrag. Nicht geänderte optionale Werte bleiben
+unverändert, und nicht gespeicherte Eingaben erfordern eine Bestätigung beim
+Schließen. Der Editor zeigt die Einstellungen des angezeigten Live- oder
+Entwurfsstandes an und stellt vorherige Darstellungsattribute beim Stoppen oder
+Verlassen wieder her. Auch hier sperren unklare Fehler bis zum Neuladen;
+isolierte Tests prüfen echte Perl-Transaktionen und das Verwerfen des Entwurfs.
+Der vorbereitete Editor bietet
+das ausdrückliche Veröffentlichen und Verwerfen eines angezeigten Entwurfs
+nach einer Bestätigung und gegen dessen Zustandskennung. Verlorene Antworten
+und veraltete Zustände sperren beide Aktionen bis zum ausdrücklichen Neuladen.
+Ein Integrationstest prüft diese Abläufe mit echten internen Perl-Transaktionen
+und bytegenauem Live-Backup in einem temporären Verzeichnis; FHEMWEB und DOM
+werden dabei simuliert.
 Ein lokaler Browsertest mit echtem Gridstack hat Ziehen und Speichern gegen
 einen simulierten Transport geprüft; der automatisierte Integrationstest nutzt
 isolierte Perl-Transaktionen und Gridstack-Stubs. Beides ersetzt keinen
 FHEMWEB- oder Geräte-Abnahmetest.
 Der Entwurfscontroller selbst bietet weder eine Oberfläche noch einen
 öffentlichen Schreibweg.
+Der vorbereitete Transport `fcui-schema5-transport.js` und der interne
+Perl-Vertrag `FHEMCMS_Version5DraftCommand` vereinbaren eine getrennte
+`version5draft`-Aktion mit Zustandskennung und Base64-JSON für Speichern sowie
+zustandsgebundenes Veröffentlichen und Verwerfen. Der interne Vertrag prüft
+Parameter, Größe, kanonisches Base64 und JSON und verwendet die bestehenden
+Transaktionen. Ein Test verbindet den echten FHEM-Client über einen simulierten
+FHEMWEB-Transport mit diesen internen Perl-Funktionen auf isolierten Dateien,
+einschließlich veralteter Zustände, verlorener Antworten und Live-Backup.
+Die vorbereitete Factory `createSchema5Editor` verbindet den Editor mit diesem
+Transport und verlangt getrennte Clients für Entwurf und Live-Abonnements.
+Beide müssen auf denselben FHEMWEB-Endpunkt und dasselbe CMS-Device zeigen.
+Die gemeinsamen Widgetdienste werden für Altbestand und vorbereiteten
+Schema-5-Editor über `widget-services.js` zusammengestellt. Die Factory stellt
+ohne eigene Dienstauswahl Geräte-, Icon-, Medien-, Verlaufs- und Aktionsdienste
+bereit; direkte Widget-Speicheraufrufe außerhalb der Dialogsession werden
+abgewiesen. Geräte- und Iconlisten werden wie im Bestand zwischengespeichert;
+fehlgeschlagene Leseversuche können wiederholt werden.
+Ein weiterer Integrationstest verbindet die Editorbedienung mit FHEM-Client,
+simuliertem FHEMWEB und internen Perl-Transaktionen auf isolierten Dateien;
+er prüft unter anderem veraltete Tabs, Bestätigungsabbruch, Antwortverlust
+nach Veröffentlichung und ein bytegenaues Backup. DOM und Gridstack sind
+dabei Stubs, keine vollständige Browser- oder FHEMWEB-Abnahme.
+Der Set-Befehl `version5draft` ist registriert; die Tests ersetzen keine
+Prüfung mit echtem FHEMWEB und vollständiger Oberfläche.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
 Positionsplan um; sie speichert und überträgt ihn nicht.

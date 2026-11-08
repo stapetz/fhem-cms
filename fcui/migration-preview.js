@@ -1,6 +1,8 @@
 import { migrationPositions, planEffectiveLegacyLayout } from './layout-migration.js';
 import { createPreviewServices } from './preview-services.js';
 import { FhemClient, isValidName } from '../www/fhem-cms/js/fhem-client.js';
+import { createMigrationTransport } from '../www/fhem-cms/js/fcui-migration-transport.js';
+import { MigrationController } from '../www/fhem-cms/js/fcui-migration-controller.js';
 
 const file = document.getElementById('file');
 const status = document.getElementById('status');
@@ -28,12 +30,20 @@ const backupStatus = document.getElementById('backup-status');
 const backupResult = document.getElementById('backup-result');
 const backupLive = document.getElementById('backup-live');
 const backupData = document.getElementById('backup-data');
+const migrateButton = document.getElementById('commit-migration');
+const restoreButton = document.getElementById('commit-restore');
+const externalBackup = document.getElementById('external-backup');
+const initialDevice = new URL(window.location.href).searchParams.get('device');
+if (isValidName(initialDevice)) device.value = initialDevice;
 let config;
 let client;
 let changes = new Map();
 let sequence = 0;
 let backupSequence = 0;
 let backupClient;
+let migrationController;
+let restoreController;
+let writing = false;
 let targetConfig;
 let targetInstance;
 let targetGeneration = 0;
@@ -50,11 +60,6 @@ const make = (tag, text) => {
   const element = document.createElement(tag);
   if (text !== undefined) element.textContent = text;
   return element;
-};
-const normalized = (value) => {
-  if (Array.isArray(value)) return value.map(normalized);
-  if (!value || typeof value !== 'object') return value;
-  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, normalized(value[key])]));
 };
 
 function drawTile(grid, text) {
@@ -98,6 +103,7 @@ function formFor(item, current, source, original) {
   const reset = make('button', 'Anpassung zurücksetzen');
   reset.type = 'button';
   reset.addEventListener('click', () => {
+    if (writing) return;
     sequence += 1;
     clearTarget();
     changes.delete(keyOf(item));
@@ -108,6 +114,7 @@ function formFor(item, current, source, original) {
   form.append(fieldset);
   form.addEventListener('submit', (event) => {
     event.preventDefault();
+    if (writing) return;
     const grid = Object.fromEntries(Object.entries(fields).map(([name, input]) => [name, input.valueAsNumber]));
     const next = new Map(changes);
     next.set(keyOf(item), { ...item, grid });
@@ -151,6 +158,8 @@ function render() {
 
 function clearPreview() {
   clearTarget();
+  if (migrationController) migrationController.stop();
+  migrationController = undefined;
   config = undefined;
   client = undefined;
   changes = new Map();
@@ -162,6 +171,8 @@ function clearPreview() {
 }
 
 function clearTarget() {
+  if (migrationController) migrationController.invalidate();
+  migrateButton.hidden = true;
   targetGeneration += 1;
   clearWidgetTarget();
   targetConfig = undefined;
@@ -265,6 +276,9 @@ async function renderTarget() {
 
 function clearBackups() {
   backupSequence += 1;
+  if (restoreController) restoreController.stop();
+  restoreController = undefined;
+  restoreButton.hidden = true;
   backupClient = undefined;
   backupControls.hidden = true;
   backupResult.hidden = true;
@@ -277,6 +291,7 @@ function showConfig(candidate, fhemClient) {
   const plan = planEffectiveLegacyLayout(candidate);
   config = candidate;
   client = fhemClient;
+  migrationController = client ? new MigrationController(createMigrationTransport(client)) : undefined;
   for (const page of plan.pages) {
     const option = make('option', page.id);
     option.value = page.id;
@@ -288,6 +303,7 @@ function showConfig(candidate, fhemClient) {
 }
 
 file.addEventListener('change', async () => {
+  if (writing) return;
   const current = ++sequence;
   clearPreview();
   clearBackups();
@@ -317,6 +333,7 @@ file.addEventListener('change', async () => {
 
 deviceForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (writing) return;
   const current = ++sequence;
   clearPreview();
   file.value = '';
@@ -334,6 +351,8 @@ deviceForm.addEventListener('submit', async (event) => {
 });
 
 device.addEventListener('input', () => {
+  if (writing) return;
+  externalBackup.checked = false;
   sequence += 1;
   clearPreview();
   status.textContent = 'CMS-Device geändert. Bitte Live-Daten erneut laden.';
@@ -342,7 +361,11 @@ device.addEventListener('input', () => {
 });
 
 loadBackups.addEventListener('click', async () => {
+  if (writing) return;
   const current = ++backupSequence;
+  if (restoreController) restoreController.stop();
+  restoreController = undefined;
+  restoreButton.hidden = true;
   backupClient = undefined;
   backupControls.hidden = true;
   backupResult.hidden = true;
@@ -361,6 +384,7 @@ loadBackups.addEventListener('click', async () => {
       backupSelect.append(option);
     }
     backupClient = candidateClient;
+    restoreController = new MigrationController(createMigrationTransport(candidateClient));
     backupControls.hidden = false;
     backupStatus.textContent = 'Backup auswählen und prüfen. Es werden keine Daten gespeichert.';
   } catch (error) {
@@ -370,20 +394,26 @@ loadBackups.addEventListener('click', async () => {
 });
 
 backupSelect.addEventListener('change', () => {
+  if (writing) return;
   backupSequence += 1;
+  if (restoreController) restoreController.invalidate();
+  restoreButton.hidden = true;
   backupResult.hidden = true;
   backupStatus.textContent = 'Backup geändert. Bitte erneut prüfen.';
 });
 
 previewBackup.addEventListener('click', async () => {
+  if (writing) return;
   const current = ++backupSequence;
   backupResult.hidden = true;
+  restoreButton.hidden = true;
   try {
-    const result = await backupClient.previewMigrationRestore(backupSelect.value);
+    const result = await restoreController.previewRestore(backupSelect.value);
     if (current !== backupSequence) return;
     backupLive.textContent = JSON.stringify(result.live, null, 2);
     backupData.textContent = JSON.stringify(result.backup, null, 2);
     backupResult.hidden = false;
+    restoreButton.hidden = false;
     backupStatus.textContent = 'Live und Backup serverseitig geprüft. Es wurde nichts wiederhergestellt.';
   } catch (error) {
     if (current !== backupSequence) return;
@@ -392,22 +422,69 @@ previewBackup.addEventListener('click', async () => {
 });
 
 validate.addEventListener('click', async () => {
+  if (writing) return;
   const current = ++sequence;
   clearTarget();
   try {
     const positions = migrationPositions(config, [...changes.values()]);
-    const result = await client.previewMigration(positions);
+    const result = await migrationController.previewMigration(config, positions);
     if (current !== sequence) return;
-    if (JSON.stringify(normalized(result.source)) !== JSON.stringify(normalized(config))) {
-      throw new Error('Die Live-Daten wurden geändert. Bitte erneut laden und prüfen.');
-    }
     targetConfig = result.config;
     showTarget.hidden = false;
     showWidgets.hidden = false;
+    migrateButton.hidden = false;
     status.textContent = 'Positionen und Konfiguration serverseitig geprüft. Es wurde nichts gespeichert.';
   } catch (error) {
     if (current !== sequence) return;
     status.textContent = `Prüfung fehlgeschlagen: ${error.message}`;
+  }
+});
+
+async function commit(controller, action) {
+  if (writing) return;
+  if (!externalBackup.checked) {
+    throw new Error('Vorher eine vollständige externe Sicherung erstellen und prüfen.');
+  }
+  writing = true;
+  const controls = [file, device, pageSelect, backupSelect, validate, loadBackups, previewBackup,
+    migrateButton, restoreButton, externalBackup];
+  for (const control of controls) control.disabled = true;
+  try {
+    return await controller.commit(() => window.confirm(action === 'migrate'
+      ? 'CMS jetzt auf Schema 5 umstellen? Die Live-Konfiguration wird ersetzt. Eine geprüfte externe Sicherung muss vorliegen.'
+      : 'Backup jetzt wiederherstellen? Die Live-Konfiguration wird ersetzt. Eine geprüfte externe Sicherung muss vorliegen.'));
+  } finally {
+    writing = false;
+    for (const control of controls) control.disabled = false;
+  }
+}
+
+migrateButton.addEventListener('click', async () => {
+  try {
+    const backup = await commit(migrationController, 'migrate');
+    if (backup === null) return;
+    externalBackup.checked = false;
+    clearPreview();
+    clearBackups();
+    status.textContent = `Umstellung abgeschlossen. Sicherung: ${backup}. CMS-Seite neu laden.`;
+  } catch (error) {
+    clearTarget();
+    status.textContent = `Umstellung nicht bestätigt: ${error.message}. Zustand und Sicherungen erneut prüfen.`;
+  }
+});
+
+restoreButton.addEventListener('click', async () => {
+  try {
+    const backup = await commit(restoreController, 'restore');
+    if (backup === null) return;
+    externalBackup.checked = false;
+    clearPreview();
+    clearBackups();
+    backupStatus.textContent = `Wiederherstellung abgeschlossen. Vorheriger Live-Stand: ${backup}. CMS-Seite neu laden.`;
+  } catch (error) {
+    if (restoreController) restoreController.invalidate();
+    restoreButton.hidden = true;
+    backupStatus.textContent = `Wiederherstellung nicht bestätigt: ${error.message}. Zustand und Sicherungen erneut prüfen.`;
   }
 });
 
@@ -418,9 +495,19 @@ showTarget.addEventListener('click', () => {
 });
 
 showWidgets.addEventListener('click', renderWidgetTarget);
-window.addEventListener('pagehide', clearWidgetTarget);
+let suspended = false;
+window.addEventListener('pagehide', () => {
+  suspended = true;
+  sequence += 1;
+  clearPreview();
+  clearBackups();
+});
+window.addEventListener('pageshow', (event) => {
+  if (suspended && event.persisted) window.location.reload();
+});
 
 pageSelect.addEventListener('change', () => {
+  if (writing) return;
   render();
   if (targetVisible) renderTarget();
   if (widgetVisible) renderWidgetTarget();

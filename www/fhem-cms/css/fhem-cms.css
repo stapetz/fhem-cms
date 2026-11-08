@@ -82,6 +82,10 @@ body {
   container-type: inline-size;
 }
 
+.cms-schema5-grid > .grid-stack-item > .grid-stack-item-content > * {
+  height: 100%;
+}
+
 .cms-status {
   margin: 0 0 0.5rem;
   color: var(--cms-muted);

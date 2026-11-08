@@ -1,6 +1,7 @@
 import { createWidgetElement, dataFor, devicesOf, groupSnapshots, isLiveWidget } from './widget-factory.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { DevicePreview } from './device-preview.js';
+import { createSchema5WidgetServices, createWidgetServices } from './widget-services.js';
 import {
   GRID_COLUMNS, GRID_COLUMN_CHOICES, LAYOUT_MODES, cellFromPoint, configureLayout, effectiveLayout, flowLayout,
   layoutMode, layoutStep, moveWidget, normalizeLayout, resizeWidget
@@ -136,6 +137,11 @@ export class CmsPage {
     this.publishButton = this.button('Veröffentlichen', () => this.publish());
     this.discardButton = this.button('Entwurf verwerfen', () => this.discard());
     this.backupsButton = this.button('Backups …', () => this.showBackups());
+    this.migrationButton = this.button('Migration / Restore …', () => {
+      const url = new URL('../examples/migration-preview.html', window.location.href);
+      url.searchParams.set('device', this.client.cmsDevice);
+      window.open(url.href, '_blank', 'noopener');
+    });
     this.purgeButton = this.button('Daten löschen …', () => this.showPurgeDialog());
     this.showGrid = !VIEW_MODE && window.localStorage.getItem(GUIDE_KEY) === '1';
     this.gridButton = this.button('Raster anzeigen', () => this.toggleGuides());
@@ -209,7 +215,7 @@ export class CmsPage {
       this.menus.push(menu);
       return menu;
     };
-    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton]);
+    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.migrationButton, this.purgeButton]);
     const editMenu = makeMenu('Bearbeiten', [this.navButton]);
     this.menu = makeMenu('Einfügen', this.menuButtons);
     const viewMenu = makeMenu('Ansicht', [this.gridButton]);
@@ -1301,20 +1307,14 @@ export class CmsPage {
   }
 
   services() {
-    return {
+    return createWidgetServices({
+      client: this.client,
       listDevices: () => this.listDevices(),
       listAllDevices: () => this.listAllDevices(),
       listIcons: () => this.listIcons(),
-      iconUrl: (name) => this.client.iconUrl(name),
-      setCommand: (device, command, value) => this.client.setCommand(device, command, value),
-      setTarget: (widget, value, device) => this.client.setReading(device || widget.device, widget.readings.target, value),
-      listMedia: () => this.client.listMedia(),
-      logReadings: (device, source) => this.client.logReadings(device, source),
-      history: (device, reading, range, granularity, source) => this.client.history(device, reading, range, granularity, source),
-      uploadMedia: (bytes) => this.client.uploadMedia(bytes),
       saveWidget: (widget) => this.saveWidget(widget),
       deleteWidget: (id) => this.deleteWidget(id)
-    };
+    });
   }
 
   async listDevices() {
@@ -1996,12 +1996,50 @@ export class CmsPage {
   }
 }
 
-export async function startCmsDevice(client, startLegacy) {
+export async function startCmsDevice(client, startLegacy, startSchema5) {
   const format = await client.getLayoutFormat();
-  if (format !== 4) {
-    throw new Error(`Layoutformat ${format} kann hier noch nicht bearbeitet oder angezeigt werden`);
+  if (format === 4) return startLegacy();
+  if (format === 5 && typeof startSchema5 === 'function') return startSchema5();
+  throw new Error(`Layoutformat ${format} kann hier nicht bearbeitet oder angezeigt werden`);
+}
+
+async function startSchema5Device(client, shell, card, isSuspended) {
+  const [runtime, editorModule, viewModule] = await Promise.all([
+    import('./fcui-runtime.js'), import('./fcui-schema5-editor.js'), import('./fcui-schema5-view.js'),
+  ]);
+  if (isSuspended()) return;
+  const liveClient = new FhemClient(client.cmsDevice, client.endpoint);
+  if (!VIEW_MODE) {
+    const migrationLink = document.createElement('a');
+    const migrationUrl = new URL('../examples/migration-preview.html', window.location.href);
+    migrationUrl.searchParams.set('device', client.cmsDevice);
+    migrationLink.href = migrationUrl.href;
+    migrationLink.target = '_blank';
+    migrationLink.rel = 'noopener';
+    migrationLink.textContent = 'Migration / Restore';
+    shell.append(migrationLink);
+    const root = document.createElement('section');
+    shell.append(root);
+    const editor = editorModule.createSchema5Editor({
+      GridStack: runtime.GridStack, root, draftClient: client, liveClient,
+    });
+    await editor.start();
+    if (!isSuspended()) card.hidden = true;
+    return;
   }
-  await startLegacy();
+  const state = await client.getVersion5State();
+  if (isSuspended()) return;
+  const config = PREVIEW_MODE && state.draft ? state.draft : state.live;
+  document.documentElement.setAttribute('data-cms-theme', config.theme === 'light' ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-cms-frames', config.settings?.showFrames === false ? 'off' : 'on');
+  const grid = document.createElement('div');
+  grid.className = 'grid-stack cms-schema5-grid';
+  shell.append(grid);
+  const view = new viewModule.Schema5View({
+    GridStack: runtime.GridStack, root: grid, status: card, config, client: liveClient,
+    services: createSchema5WidgetServices(client),
+  });
+  await view.start();
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -2042,11 +2080,16 @@ document.addEventListener('DOMContentLoaded', async function () {
       const started = page.start();
       removeStartupListeners();
       return started;
+    }, async () => {
+      if (suspended) return;
+      await startSchema5Device(client, shell, card, () => suspended);
+      if (!suspended) removeStartupListeners();
     });
   } catch (error) {
     if (suspended) return;
     removeStartupListeners();
     document.documentElement.classList.add('cms-view');
+    card.hidden = false;
     card.setAttribute('data-error', '');
     card.textContent = `Konfiguration konnte nicht geladen werden: ${error.message || String(error)}`;
   }

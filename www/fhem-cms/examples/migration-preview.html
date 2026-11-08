@@ -29,9 +29,13 @@
     <p>Geometrische Vorschau einer Schema-4-JSON-Datei oder eines CMS-Devices.
       Die gespeicherte Konfiguration ist als Text einsehbar. Optional können
       nach der Serverprüfung Widgets schreibfrei dargestellt werden. Nur beim Laden eines CMS-Devices
-      können Positionen serverseitig geprüft werden. Es werden keine Daten
-      gespeichert; Änderungen gehen beim Schließen verloren. Eine Umstellung ist
-      noch nicht möglich.</p>
+      können Positionen serverseitig geprüft und nach ausdrücklicher Bestätigung
+      umgestellt werden. Änderungen an der Vorschau gehen beim Schließen verloren.</p>
+    <p><strong>Vor Umstellung oder Wiederherstellung:</strong> Eine vollständige externe Sicherung
+      von FHEM-Konfiguration, CMS-Daten, Medien, Modul und Assets erstellen und prüfen.
+      Ein vorhandener Entwurf muss vorher veröffentlicht oder verworfen werden.</p>
+    <label><input id="external-backup" type="checkbox">
+      Ich habe eine vollständige externe Sicherung erstellt und geprüft.</label>
     <label>JSON-Datei auswählen <input id="file" type="file" accept=".json,application/json"></label>
     <form id="device-form">
       <label>CMS-Device <input id="device" required maxlength="128" autocomplete="off"></label>
@@ -39,7 +43,7 @@
     </form>
     <section aria-labelledby="restore-heading">
       <h2 id="restore-heading">Wiederherstellung prüfen</h2>
-      <p>Backups und Live-Daten werden nur als Text verglichen. Eine Wiederherstellung wird nicht ausgeführt.</p>
+      <p>Live und Backup vor einer ausdrücklich bestätigten Wiederherstellung prüfen.</p>
       <button id="load-backups" type="button">Backups des CMS-Devices laden</button>
       <div id="backup-controls" hidden>
         <label>Backup <select id="backup"></select></label>
@@ -49,6 +53,7 @@
       <div id="backup-result" hidden>
         <h3>Aktueller Live-Stand</h3><pre id="backup-live"></pre>
         <h3>Ausgewähltes Backup</h3><pre id="backup-data"></pre>
+        <button id="commit-restore" type="button" hidden>Geprüftes Backup wiederherstellen</button>
       </div>
     </section>
     <p id="status" role="status">Bitte eine Datei auswählen.</p>
@@ -60,6 +65,7 @@
       <button id="validate" type="button" hidden>Positionen serverseitig prüfen</button>
       <button id="show-target" type="button" hidden>Geprüftes Zielraster mit Gridstack anzeigen</button>
       <button id="show-widgets" type="button" hidden>Geprüfte Widgets schreibfrei anzeigen</button>
+      <button id="commit-migration" type="button" hidden>Geprüftes Layout auf Schema 5 umstellen</button>
       <section id="target" hidden>
         <h2>Geprüftes Gridstack-Zielraster</h2>
         <p>Nur Positionen und Bezeichnungen; keine Widget-Darstellung, Live-Werte oder Aktionen.</p>

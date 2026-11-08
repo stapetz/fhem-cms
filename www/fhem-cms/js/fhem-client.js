@@ -1,4 +1,4 @@
-const NAME_PATTERN = /^[A-Za-z0-9_.-]{1,128}$/;
+const NAME_PATTERN = /^[A-Za-z0-9_.-]{1,128}(?![\s\S])/;
 
 export const ICON_NAME = /^(?!.*\.\.)[A-Za-z0-9_][A-Za-z0-9_./-]{0,79}$/;
 
@@ -16,7 +16,8 @@ function toBase64(text) {
 }
 
 // Dünner Client für FHEMWEB. Anmeldung, Rechte und CSRF-Schutz bleiben bei FHEMWEB.
-const BACKUP_NAME = /^config\.json\.\d{8}-\d{6}(?:-\d+)?\.bak$/;
+export const BACKUP_NAME = /^config\.json\.\d{8}-\d{6}(?:-\d+)?\.bak(?![\s\S])/;
+const STATE_TOKEN = /^[0-9a-f]{64}(?![\s\S])/;
 
 export class FhemClient {
   constructor(cmsDevice, baseUrl = new URL('../../', window.location.href)) {
@@ -138,7 +139,7 @@ export class FhemClient {
     if (!result || typeof result !== 'object' || !result.config || !result.source
       || result.config.schemaVersion !== 5 || Number(result.source.schemaVersion) !== 4
       || typeof result.token !== 'string'
-      || !/^[0-9a-f]{64}$/.test(result.token)) {
+      || !STATE_TOKEN.test(result.token)) {
       throw new Error('Unerwartete Antwort für die Migrationsvorschau');
     }
     return result;
@@ -151,7 +152,7 @@ export class FhemClient {
       && /^[0-9]{1,6}$/.test(String(config.schemaVersion)) && Number(config.schemaVersion) === 5;
     if (!state || typeof state !== 'object' || Array.isArray(state)
       || !isVersion5(state.live) || (state.draft !== null && !isVersion5(state.draft))
-      || typeof state.token !== 'string' || !/^[0-9a-f]{64}$/.test(state.token)) {
+      || typeof state.token !== 'string' || !STATE_TOKEN.test(state.token)) {
       throw new Error('Unerwartete Antwort für den versionierten Zustand');
     }
     return state;
@@ -219,7 +220,7 @@ export class FhemClient {
       && Number(config.schemaVersion) >= 1 && Number(config.schemaVersion) <= 5;
     if (!result || typeof result !== 'object' || Array.isArray(result)
       || !isSupported(result.live) || !isSupported(result.backup)
-      || typeof result.token !== 'string' || !/^[0-9a-f]{64}$/.test(result.token)) {
+      || typeof result.token !== 'string' || !STATE_TOKEN.test(result.token)) {
       throw new Error('Unerwartete Antwort für die Wiederherstellungsvorschau');
     }
     return result;

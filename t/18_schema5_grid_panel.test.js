@@ -184,6 +184,33 @@ test('grid panel reports uncertain saves and requires reload before further edit
   }
 });
 
+test('suspended panel disposes after a failed in-flight save without invoking callbacks', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const f = fixture();
+    const state = await f.controller.reload();
+    const root = new Element('section');
+    let callbacks = 0;
+    const panel = new Schema5GridPanel({ GridStack: f.GridStack, root, controller: f.controller,
+      pageId: 'a', token: state.token, onSaved: () => { callbacks += 1; }, onCancel: () => { callbacks += 1; } });
+    const gate = f.delay();
+    f.fail('Antwort verloren');
+    const saving = root.children[5].fire('click');
+    panel.suspend();
+    assert.equal(root.hidden, true);
+    assert.equal(f.grid.destroyed, false);
+    gate.resolve();
+    await saving;
+    assert.equal(f.grid.destroyed, true);
+    assert.equal(root.children.length, 0);
+    assert.equal(callbacks, 0);
+    assert.throws(() => f.controller.snapshot(), /nicht geladen/);
+  } finally {
+    globalThis.document = original;
+  }
+});
+
 test('grid panel saves a validated draft through real isolated Perl transactions', async () => {
   const originalDocument = globalThis.document;
   const dir = await mkdtemp(join(tmpdir(), 'cms-v5-panel-'));

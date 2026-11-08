@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-test('device entry starts only the validated legacy format and displays format errors', async () => {
+test('device entry dispatches validated formats and displays format errors', async () => {
   const previous = {
     window: globalThis.window, document: globalThis.document,
     HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
@@ -51,9 +51,13 @@ test('device entry starts only the validated legacy format and displays format e
     let started = 0;
     await startCmsDevice({ getLayoutFormat: async () => 4 }, async () => { started += 1; });
     assert.equal(started, 1);
+    let started5 = 0;
+    await startCmsDevice({ getLayoutFormat: async () => 5 }, () => { started += 1; },
+      () => { started5 += 1; });
+    assert.equal(started5, 1);
     for (const format of [5, 6]) {
       await assert.rejects(startCmsDevice({ getLayoutFormat: async () => format }, () => { started += 1; }),
-        /Layoutformat .* noch nicht/);
+        /Layoutformat .* nicht/);
     }
     await assert.rejects(startCmsDevice({ getLayoutFormat: async () => { throw new Error('offline'); } },
       () => { started += 1; }), /offline/);
@@ -63,11 +67,11 @@ test('device entry starts only the validated legacy format and displays format e
     globalThis.fetch = async (url, options) => {
       if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'test-token' } });
       commands.push(options.body.get('cmd'));
-      return new Response('{"schemaVersion":5}');
+      return new Response('{"schemaVersion":6}');
     };
     await onReady();
     assert.deepEqual(commands, ['get CMS layoutformat']);
-    assert.match(card.textContent, /Layoutformat 5/);
+    assert.match(card.textContent, /Unerwartete Antwort/);
     assert.ok('data-error' in card.attributes);
     assert.ok(classes.has('cms-view'), 'initialization errors remain readable in edit mode');
 

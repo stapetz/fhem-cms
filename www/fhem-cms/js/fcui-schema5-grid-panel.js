@@ -23,6 +23,7 @@ export class Schema5GridPanel {
   #selected = '';
   #closed = false;
   #saving = false;
+  #suspended = false;
   #dirty = false;
   #requiresReload = false;
   #onSaved;
@@ -179,6 +180,10 @@ export class Schema5GridPanel {
       result = await this.#editor.save();
     } catch (error) {
       this.#saving = false;
+      if (this.#suspended) {
+        this.close();
+        return;
+      }
       this.#requiresReload = true;
       this.#cancel.disabled = false;
       this.#cancel.textContent = 'Schließen';
@@ -187,7 +192,14 @@ export class Schema5GridPanel {
     }
     this.#saving = false;
     this.close();
-    this.#onSaved(result);
+    if (!this.#suspended) this.#onSaved(result);
+  }
+
+  suspend() {
+    if (this.#closed || this.#suspended) return;
+    this.#suspended = true;
+    this.#root.hidden = true;
+    if (!this.#saving) this.close();
   }
 
   close() {

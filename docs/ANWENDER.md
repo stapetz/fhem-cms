@@ -32,18 +32,45 @@ Nach `update all …` hängt das weitere Vorgehen davon ab, was sich geändert h
 
 `rebuild` erzeugt nur die Startseite `www/fhem-cms/<Device>/index.html` neu und aktualisiert dabei die Versionsparameter, damit der Browser die neuen Dateien lädt. Konfiguration, Entwurf und Backups bleiben unberührt. Dieselbe Neuerzeugung läuft automatisch bei jedem FHEM-Start. Meldet `update` „nothing to do“, obwohl es Änderungen gibt, ist meist das Manifest auf GitHub noch nicht fertig (ein bis zwei Minuten nach dem Push) oder gecacht.
 
-## Experimentelle Rastervorschau
+## Umstellung und Wiederherstellung testen
 
-Unter `/fhem/fhem-cms/examples/migration-preview.html` lässt sich ein 48-Spalten-Layout
-geometrisch für 12 Spalten untersuchen. Alternativ zu einer lokalen JSON-Datei können
-Sie den Namen eines CMS-Devices eingeben und dessen Live-Konfiguration laden.
-Offene Positionen und Überschneidungen müssen manuell angepasst werden. Anschließend
-prüft die Seite den Plan auf Wunsch serverseitig; ein vorhandener Entwurf sperrt
-diese Prüfung. Die gespeicherten Widget- und Navigationsdaten lassen sich als
-Text aufklappen; die Widgets selbst werden nicht ausgeführt oder dargestellt.
-Die Vorschau speichert oder migriert nichts. Änderungen an Positionen gehen beim
-Schließen verloren. Der Pfad beginnt
-gegebenenfalls mit dem abweichenden FHEMWEB-Webnamen statt `/fhem`.
+Die Umstellung betrifft alle Seiten eines CMS-Devices. Bestehende Layouts bleiben
+im 48-Spalten-Format, bis die Umstellung ausdrücklich bestätigt wird. Neue
+Positionen im 12-Spalten-Raster werden nicht automatisch gerundet.
+
+1. Vor dem Test eine vollständige externe Sicherung von FHEM-Konfiguration,
+   CMS-Datenverzeichnis einschließlich Live, Entwurf und Backups, Medien, Modul
+   und gemeinsamen Assets erstellen und deren Wiederherstellbarkeit prüfen.
+   Auf einer isolierten Testinstanz und nur mit freigegebenen Testgeräten testen.
+2. Einen vorhandenen Entwurf bewusst veröffentlichen oder verwerfen. Solange ein
+   Entwurf existiert, sind Migration und Wiederherstellung gesperrt.
+3. Im Bearbeitungsmodus `Datei → Migration / Restore …` öffnen oder
+   `/fhem/fhem-cms/examples/migration-preview.html` aufrufen. Bei abweichendem
+   FHEMWEB-Webnamen beginnt der Pfad entsprechend anders. Das CMS-Device
+   eingeben und `Live-Daten laden` wählen.
+4. Offene Positionen auf allen Seiten manuell festlegen und Überschneidungen
+   beheben. `Positionen serverseitig prüfen` anklicken und das Zielraster sowie
+   die optionale schreibfreie Widget-Ansicht prüfen. Die Ansicht zeigt einmalig
+   gelesene Werte, keine laufenden Aktualisierungen; Geräteaktionen sind dort
+   gesperrt. Eine lokal geladene JSON-Datei kann nur untersucht werden.
+5. Erst nach geprüfter externer Sicherung das entsprechende Kästchen markieren,
+   `Geprüftes Layout auf Schema 5 umstellen` und den Bestätigungsdialog wählen.
+   Das Modul sichert den bisherigen Live-Stand zusätzlich bytegenau. Der
+   angezeigte Backup-Name muss notiert werden. CMS-Seite neu laden und
+   Navigation, Widgets, Medien und beide Platzhalterformen kontrollieren.
+
+Für eine Wiederherstellung auf derselben Seite `Backups des CMS-Devices laden`,
+das Backup auswählen und `Backup prüfen` wählen. Live und Backup vergleichen,
+die externe Sicherung bestätigen und `Geprüftes Backup wiederherstellen`
+bestätigen. Der vorherige Live-Stand wird ebenfalls gesichert. Nach einem Fehler
+oder einer verlorenen Antwort zuerst aktuellen Zustand und Backups prüfen, statt
+den Schreibvorgang blind zu wiederholen. Die Vorschau und ungespeicherte
+Positionsänderungen gehen beim Schließen verloren.
+
+Für einen Rollback auf eine ältere CMS-Version ausschließlich eine zusammengehörige
+vollständige Code-, Asset- und Datensicherung auf einer isolierten Instanz
+wiederherstellen: Ältere Module können Schema 5 nicht sicher interpretieren.
+Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfiguration.
 
 ## Sicherheit: FHEMWEB absichern
 
@@ -58,6 +85,12 @@ attr allowed basicAuth <base64 von benutzer:passwort>
 Das CMS speichert keine Zugangsdaten und erlaubt keine fremden Origins (kein CORS).
 
 ## Bedienung
+
+Die folgenden Beschreibungen betreffen vor allem das bisherige 48-Spalten-Format.
+Im 12-Spalten-Format stehen im Bearbeitungsmodus separate Schaltflächen für Raster,
+Seiten, Widgets, Navigation und Darstellung zur Verfügung. Änderungen werden als
+Entwurf gespeichert und erst nach Bestätigung veröffentlicht. Die normale
+Homepage zeigt Live, `?mode=preview` den Entwurf und `?mode=edit` den Editor.
 
 - **Navigation:** Die Seite hat keinen Kopfbereich mehr; eine Überschrift schreiben Sie bei Bedarf selbst in einen Textbaustein. Die Navigation ist ein eigenes Widget und gilt auf allen Seiten gleich. Im Bearbeitungsmodus öffnet der Button `Navigation` (links in der Werkzeugleiste) einen Dialog: Ausrichtung horizontal oder vertikal, Seiten mit `+ Seite` anlegen, per Ziehen am ☰-Griff umsortieren, mit ✎ umbenennen und mit ✕ löschen (die letzte Seite kann nicht gelöscht werden). Beim Löschen einer Seite mit Widgets fragt der Dialog, ob die Widgets vorher verschoben werden sollen; wenn ja, wählen Sie je Widget eine Zielseite, Widgets ohne Zielseite („– löschen –“) werden mit der Seite gelöscht. Änderungen im Dialog gelten erst nach `Speichern`; `Abbrechen` verwirft sie. Im Layout-Modus lässt sich die Navigation wie jede Kachel verschieben und in der Größe ändern. Seiten sind per Link `#/<id>` aufrufbar.
 - **Widgets:** `+ Widget` fügt eine Thermostat-Kachel oder einen Textbaustein hinzu. Das Zahnrad an der Kachel öffnet die Konfiguration. Beim Thermostat wird das Hauptdevice gewählt; Kanäle werden automatisch durchsucht. Der Dialog filtert pro Spalte (Device, Alias, Typ, Raum). Unter dem gewählten Device steht – falls vorhanden – sein Alias. Die Thermostat-Kachel setzt die Solltemperatur (Bereich aus dem Gerät, 0,5-Schritte) und die Betriebsart (Auswahlfeld, nur wenn das Gerät sie anbietet); bei kleiner Kachel werden weniger Details gezeigt.

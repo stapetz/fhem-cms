@@ -1,0 +1,436 @@
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+
+class Element {
+  constructor(tag) {
+    this.tag = tag;
+    this.children = [];
+    this.attributes = {};
+    this.listeners = {};
+    this.classList = { toggle() {} };
+    this.style = {};
+    this.value = '';
+  }
+  append(...children) {
+    this.children.push(...children);
+    if (this.tag === 'select' && !this.value && this.children.length) this.value = this.children[0].value;
+  }
+  replaceChildren(...children) { this.children = children; }
+  setAttribute(name, value) { this.attributes[name] = value; }
+  getAttribute(name) { return Object.hasOwn(this.attributes, name) ? this.attributes[name] : null; }
+  removeAttribute(name) { delete this.attributes[name]; }
+  addEventListener(name, callback) { this.listeners[name] = callback; }
+  fire(name) { return this.listeners[name]({ preventDefault() {} }); }
+  get valueAsNumber() { return this.value === '' ? NaN : Number(this.value); }
+}
+
+test('editor connects view and grid draft, and suspends in-flight writes on pagehide', async () => {
+  const previous = {
+    window: globalThis.window, document: globalThis.document,
+    HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
+  };
+  globalThis.window = { location: { href: 'https://example.test/' } };
+  globalThis.document = { createElement: (tag) => new Element(tag), documentElement: new Element('html') };
+  document.documentElement.setAttribute('data-cms-theme', 'light');
+  document.documentElement.setAttribute('data-cms-frames', 'off');
+  globalThis.HTMLElement = class {};
+  const registry = new Map();
+  globalThis.customElements = {
+    define(name, element) { registry.set(name, element); },
+    get(name) { return registry.get(name); },
+  };
+  let editor;
+  let waitingEditor;
+  try {
+    const { Schema5Editor } = await import('../www/fhem-cms/js/fcui-schema5-editor.js');
+    const live = {
+      schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+      navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+      pages: [{ id: 'a', title: 'A', widgets: [
+        { id: 'text', type: 'text', html: '{{Temp:state}}', grid: { col: 1, row: 2, w: 4, h: 2 } },
+      ] }],
+    };
+    let state = { live, draft: null, token: 'a'.repeat(64) };
+    let release;
+    let blocked = false;
+    let fail = false;
+    let writes = 0;
+    let publishCalls = 0;
+    let discardCalls = 0;
+    let failPublish = false;
+    const controller = new Schema5DraftController({
+      read: async () => structuredClone(state),
+      save: async (draft, token) => {
+        assert.equal(token, state.token);
+        writes += 1;
+        if (blocked) await new Promise((resolve) => { release = resolve; });
+        if (fail) throw new Error('Antwort verloren');
+        state = { live, draft, token: writes === 1 ? 'b'.repeat(64) : 'c'.repeat(64) };
+      },
+      publish: async (token) => {
+        assert.equal(token, state.token);
+        publishCalls += 1;
+        if (failPublish) throw new Error('Antwort verloren');
+        state = { live: state.draft, draft: null, token: 'd'.repeat(64) };
+      },
+      discard: async (token) => {
+        assert.equal(token, state.token);
+        discardCalls += 1;
+        state = { live: state.live, draft: null, token: 'e'.repeat(64) };
+      },
+    });
+
+    const listeners = new Map();
+    let reloads = 0;
+    let confirmed = false;
+    const browser = {
+      location: { hash: '#/a', reload() { reloads += 1; } },
+      confirm() { return confirmed; },
+      addEventListener(name, callback) {
+        if (!listeners.has(name)) listeners.set(name, new Set());
+        listeners.get(name).add(callback);
+      },
+      removeEventListener(name, callback) { listeners.get(name).delete(callback); },
+      dispatch(name, event = {}) {
+        for (const callback of [...(listeners.get(name) || [])]) callback(event);
+      },
+    };
+    const grids = [];
+    const GridStack = { init() {
+      const grid = {
+        items: [], destroyed: false,
+        getColumn() { return 12; },
+        makeWidget(wrapper, item) { wrapper.gridstackNode = { id: item.id }; this.items.push({ ...item }); },
+        save() { return structuredClone(this.items); },
+        update(wrapper, position) { Object.assign(this.items.find((item) => item.id === wrapper.gridstackNode.id), position); },
+        setStatic() {},
+        destroy() { this.destroyed = true; },
+      };
+      grids.push(grid);
+      return grid;
+    } };
+    let unsubscribed = 0;
+    const client = {
+      jsonlist: async () => [],
+      subscribe(names, update, status) { status('polling'); },
+      unsubscribe() { unsubscribed += 1; },
+    };
+    const root = new Element('section');
+    editor = new Schema5Editor({ GridStack, root, controller, client, services: {}, browser });
+    await editor.start();
+    assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'dark');
+    assert.equal(document.documentElement.getAttribute('data-cms-frames'), 'on');
+    const [toolbar, , content] = root.children;
+    const [edit, mode, publish, discard, reload] = toolbar.children;
+    assert.equal(mode.textContent, 'Live');
+    assert.equal(edit.disabled, false);
+    assert.equal(publish.disabled, true);
+    assert.equal(discard.disabled, true);
+    const widgetServices = content.children[0].children[1].children[0].children[0].services;
+    await assert.rejects(widgetServices.setCommand('Lamp', 'on'), /Bearbeitungsmodus deaktiviert/);
+    await assert.rejects(widgetServices.setTarget({}, 20), /Bearbeitungsmodus deaktiviert/);
+    edit.fire('click');
+    assert.equal(grids[0].destroyed, true);
+    assert.equal(unsubscribed, 1);
+    const panel = content.children[0];
+    const form = panel.children[4];
+    form.children[0].children[0].value = 'text';
+    form.children[0].children[0].fire('change');
+    form.children[2].children[0].value = '4';
+    form.children[2].children[0].fire('input');
+    form.fire('submit');
+    await panel.children[5].fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(mode.textContent, 'Entwurf');
+    assert.equal(edit.disabled, false);
+    assert.equal(state.draft.pages[0].widgets[0].grid.row, 4);
+    assert.equal(state.live.pages[0].widgets[0].grid.row, 2);
+    assert.equal(publish.disabled, false);
+    assert.equal(discard.disabled, false);
+    await publish.fire('click');
+    await discard.fire('click');
+    assert.equal(publishCalls, 0, 'cancelled confirmation never writes');
+    assert.equal(discardCalls, 0, 'cancelled confirmation never writes');
+
+    confirmed = true;
+    failPublish = true;
+    await publish.fire('click');
+    assert.equal(publishCalls, 1);
+    assert.equal(publish.disabled, true);
+    assert.equal(discard.disabled, true);
+    assert.equal(reload.hidden, false);
+    assert.match(root.children[1].textContent, /Antwort verloren.*erneut laden/);
+    assert.throws(() => controller.snapshot(), /nicht geladen/);
+    failPublish = false;
+    await reload.fire('click');
+    assert.equal(mode.textContent, 'Entwurf');
+    assert.equal(publish.disabled, false);
+    await discard.fire('click');
+    assert.equal(discardCalls, 1);
+    assert.equal(mode.textContent, 'Live');
+    assert.equal(state.draft, null);
+    assert.equal(state.live.pages[0].widgets[0].grid.row, 2);
+    assert.equal(discard.disabled, true);
+
+    edit.fire('click');
+    const anotherPanel = content.children[0];
+    await anotherPanel.children[5].fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await publish.fire('click');
+    assert.equal(publishCalls, 2);
+    assert.equal(mode.textContent, 'Live');
+    assert.equal(state.draft, null);
+    assert.equal(publish.disabled, true);
+
+    edit.fire('click');
+    fail = true;
+    const failedPanel = content.children[0];
+    await failedPanel.children[5].fire('click');
+    assert.match(failedPanel.children[2].textContent, /Antwort verloren/);
+    assert.equal(edit.disabled, true);
+    fail = false;
+    failedPanel.children[6].fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(mode.textContent, 'Live');
+    assert.equal(edit.disabled, false);
+
+    const widgetButton = toolbar.children[6];
+    widgetButton.fire('click');
+    const widgetPanel = content.children[0];
+    assert.match(widgetPanel.children[0].textContent, /Widgets auf A/);
+    assert.equal(edit.disabled, true);
+    widgetPanel.children[5].fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(mode.textContent, 'Live');
+    assert.equal(widgetButton.disabled, false);
+
+    const navigationButton = toolbar.children[7];
+    navigationButton.fire('click');
+    const navigationPanel = content.children[0];
+    assert.equal(navigationPanel.children[0].textContent, 'Navigation bearbeiten');
+    assert.equal(edit.disabled, true);
+    navigationPanel.children[4].fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(mode.textContent, 'Live');
+    assert.equal(navigationButton.disabled, false);
+
+    const settingsButton = toolbar.children[8];
+    settingsButton.fire('click');
+    const settingsPanel = content.children[0];
+    assert.equal(settingsPanel.children[0].textContent, 'Darstellung einstellen');
+    settingsPanel.children[3].fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(settingsButton.disabled, false);
+
+    edit.fire('click');
+    const pendingPanel = content.children[0];
+    const pendingGrid = grids.at(-1);
+    blocked = true;
+    const saving = pendingPanel.children[5].fire('click');
+    browser.dispatch('pagehide');
+    assert.equal(pendingPanel.hidden, true);
+    assert.equal(content.children.length, 0);
+    assert.equal(edit.disabled, true);
+    assert.equal(pendingGrid.destroyed, false);
+    release();
+    await saving;
+    assert.equal(pendingGrid.destroyed, true);
+    assert.equal(content.children.length, 0, 'late completion cannot restart the view');
+    browser.dispatch('pageshow', { persisted: true });
+    assert.equal(reloads, 1);
+    editor.stop();
+    assert.equal(root.children.length, 0);
+    assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'light');
+    assert.equal(document.documentElement.getAttribute('data-cms-frames'), 'off');
+    assert.ok([...listeners.values()].every((set) => set.size === 0));
+
+    let rejectRead;
+    const waitingController = new Schema5DraftController({
+      read: () => new Promise((resolve, reject) => { rejectRead = reject; }),
+      save: async () => {}, publish: async () => {}, discard: async () => {},
+    });
+    const waitingRoot = new Element('section');
+    waitingEditor = new Schema5Editor({
+      GridStack, root: waitingRoot, controller: waitingController, client, services: {}, browser,
+    });
+    const starting = waitingEditor.start();
+    browser.dispatch('pagehide');
+    rejectRead(new Error('Verbindung verloren'));
+    await starting;
+    browser.dispatch('pageshow', { persisted: true });
+    assert.equal(reloads, 2, 'a late failed startup cannot suppress a BFCache reload');
+    waitingEditor.stop();
+    assert.ok([...listeners.values()].every((set) => set.size === 0));
+  } finally {
+    if (editor) editor.stop();
+    if (waitingEditor) waitingEditor.stop();
+    globalThis.window = previous.window;
+    globalThis.document = previous.document;
+    globalThis.HTMLElement = previous.HTMLElement;
+    globalThis.customElements = previous.customElements;
+  }
+});
+
+test('editor lifecycle uses real isolated Perl draft transactions with stale-tab protection', async () => {
+  const previous = {
+    window: globalThis.window, document: globalThis.document,
+    HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
+  };
+  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-editor-'));
+  globalThis.window = { location: { href: 'https://example.test/' } };
+  globalThis.document = { createElement: (tag) => new Element(tag), documentElement: new Element('html') };
+  globalThis.HTMLElement = class {};
+  const registry = new Map();
+  globalThis.customElements = {
+    define(name, element) { registry.set(name, element); },
+    get(name) { return registry.get(name); },
+  };
+  let editor;
+  const script = `
+use strict;
+use warnings;
+use JSON::PP ();
+use MIME::Base64 qw(decode_base64);
+sub Log3 {}
+require './FHEM/01_FHEMCMS.pm';
+my ($dir, $operation, @args) = @ARGV;
+my ($result, $error);
+if ($operation eq 'read') {
+    ($result, $error) = FHEMCMS_ReadVersion5State($dir);
+} elsif ($operation eq 'save') {
+    my $value = JSON::PP->new->utf8->decode(decode_base64($args[0]));
+    $error = FHEMCMS_WriteVersion5Draft($dir, $value, $args[1]);
+} elsif ($operation eq 'publish') {
+    ($result, $error) = FHEMCMS_PublishVersion5Draft($dir, $args[0]);
+} elsif ($operation eq 'discard') {
+    $error = FHEMCMS_DiscardVersion5Draft($dir, $args[0]);
+} else {
+    die 'unknown operation';
+}
+print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error});
+`;
+  const invoke = (operation, ...args) => {
+    const process = spawnSync('perl', ['-e', script, dir, operation, ...args], { encoding: 'utf8' });
+    assert.equal(process.error, undefined);
+    assert.equal(process.status, 0, process.stderr);
+    const { result, error } = JSON.parse(process.stdout);
+    if (error) throw new Error(error);
+    return result;
+  };
+  const transport = {
+    read: async () => invoke('read'),
+    save: async (value, token) => invoke('save', Buffer.from(JSON.stringify(value)).toString('base64'), token),
+    publish: async (token) => invoke('publish', token),
+    discard: async (token) => invoke('discard', token),
+  };
+  const live = {
+    schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'a', title: 'A', widgets: [
+      { id: 'text', type: 'text', html: '{{Temp:state}}', grid: { col: 1, row: 2, w: 4, h: 2 } },
+      { id: 'html', type: 'fhem-html', devices: ['Temp'],
+        html: '<span device="Temp" reading="state"></span>', grid: { col: 5, row: 2, w: 4, h: 2 } },
+    ] }],
+  };
+  const original = JSON.stringify(live, null, 2);
+  const browser = {
+    location: { hash: '#/a', reload() {} },
+    confirm: () => true,
+    addEventListener() {}, removeEventListener() {},
+  };
+  const GridStack = { init() {
+    return {
+      items: [],
+      getColumn() { return 12; },
+      makeWidget(wrapper, item) { wrapper.gridstackNode = { id: item.id }; this.items.push({ ...item }); },
+      save() { return structuredClone(this.items); },
+      update(wrapper, position) { Object.assign(this.items.find((item) => item.id === wrapper.gridstackNode.id), position); },
+      setStatic() {}, destroy() {},
+    };
+  } };
+  const client = {
+    jsonlist: async () => [], subscribe(names, update, status) { status('polling'); }, unsubscribe() {},
+  };
+  try {
+    await writeFile(join(dir, 'config.json'), original);
+    const controller = new Schema5DraftController(transport);
+    const { Schema5Editor } = await import('../www/fhem-cms/js/fcui-schema5-editor.js');
+    const root = new Element('section');
+    editor = new Schema5Editor({ GridStack, root, controller, client, services: {}, browser });
+    await editor.start();
+    const [toolbar, status, content] = root.children;
+    const [edit, mode, publish, discard, reload, pagesButton] = toolbar.children;
+    edit.fire('click');
+    const form = content.children[0].children[4];
+    form.children[0].children[0].value = 'text';
+    form.children[0].children[0].fire('change');
+    form.children[2].children[0].value = '4';
+    form.children[2].children[0].fire('input');
+    form.fire('submit');
+    await content.children[0].children[5].fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(mode.textContent, 'Entwurf');
+    assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
+
+    const other = new Schema5DraftController(transport);
+    const otherState = await other.reload();
+    await other.renamePage('a', 'Anderer Tab', otherState.token);
+    await publish.fire('click');
+    assert.match(status.textContent, /veraltet/);
+    assert.equal(reload.hidden, false);
+    assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
+    assert.deepEqual((await readdir(dir)).sort(), ['config.json', 'draft.json']);
+    await reload.fire('click');
+    await publish.fire('click');
+    const published = JSON.parse(await readFile(join(dir, 'config.json'), 'utf8'));
+    assert.equal(published.pages[0].title, 'Anderer Tab');
+    assert.equal(published.pages[0].widgets[0].grid.row, 4);
+    assert.equal(published.pages[0].widgets[0].html, '{{Temp:state}}');
+    assert.equal(published.pages[0].widgets[1].html, '<span device="Temp" reading="state"></span>');
+    const backup = (await readdir(dir)).find((name) => name.endsWith('.bak'));
+    assert.ok(backup);
+    assert.equal(await readFile(join(dir, backup), 'utf8'), original);
+    assert.equal(mode.textContent, 'Live');
+    edit.fire('click');
+    await content.children[0].children[5].fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    pagesButton.fire('click');
+    const pagesPanel = content.children[0];
+    const createPage = pagesPanel.children[3].children[1];
+    createPage.children[0].children[0].value = 'second';
+    createPage.children[1].children[0].value = 'Zweite';
+    await createPage.fire('submit');
+    assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages.length, 2);
+    pagesPanel.children[4].fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(mode.textContent, 'Entwurf');
+    toolbar.children[8].fire('click');
+    const appearancePanel = content.children[0];
+    const appearanceForm = appearancePanel.children[2];
+    appearanceForm.children[0].children[0].value = 'light';
+    appearanceForm.children[1].children[0].checked = false;
+    await appearanceForm.fire('submit');
+    appearancePanel.children[3].fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'light');
+    assert.equal(document.documentElement.getAttribute('data-cms-frames'), 'off');
+    await discard.fire('click');
+    assert.equal(mode.textContent, 'Live');
+    assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'dark');
+    assert.equal(document.documentElement.getAttribute('data-cms-frames'), 'on');
+    assert.equal((await readdir(dir)).includes('draft.json'), false);
+    assert.deepEqual(JSON.parse(await readFile(join(dir, 'config.json'), 'utf8')), published);
+  } finally {
+    if (editor) editor.stop();
+    globalThis.window = previous.window;
+    globalThis.document = previous.document;
+    globalThis.HTMLElement = previous.HTMLElement;
+    globalThis.customElements = previous.customElements;
+    await rm(dir, { recursive: true });
+  }
+});

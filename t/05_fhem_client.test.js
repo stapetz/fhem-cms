@@ -44,7 +44,9 @@ test('invalid device and command inputs never reach FHEMWEB', async () => {
     throw new Error('unexpected network request');
   };
   const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.throws(() => new FhemClient('cms\n', 'https://fhem.example/fhem/'), /Device-Name/);
   await assert.rejects(client.setCommand('lamp;set all on', 'on'), /Ungültiger Befehl/);
+  await assert.rejects(client.setCommand('lamp\n', 'on'), /Ungültiger Befehl/);
   await assert.rejects(client.setCommand('lamp', 'on', 'on;shutdown'), /Ungültiger Befehl/);
   await assert.rejects(client.setReading('lamp', 'pct', '5;shutdown'), /Ungültiger Sollwert/);
   assert.equal(requests, 0);
@@ -209,6 +211,7 @@ test('migration restore preview validates backup name and response without write
   };
   const client = new FhemClient('cms', 'https://fhem.example/fhem/');
   await assert.rejects(client.previewMigrationRestore('../config.json'), /Ungültiger Backup/);
+  await assert.rejects(client.previewMigrationRestore('config.json.20000101-000000.bak\n'), /Ungültiger Backup/);
   assert.equal(calls.length, 0);
   assert.deepEqual(await client.previewMigrationRestore('config.json.20000101-000000.bak'), answer);
   assert.equal(calls[1].body.get('cmd'), 'get cms migrationrestorepreview config.json.20000101-000000.bak');
@@ -216,6 +219,7 @@ test('migration restore preview validates backup name and response without write
     { live: { schemaVersion: 6 }, backup: { schemaVersion: 1 }, token: 'c'.repeat(64) },
     { live: { schemaVersion: 5 }, backup: null, token: 'c'.repeat(64) },
     { live: { schemaVersion: 5 }, backup: { schemaVersion: 1 }, token: 'bad' },
+    { live: { schemaVersion: 5 }, backup: { schemaVersion: 1 }, token: `${'c'.repeat(64)}\n` },
   ]) {
     answer = invalid;
     await assert.rejects(client.previewMigrationRestore('config.json.20000101-000000.bak'), /Unerwartete Antwort/);

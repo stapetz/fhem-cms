@@ -23,13 +23,16 @@ class Element {
   get valueAsNumber() { return this.value === '' ? NaN : Number(this.value); }
 }
 
-test('migration preview is read-only, handles adjustments and rejects stale live data', async () => {
+test('migration preview requires backup and confirmation, handles adjustments and rejects stale data', async () => {
   const ids = ['file', 'status', 'preview', 'page', 'summary', 'canvas', 'forms', 'device-form', 'device', 'validate',
     'load-backups', 'backup-controls', 'backup', 'preview-backup', 'backup-status', 'backup-result', 'backup-live', 'backup-data',
     'show-target', 'target', 'target-grid', 'target-status', 'grid-css',
     'show-widgets', 'widget-target', 'widget-grid', 'widget-status'];
+  ids.push('commit-migration', 'commit-restore', 'external-backup');
   const elements = Object.fromEntries(ids.map((id) => [id, new Element(id)]));
   const previous = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch };
+  let confirmed = false;
+  let changed = false;
   globalThis.document = {
     getElementById(id) { return elements[id]; },
     createElement(tag) { return new Element(tag); },
@@ -37,6 +40,7 @@ test('migration preview is read-only, handles adjustments and rejects stale live
   globalThis.window = {
     location: { href: 'https://example.test/fhem/fhem-cms/examples/migration-preview.html' },
     addEventListener() {},
+    confirm() { return confirmed; },
   };
   const source = {
     schemaVersion: 4, pages: [
@@ -61,18 +65,23 @@ test('migration preview is read-only, handles adjustments and rejects stale live
         : JSON.stringify(invalidSource ? {} : source));
     }
     if (command === 'get CMS migrationbackups') return new Response(JSON.stringify(['config.json.20000101-000000.bak']));
-    if (command === 'get CMS migrationrestorepreview config.json.20000101-000000.bak') {
+    if (/^get CMS migrationrestorepreview config\.json\.20000101-00000[01]\.bak$/.test(command)) {
       if (delayedBackup) return new Promise((resolve) => {
         delayedBackup.resolve = resolve;
         delayedBackup.started();
       });
-      return new Response(JSON.stringify({ live: source, backup: source, token: 'b'.repeat(64) }));
+      return new Response(JSON.stringify({ live: changed ? { schemaVersion: 5 } : source,
+        backup: source, token: 'b'.repeat(64) }));
     }
     if (command.startsWith('get CMS migrationpreview ')) {
       return new Response(JSON.stringify({
         source: stale ? { ...source, theme: 'light' } : source,
         config: { schemaVersion: 5 }, token: 'a'.repeat(64),
       }));
+    }
+    if (command.startsWith('set CMS migrationcommit ')) {
+      changed = true;
+      return new Response(JSON.stringify({ backup: 'config.json.20000101-000001.bak' }));
     }
     throw new Error(`unexpected command: ${command}`);
   };
@@ -125,13 +134,29 @@ test('migration preview is read-only, handles adjustments and rejects stale live
     assert.match(elements['backup-status'].textContent, /nichts wiederhergestellt/);
     stale = true;
     await elements.validate.fire('click');
-    assert.match(elements.status.textContent, /Live-Daten wurden geändert/);
+    assert.match(elements.status.textContent, /Migrationsquelle hat sich geändert/);
     assert.equal(elements['show-target'].hidden, true, 'stale validation clears target preview');
     assert.equal(elements['show-widgets'].hidden, true, 'stale validation clears widget preview');
     assert.equal(elements.target.hidden, true, 'stale validation hides target preview');
     assert.equal(elements['widget-target'].hidden, true, 'stale validation hides widget preview');
     assert.ok(commands.every((command) => command.startsWith('get ')), 'only read commands are sent');
+    stale = false;
+    await elements.validate.fire('click');
+    await elements['commit-migration'].fire('click');
+    assert.match(elements.status.textContent, /vollständige externe Sicherung/);
+    assert.ok(commands.every((command) => command.startsWith('get ')), 'missing external backup blocks writes');
+    await elements.validate.fire('click');
+    elements['external-backup'].checked = true;
+    await elements['commit-migration'].fire('click');
+    assert.ok(commands.every((command) => command.startsWith('get ')), 'cancelled confirmation sends no write');
+    confirmed = true;
+    await elements['commit-migration'].fire('click');
+    assert.match(elements.status.textContent, /Umstellung abgeschlossen.*config\.json/);
+    assert.equal(commands.filter((command) => command.startsWith('set CMS migrationcommit migrate ')).length, 1);
+    assert.equal(elements.preview.hidden, true);
 
+    await elements['load-backups'].fire('click');
+    elements.backup.value = 'config.json.20000101-000000.bak';
     delayedBackup = {};
     const started = new Promise((resolve) => { delayedBackup.started = resolve; });
     const pending = elements['preview-backup'].fire('click');

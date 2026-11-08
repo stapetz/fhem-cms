@@ -11,11 +11,11 @@ use File::Path qw(make_path remove_tree);
 use File::Spec;
 use IO::Handle ();
 use JSON::PP ();
-use MIME::Base64 qw(decode_base64);
+use MIME::Base64 qw(decode_base64 encode_base64);
 use POSIX qw(strftime);
 use Time::Local ();
 
-our $FHEMCMS_VERSION = '0.5.1-dev';
+our $FHEMCMS_VERSION = '0.5.2-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -227,7 +227,9 @@ sub FHEMCMS_Set {
     my ($hash, $name, $cmd, @args) = @_;
     my $result = FHEMCMS_SetCommand($hash, $name, $cmd, @args);
     if (defined($result) && length($result) && defined($cmd)
-        && $cmd =~ /\A(?:config|draft|restore|publish|discard|media|purge|rebuild)\z/) {
+        && $cmd =~ /\A(?:config|draft|restore|publish|discard|media|purge|rebuild|version5draft|migrationcommit)\z/
+        && !($cmd eq 'migrationcommit'
+            && $result =~ /\A\{"backup":"config\.json\.\d{8}-\d{6}(?:-\d+)?\.bak"\}\z/)) {
         my $reason = substr($result, 0, 200);
         $reason =~ s/[\x00-\x1f\x7f]/ /g;
         Log3($name, 3, "FHEMCMS ($name): set $cmd abgewiesen: $reason");
@@ -253,6 +255,16 @@ sub FHEMCMS_SetCommand {
 
     return 'Die Daten dieses Devices wurden geloescht; bitte das Device loeschen oder FHEM neu starten'
         if (defined($name) && $FHEMCMS_PURGED{$name});
+
+    if ($cmd eq 'version5draft' || $cmd eq 'migrationcommit') {
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
+        return $error if (defined($error));
+        return FHEMCMS_Version5DraftCommand($dataDir, @args) if ($cmd eq 'version5draft');
+        my ($backup, $migrationError) = FHEMCMS_MigrationCommand($dataDir, @args);
+        return $migrationError if (defined($migrationError));
+        return JSON::PP->new->utf8->canonical->encode({backup => $backup});
+    }
 
     if ($cmd eq 'media') {
         return 'media erwartet genau einen Base64-Parameter' if (@args != 1);
@@ -330,7 +342,7 @@ sub FHEMCMS_SetUsage {
         splice(@backups, $FHEMCMS_USAGE_BACKUPS) if (@backups > $FHEMCMS_USAGE_BACKUPS);
     }
     my $restore = @backups ? 'restore:' . join(',', @backups) : 'restore';
-    return "config draft publish:noArg discard:noArg $restore rebuild:noArg media purge";
+    return "config draft publish:noArg discard:noArg $restore rebuild:noArg media purge version5draft migrationcommit";
 }
 
 sub FHEMCMS_Summary {
@@ -479,6 +491,7 @@ $marker
   <meta name="fhem-cms-device" content="$htmlName">
   <title>fhem-cms - $htmlName</title>
   <link rel="stylesheet" href="../css/fhem-cms.css?v=$token">
+  <link rel="stylesheet" href="../css/fcui-gridstack.css?v=$token">
   <script type="importmap">
 $importMap
   </script>
@@ -1665,7 +1678,7 @@ sub FHEMCMS_PreviewLayoutMigration {
     return ($candidate, $token, undef, $source);
 }
 
-# Der Lesevertrag ist getrennt versioniert; Schreiboperationen bleiben intern.
+# Der Lesevertrag ist getrennt versioniert.
 sub FHEMCMS_ReadVersion5State {
     my ($dataDir) = @_;
     my $json = JSON::PP->new->utf8->canonical;
@@ -1790,7 +1803,60 @@ sub FHEMCMS_PublishVersion5Draft {
     return ($backup, undef);
 }
 
-# Interner Transaktionsbaustein; bewusst nicht als FHEM-Befehl registriert.
+# Versionierter Entwurfsvertrag.
+sub FHEMCMS_Version5DraftCommand {
+    my ($dataDir, $action, @args) = @_;
+    return 'Unbekannte versionierte Entwurfsaktion'
+        if (!defined($action) || ref($action) || $action !~ /\A(?:save|publish|discard)\z/);
+    my $required = $action eq 'save' ? 2 : 1;
+    return "Versionierte Aktion $action erwartet $required Parameter" if (@args != $required);
+    my $token = $args[0];
+    return 'Ungueltige Zustandskennung'
+        if (!defined($token) || ref($token) || $token !~ /\A[0-9a-f]{64}\z/);
+    if ($action eq 'save') {
+        my $encoded = $args[1];
+        return 'Konfiguration ist nicht Base64-kodiert'
+            if (!defined($encoded) || ref($encoded));
+        return 'Konfiguration ist zu gross' if (length($encoded) > 2 * $FHEMCMS_MAX_CONFIG_BYTES);
+        return 'Konfiguration ist nicht Base64-kodiert' if ($encoded !~ /\A[A-Za-z0-9+\/]+={0,2}\z/);
+        my $bytes = decode_base64($encoded);
+        return 'Konfiguration ist nicht Base64-kodiert' if (encode_base64($bytes, '') ne $encoded);
+        return 'Konfiguration ist zu gross' if (length($bytes) > $FHEMCMS_MAX_CONFIG_BYTES);
+        my $config = eval { JSON::PP->new->utf8->decode($bytes) };
+        return 'Konfiguration ist kein gueltiges JSON' if ($@ || !defined($config));
+        return FHEMCMS_WriteVersion5Draft($dataDir, $config, $token);
+    }
+    return FHEMCMS_DiscardVersion5Draft($dataDir, $token) if ($action eq 'discard');
+    my (undef, $error) = FHEMCMS_PublishVersion5Draft($dataDir, $token);
+    return $error;
+}
+
+# Zustandsgebundener Migrations- und Restore-Vertrag.
+sub FHEMCMS_MigrationCommand {
+    my ($dataDir, $action, @args) = @_;
+    return (undef, 'Unbekannte Migrationsaktion')
+        if (!defined($action) || ref($action) || $action !~ /\A(?:migrate|restore)\z/);
+    return (undef, "Migrationsaktion $action erwartet zwei Parameter") if (@args != 2);
+    my ($token, $payload) = @args;
+    return (undef, 'Ungueltige Vorschau-Bestaetigung')
+        if (!defined($token) || ref($token) || $token !~ /\A[0-9a-f]{64}\z/);
+    if ($action eq 'restore') {
+        return FHEMCMS_CommitMigrationRestore($dataDir, $payload, $token);
+    }
+    return (undef, 'Migrationsplan ist nicht Base64-kodiert')
+        if (!defined($payload) || ref($payload));
+    return (undef, 'Migrationsplan ist zu gross') if (length($payload) > 2 * $FHEMCMS_MAX_CONFIG_BYTES);
+    return (undef, 'Migrationsplan ist nicht Base64-kodiert')
+        if ($payload !~ /\A[A-Za-z0-9+\/]+={0,2}\z/);
+    my $bytes = decode_base64($payload);
+    return (undef, 'Migrationsplan ist nicht Base64-kodiert') if (encode_base64($bytes, '') ne $payload);
+    return (undef, 'Migrationsplan ist zu gross') if (length($bytes) > $FHEMCMS_MAX_CONFIG_BYTES);
+    my $plan = eval { JSON::PP->new->utf8->decode($bytes) };
+    return (undef, 'Migrationsplan ist kein gueltiges JSON') if ($@ || !defined($plan));
+    return FHEMCMS_CommitLayoutMigration($dataDir, $plan, $token);
+}
+
+# Zustandsgebundene Migration.
 sub FHEMCMS_CommitLayoutMigration {
     my ($dataDir, $positions, $expectedToken) = @_;
     return (undef, 'Ungueltige Vorschau-Bestaetigung')
@@ -1862,7 +1928,7 @@ sub FHEMCMS_ReplaceMigrationLive {
     return ($backup, undef);
 }
 
-# Die Vorschau ist lesend; die Wiederherstellung bleibt intern.
+# Die Vorschau ist lesend; der Schreibbefehl prueft sie erneut.
 sub FHEMCMS_PreviewMigrationRestore {
     my ($dataDir, $backupName) = @_;
     return (undef, undef, 'Ungueltiger Backup-Name')
