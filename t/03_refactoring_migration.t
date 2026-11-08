@@ -583,4 +583,138 @@ subtest 'FHEM migration preview is read-only and validates its request' => sub {
     like(FHEMCMS_Set($hash, $name, 'migrationpreview', $payload), qr/Unknown argument/, 'preview cannot be used as a write command');
 };
 
+subtest 'internal version 5 draft contract rejects stale and mixed states' => sub {
+    my $name = 'Version5Draft';
+    my $hash = {NAME => $name};
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    my $livePath = File::Spec->catfile($dir, 'config.json');
+    my $draftPath = File::Spec->catfile($dir, 'draft.json');
+    my $tmp = File::Spec->catfile($dir, 'draft.json.v5.tmp');
+    my $legacy = read_bytes($livePath);
+    my ($state, $error) = FHEMCMS_ReadVersion5State($dir);
+    like($error, qr/schemaVersion/, 'legacy state is not accepted by version 5 contract');
+    my $plan = {navigation => {col => 1, row => 1, w => 12, h => 1},
+        pages => [{id => 'start', widgets => []}]};
+    my ($candidate, $previewToken, $previewError) = FHEMCMS_PreviewLayoutMigration($dir, $plan);
+    is($previewError, undef, 'previews migration');
+    my ($backup, $migrationError) = FHEMCMS_CommitLayoutMigration($dir, $plan, $previewToken);
+    is($migrationError, undef, 'migrates isolated device');
+    my $liveBytes = read_bytes($livePath);
+    ($state, $error) = FHEMCMS_ReadVersion5State($dir);
+    is($error, undef, 'reads version 5 state');
+    is_deeply($state->{live}, $candidate, 'live is unchanged');
+    ok(!defined($state->{draft}), 'initial state has no draft');
+    like($state->{token}, qr/\A[0-9a-f]{64}\z/, 'returns state token');
+    my $oldToken = $state->{token};
+    my $draft = $json->decode($json->encode($candidate));
+    $draft->{pages}[0]{title} = 'Draft';
+    is(FHEMCMS_WriteVersion5Draft($dir, $draft, $oldToken), undef, 'stores draft');
+    is(read_bytes($livePath), $liveBytes, 'draft write leaves live unchanged');
+    ($state, $error) = FHEMCMS_ReadVersion5State($dir);
+    is($error, undef, 'reads saved draft');
+    is_deeply($state->{draft}, $draft, 'draft roundtrips');
+    isnt($state->{token}, $oldToken, 'draft changes state token');
+    my $draftBytes = read_bytes($draftPath);
+    my $next = $json->decode($json->encode($draft));
+    $next->{pages}[0]{title} = 'New';
+    like(FHEMCMS_WriteVersion5Draft($dir, $next, $oldToken), qr/veraltet/, 'stale client cannot replace draft');
+    is(read_bytes($draftPath), $draftBytes, 'stale draft bytes preserved');
+    my $bad = $json->decode($json->encode($next));
+    $bad->{schemaVersion} = 4;
+    like(FHEMCMS_WriteVersion5Draft($dir, $bad, $state->{token}), qr/schemaVersion/, 'mixed format cannot be saved');
+    is(read_bytes($draftPath), $draftBytes, 'invalid draft does not replace existing draft');
+    write_bytes($tmp, 'foreign');
+    like(FHEMCMS_WriteVersion5Draft($dir, $next, $state->{token}), qr/Temporaerer/, 'existing temp file is not replaced');
+    is(read_bytes($tmp), 'foreign', 'foreign temp file preserved');
+    unlink($tmp) or die "Cannot remove test temporary file: $!";
+    {
+        my $read = \&FHEMCMS_ReadVersion5State;
+        my $count = 0;
+        no warnings 'redefine';
+        local *main::FHEMCMS_ReadVersion5State = sub {
+            $count++;
+            write_bytes($draftPath, $legacy) if ($count == 2);
+            return $read->(@_);
+        };
+        like(FHEMCMS_WriteVersion5Draft($dir, $next, $state->{token}), qr/schemaVersion/,
+            'late incompatible draft aborts write');
+    }
+    is(read_bytes($draftPath), $legacy, 'late change preserved');
+    ok(!-e $tmp, 'aborted write cleans up own temporary file');
+    like(FHEMCMS_Get($hash, $name, 'config'), qr/schemaVersion/, 'legacy read rejects migrated live');
+    like(FHEMCMS_Set($hash, $name, 'draft', encode_base64($legacy, '')), qr/schemaVersion/,
+        'legacy write rejects migrated live');
+    ok(defined($backup), 'original backup remains available');
+};
+
+subtest 'internal version 5 publish and discard respect state and backup' => sub {
+    my $name = 'Version5Publish';
+    my $hash = {NAME => $name};
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    my $livePath = File::Spec->catfile($dir, 'config.json');
+    my $draftPath = File::Spec->catfile($dir, 'draft.json');
+    my $tmp = File::Spec->catfile($dir, 'config.json.v5.tmp');
+    my $plan = {navigation => {col => 1, row => 1, w => 12, h => 1},
+        pages => [{id => 'start', widgets => []}]};
+    my ($candidate, $token, $error) = FHEMCMS_PreviewLayoutMigration($dir, $plan);
+    is($error, undef, 'prepares version 5');
+    my (undef, $migrationError) = FHEMCMS_CommitLayoutMigration($dir, $plan, $token);
+    is($migrationError, undef, 'migrates test data');
+    my $original = read_bytes($livePath);
+    my ($state, $stateError) = FHEMCMS_ReadVersion5State($dir);
+    is($stateError, undef, 'reads initial state');
+    my (undef, $publishError) = FHEMCMS_PublishVersion5Draft($dir, $state->{token});
+    like($publishError, qr/keinen Entwurf/, 'publish requires a draft');
+    like(FHEMCMS_DiscardVersion5Draft($dir, $state->{token}), qr/keinen Entwurf/, 'discard requires a draft');
+    my $draft = $json->decode($json->encode($candidate));
+    $draft->{pages}[0]{title} = 'Version 5 draft';
+    is(FHEMCMS_WriteVersion5Draft($dir, $draft, $state->{token}), undef, 'creates draft');
+    my $oldToken = $state->{token};
+    ($state, $stateError) = FHEMCMS_ReadVersion5State($dir);
+    my $draftBytes = read_bytes($draftPath);
+    (undef, $publishError) = FHEMCMS_PublishVersion5Draft($dir, $oldToken);
+    like($publishError, qr/veraltet/, 'stale publish refused');
+    like(FHEMCMS_DiscardVersion5Draft($dir, $oldToken), qr/veraltet/, 'stale discard refused');
+    is(read_bytes($livePath), $original, 'stale actions leave live intact');
+    is(read_bytes($draftPath), $draftBytes, 'stale actions leave draft intact');
+    {
+        no warnings 'redefine';
+        local *main::FHEMCMS_CreateMigrationBackup = sub { return (undef, 'injected backup failure'); };
+        (undef, $publishError) = FHEMCMS_PublishVersion5Draft($dir, $state->{token});
+    }
+    like($publishError, qr/injected backup failure/, 'backup failure aborts publish');
+    ok(!-e $tmp, 'failed publish removes its temporary file');
+    is(read_bytes($livePath), $original, 'failed publish preserves live');
+    is(read_bytes($draftPath), $draftBytes, 'failed publish preserves draft');
+    {
+        my $create = \&FHEMCMS_CreateMigrationBackup;
+        no warnings 'redefine';
+        local *main::FHEMCMS_CreateMigrationBackup = sub {
+            my @result = $create->(@_);
+            write_bytes($draftPath, $draftBytes . "\n");
+            return @result;
+        };
+        (undef, $publishError) = FHEMCMS_PublishVersion5Draft($dir, $state->{token});
+    }
+    like($publishError, qr/veraltet/, 'late draft change aborts publish');
+    is(read_bytes($livePath), $original, 'late change leaves live intact');
+    is(read_bytes($draftPath), $draftBytes . "\n", 'late draft change is preserved');
+    ok(!-e $tmp, 'late change cleans temporary file');
+    write_bytes($draftPath, $draftBytes);
+    my ($backup, $successError) = FHEMCMS_PublishVersion5Draft($dir, $state->{token});
+    is($successError, undef, 'publishes verified draft');
+    is(read_bytes($livePath), $draftBytes, 'published bytes match draft');
+    is(read_bytes(File::Spec->catfile($dir, $backup)), $original, 'backup preserves previous live bytes');
+    ok(!-e $draftPath, 'published draft removed');
+    ($state, $stateError) = FHEMCMS_ReadVersion5State($dir);
+    is_deeply($state->{live}, $draft, 'published data roundtrips');
+    is(FHEMCMS_WriteVersion5Draft($dir, $candidate, $state->{token}), undef, 'creates another draft');
+    ($state, $stateError) = FHEMCMS_ReadVersion5State($dir);
+    is(FHEMCMS_DiscardVersion5Draft($dir, $state->{token}), undef, 'discards confirmed draft');
+    ok(!-e $draftPath, 'discard removes draft');
+    is(read_bytes($livePath), $draftBytes, 'discard does not touch live');
+};
+
 done_testing();

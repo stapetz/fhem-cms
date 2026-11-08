@@ -1577,6 +1577,131 @@ sub FHEMCMS_PreviewLayoutMigration {
     return ($candidate, $token, undef, $source);
 }
 
+# Der versionierte Vertrag bleibt intern, bis die passende Runtime nutzbar ist.
+sub FHEMCMS_ReadVersion5State {
+    my ($dataDir) = @_;
+    my $json = JSON::PP->new->utf8->canonical;
+    my @entries;
+    for my $file ('config.json', 'draft.json') {
+        my $path = File::Spec->catfile($dataDir, $file);
+        return (undef, "Symlink fuer $file ist nicht erlaubt") if (-l $path);
+        if ($file eq 'draft.json' && !-e $path) {
+            push(@entries, undef);
+            next;
+        }
+        my ($bytes, $readError) = FHEMCMS_ReadFile($path);
+        return (undef, "$file: $readError") if (defined($readError));
+        my $config = eval { $json->decode($bytes) };
+        return (undef, "$file: ungueltiges JSON") if ($@ || !defined($config));
+        my $error = FHEMCMS_ValidateConfig($config, 5);
+        return (undef, "$file: $error") if (defined($error));
+        push(@entries, {bytes => $bytes, config => $config});
+    }
+    my ($live, $draft) = @entries;
+    my $token = sha256_hex(length($live->{bytes}) . ':' . $live->{bytes}
+        . (defined($draft) ? '1:' . length($draft->{bytes}) . ':' . $draft->{bytes} : '0:'));
+    return ({live => $live->{config}, draft => defined($draft) ? $draft->{config} : undef, token => $token}, undef);
+}
+
+sub FHEMCMS_WriteVersion5Draft {
+    my ($dataDir, $config, $expectedToken) = @_;
+    return 'Ungueltige Zustandskennung'
+        if (!defined($expectedToken) || ref($expectedToken) || $expectedToken !~ /\A[0-9a-f]{64}\z/);
+    my $error = FHEMCMS_ValidateConfig($config, 5);
+    return "Entwurf ist ungueltig: $error" if (defined($error));
+    my $encoded = JSON::PP->new->utf8->canonical->pretty->encode($config);
+    return 'Konfiguration ist zu gross' if (length($encoded) > $FHEMCMS_MAX_CONFIG_BYTES);
+    my ($state, $stateError) = FHEMCMS_ReadVersion5State($dataDir);
+    return $stateError if (defined($stateError));
+    return 'Zustand ist veraltet; bitte erneut laden' if ($state->{token} ne $expectedToken);
+
+    my $tmp = File::Spec->catfile($dataDir, 'draft.json.v5.tmp');
+    my $out;
+    return "Temporaerer Entwurf konnte nicht angelegt werden: $!"
+        if (!sysopen($out, $tmp, O_WRONLY | O_CREAT | O_EXCL, 0640));
+    binmode($out, ':raw');
+    my $written = print {$out} $encoded;
+    my $synced = $written && $out->sync();
+    my $closed = close($out);
+    if (!$written || !$synced || !$closed) {
+        my $reason = "$!";
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaerer Entwurf konnte nicht entfernt werden: $!");
+        return "Entwurf konnte nicht geschrieben werden: $reason";
+    }
+    ($state, $stateError) = FHEMCMS_ReadVersion5State($dataDir);
+    if (defined($stateError) || $state->{token} ne $expectedToken) {
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaerer Entwurf konnte nicht entfernt werden: $!");
+        return defined($stateError) ? $stateError : 'Zustand ist veraltet; bitte erneut laden';
+    }
+    if (!rename($tmp, File::Spec->catfile($dataDir, 'draft.json'))) {
+        my $reason = "$!";
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaerer Entwurf konnte nicht entfernt werden: $!");
+        return "Entwurf konnte nicht gespeichert werden: $reason";
+    }
+    return undef;
+}
+
+sub FHEMCMS_DiscardVersion5Draft {
+    my ($dataDir, $expectedToken) = @_;
+    return 'Ungueltige Zustandskennung'
+        if (!defined($expectedToken) || ref($expectedToken) || $expectedToken !~ /\A[0-9a-f]{64}\z/);
+    my ($state, $error) = FHEMCMS_ReadVersion5State($dataDir);
+    return $error if (defined($error));
+    return 'Zustand ist veraltet; bitte erneut laden' if ($state->{token} ne $expectedToken);
+    return 'Es gibt keinen Entwurf zum Verwerfen' if (!defined($state->{draft}));
+    return "Entwurf konnte nicht geloescht werden: $!"
+        if (!unlink(File::Spec->catfile($dataDir, 'draft.json')));
+    return undef;
+}
+
+sub FHEMCMS_PublishVersion5Draft {
+    my ($dataDir, $expectedToken) = @_;
+    return (undef, 'Ungueltige Zustandskennung')
+        if (!defined($expectedToken) || ref($expectedToken) || $expectedToken !~ /\A[0-9a-f]{64}\z/);
+    my ($state, $error) = FHEMCMS_ReadVersion5State($dataDir);
+    return (undef, $error) if (defined($error));
+    return (undef, 'Zustand ist veraltet; bitte erneut laden') if ($state->{token} ne $expectedToken);
+    return (undef, 'Es gibt keinen Entwurf zum Veroeffentlichen') if (!defined($state->{draft}));
+    my $livePath = File::Spec->catfile($dataDir, 'config.json');
+    my $draftPath = File::Spec->catfile($dataDir, 'draft.json');
+    my ($live, $liveError) = FHEMCMS_ReadFile($livePath);
+    return (undef, $liveError) if (defined($liveError));
+    my ($draft, $draftError) = FHEMCMS_ReadFile($draftPath);
+    return (undef, $draftError) if (defined($draftError));
+    my $readToken = sha256_hex(length($live) . ':' . $live . '1:' . length($draft) . ':' . $draft);
+    return (undef, 'Zustand ist veraltet; bitte erneut laden') if ($readToken ne $expectedToken);
+    my $tmp = File::Spec->catfile($dataDir, 'config.json.v5.tmp');
+    my $out;
+    return (undef, "Temporaere Datei konnte nicht angelegt werden: $!")
+        if (!sysopen($out, $tmp, O_WRONLY | O_CREAT | O_EXCL, 0640));
+    binmode($out, ':raw');
+    my $written = print {$out} $draft;
+    my $synced = $written && $out->sync();
+    my $closed = close($out);
+    if (!$written || !$synced || !$closed) {
+        my $reason = "$!";
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Datei konnte nicht entfernt werden: $!");
+        return (undef, "Veroeffentlichung konnte nicht vorbereitet werden: $reason");
+    }
+    my ($backup, $backupError) = FHEMCMS_CreateMigrationBackup($dataDir, $live);
+    if (defined($backupError)) {
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Datei konnte nicht entfernt werden: $!");
+        return (undef, $backupError);
+    }
+    ($state, $error) = FHEMCMS_ReadVersion5State($dataDir);
+    if (defined($error) || $state->{token} ne $expectedToken) {
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Datei konnte nicht entfernt werden: $!");
+        return (undef, defined($error) ? $error : 'Zustand ist veraltet; bitte erneut laden');
+    }
+    if (!rename($tmp, $livePath)) {
+        my $reason = "$!";
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Datei konnte nicht entfernt werden: $!");
+        return (undef, "Veroeffentlichung konnte nicht gespeichert werden: $reason");
+    }
+    return ($backup, "Live gespeichert, Entwurf konnte nicht geloescht werden: $!") if (!unlink($draftPath));
+    return ($backup, undef);
+}
+
 # Interner Transaktionsbaustein; bewusst nicht als FHEM-Befehl registriert.
 sub FHEMCMS_CommitLayoutMigration {
     my ($dataDir, $positions, $expectedToken) = @_;

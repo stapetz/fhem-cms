@@ -229,6 +229,15 @@ Konfiguration, Medien, Modul und Assets; insbesondere sind Stromausfall und
 unkoordinierte externe Dateischreiber damit nicht vollständig abgesichert.
 Die Bausteine sind keine freigeschaltete Umstellung: Versionierte API,
 Benutzerbestätigung und kompatible Oberfläche fehlen weiterhin.
+Ein interner Schema-5-Entwurfsvertrag validiert Live und Entwurf gemeinsam und
+verknüpft ihre tatsächlichen Bytes mit einer Zustandskennung. Ein Entwurf wird
+nur gegen den unveränderten Stand atomar gespeichert; andere Schemata, ungültige
+Entwürfe und veraltete Tabs werden abgelehnt. Dieser Baustein ist nicht als
+FHEM-Befehl erreichbar. Interne Publish- und Discard-Bausteine verlangen dieselbe
+aktuelle Zustandskennung; Publish sichert den Live-Stand vor der Übernahme.
+Wird Live gespeichert, aber der Entwurf kann nicht entfernt werden, wird der
+Teilzustand ausdrücklich als Fehler gemeldet. Dies ist noch kein Schutz gegenüber
+unkoordinierten externen Dateischreibern und keine öffentliche API.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
 Positionsplan um; sie speichert und überträgt ihn nicht.
