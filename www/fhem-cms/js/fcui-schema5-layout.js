@@ -103,15 +103,16 @@ export function createSchema5Grid(GridStack, element, config, pageId, renderCont
   if (!grid) throw new Error('12-Spalten-Raster konnte nicht angelegt werden');
   try {
     if (grid.getColumn() !== 12) throw new Error('12-Spalten-Raster konnte nicht angelegt werden');
+    const contents = new Map();
     for (const item of items) {
       const wrapper = document.createElement('div');
       wrapper.className = 'grid-stack-item';
       const content = document.createElement('div');
       content.className = 'grid-stack-item-content';
-      content.append(renderContent(item.id));
       wrapper.append(content);
       element.append(wrapper);
       grid.makeWidget(wrapper, item);
+      contents.set(item.id, content);
     }
     const actual = grid.save(false);
     if (!Array.isArray(actual) || actual.length !== items.length) {
@@ -125,6 +126,7 @@ export function createSchema5Grid(GridStack, element, config, pageId, renderCont
         throw new Error('Gridstack hat eine gespeicherte Position verändert');
       }
     }
+    for (const item of items) contents.get(item.id).append(renderContent(item.id));
     return grid;
   } catch (error) {
     grid.destroy(false);

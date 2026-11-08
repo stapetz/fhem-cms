@@ -142,11 +142,11 @@ export class FhemClient {
 
   async hasDraft() {
     const text = await this.command(`get ${this.cmsDevice} status`);
-    try {
-      return JSON.parse(text).draft === true;
-    } catch (error) {
-      throw new Error(text || 'Der Entwurfsstatus konnte nicht gelesen werden');
+    const result = await this.parseJsonResult(text, 'Der Entwurfsstatus konnte nicht gelesen werden');
+    if (!result || typeof result !== 'object' || Array.isArray(result) || typeof result.draft !== 'boolean') {
+      throw new Error('Unerwartete Antwort für den Entwurfsstatus');
     }
+    return result.draft;
   }
 
   async publishDraft() {

@@ -70,6 +70,27 @@ test('migration preview sends a read-only encoded plan and validates the reply',
   await assert.rejects(client.previewMigration(plan), /Unerwartete Antwort/);
 });
 
+test('draft status accepts only an explicit boolean and rejects malformed responses', async () => {
+  let answer = '{"draft":false}';
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    calls.push(options.body.get('cmd'));
+    return new Response(answer);
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.equal(await client.hasDraft(), false);
+  answer = '{"draft":true}';
+  assert.equal(await client.hasDraft(), true);
+  for (const invalid of ['{}', 'null', '[]', '{"draft":null}', '{"draft":"false"}', '{"draft":0}', 'true']) {
+    answer = invalid;
+    await assert.rejects(client.hasDraft(), /Unerwartete Antwort für den Entwurfsstatus/);
+  }
+  answer = 'Zugriff verweigert';
+  await assert.rejects(client.hasDraft(), /Zugriff verweigert/);
+  assert.ok(calls.every((command) => command === 'get cms status'));
+});
+
 test('versioned state uses a read-only command and checks the response shape', async () => {
   const calls = [];
   let answer = { live: { schemaVersion: 5 }, draft: null, token: 'a'.repeat(64) };

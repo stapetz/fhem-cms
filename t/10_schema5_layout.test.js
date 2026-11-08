@@ -94,16 +94,38 @@ test('Gridstack initialization refuses to silently reposition or drop elements',
       grid.items = [];
       return grid;
     } };
-    assert.equal(createSchema5Grid(api, root, source(), 'a', () => element()), grid);
+    const rendered = [];
+    assert.equal(createSchema5Grid(api, root, source(), 'a', (id) => {
+      rendered.push(id);
+      assert.equal(grid.items.length, 3, 'all positions are established before rendering');
+      return element();
+    }), grid);
     assert.equal(root.children.length, 3);
+    assert.deepEqual(rendered, ['__nav', 'text', 'html']);
     root.replaceChildren();
+    rendered.length = 0;
     behavior = 'move';
-    assert.throws(() => createSchema5Grid(api, root, source(), 'a', () => element()), /Position verändert/);
+    assert.throws(() => createSchema5Grid(api, root, source(), 'a', (id) => {
+      rendered.push(id);
+      return element();
+    }), /Position verändert/);
     assert.equal(destroyed, true);
     assert.equal(root.children.length, 0);
+    assert.deepEqual(rendered, [], 'invalid positions never instantiate widget content');
     behavior = 'drop';
-    assert.throws(() => createSchema5Grid(api, root, source(), 'a', () => element()), /verloren/);
+    assert.throws(() => createSchema5Grid(api, root, source(), 'a', (id) => {
+      rendered.push(id);
+      return element();
+    }), /verloren/);
     assert.equal(root.children.length, 0);
+    assert.deepEqual(rendered, [], 'missing grid elements never instantiate widget content');
+    behavior = 'exact';
+    destroyed = false;
+    assert.throws(() => createSchema5Grid(api, root, source(), 'a', () => {
+      throw new Error('Inhalt fehlgeschlagen');
+    }), /Inhalt fehlgeschlagen/);
+    assert.equal(destroyed, true, 'render failures destroy the grid');
+    assert.equal(root.children.length, 0, 'render failures remove all grid elements');
   } finally {
     globalThis.document = previous;
   }

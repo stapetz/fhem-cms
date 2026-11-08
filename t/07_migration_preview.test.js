@@ -45,13 +45,14 @@ test('migration preview is read-only, handles adjustments and rejects stale live
   };
   let stale = false;
   let draft = false;
+  let invalidDraftStatus = false;
   let delayedBackup;
   const commands = [];
   globalThis.fetch = async (url, options) => {
     if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'test-token' } });
     const command = options.body.get('cmd');
     commands.push(command);
-    if (command === 'get CMS status') return new Response(JSON.stringify({ draft }));
+    if (command === 'get CMS status') return new Response(JSON.stringify(invalidDraftStatus ? {} : { draft }));
     if (command === 'get CMS config') return new Response(JSON.stringify(source));
     if (command === 'get CMS migrationbackups') return new Response(JSON.stringify(['config.json.20000101-000000.bak']));
     if (command === 'get CMS migrationrestorepreview config.json.20000101-000000.bak') {
@@ -136,6 +137,12 @@ test('migration preview is read-only, handles adjustments and rejects stale live
     elements.device.value = 'CMS';
     await elements['device-form'].fire('submit');
     assert.match(elements.status.textContent, /Entwurf ist vorhanden/);
+    assert.equal(elements.preview.hidden, true);
+    invalidDraftStatus = true;
+    const before = commands.length;
+    await elements['device-form'].fire('submit');
+    assert.match(elements.status.textContent, /Unerwartete Antwort für den Entwurfsstatus/);
+    assert.deepEqual(commands.slice(before), ['get CMS status'], 'invalid draft status blocks loading config');
     assert.equal(elements.preview.hidden, true);
   } finally {
     globalThis.document = previous.document;

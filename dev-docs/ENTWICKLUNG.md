@@ -193,6 +193,8 @@ der vollständige Positionsplan über `get <CMS> migrationpreview <Base64-JSON>`
 serverseitig geprüft werden; der dabei erneut gelesene Live-Stand muss mit dem
 angezeigten Stand übereinstimmen. Bei vorhandenem Entwurf wird die Prüfung
 abgelehnt. Eine lokale JSON-Datei wird weiterhin nur geometrisch analysiert.
+Der Browser akzeptiert beim Entwurfsstatus nur eine ausdrückliche boolesche
+Antwort; fehlende oder fehlerhafte Angaben verhindern das Laden der Vorschau.
 Nach erfolgreicher Serverprüfung kann das geprüfte Zielraster zusätzlich mit
 Gridstack angezeigt werden. Es enthält nur Navigation und Widget-Bezeichnungen,
 keine ausgeführten Widgets oder Live-Werte. Bei Positionsänderungen oder einem
@@ -265,6 +267,8 @@ beim Initialisieren durch Gridstack veränderte Positionen ab. Die Prüfung umfa
 nur den Rastervertrag und ersetzt nicht die vollständige serverseitige
 Validierung. Das Modul wird noch nicht vom Device-Einstieg verwendet und bietet
 weder eine vollständige Widget-Oberfläche noch Speicherung oder Umstellung.
+Inhalte werden erst erzeugt und verbunden, nachdem Gridstack alle Positionen
+übernommen hat; ein fehlerhaftes Raster startet keine Widget-Lebenszyklen.
 Die bestehende Oberfläche verwendet zur Erzeugung ihrer Widget-Elemente die
 gemeinsame `www/fhem-cms/js/widget-factory.js`. Sie erhält die bisherigen
 Widget-Typen und Datenzuordnungen und kann später auch vom neuen Raster genutzt
