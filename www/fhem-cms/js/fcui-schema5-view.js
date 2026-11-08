@@ -82,8 +82,10 @@ export class Schema5View {
       link.className = 'cms-nav-link';
       link.href = `#/${page.id}`;
       link.textContent = item.label || page.title;
-      if (item.width) link.style.width = `${item.width}px`;
-      if (item.height) link.style.height = `${item.height}px`;
+      const width = this.config.navigation.itemWidth || item.width;
+      const height = this.config.navigation.itemHeight || item.height;
+      if (width) link.style.width = `${width}px`;
+      if (height) link.style.height = `${height}px`;
       if (page.id === pageId) link.setAttribute('aria-current', 'page');
       nav.append(link);
     }

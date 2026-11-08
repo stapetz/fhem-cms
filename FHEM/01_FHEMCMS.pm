@@ -771,11 +771,15 @@ sub FHEMCMS_ValidateConfig {
         if (exists($config->{theme}) && (ref($config->{theme}) || !defined($config->{theme})
             || $config->{theme} !~ /\A(?:dark|light)\z/));
     if (exists($config->{navigation})) {
-        $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid'], ['items']);
+        $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid'], ['items', 'itemWidth', 'itemHeight']);
         return $err if ($err);
         return 'Ungueltige Ausrichtung der Navigation'
             if (ref($config->{navigation}{orientation}) || !defined($config->{navigation}{orientation})
                 || $config->{navigation}{orientation} !~ /\A(?:horizontal|vertical)\z/);
+        return 'Ungueltige gemeinsame Breite'
+            if (exists($config->{navigation}{itemWidth}) && !$isInt->($config->{navigation}{itemWidth}, 40, 600));
+        return 'Ungueltige gemeinsame Hoehe'
+            if (exists($config->{navigation}{itemHeight}) && !$isInt->($config->{navigation}{itemHeight}, 24, 200));
         $err = $checkGrid->($config->{navigation}{grid});
         return $err if ($err);
         if (exists($config->{navigation}{items})) {

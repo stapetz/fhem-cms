@@ -83,7 +83,8 @@ test('navigation panel saves against real Perl, preserves positions and handles 
     assert.equal(save.textContent, 'Speichern');
     assert.equal(close.textContent, 'Abbrechen');
     const orientation = form.children[0].children[0];
-    const first = form.children[1];
+    const shared = form.children[1];
+    const first = form.children[2];
     const label = first.children[1].children[0];
     const width = first.children[2].children[0];
     const height = first.children[3].children[0];
@@ -118,13 +119,46 @@ test('navigation panel saves against real Perl, preserves positions and handles 
     staleRoot.children[4].children[1].fire('click');
     assert.deepEqual(staleClosed, { requiresReload: true });
 
+    // Gemeinsame Größe für alle Navigationspunkte: überstimmt individuelle Werte
+    const sharedState = controller.snapshot();
+    const sharedRoot = new Element();
+    let sharedClosed;
+    new Schema5NavigationPanel({ root: sharedRoot, controller, token: sharedState.token,
+      browser: { confirm: () => true }, onClose: (outcome) => { sharedClosed = outcome; } });
+    const sharedForm = sharedRoot.children[3];
+    const sharedSet = sharedForm.children[1];
+    sharedSet.children[1].children[0].checked = true;
+    sharedSet.children[2].children[0].value = '120';
+    sharedSet.children[3].children[0].value = '48';
+    await sharedForm.fire('submit');
+    assert.deepEqual(sharedClosed, { requiresReload: false });
+    assert.equal(controller.snapshot().draft.navigation.itemWidth, 120);
+    assert.equal(controller.snapshot().draft.navigation.itemHeight, 48);
+    assert.deepEqual(controller.snapshot().draft.navigation.items,
+      [{ page: 'two' }, { page: 'one', label: 'Home', width: '040', height: 60 }],
+      'individual sizes stay stored');
+
+    // Deaktivieren entfernt die gemeinsamen Werte wieder
+    const offState = controller.snapshot();
+    const offRoot = new Element();
+    let offClosed;
+    new Schema5NavigationPanel({ root: offRoot, controller, token: offState.token,
+      browser: { confirm: () => true }, onClose: (outcome) => { offClosed = outcome; } });
+    const offForm = offRoot.children[3];
+    assert.equal(offForm.children[1].children[1].children[0].checked, true);
+    offForm.children[1].children[1].children[0].checked = false;
+    await offForm.fire('submit');
+    assert.deepEqual(offClosed, { requiresReload: false });
+    assert.equal(controller.snapshot().draft.navigation.itemWidth, undefined);
+    assert.equal(controller.snapshot().draft.navigation.itemHeight, undefined);
+
     const latest = controller.snapshot();
     const root2 = new Element();
     const panel2 = new Schema5NavigationPanel({ root: root2, controller, token: latest.token,
       browser: { confirm: () => allowClose }, onClose: (outcome) => { closed = outcome; } });
     const form2 = root2.children[3];
     const close2 = root2.children[4].children[1];
-    form2.children[1].children[1].children[0].value = 'Später';
+    form2.children[2].children[1].children[0].value = 'Später';
     gate = {};
     const saving = form2.fire('submit');
     assert.equal(form2.inert, true);
@@ -137,7 +171,7 @@ test('navigation panel saves against real Perl, preserves positions and handles 
     assert.equal(closed, undefined, 'suspended save never reports completion');
     assert.equal((await controller.reload()).draft.navigation.items[1].label, 'Später');
     assert.equal(await readFile(path, 'utf8'), original);
-    assert.equal(writes, 3);
+    assert.equal(writes, 5);
     stalePanel.close();
     allowClose = true;
   } finally {
