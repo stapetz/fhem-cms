@@ -206,6 +206,9 @@ vorhandener Entwurf, ungültige Daten oder Symlinks sperren die Backup-Prüfung.
 Die Zustandskennung bindet beide Dateiinhalte, ist aber keine Benutzerbestätigung
 oder Autorisierung. Es gibt weiterhin keinen öffentlichen Restore-Schreibpfad
 für Schema 5; die Anzeige allein ersetzt keine externe vollständige Sicherung.
+Der Integrationstest `t/09_restore_client_integration.test.js` verbindet den
+JavaScript-Client mit dem echten Perl-Get auf isolierten Testdateien; FHEMWEB,
+Authentifizierung und ein echter Restore werden dabei nicht geprüft.
 
 Die interne Perl-Funktion `FHEMCMS_PrepareLayoutMigration` erstellt aus einer
 vollständig validierten Schema-4-Konfiguration und einem vollständig angegebenen
