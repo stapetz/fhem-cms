@@ -22,11 +22,14 @@ class FHEMCMSClock extends HTMLElement {
           background: var(--cms-surface, #202e27); padding: 0.8rem; text-align: center; }
         .content { display: grid; width: 100%; height: 100%; align-content: center; justify-items: center; gap: 0.3em; min-width: 0; }
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: max(5px, min(11cqh, 5cqw)); font-weight: 400; overflow-wrap: anywhere; }
-        .time { font-size: max(4px, min(18cqh, 10cqw)); font-variant-numeric: tabular-nums; line-height: 1; }
-        .date { color: var(--cms-muted-strong, #c4d0c8); font-size: 0.8em; }
+        .time { font-size: max(4px, min(30cqh, 13cqw)); font-variant-numeric: tabular-nums; line-height: 1; }
+        /* Ohne Datum/Wochentag füllt die Uhr das Widget aus. */
+        .content[data-time-only] .time { font-size: max(4px, min(62cqh, 19cqw)); }
+        .date { color: var(--cms-muted-strong, #c4d0c8); font-size: max(5px, min(9cqh, 4.5cqw)); }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-        .face { position: relative; width: min(60cqh, 45cqw); aspect-ratio: 1; border: 2px solid var(--cms-accent, #8fd0a8);
+        .face { position: relative; width: min(68cqh, 52cqw); aspect-ratio: 1; border: 2px solid var(--cms-accent, #8fd0a8);
           border-radius: 50%; }
+        .content[data-time-only] .face { width: min(86cqh, 72cqw); }
         .face[hidden], .date[hidden], h3[hidden] { display: none; }
         .mark-rotor { position: absolute; inset: 0; transform: rotate(var(--angle)); }
         .mark { position: absolute; top: 2%; left: 50%; transform: translateX(-50%); background: var(--cms-accent, #8fd0a8); }
@@ -219,6 +222,7 @@ class FHEMCMSClock extends HTMLElement {
     time.hidden = analog;
     face.hidden = !analog;
     date.hidden = !(this.widgetConfig.showDate || this.widgetConfig.showWeekday || this.widgetConfig.style === 'date');
+    this.shadowRoot.querySelector('.content').toggleAttribute('data-time-only', date.hidden);
     window.clearInterval(this.timer);
     this.updateTime();
     this.timer = window.setInterval(() => this.updateTime(), 1000);
