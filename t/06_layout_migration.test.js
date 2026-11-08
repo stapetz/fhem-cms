@@ -1,9 +1,71 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
-import { inspectEffectiveLegacyLayout, inspectLegacyLayout, planEffectiveLegacyLayout, planLegacyLayout } from '../fcui/layout-migration.js';
+import { inspectEffectiveLegacyLayout, inspectLegacyLayout, migrationPositions, planEffectiveLegacyLayout, planLegacyLayout } from '../fcui/layout-migration.js';
 import { configureLayout, effectiveLayout, layoutMode, layoutStep } from '../www/fhem-cms/js/layout.js';
 
 const grid = (col, row, w, h) => ({ col, row, w, h });
+
+test('exports only a complete collision-free effective plan for backend validation', () => {
+  const config = {
+    schemaVersion: 4,
+    pages: [
+      { id: 'a', widgets: [{ id: 'x', grid: grid(2, 1, 3, 1) }] },
+      { id: 'b', widgets: [{ id: 'x', grid: grid(1, 1, 4, 1) }] },
+    ],
+  };
+  const before = structuredClone(config);
+  assert.throws(() => migrationPositions(config), /Nicht alle Positionen/);
+  const adjustment = [{ type: 'widget', page: 'a', id: 'x', grid: grid(1, 2, 1, 1) }];
+  const beforeAdjustment = structuredClone(adjustment);
+  const positions = migrationPositions(config, adjustment);
+  assert.deepEqual(positions, {
+    navigation: grid(1, 1, 12, 1),
+    pages: [
+      { id: 'a', widgets: [{ id: 'x', grid: grid(1, 2, 1, 1) }] },
+      { id: 'b', widgets: [{ id: 'x', grid: grid(1, 2, 1, 1) }] },
+    ],
+  });
+  assert.deepEqual(config, before);
+  assert.deepEqual(adjustment, beforeAdjustment);
+  adjustment[0].grid.row = 1;
+  assert.throws(() => migrationPositions(config, adjustment), /überschneiden/);
+});
+
+test('backend accepts the effective plan while preserving both placeholder forms', () => {
+  const config = {
+    schemaVersion: 4,
+    pages: [{
+      id: 'a', title: 'Start', widgets: [
+        { id: 'text', type: 'text', html: '<p>{{Temp:state}}</p>', grid: grid(2, 1, 3, 1) },
+        { id: 'html', type: 'fhem-html', devices: ['Temp'],
+          html: '<span device="Temp" reading="state"></span>', grid: grid(5, 1, 4, 1) },
+      ],
+    }],
+  };
+  const positions = migrationPositions(config, [
+    { type: 'widget', page: 'a', id: 'text', grid: grid(1, 2, 1, 1) },
+  ]);
+  const script = [
+    'use strict; use warnings; use JSON::PP ();',
+    'require "./FHEM/01_FHEMCMS.pm";',
+    'local $/; my $json = JSON::PP->new->utf8;',
+    'my $request = $json->decode(<STDIN>);',
+    'my ($result, $error) = FHEMCMS_PrepareLayoutMigration($request->{config}, $request->{positions});',
+    'die "$error\\n" if defined $error;',
+    'print $json->encode($result);',
+  ].join(' ');
+  const result = spawnSync('perl', ['-e', script], {
+    input: JSON.stringify({ config, positions }), encoding: 'utf8',
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 0, result.stderr);
+  const candidate = JSON.parse(result.stdout);
+  assert.equal(candidate.schemaVersion, 5);
+  assert.deepEqual(candidate.pages[0].widgets.map(({ html }) => html), config.pages[0].widgets.map(({ html }) => html));
+  assert.deepEqual(candidate.pages[0].widgets.map(({ grid: position }) => position),
+    positions.pages[0].widgets.map(({ grid: position }) => position));
+});
 
 test('analyses navigation and each page without changing source data', () => {
   const config = {

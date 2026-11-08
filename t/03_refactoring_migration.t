@@ -140,4 +140,80 @@ subtest 'unsupported and invalid persisted data fails closed' => sub {
     }
 };
 
+subtest 'prepares a fully specified target without writing or accepting schema 5' => sub {
+    my $grid = sub { return {col => $_[0], row => $_[1], w => $_[2], h => $_[3]}; };
+    my $source = {
+        schemaVersion => 4, theme => 'light', settings => {layoutMode => 'flow', showFrames => JSON::PP::true},
+        pages => [
+            {id => 'a', title => 'Erste', widgets => [
+                {id => 'text', type => 'text', html => '<p>{{Temp:state}}</p>', grid => $grid->(2, 1, 7, 2)},
+                {id => 'html', type => 'fhem-html', devices => ['Temp'],
+                    html => '<span device="Temp" reading="state"></span>', grid => $grid->(20, 1, 8, 2)},
+            ]},
+            {id => 'b', title => 'Zweite', widgets => [
+                {id => 'text', type => 'text', markdown => 'Zweiter Text', grid => $grid->(1, 2, 8, 2)},
+            ]},
+        ],
+    };
+    my $plan = {
+        navigation => $grid->(1, 1, 12, 1),
+        pages => [
+            {id => 'b', widgets => [{id => 'text', grid => $grid->(1, 2, 2, 2)}]},
+            {id => 'a', widgets => [
+                {id => 'html', grid => $grid->(3, 2, 2, 2)},
+                {id => 'text', grid => $grid->(1, 2, 2, 2)},
+            ]},
+        ],
+    };
+    my $before_source = $json->encode($source);
+    my $before_plan = $json->encode($plan);
+    my ($candidate, $error) = FHEMCMS_PrepareLayoutMigration($source, $plan);
+    is($error, undef, 'valid plan produces a candidate');
+    is($candidate->{schemaVersion}, 5, 'candidate has a distinct schema');
+    is_deeply($candidate->{navigation}, {orientation => 'horizontal', grid => $plan->{navigation}},
+        'materializes the legacy default navigation');
+    is_deeply($candidate->{settings}, {layoutMode => 'grid', gridColumns => 12, showFrames => JSON::PP::true},
+        'freezes the previewed geometry and retains other settings');
+    is_deeply($candidate->{pages}[0]{widgets}[0]{grid}, $plan->{pages}[1]{widgets}[1]{grid},
+        'matches widget positions by page and ID rather than plan order');
+    is($candidate->{pages}[0]{widgets}[0]{html}, $source->{pages}[0]{widgets}[0]{html}, 'retains text placeholder');
+    is($candidate->{pages}[0]{widgets}[1]{html}, $source->{pages}[0]{widgets}[1]{html}, 'retains HTML binding');
+    is($json->encode($source), $before_source, 'source is unchanged');
+    is($json->encode($plan), $before_plan, 'plan is unchanged');
+    like(FHEMCMS_ValidateConfig($candidate), qr/schemaVersion/, 'existing validator does not accept candidate');
+    my (undef, $parse_error) = FHEMCMS_ParseConfig($json->encode($candidate));
+    like($parse_error, qr/schemaVersion/, 'existing API parser does not accept candidate');
+
+    for my $case (
+        ['missing navigation', sub { delete $_[0]{navigation} }],
+        ['extra plan field', sub { $_[0]{extra} = 1 }],
+        ['unknown page', sub { $_[0]{pages}[0]{id} = 'unknown' }],
+        ['duplicate page', sub { $_[0]{pages}[0]{id} = 'a' }],
+        ['missing widget', sub { pop @{$_[0]{pages}[1]{widgets}} }],
+        ['unknown widget', sub { $_[0]{pages}[1]{widgets}[0]{id} = 'unknown' }],
+        ['duplicate widget', sub { $_[0]{pages}[1]{widgets}[0]{id} = 'text' }],
+        ['column overflow', sub { $_[0]{navigation}{col} = 2 }],
+        ['row overflow', sub { $_[0]{navigation}{row} = 1000; $_[0]{navigation}{h} = 2 }],
+        ['invalid grid field', sub { $_[0]{navigation}{extra} = 1 }],
+        ['navigation collision', sub { $_[0]{pages}[1]{widgets}[0]{grid}{row} = 1 }],
+        ['widget collision', sub { $_[0]{pages}[1]{widgets}[0]{grid}{col} = 2 }],
+    ) {
+        my $bad = $json->decode($before_plan);
+        $case->[1]->($bad);
+        my ($result, $reason) = FHEMCMS_PrepareLayoutMigration($source, $bad);
+        ok(!defined($result) && defined($reason), "$case->[0] is rejected explicitly");
+        is($json->encode($source), $before_source, "$case->[0] leaves source unchanged");
+    }
+    my $invalid = $json->decode($before_source);
+    $invalid->{schemaVersion} = 5;
+    my ($result, $reason) = FHEMCMS_PrepareLayoutMigration($invalid, $plan);
+    ok(!defined($result) && $reason =~ /schemaVersion/, 'rejects already migrated input');
+    $invalid = $json->decode($before_source);
+    $invalid->{pages}[0]{widgets}[0]{id} = '__nav';
+    my $reserved = $json->decode($before_plan);
+    $reserved->{pages}[1]{widgets}[1]{id} = '__nav';
+    ($result, $reason) = FHEMCMS_PrepareLayoutMigration($invalid, $reserved);
+    ok(!defined($result) && $reason =~ /__nav/, 'rejects ambiguous legacy navigation ID');
+};
+
 done_testing();

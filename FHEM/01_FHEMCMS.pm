@@ -1406,6 +1406,80 @@ sub FHEMCMS_ParseConfig {
     return ($config, undef);
 }
 
+# Rein vorbereitend: Schema 5 wird weder von der bestehenden API angenommen noch gespeichert.
+sub FHEMCMS_PrepareLayoutMigration {
+    my ($source, $positions) = @_;
+    my $error = FHEMCMS_ValidateConfig($source);
+    return (undef, "Ausgangskonfiguration ist ungueltig: $error") if (defined($error));
+    return (undef, 'Ungueltiger Migrationsplan')
+        if (ref($positions) ne 'HASH' || keys(%{$positions}) != 2
+            || !exists($positions->{navigation}) || ref($positions->{pages}) ne 'ARRAY'
+            || @{$positions->{pages}} != @{$source->{pages}});
+
+    my $checkGrid = sub {
+        my ($grid) = @_;
+        return 0 if (ref($grid) ne 'HASH' || keys(%{$grid}) != 4);
+        for my $key (qw(col row w h)) {
+            return 0 if (!exists($grid->{$key}) || !defined($grid->{$key}) || ref($grid->{$key})
+                || $grid->{$key} !~ /\A[0-9]{1,6}\z/ || $grid->{$key} < 1);
+        }
+        return $grid->{col} + $grid->{w} <= 13 && $grid->{row} + $grid->{h} <= 1001;
+    };
+    return (undef, 'Ungueltige Navigationsposition') if (!$checkGrid->($positions->{navigation}));
+
+    my %pages;
+    for my $page (@{$positions->{pages}}) {
+        return (undef, 'Ungueltige Seite im Migrationsplan')
+            if (ref($page) ne 'HASH' || keys(%{$page}) != 2 || !defined($page->{id})
+                || ref($page->{id}) || $page->{id} !~ /\A[A-Za-z0-9_-]{1,64}\z/
+                || ref($page->{widgets}) ne 'ARRAY' || $pages{$page->{id}});
+        $pages{$page->{id}} = $page;
+    }
+
+    my $json = JSON::PP->new->utf8->canonical;
+    my $candidate = $json->decode($json->encode($source));
+    $candidate->{schemaVersion} = 5;
+    $candidate->{settings} //= {};
+    $candidate->{settings}{layoutMode} = 'grid';
+    $candidate->{settings}{gridColumns} = 12;
+    $candidate->{navigation} //= {orientation => 'horizontal'};
+    $candidate->{navigation}{grid} = {%{$positions->{navigation}}};
+
+    for my $page (@{$candidate->{pages}}) {
+        my $plan = $pages{$page->{id}};
+        return (undef, 'Seite im Migrationsplan fehlt')
+            if (!$plan || @{$plan->{widgets}} != @{$page->{widgets}});
+        my %widgets;
+        for my $widget (@{$plan->{widgets}}) {
+            return (undef, 'Ungueltiges Widget im Migrationsplan')
+                if (ref($widget) ne 'HASH' || keys(%{$widget}) != 2
+                    || !defined($widget->{id}) || ref($widget->{id})
+                    || $widget->{id} !~ /\A[A-Za-z0-9_-]{1,64}\z/
+                    || $widgets{$widget->{id}} || !$checkGrid->($widget->{grid}));
+            $widgets{$widget->{id}} = $widget->{grid};
+        }
+        my @grids = ($candidate->{navigation}{grid});
+        for my $widget (@{$page->{widgets}}) {
+            return (undef, 'Widget-ID __nav ist fuer die Navigation reserviert')
+                if ($widget->{id} eq '__nav');
+            return (undef, 'Widget im Migrationsplan fehlt') if (!$widgets{$widget->{id}});
+            my $grid = $widgets{$widget->{id}};
+            for my $other (@grids) {
+                return (undef, 'Ueberschneidung im Migrationsplan')
+                    if ($grid->{col} < $other->{col} + $other->{w}
+                        && $other->{col} < $grid->{col} + $grid->{w}
+                        && $grid->{row} < $other->{row} + $other->{h}
+                        && $other->{row} < $grid->{row} + $grid->{h});
+            }
+            $widget->{grid} = {%{$grid}};
+            push(@grids, $widget->{grid});
+        }
+    }
+    return (undef, 'Konfiguration ist zu gross')
+        if (length($json->encode($candidate)) > $FHEMCMS_MAX_CONFIG_BYTES);
+    return ($candidate, undef);
+}
+
 sub FHEMCMS_ReadFile {
     my ($file) = @_;
     return (undef, 'Datei nicht gefunden') if (!-f $file);

@@ -240,3 +240,17 @@ export function planEffectiveLegacyLayout(config, adjustments = []) {
       && resultPages.every((page) => page.widgets.every((widget) => widget.grid !== null)),
   };
 }
+
+// The backend must still validate the source, positions and transaction independently.
+export function migrationPositions(config, adjustments = []) {
+  const plan = planEffectiveLegacyLayout(config, adjustments);
+  if (!plan.allPositionsResolved) throw new Error('Nicht alle Positionen sind festgelegt');
+  if (plan.pages.some((page) => page.collisions.length)) throw new Error('Positionen überschneiden sich');
+  return {
+    navigation: { ...plan.navigation },
+    pages: plan.pages.map((page) => ({
+      id: page.id,
+      widgets: page.widgets.map((widget) => ({ id: widget.id, grid: { ...widget.grid } })),
+    })),
+  };
+}

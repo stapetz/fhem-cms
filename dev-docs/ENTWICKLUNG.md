@@ -193,6 +193,21 @@ führt keine Umstellung durch und prüft nicht, ob ein Entwurf vorhanden ist.
 Die spätere Migrationsfunktion muss vor dem Schreiben alle serverseitigen
 Sicherungen und Prüfungen unabhängig von dieser Vorschau durchsetzen.
 
+Die interne Perl-Funktion `FHEMCMS_PrepareLayoutMigration` erstellt aus einer
+vollständig validierten Schema-4-Konfiguration und einem vollständig angegebenen
+12-Spalten-Positionsplan einen Schema-5-Kandidaten im Speicher. Sie erhält
+Widget-Inhalte und Reihenfolge, ergänzt bei Bedarf die bisherige Standardnavigation
+und stellt den Ziel-Layoutmodus auf `grid`. Sie weist unbekannte, doppelte,
+fehlende oder kollidierende Positionen und die mehrdeutige Widget-ID `__nav` ab.
+Weder diese Funktion noch die Vorschau beweisen, dass der Plan der bestätigten
+Anzeige entspricht; dafür fehlt noch ein manipulations- und veraltungssicherer
+Transaktionsvertrag. Der Kandidat wird nicht gespeichert und Schema 5 bleibt
+über alle bestehenden Schnittstellen gesperrt. Die Struktur ist vor der
+Freischaltung mit der künftigen Layout-Engine abzugleichen.
+Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
+aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
+Positionsplan um; sie speichert und überträgt ihn nicht.
+
 Das ist kein Nachweis einer vollständigen FHEMWEB-Autorisierung, Migration oder
 Geräteabnahme. Insbesondere Testinstanz-Rechte, CSRF, externer Ressourcenzugriff,
 Verlustfreiheit und Rollback sind vor Einsatz auf der Referenzumgebung zu prüfen.
