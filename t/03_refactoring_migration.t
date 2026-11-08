@@ -329,4 +329,229 @@ subtest 'preview binds both source bytes and target while refusing a draft' => s
     is_deeply([FHEMCMS_ListBackups($dir)], \@backups, 'failed previews create no backup');
 };
 
+subtest 'internal migration transaction checks preview and preserves original backup' => sub {
+    my $name = 'MigrationTransaction';
+    my $hash = {NAME => $name};
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    my $live = File::Spec->catfile($dir, 'config.json');
+    my $draft = File::Spec->catfile($dir, 'draft.json');
+    my $tmp = File::Spec->catfile($dir, 'config.json.migration.tmp');
+    my $original = read_bytes($live);
+    my $plan = {navigation => {col => 1, row => 1, w => 12, h => 1},
+        pages => [{id => 'start', widgets => []}]};
+    my ($expected, $token, $error) = FHEMCMS_PreviewLayoutMigration($dir, $plan);
+    is($error, undef, 'prepares valid candidate');
+    my ($backup, $reason) = FHEMCMS_CommitLayoutMigration($dir, $plan, 'invalid');
+    like($reason, qr/Bestaetigung/, 'invalid confirmation rejected');
+    is(read_bytes($live), $original, 'invalid confirmation preserves live');
+    write_bytes($draft, $original);
+    ($backup, $reason) = FHEMCMS_CommitLayoutMigration($dir, $plan, $token);
+    like($reason, qr/Entwurf/, 'new draft blocks transaction');
+    is(read_bytes($draft), $original, 'transaction does not touch draft');
+    unlink($draft) or die "Cannot remove draft: $!";
+    write_bytes($live, $original . "\n");
+    ($backup, $reason) = FHEMCMS_CommitLayoutMigration($dir, $plan, $token);
+    like($reason, qr/veraltet/, 'changed live data invalidates preview');
+    is(read_bytes($live), $original . "\n", 'stale preview does not rewrite live');
+    write_bytes($live, $original);
+    write_bytes($tmp, 'foreign temporary file');
+    ($backup, $reason) = FHEMCMS_CommitLayoutMigration($dir, $plan, $token);
+    like($reason, qr/Temporaere/, 'existing temporary file blocks transaction');
+    is(read_bytes($tmp), 'foreign temporary file', 'existing temporary file is not overwritten');
+    unlink($tmp) or die "Cannot remove test temporary file: $!";
+
+    {
+        no warnings 'redefine';
+        local *main::FHEMCMS_CreateMigrationBackup = sub { return (undef, 'injected backup failure'); };
+        ($backup, $reason) = FHEMCMS_CommitLayoutMigration($dir, $plan, $token);
+    }
+    like($reason, qr/injected backup failure/, 'backup failure aborts transaction');
+    is(read_bytes($live), $original, 'backup failure preserves live');
+    ok(!-e $tmp, 'backup failure removes transaction-owned temporary file');
+
+    {
+        my $create = \&FHEMCMS_CreateMigrationBackup;
+        no warnings 'redefine';
+        local *main::FHEMCMS_CreateMigrationBackup = sub {
+            my @result = $create->(@_);
+            write_bytes($draft, $original);
+            return @result;
+        };
+        ($backup, $reason) = FHEMCMS_CommitLayoutMigration($dir, $plan, $token);
+    }
+    like($reason, qr/Entwurf/, 'draft created before commit blocks transaction');
+    is(read_bytes($live), $original, 'late draft leaves live untouched');
+    is(read_bytes($draft), $original, 'late draft remains untouched');
+    ok(!-e $tmp, 'aborted transaction removes its temporary file');
+    unlink($draft) or die "Cannot remove draft: $!";
+
+    {
+        my $create = \&FHEMCMS_CreateMigrationBackup;
+        no warnings 'redefine';
+        local *main::FHEMCMS_CreateMigrationBackup = sub {
+            my @result = $create->(@_);
+            write_bytes($live, $original . "\n");
+            return @result;
+        };
+        ($backup, $reason) = FHEMCMS_CommitLayoutMigration($dir, $plan, $token);
+    }
+    like($reason, qr/veraltet/, 'late live change blocks transaction');
+    is(read_bytes($live), $original . "\n", 'late live change is preserved');
+    ok(!-e $tmp, 'late live change removes transaction-owned temporary file');
+    write_bytes($live, $original);
+
+    ($backup, $reason) = FHEMCMS_CommitLayoutMigration($dir, $plan, $token);
+    is($reason, undef, 'commits validated candidate on isolated test data');
+    like($backup, qr/\Aconfig\.json\.\d{8}-\d{6}(?:-\d+)?\.bak\z/, 'returns standard backup name');
+    is(read_bytes(File::Spec->catfile($dir, $backup)), $original, 'verified backup preserves exact original bytes');
+    is_deeply($json->decode(read_bytes($live)), $expected, 'committed target matches preview');
+    ok(!-e $tmp, 'successful transaction leaves no temporary file');
+    my $originalBackup = $backup;
+    ($backup, $reason) = FHEMCMS_CommitLayoutMigration($dir, $plan, $token);
+    like($reason, qr/schemaVersion/, 'repeated migration fails closed');
+    is_deeply($json->decode(read_bytes($live)), $expected, 'repetition leaves target unchanged');
+    like(FHEMCMS_Set($hash, $name, 'config', encode_base64($original, '')), qr/schemaVersion/,
+        'legacy client cannot overwrite target');
+    my $target = read_bytes($live);
+    my ($restoreBytes, $restoreToken, $restoreError) = FHEMCMS_PreviewMigrationRestore($dir, $originalBackup);
+    is($restoreError, undef, 'previews restore across schemas');
+    is($restoreBytes, $original, 'restore preview retains original bytes');
+    write_bytes($draft, $original);
+    my ($rollbackBackup, $rollbackError) = FHEMCMS_CommitMigrationRestore($dir, $originalBackup, $restoreToken);
+    like($rollbackError, qr/Entwurf/, 'restore refuses an existing draft');
+    is(read_bytes($draft), $original, 'restore leaves draft intact');
+    is(read_bytes($live), $target, 'blocked restore preserves target');
+    unlink($draft) or die "Cannot remove draft: $!";
+    write_bytes($live, $target . "\n");
+    ($rollbackBackup, $rollbackError) = FHEMCMS_CommitMigrationRestore($dir, $originalBackup, $restoreToken);
+    like($rollbackError, qr/veraltet/, 'restore rejects changed source');
+    write_bytes($live, $target);
+    my $backupPath = File::Spec->catfile($dir, $originalBackup);
+    write_bytes($backupPath, $original . "\n");
+    ($rollbackBackup, $rollbackError) = FHEMCMS_CommitMigrationRestore($dir, $originalBackup, $restoreToken);
+    like($rollbackError, qr/veraltet/, 'restore rejects changed backup');
+    write_bytes($backupPath, $original);
+    ($rollbackBackup, $rollbackError) = FHEMCMS_CommitMigrationRestore($dir, $originalBackup, $restoreToken);
+    is($rollbackError, undef, 'restores original live bytes');
+    is(read_bytes($live), $original, 'restore preserves original byte-for-byte');
+    is(read_bytes(File::Spec->catfile($dir, $rollbackBackup)), $target, 'restore backs up schema 5 bytes');
+    is(read_bytes($backupPath), $original, 'restore does not change original backup');
+    my (undef, $redoToken, $redoError) = FHEMCMS_PreviewMigrationRestore($dir, $rollbackBackup);
+    is($redoError, undef, 'previews redo from schema 5 backup');
+    (my $redoBackup, $redoError) = FHEMCMS_CommitMigrationRestore($dir, $rollbackBackup, $redoToken);
+    is($redoError, undef, 'restores schema 5 backup exactly');
+    is(read_bytes($live), $target, 'redo preserves schema 5 bytes');
+    is(read_bytes(File::Spec->catfile($dir, $redoBackup)), $original, 'redo backs up restored legacy bytes');
+    (undef, undef, $restoreError) = FHEMCMS_PreviewMigrationRestore($dir, '../config.json');
+    like($restoreError, qr/Backup-Name/, 'restore rejects path traversal');
+    write_bytes($backupPath, '{"schemaVersion":99,"pages":[]}');
+    (undef, undef, $restoreError) = FHEMCMS_PreviewMigrationRestore($dir, $originalBackup);
+    like($restoreError, qr/schemaVersion/, 'restore rejects unknown backup schema');
+    is(read_bytes($live), $target, 'invalid backup does not alter live');
+};
+
+subtest 'migration transaction preserves widget content and media on isolated data' => sub {
+    my $name = 'MigrationContent';
+    my $hash = {NAME => $name};
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    my $live = File::Spec->catfile($dir, 'config.json');
+    my $media = File::Spec->catdir($modPath, 'www', 'fhem-cms', $name, 'media');
+    my $png = "\x89PNG\r\n\x1a\n" . ("\0" x 32);
+    my $mediaName = FHEMCMS_Set($hash, $name, 'media', encode_base64($png, ''));
+    like($mediaName, qr{\Amedia/[0-9a-f]{32}\.png\z}, 'stores media');
+    my $mediaPath = File::Spec->catfile($media, (split m{/}, $mediaName)[1]);
+    my $source = {
+        schemaVersion => 4, theme => 'light',
+        navigation => {orientation => 'vertical', grid => {col => 1, row => 1, w => 4, h => 1},
+            items => [{page => 'start', label => 'Home'}]},
+        pages => [{id => 'start', title => 'Start', widgets => [
+            {id => 'text', type => 'text', html => qq{<p>{{Temp:state}}<img src="$mediaName"></p>},
+                grid => {col => 5, row => 2, w => 4, h => 2}},
+            {id => 'html', type => 'fhem-html', devices => ['Temp'],
+                html => '<div>{{Temp:state}}<span device="Temp" reading="state"></span></div>',
+                grid => {col => 9, row => 2, w => 4, h => 2}},
+        ]}],
+    };
+    is(FHEMCMS_Set($hash, $name, 'config', encode_base64($json->encode($source), '')), undef, 'stores source');
+    my $original = read_bytes($live);
+    my $plan = {
+        navigation => {col => 1, row => 1, w => 1, h => 1},
+        pages => [{id => 'start', widgets => [
+            {id => 'text', grid => {col => 2, row => 2, w => 1, h => 2}},
+            {id => 'html', grid => {col => 3, row => 2, w => 1, h => 2}},
+        ]}],
+    };
+    my ($candidate, $token, $error) = FHEMCMS_PreviewLayoutMigration($dir, $plan);
+    is($error, undef, 'previews migration');
+    my ($backup, $writeError) = FHEMCMS_CommitLayoutMigration($dir, $plan, $token);
+    is($writeError, undef, 'commits migration on test copy');
+    is_deeply($json->decode(read_bytes($live)), $candidate, 'target matches preview');
+    is($candidate->{pages}[0]{widgets}[0]{html}, $source->{pages}[0]{widgets}[0]{html}, 'text and media reference preserved');
+    is($candidate->{pages}[0]{widgets}[1]{html}, $source->{pages}[0]{widgets}[1]{html}, 'both HTML placeholder forms preserved');
+    is_deeply($candidate->{navigation}{items}, $source->{navigation}{items}, 'navigation items preserved');
+    is(read_bytes($mediaPath), $png, 'media bytes remain untouched');
+    is(read_bytes(File::Spec->catfile($dir, $backup)), $original, 'backup preserves complete source');
+};
+
+subtest 'migration backup verification failure is explicit' => sub {
+    my $dir = tempdir(CLEANUP => 1);
+    my $original = '{"schemaVersion":4}';
+    my ($backup, $error);
+    {
+        my $read = \&FHEMCMS_ReadFile;
+        no warnings 'redefine';
+        local *main::FHEMCMS_ReadFile = sub {
+            my ($path) = @_;
+            return ('different bytes', undef) if ($path =~ /[.]bak\z/);
+            return $read->(@_);
+        };
+        ($backup, $error) = FHEMCMS_CreateMigrationBackup($dir, $original);
+    }
+    like($error, qr/stimmt nicht/, 'verification failure is reported');
+    ok(!defined($backup), 'invalid backup is not returned');
+    is_deeply([FHEMCMS_ListBackups($dir)], [], 'invalid backup is removed');
+    ($backup, $error) = FHEMCMS_CreateMigrationBackup($dir, $original);
+    is($error, undef, 'subsequent verified backup succeeds');
+    is(read_bytes(File::Spec->catfile($dir, $backup)), $original, 'verified backup contains original bytes');
+    my ($second, $secondError) = FHEMCMS_CreateMigrationBackup($dir, 'other');
+    is($secondError, undef, 'second backup succeeds without replacing first');
+    isnt($second, $backup, 'backup names are unique');
+    is(read_bytes(File::Spec->catfile($dir, $backup)), $original, 'first backup stays unchanged');
+};
+
+subtest 'versioned restore accepts and preserves historical schema bytes' => sub {
+    my $name = 'HistoricalRestore';
+    my $hash = {NAME => $name};
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    my $live = File::Spec->catfile($dir, 'config.json');
+    my $original = read_bytes($live);
+    for my $version (1 .. 4) {
+        my $legacy = {schemaVersion => $version, pages => [{id => 'start', title => 'Original', widgets => []}]};
+        my $bytes = $json->pretty->encode($legacy);
+        my $backupName = sprintf('config.json.2000010%d-000000.bak', $version);
+        write_bytes(File::Spec->catfile($dir, $backupName), $bytes);
+        my ($read, $token, $error) = FHEMCMS_PreviewMigrationRestore($dir, $backupName);
+        is($error, undef, "schema $version backup validates");
+        is($read, $bytes, "schema $version preview preserves bytes");
+        my ($newBackup, $commitError) = FHEMCMS_CommitMigrationRestore($dir, $backupName, $token);
+        is($commitError, undef, "schema $version restores");
+        is(read_bytes($live), $bytes, "schema $version restored without rewriting");
+        ok(defined($newBackup), "schema $version creates rollback backup");
+    }
+    my $draft = File::Spec->catfile($dir, 'draft.json');
+    symlink('missing', $draft) or die "Cannot create draft symlink: $!";
+    my (undef, undef, $error) = FHEMCMS_PreviewMigrationRestore($dir, 'config.json.20000101-000000.bak');
+    like($error, qr/Entwurf/, 'dangling draft symlink blocks restore');
+    unlink($draft) or die "Cannot remove draft symlink: $!";
+    unlink($live) or die "Cannot remove live file: $!";
+    symlink('config.json.20000101-000000.bak', $live) or die "Cannot create live symlink: $!";
+    (undef, undef, $error) = FHEMCMS_PreviewMigrationRestore($dir, 'config.json.20000101-000000.bak');
+    like($error, qr/Symlinks/, 'live symlink blocks restore');
+    unlink($live) or die "Cannot remove live symlink: $!";
+    write_bytes($live, $original);
+};
+
 done_testing();

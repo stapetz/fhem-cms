@@ -213,6 +213,18 @@ die gelesenen Live-Bytes und den vollständigen geprüften Zielkandidaten an ein
 SHA-256-Wert. Der Wert allein ist keine Autorisierung oder Bestätigung und
 beweist keine Vorschau im Browser. Ein späterer Schreibpfad muss den aktuellen
 Entwurf und beide Inhalte unmittelbar vor der Transaktion erneut prüfen.
+Interne, nicht als FHEM-Befehle registrierte Transaktionsbausteine prüfen diese
+Bindung erneut, erstellen vor dem atomaren Austausch eine exklusive,
+byteweise überprüfte Sicherung und prüfen Live-Datei und Entwurf unmittelbar
+vor dem Austausch nochmals. Ein vorbereiteter Restore akzeptiert validierte
+Backups der Schemata 1–5, sichert den aktuellen Stand und stellt Backup-Bytes
+unverändert wieder her; ein vorhandener Entwurf sperrt ihn. Die Tests verwenden
+ausschließlich isolierte temporäre Verzeichnisse. Die Dateisynchronisierung und
+das atomare Umbenennen ersetzen keine vollständige externe Sicherung von
+Konfiguration, Medien, Modul und Assets; insbesondere sind Stromausfall und
+unkoordinierte externe Dateischreiber damit nicht vollständig abgesichert.
+Die Bausteine sind keine freigeschaltete Umstellung: Versionierte API,
+Benutzerbestätigung und kompatible Oberfläche fehlen weiterhin.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
 Positionsplan um; sie speichert und überträgt ihn nicht.

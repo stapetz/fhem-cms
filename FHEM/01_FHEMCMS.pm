@@ -9,6 +9,7 @@ use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
 use File::Copy qw(copy);
 use File::Path qw(make_path remove_tree);
 use File::Spec;
+use IO::Handle ();
 use JSON::PP ();
 use MIME::Base64 qw(decode_base64);
 use POSIX qw(strftime);
@@ -1546,7 +1547,9 @@ sub FHEMCMS_PreviewLayoutMigration {
     my ($dataDir, $positions) = @_;
     my $draft = File::Spec->catfile($dataDir, 'draft.json');
     return (undef, undef, 'Entwurf vorhanden: zuerst veroeffentlichen oder verwerfen') if (-e $draft || -l $draft);
-    my ($bytes, $error) = FHEMCMS_ReadFile(File::Spec->catfile($dataDir, 'config.json'));
+    my $live = File::Spec->catfile($dataDir, 'config.json');
+    return (undef, undef, 'Live-Konfiguration darf kein Symlink sein') if (-l $live);
+    my ($bytes, $error) = FHEMCMS_ReadFile($live);
     return (undef, undef, $error) if (defined($error));
     my ($source, $parseError) = FHEMCMS_ParseConfig($bytes);
     return (undef, undef, "Live-Konfiguration ist ungueltig: $parseError") if (defined($parseError));
@@ -1555,6 +1558,156 @@ sub FHEMCMS_PreviewLayoutMigration {
     my $target = JSON::PP->new->utf8->canonical->encode($candidate);
     my $token = sha256_hex(length($bytes) . ':' . $bytes . length($target) . ':' . $target);
     return ($candidate, $token, undef);
+}
+
+# Interner Transaktionsbaustein; bewusst nicht als FHEM-Befehl registriert.
+sub FHEMCMS_CommitLayoutMigration {
+    my ($dataDir, $positions, $expectedToken) = @_;
+    return (undef, 'Ungueltige Vorschau-Bestaetigung')
+        if (!defined($expectedToken) || ref($expectedToken) || $expectedToken !~ /\A[0-9a-f]{64}\z/);
+    my ($candidate, $token, $error) = FHEMCMS_PreviewLayoutMigration($dataDir, $positions);
+    return (undef, $error) if (defined($error));
+    return (undef, 'Vorschau ist veraltet; bitte erneut pruefen')
+        if ($token ne $expectedToken);
+
+    my $live = File::Spec->catfile($dataDir, 'config.json');
+    my ($original, $readError) = FHEMCMS_ReadFile($live);
+    return (undef, $readError) if (defined($readError));
+    my $target = JSON::PP->new->utf8->canonical->encode($candidate);
+    return (undef, 'Vorschau ist veraltet; bitte erneut pruefen')
+        if (sha256_hex(length($original) . ':' . $original . length($target) . ':' . $target) ne $expectedToken);
+    my $encoded = JSON::PP->new->utf8->canonical->pretty->encode($candidate);
+    return (undef, 'Konfiguration ist zu gross') if (length($encoded) > $FHEMCMS_MAX_CONFIG_BYTES);
+    return FHEMCMS_ReplaceMigrationLive($dataDir, $original, $encoded);
+}
+
+# Atomarer Austausch nur nach verifiziertem Backup und erneuter Zustandspruefung.
+sub FHEMCMS_ReplaceMigrationLive {
+    my ($dataDir, $original, $encoded) = @_;
+    my $live = File::Spec->catfile($dataDir, 'config.json');
+    my $draft = File::Spec->catfile($dataDir, 'draft.json');
+    return (undef, 'Entwurf vorhanden: zuerst veroeffentlichen oder verwerfen') if (-e $draft || -l $draft);
+    return (undef, 'Live-Konfiguration darf kein Symlink sein') if (-l $live);
+    my ($current, $currentError) = FHEMCMS_ReadFile($live);
+    return (undef, $currentError) if (defined($currentError));
+    return (undef, 'Vorschau ist veraltet; bitte erneut pruefen') if ($current ne $original);
+    my $tmp = File::Spec->catfile($dataDir, 'config.json.migration.tmp');
+    my $out;
+    return (undef, "Temporaere Migrationsdatei konnte nicht angelegt werden: $!")
+        if (!sysopen($out, $tmp, O_WRONLY | O_CREAT | O_EXCL, 0640));
+    binmode($out, ':raw');
+    my $written = print {$out} $encoded;
+    my $synced = $written && $out->sync();
+    my $closed = close($out);
+    if (!$written || !$synced || !$closed) {
+        my $reason = "$!";
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Migrationsdatei konnte nicht entfernt werden: $!");
+        return (undef, "Migrationsdatei konnte nicht geschrieben werden: $reason");
+    }
+
+    my ($backup, $backupError) = FHEMCMS_CreateMigrationBackup($dataDir, $original);
+    if (defined($backupError)) {
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Migrationsdatei konnte nicht entfernt werden: $!");
+        return (undef, $backupError);
+    }
+    my $checkError;
+    if (-e $draft || -l $draft) {
+        $checkError = 'Entwurf vorhanden: zuerst veroeffentlichen oder verwerfen';
+    } elsif (-l $live) {
+        $checkError = 'Live-Konfiguration darf kein Symlink sein';
+    } else {
+        my ($check, $error) = FHEMCMS_ReadFile($live);
+        $checkError = defined($error) ? $error
+            : $check ne $original ? 'Vorschau ist veraltet; bitte erneut pruefen' : undef;
+    }
+    if (defined($checkError)) {
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Migrationsdatei konnte nicht entfernt werden: $!");
+        return (undef, $checkError);
+    }
+    if (!rename($tmp, $live)) {
+        my $reason = "$!";
+        unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Migrationsdatei konnte nicht entfernt werden: $!");
+        return (undef, "Migration konnte nicht gespeichert werden: $reason");
+    }
+    return ($backup, undef);
+}
+
+# Wiederherstellung ist nur intern vorbereitet, bis die versionierte UI existiert.
+sub FHEMCMS_PreviewMigrationRestore {
+    my ($dataDir, $backupName) = @_;
+    return (undef, undef, 'Ungueltiger Backup-Name')
+        if (!defined($backupName) || ref($backupName)
+            || $backupName !~ /\Aconfig\.json\.\d{8}-\d{6}(?:-\d+)?\.bak\z/);
+    my $draft = File::Spec->catfile($dataDir, 'draft.json');
+    return (undef, undef, 'Entwurf vorhanden: zuerst veroeffentlichen oder verwerfen') if (-e $draft || -l $draft);
+    my $live = File::Spec->catfile($dataDir, 'config.json');
+    my $backup = File::Spec->catfile($dataDir, $backupName);
+    return (undef, undef, 'Symlinks sind fuer Restore nicht erlaubt') if (-l $live || -l $backup);
+    my ($liveBytes, $liveError) = FHEMCMS_ReadFile($live);
+    return (undef, undef, $liveError) if (defined($liveError));
+    my ($backupBytes, $backupError) = FHEMCMS_ReadFile($backup);
+    return (undef, undef, $backupError) if (defined($backupError));
+    for my $entry ([$liveBytes, 'Live-Konfiguration'], [$backupBytes, 'Backup']) {
+        my ($bytes, $label) = @{$entry};
+        my $config = eval { JSON::PP->new->utf8->decode($bytes) };
+        return (undef, undef, "$label ist kein gueltiges JSON") if ($@ || ref($config) ne 'HASH');
+        my $error;
+        if (defined($config->{schemaVersion}) && !ref($config->{schemaVersion})
+            && $config->{schemaVersion} eq '5') {
+            $error = FHEMCMS_ValidateConfig($config, 5);
+        } else {
+            (undef, $error) = FHEMCMS_ParseConfig($bytes);
+        }
+        return (undef, undef, "$label ist ungueltig: $error") if (defined($error));
+    }
+    my $token = sha256_hex(length($liveBytes) . ':' . $liveBytes . length($backupBytes) . ':' . $backupBytes);
+    return ($backupBytes, $token, undef);
+}
+
+sub FHEMCMS_CommitMigrationRestore {
+    my ($dataDir, $backupName, $expectedToken) = @_;
+    return (undef, 'Ungueltige Vorschau-Bestaetigung')
+        if (!defined($expectedToken) || ref($expectedToken) || $expectedToken !~ /\A[0-9a-f]{64}\z/);
+    my ($backupBytes, $token, $error) = FHEMCMS_PreviewMigrationRestore($dataDir, $backupName);
+    return (undef, $error) if (defined($error));
+    return (undef, 'Vorschau ist veraltet; bitte erneut pruefen') if ($token ne $expectedToken);
+    my ($liveBytes, $readError) = FHEMCMS_ReadFile(File::Spec->catfile($dataDir, 'config.json'));
+    return (undef, $readError) if (defined($readError));
+    return (undef, 'Vorschau ist veraltet; bitte erneut pruefen')
+        if (sha256_hex(length($liveBytes) . ':' . $liveBytes . length($backupBytes) . ':' . $backupBytes) ne $expectedToken);
+    return FHEMCMS_ReplaceMigrationLive($dataDir, $liveBytes, $backupBytes);
+}
+
+sub FHEMCMS_CreateMigrationBackup {
+    my ($dataDir, $bytes) = @_;
+    my $stamp = strftime('%Y%m%d-%H%M%S', localtime());
+    my ($name, $path, $out);
+    my $created = 0;
+    for (my $i = 0; $i <= 10000; $i++) {
+        $name = 'config.json.' . $stamp . ($i ? "-$i" : '') . '.bak';
+        $path = File::Spec->catfile($dataDir, $name);
+        if (sysopen($out, $path, O_WRONLY | O_CREAT | O_EXCL, 0640)) {
+            $created = 1;
+            last;
+        }
+        return (undef, "Migrationsbackup konnte nicht angelegt werden: $!") if (!$!{EEXIST});
+    }
+    return (undef, 'Kein freier Name fuer Migrationsbackup') if (!$created);
+    binmode($out, ':raw');
+    my $written = print {$out} $bytes;
+    my $synced = $written && $out->sync();
+    my $closed = close($out);
+    if (!$written || !$synced || !$closed) {
+        my $reason = "$!";
+        unlink($path) or Log3('FHEMCMS', 1, "FHEMCMS: unvollstaendiges Migrationsbackup konnte nicht entfernt werden: $!");
+        return (undef, "Migrationsbackup konnte nicht geschrieben werden: $reason");
+    }
+    my ($verify, $error) = FHEMCMS_ReadFile($path);
+    if (defined($error) || $verify ne $bytes) {
+        unlink($path) or Log3('FHEMCMS', 1, "FHEMCMS: ungueltiges Migrationsbackup konnte nicht entfernt werden: $!");
+        return (undef, defined($error) ? "Migrationsbackup nicht lesbar: $error" : 'Migrationsbackup stimmt nicht ueberein');
+    }
+    return ($name, undef);
 }
 
 sub FHEMCMS_ReadFile {
