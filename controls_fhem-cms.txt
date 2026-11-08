@@ -22,10 +22,11 @@ UPD 2026-11-08_12:12:28 22208 www/fhem-cms/js/fcui-migration-preview.js
 UPD 2026-11-08_10:43:57 111967 www/fhem-cms/js/fcui-runtime.js
 UPD 2026-11-08_12:08:37 5781 www/fhem-cms/js/fcui-schema5-layout.js
 UPD 2026-11-08_11:57:43 14183 www/fhem-cms/js/fhem-client.js
-UPD 2026-11-08_11:53:02 80147 www/fhem-cms/js/fhem-cms.js
+UPD 2026-11-08_12:17:54 75831 www/fhem-cms/js/fhem-cms.js
 UPD 2026-10-31_16:30:23 12159 www/fhem-cms/js/freehtml.js
 UPD 2026-11-04_21:52:16 4898 www/fhem-cms/js/icon-picker.js
 UPD 2026-11-08_11:00:11 7487 www/fhem-cms/js/layout.js
 UPD 2026-10-31_10:55:33 3145 www/fhem-cms/js/markdown.js
 UPD 2026-11-04_21:52:16 12908 www/fhem-cms/js/placeholder-picker.js
 UPD 2026-11-04_22:28:40 36545 www/fhem-cms/js/richtext.js
+UPD 2026-11-08_12:17:54 2449 www/fhem-cms/js/widget-factory.js
