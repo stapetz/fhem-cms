@@ -341,6 +341,10 @@ Live und Entwurf mit dem erwarteten Ergebnis und gibt nur Kopien aus. Die
 Transportfunktionen müssen vom späteren Aufrufer bereitgestellt werden; sie
 sind noch nicht öffentlich angebunden. Ein Integrationstest verwendet die echten
 internen Perl-Transaktionen auf isolierten Dateien, aber keinen FHEMWEB-Transport.
+Ein Raster-Roundtrip wendet Gridstack-Positionen auf den aktuellen Entwurf oder
+bei fehlendem Entwurf auf Live an, prüft auch seitenübergreifende Kollisionen der
+globalen Navigation und speichert ausschließlich über diesen Entwurfsvertrag.
+Der Baustein selbst bietet weder einen Editor noch einen öffentlichen Schreibweg.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
 Positionsplan um; sie speichert und überträgt ihn nicht.

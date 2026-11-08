@@ -1,4 +1,4 @@
-import { schema5GridItems } from './fcui-schema5-layout.js';
+import { applySchema5GridItems, schema5GridItems } from './fcui-schema5-layout.js';
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -72,6 +72,12 @@ export class Schema5DraftController {
     const candidate = structuredClone(config);
     validateConfig(candidate);
     return this.#change('save', candidate);
+  }
+
+  saveLayout(pageId, items) {
+    const state = this.snapshot();
+    const candidate = applySchema5GridItems(state.draft || state.live, pageId, items);
+    return this.saveDraft(candidate);
   }
 
   publishDraft() {

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
 
 const config = () => ({
   schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
@@ -98,6 +99,39 @@ test('successful writes with failed or conflicting verification require explicit
   assert.equal((await controller.reload()).live.theme, 'light');
 });
 
+test('first layout edit copies live and rejects a navigation collision on another page', async () => {
+  const live = config();
+  live.pages.push({ id: 'second', title: 'Zweite', widgets: [
+    { id: 'clock', type: 'fhem-clock', style: 'digital', grid: { col: 1, row: 5, w: 2, h: 1 } },
+  ] });
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let writes = 0;
+  const transport = {
+    read: async () => structuredClone(state),
+    save: async (draft, token) => {
+      writes += 1;
+      assert.equal(token, 'a'.repeat(64));
+      state = { live, draft, token: 'b'.repeat(64) };
+    },
+    publish: async () => {},
+    discard: async () => {},
+  };
+  const controller = new Schema5DraftController(transport);
+  await controller.reload();
+  const positions = schema5GridItems(live, 'start');
+  const invalid = structuredClone(positions);
+  invalid[0].y = 4;
+  assert.throws(() => controller.saveLayout('start', invalid), /Seite second/);
+  assert.equal(writes, 0);
+  positions[1].y = 3;
+  const saved = await controller.saveLayout('start', positions);
+  assert.equal(writes, 1);
+  assert.deepEqual(saved.live, live);
+  assert.equal(saved.draft.pages[0].widgets[0].grid.row, 4);
+  assert.deepEqual(saved.draft.pages[1], live.pages[1]);
+  assert.equal(saved.draft.pages[0].widgets[1].html, live.pages[0].widgets[1].html);
+});
+
 const perl = `
 use strict;
 use warnings;
@@ -157,24 +191,36 @@ test('controller runs against isolated real Perl draft transactions and rejects 
     await assert.rejects(second.saveDraft(config()), /veraltet/);
     assert.equal(await readFile(draftPath, 'utf8'), draftBytes);
     await assert.rejects(second.publishDraft(), /nicht geladen/);
+    const positions = schema5GridItems(draft, 'start');
+    const invalid = structuredClone(positions);
+    invalid[1].y = 0;
+    assert.throws(() => first.saveLayout('start', invalid), /überschneidung/);
+    assert.equal(await readFile(draftPath, 'utf8'), draftBytes, 'invalid grid does not reach persistence');
+    positions[1].y = 3;
+    const moved = await first.saveLayout('start', positions);
+    assert.equal(moved.draft.pages[0].widgets[0].grid.row, 4);
+    assert.equal(moved.draft.pages[0].widgets[0].html, draft.pages[0].widgets[0].html);
+    assert.equal(moved.draft.pages[0].title, 'Entwurf');
+    assert.equal(await readFile(livePath, 'utf8'), original);
+    const movedBytes = await readFile(draftPath, 'utf8');
     await second.reload();
     const published = await second.publishDraft();
-    assert.deepEqual(published.live, draft);
+    assert.deepEqual(published.live, moved.draft);
     assert.equal(published.draft, null);
     const files = await readdir(dir);
     const backup = files.find((name) => /^config\.json\.\d{8}-\d{6}(?:-\d+)?\.bak$/.test(name));
     assert.ok(backup);
     assert.equal(await readFile(join(dir, backup), 'utf8'), original);
-    assert.equal(await readFile(livePath, 'utf8'), draftBytes);
+    assert.equal(await readFile(livePath, 'utf8'), movedBytes);
     await assert.rejects(first.discardDraft(), /veraltet/);
     await first.reload();
-    const fresh = structuredClone(draft);
+    const fresh = structuredClone(moved.draft);
     fresh.pages[0].title = 'Nicht veröffentlicht';
     await first.saveDraft(fresh);
     const discarded = await first.discardDraft();
-    assert.deepEqual(discarded.live, draft);
+    assert.deepEqual(discarded.live, moved.draft);
     assert.equal(discarded.draft, null);
-    assert.equal(await readFile(livePath, 'utf8'), draftBytes);
+    assert.equal(await readFile(livePath, 'utf8'), movedBytes);
     assert.match(discarded.live.pages[0].widgets[0].html, /\{\{Temp:state\}\}/);
     assert.match(discarded.live.pages[0].widgets[1].html, /device="Temp" reading="state"/);
   } finally {
