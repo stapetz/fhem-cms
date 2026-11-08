@@ -100,7 +100,7 @@ test('page panel protects unsaved input, stale coordinates, cancel and verified 
     assert.equal(settings.children[2].children[0].attributes ? true : true, true);
     const form = root.children[5];
     const footer = root.children[6];
-    const [save, cancel] = footer.children;
+    const [cancel, save] = footer.children;
     assert.equal(save.textContent, 'Speichern');
     assert.equal(cancel.textContent, 'Abbrechen');
     const status = root.children[2];
@@ -149,8 +149,8 @@ test('page panel protects unsaved input, stale coordinates, cancel and verified 
     // zusätzlich Theme wechseln: wird mitgespeichert
     root.children[3].children[0].children[0].value = 'light';
     const gate = f.delay();
-    const saving = root.children[6].children[0].fire('click');
-    assert.equal(root.children[6].children[1].disabled, true);
+    const saving = root.children[6].children[1].fire('click');
+    assert.equal(root.children[6].children[0].disabled, true);
     assert.throws(() => next.close(), /läuft noch/);
     gate.resolve();
     await saving;
@@ -181,13 +181,13 @@ test('page panel reports uncertain saves and requires reload before further edit
       browser: { confirm: () => true }, onClose: (outcome) => { closed = outcome; },
     });
     root.children[3].children[0].children[0].value = 'light';
-    await root.children[6].children[0].fire('click');
+    await root.children[6].children[1].fire('click');
     assert.match(root.children[2].textContent, /Antwort verloren.*erneut laden/);
     assert.equal(root.children[5].inert, true);
-    assert.equal(root.children[6].children[0].disabled, true);
-    assert.equal(root.children[6].children[1].disabled, false);
+    assert.equal(root.children[6].children[1].disabled, true);
+    assert.equal(root.children[6].children[0].disabled, false);
     assert.throws(() => f.controller.snapshot(), /nicht geladen/);
-    root.children[6].children[1].fire('click');
+    root.children[6].children[0].fire('click');
     assert.equal(closed.requiresReload, true);
     assert.equal(f.grid.destroyed, true);
   } finally {
@@ -208,7 +208,7 @@ test('suspended page panel disposes after a failed in-flight save without invoki
     root.children[3].children[0].children[0].value = 'light';
     const gate = f.delay();
     f.fail('Antwort verloren');
-    const saving = root.children[6].children[0].fire('click');
+    const saving = root.children[6].children[1].fire('click');
     panel.suspend();
     assert.equal(root.hidden, true);
     assert.equal(f.grid.destroyed, false);
@@ -284,7 +284,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     form.children[2].children[0].fire('input');
     form.fire('submit');
     root.children[3].children[1].children[0].checked = false;
-    await root.children[6].children[0].fire('click');
+    await root.children[6].children[1].fire('click');
     assert.deepEqual(closed, { requiresReload: false });
     const draft = controller.snapshot().draft;
     assert.equal(draft.pages[0].widgets[0].grid.row, 4);

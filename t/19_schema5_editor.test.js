@@ -174,7 +174,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     form.children[2].children[0].value = '4';
     form.children[2].children[0].fire('input');
     form.fire('submit');
-    await panel.children[6].children[0].fire('click');
+    await panel.children[6].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(mode.textContent, 'Entwurf');
     assert.equal(edit.disabled, false);
@@ -209,7 +209,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
 
     edit.fire('click');
     const anotherPanel = content.children[0];
-    await anotherPanel.children[6].children[0].fire('click');
+    await anotherPanel.children[6].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     await publish.fire('click');
     assert.equal(publishCalls, 2);
@@ -220,11 +220,11 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     edit.fire('click');
     fail = true;
     const failedPanel = content.children[0];
-    await failedPanel.children[6].children[0].fire('click');
+    await failedPanel.children[6].children[1].fire('click');
     assert.match(failedPanel.children[2].textContent, /Antwort verloren/);
     assert.equal(edit.disabled, true);
     fail = false;
-    failedPanel.children[6].children[1].fire('click');
+    failedPanel.children[6].children[0].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(mode.textContent, 'Live');
     assert.equal(edit.disabled, false);
@@ -246,7 +246,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const navigationPanel = content.children[0];
     assert.equal(navigationPanel.children[0].textContent, 'Navigation bearbeiten');
     assert.equal(edit.disabled, true);
-    navigationPanel.children[4].children[1].fire('click');
+    navigationPanel.children[4].children[0].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(mode.textContent, 'Live');
     assert.equal(widgetButton.disabled, false);
@@ -266,7 +266,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const pendingPanel = content.children[0];
     const pendingGrid = grids.at(-1);
     blocked = true;
-    const saving = pendingPanel.children[6].children[0].fire('click');
+    const saving = pendingPanel.children[6].children[1].fire('click');
     browser.dispatch('pagehide');
     assert.equal(pendingPanel.hidden, true);
     assert.equal(content.children.length, 0);
@@ -408,7 +408,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     form.children[2].children[0].value = '4';
     form.children[2].children[0].fire('input');
     form.fire('submit');
-    await content.children[0].children[6].children[0].fire('click');
+    await content.children[0].children[6].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(mode.textContent, 'Entwurf');
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
@@ -433,7 +433,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     assert.equal(await readFile(join(dir, backup), 'utf8'), original);
     assert.equal(mode.textContent, 'Live');
     edit.fire('click');
-    await content.children[0].children[6].children[0].fire('click');
+    await content.children[0].children[6].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     const navWrapper2 = content.children[0].children[0];
     navWrapper2.children.at(-1).children[1].fire('click');
@@ -442,7 +442,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     addSection.children[0].children[0].value = 'Zweite';
     addSection.children[1].children[0].value = 'second';
     addSection.children[2].fire('click');
-    await navPanel.children[4].children[0].fire('click');
+    await navPanel.children[4].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages.length, 2);
     assert.equal(mode.textContent, 'Entwurf');
@@ -451,7 +451,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     const appearanceForm = pagePanel.children[3];
     appearanceForm.children[0].children[0].value = 'light';
     appearanceForm.children[1].children[0].checked = false;
-    await pagePanel.children[6].children[0].fire('click');
+    await pagePanel.children[6].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'light');
     assert.equal(document.documentElement.getAttribute('data-cms-frames'), 'off');

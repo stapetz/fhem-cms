@@ -62,7 +62,7 @@ export class Schema5MovePanel {
     this.#close.className = 'cms-button cms-panel-close';
     const footer = element('div');
     footer.className = 'cms-panel-footer';
-    footer.append(this.#move, this.#close);
+    footer.append(this.#close, this.#move);
     root.append(heading, hint, this.#status, selectLabel, footer);
     if (!targets.length) this.#statusText('Es gibt keine weitere Seite.', true);
     this.#move.addEventListener('click', () => this.#commit());

@@ -62,7 +62,7 @@ test('move panel moves a widget below the target page content and saves once', a
     assert.equal(root.children[0].textContent, 'Widget auf andere Seite verschieben');
     assert.match(root.children[1].textContent, /„Notiz“/, 'uses the title as internal name');
     const select = root.children[3].children[0];
-    const [move, cancel] = root.children[4].children;
+    const [cancel, move] = root.children[4].children;
     assert.equal(select.value, 'b');
     assert.equal(move.textContent, 'Verschieben');
     assert.equal(cancel.textContent, 'Abbrechen');
@@ -91,9 +91,9 @@ test('move panel reports uncertain moves and offers no target on a single page',
     let closed;
     new Schema5MovePanel({ root, controller: f.controller, pageId: 'a', widgetId: 'text',
       token: state.token, onClose: (outcome) => { closed = outcome; } });
-    await root.children[4].children[0].fire('click');
+    await root.children[4].children[1].fire('click');
     assert.match(root.children[2].textContent, /nicht bestätigt/);
-    root.children[4].children[1].fire('click');
+    root.children[4].children[0].fire('click');
     assert.equal(closed.requiresReload, true);
 
     // Einzige Seite: kein Ziel, Verschieben deaktiviert
@@ -114,7 +114,7 @@ test('move panel reports uncertain moves and offers no target on a single page',
     const soloRoot = new Element('section');
     new Schema5MovePanel({ root: soloRoot, controller: solo, pageId: 'a', widgetId: 'text',
       token: loaded.token, onClose: () => {} });
-    assert.equal(soloRoot.children[4].children[0].disabled, true);
+    assert.equal(soloRoot.children[4].children[1].disabled, true);
     assert.match(soloRoot.children[2].textContent, /keine weitere Seite/);
   } finally {
     globalThis.document = previous;

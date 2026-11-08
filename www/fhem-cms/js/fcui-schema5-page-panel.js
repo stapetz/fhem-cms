@@ -137,7 +137,7 @@ export class Schema5PagePanel {
     this.#close.className = 'cms-button cms-panel-close';
     const footer = element('div');
     footer.className = 'cms-panel-footer';
-    footer.append(this.#save, this.#close);
+    footer.append(this.#close, this.#save);
 
     root.append(heading, hint, this.#status, this.#form, grid, this.#positionForm, footer);
 

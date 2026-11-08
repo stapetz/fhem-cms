@@ -167,7 +167,7 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
     toolbar.children[0].fire('click');
     const pagePanel = content.children[0];
     pagePanel.children[3].children[0].children[0].value = 'light';
-    await pagePanel.children[6].children[0].fire('click');
+    await pagePanel.children[6].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(await readFile(livePath, 'utf8'), original);
     assert.equal(toolbar.children[1].textContent, 'Entwurf');
@@ -195,7 +195,7 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
     toolbar.children[0].fire('click');
     const secondPanel = content.children[0];
     secondPanel.children[3].children[0].children[0].value = 'dark';
-    await secondPanel.children[6].children[0].fire('click');
+    await secondPanel.children[6].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(toolbar.children[1].textContent, 'Entwurf');
     assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'dark');
