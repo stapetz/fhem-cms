@@ -554,4 +554,33 @@ subtest 'versioned restore accepts and preserves historical schema bytes' => sub
     write_bytes($live, $original);
 };
 
+subtest 'FHEM migration preview is read-only and validates its request' => sub {
+    my $name = 'PreviewAPI';
+    my $hash = {NAME => $name};
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    my $live = File::Spec->catfile($dir, 'config.json');
+    my $draft = File::Spec->catfile($dir, 'draft.json');
+    my $original = read_bytes($live);
+    my @backups = FHEMCMS_ListBackups($dir);
+    my $plan = {navigation => {col => 1, row => 1, w => 12, h => 1},
+        pages => [{id => 'start', widgets => []}]};
+    my $payload = encode_base64($json->encode($plan), '');
+    my $response = $json->decode(FHEMCMS_Get($hash, $name, 'migrationpreview', $payload));
+    is($response->{config}{schemaVersion}, 5, 'returns a candidate via explicit preview API');
+    is_deeply($response->{source}, $json->decode($original), 'returns the validated source for stale-preview detection');
+    like($response->{token}, qr/\A[0-9a-f]{64}\z/, 'returns bound digest');
+    is(read_bytes($live), $original, 'preview does not rewrite live data');
+    is_deeply([FHEMCMS_ListBackups($dir)], \@backups, 'preview creates no backup');
+    like(FHEMCMS_Get($hash, $name, 'migrationpreview'), qr/Parameter/, 'requires payload');
+    like(FHEMCMS_Get($hash, $name, 'migrationpreview', 'not base64!'), qr/Base64/, 'rejects invalid base64');
+    like(FHEMCMS_Get($hash, $name, 'migrationpreview', encode_base64('{', '')), qr/JSON/, 'rejects invalid JSON');
+    like(FHEMCMS_Get($hash, $name, 'migrationpreview', encode_base64('{}', '')), qr/Migrationsplan/, 'rejects incomplete plan');
+    write_bytes($draft, $original);
+    like(FHEMCMS_Get($hash, $name, 'migrationpreview', $payload), qr/Entwurf/, 'draft blocks preview API');
+    is(read_bytes($draft), $original, 'draft is unchanged');
+    is(read_bytes($live), $original, 'failed previews leave live unchanged');
+    like(FHEMCMS_Set($hash, $name, 'migrationpreview', $payload), qr/Unknown argument/, 'preview cannot be used as a write command');
+};
+
 done_testing();

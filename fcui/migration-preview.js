@@ -1,4 +1,5 @@
-import { planEffectiveLegacyLayout } from './layout-migration.js';
+import { migrationPositions, planEffectiveLegacyLayout } from './layout-migration.js';
+import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
 
 const file = document.getElementById('file');
 const status = document.getElementById('status');
@@ -7,7 +8,11 @@ const pageSelect = document.getElementById('page');
 const summary = document.getElementById('summary');
 const canvas = document.getElementById('canvas');
 const forms = document.getElementById('forms');
+const deviceForm = document.getElementById('device-form');
+const device = document.getElementById('device');
+const validate = document.getElementById('validate');
 let config;
+let client;
 let changes = new Map();
 let sequence = 0;
 
@@ -18,6 +23,11 @@ const make = (tag, text) => {
   const element = document.createElement(tag);
   if (text !== undefined) element.textContent = text;
   return element;
+};
+const normalized = (value) => {
+  if (Array.isArray(value)) return value.map(normalized);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, normalized(value[key])]));
 };
 
 function drawTile(grid, text) {
@@ -55,6 +65,7 @@ function formFor(item, current, source) {
   const reset = make('button', 'Anpassung zurücksetzen');
   reset.type = 'button';
   reset.addEventListener('click', () => {
+    sequence += 1;
     changes.delete(keyOf(item));
     render();
     status.textContent = 'Anpassung in dieser Vorschau zurückgesetzt.';
@@ -68,6 +79,7 @@ function formFor(item, current, source) {
     next.set(keyOf(item), { ...item, grid });
     try {
       planEffectiveLegacyLayout(config, [...next.values()]);
+      sequence += 1;
       changes = next;
       render();
       status.textContent = 'Anpassung nur in dieser Vorschau übernommen.';
@@ -100,14 +112,35 @@ function render() {
   }
 }
 
-file.addEventListener('change', async () => {
-  const current = ++sequence;
+function clearPreview() {
   config = undefined;
+  client = undefined;
   changes = new Map();
   preview.hidden = true;
+  validate.hidden = true;
   pageSelect.replaceChildren();
   canvas.replaceChildren();
   forms.replaceChildren();
+}
+
+function showConfig(candidate, fhemClient) {
+  const plan = planEffectiveLegacyLayout(candidate);
+  config = candidate;
+  client = fhemClient;
+  for (const page of plan.pages) {
+    const option = make('option', page.id);
+    option.value = page.id;
+    pageSelect.append(option);
+  }
+  preview.hidden = false;
+  validate.hidden = !client;
+  render();
+}
+
+file.addEventListener('change', async () => {
+  const current = ++sequence;
+  clearPreview();
+  device.value = '';
   const selected = file.files[0];
   if (!selected) {
     status.textContent = 'Bitte eine Datei auswählen.';
@@ -120,21 +153,56 @@ file.addEventListener('change', async () => {
   try {
     const candidate = JSON.parse(await selected.text());
     if (current !== sequence) return;
-    const plan = planEffectiveLegacyLayout(candidate);
-    config = candidate;
-    for (const page of plan.pages) {
-      const option = make('option', page.id);
-      option.value = page.id;
-      pageSelect.append(option);
-    }
-    preview.hidden = false;
-    render();
+    showConfig(candidate);
     status.textContent = 'Vorschau geladen. Es werden keine Daten gespeichert.';
   } catch (error) {
     if (current !== sequence) return;
     config = undefined;
     preview.hidden = true;
     status.textContent = `Datei konnte nicht analysiert werden: ${error.message}`;
+  }
+});
+
+deviceForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const current = ++sequence;
+  clearPreview();
+  file.value = '';
+  try {
+    const candidateClient = new FhemClient(device.value.trim());
+    if (await candidateClient.hasDraft()) {
+      throw new Error('Ein Entwurf ist vorhanden. Bitte zuerst ausdrücklich veröffentlichen oder verwerfen.');
+    }
+    const candidate = await candidateClient.getConfig();
+    if (current !== sequence) return;
+    showConfig(candidate, candidateClient);
+    status.textContent = 'Live-Daten geladen. Es werden keine Daten gespeichert.';
+  } catch (error) {
+    if (current !== sequence) return;
+    clearPreview();
+    status.textContent = `Live-Daten konnten nicht geladen werden: ${error.message}`;
+  }
+});
+
+device.addEventListener('input', () => {
+  sequence += 1;
+  clearPreview();
+  status.textContent = 'CMS-Device geändert. Bitte Live-Daten erneut laden.';
+});
+
+validate.addEventListener('click', async () => {
+  const current = ++sequence;
+  try {
+    const positions = migrationPositions(config, [...changes.values()]);
+    const result = await client.previewMigration(positions);
+    if (current !== sequence) return;
+    if (JSON.stringify(normalized(result.source)) !== JSON.stringify(normalized(config))) {
+      throw new Error('Die Live-Daten wurden geändert. Bitte erneut laden und prüfen.');
+    }
+    status.textContent = 'Positionen und Konfiguration serverseitig geprüft. Es wurde nichts gespeichert.';
+  } catch (error) {
+    if (current !== sequence) return;
+    status.textContent = `Prüfung fehlgeschlagen: ${error.message}`;
   }
 });
 

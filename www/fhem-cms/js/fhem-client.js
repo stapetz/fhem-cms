@@ -107,6 +107,19 @@ export class FhemClient {
     }
   }
 
+  async previewMigration(positions) {
+    const text = await this.command(
+      `get ${this.cmsDevice} migrationpreview ${toBase64(JSON.stringify(positions))}`);
+    const result = await this.parseJsonResult(text, 'Die Migrationsvorschau konnte nicht geprüft werden');
+    if (!result || typeof result !== 'object' || !result.config || !result.source
+      || result.config.schemaVersion !== 5 || Number(result.source.schemaVersion) !== 4
+      || typeof result.token !== 'string'
+      || !/^[0-9a-f]{64}$/.test(result.token)) {
+      throw new Error('Unerwartete Antwort für die Migrationsvorschau');
+    }
+    return result;
+  }
+
   async saveDraft(config) {
     const result = await this.command(`set ${this.cmsDevice} draft ${toBase64(JSON.stringify(config))}`);
     if (result) {

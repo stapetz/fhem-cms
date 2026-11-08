@@ -32,6 +32,17 @@ Nach `update all …` hängt das weitere Vorgehen davon ab, was sich geändert h
 
 `rebuild` erzeugt nur die Startseite `www/fhem-cms/<Device>/index.html` neu und aktualisiert dabei die Versionsparameter, damit der Browser die neuen Dateien lädt. Konfiguration, Entwurf und Backups bleiben unberührt. Dieselbe Neuerzeugung läuft automatisch bei jedem FHEM-Start. Meldet `update` „nothing to do“, obwohl es Änderungen gibt, ist meist das Manifest auf GitHub noch nicht fertig (ein bis zwei Minuten nach dem Push) oder gecacht.
 
+## Experimentelle Rastervorschau
+
+Unter `/fhem/fhem-cms/examples/migration-preview.html` lässt sich ein 48-Spalten-Layout
+geometrisch für 12 Spalten untersuchen. Alternativ zu einer lokalen JSON-Datei können
+Sie den Namen eines CMS-Devices eingeben und dessen Live-Konfiguration laden.
+Offene Positionen und Überschneidungen müssen manuell angepasst werden. Anschließend
+prüft die Seite den Plan auf Wunsch serverseitig; ein vorhandener Entwurf sperrt
+diese Prüfung. Die Vorschau zeigt keine Widget-Inhalte und speichert oder migriert
+nichts. Änderungen an Positionen gehen beim Schließen verloren. Der Pfad beginnt
+gegebenenfalls mit dem abweichenden FHEMWEB-Webnamen statt `/fhem`.
+
 ## Sicherheit: FHEMWEB absichern
 
 Das CMS liest und schreibt über FHEMWEB. Ist FHEMWEB nicht abgesichert (FHEM meldet beim Start „WEB is not password protected“), kann jeder im Netz die CMS-Konfiguration ändern und Sollwerte setzen. Bitte vor dem produktiven Einsatz ein `allowed`-Device anlegen:

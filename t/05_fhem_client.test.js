@@ -49,6 +49,27 @@ test('invalid device and command inputs never reach FHEMWEB', async () => {
   assert.equal(requests, 0);
 });
 
+test('migration preview sends a read-only encoded plan and validates the reply', async () => {
+  const plan = { navigation: { col: 1, row: 1, w: 12, h: 1 }, pages: [] };
+  const calls = [];
+  let answer = { config: { schemaVersion: 5 }, source: { schemaVersion: 4 }, token: 'a'.repeat(64) };
+  globalThis.fetch = async (url, options) => {
+    calls.push(options);
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    return new Response(JSON.stringify(answer));
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.deepEqual(await client.previewMigration(plan), answer);
+  const command = calls[1].body.get('cmd');
+  assert.match(command, /^get cms migrationpreview [A-Za-z0-9+/]+=*$/);
+  assert.deepEqual(JSON.parse(atob(command.split(' ')[3])), plan);
+  assert.equal(calls[1].body.get('fwcsrf'), 'token');
+  answer = { config: { schemaVersion: 4 }, source: { schemaVersion: 4 }, token: 'a'.repeat(64) };
+  await assert.rejects(client.previewMigration(plan), /Unerwartete Antwort/);
+  answer = { config: { schemaVersion: 5 }, source: { schemaVersion: 4 }, token: 'invalid' };
+  await assert.rejects(client.previewMigration(plan), /Unerwartete Antwort/);
+});
+
 test('subscriptions filter names, reconnect after close, and stop after unsubscribe', () => {
   const sockets = [];
   const timers = new Map();

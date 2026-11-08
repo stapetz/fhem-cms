@@ -109,6 +109,23 @@ sub FHEMCMS_Get {
         return $basePath . '/fhem-cms/' . $name . '/index.html';
     }
 
+    if ($cmd eq 'migrationpreview') {
+        return 'migrationpreview erwartet genau einen Base64-Parameter' if (@args != 1);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        return 'Migrationsplan ist nicht Base64-kodiert' if (!defined($args[0]) || ref($args[0]));
+        return 'Migrationsplan ist zu gross' if (length($args[0]) > 2 * $FHEMCMS_MAX_CONFIG_BYTES);
+        return 'Migrationsplan ist nicht Base64-kodiert' if ($args[0] !~ /\A[A-Za-z0-9+\/]+={0,2}\z/);
+        my $decoded = decode_base64($args[0]);
+        return 'Migrationsplan ist zu gross' if (length($decoded) > $FHEMCMS_MAX_CONFIG_BYTES);
+        my $plan = eval { JSON::PP->new->utf8->decode($decoded) };
+        return 'Migrationsplan ist kein gueltiges JSON' if ($@ || !defined($plan));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
+        return $error if (defined($error));
+        my ($candidate, $token, $previewError, $source) = FHEMCMS_PreviewLayoutMigration($dataDir, $plan);
+        return $previewError if (defined($previewError));
+        return JSON::PP->new->utf8->canonical->encode({config => $candidate, source => $source, token => $token});
+    }
+
     if ($cmd eq 'config' || $cmd eq 'backups' || $cmd eq 'draft' || $cmd eq 'status') {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
         my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
@@ -141,7 +158,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history migrationpreview';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -1557,7 +1574,7 @@ sub FHEMCMS_PreviewLayoutMigration {
     return (undef, undef, $planError) if (defined($planError));
     my $target = JSON::PP->new->utf8->canonical->encode($candidate);
     my $token = sha256_hex(length($bytes) . ':' . $bytes . length($target) . ':' . $target);
-    return ($candidate, $token, undef);
+    return ($candidate, $token, undef, $source);
 }
 
 # Interner Transaktionsbaustein; bewusst nicht als FHEM-Befehl registriert.

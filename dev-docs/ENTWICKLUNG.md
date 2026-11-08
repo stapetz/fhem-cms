@@ -185,11 +185,15 @@ werden pro Seite gemeldet. Ihre Ergebnisse ersetzen keine serverseitigen
 Prüfungen und ermöglichen keine Speicherung oder Umstellung.
 
 Die separate Seite `fhem-cms/examples/migration-preview.html` ermöglicht eine
-schreibfreie, ausschließlich lokale geometrische Vorschau einer ausgewählten
-Schema-4-JSON-Datei. Sie zeigt die Navigation und Widget-IDs, aber keine
-Widget-Inhalte; sie validiert nicht die gesamte Konfiguration. Manuelle
-Positionen bleiben nur bis zum Schließen der Seite im Browser. Die Seite
-führt keine Umstellung durch und prüft nicht, ob ein Entwurf vorhanden ist.
+schreibfreie geometrische Vorschau einer ausgewählten Schema-4-JSON-Datei oder
+der Live-Daten eines angegebenen CMS-Devices. Sie zeigt die Navigation und
+Widget-IDs, aber keine Widget-Inhalte. Nur beim Laden eines CMS-Devices kann
+der vollständige Positionsplan über `get <CMS> migrationpreview <Base64-JSON>`
+serverseitig geprüft werden; der dabei erneut gelesene Live-Stand muss mit dem
+angezeigten Stand übereinstimmen. Bei vorhandenem Entwurf wird die Prüfung
+abgelehnt. Eine lokale JSON-Datei wird weiterhin nur geometrisch analysiert.
+Manuelle Positionen bleiben nur bis zum Schließen der Seite im Browser. Die
+Seite führt keine Umstellung durch.
 Die spätere Migrationsfunktion muss vor dem Schreiben alle serverseitigen
 Sicherungen und Prüfungen unabhängig von dieser Vorschau durchsetzen.
 
@@ -205,9 +209,9 @@ Transaktionsvertrag. Der Kandidat wird nicht gespeichert und Schema 5 bleibt
 über alle bestehenden Schnittstellen gesperrt. Die Struktur ist vor der
 Freischaltung mit der künftigen Layout-Engine abzugleichen.
 Der interne Schema-5-Validierungsvertrag prüft zusätzlich die vollständigen
-Widget-Daten, Navigations- und 12-Spalten-Grenzen sowie Kollisionen. Er wird
-nicht von den bestehenden Ein- und Ausgabewegen aufgerufen; diese akzeptieren
-weiterhin ausschließlich Schema 4.
+Widget-Daten, Navigations- und 12-Spalten-Grenzen sowie Kollisionen. Die
+bisherigen Lese- und Schreibwege akzeptieren weiterhin ausschließlich Schema 4;
+die neue explizite Vorschau gibt einen Kandidaten zurück, speichert ihn aber nicht.
 Eine ebenfalls interne Vorschaufunktion lehnt vorhandene Entwürfe ab und bindet
 die gelesenen Live-Bytes und den vollständigen geprüften Zielkandidaten an einen
 SHA-256-Wert. Der Wert allein ist keine Autorisierung oder Bestätigung und
