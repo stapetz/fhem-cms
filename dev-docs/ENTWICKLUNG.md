@@ -156,7 +156,7 @@ Funktionen:
   Schutzmaßnahmen nicht vorausgesetzt werden: Nur zusammengehörige Code-,
   Asset- und Datensicherungen auf einer isolierten Instanz wiederherstellen.
 
-Die interne, noch nicht in die Oberfläche eingebundene Rasteranalyse
+Die interne Rasteranalyse
 `fcui/layout-migration.js` ermittelt für Schema 4 die exakt umrechenbaren
 gespeicherten Koordinaten und markiert die übrigen Positionen und Breiten.
 Sie meldet außerdem Überlappungen der gespeicherten Raster pro Seite. Sie
@@ -181,9 +181,17 @@ Die separate Funktion `planEffectiveLegacyLayout` plant aus den effektiv
 angezeigten Positionen. Bei seitenabhängig unterschiedlichen Positionen der
 Navigation verlangt sie eine explizite gemeinsame Zielposition. Nicht exakt
 darstellbare Kacheln bleiben ohne manuelle Anpassung ungelöst; Zielkollisionen
-werden pro Seite gemeldet. Auch diese Funktion ist nicht in eine Oberfläche
-eingebunden; ihre Ergebnisse ersetzen keine serverseitigen Prüfungen und
-ermöglichen keine Speicherung oder Umstellung.
+werden pro Seite gemeldet. Ihre Ergebnisse ersetzen keine serverseitigen
+Prüfungen und ermöglichen keine Speicherung oder Umstellung.
+
+Die separate Seite `fhem-cms/examples/migration-preview.html` ermöglicht eine
+schreibfreie, ausschließlich lokale geometrische Vorschau einer ausgewählten
+Schema-4-JSON-Datei. Sie zeigt die Navigation und Widget-IDs, aber keine
+Widget-Inhalte; sie validiert nicht die gesamte Konfiguration. Manuelle
+Positionen bleiben nur bis zum Schließen der Seite im Browser. Die Seite
+führt keine Umstellung durch und prüft nicht, ob ein Entwurf vorhanden ist.
+Die spätere Migrationsfunktion muss vor dem Schreiben alle serverseitigen
+Sicherungen und Prüfungen unabhängig von dieser Vorschau durchsetzen.
 
 Das ist kein Nachweis einer vollständigen FHEMWEB-Autorisierung, Migration oder
 Geräteabnahme. Insbesondere Testinstanz-Rechte, CSRF, externer Ressourcenzugriff,

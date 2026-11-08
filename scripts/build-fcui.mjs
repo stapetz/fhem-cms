@@ -24,6 +24,12 @@ const builds = [
   },
   {
     ...common,
+    entryPoints: ['fcui/migration-preview.js'],
+    format: 'esm',
+    outfile: 'www/fhem-cms/js/fcui-migration-preview.js',
+  },
+  {
+    ...common,
     entryPoints: ['node_modules/gridstack/dist/gridstack.min.css'],
     outfile: 'www/fhem-cms/css/fcui-gridstack.css',
   },

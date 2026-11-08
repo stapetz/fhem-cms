@@ -14,6 +14,8 @@ my @assets = (
     'www/fhem-cms/css/fcui-gridstack.css',
     'www/fhem-cms/FCUI-LICENSES.txt',
     'www/fhem-cms/examples/fcui-check.html',
+    'www/fhem-cms/examples/migration-preview.html',
+    'www/fhem-cms/js/fcui-migration-preview.js',
 );
 for my $asset (@assets) {
     ok(-s $asset, "$asset exists and is not empty");
