@@ -329,7 +329,9 @@ Dateien noch nicht. FCUI-Oberfläche, Versionsvertrag und browserseitige
 Integration werden in den Folgeaufgaben umgesetzt und geprüft.
 Die separat aufrufbare Seite `fhem-cms/examples/fcui-check.html` prüft das
 Laden der lokalen Bibliotheken mit Lit und einem 12-Spalten-Gridstack-Raster
-und zeigt Ladefehler an. Sie sendet keine FHEM-Befehle und verändert keine
+und zeigt Ladefehler an. Zusätzlich prüft sie mit künstlichen Snapshots Text,
+freies HTML mit beiden Platzhalterformen und die Aktualisierung im vorbereiteten
+Schema-5-Widget-Adapter. Sie sendet keine FHEM-Befehle und verändert keine
 CMS-Daten. Sie ersetzt nicht die Prüfung der später integrierten Oberfläche.
 
 ### Sicherung und Regression vor Umbauten

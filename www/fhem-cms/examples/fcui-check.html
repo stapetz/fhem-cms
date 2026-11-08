@@ -38,9 +38,10 @@
     }
 
     try {
-      const [runtime, schema5] = await Promise.all([
+      const [runtime, schema5, widgets] = await Promise.all([
         import(url('../js/fcui-runtime.js')),
         import(url('../js/fcui-schema5-layout.js')),
+        import(url('../js/fcui-schema5-widgets.js')),
         loadStylesheet(),
       ]);
       const { LitElement, html, GridStack } = runtime;
@@ -88,7 +89,41 @@
       } finally {
         schemaGrid.destroy();
       }
-      status.textContent = 'Erfolg: Lit, Gridstack, Gridstack-CSS und Schema-5-Raster wurden lokal geprüft.';
+      const widgetConfig = {
+        schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+        navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } },
+        pages: [{ id: 'check', widgets: [
+          { id: 'text', type: 'text', html: '<p>{{Test:state}}</p>', grid: { col: 1, row: 2, w: 4, h: 2 } },
+          { id: 'html', type: 'fhem-html', devices: ['Test'],
+            html: '<div>{{Test:state}} <span device="Test" reading="state"></span></div>',
+            grid: { col: 5, row: 2, w: 4, h: 2 } },
+          { id: 'clock', type: 'fhem-clock', style: 'digital',
+            grid: { col: 9, row: 2, w: 4, h: 2 } },
+        ] }],
+      };
+      const widgetRoot = document.createElement('div');
+      widgetRoot.className = 'grid-stack';
+      document.getElementById('probe').append(widgetRoot);
+      const snapshot = (value) => new Map([['Test', [{ name: 'Test', readings: { state: value } }]]]);
+      const view = widgets.mountSchema5Widgets(GridStack, widgetRoot, widgetConfig, 'check',
+        document.createElement('nav'), {}, snapshot('vorher'));
+      try {
+        const text = widgetRoot.querySelector('cms-text');
+        const freeHtml = widgetRoot.querySelector('cms-html');
+        if (text?.shadowRoot.querySelector('[data-body]')?.textContent.trim() !== 'vorher'
+          || freeHtml?.shadowRoot.querySelector('[data-content]')?.textContent.trim() !== 'vorher vorher') {
+          throw new Error('Widget-Platzhalter konnten nicht dargestellt werden');
+        }
+        view.update(snapshot('nachher'));
+        if (text.shadowRoot.querySelector('[data-body]').textContent.trim() !== 'nachher'
+          || freeHtml.shadowRoot.querySelector('[data-content]').textContent.trim() !== 'nachher nachher') {
+          throw new Error('Widget-Platzhalter konnten nicht aktualisiert werden');
+        }
+      } finally {
+        view.destroy();
+        widgetRoot.remove();
+      }
+      status.textContent = 'Erfolg: Lit, Gridstack, Schema-5-Raster und synthetische Widget-Bindings wurden lokal geprüft.';
     } catch (error) {
       status.textContent = `Fehler beim Laden oder Prüfen der FCUI-Dateien: ${error.message}`;
     }
