@@ -616,6 +616,15 @@ subtest 'FHEM migration preview is read-only and validates its request' => sub {
     my $plan = {navigation => {col => 1, row => 1, w => 12, h => 1},
         pages => [{id => 'start', widgets => []}]};
     my $payload = encode_base64($json->encode($plan), '');
+    my $missing = File::Spec->catdir($modPath, 'fhem-cms-data', 'NoMigrationData');
+    like(FHEMCMS_Get({NAME => 'NoMigrationData'}, 'NoMigrationData', 'migrationstate'),
+        qr/Datenverzeichnis existiert nicht/, 'source rejects missing directory');
+    like(FHEMCMS_Get({NAME => 'NoMigrationData'}, 'NoMigrationData', 'migrationpreview', $payload),
+        qr/Datenverzeichnis existiert nicht/, 'preview rejects missing directory');
+    ok(!-e $missing, 'read-only commands do not create a missing directory');
+    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'migrationstate')), $json->decode($original),
+        'source command returns validated live configuration');
+    like(FHEMCMS_Get($hash, $name, 'migrationstate', 'extra'), qr/keine Parameter/, 'source rejects parameters');
     my $response = $json->decode(FHEMCMS_Get($hash, $name, 'migrationpreview', $payload));
     is($response->{config}{schemaVersion}, 5, 'returns a candidate via explicit preview API');
     is_deeply($response->{source}, $json->decode($original), 'returns the validated source for stale-preview detection');
@@ -627,9 +636,17 @@ subtest 'FHEM migration preview is read-only and validates its request' => sub {
     like(FHEMCMS_Get($hash, $name, 'migrationpreview', encode_base64('{', '')), qr/JSON/, 'rejects invalid JSON');
     like(FHEMCMS_Get($hash, $name, 'migrationpreview', encode_base64('{}', '')), qr/Migrationsplan/, 'rejects incomplete plan');
     write_bytes($draft, $original);
+    like(FHEMCMS_Get($hash, $name, 'migrationstate'), qr/Entwurf/, 'draft blocks source API');
     like(FHEMCMS_Get($hash, $name, 'migrationpreview', $payload), qr/Entwurf/, 'draft blocks preview API');
     is(read_bytes($draft), $original, 'draft is unchanged');
     is(read_bytes($live), $original, 'failed previews leave live unchanged');
+    unlink($draft) or die "Cannot remove draft: $!";
+    SKIP: {
+        skip 'symlinks are unavailable', 2 if (!symlink('missing-draft.json', $draft));
+        like(FHEMCMS_Get($hash, $name, 'migrationstate'), qr/Entwurf/, 'dangling draft symlink blocks source');
+        like(FHEMCMS_Get($hash, $name, 'migrationpreview', $payload), qr/Entwurf/, 'dangling draft symlink blocks preview');
+        unlink($draft) or die "Cannot remove draft symlink: $!";
+    }
     like(FHEMCMS_Set($hash, $name, 'migrationpreview', $payload), qr/Unknown argument/, 'preview cannot be used as a write command');
 };
 

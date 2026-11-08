@@ -194,8 +194,10 @@ CMS-Devices kann der vollständige Positionsplan über
 serverseitig geprüft werden; der dabei erneut gelesene Live-Stand muss mit dem
 angezeigten Stand übereinstimmen. Bei vorhandenem Entwurf wird die Prüfung
 abgelehnt. Eine lokale JSON-Datei wird weiterhin nur geometrisch analysiert.
-Der Browser akzeptiert beim Entwurfsstatus nur eine ausdrückliche boolesche
-Antwort; fehlende oder fehlerhafte Angaben verhindern das Laden der Vorschau.
+Für das Laden nutzt sie `get <CMS> migrationstate`: Der Befehl liest die
+validierte Live-Konfiguration nur bei fehlendem Entwurf und erzeugt kein
+Datenverzeichnis. Auch `migrationpreview` erzeugt kein Datenverzeichnis.
+Ein vorhandener oder als Symlink angelegter Entwurf sperrt beide Befehle.
 Nach erfolgreicher Serverprüfung kann das geprüfte Zielraster zusätzlich mit
 Gridstack angezeigt werden. Es enthält nur Navigation und Widget-Bezeichnungen,
 keine ausgeführten Widgets oder Live-Werte. Bei Positionsänderungen oder einem

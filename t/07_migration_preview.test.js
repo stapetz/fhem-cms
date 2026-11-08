@@ -49,15 +49,17 @@ test('migration preview is read-only, handles adjustments and rejects stale live
   };
   let stale = false;
   let draft = false;
-  let invalidDraftStatus = false;
+  let invalidSource = false;
   let delayedBackup;
   const commands = [];
   globalThis.fetch = async (url, options) => {
     if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'test-token' } });
     const command = options.body.get('cmd');
     commands.push(command);
-    if (command === 'get CMS status') return new Response(JSON.stringify(invalidDraftStatus ? {} : { draft }));
-    if (command === 'get CMS config') return new Response(JSON.stringify(source));
+    if (command === 'get CMS migrationstate') {
+      return new Response(draft ? 'Entwurf vorhanden: zuerst veroeffentlichen oder verwerfen'
+        : JSON.stringify(invalidSource ? {} : source));
+    }
     if (command === 'get CMS migrationbackups') return new Response(JSON.stringify(['config.json.20000101-000000.bak']));
     if (command === 'get CMS migrationrestorepreview config.json.20000101-000000.bak') {
       if (delayedBackup) return new Promise((resolve) => {
@@ -96,7 +98,7 @@ test('migration preview is read-only, handles adjustments and rejects stale live
     assert.deepEqual(original.children, [], 'source HTML is inserted as text, not markup');
     await elements.validate.fire('click');
     assert.match(elements.status.textContent, /Nicht alle Positionen/);
-    assert.equal(commands.length, 2, 'unresolved position sends no preview command');
+    assert.equal(commands.length, 1, 'unresolved position sends no preview command');
 
     const labels = fieldset.children.filter((child) => child.tag === 'label');
     ['1', '2', '1', '1'].forEach((value, index) => { labels[index].children[0].value = value; });
@@ -145,13 +147,14 @@ test('migration preview is read-only, handles adjustments and rejects stale live
     draft = true;
     elements.device.value = 'CMS';
     await elements['device-form'].fire('submit');
-    assert.match(elements.status.textContent, /Entwurf ist vorhanden/);
+    assert.match(elements.status.textContent, /Entwurf vorhanden/);
     assert.equal(elements.preview.hidden, true);
-    invalidDraftStatus = true;
+    draft = false;
+    invalidSource = true;
     const before = commands.length;
     await elements['device-form'].fire('submit');
-    assert.match(elements.status.textContent, /Unerwartete Antwort für den Entwurfsstatus/);
-    assert.deepEqual(commands.slice(before), ['get CMS status'], 'invalid draft status blocks loading config');
+    assert.match(elements.status.textContent, /Unerwartete Antwort für die Migrationsquelle/);
+    assert.deepEqual(commands.slice(before), ['get CMS migrationstate'], 'invalid source is rejected');
     assert.equal(elements.preview.hidden, true);
   } finally {
     globalThis.document = previous.document;

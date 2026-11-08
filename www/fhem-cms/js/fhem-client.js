@@ -110,6 +110,17 @@ export class FhemClient {
     }
   }
 
+  async getMigrationSource() {
+    const text = await this.command(`get ${this.cmsDevice} migrationstate`);
+    const source = await this.parseJsonResult(text, 'Die Migrationsquelle konnte nicht gelesen werden');
+    if (!source || typeof source !== 'object' || Array.isArray(source)
+      || !/^[0-9]{1,6}$/.test(String(source.schemaVersion)) || Number(source.schemaVersion) !== 4
+      || !Array.isArray(source.pages)) {
+      throw new Error('Unerwartete Antwort für die Migrationsquelle');
+    }
+    return source;
+  }
+
   async previewMigration(positions) {
     const text = await this.command(
       `get ${this.cmsDevice} migrationpreview ${toBase64(JSON.stringify(positions))}`);

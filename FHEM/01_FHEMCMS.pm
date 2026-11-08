@@ -109,6 +109,16 @@ sub FHEMCMS_Get {
         return $basePath . '/fhem-cms/' . $name . '/index.html';
     }
 
+    if ($cmd eq 'migrationstate') {
+        return 'migrationstate erwartet keine Parameter' if (@args);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
+        return $error if (defined($error));
+        my (undef, $source, $readError) = FHEMCMS_ReadMigrationSource($dataDir);
+        return $readError if (defined($readError));
+        return JSON::PP->new->utf8->canonical->encode($source);
+    }
+
     if ($cmd eq 'migrationpreview') {
         return 'migrationpreview erwartet genau einen Base64-Parameter' if (@args != 1);
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
@@ -119,7 +129,7 @@ sub FHEMCMS_Get {
         return 'Migrationsplan ist zu gross' if (length($decoded) > $FHEMCMS_MAX_CONFIG_BYTES);
         my $plan = eval { JSON::PP->new->utf8->decode($decoded) };
         return 'Migrationsplan ist kein gueltiges JSON' if ($@ || !defined($plan));
-        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name);
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
         return $error if (defined($error));
         my ($candidate, $token, $previewError, $source) = FHEMCMS_PreviewLayoutMigration($dataDir, $plan);
         return $previewError if (defined($previewError));
@@ -193,7 +203,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -1595,9 +1605,8 @@ sub FHEMCMS_PrepareLayoutMigration {
     return ($candidate, undef);
 }
 
-# Nur Vorschau: Ein spaeterer Schreibpfad muss denselben Zustand erneut pruefen.
-sub FHEMCMS_PreviewLayoutMigration {
-    my ($dataDir, $positions) = @_;
+sub FHEMCMS_ReadMigrationSource {
+    my ($dataDir) = @_;
     my $draft = File::Spec->catfile($dataDir, 'draft.json');
     return (undef, undef, 'Entwurf vorhanden: zuerst veroeffentlichen oder verwerfen') if (-e $draft || -l $draft);
     my $live = File::Spec->catfile($dataDir, 'config.json');
@@ -1606,6 +1615,14 @@ sub FHEMCMS_PreviewLayoutMigration {
     return (undef, undef, $error) if (defined($error));
     my ($source, $parseError) = FHEMCMS_ParseConfig($bytes);
     return (undef, undef, "Live-Konfiguration ist ungueltig: $parseError") if (defined($parseError));
+    return ($bytes, $source, undef);
+}
+
+# Nur Vorschau: Ein spaeterer Schreibpfad muss denselben Zustand erneut pruefen.
+sub FHEMCMS_PreviewLayoutMigration {
+    my ($dataDir, $positions) = @_;
+    my ($bytes, $source, $error) = FHEMCMS_ReadMigrationSource($dataDir);
+    return (undef, undef, $error) if (defined($error));
     my ($candidate, $planError) = FHEMCMS_PrepareLayoutMigration($source, $positions);
     return (undef, undef, $planError) if (defined($planError));
     my $target = JSON::PP->new->utf8->canonical->encode($candidate);

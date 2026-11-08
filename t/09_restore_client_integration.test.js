@@ -111,13 +111,15 @@ test('real migration preview connects legacy plan to schema 5 grid without write
     globalThis.fetch = async (url, options) => {
       if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'test-token' } });
       const parts = options.body.get('cmd').split(' ');
-      assert.deepEqual(parts.slice(0, 3), ['get', 'CMS', 'migrationpreview']);
+      assert.deepEqual(parts.slice(0, 2), ['get', 'CMS']);
+      assert.ok(['migrationstate', 'migrationpreview'].includes(parts[2]));
       const result = spawnSync('perl', ['-e', script, root, ...parts.slice(2)], { encoding: 'utf8' });
       assert.equal(result.error, undefined);
       assert.equal(result.status, 0, result.stderr);
       return new Response(result.stdout);
     };
     const client = new FhemClient('CMS', 'https://example.test/fhem/');
+    assert.deepEqual(await client.getMigrationSource(), live);
     const positions = migrationPositions(live);
     const result = await client.previewMigration(positions);
     assert.deepEqual(result.source, live);
@@ -132,6 +134,7 @@ test('real migration preview connects legacy plan to schema 5 grid without write
     assert.equal(await readFile(livePath, 'utf8'), bytes);
     assert.deepEqual(await readdir(dir), ['config.json']);
     await writeFile(draftPath, bytes);
+    await assert.rejects(client.getMigrationSource(), /Entwurf vorhanden/);
     await assert.rejects(client.previewMigration(positions), /Entwurf vorhanden/);
     assert.equal(await readFile(livePath, 'utf8'), bytes);
     assert.equal(await readFile(draftPath, 'utf8'), bytes);

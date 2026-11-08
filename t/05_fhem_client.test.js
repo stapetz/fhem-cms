@@ -99,6 +99,23 @@ test('migration preview sends a read-only encoded plan and validates the reply',
   await assert.rejects(client.previewMigration(plan), /Unerwartete Antwort/);
 });
 
+test('migration source uses the read-only migration state contract', async () => {
+  let answer = { schemaVersion: 4, pages: [] };
+  const commands = [];
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    commands.push(options.body.get('cmd'));
+    return new Response(JSON.stringify(answer));
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.deepEqual(await client.getMigrationSource(), answer);
+  for (const invalid of [null, [], {}, { schemaVersion: 5, pages: [] }, { schemaVersion: 4, pages: {} }]) {
+    answer = invalid;
+    await assert.rejects(client.getMigrationSource(), /Unerwartete Antwort/);
+  }
+  assert.ok(commands.every((command) => command === 'get cms migrationstate'));
+});
+
 test('draft status accepts only an explicit boolean and rejects malformed responses', async () => {
   let answer = '{"draft":false}';
   const calls = [];

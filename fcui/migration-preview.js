@@ -322,10 +322,7 @@ deviceForm.addEventListener('submit', async (event) => {
   file.value = '';
   try {
     const candidateClient = new FhemClient(device.value.trim());
-    if (await candidateClient.hasDraft()) {
-      throw new Error('Ein Entwurf ist vorhanden. Bitte zuerst ausdrücklich veröffentlichen oder verwerfen.');
-    }
-    const candidate = await candidateClient.getConfig();
+    const candidate = await candidateClient.getMigrationSource();
     if (current !== sequence) return;
     showConfig(candidate, candidateClient);
     status.textContent = 'Live-Daten geladen. Es werden keine Daten gespeichert.';
