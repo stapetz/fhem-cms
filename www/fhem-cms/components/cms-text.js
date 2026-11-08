@@ -71,7 +71,7 @@ class FHEMCMSText extends HTMLElement {
           <div data-editor></div>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
-            <button type="button" class="danger" data-delete>Löschen</button>
+            <button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button>
             <button type="submit" data-save>Speichern</button>
           </div>

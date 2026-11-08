@@ -86,7 +86,7 @@ class FHEMCMSIcon extends HTMLElement {
           </fieldset>
           <p class="hint">Für jeden Reading-Wert ein Icon und eine Farbe wählen. Nicht zugeordnete Werte werden als Text angezeigt.</p>
           <p class="error" data-error role="alert"></p>
-          <div class="actions"><button type="button" class="danger" data-delete>Entfernen</button>
+          <div class="actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>
         </form>
       </dialog>`;

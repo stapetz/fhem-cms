@@ -266,7 +266,7 @@ class FHEMCMSThermostat extends HTMLElement {
           </fieldset>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
-            <button type="button" class="danger" data-delete>Kachel löschen</button>
+            <button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button>
             <button type="submit" data-save>Speichern</button>
           </div>

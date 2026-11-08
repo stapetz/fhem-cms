@@ -219,7 +219,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
           <label>Schwellwert „inaktiv“ in Watt<input name="threshold" type="number" min="0" max="1000" step="1"></label>
           <p class="hint">Netz: Bezug negativ, Einspeisung positiv. Batterie: Laden positiv, Entladen negativ. Fehlt das Reading für Hausverbrauch, wird er aus den übrigen Werten berechnet. Ohne Netz- oder Batterie-Reading entfällt die jeweilige Station. Das Widget liest nur und sendet keine FHEM-Befehle.</p>
           <p class="error" data-error role="alert"></p>
-          <div class="actions"><button type="button" class="danger" data-delete>Entfernen</button>
+          <div class="actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>
         </form>
       </dialog>`;

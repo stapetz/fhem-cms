@@ -148,7 +148,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
           <fieldset><legend>Readings</legend><div data-config-rows></div>
             <button type="button" data-add>Reading hinzufügen</button></fieldset>
           <p class="error" data-error role="alert"></p>
-          <div class="actions"><button type="button" class="danger" data-delete>Entfernen</button>
+          <div class="actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>
         </form>
       </dialog>`;

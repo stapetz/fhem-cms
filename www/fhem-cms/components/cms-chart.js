@@ -136,7 +136,7 @@ class FHEMCMSChart extends HTMLElement {
           <label>Standard-Granularität<select name="granularity"></select></label>
           <label>Datenquelle<select name="source"></select></label>
           <p class="error" data-error role="alert"></p>
-          <div class="actions"><button type="button" class="danger" data-delete>Entfernen</button>
+          <div class="actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit" data-save>Speichern</button></div>
         </form>
       </dialog>`;
