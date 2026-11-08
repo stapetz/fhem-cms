@@ -241,6 +241,67 @@ export function planEffectiveLegacyLayout(config, adjustments = []) {
   };
 }
 
+function roundedGrid(source, compact = false) {
+  const w = Math.max(1, Math.min(12, Math.round(source.w / 4)));
+  const col = Math.min(13 - w, Math.max(1, Math.round((source.col - 1) / 4) + 1));
+  const h = compact ? 1 : Math.min(source.h, 1000);
+  return { col, row: Math.min(source.row, 1001 - h), w, h };
+}
+
+function findPosition(occupied, target) {
+  let best = null;
+  for (let col = 1; col <= 13 - target.w; col += 1) {
+    const mask = ((1 << target.w) - 1) << (col - 1);
+    let start = 1;
+    for (let row = 1; row <= 1001; row += 1) {
+      if (row <= 1000 && !(occupied[row] & mask)) continue;
+      const last = row - target.h;
+      if (last >= start) {
+        const candidateRow = Math.max(start, Math.min(last, target.row));
+        const distance = Math.abs(candidateRow - target.row) * 12 + Math.abs(col - target.col);
+        if (!best || distance < best.distance) {
+          best = { col, row: candidateRow, w: target.w, h: target.h, distance };
+        }
+      }
+      start = row + 1;
+    }
+  }
+  if (!best) return null;
+  const { distance, ...grid } = best;
+  return grid;
+}
+
+function occupy(rows, grid) {
+  const mask = ((1 << grid.w) - 1) << (grid.col - 1);
+  for (let row = grid.row; row < grid.row + grid.h; row += 1) rows[row] |= mask;
+}
+
+// The generated positions are proposals; server validation and confirmation remain mandatory.
+export function suggestEffectiveLegacyLayout(config) {
+  const analysis = inspectEffectiveLegacyLayout(config);
+  const build = (compact) => {
+    const navigation = compact
+      ? { col: 1, row: 1, w: 12, h: 1 }
+      : roundedGrid(analysis.pages[0].navigation.source);
+    const adjustments = [{ type: 'navigation', grid: navigation }];
+    for (const page of analysis.pages) {
+      const occupied = new Uint16Array(1001);
+      occupy(occupied, navigation);
+      for (const widget of page.widgets) {
+        const target = roundedGrid(widget.source, compact);
+        const position = findPosition(occupied, target);
+        if (!position) return null;
+        occupy(occupied, position);
+        adjustments.push({ type: 'widget', page: page.id, id: widget.id, grid: position });
+      }
+    }
+    return adjustments;
+  };
+  const adjustments = build(false) || build(true);
+  if (!adjustments) throw new Error('Das Layout kann nicht automatisch angeordnet werden');
+  return adjustments;
+}
+
 // The backend must still validate the source, positions and transaction independently.
 export function migrationPositions(config, adjustments = []) {
   const plan = planEffectiveLegacyLayout(config, adjustments);

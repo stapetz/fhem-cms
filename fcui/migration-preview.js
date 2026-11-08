@@ -1,4 +1,4 @@
-import { migrationPositions, planEffectiveLegacyLayout } from './layout-migration.js';
+import { migrationPositions, planEffectiveLegacyLayout, suggestEffectiveLegacyLayout } from './layout-migration.js';
 import { createPreviewServices } from './preview-services.js';
 import { FhemClient, isValidName } from '../www/fhem-cms/js/fhem-client.js';
 import { createMigrationTransport } from '../www/fhem-cms/js/fcui-migration-transport.js';
@@ -38,6 +38,7 @@ if (isValidName(initialDevice)) device.value = initialDevice;
 let config;
 let client;
 let changes = new Map();
+let suggestions = new Map();
 let sequence = 0;
 let backupSequence = 0;
 let backupClient;
@@ -106,9 +107,9 @@ function formFor(item, current, source, original) {
     if (writing) return;
     sequence += 1;
     clearTarget();
-    changes.delete(keyOf(item));
+    changes.set(keyOf(item), structuredClone(suggestions.get(keyOf(item))));
     render();
-    status.textContent = 'Anpassung in dieser Vorschau zurückgesetzt.';
+    status.textContent = 'Automatischer Vorschlag wiederhergestellt.';
   });
   fieldset.append(reset);
   form.append(fieldset);
@@ -163,6 +164,7 @@ function clearPreview() {
   config = undefined;
   client = undefined;
   changes = new Map();
+  suggestions = new Map();
   preview.hidden = true;
   validate.hidden = true;
   pageSelect.replaceChildren();
@@ -288,9 +290,12 @@ function clearBackups() {
 }
 
 function showConfig(candidate, fhemClient) {
-  const plan = planEffectiveLegacyLayout(candidate);
+  const automatic = suggestEffectiveLegacyLayout(candidate);
+  const plan = planEffectiveLegacyLayout(candidate, automatic);
   config = candidate;
   client = fhemClient;
+  suggestions = new Map(automatic.map((item) => [keyOf(item), item]));
+  changes = new Map(automatic.map((item) => [keyOf(item), structuredClone(item)]));
   migrationController = client ? new MigrationController(createMigrationTransport(client)) : undefined;
   for (const page of plan.pages) {
     const option = make('option', page.id);
@@ -322,7 +327,7 @@ file.addEventListener('change', async () => {
     const candidate = JSON.parse(await selected.text());
     if (current !== sequence) return;
     showConfig(candidate);
-    status.textContent = 'Vorschau geladen. Es werden keine Daten gespeichert.';
+    status.textContent = 'Automatischer Layoutvorschlag geladen. Es werden keine Daten gespeichert.';
   } catch (error) {
     if (current !== sequence) return;
     config = undefined;
@@ -342,7 +347,7 @@ deviceForm.addEventListener('submit', async (event) => {
     const candidate = await candidateClient.getMigrationSource();
     if (current !== sequence) return;
     showConfig(candidate, candidateClient);
-    status.textContent = 'Live-Daten geladen. Es werden keine Daten gespeichert.';
+    status.textContent = 'Automatischer Layoutvorschlag aus Live-Daten geladen. Es werden keine Daten gespeichert.';
   } catch (error) {
     if (current !== sequence) return;
     clearPreview();

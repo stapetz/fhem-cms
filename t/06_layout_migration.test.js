@@ -1,10 +1,51 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
-import { inspectEffectiveLegacyLayout, inspectLegacyLayout, migrationPositions, planEffectiveLegacyLayout, planLegacyLayout } from '../fcui/layout-migration.js';
+import { inspectEffectiveLegacyLayout, inspectLegacyLayout, migrationPositions, planEffectiveLegacyLayout, planLegacyLayout, suggestEffectiveLegacyLayout } from '../fcui/layout-migration.js';
 import { configureLayout, effectiveLayout, layoutMode, layoutStep } from '../www/fhem-cms/js/layout.js';
 
 const grid = (col, row, w, h) => ({ col, row, w, h });
+
+test('automatic suggestions cover all pages, round misaligned geometry and avoid collisions', () => {
+  const config = {
+    schemaVersion: 4, settings: { layoutMode: 'free' },
+    navigation: { grid: grid(2, 1, 45, 1) },
+    pages: [
+      { id: 'a', widgets: [
+        { id: 'x', grid: grid(2, 1, 3, 2) },
+        { id: 'y', grid: grid(3, 1, 4, 2) },
+        { id: 'z', grid: grid(47, 1000, 2, 2) },
+      ] },
+      { id: 'b', widgets: [{ id: 'x', grid: grid(48, 1, 1, 1) }] },
+    ],
+  };
+  const original = structuredClone(config);
+  const suggestions = suggestEffectiveLegacyLayout(config);
+  const plan = planEffectiveLegacyLayout(config, suggestions);
+  assert.equal(plan.allPositionsResolved, true);
+  assert.ok(plan.pages.every((page) => page.collisions.length === 0));
+  assert.deepEqual(plan.pages.map((page) => page.widgets.map((item) => item.id)), [['x', 'y', 'z'], ['x']]);
+  assert.equal(plan.pages[0].widgets[0].grid.w, 1);
+  assert.ok(plan.pages[0].widgets[2].grid.row + plan.pages[0].widgets[2].grid.h <= 1001);
+  assert.deepEqual(config, original);
+  assert.deepEqual(suggestEffectiveLegacyLayout(config), suggestions, 'proposals are deterministic');
+  assert.doesNotThrow(() => migrationPositions(config, suggestions));
+});
+
+test('automatic fallback fits large legacy widgets without dropping them', () => {
+  const config = {
+    schemaVersion: 4, settings: { layoutMode: 'free' },
+    navigation: { grid: grid(1, 1, 48, 1000) },
+    pages: [{ id: 'a', widgets: Array.from({ length: 200 }, (_, index) =>
+      ({ id: `w${index}`, grid: grid(1, 1, 48, 1000) })) }],
+  };
+  const plan = planEffectiveLegacyLayout(config, suggestEffectiveLegacyLayout(config));
+  assert.equal(plan.allPositionsResolved, true);
+  assert.equal(plan.pages[0].widgets.length, 200);
+  assert.deepEqual(plan.pages[0].collisions, []);
+  assert.deepEqual(plan.navigation, grid(1, 1, 12, 1));
+  assert.ok(plan.pages[0].widgets.every((widget) => widget.grid.h === 1));
+});
 
 test('exports only a complete collision-free effective plan for backend validation', () => {
   const config = {
@@ -43,9 +84,7 @@ test('backend accepts the effective plan while preserving both placeholder forms
       ],
     }],
   };
-  const positions = migrationPositions(config, [
-    { type: 'widget', page: 'a', id: 'text', grid: grid(1, 2, 1, 1) },
-  ]);
+  const positions = migrationPositions(config, suggestEffectiveLegacyLayout(config));
   const script = [
     'use strict; use warnings; use JSON::PP ();',
     'require "./FHEM/01_FHEMCMS.pm";',

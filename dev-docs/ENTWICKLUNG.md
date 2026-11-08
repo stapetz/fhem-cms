@@ -74,7 +74,10 @@ Datensicherung.
 
 Am 08.11.2026 wurde für den Rasterübergang festgelegt: **Bestehende Layouts
 bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen
-12 Spalten.** Es gibt keine automatische verlustbehaftete Umrechnung. Ein
+12 Spalten.** Nach späterer ausdrücklicher Entscheidung des Entwicklers werden
+bei der bestätigten Umstellung automatisch gerundete und kollisionsfrei
+angeordnete Layoutvorschläge akzeptiert; das Erscheinungsbild darf sich ändern.
+Inhalte, Seiten, Medien und Widget-Konfigurationen bleiben erhalten. Ein
 gespeichertes `settings.gridColumns` von 12 oder 24 ändert daran nichts: Im
 Bestand sind alle gespeicherten Koordinaten trotzdem 48-Spalten-Einheiten.
 
@@ -100,10 +103,11 @@ Funktionen:
    ihn nicht umschreiben. Änderungen an alten Layouts dürfen nicht implizit auf
    12 Spalten runden. Für die spätere explizite Umstellung sind eine geprüfte
    Sicherung, eine Vorschau der Auswirkungen und eine Bestätigung vorgesehen.
-   Nicht exakt darstellbare Positionen und Breiten werden in der Vorschau
-   gekennzeichnet und von der bearbeitenden Person manuell angepasst, nicht
-   stillschweigend gerundet. Auch Navigation, alle Seiten und mögliche
-   Überschneidungen sind einzubeziehen. Bis zur bestätigten Umstellung bleiben
+   Nicht exakt darstellbare Positionen und Breiten werden für die Vorschau
+   automatisch gerundet und kollisionsfrei angeordnet. Bei Platzmangel dürfen
+   die Höhen verkleinert werden. Die Vorschau weist auf sichtbare Änderungen hin
+   und erlaubt manuelle Korrekturen. Navigation und alle Seiten sind einzubeziehen.
+   Bis zur bestätigten Umstellung bleiben
    die ursprünglichen Daten unverändert; ein Abbruch verwirft die Vorschau.
    Solange ein Entwurf existiert, ist die Umstellung gesperrt: Er muss vorher
    ausdrücklich veröffentlicht oder verworfen werden. Die Umstellung selbst
@@ -195,6 +199,14 @@ darstellbare Kacheln bleiben ohne manuelle Anpassung ungelöst; Zielkollisionen
 werden pro Seite gemeldet. Ihre Ergebnisse ersetzen keine serverseitigen
 Prüfungen und ermöglichen keine Speicherung oder Umstellung.
 
+`suggestEffectiveLegacyLayout` erzeugt auf dieser Grundlage beim Laden einer
+Vorschau automatisch vollständige Vorschläge für Navigation und alle Widgets.
+Die Vorschläge werden auf 12 Spalten gerundet und kollisionsfrei platziert;
+bei Platzmangel wird ein kompakter Vorschlag mit einer Zeile Höhe verwendet.
+Die ursprünglichen Daten bleiben unverändert. Einzelne Positionen können in
+der Vorschau angepasst oder auf den automatischen Vorschlag zurückgesetzt werden.
+Die Serverprüfung und die ausdrückliche Bestätigung bleiben obligatorisch.
+
 Die separate Seite `fhem-cms/examples/migration-preview.html` ermöglicht eine
 schreibfreie geometrische Vorschau einer ausgewählten Schema-4-JSON-Datei oder
 der Live-Daten eines angegebenen CMS-Devices. Sie zeigt die Navigation und
@@ -224,10 +236,9 @@ Widget-Bereich ist inert und die eigens begrenzten Dienste lehnen Schreibaktione
 ausdrücklich ab. Seiten- oder Devicewechsel, Positionsänderungen und erneute
 Prüfung räumen Widgets und Timer auf und verwerfen verspätete Ergebnisse.
 Die Ansicht belegt weder eine Freigabe zur Migration noch die fertige Oberfläche.
-Manuelle Positionen bleiben nur bis zum Schließen der Seite im Browser. Die
-Seite führt keine Umstellung durch.
-Die spätere Migrationsfunktion muss vor dem Schreiben alle serverseitigen
-Sicherungen und Prüfungen unabhängig von dieser Vorschau durchsetzen.
+Vorschläge und manuelle Positionen bleiben nur bis zum Schließen der Seite im
+Browser. Eine Umstellung erfolgt erst nach Serverprüfung und ausdrücklicher
+Bestätigung; der Schreibpfad setzt alle Sicherungen und Prüfungen erneut durch.
 
 Die Vorschauseite kann auch über `get <CMS> migrationbackups` vorhandene
 Backup-Namen laden und mit `get <CMS> migrationrestorepreview <Backup>` den

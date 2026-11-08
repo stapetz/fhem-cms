@@ -35,8 +35,10 @@ Nach `update all …` hängt das weitere Vorgehen davon ab, was sich geändert h
 ## Umstellung und Wiederherstellung testen
 
 Die Umstellung betrifft alle Seiten eines CMS-Devices. Bestehende Layouts bleiben
-im 48-Spalten-Format, bis die Umstellung ausdrücklich bestätigt wird. Neue
-Positionen im 12-Spalten-Raster werden nicht automatisch gerundet.
+im 48-Spalten-Format, bis die Umstellung ausdrücklich bestätigt wird. Für das
+12-Spalten-Raster werden automatisch gerundete, überschneidungsfreie Positionen
+vorgeschlagen. Das Erscheinungsbild kann sich dabei deutlich ändern; Inhalte,
+Seiten und Widget-Einstellungen bleiben erhalten.
 
 1. Vor dem Test eine vollständige externe Sicherung von FHEM-Konfiguration,
    CMS-Datenverzeichnis einschließlich Live, Entwurf und Backups, Medien, Modul
@@ -48,11 +50,13 @@ Positionen im 12-Spalten-Raster werden nicht automatisch gerundet.
    `/fhem/fhem-cms/examples/migration-preview.html` aufrufen. Bei abweichendem
    FHEMWEB-Webnamen beginnt der Pfad entsprechend anders. Das CMS-Device
    eingeben und `Live-Daten laden` wählen.
-4. Offene Positionen auf allen Seiten manuell festlegen und Überschneidungen
-   beheben. `Positionen serverseitig prüfen` anklicken und das Zielraster sowie
+4. Die automatisch vorgeschlagenen Positionen bei Bedarf auf einzelnen Seiten
+   anpassen. `Positionen serverseitig prüfen` anklicken und das Zielraster sowie
    die optionale schreibfreie Widget-Ansicht prüfen. Die Ansicht zeigt einmalig
    gelesene Werte, keine laufenden Aktualisierungen; Geräteaktionen sind dort
    gesperrt. Eine lokal geladene JSON-Datei kann nur untersucht werden.
+   Falls sehr große Widgets nicht in das Zielraster passen, werden die Höhen im
+   Vorschlag verkleinert; die Anordnung kann später im Editor korrigiert werden.
 5. Erst nach geprüfter externer Sicherung das entsprechende Kästchen markieren,
    `Geprüftes Layout auf Schema 5 umstellen` und den Bestätigungsdialog wählen.
    Das Modul sichert den bisherigen Live-Stand zusätzlich bytegenau. Der
