@@ -338,6 +338,15 @@ FHEM-Client mit dieser Ansicht und prüft auf isolierten Dateien getrennte
 Live- und Entwurfsdaten sowie unveränderte Quelldateien. Gridstack, DOM und
 Gerätesnapshots sind dabei Test-Stubs; ein echter FHEMWEB- oder Browsertest
 ist dies nicht.
+Ein weiterer Integrationstest führt auf isolierten Testdateien Vorschau,
+interne Migration und Neustart, versioniertes Lesen und Anzeigen, Entwurf,
+Publish und formatübergreifenden internen Restore als zusammenhängende Kette
+aus. Er prüft alte Schreibbefehle und veraltete Zustandskennungen, beide
+Platzhaltervarianten, Medienbytes und Backup-Inhalte. Die internen
+Schreibfunktionen werden dabei nur vom Test direkt aufgerufen; sie sind nicht
+als FHEM-Befehle freigeschaltet. DOM, Gridstack, Gerätesnapshots und Transport
+bleiben Test-Stubs; dies ersetzt weder eine vollständige Oberfläche noch
+die Abnahme auf einer gesicherten FHEM-Testinstanz.
 Die bisherigen Schreibbefehle prüfen vor Änderungen die Schema-Version von
 Live- und gegebenenfalls Entwurfsdatei. Bei einem unbekannten Format lehnen sie
 auch Verwerfen und Restore ab, statt Daten mit einem älteren Client zu ersetzen.
