@@ -47,6 +47,19 @@ export function dataFor(widget, snapshots) {
     : snapshots.get(widget.device) || null;
 }
 
+export function groupSnapshots(mains, results) {
+  const byName = new Map(results.map((item) => [item.name, item]));
+  const groups = new Map();
+  for (const name of mains) {
+    const main = byName.get(name);
+    if (!main) continue;
+    const channels = results.filter((item) => item.parent === name)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    groups.set(name, [main, ...channels]);
+  }
+  return groups;
+}
+
 export function isLiveWidget(widget) {
   return ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-solarflow'].includes(widget.type)
     || (widget.type === 'text' && devicesOf(widget).length > 0);

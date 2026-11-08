@@ -26,14 +26,18 @@ class Element {
 test('migration preview is read-only, handles adjustments and rejects stale live data', async () => {
   const ids = ['file', 'status', 'preview', 'page', 'summary', 'canvas', 'forms', 'device-form', 'device', 'validate',
     'load-backups', 'backup-controls', 'backup', 'preview-backup', 'backup-status', 'backup-result', 'backup-live', 'backup-data',
-    'show-target', 'target', 'target-grid', 'target-status', 'grid-css'];
+    'show-target', 'target', 'target-grid', 'target-status', 'grid-css',
+    'show-widgets', 'widget-target', 'widget-grid', 'widget-status'];
   const elements = Object.fromEntries(ids.map((id) => [id, new Element(id)]));
   const previous = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch };
   globalThis.document = {
     getElementById(id) { return elements[id]; },
     createElement(tag) { return new Element(tag); },
   };
-  globalThis.window = { location: { href: 'https://example.test/fhem/fhem-cms/examples/migration-preview.html' } };
+  globalThis.window = {
+    location: { href: 'https://example.test/fhem/fhem-cms/examples/migration-preview.html' },
+    addEventListener() {},
+  };
   const source = {
     schemaVersion: 4, pages: [
       { id: 'one', title: 'One', widgets: [
@@ -101,6 +105,9 @@ test('migration preview is read-only, handles adjustments and rejects stale live
     await elements.validate.fire('click');
     assert.match(elements.status.textContent, /serverseitig geprüft/);
     assert.equal(elements['show-target'].hidden, false);
+    assert.equal(elements['show-widgets'].hidden, false);
+    await elements['show-widgets'].fire('click');
+    assert.match(elements['widget-status'].textContent, /Gridstack-CSS konnte nicht geladen werden/);
     await elements['show-target'].fire('click');
     assert.equal(elements.target.hidden, false);
     assert.match(elements['target-status'].textContent, /Gridstack-CSS konnte nicht geladen werden/);
@@ -118,7 +125,9 @@ test('migration preview is read-only, handles adjustments and rejects stale live
     await elements.validate.fire('click');
     assert.match(elements.status.textContent, /Live-Daten wurden geändert/);
     assert.equal(elements['show-target'].hidden, true, 'stale validation clears target preview');
+    assert.equal(elements['show-widgets'].hidden, true, 'stale validation clears widget preview');
     assert.equal(elements.target.hidden, true, 'stale validation hides target preview');
+    assert.equal(elements['widget-target'].hidden, true, 'stale validation hides widget preview');
     assert.ok(commands.every((command) => command.startsWith('get ')), 'only read commands are sent');
 
     delayedBackup = {};

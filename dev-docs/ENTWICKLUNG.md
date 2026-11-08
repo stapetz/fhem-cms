@@ -188,8 +188,9 @@ Die separate Seite `fhem-cms/examples/migration-preview.html` ermöglicht eine
 schreibfreie geometrische Vorschau einer ausgewählten Schema-4-JSON-Datei oder
 der Live-Daten eines angegebenen CMS-Devices. Sie zeigt die Navigation und
 Widget-IDs; gespeicherte Konfigurationen lassen sich als reiner Text aufklappen,
-Widget-Inhalte werden nicht ausgeführt oder grafisch dargestellt. Nur beim Laden eines CMS-Devices kann
-der vollständige Positionsplan über `get <CMS> migrationpreview <Base64-JSON>`
+die anfängliche Rastervorschau führt keine Widgets aus. Nur beim Laden eines
+CMS-Devices kann der vollständige Positionsplan über
+`get <CMS> migrationpreview <Base64-JSON>`
 serverseitig geprüft werden; der dabei erneut gelesene Live-Stand muss mit dem
 angezeigten Stand übereinstimmen. Bei vorhandenem Entwurf wird die Prüfung
 abgelehnt. Eine lokale JSON-Datei wird weiterhin nur geometrisch analysiert.
@@ -201,6 +202,15 @@ keine ausgeführten Widgets oder Live-Werte. Bei Positionsänderungen oder einem
 erneuten Prüflauf wird diese Anzeige verworfen; ein Seitenwechsel zeigt dieselbe
 geprüfte Konfiguration für die gewählte Seite. Fehler beim Laden von Gridstack
 oder Änderungen der Positionen durch Gridstack werden angezeigt.
+Zusätzlich kann nach der Serverprüfung eine schreibfreie Widget-Ansicht des
+Kandidaten geöffnet werden. Sie liest einmalig Snapshots der verwendeten
+Devices; Diagramme dürfen Verlauf lesen und Medien/Icons werden vom Server
+geladen. Die Vorschau stellt nur eine Annäherung dar und aktualisiert Readings
+nicht automatisch. Steueraktionen und Bearbeitung sind deaktiviert: Der
+Widget-Bereich ist inert und die eigens begrenzten Dienste lehnen Schreibaktionen
+ausdrücklich ab. Seiten- oder Devicewechsel, Positionsänderungen und erneute
+Prüfung räumen Widgets und Timer auf und verwerfen verspätete Ergebnisse.
+Die Ansicht belegt weder eine Freigabe zur Migration noch die fertige Oberfläche.
 Manuelle Positionen bleiben nur bis zum Schließen der Seite im Browser. Die
 Seite führt keine Umstellung durch.
 Die spätere Migrationsfunktion muss vor dem Schreiben alle serverseitigen
@@ -273,8 +283,8 @@ Inhalte werden erst erzeugt und verbunden, nachdem Gridstack alle Positionen
 übernommen hat; ein fehlerhaftes Raster startet keine Widget-Lebenszyklen.
 Die bestehende Oberfläche verwendet zur Erzeugung ihrer Widget-Elemente die
 gemeinsame `www/fhem-cms/js/widget-factory.js`. Sie erhält die bisherigen
-Widget-Typen und Datenzuordnungen und kann später auch vom neuen Raster genutzt
-werden. Sie stellt selbst keine Vorschau-Sicherheitsgrenze dar: Komponenten
+Widget-Typen und Datenzuordnungen und wird auch in der optionalen Widget-Vorschau
+genutzt. Sie stellt selbst keine Vorschau-Sicherheitsgrenze dar: Komponenten
 können beim Verbinden Timer starten oder Dienste aufrufen; eine spätere Vorschau
 muss diese Lebenszyklen und verfügbare Dienste ausdrücklich absichern.
 Der vorbereitete Adapter `www/fhem-cms/js/fcui-schema5-widgets.js` verbindet
@@ -282,8 +292,9 @@ eine validierte Gridstack-Seite mit diesen Widgets und übernimmt Snapshot-Updat
 und das Entfernen des Rasters. Navigation, Dienste und Snapshots werden vom
 Aufrufer bereitgestellt; der Adapter führt selbst keine FHEM-Anfragen aus, aber
 Widgets dürfen die übergebenen Dienste nutzen. `view-only` ist keine Schreib-
-oder Netzwerk-Sperre. Der Adapter ist noch nicht mit dem Device-Einstieg, einer
-Vorschau, Live-Abonnements oder versionierter Speicherung verbunden.
+oder Netzwerk-Sperre. Der Adapter wird in der gesondert abgesicherten
+Widget-Vorschau verwendet, ist aber noch nicht mit dem Device-Einstieg,
+Live-Abonnements oder versionierter Speicherung verbunden.
 Beim Entfernen einer Diagrammkomponente werden laufende Verlaufsergebnisse
 verworfen; beim erneuten Verbinden wird der Verlauf neu angefordert. Das
 verhindert die Übernahme verspäteter Antworten nach einem Seitenwechsel.

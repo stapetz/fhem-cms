@@ -17,14 +17,18 @@
     pre { max-height: 20rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
     .target-scroll { max-height: 28rem; overflow: auto; border: 1px solid; }
     .target-grid .grid-stack-item-content { background: #d7e8f6; border: 1px solid #345; padding: 2px; }
+    .widget-nav { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .widget-nav.vertical { flex-direction: column; }
+    .widget-nav span { border: 1px solid; border-radius: .5rem; padding: .5rem; }
+    .widget-grid .grid-stack-item-content > * { height: 100%; }
   </style>
 </head>
 <body>
   <main>
     <h1>CMS-Rastervorschau</h1>
     <p>Geometrische Vorschau einer Schema-4-JSON-Datei oder eines CMS-Devices.
-      Die gespeicherte Konfiguration ist als Text einsehbar; Widgets werden nicht
-      ausgeführt oder grafisch dargestellt. Nur beim Laden eines CMS-Devices
+      Die gespeicherte Konfiguration ist als Text einsehbar. Optional können
+      nach der Serverprüfung Widgets schreibfrei dargestellt werden. Nur beim Laden eines CMS-Devices
       können Positionen serverseitig geprüft werden. Es werden keine Daten
       gespeichert; Änderungen gehen beim Schließen verloren. Eine Umstellung ist
       noch nicht möglich.</p>
@@ -55,11 +59,20 @@
       <div id="forms"></div>
       <button id="validate" type="button" hidden>Positionen serverseitig prüfen</button>
       <button id="show-target" type="button" hidden>Geprüftes Zielraster mit Gridstack anzeigen</button>
+      <button id="show-widgets" type="button" hidden>Geprüfte Widgets schreibfrei anzeigen</button>
       <section id="target" hidden>
         <h2>Geprüftes Gridstack-Zielraster</h2>
         <p>Nur Positionen und Bezeichnungen; keine Widget-Darstellung, Live-Werte oder Aktionen.</p>
         <p id="target-status" role="status"></p>
         <div class="target-scroll"><div id="target-grid" class="grid-stack target-grid"></div></div>
+      </section>
+      <section id="widget-target" hidden>
+        <h2>Schreibfreie Widget-Ansicht</h2>
+        <p>Annäherung der Zielansicht mit einmalig gelesenen Werten. Aktionen und Bearbeitung sind deaktiviert.
+          Diagramme lesen historische Daten; Medien und Icons werden vom FHEM-Server geladen.
+          Die Ansicht aktualisiert Readings nicht automatisch und ist kein Nachweis einer vollständigen Oberfläche.</p>
+        <p id="widget-status" role="status"></p>
+        <div class="target-scroll" inert><div id="widget-grid" class="grid-stack widget-grid"></div></div>
       </section>
     </section>
   </main>

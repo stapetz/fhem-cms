@@ -1,4 +1,4 @@
-import { createWidgetElement, dataFor, devicesOf, isLiveWidget } from './widget-factory.js';
+import { createWidgetElement, dataFor, devicesOf, groupSnapshots, isLiveWidget } from './widget-factory.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { DevicePreview } from './device-preview.js';
 import {
@@ -1947,19 +1947,7 @@ export class CmsPage {
 
   // Je Hauptdevice: [Hauptdevice, Kanäle ...]; die Kachel sucht Readings in dieser Reihenfolge.
   groupSnapshots(mains, results) {
-    const byName = new Map(results.map((item) => [item.name, item]));
-    const groups = new Map();
-    for (const name of mains) {
-      const main = byName.get(name);
-      if (!main) {
-        continue;
-      }
-      const channels = results
-        .filter((item) => item.parent === name)
-        .sort((a, b) => a.name.localeCompare(b.name));
-      groups.set(name, [main, ...channels]);
-    }
-    return groups;
+    return groupSnapshots(mains, results);
   }
 
   watchedNames() {

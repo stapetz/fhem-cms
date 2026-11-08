@@ -77,7 +77,10 @@ export class FhemClient {
     } catch (error) {
       throw new Error('FHEM lieferte keine gültigen Gerätedaten');
     }
-    const results = Array.isArray(data.Results) ? data.Results : [];
+    if (!data || typeof data !== 'object' || Array.isArray(data) || !Array.isArray(data.Results)) {
+      throw new Error('FHEM lieferte eine ungültige Geräteliste');
+    }
+    const results = data.Results;
     return results
       .filter((item) => item && isValidName(item.Name))
       .map((item) => {
@@ -270,7 +273,7 @@ export class FhemClient {
 
   iconUrl(name) {
     return ICON_NAME.test(name)
-      ? `${this.endpoint.pathname}/icons/${name.split('/').map(encodeURIComponent).join('/')}`
+      ? `${this.endpoint.pathname.replace(/\/+$/, '')}/icons/${name.split('/').map(encodeURIComponent).join('/')}`
       : '';
   }
 

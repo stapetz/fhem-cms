@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
+import { createPreviewServices } from '../fcui/preview-services.js';
 
 const original = {
   fetch: globalThis.fetch,
@@ -49,6 +50,34 @@ test('invalid device and command inputs never reach FHEMWEB', async () => {
   assert.equal(requests, 0);
 });
 
+test('icon URLs remain same-origin when FHEMWEB is at the web root', () => {
+  const root = new FhemClient('cms', 'https://fhem.example/');
+  const nested = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.equal(root.iconUrl('light_on'), '/icons/light_on');
+  assert.equal(nested.iconUrl('light_on'), '/fhem/icons/light_on');
+  assert.equal(root.iconUrl('../invalid'), '');
+});
+
+test('preview services expose only reads and explicitly reject actions', async () => {
+  const calls = [];
+  const client = {
+    iconUrl(name) { calls.push(['icon', name]); return '/fhem/icons/test'; },
+    async history(...args) { calls.push(['history', ...args]); return { points: [] }; },
+    setCommand() { throw new Error('write method must never be reached'); },
+    setReading() { throw new Error('write method must never be reached'); },
+  };
+  const services = createPreviewServices(client);
+  assert.equal(services.iconUrl('test'), '/fhem/icons/test');
+  assert.deepEqual(await services.history('Temp', 'state', '24h', 'auto', 'auto'), { points: [] });
+  assert.throws(() => services.setCommand('Lamp', 'on'), /Vorschau deaktiviert/);
+  assert.throws(() => services.setTarget({}, 20), /Vorschau deaktiviert/);
+  assert.equal(services.saveWidget, undefined);
+  assert.equal(services.uploadMedia, undefined);
+  assert.ok(Object.isFrozen(services));
+  assert.deepEqual(calls, [['icon', 'test'], ['history', 'Temp', 'state', '24h', 'auto', 'auto']]);
+  assert.throws(() => createPreviewServices({}), /nicht verfügbar/);
+});
+
 test('migration preview sends a read-only encoded plan and validates the reply', async () => {
   const plan = { navigation: { col: 1, row: 1, w: 12, h: 1 }, pages: [] };
   const calls = [];
@@ -89,6 +118,22 @@ test('draft status accepts only an explicit boolean and rejects malformed respon
   answer = 'Zugriff verweigert';
   await assert.rejects(client.hasDraft(), /Zugriff verweigert/);
   assert.ok(calls.every((command) => command === 'get cms status'));
+});
+
+test('jsonlist reports malformed responses instead of treating them as empty device lists', async () => {
+  let answer = '{"Results":[]}';
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    return new Response(answer);
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.deepEqual(await client.jsonlist('Temp'), []);
+  for (const invalid of ['null', '[]', '{}', '{"Results":null}', '{"Results":{}}']) {
+    answer = invalid;
+    await assert.rejects(client.jsonlist('Temp'), /ungültige Geräteliste/);
+  }
+  answer = 'not-json';
+  await assert.rejects(client.jsonlist('Temp'), /keine gültigen Gerätedaten/);
 });
 
 test('versioned state uses a read-only command and checks the response shape', async () => {

@@ -1,5 +1,6 @@
 import { migrationPositions, planEffectiveLegacyLayout } from './layout-migration.js';
-import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
+import { createPreviewServices } from './preview-services.js';
+import { FhemClient, isValidName } from '../www/fhem-cms/js/fhem-client.js';
 
 const file = document.getElementById('file');
 const status = document.getElementById('status');
@@ -12,9 +13,13 @@ const deviceForm = document.getElementById('device-form');
 const device = document.getElementById('device');
 const validate = document.getElementById('validate');
 const showTarget = document.getElementById('show-target');
+const showWidgets = document.getElementById('show-widgets');
 const target = document.getElementById('target');
 const targetGrid = document.getElementById('target-grid');
 const targetStatus = document.getElementById('target-status');
+const widgetTarget = document.getElementById('widget-target');
+const widgetGrid = document.getElementById('widget-grid');
+const widgetStatus = document.getElementById('widget-status');
 const loadBackups = document.getElementById('load-backups');
 const backupControls = document.getElementById('backup-controls');
 const backupSelect = document.getElementById('backup');
@@ -33,6 +38,10 @@ let targetConfig;
 let targetInstance;
 let targetGeneration = 0;
 let targetVisible = false;
+let widgetView;
+let widgetBase;
+let widgetGeneration = 0;
+let widgetVisible = false;
 
 const keyOf = (item) => item.type === 'navigation' ? 'navigation' : `${item.page}/${item.id}`;
 const describe = (grid) => `Spalte ${grid.col}, Zeile ${grid.row}, Breite ${grid.w}, Höhe ${grid.h}`;
@@ -154,14 +163,76 @@ function clearPreview() {
 
 function clearTarget() {
   targetGeneration += 1;
+  clearWidgetTarget();
   targetConfig = undefined;
   targetVisible = false;
   showTarget.hidden = true;
+  showWidgets.hidden = true;
   target.hidden = true;
   if (targetInstance) targetInstance.destroy(false);
   targetInstance = undefined;
   targetGrid.replaceChildren();
   targetStatus.textContent = '';
+}
+
+function clearWidgetTarget() {
+  widgetGeneration += 1;
+  widgetVisible = false;
+  widgetTarget.hidden = true;
+  if (widgetView) widgetView.destroy();
+  widgetView = undefined;
+  if (widgetBase) widgetBase.remove();
+  widgetBase = undefined;
+  widgetGrid.replaceChildren();
+  widgetStatus.textContent = '';
+}
+
+async function renderWidgetTarget() {
+  clearWidgetTarget();
+  widgetVisible = true;
+  widgetTarget.hidden = false;
+  const generation = widgetGeneration;
+  const currentConfig = targetConfig;
+  const currentClient = client;
+  const currentPage = pageSelect.value;
+  widgetStatus.textContent = 'Widgets und aktuelle Werte werden geladen …';
+  try {
+    if (!document.getElementById('grid-css').sheet) throw new Error('Gridstack-CSS konnte nicht geladen werden');
+    const url = (path) => new URL(path, window.location.href).href;
+    const [runtime, adapter, factory] = await Promise.all([
+      import(url('../js/fcui-runtime.js')), import(url('../js/fcui-schema5-widgets.js')),
+      import(url('../js/widget-factory.js')),
+    ]);
+    if (generation !== widgetGeneration) return;
+    const page = currentConfig.pages.find((entry) => entry.id === currentPage);
+    if (!page) throw new Error('Unbekannte Seite');
+    const devices = [...new Set(page.widgets.flatMap(factory.devicesOf).filter(isValidName))];
+    const specs = devices.flatMap((name) => [name, `device=${name}`]);
+    const data = devices.length ? await currentClient.jsonlist(specs.join(',')) : [];
+    if (generation !== widgetGeneration) return;
+    const nav = make('nav');
+    nav.className = `widget-nav${currentConfig.navigation.orientation === 'vertical' ? ' vertical' : ''}`;
+    nav.setAttribute('aria-label', 'Seiten');
+    for (const entry of currentConfig.pages) {
+      const item = (currentConfig.navigation.items || []).find((candidate) => candidate.page === entry.id) || {};
+      const label = make('span', item.label || entry.title);
+      if (item.width) label.style.width = `${item.width}px`;
+      if (item.height) label.style.height = `${item.height}px`;
+      nav.append(label);
+    }
+    widgetBase = document.createElement('base');
+    widgetBase.href = new URL(`../${currentClient.cmsDevice}/`, window.location.href).href;
+    document.head.prepend(widgetBase);
+    const services = createPreviewServices(currentClient);
+    widgetView = adapter.mountSchema5Widgets(runtime.GridStack, widgetGrid, currentConfig, currentPage,
+      nav, services, factory.groupSnapshots(devices, data));
+    widgetStatus.textContent = 'Widgets geladen. Die angezeigten Werte werden nicht automatisch aktualisiert.';
+  } catch (error) {
+    if (generation !== widgetGeneration) return;
+    if (widgetBase) widgetBase.remove();
+    widgetBase = undefined;
+    widgetStatus.textContent = `Widgets konnten nicht angezeigt werden: ${error.message}`;
+  }
 }
 
 async function renderTarget() {
@@ -335,6 +406,7 @@ validate.addEventListener('click', async () => {
     }
     targetConfig = result.config;
     showTarget.hidden = false;
+    showWidgets.hidden = false;
     status.textContent = 'Positionen und Konfiguration serverseitig geprüft. Es wurde nichts gespeichert.';
   } catch (error) {
     if (current !== sequence) return;
@@ -348,7 +420,11 @@ showTarget.addEventListener('click', () => {
   renderTarget();
 });
 
+showWidgets.addEventListener('click', renderWidgetTarget);
+window.addEventListener('pagehide', clearWidgetTarget);
+
 pageSelect.addEventListener('change', () => {
   render();
   if (targetVisible) renderTarget();
+  if (widgetVisible) renderWidgetTarget();
 });
