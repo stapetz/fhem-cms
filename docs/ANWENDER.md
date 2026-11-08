@@ -70,10 +70,10 @@ nur Konfigurationsdateien und ist keine Zusicherung gegen Stromausfall oder
 gleichzeitige externe Dateischreiber.
 
 Für eine Wiederherstellung im Schema-5-Editor **Sicherungen / Wiederherstellung**
-im Menü **Datei** öffnen, `Backups laden`, ein Backup auswählen und `Backup prüfen` wählen.
-Live und Backup vergleichen, die geprüfte externe Sicherung bestätigen und
-`Backup wiederherstellen` bestätigen. Ein vorhandener Entwurf muss nur für diese
-Wiederherstellung vorher veröffentlicht oder verworfen werden.
+im Menü **Datei** öffnen. Der Dialog lädt die Backups, zeigt nach `Backup prüfen`
+Live und Backup zum Vergleich, verlangt die Bestätigung der geprüften externen
+Sicherung und stellt erst mit `Backup wiederherstellen` wieder her. Ein vorhandener
+Entwurf muss nur für diese Wiederherstellung vorher veröffentlicht oder verworfen werden.
 Eine Entwurfssicherung wird beim Restore nicht automatisch als Entwurf erkannt:
 Die ausgewählte Datei ersetzt immer den Live-Stand. Für einen vollständigen
 Rollback mit Entwurf beide Originaldateien bei gestopptem FHEM aus den jeweils
@@ -90,8 +90,14 @@ Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfigu
 ## Schema-5-Editor bedienen
 
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
-- **Bearbeiten:** Seiten, Widgets und Navigation einstellen.
-- **Ansicht:** Darstellung und die numerische Rasterbearbeitung.
+- **Bearbeiten:** Seiten verwalten, Widget hinzufügen (mit Suche) und Navigation bearbeiten.
+- **Ansicht:** Seite bearbeiten – Theme, Widget-Rahmen, Rasterart mit Vorschau und
+  die numerische Positionseingabe in einem Dialog.
+
+Alle Dialoge haben unten die Knöpfe **Speichern** und **Abbrechen**: Speichern
+übernimmt die Änderungen als Entwurf und schließt den Dialog, Abbrechen verwirft
+die Eingaben. In „Seiten verwalten“ wirken Anlegen, Umbenennen, Verschieben und
+Löschen erst mit Speichern.
 
 Widgets am Punktgriff oben rechts ziehen. Am markierten Griff unten rechts
 Breite und Höhe ändern. Das Stiftsymbol öffnet direkt die Widgeteinstellungen;
