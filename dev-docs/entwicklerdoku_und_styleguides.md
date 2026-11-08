@@ -187,7 +187,11 @@ Der Bearbeitungsmodus schaltet die Oberfläche von einem statischen Zustand in e
 Für bestehende CMS-Layouts gilt die abgestimmte Übergangsregel: Ihre
 48-Spalten-Koordinaten und Bearbeitbarkeit bleiben erhalten; neue FCUI-Layouts
 nutzen das 12-Spalten-Raster. Eine automatische verlustbehaftete Umrechnung
-findet nicht statt. Einzelheiten und noch ausstehende Implementierungsschritte
+findet nicht statt. Bestehende Instanzen sollen später ausdrücklich auf das
+neue Format umgestellt werden können; diese Funktion ist noch nicht umgesetzt.
+Die Auswahl der Layout-Engine gilt für das gesamte CMS-Device; alte und neue
+Layoutformate werden innerhalb einer Instanz nicht gemischt. Einzelheiten und
+noch ausstehende Implementierungsschritte
 stehen in der [Entwicklungsdokumentation](./ENTWICKLUNG.md#fcui-übergangsarchitektur).
 
 ### 3.1 Implementierungs-Muster & JSON-Export

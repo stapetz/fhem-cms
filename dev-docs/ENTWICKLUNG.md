@@ -66,6 +66,14 @@ bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen
 gespeichertes `settings.gridColumns` von 12 oder 24 ändert daran nichts: Im
 Bestand sind alle gespeicherten Koordinaten trotzdem 48-Spalten-Einheiten.
 
+Die Formatentscheidung gilt **pro CMS-Device**, nicht pro Seite: Alle Seiten
+und die Navigation einer Instanz gehören derselben Layout-Engine an. Eine
+Mischung alter und neuer Layoutformate innerhalb einer Instanz ist nicht
+vorgesehen. Bestehende Instanzen bleiben zunächst im alten Format bearbeitbar;
+neue FCUI-Instanzen sollen das neue Format verwenden. Auch bestehende Instanzen
+sollen später ausdrücklich auf das neue Format umgestellt werden können. Eine
+solche Umstellung ist noch nicht implementiert.
+
 Für den Übergang gelten folgende Anforderungen, nicht bereits implementierte
 Funktionen:
 
@@ -79,8 +87,10 @@ Funktionen:
 2. **Live, Entwurf und Backup:** Live-Konfiguration, Entwurf, Medien und alte
    Backups bleiben getrennt erhalten. Laden oder Anzeigen eines Altbestands darf
    ihn nicht umschreiben. Änderungen an alten Layouts dürfen nicht implizit auf
-   12 Spalten runden. Vor jeder künftigen Konvertierungsfunktion sind Verhalten,
-   Datensicherung und Zustimmung gesondert festzulegen. Wiederherstellung muss
+   12 Spalten runden. Für die spätere explizite Umstellung sind eine geprüfte
+   Sicherung, eine Vorschau der Auswirkungen und eine Bestätigung vorgesehen.
+   Der genaue Umgang mit nicht exakt darstellbaren Positionen, bestehenden
+   Entwürfen und Abbrüchen ist noch festzulegen. Wiederherstellung muss
    das Format des Backups respektieren; ein älterer Programmstand kann ein neues
    Format möglicherweise nicht lesen, deshalb beim Rollback die dazu passende
    vollständige Datensicherung verwenden.
@@ -109,6 +119,33 @@ Funktionen:
    eigene Tests und eine Geräteabnahme. Abhängige Commits nur gemeinsam
    freigeben, wenn eine unabhängige Übernahme nicht sicher möglich ist;
    `main` bleibt bis zum ausdrücklichen Release-Go unverändert.
+
+#### Sicherheitsgrenzen des künftigen Formatvertrags
+
+- Die Konfiguration trägt ihre Formatkennung eindeutig auf oberster Ebene;
+  Schema 1–3 werden wie bisher beim Lesen nach Schema 4 migriert und behalten
+  dessen 48-Spalten-Semantik. Ein neues Schema für 12 Spalten ist noch nicht
+  implementiert und wird derzeit abgewiesen. Koordinatenkonvention, genaue
+  Schema-Version und Widget-Vertrag müssen vor der Implementierung zwischen
+  #65 und #67 abgestimmt und serverseitig strikt validiert werden.
+- Live und Entwurf derselben Instanz dürfen nicht unbemerkt unterschiedliche
+  Layoutformate annehmen. Formatwechsel, Wiederherstellung eines Backups in
+  einem anderen Format und der Umgang mit einem vorhandenen Entwurf benötigen
+  einen ausdrücklich geregelten, getesteten Ablauf; insbesondere dürfen Daten
+  dabei nicht automatisch konvertiert oder verworfen werden.
+- Neue Daten dürfen erst angenommen oder ausgeliefert werden, wenn die passende
+  Engine einsatzbereit ist und auch veraltete oder zwischengespeicherte Clients
+  sicher behandelt werden. Ein alleiniger Schema-Check im neuen Frontend reicht
+  nicht: Alte Clients und alte Schreibbefehle müssen serverseitig daran
+  gehindert werden, neue Daten falsch zu interpretieren oder zu überschreiben.
+  Dazu ist ein getrennt versionierter Zugriffspfad oder ein gleichwertiger,
+  nachweisbar sicherer Vertrag erforderlich; bei fehlender Kompatibilität
+  müssen Lesen und betroffene Schreiboperationen sichtbar fehlschlagen.
+- Alte und neue Assets, Device-Startseite und Backend müssen gemeinsam
+  kompatibel sein; Cache, parallele Browser-Tabs und unvollständige Updates sind
+  in den Tests zu berücksichtigen. Bei Rollback auf älteren Code können diese
+  Schutzmaßnahmen nicht vorausgesetzt werden: Nur zusammengehörige Code-,
+  Asset- und Datensicherungen auf einer isolierten Instanz wiederherstellen.
 
 Das ist kein Nachweis einer vollständigen FHEMWEB-Autorisierung, Migration oder
 Geräteabnahme. Insbesondere Testinstanz-Rechte, CSRF, externer Ressourcenzugriff,
@@ -161,9 +198,10 @@ Für spätere automatisierte Regressionstests ist folgender Umfang festgelegt:
 | Browser und Bindings | Beide Seiten und alle Widgets rendern; beide Platzhaltervarianten inklusive Filter zeigen dieselben erwarteten Testwerte, Änderungen aktualisieren sich. Seitenwechsel und Entfernen räumen Abos auf; Offline/Fehler und Wiederverbindung sind sichtbar. |
 | Sicherheit | Unzulässiges HTML und Schemafelder werden serverseitig abgelehnt; Daten erscheinen nur als Text. Session-/CSRF- und Rechtefehler sowie unerlaubte Befehle werden erkennbar behandelt. |
 
-Die Testbeispiele und automatisierten Browserprüfungen sind **noch nicht erstellt**;
-dieser Plan ist kein Nachweis ihrer erfolgreichen Ausführung. Bestehende
-Backendtests sind separat unten aufgeführt.
+Repräsentative synthetische Backend-Testbeispiele sind in
+`t/02_refactoring_legacy.t` und `t/03_refactoring_migration.t` enthalten.
+Automatisierte Browserprüfungen sind noch nicht erstellt; der Plan ist kein
+Nachweis einer erfolgreichen Geräteprüfung.
 
 Basisprüfung für das Backend: `prove t/01_fhemcms.t` aus dem Repository-Root.
 Am 08.11.2026 lokal bestanden: 363 Tests; dabei wird ein temporäres FHEM-Umfeld
