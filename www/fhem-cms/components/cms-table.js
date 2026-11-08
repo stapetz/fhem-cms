@@ -65,7 +65,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         header[hidden] { display: none; }
         table { width: 100%; border-collapse: collapse; font-size: clamp(0.65rem, 3cqh, 0.9rem); }
         th, td { padding: 0.25rem 0.4rem; border-bottom: 1px solid var(--cms-border-subtle, #3a4d42); text-align: left; overflow-wrap: anywhere; }
-        tfoot th { position: static; text-align: left; border-top: 1px solid var(--cms-border, #3a4a40); color: var(--cms-text, inherit); font-weight: 700; }
+        tfoot th { position: static; text-align: left; border-top: 2px solid var(--cms-frame, #7f8c84); color: var(--cms-text, inherit); font-weight: 700; }
         tfoot th[data-sum-value] { text-align: right; }
         thead th:last-child { text-align: right; }
         th:last-child, td:last-child { padding-right: 2rem; }
