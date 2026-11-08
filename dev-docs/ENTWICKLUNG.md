@@ -332,6 +332,15 @@ aktuelle Zustandskennung; Publish sichert den Live-Stand vor der Übernahme.
 Wird Live gespeichert, aber der Entwurf kann nicht entfernt werden, wird der
 Teilzustand ausdrücklich als Fehler gemeldet. Dies ist noch kein Schutz gegenüber
 unkoordinierten externen Dateischreibern und keine öffentliche API.
+Der vorbereitete Browserbaustein `www/fhem-cms/js/fcui-schema5-draft.js`
+führt jeweils höchstens eine Entwurfsaktion aus und verwendet die Kennung des
+zuletzt gelesenen Zustands. Nach jedem Schreibversuch sperrt er weitere Aktionen
+bis zum bestätigten erneuten Lesen; bei Fehlern, widersprüchlichem Ergebnis oder
+verlorener Antwort muss ausdrücklich neu geladen werden. Er vergleicht dabei
+Live und Entwurf mit dem erwarteten Ergebnis und gibt nur Kopien aus. Die
+Transportfunktionen müssen vom späteren Aufrufer bereitgestellt werden; sie
+sind noch nicht öffentlich angebunden. Ein Integrationstest verwendet die echten
+internen Perl-Transaktionen auf isolierten Dateien, aber keinen FHEMWEB-Transport.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
 Positionsplan um; sie speichert und überträgt ihn nicht.
