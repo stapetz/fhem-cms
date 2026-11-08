@@ -38,10 +38,11 @@
     }
 
     try {
-      const [runtime, schema5, widgets] = await Promise.all([
+      const [runtime, schema5, widgets, live] = await Promise.all([
         import(url('../js/fcui-runtime.js')),
         import(url('../js/fcui-schema5-layout.js')),
         import(url('../js/fcui-schema5-widgets.js')),
+        import(url('../js/fcui-schema5-live.js')),
         loadStylesheet(),
       ]);
       const { LitElement, html, GridStack } = runtime;
@@ -133,6 +134,13 @@
       };
       const view = widgets.mountSchema5Widgets(GridStack, widgetRoot, widgetConfig, 'check',
         document.createElement('nav'), services, snapshot('vorher'));
+      let liveStatus;
+      const livePage = new live.Schema5LivePage({
+        jsonlist: async () => snapshot('nachher').get('Test'),
+        subscribe: (names, onEvent, onState) => onState('polling'),
+        unsubscribe: () => {},
+      }, widgetConfig.pages[0].widgets, (data, stale) => view.update(data, stale),
+      (next) => { liveStatus = next; });
       try {
         const text = widgetRoot.querySelector('cms-text');
         const freeHtml = widgetRoot.querySelector('cms-html');
@@ -146,10 +154,11 @@
           || freeHtml?.shadowRoot.querySelector('[data-content]')?.textContent.trim() !== 'vorher vorher') {
           throw new Error('Widget-Platzhalter konnten nicht dargestellt werden');
         }
-        view.update(snapshot('nachher'));
+        await livePage.start();
         if (text.shadowRoot.querySelector('[data-body]').textContent.trim() !== 'nachher'
-          || freeHtml.shadowRoot.querySelector('[data-content]').textContent.trim() !== 'nachher nachher') {
-          throw new Error('Widget-Platzhalter konnten nicht aktualisiert werden');
+          || freeHtml.shadowRoot.querySelector('[data-content]').textContent.trim() !== 'nachher nachher'
+          || liveStatus.error !== null) {
+          throw new Error('Live-Snapshots und Widget-Platzhalter konnten nicht aktualisiert werden');
         }
         await widgetRoot.querySelector('cms-button').push();
         if (actionAttempts !== 1 || !widgetRoot.querySelector('cms-button').shadowRoot
@@ -157,10 +166,11 @@
           throw new Error('Testaktion wurde nicht sicher abgewiesen');
         }
       } finally {
+        livePage.stop();
         view.destroy();
         widgetRoot.remove();
       }
-      status.textContent = 'Erfolg: Lit, Gridstack, Schema-5-Raster und synthetische Widget-Bindings wurden lokal geprüft.';
+      status.textContent = 'Erfolg: Lit, Gridstack, Schema-5-Raster und synthetische Live-Widget-Bindings wurden lokal geprüft.';
     } catch (error) {
       status.textContent = `Fehler beim Laden oder Prüfen der FCUI-Dateien: ${error.message}`;
     }

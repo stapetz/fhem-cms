@@ -316,6 +316,17 @@ unkoordinierten externen Dateischreibern und keine öffentliche API.
 Die interne JavaScript-Funktion `migrationPositions` formt nur vollständig
 aufgelöste, kollisionsfreie Ergebnisse der effektiven Vorschau in diesen
 Positionsplan um; sie speichert und überträgt ihn nicht.
+Der vorbereitete `Schema5LivePage`-Baustein verwaltet für eine Seite Snapshots
+über den bestehenden FHEMWEB-Client: Inform-Hinweise und Wiederverbindung lösen
+einen gebündelten Refresh aus, alle 30 Sekunden wird zusätzlich abgefragt.
+Kanalnamen werden nach einem Snapshot neu abonniert; fehlgeschlagene Abfragen
+zeigen den Fehler und behalten bekannte Werte mit Veraltungszeitpunkt.
+Nach dem Stop werden Timer, Abos und verspätete Ergebnisse verworfen.
+Der Baustein benötigt einen eigenen Client, da dessen Subscription beim Wechsel
+und Stop ersetzt beziehungsweise abgemeldet wird.
+Der Baustein wird nur im synthetischen Bibliothekstest verwendet, nicht im
+Device-Einstieg oder in der schreibfreien Migrationsvorschau. Er ist weder
+eine vollständige Oberfläche noch der angestrebte zentrale Pub/Sub-Controller.
 Die bisherigen Schreibbefehle prüfen vor Änderungen die Schema-Version von
 Live- und gegebenenfalls Entwurfsdatei. Bei einem unbekannten Format lehnen sie
 auch Verwerfen und Restore ab, statt Daten mit einem älteren Client zu ersetzen.
@@ -350,7 +361,8 @@ Die separat aufrufbare Seite `fhem-cms/examples/fcui-check.html` prüft das
 Laden der lokalen Bibliotheken mit Lit und einem 12-Spalten-Gridstack-Raster
 und zeigt Ladefehler an. Zusätzlich prüft sie alle zwölf Widgettypen mit
 künstlichen Snapshots, beide Platzhalterformen, die Aktualisierung und eine
-explizit gesperrte Testaktion im Schema-5-Widget-Adapter. Die verwendeten
+explizit gesperrte Testaktion im Schema-5-Widget-Adapter. Der Live-Seitenbaustein
+aktualisiert die Widgets dabei mit einem künstlichen Client. Die verwendeten
 Dienste sind Test-Stubs. Sie sendet keine FHEM-Befehle und verändert keine
 CMS-Daten. Sie ersetzt nicht die Prüfung der später integrierten Oberfläche.
 
