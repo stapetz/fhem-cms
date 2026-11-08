@@ -1553,7 +1553,7 @@ sub FHEMCMS_PrepareLayoutMigration {
         }
     }
     return (undef, 'Konfiguration ist zu gross')
-        if (length($json->encode($candidate)) > $FHEMCMS_MAX_CONFIG_BYTES);
+        if (length(JSON::PP->new->utf8->canonical->pretty->encode($candidate)) > $FHEMCMS_MAX_CONFIG_BYTES);
     $error = FHEMCMS_ValidateConfig($candidate, 5);
     return (undef, "Zielkonfiguration ist ungueltig: $error") if (defined($error));
     return ($candidate, undef);
@@ -1795,7 +1795,7 @@ sub FHEMCMS_PreviewMigrationRestore {
         return (undef, undef, "$label ist kein gueltiges JSON") if ($@ || ref($config) ne 'HASH');
         my $error;
         if (defined($config->{schemaVersion}) && !ref($config->{schemaVersion})
-            && $config->{schemaVersion} eq '5') {
+            && $config->{schemaVersion} =~ /\A[0-9]{1,6}\z/ && $config->{schemaVersion} == 5) {
             $error = FHEMCMS_ValidateConfig($config, 5);
         } else {
             (undef, $error) = FHEMCMS_ParseConfig($bytes);

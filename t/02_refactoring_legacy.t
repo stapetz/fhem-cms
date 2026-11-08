@@ -118,4 +118,73 @@ is($media_contents, $png, 'publish and restore leave referenced media intact');
 like(FHEMCMS_Set($hash, $name, 'restore', '../config.json'), qr/Backup-Name/, 'rejects invalid backup path');
 is_deeply(read_config('config'), $live, 'failed restore leaves live unchanged');
 
+subtest 'representative widgets survive migration, versioned draft and restore' => sub {
+    my $testName = 'AllWidgetsMigration';
+    my $testHash = {NAME => $testName};
+    is(FHEMCMS_Define($testHash, "$testName FHEMCMS"), undef, 'defines isolated migration device');
+    is(FHEMCMS_Set($testHash, $testName, 'media', encode_base64($png, '')), "media/$image.png",
+        'stores representative media');
+    is(FHEMCMS_Set($testHash, $testName, 'config', payload($live)), undef, 'stores complete legacy fixture');
+    my $testDir = File::Spec->catdir($modPath, 'fhem-cms-data', $testName);
+    my $livePath = File::Spec->catfile($testDir, 'config.json');
+    my $readBytes = sub {
+        my ($path) = @_;
+        open(my $in, '<:raw', $path) or die "Cannot open $path: $!";
+        my $contents = do { local $/; <$in> };
+        close($in) or die "Cannot close $path: $!";
+        return $contents;
+    };
+    my $original = $readBytes->($livePath);
+    my @pages;
+    for my $page (@{$live->{pages}}) {
+        my @widgets;
+        my $index = 0;
+        for my $widget (@{$page->{widgets}}) {
+            push(@widgets, {
+                id => $widget->{id},
+                grid => $grid->(1 + 2 * ($index % 6), 2 + 3 * int($index / 6), 2, 2),
+            });
+            $index++;
+        }
+        push(@pages, {id => $page->{id}, widgets => \@widgets});
+    }
+    my $plan = {navigation => $grid->(1, 1, 12, 1), pages => \@pages};
+    my ($candidate, $token, $previewError) = FHEMCMS_PreviewLayoutMigration($testDir, $plan);
+    is($previewError, undef, 'previews every widget');
+    my $unchanged = clone_config($candidate);
+    $unchanged->{schemaVersion} = 4;
+    $unchanged->{settings} = clone_config($live->{settings});
+    $unchanged->{navigation}{grid} = clone_config($live->{navigation}{grid});
+    for my $pageIndex (0 .. $#{$live->{pages}}) {
+        for my $widgetIndex (0 .. $#{$live->{pages}[$pageIndex]{widgets}}) {
+            $unchanged->{pages}[$pageIndex]{widgets}[$widgetIndex]{grid}
+                = clone_config($live->{pages}[$pageIndex]{widgets}[$widgetIndex]{grid});
+        }
+    }
+    is_deeply($unchanged, $live, 'only schema, target settings and planned grids change');
+    my ($backup, $migrationError) = FHEMCMS_CommitLayoutMigration($testDir, $plan, $token);
+    is($migrationError, undef, 'migrates isolated device');
+    is($readBytes->(File::Spec->catfile($testDir, $backup)), $original, 'backup preserves legacy bytes');
+    my ($state, $stateError) = FHEMCMS_ReadVersion5State($testDir);
+    is($stateError, undef, 'reads versioned live');
+    is_deeply($state->{live}, $candidate, 'all widgets roundtrip after migration');
+    my $edited = clone_config($candidate);
+    $edited->{pages}[1]{title} = 'Edited';
+    is(FHEMCMS_WriteVersion5Draft($testDir, $edited, $state->{token}), undef, 'saves versioned draft');
+    ($state, $stateError) = FHEMCMS_ReadVersion5State($testDir);
+    is_deeply($state->{draft}, $edited, 'all widget data survives draft save');
+    my ($publishBackup, $publishError) = FHEMCMS_PublishVersion5Draft($testDir, $state->{token});
+    is($publishError, undef, 'publishes versioned draft');
+    ok(defined($publishBackup), 'publishing backs up versioned live');
+    ($state, $stateError) = FHEMCMS_ReadVersion5State($testDir);
+    is_deeply($state->{live}, $edited, 'all widget data survives publish');
+    my (undef, $restoreToken, $restoreError) = FHEMCMS_PreviewMigrationRestore($testDir, $backup);
+    is($restoreError, undef, 'previews legacy restore');
+    my (undef, $commitError) = FHEMCMS_CommitMigrationRestore($testDir, $backup, $restoreToken);
+    is($commitError, undef, 'restores legacy fixture');
+    is($readBytes->($livePath), $original, 'restore recovers exact legacy bytes');
+    my $testMedia = File::Spec->catfile($modPath, 'www', 'fhem-cms', $testName, 'media', "$image.png");
+    is($readBytes->($testMedia), $png, 'migration and restore leave media untouched');
+};
+
 done_testing();

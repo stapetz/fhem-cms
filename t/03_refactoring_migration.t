@@ -449,6 +449,16 @@ subtest 'internal migration transaction checks preview and preserves original ba
     (undef, undef, $restoreError) = FHEMCMS_PreviewMigrationRestore($dir, $originalBackup);
     like($restoreError, qr/schemaVersion/, 'restore rejects unknown backup schema');
     is(read_bytes($live), $target, 'invalid backup does not alter live');
+    my $schemaWithLeadingZero = $json->decode($target);
+    $schemaWithLeadingZero->{schemaVersion} = '05';
+    my $paddedBytes = $json->encode($schemaWithLeadingZero);
+    write_bytes($backupPath, $paddedBytes);
+    my ($paddedPreview, $paddedToken, $paddedError) = FHEMCMS_PreviewMigrationRestore($dir, $originalBackup);
+    is($paddedError, undef, 'restore accepts schema 5 spelling permitted by validator');
+    is($paddedPreview, $paddedBytes, 'restore preview retains padded version bytes');
+    my (undef, $paddedCommitError) = FHEMCMS_CommitMigrationRestore($dir, $originalBackup, $paddedToken);
+    is($paddedCommitError, undef, 'restores padded schema 5 without rewriting');
+    is(read_bytes($live), $paddedBytes, 'restored version spelling is preserved');
 };
 
 subtest 'migration transaction preserves widget content and media on isolated data' => sub {
@@ -581,6 +591,29 @@ subtest 'FHEM migration preview is read-only and validates its request' => sub {
     is(read_bytes($draft), $original, 'draft is unchanged');
     is(read_bytes($live), $original, 'failed previews leave live unchanged');
     like(FHEMCMS_Set($hash, $name, 'migrationpreview', $payload), qr/Unknown argument/, 'preview cannot be used as a write command');
+};
+
+subtest 'preview checks the actual serialized migration size' => sub {
+    my $source = {schemaVersion => 4, pages => [{id => 'start', title => 'Start', widgets => []}]};
+    my $plan = {navigation => {col => 1, row => 1, w => 12, h => 1},
+        pages => [{id => 'start', widgets => []}]};
+    my ($candidate, $error) = FHEMCMS_PrepareLayoutMigration($source, $plan);
+    is($error, undef, 'prepares valid candidate');
+    my $compact = length(JSON::PP->new->utf8->canonical->encode($candidate));
+    my $pretty = length(JSON::PP->new->utf8->canonical->pretty->encode($candidate));
+    cmp_ok($pretty, '>', $compact, 'actual persisted format is larger than compact response');
+    {
+        local $main::FHEMCMS_MAX_CONFIG_BYTES = $pretty - 1;
+        my ($tooLarge, $sizeError) = FHEMCMS_PrepareLayoutMigration($source, $plan);
+        ok(!defined($tooLarge), 'candidate exceeding persisted limit is not presented as valid');
+        like($sizeError, qr/zu gross/, 'size error is explicit');
+    }
+    {
+        local $main::FHEMCMS_MAX_CONFIG_BYTES = $pretty;
+        my ($fits, $sizeError) = FHEMCMS_PrepareLayoutMigration($source, $plan);
+        is($sizeError, undef, 'candidate at exact persisted limit is accepted');
+        is_deeply($fits, $candidate, 'boundary acceptance preserves candidate');
+    }
 };
 
 subtest 'internal version 5 draft contract rejects stale and mixed states' => sub {
