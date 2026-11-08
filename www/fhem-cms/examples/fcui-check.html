@@ -99,17 +99,49 @@
             grid: { col: 5, row: 2, w: 4, h: 2 } },
           { id: 'clock', type: 'fhem-clock', style: 'digital',
             grid: { col: 9, row: 2, w: 4, h: 2 } },
+          { id: 'thermostat', type: 'thermostat', device: 'Test',
+            readings: { actual: 'temperature', target: 'desiredTemperature' }, grid: { col: 1, row: 4, w: 4, h: 2 } },
+          { id: 'value', type: 'fhem-value', device: 'Test', reading: 'state', grid: { col: 5, row: 4, w: 4, h: 2 } },
+          { id: 'icon', type: 'fhem-icon', device: 'Test', reading: 'state', states: [],
+            grid: { col: 9, row: 4, w: 4, h: 2 } },
+          { id: 'table', type: 'fhem-table', rows: [{ device: 'Test', reading: 'state' }],
+            grid: { col: 1, row: 6, w: 4, h: 2 } },
+          { id: 'slider', type: 'fhem-slider', device: 'Test', reading: 'pct', command: 'pct',
+            grid: { col: 5, row: 6, w: 4, h: 2 } },
+          { id: 'switch', type: 'fhem-switch', device: 'Test', reading: 'state', on: 'on', off: 'off',
+            grid: { col: 9, row: 6, w: 4, h: 2 } },
+          { id: 'button', type: 'fhem-button', device: 'Test', command: 'on',
+            grid: { col: 1, row: 8, w: 4, h: 2 } },
+          { id: 'chart', type: 'fhem-chart', device: 'Test', reading: 'state',
+            grid: { col: 5, row: 8, w: 4, h: 2 } },
+          { id: 'solar', type: 'fhem-solarflow', readings: { pv: { device: 'Test', reading: 'power' } },
+            grid: { col: 9, row: 8, w: 4, h: 2 } },
         ] }],
       };
       const widgetRoot = document.createElement('div');
       widgetRoot.className = 'grid-stack';
       document.getElementById('probe').append(widgetRoot);
-      const snapshot = (value) => new Map([['Test', [{ name: 'Test', readings: { state: value } }]]]);
+      const snapshot = (value) => new Map([['Test', [{
+        name: 'Test', readings: { state: value, temperature: '21', desiredTemperature: '22', pct: '40', power: '100' },
+      }]]]);
+      let actionAttempts = 0;
+      const services = {
+        iconUrl: () => '',
+        history: async () => ({ points: [] }),
+        setCommand: () => { actionAttempts += 1; throw new Error('Testaktion gesperrt'); },
+        setTarget: () => { actionAttempts += 1; throw new Error('Testaktion gesperrt'); },
+      };
       const view = widgets.mountSchema5Widgets(GridStack, widgetRoot, widgetConfig, 'check',
-        document.createElement('nav'), {}, snapshot('vorher'));
+        document.createElement('nav'), services, snapshot('vorher'));
       try {
         const text = widgetRoot.querySelector('cms-text');
         const freeHtml = widgetRoot.querySelector('cms-html');
+        const tags = ['cms-text', 'cms-html', 'cms-clock', 'cms-thermostat', 'cms-value', 'cms-icon',
+          'cms-table', 'cms-slider', 'cms-switch', 'cms-button', 'cms-chart', 'cms-solarflow'];
+        if (widgetRoot.querySelectorAll('.grid-stack-item').length !== 13
+          || tags.some((tag) => widgetRoot.querySelectorAll(tag).length !== 1)) {
+          throw new Error('Nicht alle Test-Widgets wurden im Raster angelegt');
+        }
         if (text?.shadowRoot.querySelector('[data-body]')?.textContent.trim() !== 'vorher'
           || freeHtml?.shadowRoot.querySelector('[data-content]')?.textContent.trim() !== 'vorher vorher') {
           throw new Error('Widget-Platzhalter konnten nicht dargestellt werden');
@@ -118,6 +150,11 @@
         if (text.shadowRoot.querySelector('[data-body]').textContent.trim() !== 'nachher'
           || freeHtml.shadowRoot.querySelector('[data-content]').textContent.trim() !== 'nachher nachher') {
           throw new Error('Widget-Platzhalter konnten nicht aktualisiert werden');
+        }
+        await widgetRoot.querySelector('cms-button').push();
+        if (actionAttempts !== 1 || !widgetRoot.querySelector('cms-button').shadowRoot
+          .querySelector('[data-msg]').textContent.includes('Testaktion gesperrt')) {
+          throw new Error('Testaktion wurde nicht sicher abgewiesen');
         }
       } finally {
         view.destroy();
