@@ -78,6 +78,45 @@ export function inspectLegacyLayout(config) {
   return { navigation, pages, requiresEffectiveNavigation: navigation === null };
 }
 
+// Mirrors the legacy page rendering without altering the stored configuration.
+export function inspectEffectiveLegacyLayout(config) {
+  const analysis = inspectLegacyLayout(config);
+  const mode = config.settings?.layoutMode ?? 'grid';
+  if (!['grid', 'free', 'flow', 'masonry'].includes(mode)) {
+    throw new Error('Ungültiger Layoutmodus');
+  }
+  const columns = [12, 24, 48].includes(config.settings?.gridColumns)
+    ? config.settings.gridColumns : 48;
+  const defaultNavigation = !analysis.navigation;
+  const navigation = analysis.navigation ? config.navigation.grid : { col: 1, row: 1, w: 48, h: 1 };
+  const pages = analysis.pages.map((page, index) => {
+    if (page.widgets.some((widget) => widget.id === '__nav')) {
+      throw new Error(`Widget-ID __nav kollidiert mit der Navigation: ${page.id}`);
+    }
+    const items = [
+      { id: '__nav', grid: { ...navigation } },
+      ...page.widgets.map((widget, widgetIndex) => {
+        const grid = { ...config.pages[index].widgets[widgetIndex].grid };
+        if (defaultNavigation) {
+          // The legacy frontend adds one to the original value before numeric coercion.
+          grid.row = Math.min(config.pages[index].widgets[widgetIndex].grid.row + 1, 1000);
+        }
+        return { id: widget.id, grid };
+      }),
+    ];
+    const effective = effectiveLayoutFor(items, mode, mode === 'free' ? 1 : 48 / columns);
+    return {
+      id: page.id,
+      navigation: inspectGrid(effective.get('__nav'), `${page.id}/navigation`),
+      widgets: page.widgets.map((widget) => ({
+        id: widget.id,
+        ...inspectGrid(effective.get(widget.id), `${page.id}/${widget.id}`),
+      })),
+    };
+  });
+  return { defaultNavigation, mode, pages };
+}
+
 function adjustedGrid(grid) {
   if (!grid || typeof grid !== 'object' || Array.isArray(grid)
     || Object.keys(grid).sort().join(',') !== 'col,h,row,w'
@@ -155,3 +194,4 @@ export function planLegacyLayout(config, adjustments = []) {
     requiresEffectiveLayout: layoutMode === 'flow' || layoutMode === 'masonry',
   };
 }
+import { effectiveLayoutFor } from '../www/fhem-cms/js/layout.js';

@@ -164,7 +164,13 @@ verändert und speichert keine Daten und ersetzt weder die serverseitige
 Validierung noch die Migrationsvorschau. Ohne gespeicherte Navigation meldet sie
 ausdrücklich, dass die vom Bestandsfrontend ergänzte Navigation und die
 verschobenen Zeilen separat zu berücksichtigen sind. Auch abweichende effektive
-Layoutmodi sind vor einer tatsächlichen Vorschau zu behandeln. Die interne
+Layoutmodi sind vor einer tatsächlichen Vorschau zu behandeln. Zusätzlich
+berechnet `inspectEffectiveLegacyLayout` die angezeigten Positionen pro Seite
+mit der bestehenden Layoutlogik, einschließlich Standardnavigation und
+Zeilenverschiebung. Bei mehrdeutiger reservierter Widget-ID `__nav` wird
+abgebrochen. Die berechnete Navigation kann je Seite verschieden sein und
+wird nicht automatisch in die globale Navigation des Zielformats übernommen.
+Die interne
 Planungsfunktion akzeptiert geprüfte manuelle 12-Spalten-Positionen, meldet
 noch ungelöste Positionen und Überschneidungen und speichert nichts; fehlende
 Navigation und die effektive Darstellung der Modi `flow` und `masonry` werden

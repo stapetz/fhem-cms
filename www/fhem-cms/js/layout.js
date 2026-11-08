@@ -84,7 +84,7 @@ function settle(placed, others, result) {
 
 // Fluss: Reihenfolge von links nach rechts, bei Platzmangel Zeilenumbruch.
 // Spalten: jedes Widget kommt in die Spalte(n) mit dem geringsten Stand (lückenlos von oben nach unten).
-export function flowLayout(items, mode = options.mode) {
+export function flowLayout(items, mode = options.mode, step = layoutStep()) {
   const result = new Map();
   const heights = new Array(GRID_COLUMNS).fill(1);
   let row = 1;
@@ -96,7 +96,7 @@ export function flowLayout(items, mode = options.mode) {
     let target;
     if (mode === 'masonry') {
       let best = null;
-      for (let start = 1; start + w - 1 <= GRID_COLUMNS; start += layoutStep()) {
+      for (let start = 1; start + w - 1 <= GRID_COLUMNS; start += step) {
         const level = Math.max(...heights.slice(start - 1, start - 1 + w));
         if (best === null || level < best.row) {
           best = { col: start, row: level };
@@ -143,8 +143,13 @@ function arrange(widgets, movedId, target) {
 
 // Positionen, wie sie im aktuellen Modus tatsächlich angezeigt werden (Fluss und Spalten werden berechnet).
 export function effectiveLayout(items) {
-  if (isFlowMode()) {
-    return flowLayout([...items].sort(byPosition)) || new Map(items.map((item) => [item.id, { ...item.grid }]));
+  return effectiveLayoutFor(items, options.mode, layoutStep());
+}
+
+export function effectiveLayoutFor(items, mode, step) {
+  if (mode === 'flow' || mode === 'masonry') {
+    return flowLayout([...items].sort(byPosition), mode, step)
+      || new Map(items.map((item) => [item.id, { ...item.grid }]));
   }
   return new Map(items.map((item) => [item.id, { ...item.grid }]));
 }

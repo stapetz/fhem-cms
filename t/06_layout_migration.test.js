@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { inspectLegacyLayout, planLegacyLayout } from '../fcui/layout-migration.js';
+import { inspectEffectiveLegacyLayout, inspectLegacyLayout, planLegacyLayout } from '../fcui/layout-migration.js';
+import { configureLayout, effectiveLayout, layoutMode, layoutStep } from '../www/fhem-cms/js/layout.js';
 
 const grid = (col, row, w, h) => ({ col, row, w, h });
 
@@ -132,4 +133,77 @@ test('planning rejects malformed, duplicate and out-of-range adjustments', () =>
   ]) {
     assert.throws(() => planLegacyLayout(source, adjustments), /Anpassung|Position/);
   }
+});
+
+test('effective analysis matches legacy rendering without changing live layout settings', () => {
+  const config = {
+    schemaVersion: 4, pages: [
+      { id: 'a', widgets: [
+        { id: 'w1', grid: grid(3, 5, 5, 2) },
+        { id: 'w2', grid: grid(12, 3, 7, 3) },
+      ] },
+      { id: 'b', widgets: [{ id: 'w3', grid: grid(1, '2', 4, 1) }] },
+    ],
+  };
+  for (const mode of ['grid', 'free', 'flow', 'masonry']) {
+    for (const columns of [12, 24, 48, '12']) {
+      config.settings = { layoutMode: mode, gridColumns: columns };
+      configureLayout(config.settings);
+      const expected = config.pages.map((page) => {
+        const items = [
+          { id: '__nav', grid: grid(1, 1, 48, 1) },
+          ...page.widgets.map((widget) => ({
+            ...widget, grid: { ...widget.grid, row: Math.min(widget.grid.row + 1, 1000) },
+          })),
+        ];
+        return effectiveLayout(items);
+      });
+      configureLayout({ layoutMode: 'free', gridColumns: 12 });
+      const before = structuredClone(config);
+      const result = inspectEffectiveLegacyLayout(config);
+      assert.deepEqual(config, before);
+      assert.equal(layoutMode(), 'free');
+      assert.equal(layoutStep(), 1);
+      assert.equal(result.defaultNavigation, true);
+      for (let i = 0; i < result.pages.length; i += 1) {
+        assert.deepEqual(result.pages[i].navigation.source, expected[i].get('__nav'));
+        for (const widget of result.pages[i].widgets) {
+          const legacy = expected[i].get(widget.id);
+          assert.deepEqual(widget.source, Object.fromEntries(
+            Object.entries(legacy).map(([key, value]) => [key, Number(value)]),
+          ));
+        }
+      }
+    }
+  }
+});
+
+test('effective analysis matches page-specific navigation and rejects reserved ID ambiguity', () => {
+  const config = {
+    schemaVersion: 4, settings: { layoutMode: 'flow' },
+    navigation: { grid: grid(1, 5, 4, 1) },
+    pages: [
+      { id: 'a', widgets: [{ id: 'w', grid: grid(1, 1, 4, 1) }] },
+      { id: 'b', widgets: [] },
+    ],
+  };
+  const result = inspectEffectiveLegacyLayout(config);
+  assert.notDeepEqual(result.pages[0].navigation.source, result.pages[1].navigation.source);
+  config.pages[0].widgets[0].id = '__nav';
+  assert.throws(() => inspectEffectiveLegacyLayout(config), /kollidiert/);
+});
+
+test('effective flow fallback and masonry keep legacy positions at row limits', () => {
+  const config = {
+    schemaVersion: 4, settings: { layoutMode: 'flow', gridColumns: 12 },
+    navigation: { grid: grid(1, 1, 48, 1000) },
+    pages: [{ id: 'a', widgets: [{ id: 'w', grid: grid(5, 3, 4, 2) }] }],
+  };
+  let result = inspectEffectiveLegacyLayout(config);
+  assert.deepEqual(result.pages[0].navigation.source, grid(1, 1, 48, 1000));
+  assert.deepEqual(result.pages[0].widgets[0].source, grid(5, 3, 4, 2));
+  config.settings.layoutMode = 'masonry';
+  config.navigation.grid.h = 1;
+  result = inspectEffectiveLegacyLayout(config);
+  assert.deepEqual(result.pages[0].widgets[0].source, grid(1, 2, 4, 2));
 });
