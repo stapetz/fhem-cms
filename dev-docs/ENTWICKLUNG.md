@@ -280,7 +280,15 @@ weder Live noch Entwurf; beschädigte, unbekannte oder symbolisch verlinkte
 Live-Dateien werden abgewiesen. Er prüft keinen Entwurf und ist nur eine
 Momentaufnahme: Die nachfolgende formatspezifische Lese- und Schreib-API muss
 den Zustand erneut prüfen und bei zwischenzeitlichem Formatwechsel scheitern.
-Der Device-Einstieg verwendet diesen Vertrag noch nicht.
+Der Device-Einstieg fragt diesen Vertrag vor dem Start der Bestandsoberfläche ab.
+Format 4 startet wie bisher; Format 5 und fehlgeschlagene oder unverständliche
+Antworten werden sichtbar abgewiesen, solange die passende Oberfläche nicht
+vollständig verfügbar ist. Ein altes Backend ohne `layoutformat` benötigt ein
+gemeinsames Update von Modul und Assets. Der Legacy-Entwurfsleser prüft bei
+vorhandenem Entwurf den Live-Stand erneut und lehnt ungültige oder andere Formate
+ab; damit kann ein Formatwechsel nach der ersten Abfrage keinen alten Entwurf
+als aktuellen Zustand ausliefern. Für die Wiederherstellung eines beschädigten
+Live-Stands bleibt der explizite Restore-Weg erhalten.
 Das vorbereitete Modul `www/fhem-cms/js/fcui-schema5-layout.js` übersetzt
 Schema-5-Positionen zwischen den einbasierten Daten und Gridstacks nullbasierten
 Koordinaten. Es erhält Inhalte und Seitenreihenfolge, prüft Grenzen sowie

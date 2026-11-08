@@ -186,6 +186,9 @@ subtest 'layout format is validated without writing or creating directories' => 
     is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 4},
         'detection only reports live format and does not hide a draft');
     is(read_bytes($draft), '{', 'draft is unchanged');
+    write_bytes($draft, $legacy);
+    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'draft')), $json->decode($legacy),
+        'legacy draft remains readable with legacy live');
     my $plan = {navigation => {col => 1, row => 1, w => 12, h => 1},
         pages => [{id => 'start', widgets => []}]};
     my ($candidate, $candidateError) = FHEMCMS_PrepareLayoutMigration($json->decode($legacy), $plan);
@@ -194,20 +197,25 @@ subtest 'layout format is validated without writing or creating directories' => 
     write_bytes($live, $five);
     is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 5},
         'recognises valid schema 5 independently of draft');
+    like(FHEMCMS_Get($hash, $name, 'draft'), qr/schemaVersion/,
+        'legacy draft read detects a format change after initial detection');
     is(read_bytes($live), $five, 'schema 5 bytes remain untouched');
     my $invalid = $json->decode($five);
     $invalid->{navigation}{grid}{w} = 13;
     write_bytes($live, $json->encode($invalid));
     like(FHEMCMS_Get($hash, $name, 'layoutformat'), qr/ungueltig/, 'invalid schema 5 is rejected');
+    like(FHEMCMS_Get($hash, $name, 'draft'), qr/ungueltig/, 'draft read rejects invalid live data');
     $invalid->{schemaVersion} = 99;
     write_bytes($live, $json->encode($invalid));
     like(FHEMCMS_Get($hash, $name, 'layoutformat'), qr/schemaVersion/, 'unknown schema is rejected');
     write_bytes($live, '{');
     like(FHEMCMS_Get($hash, $name, 'layoutformat'), qr/JSON/, 'invalid JSON is rejected');
+    like(FHEMCMS_Get($hash, $name, 'draft'), qr/JSON/, 'draft read reports corrupt live data');
     unlink($live) or die "Cannot remove test live file: $!";
     symlink($draft, $live) or die "Cannot create test symlink: $!";
     like(FHEMCMS_Get($hash, $name, 'layoutformat'), qr/Symlink/, 'live symlink is rejected');
-    is(read_bytes($draft), '{', 'rejected reads do not modify target');
+    like(FHEMCMS_Get($hash, $name, 'draft'), qr/Symlink/, 'draft read rejects live symlink');
+    is(read_bytes($draft), $legacy, 'rejected reads do not modify target');
 };
 
 subtest 'prepares a fully specified target without writing or accepting schema 5' => sub {
@@ -795,6 +803,9 @@ subtest 'internal version 5 draft contract rejects stale and mixed states' => su
     is(read_bytes($draftPath), $legacy, 'late change preserved');
     like(FHEMCMS_Get($hash, $name, 'version5state'), qr/schemaVersion/, 'versioned get rejects mixed formats');
     is(read_bytes($draftPath), $legacy, 'rejected versioned get preserves incompatible draft');
+    like(FHEMCMS_Get($hash, $name, 'draft'), qr/schemaVersion/,
+        'legacy draft read rejects a live format change even with a legacy draft');
+    is(read_bytes($draftPath), $legacy, 'rejected legacy read preserves draft bytes');
     ok(!-e $tmp, 'aborted write cleans up own temporary file');
     like(FHEMCMS_Get($hash, $name, 'config'), qr/schemaVersion/, 'legacy read rejects migrated live');
     like(FHEMCMS_Set($hash, $name, 'draft', encode_base64($legacy, '')), qr/schemaVersion/,

@@ -1994,7 +1994,15 @@ export class CmsPage {
   }
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+export async function startCmsDevice(client, startLegacy) {
+  const format = await client.getLayoutFormat();
+  if (format !== 4) {
+    throw new Error(`Layoutformat ${format} kann hier noch nicht bearbeitet oder angezeigt werden`);
+  }
+  await startLegacy();
+}
+
+document.addEventListener('DOMContentLoaded', async function () {
   const card = document.querySelector('.cms-status');
   const shell = document.querySelector('.cms-shell');
   const meta = document.querySelector('meta[name="fhem-cms-device"]');
@@ -2013,5 +2021,12 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   card.textContent = 'Konfiguration wird geladen ...';
-  new CmsPage(cmsDevice, shell, card).start();
+  try {
+    const client = new FhemClient(cmsDevice);
+    await startCmsDevice(client, () => new CmsPage(cmsDevice, shell, card).start());
+  } catch (error) {
+    document.documentElement.classList.add('cms-view');
+    card.setAttribute('data-error', '');
+    card.textContent = `Konfiguration konnte nicht geladen werden: ${error.message || String(error)}`;
+  }
 });

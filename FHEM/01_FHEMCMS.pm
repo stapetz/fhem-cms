@@ -193,6 +193,12 @@ sub FHEMCMS_Get {
         if ($cmd eq 'status') {
             return JSON::PP->new->utf8->canonical->encode({draft => (-f $draftFile ? JSON::PP::true : JSON::PP::false)});
         }
+        if ($cmd eq 'draft' && -f $draftFile) {
+            my ($format, $formatError) = FHEMCMS_ReadLayoutFormat($dataDir);
+            return "Live-Konfiguration kann nicht geprueft werden: $formatError" if (defined($formatError));
+            return 'Live-Konfiguration hat eine nicht unterstuetzte schemaVersion; alter Entwurfszugriff abgelehnt'
+                if ($format != 4);
+        }
         # Ohne Entwurf startet die Bearbeitung mit einer Kopie des Live-Stands.
         my $source = ($cmd eq 'draft' && -f $draftFile) ? $draftFile : File::Spec->catfile($dataDir, 'config.json');
         my ($text, $readError) = FHEMCMS_ReadFile($source);
