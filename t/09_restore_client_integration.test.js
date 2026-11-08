@@ -219,6 +219,11 @@ test('real versioned state reaches schema 5 view for live and draft without writ
     replaceChildren(...children) { this.children = children; }
     setAttribute(name, value) { this.attributes[name] = value; }
     removeAttribute(name) { delete this.attributes[name]; }
+    toggleAttribute(name) {
+      if (name in this.attributes) { delete this.attributes[name]; return false; }
+      this.attributes[name] = ''; return true;
+    }
+    addEventListener() {}
   }
   const live = {
     schemaVersion: 5, theme: 'light', settings: { layoutMode: 'grid', gridColumns: 12 },
@@ -290,7 +295,7 @@ test('real versioned state reaches schema 5 view for live and draft without writ
         await view.start();
         const nav = grid.children[0].children[0].children[0];
         const text = grid.children[1].children[0].children[0];
-        assert.equal(nav.children[0].textContent, title);
+        assert.equal(nav.children[1].textContent, title);
         assert.equal(text.config.html, html);
         assert.equal(text.data.get('Temp')[0].readings.state, 'Beispiel');
       } finally {

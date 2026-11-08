@@ -18,6 +18,11 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
     replaceChildren(...children) { this.children = children; }
     setAttribute(name, value) { this.attributes[name] = value; }
     removeAttribute(name) { delete this.attributes[name]; }
+    toggleAttribute(name) {
+      if (name in this.attributes) { delete this.attributes[name]; return false; }
+      this.attributes[name] = ''; return true;
+    }
+    addEventListener(name, callback) { (this.listeners ||= {})[name] = callback; }
   }
   globalThis.window = { location: { href: 'https://example.test/' } };
   globalThis.document = { createElement: (tag) => new Element(tag) };
@@ -84,10 +89,11 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
     const first = view.start();
     assert.equal(requests[0].spec, 'Temp,device=Temp');
     const firstNav = root.children[0].children[0].children[0];
-    assert.equal(firstNav.children[0].href, '#/first');
-    assert.equal(firstNav.children[0].attributes['aria-current'], 'page');
-    assert.equal(firstNav.children[1].textContent, 'Zwei');
-    assert.equal(firstNav.children[1].style.width, '90px');
+    assert.equal(firstNav.children[0].className, 'cms-nav-burger');
+    assert.equal(firstNav.children[1].href, '#/first');
+    assert.equal(firstNav.children[1].attributes['aria-current'], 'page');
+    assert.equal(firstNav.children[2].textContent, 'Zwei');
+    assert.equal(firstNav.children[2].style.width, '90px');
     browser.location.hash = '#/second';
     listeners.get('hashchange')();
     assert.equal(requests[1].spec, 'Other,device=Other');
@@ -95,7 +101,7 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
     assert.equal(unsubscribed, 1);
     const secondComponent = root.children[1].children[0].children[0];
     const secondNav = root.children[0].children[0].children[0];
-    assert.equal(secondNav.children[1].attributes['aria-current'], 'page');
+    assert.equal(secondNav.children[2].attributes['aria-current'], 'page');
     requests[1].resolve([{ name: 'Other', readings: { state: 'neu' } }]);
     await view.live.inFlight;
     assert.equal(secondComponent.data[0].readings.state, 'neu');

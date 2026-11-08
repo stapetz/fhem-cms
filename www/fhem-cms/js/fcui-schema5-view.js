@@ -76,6 +76,18 @@ export class Schema5View {
     nav.className = 'cms-nav';
     nav.classList.toggle('is-vertical', this.config.navigation.orientation === 'vertical');
     nav.setAttribute('aria-label', 'Seiten');
+    const burger = document.createElement('button');
+    burger.type = 'button';
+    burger.className = 'cms-nav-burger';
+    burger.textContent = '☰';
+    burger.title = 'Navigation anzeigen';
+    burger.setAttribute('aria-label', 'Navigation anzeigen');
+    burger.setAttribute('aria-expanded', 'false');
+    burger.addEventListener('click', () => {
+      const open = nav.toggleAttribute('data-open');
+      burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    nav.append(burger);
     for (const page of this.config.pages) {
       const item = (this.config.navigation.items || []).find((entry) => entry.page === page.id) || {};
       const link = document.createElement('a');

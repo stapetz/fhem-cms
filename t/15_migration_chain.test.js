@@ -69,6 +69,11 @@ test('isolated migration, restart, versioned draft and restore form one protecte
     replaceChildren(...children) { this.children = children; }
     setAttribute(name, value) { this.attributes[name] = value; }
     removeAttribute(name) { delete this.attributes[name]; }
+    toggleAttribute(name) {
+      if (name in this.attributes) { delete this.attributes[name]; return false; }
+      this.attributes[name] = ''; return true;
+    }
+    addEventListener() {}
   }
   const legacy = {
     schemaVersion: 4, theme: 'light', settings: { layoutMode: 'grid', gridColumns: 12 },
@@ -179,7 +184,7 @@ test('isolated migration, restart, versioned draft and restore form one protecte
         const nav = grid.children[0].children[0].children[0];
         const text = grid.children[1].children[0].children[0];
         const html = grid.children[2].children[0].children[0];
-        assert.equal(nav.children[1].textContent, secondTitle);
+        assert.equal(nav.children[2].textContent, secondTitle);
         assert.equal(text.config.html, legacy.pages[0].widgets[0].html);
         assert.equal(html.config.html, legacy.pages[0].widgets[1].html);
         assert.equal(text.data.get('Temp')[0].readings.state, 'Testwert');

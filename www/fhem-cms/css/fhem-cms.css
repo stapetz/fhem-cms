@@ -610,6 +610,42 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: clamp(0.8rem, 0.55rem + 0.9vw, 1.05rem);
+  max-width: 100%;
+}
+
+.cms-nav-burger {
+  display: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 1px solid var(--cms-border);
+  border-radius: 0.5rem;
+  background: var(--cms-surface-raised);
+  padding: 0.3rem 0.65rem;
+  line-height: 1;
+}
+
+/* Schmale Fenster: Navigation als Burger-Menü. */
+@media (max-width: 40rem) {
+  .cms-nav .cms-nav-burger {
+    display: inline-flex;
+  }
+
+  .cms-nav .cms-nav-link {
+    display: none;
+  }
+
+  .cms-nav[data-open] {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+  }
+
+  .cms-nav[data-open] .cms-nav-link {
+    display: inline-flex;
+    width: auto !important;
+  }
 }
 
 .cms-nav-link:hover {
