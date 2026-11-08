@@ -27,7 +27,11 @@ class FHEMCMSText extends HTMLElement {
         h3 { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
         h3[data-title] { font-size: max(6px, min(10cqh, 4.5cqw)); }
         ${contentCss('.body')}
-        .body { overflow-y: auto; min-height: 0; }
+        /* Inhalt skaliert mit der Kachel; Überschriften im Text relativ dazu. */
+        .body { overflow-y: auto; min-height: 0; font-size: max(10px, min(6.5cqh, 3.2cqw)); }
+        .body h1 { font-size: 1.4em; }
+        .body h2 { font-size: 1.2em; }
+        .body h3 { font-size: 1.05em; }
         .body h4, .body h5 { margin: 0.8rem 0 0.4rem; }
         ${editorCss()}
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
