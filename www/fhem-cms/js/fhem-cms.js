@@ -34,6 +34,7 @@ const devicesOf = (widget) => {
     return devicesOfSolarFlow(widget);
   }
   if (widget.type === 'fhem-html') {
+    return widget.devices;
   }
   if (widget.type === 'text') {
     return extractDevices(widget.html || '').slice(0, MAX_FREE_DEVICES);
@@ -118,7 +119,7 @@ const VIEW_MODE = MODE !== 'edit';
 // ?mode=preview zeigt den Entwurf wie die fertige Seite (nur Ansicht).
 const PREVIEW_MODE = MODE === 'preview';
 
-class CmsPage {
+export class CmsPage {
   constructor(cmsDevice, shell, statusLine) {
     this.client = new FhemClient(cmsDevice);
     this.statusLine = statusLine;
