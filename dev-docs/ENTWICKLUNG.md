@@ -187,7 +187,8 @@ Prüfungen und ermöglichen keine Speicherung oder Umstellung.
 Die separate Seite `fhem-cms/examples/migration-preview.html` ermöglicht eine
 schreibfreie geometrische Vorschau einer ausgewählten Schema-4-JSON-Datei oder
 der Live-Daten eines angegebenen CMS-Devices. Sie zeigt die Navigation und
-Widget-IDs, aber keine Widget-Inhalte. Nur beim Laden eines CMS-Devices kann
+Widget-IDs; gespeicherte Konfigurationen lassen sich als reiner Text aufklappen,
+Widget-Inhalte werden nicht ausgeführt oder grafisch dargestellt. Nur beim Laden eines CMS-Devices kann
 der vollständige Positionsplan über `get <CMS> migrationpreview <Base64-JSON>`
 serverseitig geprüft werden; der dabei erneut gelesene Live-Stand muss mit dem
 angezeigten Stand übereinstimmen. Bei vorhandenem Entwurf wird die Prüfung

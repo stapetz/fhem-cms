@@ -39,10 +39,16 @@ function drawTile(grid, text) {
   canvas.append(tile);
 }
 
-function formFor(item, current, source) {
+function formFor(item, current, source, original) {
   const form = make('form');
   const fieldset = make('fieldset');
   fieldset.append(make('legend', labelOf(item)), make('p', `Bisher: ${describe(source)}`));
+  const details = make('details');
+  details.append(make('summary', 'Bisherige Konfiguration anzeigen'));
+  details.append(make('pre', original === undefined
+    ? 'Keine gespeicherte Navigation; die Standardnavigation wird verwendet.'
+    : JSON.stringify(original, null, 2)));
+  fieldset.append(details);
   const fields = {};
   for (const [name, title, max] of [
     ['col', 'Spalte', 12], ['row', 'Zeile', 1000], ['w', 'Breite', 12], ['h', 'Höhe', 1000],
@@ -93,6 +99,7 @@ function formFor(item, current, source) {
 function render() {
   const plan = planEffectiveLegacyLayout(config, [...changes.values()]);
   const page = plan.pages.find((entry) => entry.id === pageSelect.value) || plan.pages[0];
+  const sourcePage = config.pages.find((entry) => entry.id === page.id);
   pageSelect.value = page.id;
   const collisions = plan.pages.reduce((total, entry) => total + entry.collisions.length, 0);
   const unresolved = plan.pages.reduce((total, entry) =>
@@ -102,10 +109,11 @@ function render() {
   canvas.replaceChildren();
   forms.replaceChildren();
   drawTile(plan.navigation, 'Navigation');
-  forms.append(formFor({ type: 'navigation' }, plan.navigation, page.navigationSource));
+  forms.append(formFor({ type: 'navigation' }, plan.navigation, page.navigationSource, config.navigation));
   for (const widget of page.widgets) {
     drawTile(widget.grid, widget.id);
-    forms.append(formFor({ type: 'widget', page: page.id, id: widget.id }, widget.grid, widget.source));
+    const original = sourcePage.widgets.find((entry) => entry.id === widget.id);
+    forms.append(formFor({ type: 'widget', page: page.id, id: widget.id }, widget.grid, widget.source, original));
   }
   for (const pair of page.collisions) {
     summary.append(` Überschneidung: ${pair.map(labelOf).join(' / ')}.`);

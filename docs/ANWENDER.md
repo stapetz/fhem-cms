@@ -39,8 +39,10 @@ geometrisch für 12 Spalten untersuchen. Alternativ zu einer lokalen JSON-Datei 
 Sie den Namen eines CMS-Devices eingeben und dessen Live-Konfiguration laden.
 Offene Positionen und Überschneidungen müssen manuell angepasst werden. Anschließend
 prüft die Seite den Plan auf Wunsch serverseitig; ein vorhandener Entwurf sperrt
-diese Prüfung. Die Vorschau zeigt keine Widget-Inhalte und speichert oder migriert
-nichts. Änderungen an Positionen gehen beim Schließen verloren. Der Pfad beginnt
+diese Prüfung. Die gespeicherten Widget- und Navigationsdaten lassen sich als
+Text aufklappen; die Widgets selbst werden nicht ausgeführt oder dargestellt.
+Die Vorschau speichert oder migriert nichts. Änderungen an Positionen gehen beim
+Schließen verloren. Der Pfad beginnt
 gegebenenfalls mit dem abweichenden FHEMWEB-Webnamen statt `/fhem`.
 
 ## Sicherheit: FHEMWEB absichern
