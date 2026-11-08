@@ -1,4 +1,4 @@
-UPD 2026-11-08_11:11:59 78098 FHEM/01_FHEMCMS.pm
+UPD 2026-11-08_11:14:47 80806 FHEM/01_FHEMCMS.pm
 UPD 2026-11-08_10:43:57 7458 www/fhem-cms/FCUI-LICENSES.txt
 UPD 2026-11-05_15:13:47 15377 www/fhem-cms/components/cms-button.js
 UPD 2026-11-05_15:13:47 19230 www/fhem-cms/components/cms-chart.js
