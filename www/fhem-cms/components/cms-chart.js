@@ -67,7 +67,7 @@ class FHEMCMSChart extends HTMLElement {
         .tile { position: relative; display: grid; grid-template-rows: auto 1fr auto; height: 100%; gap: 0.2rem; overflow: hidden;
           container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
           background: var(--cms-surface, #202e27); padding: 0.4rem 1.2rem 0.4rem 0.8rem; }
-        header { display: flex; align-items: center; gap: 0.5rem; min-width: 0; padding-right: 1.2rem; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
+        header { display: flex; align-items: center; gap: 0.5rem; min-width: 0; padding-right: 1.2rem; color: var(--cms-muted, #a5c9b2); font-size: max(6px, min(7cqh, 3.5cqw)); }
         h3 { margin: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1em; font-weight: 400; }
         .controls { display: flex; gap: 0.3rem; }
         .controls select { font: inherit; font-size: 0.75rem; color: inherit; background: var(--cms-bg, #17211d);

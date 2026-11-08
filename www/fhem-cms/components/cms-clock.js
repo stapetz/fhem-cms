@@ -21,7 +21,7 @@ class FHEMCMSClock extends HTMLElement {
           overflow: hidden; container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
           background: var(--cms-surface, #202e27); padding: 0.8rem; text-align: center; }
         .content { display: grid; width: 100%; height: 100%; align-content: center; justify-items: center; gap: 0.3em; min-width: 0; }
-        h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.75em; font-weight: 400; overflow-wrap: anywhere; }
+        h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: max(5px, min(11cqh, 5cqw)); font-weight: 400; overflow-wrap: anywhere; }
         .time { font-size: max(4px, min(18cqh, 10cqw)); font-variant-numeric: tabular-nums; line-height: 1; }
         .date { color: var(--cms-muted-strong, #c4d0c8); font-size: 0.8em; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

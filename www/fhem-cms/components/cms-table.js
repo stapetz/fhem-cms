@@ -60,7 +60,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
           border-radius: 1.2rem; background: var(--cms-surface, #202e27); padding: 0.6rem; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         header { padding: 0.1rem 2rem 0.4rem 0.2rem; }
-        h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.85rem; font-weight: 400; }
+        h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: max(6px, min(8cqh, 4cqw)); font-weight: 400; }
         header[hidden] { display: none; }
         table { width: 100%; border-collapse: collapse; font-size: clamp(0.65rem, 3cqh, 0.9rem); }
         th, td { padding: 0.25rem 0.4rem; border-bottom: 1px solid var(--cms-border-subtle, #3a4d42); text-align: left; overflow-wrap: anywhere; }
