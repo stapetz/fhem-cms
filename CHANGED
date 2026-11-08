@@ -1,3 +1,21 @@
+2026-11-08 - Neuer Schema-5-Editor: 12-Spalten-Raster, Menüleiste, Entwürfe und Sicherungen (1.0.0)
+
+Kompletter Umstieg auf das Schema-5-Layout mit Ein-Klick-Umstellung inklusive
+getrennter Live- und Entwurfssicherung. Neuer Editor mit Menüleiste: Datei
+(Entwurf veröffentlichen/verwerfen, Sicherungen/Wiederherstellung als Dialog),
+Bearbeiten (Widget hinzufügen mit Suche), Ansicht (Seite bearbeiten mit Theme,
+Rasterart und Positionseingabe, Vorschau ohne Bearbeitungselemente, Raster
+anzeigen). Widgets werden direkt auf der Seite bearbeitet: Ziehen am Punktgriff,
+Größe an der Ecke, Stift für die Einstellungen, Pfeilsymbol zum Verschieben auf
+eine andere Seite. Der Navigationsdialog ist die zentrale Seitenverwaltung mit
+Reihenfolge per Griff, Dateinamen, Anzeigen-Haken für versteckte Seiten,
+gemeinsamen Größen und Neuanlage. Alle Dialoge einheitlich mit Speichern und
+Abbrechen unten rechts. Widget-Titel skalieren mit, sind per Haken ausblendbar
+und dienen als interner Name. Größere Uhr, abgesetzte Summenzeile der Tabelle,
+responsive Navigation mit Burger-Menü bei schmalen Fenstern sowie zahlreiche
+Safari-Korrekturen (Menüs, Auswahllisten, Texteditor-Einfügeposition,
+Schriftgrößen).
+
 2026-11-05 - SolarFlow, Tabelle, Seite einrichten, Positionierung und Geräte-Vorschau (0.5.0)
 
 Neues Widget SolarFlow mit animiertem Energiefluss (ein oder mehrere Devices, segmentierte Batterieanzeige). Die Tabelle liest Werte aus einem oder mehreren Devices und hat eine optionale Summenzeile sowie konfigurierbare Kopfzeile. Widgets lassen sich auf andere Seiten verschieben, beim Löschen einer Seite können sie umziehen. Neuer Dialog Datei › Seite einrichten mit Theme, Widget-Rahmen, Positionierung (Raster, Fluss, Spalten, Frei) und Rastergröße. Im Bearbeitungsmodus zeigt eine Geräte-Vorschau die Seite in der Größe von iPhone, iPad, Android und Desktop. Kachel-Symbole liegen einheitlich oben rechts mit Tooltips, das Verschieben ist flüssiger.
