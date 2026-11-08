@@ -140,3 +140,59 @@ test('real migration preview connects legacy plan to schema 5 grid without write
     await rm(root, { recursive: true });
   }
 });
+
+test('versioned state client reads actual live and draft data without modifying files', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fhem-cms-version5-test-'));
+  const dir = join(root, 'fhem-cms-data', 'CMS');
+  const livePath = join(dir, 'config.json');
+  const draftPath = join(dir, 'draft.json');
+  const previousFetch = globalThis.fetch;
+  const live = {
+    schemaVersion: 5, theme: 'light', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'one', title: 'Live', widgets: [
+      { id: 'text', type: 'text', html: '{{Temp:state}}', grid: { col: 1, row: 2, w: 1, h: 1 } },
+    ] }],
+  };
+  const draft = structuredClone(live);
+  draft.pages[0].title = 'Draft';
+  const liveBytes = JSON.stringify(live);
+  const draftBytes = JSON.stringify(draft);
+  try {
+    await mkdir(dir, { recursive: true });
+    await writeFile(livePath, liveBytes);
+    globalThis.fetch = async (url, options) => {
+      if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'test-token' } });
+      const parts = options.body.get('cmd').split(' ');
+      assert.deepEqual(parts, ['get', 'CMS', 'version5state']);
+      const result = spawnSync('perl', ['-e', script, root, 'version5state'], { encoding: 'utf8' });
+      assert.equal(result.error, undefined);
+      assert.equal(result.status, 0, result.stderr);
+      return new Response(result.stdout);
+    };
+    const client = new FhemClient('CMS', 'https://example.test/fhem/');
+    const initial = await client.getVersion5State();
+    assert.deepEqual(initial.live, live);
+    assert.equal(initial.draft, null);
+    assert.match(initial.token, /^[0-9a-f]{64}$/);
+    assert.deepEqual(await readdir(dir), ['config.json']);
+    await writeFile(draftPath, draftBytes);
+    const withDraft = await client.getVersion5State();
+    assert.deepEqual(withDraft.live, live);
+    assert.deepEqual(withDraft.draft, draft);
+    assert.notEqual(withDraft.token, initial.token);
+    assert.equal(await readFile(livePath, 'utf8'), liveBytes);
+    assert.equal(await readFile(draftPath, 'utf8'), draftBytes);
+    await writeFile(draftPath, `${draftBytes}\n`);
+    const reformatted = await client.getVersion5State();
+    assert.deepEqual(reformatted.draft, draft);
+    assert.notEqual(reformatted.token, withDraft.token, 'byte-only draft change invalidates token');
+    await writeFile(draftPath, JSON.stringify({ ...draft, schemaVersion: 4 }));
+    await assert.rejects(client.getVersion5State(), /draft.json/);
+    assert.equal(await readFile(livePath, 'utf8'), liveBytes);
+    assert.equal(await readFile(draftPath, 'utf8'), JSON.stringify({ ...draft, schemaVersion: 4 }));
+  } finally {
+    globalThis.fetch = previousFetch;
+    await rm(root, { recursive: true });
+  }
+});
