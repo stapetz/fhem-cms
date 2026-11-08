@@ -162,7 +162,9 @@ export class Schema5Editor {
       }
     });
     menu.addEventListener('focusout', (event) => {
-      if (!menu.contains(event.relatedTarget)) menu.open = false;
+      // Safari/WebKit fokussiert Buttons beim Klick nicht: relatedTarget ist dann null,
+      // obwohl der Klick im Menü landet. Nur bei echtem Fokuswechsel schließen.
+      if (event.relatedTarget && !menu.contains(event.relatedTarget)) menu.open = false;
     });
     this.#menus.push(menu);
     this.#toolbar.append(menu);
