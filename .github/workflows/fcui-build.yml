@@ -19,5 +19,5 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build:check
-      - run: prove t/01_fhemcms.t t/02_refactoring_legacy.t t/03_refactoring_migration.t t/04_fcui_assets.t
+      - run: prove t/*.t
       - run: node --test t/*.test.js
