@@ -91,14 +91,14 @@ test('page management collects changes locally and saves them once through real 
     assert.equal(close.textContent, 'Abbrechen');
     let list = () => root.children[3].children[0];
     let row = (index) => list().children[index];
-    assert.equal(row(0).children[3].disabled, true, 'nonempty last page cannot be deleted');
+    assert.equal(row(0).children[4].disabled, true, 'nonempty last page cannot be deleted');
 
     // Seite lokal anlegen: kein Schreibzugriff, Entwurf bleibt leer
     const create = controls.children[1];
     create.children[0].children[0].value = 'bad id!';
     create.children[1].children[0].value = 'Zweite';
     await create.fire('submit');
-    assert.match(status.textContent, /Seitenkennung/);
+    assert.match(status.textContent, /Ungültiger Dateiname/);
     assert.equal(writes, 0);
     const createAgain = root.children[3].children[1];
     createAgain.children[0].children[0].value = 'second';
@@ -116,14 +116,24 @@ test('page management collects changes locally and saves them once through real 
     // Titel ändern, Reihenfolge tauschen, Widget verschieben – alles lokal
     row(0).children[0].children[0].value = 'Haupt';
     row(0).children[0].children[0].fire('input');
-    await row(1).children[1].fire('click');
+    await row(1).children[2].fire('click');
     assert.equal(writes, 0);
     assert.equal(row(0).children[0].children[0].value, 'Zweite');
-    const moves = row(1).children[4];
+    const moves = row(1).children[5];
     const moveForm = moves.children[1];
     await moveForm.fire('submit');
     assert.equal(writes, 0);
-    assert.equal(row(0).children[3].disabled, true, 'page with a widget cannot be deleted');
+    assert.equal(row(0).children[4].disabled, true, 'page with a widget cannot be deleted');
+
+    // Dateiname umbenennen: ungültig wird abgewiesen, gültig lokal übernommen
+    const fileInput = row(0).children[1].children[0];
+    fileInput.value = 'böse id';
+    fileInput.fire('change');
+    assert.match(root.children[2].textContent, /Ungültiger Dateiname/);
+    assert.equal(fileInput.value, 'second');
+    fileInput.value = 'zweite-seite';
+    fileInput.fire('change');
+    assert.equal(writes, 0);
 
     // Speichern schreibt genau einmal und schließt den Dialog
     await save.fire('click');
@@ -131,7 +141,7 @@ test('page management collects changes locally and saves them once through real 
     assert.deepEqual(closed, { requiresReload: false });
     assert.equal(root.children.length, 0);
     const draft = controller.snapshot().draft;
-    assert.deepEqual(draft.pages.map((page) => page.id), ['second', 'start']);
+    assert.deepEqual(draft.pages.map((page) => page.id), ['zweite-seite', 'start']);
     assert.equal(draft.pages[1].title, 'Haupt');
     assert.equal(draft.pages[0].widgets[0].html, '{{Temp:state}}');
     assert.equal(draft.pages[1].widgets.length, 1);

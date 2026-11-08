@@ -4,6 +4,9 @@ function element(tag, text) {
   return result;
 }
 
+const FILE_NAME = /^[A-Za-z0-9_-]{1,64}$/;
+const FILE_NAME_HINT = 'Ungültiger Dateiname: erlaubt sind 1–64 Zeichen aus A–Z, a–z, 0–9, „_“ und „-“.';
+
 export class Schema5PagesPanel {
   #root;
   #controller;
@@ -103,12 +106,39 @@ export class Schema5PagesPanel {
         this.#message(this.#dirty() ? 'Noch nicht gespeicherte Änderungen.' : '');
       });
       label.append(title);
+      const idLabel = element('label', 'Dateiname ');
+      const idInput = element('input');
+      idInput.value = page.id;
+      idInput.required = true;
+      idInput.maxLength = 64;
+      idInput.addEventListener('change', () => {
+        const next = idInput.value;
+        if (next === page.id) return;
+        if (!FILE_NAME.test(next)) {
+          idInput.value = page.id;
+          this.#message(FILE_NAME_HINT, true);
+          return;
+        }
+        if (pages.some((entry) => entry !== page && entry.id === next)) {
+          idInput.value = page.id;
+          this.#message(`Dateiname „${next}“ ist bereits vergeben.`, true);
+          return;
+        }
+        if (this.#candidate.navigation.items) {
+          for (const item of this.#candidate.navigation.items) {
+            if (item.page === page.id) item.page = next;
+          }
+        }
+        page.id = next;
+        this.#changed();
+      });
+      idLabel.append(idInput);
       const reorder = (offset) => {
         const destination = index + offset;
         [pages[index], pages[destination]] = [pages[destination], pages[index]];
         this.#changed();
       };
-      row.append(label,
+      row.append(label, idLabel,
         this.#button('Nach oben', () => reorder(-1), index === 0),
         this.#button('Nach unten', () => reorder(1), index === pages.length - 1),
         this.#button('Leere Seite löschen', () => {
@@ -131,7 +161,7 @@ export class Schema5PagesPanel {
     }
     const add = element('form');
     add.className = 'cms-page-add';
-    const idLabel = element('label', 'Seitenkennung (optional) ');
+    const idLabel = element('label', 'Dateiname (optional) ');
     const id = element('input');
     id.placeholder = 'automatisch';
     id.maxLength = 64;
@@ -151,8 +181,12 @@ export class Schema5PagesPanel {
       let number = 1;
       while (existing.has(`page${number}`)) number++;
       const pageId = id.value || `page${number}`;
-      if (!/^[A-Za-z0-9_-]{1,64}$/.test(pageId) || existing.has(pageId)) {
-        this.#message('Ungültige oder bereits vorhandene Seitenkennung.', true);
+      if (!FILE_NAME.test(pageId)) {
+        this.#message(FILE_NAME_HINT, true);
+        return;
+      }
+      if (existing.has(pageId)) {
+        this.#message(`Dateiname „${pageId}“ ist bereits vergeben.`, true);
         return;
       }
       if (!title.value.length || title.value.length > 128 || /[\x00-\x1f\x7f]/.test(title.value)) {
