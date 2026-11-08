@@ -248,6 +248,14 @@ Zustandskennung. Er weist Schema 4, gemischte Formate und beschädigte Daten ab;
 die bisherigen Lesewege bleiben unverändert. Damit kann eine zukünftige
 versionierte Oberfläche den Zustand abrufen, aber weder Migration noch
 Schema-5-Entwürfe auslösen. Die Kennung ist keine Autorisierung.
+Das vorbereitete Modul `www/fhem-cms/js/fcui-schema5-layout.js` übersetzt
+Schema-5-Positionen zwischen den einbasierten Daten und Gridstacks nullbasierten
+Koordinaten. Es erhält Inhalte und Seitenreihenfolge, prüft Grenzen sowie
+Kollisionen einschließlich der globalen Navigation auf allen Seiten und weist
+beim Initialisieren durch Gridstack veränderte Positionen ab. Die Prüfung umfasst
+nur den Rastervertrag und ersetzt nicht die vollständige serverseitige
+Validierung. Das Modul wird noch nicht vom Device-Einstieg verwendet und bietet
+weder eine vollständige Widget-Oberfläche noch Speicherung oder Umstellung.
 Ein interner Schema-5-Entwurfsvertrag validiert Live und Entwurf gemeinsam und
 verknüpft ihre tatsächlichen Bytes mit einer Zustandskennung. Ein Entwurf wird
 nur gegen den unveränderten Stand atomar gespeichert; andere Schemata, ungültige

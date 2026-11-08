@@ -16,6 +16,7 @@ my @assets = (
     'www/fhem-cms/examples/fcui-check.html',
     'www/fhem-cms/examples/migration-preview.html',
     'www/fhem-cms/js/fcui-migration-preview.js',
+    'www/fhem-cms/js/fcui-schema5-layout.js',
 );
 for my $asset (@assets) {
     ok(-s $asset, "$asset exists and is not empty");
