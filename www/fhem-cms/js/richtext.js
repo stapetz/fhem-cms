@@ -428,10 +428,43 @@ export function createEditor({ root, services, html, onError }) {
   const panels = {};
 
   const selection = () => (typeof root.getSelection === 'function' ? root.getSelection() : document.getSelection());
+  // Safari kennt shadowRoot.getSelection() nicht; getComposedRanges() liefert dort
+  // die Auswahl innerhalb des Shadow-DOM, sonst ginge die Cursorposition verloren.
+  const composedRange = (sel) => {
+    if (!sel || typeof sel.getComposedRanges !== 'function') return null;
+    const shadowRoots = root && root !== document && root.host ? [root] : [];
+    // Neuere Engines erwarten ein Options-Objekt, aelteres WebKit die Roots als Argumente.
+    const attempts = [];
+    try {
+      attempts.push(sel.getComposedRanges({ shadowRoots }));
+    } catch { /* Signatur nicht unterstuetzt */ }
+    try {
+      attempts.push(sel.getComposedRanges(...shadowRoots));
+    } catch { /* Signatur nicht unterstuetzt */ }
+    for (const ranges of attempts) {
+      const first = ranges && ranges[0];
+      if (!first) continue;
+      const range = document.createRange();
+      try {
+        range.setStart(first.startContainer, first.startOffset);
+        range.setEnd(first.endContainer, first.endOffset);
+      } catch {
+        continue;
+      }
+      if (area.contains(range.commonAncestorContainer)) return range;
+    }
+    return null;
+  };
   const remember = () => {
     const sel = selection();
-    if (sel && sel.rangeCount && area.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+    if (!sel) return;
+    if (sel.rangeCount && area.contains(sel.getRangeAt(0).commonAncestorContainer)) {
       saved = sel.getRangeAt(0).cloneRange();
+      return;
+    }
+    const range = composedRange(sel);
+    if (range) {
+      saved = range.cloneRange();
     }
   };
   const restore = () => {
