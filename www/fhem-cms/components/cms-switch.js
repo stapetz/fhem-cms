@@ -83,6 +83,11 @@ class FHEMCMSSwitch extends HTMLElement {
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { margin: 0; color: var(--cms-danger, #ffb4a8); min-height: 1.2em; }
+        /* Einheitliche Auswahllisten: eigener Pfeil statt Systemdarstellung (Safari). */
+        select { appearance: none; -webkit-appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a9a8f' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+          background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
+          padding-right: 1.6em; }
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>
