@@ -191,7 +191,8 @@ findet nicht statt. Bestehende Instanzen sollen später ausdrücklich auf das
 neue Format umgestellt werden können; diese Funktion ist noch nicht umgesetzt.
 Nicht exakt darstellbare Positionen und Breiten sind in einer Vorschau zu
 kennzeichnen und manuell anzupassen; ohne Bestätigung bleiben die alten Daten
-unverändert.
+unverändert. Ein vorhandener Entwurf muss vor der Umstellung ausdrücklich
+veröffentlicht oder verworfen werden; die Umstellung selbst erledigt dies nicht.
 Die Auswahl der Layout-Engine gilt für das gesamte CMS-Device; alte und neue
 Layoutformate werden innerhalb einer Instanz nicht gemischt. Einzelheiten und
 noch ausstehende Implementierungsschritte

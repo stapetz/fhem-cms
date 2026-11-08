@@ -94,7 +94,10 @@ Funktionen:
    stillschweigend gerundet. Auch Navigation, alle Seiten und mögliche
    Überschneidungen sind einzubeziehen. Bis zur bestätigten Umstellung bleiben
    die ursprünglichen Daten unverändert; ein Abbruch verwirft die Vorschau.
-   Der genaue Umgang mit bestehenden Entwürfen ist noch festzulegen.
+   Solange ein Entwurf existiert, ist die Umstellung gesperrt: Er muss vorher
+   ausdrücklich veröffentlicht oder verworfen werden. Die Umstellung selbst
+   darf keinen Entwurf veröffentlichen, verwerfen oder überschreiben. Diese
+   Sperre muss auch serverseitig unmittelbar vor der Umstellung geprüft werden.
    Wiederherstellung muss
    das Format des Backups respektieren; ein älterer Programmstand kann ein neues
    Format möglicherweise nicht lesen, deshalb beim Rollback die dazu passende
@@ -134,10 +137,11 @@ Funktionen:
   Schema-Version und Widget-Vertrag müssen vor der Implementierung zwischen
   #65 und #67 abgestimmt und serverseitig strikt validiert werden.
 - Live und Entwurf derselben Instanz dürfen nicht unbemerkt unterschiedliche
-  Layoutformate annehmen. Formatwechsel, Wiederherstellung eines Backups in
-  einem anderen Format und der Umgang mit einem vorhandenen Entwurf benötigen
-  einen ausdrücklich geregelten, getesteten Ablauf; insbesondere dürfen Daten
-  dabei nicht automatisch konvertiert oder verworfen werden.
+  Layoutformate annehmen. Ein Formatwechsel ist bei vorhandenem Entwurf
+  abzulehnen. Die Wiederherstellung eines Backups in einem anderen Format und
+  der dabei bestehende Entwurf benötigen einen ausdrücklich geregelten,
+  getesteten Ablauf; insbesondere dürfen Daten dabei nicht automatisch
+  konvertiert oder verworfen werden.
 - Neue Daten dürfen erst angenommen oder ausgeliefert werden, wenn die passende
   Engine einsatzbereit ist und auch veraltete oder zwischengespeicherte Clients
   sicher behandelt werden. Ein alleiniger Schema-Check im neuen Frontend reicht
