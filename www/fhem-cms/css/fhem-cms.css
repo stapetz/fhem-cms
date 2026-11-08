@@ -189,10 +189,6 @@ body {
   backdrop-filter: blur(3px);
 }
 
-.cms-editor-dialog[data-panel="settings"] {
-  width: min(94vw, 28rem);
-}
-
 .cms-editor-dialog[data-panel="widgets"] {
   width: min(94vw, 36rem);
 }
@@ -207,15 +203,11 @@ body {
   display: none;
 }
 
-.cms-editor-dialog[data-panel="settings"] form {
-  display: grid;
-  align-items: start;
-}
-
-.cms-editor-dialog[data-panel="settings"] label:has(input[type="checkbox"]) {
+.cms-editor-dialog label:has(input[type="checkbox"]) {
   display: flex;
   align-items: center;
   gap: .75rem;
+  flex: 0 1 auto;
 }
 
 .cms-editor-panel h2 {

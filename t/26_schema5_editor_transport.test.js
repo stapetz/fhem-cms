@@ -36,9 +36,9 @@ function toolbarControls(toolbar) {
   const all = (node) => [node, ...node.children.flatMap(all)];
   const nodes = all(toolbar);
   return [
-    'Raster bearbeiten', null, 'Entwurf veröffentlichen', 'Entwurf verwerfen',
-    'Zustand erneut laden', 'Seiten verwalten', 'Widgets bearbeiten',
-    'Navigation bearbeiten', 'Darstellung einstellen',
+    'Seite bearbeiten', null, 'Entwurf veröffentlichen', 'Entwurf verwerfen',
+    'Zustand erneut laden', 'Seiten verwalten', 'Widget hinzufügen',
+    'Navigation bearbeiten',
   ].map((label) => nodes.find((node) => label ? node.textContent === label : node.className === 'cms-editor-mode'));
 }
 
@@ -165,13 +165,12 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
     const [, status, content] = root.children;
     const toolbar = { children: toolbarControls(root.children[0]) };
     assert.equal(toolbar.children[1].textContent, 'Live');
-    toolbar.children[8].fire('click');
-    const form = content.children[0].children[2];
-    form.children[0].children[0].value = 'light';
-    await form.fire('submit');
-    assert.equal(await readFile(livePath, 'utf8'), original);
-    content.children[0].children[3].fire('click');
+    toolbar.children[0].fire('click');
+    const pagePanel = content.children[0];
+    pagePanel.children[3].children[0].children[0].value = 'light';
+    await pagePanel.children[6].children[0].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(await readFile(livePath, 'utf8'), original);
     assert.equal(toolbar.children[1].textContent, 'Entwurf');
     assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'light');
     await assert.rejects(other.saveDraft(stale.live, stale.token), /veraltet/);
@@ -194,11 +193,10 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
     const backup = (await readdir(dataDir)).find((name) => name.endsWith('.bak'));
     assert.ok(backup);
     assert.equal(await readFile(join(dataDir, backup), 'utf8'), original);
-    toolbar.children[8].fire('click');
-    const secondForm = content.children[0].children[2];
-    secondForm.children[0].children[0].value = 'dark';
-    await secondForm.fire('submit');
-    content.children[0].children[3].fire('click');
+    toolbar.children[0].fire('click');
+    const secondPanel = content.children[0];
+    secondPanel.children[3].children[0].children[0].value = 'dark';
+    await secondPanel.children[6].children[0].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(toolbar.children[1].textContent, 'Entwurf');
     assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'dark');
@@ -216,7 +214,7 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
     dragGrid.items.find((item) => item.id === 'text').y = 4;
     dragGrid.onStop();
     assert.equal(content.children[0].inert, true, 'saving locks pointer edits synchronously');
-    assert.equal(toolbar.children[8].disabled, true);
+    assert.equal(toolbar.children[0].disabled, true);
     await new Promise((resolve) => setTimeout(resolve, 20));
     const moved = JSON.parse(await readFile(join(dataDir, 'draft.json'), 'utf8'));
     assert.equal(moved.pages[0].widgets[0].grid.row, 5);
@@ -241,7 +239,7 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
     grids.at(-1).onStop();
     await new Promise((resolve) => setTimeout(resolve, 20));
     assert.match(status.textContent, /Position nicht übernommen.*überschneidung/);
-    assert.equal(toolbar.children[8].disabled, false, 'invalid geometry restores a usable editor');
+    assert.equal(toolbar.children[0].disabled, false, 'invalid geometry restores a usable editor');
     assert.equal(await readFile(join(dataDir, 'draft.json'), 'utf8'), draftBytes);
 
     failAfterWrite = true;
@@ -249,7 +247,7 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
     grids.at(-1).onStop();
     await new Promise((resolve) => setTimeout(resolve, 20));
     assert.match(status.textContent, /Antwort verloren/);
-    assert.equal(toolbar.children[8].disabled, true);
+    assert.equal(toolbar.children[0].disabled, true);
     assert.deepEqual(JSON.parse(await readFile(livePath, 'utf8')), current);
     failAfterWrite = false;
     await toolbar.children[4].fire('click');

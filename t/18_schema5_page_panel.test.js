@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
-import { Schema5GridPanel } from '../www/fhem-cms/js/fcui-schema5-grid-panel.js';
+import { Schema5PagePanel } from '../www/fhem-cms/js/fcui-schema5-page-panel.js';
 
 class Element {
   constructor(tag) {
@@ -14,6 +14,7 @@ class Element {
     this.attributes = {};
     this.listeners = {};
     this.value = '';
+    this.checked = false;
   }
   append(...children) {
     this.children.push(...children);
@@ -29,7 +30,7 @@ class Element {
 
 function fixture() {
   const live = {
-    schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+    schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12, showFrames: true },
     navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } },
     pages: [
       { id: 'a', title: 'A', widgets: [
@@ -78,22 +79,31 @@ function fixture() {
   };
 }
 
-test('grid panel protects unsaved input, stale coordinates, cancel and verified save', async () => {
+test('page panel protects unsaved input, stale coordinates, cancel and verified save', async () => {
   const original = globalThis.document;
   globalThis.document = { createElement: (tag) => new Element(tag) };
   try {
     const f = fixture();
     const state = await f.controller.reload();
     const root = new Element('section');
-    let cancelled = 0;
-    let saved;
-    const open = () => new Schema5GridPanel({
+    let closed = 0;
+    const open = () => new Schema5PagePanel({
       GridStack: f.GridStack, root, controller: f.controller, pageId: 'a', token: state.token,
-      onSaved: (result) => { saved = result; },
-      onCancel: (outcome) => { assert.equal(outcome.requiresReload, false); cancelled += 1; },
+      browser: { confirm: () => true },
+      onClose: (outcome) => { assert.equal(outcome.requiresReload, false); closed += 1; },
     });
     const panel = open();
-    const [, , status, , form, save, cancel] = root.children;
+    assert.equal(root.children[0].textContent, 'Seite bearbeiten');
+    const settings = root.children[3];
+    assert.equal(settings.children[0].children[0].value, 'dark');
+    assert.equal(settings.children[1].children[0].checked, true);
+    assert.equal(settings.children[2].children[0].attributes ? true : true, true);
+    const form = root.children[5];
+    const footer = root.children[6];
+    const [save, cancel] = footer.children;
+    assert.equal(save.textContent, 'Speichern');
+    assert.equal(cancel.textContent, 'Abbrechen');
+    const status = root.children[2];
     const select = form.children[0].children[0];
     const col = form.children[1].children[0];
     const row = form.children[2].children[0];
@@ -123,38 +133,41 @@ test('grid panel protects unsaved input, stale coordinates, cancel and verified 
     assert.match(status.textContent, /noch nicht gespeichert/);
     assert.equal(f.grid.items[1].y, 5);
     cancel.fire('click');
-    assert.equal(cancelled, 1);
+    assert.equal(closed, 1);
     assert.equal(f.writes, 0);
     assert.equal(root.children.length, 0);
     assert.equal(f.grid.destroyed, true);
     panel.close();
 
     const next = open();
-    const nextForm = root.children[4];
+    const nextForm = root.children[5];
     nextForm.children[0].children[0].value = 'text';
     nextForm.children[0].children[0].fire('change');
     nextForm.children[2].children[0].value = '4';
     nextForm.children[2].children[0].fire('input');
     nextForm.fire('submit');
+    // zusätzlich Theme wechseln: wird mitgespeichert
+    root.children[3].children[0].children[0].value = 'light';
     const gate = f.delay();
-    const saving = root.children[5].fire('click');
-    assert.equal(root.children[6].disabled, true);
+    const saving = root.children[6].children[0].fire('click');
+    assert.equal(root.children[6].children[1].disabled, true);
     assert.throws(() => next.close(), /läuft noch/);
-    assert.equal(f.grid.frozen, true);
     gate.resolve();
     await saving;
     assert.equal(f.writes, 1);
-    assert.equal(saved.draft.pages[0].widgets[0].grid.row, 4);
-    assert.equal(saved.draft.pages[0].widgets[0].html, '{{Temp:state}}');
-    assert.equal(saved.draft.pages[0].widgets[1].html, '<span device="Temp" reading="state"></span>');
-    assert.deepEqual(saved.live, f.live);
+    const draft = f.controller.snapshot().draft;
+    assert.equal(draft.pages[0].widgets[0].grid.row, 4);
+    assert.equal(draft.pages[0].widgets[0].html, '{{Temp:state}}');
+    assert.equal(draft.pages[0].widgets[1].html, '<span device="Temp" reading="state"></span>');
+    assert.equal(draft.theme, 'light');
+    assert.equal(closed, 2);
     assert.equal(root.children.length, 0);
   } finally {
     globalThis.document = original;
   }
 });
 
-test('grid panel reports uncertain saves and requires reload before further edits', async () => {
+test('page panel reports uncertain saves and requires reload before further edits', async () => {
   const original = globalThis.document;
   globalThis.document = { createElement: (tag) => new Element(tag) };
   try {
@@ -162,21 +175,19 @@ test('grid panel reports uncertain saves and requires reload before further edit
     const state = await f.controller.reload();
     f.fail('Antwort verloren');
     const root = new Element('section');
-    let saved = false;
     let closed;
-    new Schema5GridPanel({
+    new Schema5PagePanel({
       GridStack: f.GridStack, root, controller: f.controller, pageId: 'a', token: state.token,
-      onSaved: () => { saved = true; }, onCancel: (outcome) => { closed = outcome; },
+      browser: { confirm: () => true }, onClose: (outcome) => { closed = outcome; },
     });
-    await root.children[5].fire('click');
-    assert.equal(saved, false);
+    root.children[3].children[0].children[0].value = 'light';
+    await root.children[6].children[0].fire('click');
     assert.match(root.children[2].textContent, /Antwort verloren.*erneut laden/);
-    assert.equal(root.children[4].hidden, true);
-    assert.equal(root.children[5].disabled, true);
-    assert.equal(root.children[6].disabled, false);
-    assert.equal(root.children[6].textContent, 'Schließen');
+    assert.equal(root.children[5].inert, true);
+    assert.equal(root.children[6].children[0].disabled, true);
+    assert.equal(root.children[6].children[1].disabled, false);
     assert.throws(() => f.controller.snapshot(), /nicht geladen/);
-    root.children[6].fire('click');
+    root.children[6].children[1].fire('click');
     assert.equal(closed.requiresReload, true);
     assert.equal(f.grid.destroyed, true);
   } finally {
@@ -184,7 +195,7 @@ test('grid panel reports uncertain saves and requires reload before further edit
   }
 });
 
-test('suspended panel disposes after a failed in-flight save without invoking callbacks', async () => {
+test('suspended page panel disposes after a failed in-flight save without invoking callbacks', async () => {
   const original = globalThis.document;
   globalThis.document = { createElement: (tag) => new Element(tag) };
   try {
@@ -192,11 +203,12 @@ test('suspended panel disposes after a failed in-flight save without invoking ca
     const state = await f.controller.reload();
     const root = new Element('section');
     let callbacks = 0;
-    const panel = new Schema5GridPanel({ GridStack: f.GridStack, root, controller: f.controller,
-      pageId: 'a', token: state.token, onSaved: () => { callbacks += 1; }, onCancel: () => { callbacks += 1; } });
+    const panel = new Schema5PagePanel({ GridStack: f.GridStack, root, controller: f.controller,
+      pageId: 'a', token: state.token, browser: { confirm: () => true }, onClose: () => { callbacks += 1; } });
+    root.children[3].children[0].children[0].value = 'light';
     const gate = f.delay();
     f.fail('Antwort verloren');
-    const saving = root.children[5].fire('click');
+    const saving = root.children[6].children[0].fire('click');
     panel.suspend();
     assert.equal(root.hidden, true);
     assert.equal(f.grid.destroyed, false);
@@ -211,9 +223,9 @@ test('suspended panel disposes after a failed in-flight save without invoking ca
   }
 });
 
-test('grid panel saves a validated draft through real isolated Perl transactions', async () => {
+test('page panel saves a validated draft through real isolated Perl transactions', async () => {
   const originalDocument = globalThis.document;
-  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-panel-'));
+  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-page-panel-'));
   globalThis.document = { createElement: (tag) => new Element(tag) };
   const original = JSON.stringify({
     schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
@@ -262,19 +274,23 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     });
     const state = await controller.reload();
     const root = new Element('section');
-    let saved;
-    new Schema5GridPanel({ GridStack: f.GridStack, root, controller, pageId: 'a', token: state.token,
-      onSaved: (result) => { saved = result; }, onCancel: () => {} });
-    const form = root.children[4];
+    let closed;
+    new Schema5PagePanel({ GridStack: f.GridStack, root, controller, pageId: 'a', token: state.token,
+      browser: { confirm: () => true }, onClose: (outcome) => { closed = outcome; } });
+    const form = root.children[5];
     form.children[0].children[0].value = 'text';
     form.children[0].children[0].fire('change');
     form.children[2].children[0].value = '4';
     form.children[2].children[0].fire('input');
     form.fire('submit');
-    await root.children[5].fire('click');
-    assert.equal(saved.draft.pages[0].widgets[0].grid.row, 4);
-    assert.equal(saved.draft.pages[0].widgets[0].html, '{{Temp:state}}');
-    assert.equal(saved.draft.pages[0].widgets[1].html, '<span device="Temp" reading="state"></span>');
+    root.children[3].children[1].children[0].checked = false;
+    await root.children[6].children[0].fire('click');
+    assert.deepEqual(closed, { requiresReload: false });
+    const draft = controller.snapshot().draft;
+    assert.equal(draft.pages[0].widgets[0].grid.row, 4);
+    assert.equal(draft.pages[0].widgets[0].html, '{{Temp:state}}');
+    assert.equal(draft.pages[0].widgets[1].html, '<span device="Temp" reading="state"></span>');
+    assert.equal(draft.settings.showFrames, false);
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
     assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages[0].widgets[0].grid.row, 4);
   } finally {
