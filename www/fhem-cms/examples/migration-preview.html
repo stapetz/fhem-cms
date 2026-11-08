@@ -44,6 +44,14 @@
       <label>CMS-Device <input id="device" required maxlength="128" autocomplete="off"></label>
       <button type="submit">Live-Daten laden</button>
     </form>
+    <section aria-labelledby="migration-heading">
+      <h2 id="migration-heading">Migration auf Schema 5</h2>
+      <p>1. Live-Daten laden. 2. Vorschlag prüfen und bei Bedarf unten anpassen.
+        3. Positionen serverseitig prüfen. 4. Externe Sicherung bestätigen und Migration starten.</p>
+      <button id="validate" type="button" disabled>Positionen serverseitig prüfen</button>
+      <button id="commit-migration" type="button" disabled>Jetzt migrieren</button>
+      <p id="migration-ready" role="status">Bitte zuerst die Live-Daten eines CMS-Devices laden.</p>
+    </section>
     <section aria-labelledby="restore-heading">
       <h2 id="restore-heading">Wiederherstellung prüfen</h2>
       <p>Live und Backup vor einer ausdrücklich bestätigten Wiederherstellung prüfen.</p>
@@ -65,10 +73,8 @@
       <p id="summary"></p>
       <div id="canvas" class="canvas" aria-label="12-Spalten-Rastervorschau"></div>
       <div id="forms"></div>
-      <button id="validate" type="button" hidden>Positionen serverseitig prüfen</button>
       <button id="show-target" type="button" hidden>Geprüftes Zielraster mit Gridstack anzeigen</button>
       <button id="show-widgets" type="button" hidden>Geprüfte Widgets schreibfrei anzeigen</button>
-      <button id="commit-migration" type="button" hidden>Geprüftes Layout auf Schema 5 umstellen</button>
       <section id="target" hidden>
         <h2>Geprüftes Gridstack-Zielraster</h2>
         <p>Nur Positionen und Bezeichnungen; keine Widget-Darstellung, Live-Werte oder Aktionen.</p>
@@ -85,7 +91,7 @@
       </section>
     </section>
   </main>
-  <script type="module" src="../js/fcui-migration-preview.js"
+  <script type="module" src="../js/fcui-migration-preview.js?v=0.5.3"
     onerror="document.getElementById('status').textContent='Fehler: Vorschau konnte nicht geladen werden.'"></script>
 </body>
 </html>

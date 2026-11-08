@@ -41,11 +41,57 @@ sub write_bytes {
     close($out) or die "Cannot close $path: $!";
 }
 
+sub define_legacy {
+    my ($hash, $definition) = @_;
+    my $name = $hash->{NAME};
+    my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    make_path($dir);
+    my $error = FHEMCMS_WriteConfig($name, $dir, FHEMCMS_DefaultConfig());
+    die "Cannot prepare legacy fixture: $error" if (defined($error));
+    return FHEMCMS_Define($hash, $definition);
+}
+
+subtest 'new device starts in schema 5 without rewriting existing data' => sub {
+    my $name = 'NewSchema5';
+    my $hash = {NAME => $name};
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines new device');
+    my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+    my $live = File::Spec->catfile($dir, 'config.json');
+    my $initial = read_bytes($live);
+    my $config = $json->decode($initial);
+    is(FHEMCMS_ValidateConfig($config, 5), undef, 'default passes schema 5 validation');
+    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 5},
+        'entry dispatch detects schema 5');
+    my ($state, $error) = FHEMCMS_ReadVersion5State($dir);
+    is($error, undef, 'schema 5 editor state is readable');
+    is_deeply($state->{live}, $config, 'editor receives the new live configuration');
+    my $draft = $json->decode($initial);
+    $draft->{pages}[0]{title} = 'Edited';
+    is(FHEMCMS_WriteVersion5Draft($dir, $draft, $state->{token}), undef, 'new device accepts a versioned draft');
+    ($state, $error) = FHEMCMS_ReadVersion5State($dir);
+    is($error, undef, 'draft state remains readable');
+    my (undef, $publishError) = FHEMCMS_PublishVersion5Draft($dir, $state->{token});
+    is($publishError, undef, 'new device publishes the draft');
+    is($json->decode(read_bytes($live))->{pages}[0]{title}, 'Edited', 'published changes reach live data');
+    my $published = read_bytes($live);
+    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'restarting preserves new device');
+    is(read_bytes($live), $published, 'restart leaves live bytes unchanged');
+    unlink($live) or die "Cannot remove test live file: $!";
+    like(FHEMCMS_Define($hash, "$name FHEMCMS"), qr/Live-Konfiguration fehlt/,
+        'missing live in existing directory is reported');
+    ok(!-e $live, 'missing existing live file is not recreated');
+    my $draftPath = File::Spec->catfile($dir, 'draft.json');
+    write_bytes($draftPath, 'preserve draft');
+    like(FHEMCMS_Define($hash, "$name FHEMCMS"), qr/Live-Konfiguration fehlt/,
+        'missing live with existing draft is reported');
+    is(read_bytes($draftPath), 'preserve draft', 'existing draft remains unchanged');
+};
+
 for my $version (1 .. 3) {
     subtest "schema $version lifecycle" => sub {
         my $name = "Migration$version";
         my $hash = {NAME => $name};
-        is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+        is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
         my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
         my $livePath = File::Spec->catfile($dir, 'config.json');
         my $draftPath = File::Spec->catfile($dir, 'draft.json');
@@ -131,7 +177,7 @@ for my $version (1 .. 3) {
 subtest 'unsupported and invalid persisted data fails closed' => sub {
     my $name = 'InvalidData';
     my $hash = {NAME => $name};
-    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
     my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
     my $livePath = File::Spec->catfile($dir, 'config.json');
     my $draftPath = File::Spec->catfile($dir, 'draft.json');
@@ -174,7 +220,7 @@ subtest 'layout format is validated without writing or creating directories' => 
     like(FHEMCMS_Get($hash, $name, 'layoutformat'), qr/Datenverzeichnis existiert nicht/,
         'missing directory is reported');
     ok(!-e $missing, 'format detection does not create directory');
-    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
     my $live = File::Spec->catfile($missing, 'config.json');
     my $draft = File::Spec->catfile($missing, 'draft.json');
     my $legacy = read_bytes($live);
@@ -319,7 +365,7 @@ subtest 'prepares a fully specified target without writing or accepting schema 5
 subtest 'legacy commands cannot overwrite or discard a future format' => sub {
     my $name = 'FutureGuard';
     my $hash = {NAME => $name};
-    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
     my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
     my $live = File::Spec->catfile($dir, 'config.json');
     my $draft = File::Spec->catfile($dir, 'draft.json');
@@ -368,7 +414,7 @@ subtest 'legacy commands cannot overwrite or discard a future format' => sub {
 subtest 'preview binds both source bytes and target while refusing a draft' => sub {
     my $name = 'SnapshotPreview';
     my $hash = {NAME => $name};
-    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
     my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
     my $live = File::Spec->catfile($dir, 'config.json');
     my $draft = File::Spec->catfile($dir, 'draft.json');
@@ -410,7 +456,7 @@ subtest 'preview binds both source bytes and target while refusing a draft' => s
 subtest 'internal migration transaction checks preview and preserves original backup' => sub {
     my $name = 'MigrationTransaction';
     my $hash = {NAME => $name};
-    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
     my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
     my $live = File::Spec->catfile($dir, 'config.json');
     my $draft = File::Spec->catfile($dir, 'draft.json');
@@ -542,7 +588,7 @@ subtest 'internal migration transaction checks preview and preserves original ba
 subtest 'migration transaction preserves widget content and media on isolated data' => sub {
     my $name = 'MigrationContent';
     my $hash = {NAME => $name};
-    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
     my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
     my $live = File::Spec->catfile($dir, 'config.json');
     my $media = File::Spec->catdir($modPath, 'www', 'fhem-cms', $name, 'media');
@@ -612,7 +658,7 @@ subtest 'migration backup verification failure is explicit' => sub {
 subtest 'versioned restore accepts and preserves historical schema bytes' => sub {
     my $name = 'HistoricalRestore';
     my $hash = {NAME => $name};
-    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
     my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
     my $live = File::Spec->catfile($dir, 'config.json');
     my $original = read_bytes($live);
@@ -660,7 +706,7 @@ subtest 'versioned restore accepts and preserves historical schema bytes' => sub
 subtest 'FHEM migration preview is read-only and validates its request' => sub {
     my $name = 'PreviewAPI';
     my $hash = {NAME => $name};
-    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
     my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
     my $live = File::Spec->catfile($dir, 'config.json');
     my $draft = File::Spec->catfile($dir, 'draft.json');
@@ -729,7 +775,7 @@ subtest 'preview checks the actual serialized migration size' => sub {
 subtest 'internal version 5 draft contract rejects stale and mixed states' => sub {
     my $name = 'Version5Draft';
     my $hash = {NAME => $name};
-    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
     my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
     my $livePath = File::Spec->catfile($dir, 'config.json');
     my $draftPath = File::Spec->catfile($dir, 'draft.json');
@@ -816,7 +862,7 @@ subtest 'internal version 5 draft contract rejects stale and mixed states' => su
 subtest 'internal version 5 publish and discard respect state and backup' => sub {
     my $name = 'Version5Publish';
     my $hash = {NAME => $name};
-    is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated device');
+    is(define_legacy($hash, "$name FHEMCMS"), undef, 'defines isolated device');
     my $dir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
     my $livePath = File::Spec->catfile($dir, 'config.json');
     my $draftPath = File::Spec->catfile($dir, 'draft.json');

@@ -74,6 +74,9 @@ sub payload { return encode_base64($json->encode($_[0]), ''); }
 sub read_config { return $json->decode(FHEMCMS_Get($hash, $name, $_[0])); }
 sub clone_config { return $json->decode($json->encode($_[0])); }
 
+my $legacyDir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+make_path($legacyDir);
+is(FHEMCMS_WriteConfig($name, $legacyDir, FHEMCMS_DefaultConfig()), undef, 'prepares legacy live data');
 is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines isolated test device');
 is(FHEMCMS_Set($hash, $name, 'media', encode_base64($png, '')), "media/$image.png", 'stores referenced test media');
 is(FHEMCMS_ValidateConfig($live), undef, 'accepts representative legacy configuration');
@@ -121,6 +124,9 @@ is_deeply(read_config('config'), $live, 'failed restore leaves live unchanged');
 subtest 'representative widgets survive migration, versioned draft and restore' => sub {
     my $testName = 'AllWidgetsMigration';
     my $testHash = {NAME => $testName};
+    my $initialDir = File::Spec->catdir($modPath, 'fhem-cms-data', $testName);
+    make_path($initialDir);
+    is(FHEMCMS_WriteConfig($testName, $initialDir, FHEMCMS_DefaultConfig()), undef, 'prepares legacy fixture');
     is(FHEMCMS_Define($testHash, "$testName FHEMCMS"), undef, 'defines isolated migration device');
     is(FHEMCMS_Set($testHash, $testName, 'media', encode_base64($png, '')), "media/$image.png",
         'stores representative media');

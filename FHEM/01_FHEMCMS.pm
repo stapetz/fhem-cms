@@ -15,7 +15,7 @@ use MIME::Base64 qw(decode_base64 encode_base64);
 use POSIX qw(strftime);
 use Time::Local ();
 
-our $FHEMCMS_VERSION = '0.5.2-dev';
+our $FHEMCMS_VERSION = '0.5.3-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -54,14 +54,21 @@ sub FHEMCMS_Define {
     return 'Der Device-Name darf nur Buchstaben, Ziffern, Punkt, Unterstrich und Bindestrich enthalten'
         if ($name !~ /\A[A-Za-z0-9_.-]{1,128}\z/ || $name eq '.' || $name eq '..');
 
+    my $modPath = $main::attr{global}{modpath};
+    my $hadPage = defined($modPath) && $modPath ne ''
+        && -e File::Spec->catfile($modPath, 'www', 'fhem-cms', $name, 'index.html');
     delete($FHEMCMS_PURGED{$name});
     my $error = FHEMCMS_CreateStartPage($name);
     return $error if (defined($error));
 
-    # Läuft bei jedem Start: richtet Datenordner und Konfiguration für bestehende Devices nach.
-    my ($dataError, $dataDir) = FHEMCMS_CreateDataDir($name);
+    if ($hadPage) {
+        my ($existingError) = FHEMCMS_CreateDataDir($name, 1);
+        return "Bestehendes CMS: $existingError; Sicherung pruefen" if (defined($existingError));
+    }
+
+    my ($dataError, $dataDir, $created) = FHEMCMS_CreateDataDir($name);
     return $dataError if (defined($dataError));
-    $error = FHEMCMS_EnsureConfig($name, $dataDir);
+    $error = FHEMCMS_EnsureConfig($name, $dataDir, $created);
     return $error if (defined($error));
 
     if (!defined($main::attr{$name}{room}) || $main::attr{$name}{room} eq '') {
@@ -571,12 +578,14 @@ sub FHEMCMS_CreateDataDir {
 
     my $dataPath = File::Spec->catdir($root, 'fhem-cms-data');
     my $devicePath = File::Spec->catdir($dataPath, $name);
+    my $created = 0;
     if (!-d $devicePath) {
         return ('CMS-Datenverzeichnis existiert nicht') if ($existingOnly);
         my $errors;
-        make_path($devicePath, {mode => 0750, error => \$errors});
+        my @createdPaths = make_path($devicePath, {mode => 0750, error => \$errors});
         return (FHEMCMS_PathError('Datenverzeichnis konnte nicht angelegt werden', $devicePath, $errors))
             if (ref($errors) eq 'ARRAY' && @{$errors});
+        $created = scalar grep { $_ eq $devicePath } @createdPaths;
     }
 
     my $dataRoot = abs_path($dataPath);
@@ -585,7 +594,7 @@ sub FHEMCMS_CreateDataDir {
         if (!defined($dataRoot) || !defined($realPath)
             || !FHEMCMS_IsChildPath($dataRoot, $root) || !FHEMCMS_IsChildPath($realPath, $dataRoot));
 
-    return (undef, $realPath);
+    return (undef, $realPath, $created);
 }
 
 sub FHEMCMS_DefaultConfig {
@@ -597,10 +606,34 @@ sub FHEMCMS_DefaultConfig {
 }
 
 sub FHEMCMS_EnsureConfig {
-    my ($name, $dataDir) = @_;
+    my ($name, $dataDir, $created) = @_;
     my $file = File::Spec->catfile($dataDir, 'config.json');
-    return undef if (-e $file);
-    return FHEMCMS_WriteConfig($name, $dataDir, FHEMCMS_DefaultConfig());
+    return undef if (-e $file || -l $file);
+    return 'Live-Konfiguration fehlt im bestehenden CMS-Datenverzeichnis; Sicherung pruefen'
+        if (!$created);
+    my $config = {
+        schemaVersion => 5,
+        theme => 'dark',
+        settings => {layoutMode => 'grid', gridColumns => 12},
+        navigation => {orientation => 'horizontal', grid => {col => 1, row => 1, w => 12, h => 1}},
+        pages => [{id => 'start', title => 'Start', widgets => []}],
+    };
+    my $error = FHEMCMS_ValidateConfig($config, 5);
+    return $error if (defined($error));
+    my $text = JSON::PP->new->utf8->canonical->pretty->encode($config);
+    my $out;
+    return "Live-Konfiguration konnte nicht angelegt werden: $!"
+        if (!sysopen($out, $file, O_WRONLY | O_CREAT | O_EXCL, 0640));
+    binmode($out, ':raw');
+    my $written = print {$out} $text;
+    my $synced = $written && $out->sync();
+    my $closed = close($out);
+    if (!$written || !$synced || !$closed) {
+        my $reason = "$!";
+        unlink($file) or Log3('FHEMCMS', 1, "FHEMCMS: unvollstaendige Konfiguration konnte nicht entfernt werden: $!");
+        return "Live-Konfiguration konnte nicht geschrieben werden: $reason";
+    }
+    return undef;
 }
 
 # Migriert Version 1 (Widget-IDs), Version 2 (48 Spalten) und Version 3 (Theme-Feld).
@@ -1834,8 +1867,10 @@ sub FHEMCMS_Version5DraftCommand {
 # Zustandsgebundener Migrations- und Restore-Vertrag.
 sub FHEMCMS_MigrationCommand {
     my ($dataDir, $action, @args) = @_;
+    return (undef, 'migrationcommit ist ein interner Befehl; bitte Migration / Restore im CMS verwenden')
+        if (!defined($action) || $action eq '');
     return (undef, 'Unbekannte Migrationsaktion')
-        if (!defined($action) || ref($action) || $action !~ /\A(?:migrate|restore)\z/);
+        if (ref($action) || $action !~ /\A(?:migrate|restore)\z/);
     return (undef, "Migrationsaktion $action erwartet zwei Parameter") if (@args != 2);
     my ($token, $payload) = @args;
     return (undef, 'Ungueltige Vorschau-Bestaetigung')

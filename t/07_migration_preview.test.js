@@ -28,7 +28,7 @@ test('migration preview requires backup and confirmation, handles adjustments an
     'load-backups', 'backup-controls', 'backup', 'preview-backup', 'backup-status', 'backup-result', 'backup-live', 'backup-data',
     'show-target', 'target', 'target-grid', 'target-status', 'grid-css',
     'show-widgets', 'widget-target', 'widget-grid', 'widget-status'];
-  ids.push('commit-migration', 'commit-restore', 'external-backup');
+  ids.push('commit-migration', 'commit-restore', 'external-backup', 'migration-ready');
   const elements = Object.fromEntries(ids.map((id) => [id, new Element(id)]));
   const previous = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch };
   let confirmed = false;
@@ -87,6 +87,9 @@ test('migration preview requires backup and confirmation, handles adjustments an
   };
   try {
     await import('../fcui/migration-preview.js');
+    assert.equal(elements.validate.disabled, true);
+    assert.equal(elements['commit-migration'].disabled, true);
+    assert.match(elements['migration-ready'].textContent, /Live-Daten/);
     elements.file.files = [{ size: 1048577 }];
     await elements.file.fire('change');
     assert.match(elements.status.textContent, /höchstens 1 MiB/);
@@ -94,11 +97,18 @@ test('migration preview requires backup and confirmation, handles adjustments an
     elements.file.files = [{ size: 1, text: async () => '{' }];
     await elements.file.fire('change');
     assert.match(elements.status.textContent, /nicht analysiert/);
+    elements.file.files = [{ size: 1, text: async () => JSON.stringify(source) }];
+    await elements.file.fire('change');
+    assert.equal(elements.preview.hidden, false);
+    assert.equal(elements.validate.disabled, true, 'local file cannot be sent for migration');
+    assert.equal(elements['commit-migration'].disabled, true, 'local file cannot be migrated');
 
     elements.device.value = 'CMS';
     await elements['device-form'].fire('submit');
     assert.equal(elements.preview.hidden, false);
-    assert.equal(elements.validate.hidden, false);
+    assert.equal(elements.validate.disabled, false);
+    assert.equal(elements['commit-migration'].disabled, true);
+    assert.match(elements['migration-ready'].textContent, /serverseitig prüfen/);
     assert.match(elements.summary.textContent, /Offene Positionen: 0/);
     const widgetForm = elements.forms.children[1];
     const fieldset = widgetForm.children[0];
@@ -117,6 +127,14 @@ test('migration preview requires backup and confirmation, handles adjustments an
     assert.match(elements.status.textContent, /Automatischer Vorschlag wiederhergestellt/);
     await elements.validate.fire('click');
     assert.match(elements.status.textContent, /serverseitig geprüft/);
+    assert.equal(elements['commit-migration'].disabled, true);
+    assert.match(elements['migration-ready'].textContent, /Sicherung bestätigen/);
+    elements['external-backup'].checked = true;
+    await elements['external-backup'].fire('change');
+    assert.equal(elements['commit-migration'].disabled, false);
+    elements['external-backup'].checked = false;
+    await elements['external-backup'].fire('change');
+    assert.equal(elements['commit-migration'].disabled, true, 'removing backup confirmation blocks migration');
     assert.equal(elements['show-target'].hidden, false);
     assert.equal(elements['show-widgets'].hidden, false);
     await elements['show-widgets'].fire('click');
@@ -149,6 +167,8 @@ test('migration preview requires backup and confirmation, handles adjustments an
     assert.ok(commands.every((command) => command.startsWith('get ')), 'missing external backup blocks writes');
     await elements.validate.fire('click');
     elements['external-backup'].checked = true;
+    await elements['external-backup'].fire('change');
+    assert.equal(elements['commit-migration'].disabled, false);
     await elements['commit-migration'].fire('click');
     assert.ok(commands.every((command) => command.startsWith('get ')), 'cancelled confirmation sends no write');
     confirmed = true;
@@ -156,6 +176,7 @@ test('migration preview requires backup and confirmation, handles adjustments an
     assert.match(elements.status.textContent, /Umstellung abgeschlossen.*config\.json/);
     assert.equal(commands.filter((command) => command.startsWith('set CMS migrationcommit migrate ')).length, 1);
     assert.equal(elements.preview.hidden, true);
+    assert.equal(elements['commit-migration'].disabled, true);
 
     await elements['load-backups'].fire('click');
     elements.backup.value = 'config.json.20000101-000000.bak';

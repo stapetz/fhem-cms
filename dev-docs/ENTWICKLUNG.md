@@ -72,6 +72,11 @@ Transaktionstests ersetzen keine FHEMWEB-/Geräteabnahme auf gesicherten Testdat
 Ältere Stände benötigen für Rollback eine zusammengehörige Code-, Asset- und
 Datensicherung.
 
+Neue Datenverzeichnisse erhalten eine validierte Schema-5-Startkonfiguration.
+Eine fehlende Live-Datei in einem bereits vorhandenen Datenverzeichnis wird
+nicht automatisch ersetzt. In der Vorschau sind Prüfung und `Jetzt migrieren`
+stets sichtbar, aber bis zur jeweiligen Voraussetzung deaktiviert.
+
 Am 08.11.2026 wurde für den Rasterübergang festgelegt: **Bestehende Layouts
 bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen
 12 Spalten.** Nach späterer ausdrücklicher Entscheidung des Entwicklers werden

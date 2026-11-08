@@ -31,6 +31,7 @@ const backupResult = document.getElementById('backup-result');
 const backupLive = document.getElementById('backup-live');
 const backupData = document.getElementById('backup-data');
 const migrateButton = document.getElementById('commit-migration');
+const migrationReady = document.getElementById('migration-ready');
 const restoreButton = document.getElementById('commit-restore');
 const externalBackup = document.getElementById('external-backup');
 const initialDevice = new URL(window.location.href).searchParams.get('device');
@@ -53,6 +54,19 @@ let widgetView;
 let widgetBase;
 let widgetGeneration = 0;
 let widgetVisible = false;
+let migrationValidated = false;
+
+function updateMigrationControls() {
+  validate.disabled = writing || !client;
+  migrateButton.disabled = writing || !migrationValidated || !externalBackup.checked;
+  migrationReady.textContent = !client
+    ? 'Bitte zuerst die Live-Daten eines CMS-Devices laden.'
+    : !migrationValidated
+      ? 'Bitte den Layoutvorschlag serverseitig prüfen.'
+      : !externalBackup.checked
+        ? 'Bitte die vollständige externe Sicherung bestätigen.'
+        : 'Das geprüfte Layout kann nach Bestätigung migriert werden.';
+}
 
 const keyOf = (item) => item.type === 'navigation' ? 'navigation' : `${item.page}/${item.id}`;
 const describe = (grid) => `Spalte ${grid.col}, Zeile ${grid.row}, Breite ${grid.w}, Höhe ${grid.h}`;
@@ -166,7 +180,7 @@ function clearPreview() {
   changes = new Map();
   suggestions = new Map();
   preview.hidden = true;
-  validate.hidden = true;
+  updateMigrationControls();
   pageSelect.replaceChildren();
   canvas.replaceChildren();
   forms.replaceChildren();
@@ -174,7 +188,8 @@ function clearPreview() {
 
 function clearTarget() {
   if (migrationController) migrationController.invalidate();
-  migrateButton.hidden = true;
+  migrationValidated = false;
+  updateMigrationControls();
   targetGeneration += 1;
   clearWidgetTarget();
   targetConfig = undefined;
@@ -303,7 +318,7 @@ function showConfig(candidate, fhemClient) {
     pageSelect.append(option);
   }
   preview.hidden = false;
-  validate.hidden = !client;
+  updateMigrationControls();
   render();
 }
 
@@ -437,7 +452,8 @@ validate.addEventListener('click', async () => {
     targetConfig = result.config;
     showTarget.hidden = false;
     showWidgets.hidden = false;
-    migrateButton.hidden = false;
+    migrationValidated = true;
+    updateMigrationControls();
     status.textContent = 'Positionen und Konfiguration serverseitig geprüft. Es wurde nichts gespeichert.';
   } catch (error) {
     if (current !== sequence) return;
@@ -461,10 +477,12 @@ async function commit(controller, action) {
   } finally {
     writing = false;
     for (const control of controls) control.disabled = false;
+    updateMigrationControls();
   }
 }
 
 migrateButton.addEventListener('click', async () => {
+  if (!migrationValidated || !client) return;
   try {
     const backup = await commit(migrationController, 'migrate');
     if (backup === null) return;
@@ -477,6 +495,9 @@ migrateButton.addEventListener('click', async () => {
     status.textContent = `Umstellung nicht bestätigt: ${error.message}. Zustand und Sicherungen erneut prüfen.`;
   }
 });
+
+externalBackup.addEventListener('change', updateMigrationControls);
+updateMigrationControls();
 
 restoreButton.addEventListener('click', async () => {
   try {

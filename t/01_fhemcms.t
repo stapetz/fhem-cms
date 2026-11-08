@@ -34,6 +34,9 @@ $attr{global}{modpath} = $modPath;
 
 my $name = 'CMS';
 my $hash = {NAME => $name};
+my $legacyDir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
+make_path($legacyDir);
+is(FHEMCMS_WriteConfig($name, $legacyDir, FHEMCMS_DefaultConfig()), undef, 'prepares existing legacy device');
 is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines a CMS test device');
 is($attr{$name}{room}, 'FHEM CMS', 'assigns new devices to the FHEM CMS room');
 
@@ -217,11 +220,16 @@ my ($latest) = FHEMCMS_ListBackups($dataDir);
 is(FHEMCMS_Set($hash, $name, 'restore', $latest), undef, 'set restore restores a backup');
 like(FHEMCMS_Set($hash, $name, 'restore', '../x'), qr/Ungueltiger Backup-Name/, 'set restore rejects bad names');
 like(FHEMCMS_Set($hash, $name, 'bogus'), qr/Unknown argument/, 'set rejects unknown commands');
+like(FHEMCMS_Set($hash, $name, 'migrationcommit'), qr/interner Befehl.*Migration \/ Restore/,
+    'direct migration command explains the required interface');
 
 unlink(File::Spec->catfile($dataDir, 'config.json'));
 remove_tree($dataDir);
-is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'redefine recreates missing data for existing devices');
-ok(-f File::Spec->catfile($dataDir, 'config.json'), 'recreates the missing default config');
+like(FHEMCMS_Define($hash, "$name FHEMCMS"), qr/Bestehendes CMS.*Sicherung/,
+    'redefine reports missing data for an existing device');
+ok(!-e $dataDir, 'does not recreate missing data for an existing device');
+make_path($dataDir);
+is(FHEMCMS_WriteConfig($name, $dataDir, FHEMCMS_DefaultConfig()), undef, 'restores legacy test data');
 is(FHEMCMS_Undef($hash), undef, 'allows deleting the device definition');
 ok(-d $dataDir, 'keeps the device data directory when the definition is deleted');
 ok(-f $pagePath, 'keeps the device files when the definition is deleted');
@@ -356,6 +364,8 @@ like(FHEMCMS_Summary('WEB', $pName), qr/Daten geloescht/, 'summary shows the pur
 ok(!-e $pData && !-e $pPage, 'blocked calls do not recreate the folders');
 is(FHEMCMS_Define($pHash, "$pName FHEMCMS"), undef, 'redefine after purge works');
 ok(-f File::Spec->catfile($pData, 'config.json') && -f $pIndex, 'redefine recreates data and page');
+write_file(File::Spec->catfile($pData, 'config.json'),
+    JSON::PP->new->utf8->canonical->encode(FHEMCMS_DefaultConfig()));
 
 # restore dropdown
 my $usage = FHEMCMS_Set($pHash, $pName, '?');

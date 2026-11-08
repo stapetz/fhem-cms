@@ -20,6 +20,11 @@ define CMS fhemcms
 ```
 
 Das Device erscheint im Raum `FHEM CMS` mit den Links `CMS starten` und `Zeige Homepage`. Alternativ: `get CMS url`.
+Neu angelegte Devices verwenden Schema 5 mit 12 Spalten. Vorhandene
+Konfigurationen behalten ihr bisheriges Format bis zur bestätigten Umstellung.
+Fehlt die Live-Konfiguration in einem bereits vorhandenen Datenverzeichnis oder
+fehlt bei einer vorhandenen Startseite das ganze Datenverzeichnis, werden die
+Daten nicht neu angelegt: In diesem Fall die Sicherung prüfen und wiederherstellen.
 
 ## Updates einspielen
 
@@ -58,7 +63,8 @@ Seiten und Widget-Einstellungen bleiben erhalten.
    Falls sehr große Widgets nicht in das Zielraster passen, werden die Höhen im
    Vorschlag verkleinert; die Anordnung kann später im Editor korrigiert werden.
 5. Erst nach geprüfter externer Sicherung das entsprechende Kästchen markieren,
-   `Geprüftes Layout auf Schema 5 umstellen` und den Bestätigungsdialog wählen.
+   `Jetzt migrieren` und den Bestätigungsdialog wählen. Die Schaltfläche ist
+   bereits vorher sichtbar, aber bis zur Prüfung und Sicherungsbestätigung gesperrt.
    Das Modul sichert den bisherigen Live-Stand zusätzlich bytegenau. Der
    angezeigte Backup-Name muss notiert werden. CMS-Seite neu laden und
    Navigation, Widgets, Medien und beide Platzhalterformen kontrollieren.
