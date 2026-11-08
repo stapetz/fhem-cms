@@ -20,8 +20,19 @@ export class Schema5View {
     this.view = null;
     this.generation = 0;
     this.active = false;
+    this.suspended = false;
     this.onHashChange = () => {
+      if (this.suspended) return;
       this.showPage(this.pageFromHash()).catch((error) => this.showError(error));
+    };
+    this.onPageHide = () => {
+      if (!this.active || this.suspended) return;
+      this.suspended = true;
+      this.clearPage();
+    };
+    this.onPageShow = (event) => {
+      if (!this.active || !this.suspended || !event.persisted) return;
+      this.browser.location.reload();
     };
   }
 
@@ -46,7 +57,10 @@ export class Schema5View {
     if (this.active) throw new Error('Schema-5-Ansicht ist bereits gestartet');
     schema5GridItems(this.config, this.config.pages?.[0]?.id);
     this.active = true;
+    this.suspended = false;
     this.browser.addEventListener('hashchange', this.onHashChange);
+    this.browser.addEventListener('pagehide', this.onPageHide);
+    this.browser.addEventListener('pageshow', this.onPageShow);
     try {
       await this.showPage(this.pageFromHash());
     } catch (error) {
@@ -75,7 +89,7 @@ export class Schema5View {
   }
 
   async showPage(pageId) {
-    if (!this.active) throw new Error('Schema-5-Ansicht ist nicht aktiv');
+    if (!this.active || this.suspended) throw new Error('Schema-5-Ansicht ist nicht aktiv');
     schema5GridItems(this.config, pageId);
     if (pageId === this.current) return;
     const generation = ++this.generation;
@@ -117,8 +131,14 @@ export class Schema5View {
   stop() {
     if (!this.active) return;
     this.active = false;
-    this.generation += 1;
     this.browser.removeEventListener('hashchange', this.onHashChange);
+    this.browser.removeEventListener('pagehide', this.onPageHide);
+    this.browser.removeEventListener('pageshow', this.onPageShow);
+    this.clearPage();
+  }
+
+  clearPage() {
+    this.generation += 1;
     if (this.live) this.live.stop();
     if (this.view) this.view.destroy();
     this.live = null;

@@ -328,7 +328,11 @@ Der Live-Baustein wird von der vorbereiteten `Schema5View` mit Raster, Widgets
 und bestehendem Hash-Seitenrouting verbunden. Beim Seitenwechsel beendet sie
 zuerst das alte Abo und Raster; verspätete Ergebnisse dürfen die neue Seite
 nicht verändern. Fehler und veraltete Werte werden sichtbar angezeigt. Die
-Ansicht erhält einen exklusiven Client und Widget-Dienste vom Aufrufer; sie ist
+Ansicht beendet beim `pagehide` auch Widget-Lebenszyklen und Abos. Nach einer
+Wiederherstellung aus dem Browser-Cache veranlasst sie ein vollständiges
+Neuladen, damit keine möglicherweise veraltete Formatkonfiguration weiterläuft.
+Dieser Mechanismus ist bisher nur mit synthetischen Browserereignissen getestet.
+Die Ansicht erhält einen exklusiven Client und Widget-Dienste vom Aufrufer; sie ist
 keine Schreibsperre. Beide Bausteine werden nur im synthetischen Bibliothekstest
 verwendet, nicht im Device-Einstieg oder in der schreibfreien Migrationsvorschau.
 Sie sind weder eine vollständige Oberfläche noch der angestrebte zentrale

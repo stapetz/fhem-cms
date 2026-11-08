@@ -185,8 +185,9 @@
       document.getElementById('probe').append(shellRoot);
       const shellStatus = document.createElement('p');
       const listeners = new Map();
+      let reloads = 0;
       const browser = {
-        location: { hash: '#/check' },
+        location: { hash: '#/check', reload: () => { reloads += 1; } },
         addEventListener: (name, callback) => listeners.set(name, callback),
         removeEventListener: (name) => listeners.delete(name),
       };
@@ -219,6 +220,12 @@
           || shellRequests !== 2) {
           throw new Error('Schema-5-Seitenwechsel konnte nicht geprüft werden');
         }
+        listeners.get('pagehide')();
+        if (shellRoot.querySelector('.grid-stack-item') || unsubscribed !== 2) {
+          throw new Error('Schema-5-Ansicht wird beim Verlassen nicht aufgeräumt');
+        }
+        listeners.get('pageshow')({ persisted: true });
+        if (reloads !== 1) throw new Error('Wiederhergestellte Seite wird nicht neu geladen');
       } finally {
         shellView.stop();
         shellRoot.remove();

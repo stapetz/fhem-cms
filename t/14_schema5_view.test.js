@@ -45,8 +45,9 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
       ],
     };
     const listeners = new Map();
+    let reloads = 0;
     const browser = {
-      location: { hash: '#/first' },
+      location: { hash: '#/first', reload() { reloads += 1; } },
       addEventListener(name, callback) { listeners.set(name, callback); },
       removeEventListener(name, callback) {
         assert.equal(listeners.get(name), callback);
@@ -141,7 +142,24 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
     const restarted = view.start();
     requests[5].resolve([{ name: 'Temp', readings: { state: 'erneut' } }]);
     await restarted;
-    assert.equal(root.children[1].children[0].children[0].data[0].readings.state, 'erneut');
+    const restartedComponent = root.children[1].children[0].children[0];
+    assert.equal(restartedComponent.data[0].readings.state, 'erneut');
+    const beforeHide = view.live.refresh();
+    listeners.get('pagehide')();
+    assert.equal(root.children.length, 0);
+    assert.equal(grids[3].destroyed, 1);
+    requests[6].resolve([{ name: 'Temp', readings: { state: 'nach pagehide' } }]);
+    await beforeHide;
+    assert.equal(restartedComponent.data[0].readings.state, 'erneut');
+    browser.location.hash = '#/second';
+    listeners.get('hashchange')();
+    assert.equal(requests.length, 7, 'hidden page cannot start another request');
+    listeners.get('pageshow')({ persisted: false });
+    assert.equal(reloads, 0);
+    listeners.get('pageshow')({ persisted: true });
+    assert.equal(reloads, 1, 'restored page reloads the versioned state');
+    assert.equal(root.children.length, 0);
+    await assert.rejects(view.showPage('first'), /nicht aktiv/);
     view.stop();
     assert.equal(listeners.size, 0);
     const invalid = structuredClone(config);
