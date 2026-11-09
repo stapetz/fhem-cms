@@ -212,7 +212,7 @@ test('real versioned state reaches schema 5 view for live and draft without writ
       this.tag = tag;
       this.children = [];
       this.attributes = {};
-      this.style = {};
+      this.style = { setProperty(name, value) { this[name] = value; } };
       this.classList = { toggle() {} };
     }
     append(child) { this.children.push(child); }

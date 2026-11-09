@@ -156,7 +156,7 @@ export function createSchema5Grid(GridStack, element, config, pageId, renderCont
       wrapper.append(content);
       element.append(wrapper);
       grid.makeWidget(wrapper, item);
-      contents.set(item.id, content);
+      contents.set(item.id, { content, wrapper });
     }
     const actual = grid.save(false);
     if (!Array.isArray(actual) || actual.length !== items.length) {
@@ -170,7 +170,10 @@ export function createSchema5Grid(GridStack, element, config, pageId, renderCont
         throw new Error('Gridstack hat eine gespeicherte Position verändert');
       }
     }
-    for (const item of items) contents.get(item.id).append(renderContent(item.id));
+    for (const item of items) {
+      const { content, wrapper } = contents.get(item.id);
+      content.append(renderContent(item.id, wrapper));
+    }
     return grid;
   } catch (error) {
     grid.destroy(false);

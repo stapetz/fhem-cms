@@ -9,13 +9,32 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   const page = config.pages.find((item) => item.id === pageId);
   const widgets = new Map(page.widgets.map((widget) => [widget.id, widget]));
   const elements = new Map();
-  const grid = createSchema5Grid(GridStack, root, config, pageId, (id) => {
+  const viewConfig = editing ? config : {
+    ...config,
+    pages: config.pages.map((entry) => entry !== page ? entry : {
+      ...page,
+      widgets: [...page.widgets].sort((a, b) => a.grid.row - b.grid.row || a.grid.col - b.grid.col),
+    }),
+  };
+  const grid = createSchema5Grid(GridStack, root, viewConfig, pageId, (id, wrapper) => {
+    if (!editing) {
+      if (id === '__nav') {
+        wrapper.className += ' cms-responsive-navigation';
+      } else {
+        const { w, h } = widgets.get(id).grid;
+        const fraction = Number(w) / Number(config.settings.gridColumns);
+        wrapper.style.setProperty('--cms-mobile-span', fraction <= 0.25 ? '1' : '2');
+        wrapper.style.setProperty('--cms-tablet-span', fraction <= 0.25 ? '1' : fraction <= 0.5 ? '2' : '4');
+        wrapper.style.setProperty('--cms-widget-aspect', `${Number(w)} / ${Number(h)}`);
+      }
+    }
     if (id === '__nav') return navigation;
     const widget = widgets.get(id);
     const element = createWidgetElement(widget, services, snapshots, true);
     elements.set(id, element);
     return element;
   }, Boolean(editing));
+  if (!editing) root.setAttribute('data-responsive', '');
   let destroyed = false;
   if (editing) {
     root.classList.toggle('cms-grid-editable', true);
@@ -81,6 +100,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       if (destroyed) return;
       destroyed = true;
       grid.destroy(false);
+      if (!editing) root.removeAttribute('data-responsive');
       root.replaceChildren();
       if (editing) {
         root.classList.toggle('cms-grid-editable', false);

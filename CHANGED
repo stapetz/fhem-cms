@@ -1,3 +1,11 @@
+2026-11-09 - Responsive Schema-5-Ansicht für Smartphone und Tablet (Refs #101)
+
+Homepage und Vorschau brechen Widgets bei weniger als 768 Pixeln Inhaltsbreite
+auf ein normales oder zwei kleine Widgets um; bis unter 1200 Pixeln gilt eine
+Tablet-Anordnung. Drehen und Größenänderungen passen nur die Darstellung an.
+Desktoppositionen, Inhalte und Live-Daten bleiben erhalten; der Editor behält
+das gespeicherte Raster. Die Geräte-Vorschau zeigt die mobilen Umbrüche.
+
 2026-11-09 - Feinere Schema-5-Rasterstufen (Refs #100)
 
 Die Seiteneinstellungen bieten zusätzlich 96 und 192 Spalten an. Umrechnung,
