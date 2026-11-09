@@ -1,3 +1,20 @@
+2026-11-09 - Version 1.1.0
+
+Geräte-Vorschau mit Hoch-/Querformat und Desktopauflösungen wiederhergestellt.
+Seiteneinstellungen unter Bearbeiten enthalten nur Look & Feel und Rasterdichten
+von 12 bis 192 Spalten. Smartphone und Tablet brechen Widgets automatisch um;
+die Navigation erscheint nur bei tatsächlichem Platzmangel als Burger.
+Pumpende Größenänderungen und Widgetüberlappungen nach Rotation im
+iPhone-Homescreen-Modus sind behoben. Der Entwickler hat den Stand abgenommen.
+
+S97 - Schema-5-Editor: Geräte-Vorschau mit Desktopauflösungen und Drehfunktion wiederherstellen
+S98 - Seiteneinstellungen unter Bearbeiten mit wählbarem Schema-5-Raster 12/24/48
+S99 - Pumpende Schema-5-Ansicht durch Scrollbar-/Gridstack-Resize-Schleife beheben
+S100 - Schema-5-Raster um feinere Stufen 96 und 192 erweitern
+S101 - Responsive Schema-5-Widgetumbrüche für Smartphone und Tablet
+S102 - Seiteneinstellungen auf Look & Feel ohne Widgetpositionierung beschränken
+S103 - Schema-5-Navigation nur bei tatsächlichem Platzmangel als Burger anzeigen
+
 2026-11-09 - Mobile Rasterhöhe nach Rotation stabilisieren (Refs #101)
 
 Responsive Widgetkacheln reservieren ihr Seitenverhältnis über prozentuales
