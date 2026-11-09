@@ -1,6 +1,6 @@
 const NAVIGATION = '__nav';
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
-export const SCHEMA5_GRID_COLUMNS = [12, 24, 48];
+export const SCHEMA5_GRID_COLUMNS = [12, 24, 48, 96, 192];
 
 function integer(value, min, max) {
   if ((typeof value !== 'number' && typeof value !== 'string')
@@ -32,9 +32,9 @@ function overlaps(a, b) {
 function validateLayout(config) {
   if (!config || integer(config.schemaVersion, 5, 5) === null
     || config.settings?.layoutMode !== 'grid'
-    || !SCHEMA5_GRID_COLUMNS.includes(integer(config.settings?.gridColumns, 12, 48))
+    || !SCHEMA5_GRID_COLUMNS.includes(integer(config.settings?.gridColumns, 12, 192))
     || !Array.isArray(config.pages) || config.pages.length < 1 || config.pages.length > 50) {
-    throw new Error('Gültiges Schema 5 mit 12-, 24- oder 48-Spalten-Raster erwartet');
+    throw new Error('Gültiges Schema 5 mit 12, 24, 48, 96 oder 192 Rasterspalten erwartet');
   }
   const columns = Number(config.settings.gridColumns);
   const nav = geometry(config.navigation?.grid, columns);

@@ -765,12 +765,14 @@ sub FHEMCMS_ValidateConfig {
         return 'Ungueltiger Wert fuer gridColumns'
             if (exists($config->{settings}{gridColumns}) && (ref($config->{settings}{gridColumns})
                 || !defined($config->{settings}{gridColumns})
-                || $config->{settings}{gridColumns} !~ /\A(?:12|24|48)\z/));
+                || ($targetSchema == 5
+                    ? $config->{settings}{gridColumns} !~ /\A(?:12|24|48|96|192)\z/
+                    : $config->{settings}{gridColumns} !~ /\A(?:12|24|48)\z/)));
         return 'Ungueltiger Wert fuer showFrames'
             if (exists($config->{settings}{showFrames}) && !$isBool->($config->{settings}{showFrames}));
     }
     if ($targetSchema == 5) {
-        return 'Schema 5 erfordert Navigation und ein 12-, 24- oder 48-Spalten-Raster'
+        return 'Schema 5 erfordert Navigation und 12, 24, 48, 96 oder 192 Rasterspalten'
             if (!exists($config->{navigation}) || !exists($config->{settings})
                 || !defined($config->{settings}{layoutMode})
                 || $config->{settings}{layoutMode} ne 'grid'

@@ -94,8 +94,8 @@ Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfigu
   Vorschau und numerischer Positionseingabe) und Widget hinzufügen (mit Suche).
 - **Ansicht:** Vorschau (zeigt die Seite ohne Bearbeitungselemente) und Raster anzeigen.
 
-Unter **Bearbeiten → Seiteneinstellungen → Rastergröße** wählen Sie 12, 24 oder
-48 Spalten: mehr Spalten erlauben feinere Positionen und Größen. Die Auswahl gilt
+Unter **Bearbeiten → Seiteneinstellungen → Rastergröße** wählen Sie 12, 24, 48,
+96 oder 192 Spalten: mehr Spalten erlauben feinere Positionen und Größen. Die Auswahl gilt
 für alle Seiten und die gemeinsame Navigation. Bestehende Positionen und Größen
 werden proportional in beiden Richtungen umgerechnet. Beim Vergröbern werden
 sie gerundet; Überschneidungen werden durch Verschieben nach unten aufgelöst.
