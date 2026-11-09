@@ -96,6 +96,9 @@ Bekannte Layoutfehler setzen das Raster mit sichtbarer Meldung zurück;
 unklare Schreibantworten erfordern explizites Neuladen. `pagehide` verhindert
 noch nicht gestartete Pointer-Schreibaktionen und unterdrückt späte Antworten.
 Die numerische Rastermaske bleibt als präzise Tastaturbedienung erhalten.
+Die Geräte-Vorschau ist auch in diesem Editor verfügbar: Sie öffnet die aktuelle
+Seite mit `?mode=preview` in einem maßgerechten Iframe, bietet Geräte- und
+Desktopauflösungen an und vertauscht beim Drehen Breite und Höhe.
 
 Am 08.11.2026 wurde für den Rasterübergang festgelegt: **Bestehende Layouts
 bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen

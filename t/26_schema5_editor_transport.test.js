@@ -15,11 +15,12 @@ class Element {
     this.attributes = {};
     this.listeners = {};
     this.classList = { toggle() {} };
-    this.style = {};
+    this.style = { setProperty(name, value) { this[name] = value; } };
     this.value = '';
   }
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children; }
+  remove() { this.removed = true; }
   setAttribute(name, value) { this.attributes[name] = value; }
   getAttribute(name) { return Object.hasOwn(this.attributes, name) ? this.attributes[name] : null; }
   removeAttribute(name) { delete this.attributes[name]; }
@@ -90,8 +91,14 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
   try {
     await mkdir(dataDir, { recursive: true });
     await writeFile(livePath, original);
-    globalThis.window = { location: { href: 'https://example.test/fhem/' }, clearTimeout, setTimeout };
-    globalThis.document = { createElement: (tag) => new Element(tag), documentElement: new Element('html') };
+    globalThis.window = {
+      location: { href: 'https://example.test/fhem/' }, clearTimeout, setTimeout,
+      addEventListener() {}, removeEventListener() {},
+    };
+    globalThis.document = {
+      createElement: (tag) => new Element(tag), documentElement: new Element('html'), body: new Element('body'),
+      addEventListener() {}, removeEventListener() {},
+    };
     globalThis.HTMLElement = class {};
     const registry = new Map();
     globalThis.customElements = { define: (name, value) => registry.set(name, value), get: (name) => registry.get(name) };
