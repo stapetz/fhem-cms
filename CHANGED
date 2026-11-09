@@ -1,3 +1,9 @@
+2026-11-09 - Späterer Widgetumbruch im Smartphone-Querformat (Refs #101)
+
+Normale Widgets passen ab 640 statt erst ab 768 Pixeln verfügbarer Inhaltsbreite
+nebeneinander. Das lässt mehr Platz für seitliche Browser-/Sicherheitsabstände
+auf dem echten iPhone. Die kompakte Navigation bleibt unverändert.
+
 2026-11-09 - Seiteneinstellungen auf Look & Feel beschränkt (Refs #102)
 
 Der Dialog enthält nur noch Rasterdichte, Theme und Widget-Rahmen. Die separate

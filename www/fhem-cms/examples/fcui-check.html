@@ -25,11 +25,11 @@
       return result.href;
     };
 
-    function loadStylesheet() {
+    function loadStylesheet(path = '../css/fcui-gridstack.css') {
       return new Promise((resolve, reject) => {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = url('../css/fcui-gridstack.css');
+        link.href = url(path);
         const timer = setTimeout(() => reject(new Error('Gridstack-CSS antwortet nicht')), 15000);
         link.onload = () => { clearTimeout(timer); resolve(); };
         link.onerror = () => { clearTimeout(timer); reject(new Error('Gridstack-CSS konnte nicht geladen werden')); };
@@ -45,6 +45,7 @@
         import(url('../js/fcui-schema5-live.js')),
         import(url('../js/fcui-schema5-view.js')),
         loadStylesheet(),
+        loadStylesheet('../css/fhem-cms.css'),
       ]);
       const { LitElement, html, GridStack } = runtime;
       class Probe extends LitElement {
@@ -233,7 +234,71 @@
       if (listeners.size !== 0 || unsubscribed !== 2) {
         throw new Error('Schema-5-Seite räumt Live-Abos nicht auf');
       }
-      status.textContent = 'Erfolg: Lit, Gridstack, Schema-5-Raster, Live-Widgets und Seitenwechsel wurden synthetisch geprüft.';
+      const responsiveConfig = {
+        schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+        navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } },
+        pages: [{ id: 'check', widgets: [
+          { ...widgetConfig.pages[0].widgets.find((widget) => widget.id === 'solar'),
+            grid: { col: 1, row: 2, w: 4, h: 4 } },
+          { id: 'second', type: 'text', html: 'Zweites Solar-Widget',
+            grid: { col: 5, row: 2, w: 4, h: 4 } },
+          { id: 'small1', type: 'text', html: 'Klein 1', grid: { col: 1, row: 6, w: 3, h: 1 } },
+          { id: 'small2', type: 'text', html: 'Klein 2', grid: { col: 4, row: 6, w: 3, h: 1 } },
+        ] }],
+      };
+      const responsiveShell = document.createElement('section');
+      responsiveShell.className = 'cms-shell';
+      responsiveShell.style.cssText = 'position:fixed;left:-2000px;top:0';
+      document.getElementById('probe').append(responsiveShell);
+      let responsiveChecks = 0;
+      try {
+        for (const columns of schema5.SCHEMA5_GRID_COLUMNS) {
+          const current = schema5.resizeSchema5Grid(responsiveConfig, columns);
+          const original = JSON.stringify(current);
+          const root = document.createElement('div');
+          root.className = 'grid-stack cms-schema5-grid';
+          responsiveShell.style.width = '1200px';
+          responsiveShell.append(root);
+          const navigation = document.createElement('nav');
+          navigation.className = 'cms-nav';
+          const burger = document.createElement('button');
+          burger.className = 'cms-nav-burger';
+          navigation.append(burger);
+          const mounted = widgets.mountSchema5Widgets(GridStack, root, current, 'check', navigation, services, snapshot('100'));
+          try {
+            const nodes = [...root.children];
+            const positions = JSON.stringify(root.gridstack.save(false));
+            for (const width of [393, 639, 640, 670, 734, 767, 768, 1199, 1200, 393]) {
+              responsiveShell.style.width = `${width}px`;
+              await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+              const rect = (id) => nodes.find((node) => node.gridstackNode.id === id).getBoundingClientRect();
+              const solar = rect('solar');
+              const second = rect('second');
+              const sameRow = Math.abs(solar.top - second.top) < 1;
+              if (sameRow !== (width >= 640)
+                || (width < 640 && Math.abs(solar.width - width) > 1)
+                || (width >= 640 && width < 1200 && Math.abs(solar.width - (width - 12) / 2) > 1)
+                || Math.abs(rect('small1').top - rect('small2').top) > 1) {
+                throw new Error(`Widgetumbruch bei ${width}px und ${columns} Spalten fehlerhaft`);
+              }
+              if ((getComputedStyle(burger).display !== 'none') !== (width < 768 || matchMedia('(max-width: 40rem)').matches)
+                || !nodes.every((node, index) => root.children[index] === node)
+                || JSON.stringify(current) !== original
+                || JSON.stringify(root.gridstack.save(false)) !== positions
+                || root.scrollWidth > root.clientWidth) {
+                throw new Error(`Responsive Navigation, Zustand oder Breite bei ${width}px fehlerhaft`);
+              }
+              responsiveChecks += 1;
+            }
+          } finally {
+            mounted.destroy();
+            root.remove();
+          }
+        }
+      } finally {
+        responsiveShell.remove();
+      }
+      status.textContent = `Erfolg: Lit, Gridstack, Schema-5-Raster, Live-Widgets, Seitenwechsel und ${responsiveChecks} responsive Umbrüche wurden synthetisch geprüft.`;
     } catch (error) {
       status.textContent = `Fehler beim Laden oder Prüfen der FCUI-Dateien: ${error.message}`;
     }
