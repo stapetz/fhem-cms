@@ -134,7 +134,7 @@ body {
   }
 }
 
-@container cms-page (width < 768px) {
+@container cms-page (width < 640px) {
   .cms-schema5-grid[data-responsive] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -142,7 +142,9 @@ body {
   .cms-schema5-grid[data-responsive] > .grid-stack-item:not(.cms-responsive-navigation) {
     grid-column: span var(--cms-mobile-span);
   }
+}
 
+@container cms-page (width < 768px) {
   .cms-schema5-grid[data-responsive] .cms-nav-burger {
     display: inline-flex;
   }

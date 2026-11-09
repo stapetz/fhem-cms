@@ -109,15 +109,18 @@ Widgets werden ausschließlich direkt im Editiermodus verschoben und skaliert.
 Homepage und Vorschau passen die Anordnung automatisch an die verfügbare
 Inhaltsbreite an, auch beim Drehen eines Smartphones oder Tablets:
 
-- **Unter 768 Pixeln:** Ein normales Widget pro Zeile, zwei kleine nebeneinander.
+- **Unter 640 Pixeln:** Ein normales Widget pro Zeile, zwei kleine nebeneinander.
   Klein sind Widgets bis zu einem Viertel der gespeicherten Rasterbreite
   (3 von 12 bzw. 48 von 192 Spalten).
-- **768 bis unter 1200 Pixel:** Vier Teilspalten; kleine Widgets belegen eine,
+- **640 bis unter 1200 Pixel:** Vier Teilspalten; kleine Widgets belegen eine,
   Widgets bis zur halben Rasterbreite zwei, breitere die ganze Zeile.
 - **Ab 1200 Pixeln:** Die gespeicherten Desktoppositionen und Größen gelten.
 
 Die Navigation steht in mobilen Ansichten vor den Widgets; bei schmaler
-Inhaltsbreite ist sie als ☰-Menü aufklappbar. Widgets folgen ihrer ursprünglichen
+Inhaltsbreite unter 768 Pixeln ist sie als ☰-Menü aufklappbar. Der spätere
+Widgetumbruch berücksichtigt den im Smartphone-Querformat durch Browserränder
+und Sicherheitsabstände verringerten Platz: Ab 640 Pixeln verbleibender
+Inhaltsbreite passen zwei normale Widgets nebeneinander. Widgets folgen ihrer ursprünglichen
 Zeilen-/Spaltenreihenfolge. Ihr Seitenverhältnis bleibt erhalten, mit mindestens
 96 Pixeln Höhe. Die Anordnung ist unabhängig von der gewählten Rasterdichte.
 Beim Drehen oder Vergrößern bleiben Inhalte und Live-Daten bestehen; es werden

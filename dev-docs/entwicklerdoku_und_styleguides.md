@@ -175,12 +175,15 @@ Das Root-Layout des Frameworks unterstützt drei frei wählbare Struktur-Modi. D
 
 ### 2.3 Responsives Verhalten & Hamburger-Menü
 Im aktuellen Schema-5-Renderer werden Homepage und Vorschau anhand der
-CMS-Inhaltsbreite umgebrochen: unter 768 Pixeln ein normales oder zwei kleine
-Widgets, von 768 bis unter 1200 Pixeln vier Teilspalten, danach gespeicherte
+CMS-Inhaltsbreite umgebrochen: unter 640 Pixeln ein normales oder zwei kleine
+Widgets, von 640 bis unter 1200 Pixeln vier Teilspalten, danach gespeicherte
 Desktoppositionen. Klein bedeutet höchstens ein Viertel der gespeicherten
 Rasterbreite. Reflow verändert keine Konfiguration; der Editor behält sein
 präzises Raster, Geräte-Vorschau und Drehen zeigen den responsiven Umbruch.
 Dies implementiert noch nicht die folgenden App-Shell-/Drawer-Zielmodi.
+Die kompakte Schema-5-Navigation schaltet unabhängig unter 768 Pixeln um;
+seitliche Browser-/Sicherheitsabstände im Querformat lösen damit nicht schon
+den einspaltigen Widgetumbruch aus.
 
 Sobald die Viewport-Breite **`768px`** unterschreitet (Smartphones oder Tablets im engen Hochformat), schaltet das System unabhängig vom gewählten Layout (`sidebar` oder `topbar`) in den mobilen Modus:
 *   Die globale Navigationsleiste wird aus dem Grid ausgekoppelt und als verborgener Drawer (`transform: translateX(-100%)`) links platziert.
