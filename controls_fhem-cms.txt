@@ -13,8 +13,8 @@ UPD 2026-11-08_22:22:21 9732 www/fhem-cms/components/cms-text.js
 UPD 2026-11-08_22:22:21 37225 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-08_22:22:21 24740 www/fhem-cms/components/cms-value.js
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
-UPD 2026-11-09_07:43:46 29333 www/fhem-cms/css/fhem-cms.css
-UPD 2026-11-08_13:06:21 12309 www/fhem-cms/examples/fcui-check.html
+UPD 2026-11-09_07:48:32 29373 www/fhem-cms/css/fhem-cms.css
+UPD 2026-11-09_07:48:32 15958 www/fhem-cms/examples/fcui-check.html
 UPD 2026-11-08_21:07:16 4844 www/fhem-cms/examples/migration-preview.html
 UPD 2026-11-04_21:52:16 5087 www/fhem-cms/js/device-picker.js
 UPD 2026-11-09_07:17:44 6725 www/fhem-cms/js/device-preview.js
