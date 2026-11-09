@@ -111,7 +111,8 @@ body {
     min-height: 96px;
     max-width: 100%;
     grid-column: span var(--cms-tablet-span);
-    aspect-ratio: var(--cms-widget-aspect);
+    /* Padding trägt die volle Kachelhöhe auch zu WebKits Rasterzeilen nach Rotation bei. */
+    padding-top: var(--cms-widget-padding, 0px);
   }
 
   .cms-schema5-grid[data-responsive] > .grid-stack-item > .grid-stack-item-content {
@@ -120,7 +121,6 @@ body {
 
   .cms-schema5-grid[data-responsive] > .cms-responsive-navigation {
     grid-column: 1 / -1;
-    aspect-ratio: auto;
     min-height: 0;
   }
 

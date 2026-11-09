@@ -1,3 +1,11 @@
+2026-11-09 - Mobile Rasterhöhe nach Rotation stabilisieren (Refs #101)
+
+Responsive Widgetkacheln reservieren ihr Seitenverhältnis über prozentuales
+Padding statt aspect-ratio am Grid-Item. Dies adressiert den gemessenen
+Homescreen-Fehler mit zu kurzen Rasterzeilen und überlappenden Kacheln.
+Die Prüfseite kontrolliert zusätzlich nichtquadratische Kacheln und Zeilenabstände.
+Gespeicherte Positionen und der Desktopeditor bleiben unverändert.
+
 2026-11-09 - Homescreen-Rotation gezielt diagnostizieren (Refs #101)
 
 Die rein lesende FCUI-Prüfseite erfasst den Standalone-Modus, die adaptive
