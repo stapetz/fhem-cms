@@ -104,6 +104,8 @@ Grenzüberschreitungen werden sichtbar abgewiesen. Die Vorschau bleibt lokal,
 bis der vollständige Kandidat als Entwurf gespeichert und zurückgelesen ist.
 Darstellung, Validierung, Positionseingabe, Hilfsraster und neue Widgetgrößen
 verwenden durchgängig die gewählte Spaltenzahl.
+Ein stabil reservierter Scrollbalkenplatz am Dokument verhindert eine
+Resize-Schleife durch wechselnde Fensterbreiten und automatische Zellhöhen.
 Die Geräte-Vorschau ist auch in diesem Editor verfügbar: Sie öffnet die aktuelle
 Seite mit `?mode=preview` in einem maßgerechten Iframe, bietet Geräte- und
 Desktopauflösungen an und vertauscht beim Drehen Breite und Höhe.
