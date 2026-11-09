@@ -306,10 +306,6 @@ body {
   white-space: nowrap;
 }
 
-.cms-editor-dialog[data-panel="page"] .cms-position-grid {
-  margin-block: .25rem;
-}
-
 .cms-editor-dialog[data-widget-open] {
   background: transparent;
   border-color: transparent;

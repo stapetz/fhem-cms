@@ -1,3 +1,10 @@
+2026-11-09 - Seiteneinstellungen auf Look & Feel beschränkt (Refs #102)
+
+Der Dialog enthält nur noch Rasterdichte, Theme und Widget-Rahmen. Die separate
+Rastervorschau und Positions-/Größeneingaben entfallen; Widgets werden direkt
+im Editiermodus verschoben und skaliert. Rasterumrechnung und Entwurfsspeicherung
+bleiben erhalten, Abbrechen verändert keine Konfiguration.
+
 2026-11-09 - Responsive Schema-5-Ansicht für Smartphone und Tablet (Refs #101)
 
 Homepage und Vorschau brechen Widgets bei weniger als 768 Pixeln Inhaltsbreite
