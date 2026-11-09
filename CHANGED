@@ -1,3 +1,8 @@
+2026-11-09 - Pumpende Schema-5-Ansicht stabilisiert (Refs #99)
+
+Stabiler Scrollbalkenplatz verhindert das wiederholte Vergrößern und Verkleinern
+der Ansicht an der Scrollgrenze.
+
 2026-11-09 - Seiteneinstellungen und Rastergröße im Schema-5-Editor (Refs #98)
 
 Unter Bearbeiten > Seiteneinstellungen ist die Rastergröße mit 12, 24 oder
