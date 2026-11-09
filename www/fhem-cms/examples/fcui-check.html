@@ -10,6 +10,11 @@
     <h1>FCUI-Bibliotheken prüfen</h1>
     <p id="status" role="status">Prüfung wird geladen …</p>
     <p>Diese Prüfung verändert keine CMS-Daten und benötigt keine FHEM-Befehle.</p>
+    <p>Für die Homescreen-Prüfung diese Seite als eigenes Homescreen-Icon öffnen,
+      Hochformat → Querformat → Hochformat drehen und anschließend den Messstand festhalten.
+      Die Beispielansicht steht oberhalb der Messwerte.</p>
+    <div id="diagnostic-preview"></div>
+    <button id="freeze-diagnostics" type="button" disabled>Messstand festhalten</button>
     <details open>
       <summary>Mobile Layoutdiagnose (zum Weitergeben markieren und kopieren)</summary>
       <pre id="layout-diagnostics" style="white-space:pre-wrap;overflow-wrap:anywhere">Wird geladen …</pre>
@@ -348,49 +353,130 @@
       const diagnosticRoot = document.createElement('div');
       diagnosticRoot.className = 'grid-stack cms-schema5-grid';
       diagnosticShell.append(diagnosticRoot);
-      document.getElementById('probe').append(diagnosticShell);
-      const diagnosticView = widgets.mountSchema5Widgets(GridStack, diagnosticRoot, responsiveConfig, 'check',
-        document.createElement('nav'), services, snapshot('100'));
-      const diagnosticNodes = [...diagnosticRoot.children];
-      const describe = (id) => {
-        const node = diagnosticNodes.find((entry) => entry.gridstackNode.id === id);
+      document.getElementById('diagnostic-preview').append(diagnosticShell);
+      const diagnosticConfig = structuredClone(responsiveConfig);
+      const diagnosticWidgets = [
+        { ...diagnosticConfig.pages[0].widgets[0], title: 'SolarFlow',
+          grid: { col: 1, row: 2, w: 4, h: 3 } },
+        { id: 'second', type: 'fhem-table', title: 'Solaranlage Einzelübersicht',
+          deviceLabel: 'Anlage', valueLabel: 'Watt', sum: true, sumLabel: 'Gesamtleistung', sumUnit: 'W',
+          rows: ['Dach Strang Süd', 'Dach Strang West', 'Gartenhaus', 'Garage']
+            .map((label) => ({ device: 'Test', reading: 'power', label, unit: 'W' })),
+          grid: { col: 5, row: 2, w: 4, h: 3 } },
+      ];
+      diagnosticConfig.pages = ['Start', 'Thermometer', 'Diverse neue Widgets', 'Solaranlage']
+        .map((title, index) => ({
+          id: index === 0 ? 'check' : `check${index}`, title,
+          widgets: structuredClone(diagnosticWidgets),
+        }));
+      const diagnosticView = new shell.Schema5View({
+        GridStack, root: diagnosticRoot, status: document.createElement('p'), config: diagnosticConfig,
+        client: {
+          jsonlist: async () => snapshot('100').get('Test'),
+          subscribe: (names, onEvent, onState) => onState('polling'),
+          unsubscribe: () => {},
+        },
+        services,
+      });
+      await diagnosticView.start();
+      const rectangle = (node) => {
         const rect = node.getBoundingClientRect();
-        return { x: Math.round(rect.left), y: Math.round(rect.top),
-          width: Math.round(rect.width), height: Math.round(rect.height) };
+        return { x: Math.round(rect.left * 100) / 100, y: Math.round(rect.top * 100) / 100,
+          width: Math.round(rect.width * 100) / 100, height: Math.round(rect.height * 100) / 100 };
       };
-      const updateDiagnostics = () => {
+      const describe = (id) => {
+        const node = diagnosticRoot.querySelector(`[gs-id="${id}"]`);
+        const content = node.querySelector('.grid-stack-item-content');
+        return { wrapper: rectangle(node), content: rectangle(content),
+          widget: rectangle(content.firstElementChild), aspect: getComputedStyle(node).aspectRatio };
+      };
+      const freeze = document.getElementById('freeze-diagnostics');
+      let frozen = false;
+      const history = [];
+      const updateDiagnostics = (event) => {
+        if (frozen) return;
         const available = diagnosticRoot.clientWidth;
         const solar = describe('solar');
         const second = describe('second');
+        const nav = diagnosticRoot.querySelector('.cms-nav');
+        const sameRow = Math.abs(solar.wrapper.y - second.wrapper.y) < 1;
+        const overlap = !sameRow && second.content.y < Math.max(
+          solar.content.y + solar.content.height, solar.widget.y + solar.widget.height,
+        ) - 1;
+        history.push({
+          event, ms: Math.round(performance.now()), viewport: [innerWidth, innerHeight],
+          container: available, compact: nav.hasAttribute('data-compact'),
+          solar: solar.wrapper, second: second.wrapper, overlap,
+        });
+        if (history.length > 12) history.shift();
         document.getElementById('layout-diagnostics').textContent = JSON.stringify({
+          revision: 'standalone-rotation-1',
+          standalone: { navigator: navigator.standalone ?? null,
+            displayMode: matchMedia('(display-mode: standalone)').matches,
+            fullscreen: matchMedia('(display-mode: fullscreen)').matches },
           screen: { width: screen.width, height: screen.height },
+          orientation: screen.orientation?.type ?? null,
           viewport: { width: innerWidth, height: innerHeight,
             clientWidth: document.documentElement.clientWidth },
           visualViewport: visualViewport && { width: Math.round(visualViewport.width),
             height: Math.round(visualViewport.height), scale: visualViewport.scale },
           rootFont: getComputedStyle(document.documentElement).fontSize,
+          textSizeAdjust: getComputedStyle(document.documentElement).getPropertyValue('-webkit-text-size-adjust'),
           bodyPadding: getComputedStyle(document.body).padding,
           container: { width: available, type: getComputedStyle(diagnosticShell).containerType,
             name: getComputedStyle(diagnosticShell).containerName },
           grid: { display: getComputedStyle(diagnosticRoot).display,
-            tracks: getComputedStyle(diagnosticRoot).gridTemplateColumns },
+            tracks: getComputedStyle(diagnosticRoot).gridTemplateColumns,
+            rows: getComputedStyle(diagnosticRoot).gridTemplateRows,
+            gap: getComputedStyle(diagnosticRoot).gap },
+          navigation: { width: nav.clientWidth, adaptive: nav.hasAttribute('data-adaptive'),
+            compact: nav.hasAttribute('data-compact'), open: nav.hasAttribute('data-open'),
+            burger: getComputedStyle(nav.querySelector('.cms-nav-burger')).display,
+            links: [...nav.querySelectorAll('.cms-nav-link')].map((link) => ({
+              label: link.textContent, width: rectangle(link).width,
+              font: getComputedStyle(link).fontSize, display: getComputedStyle(link).display,
+            })) },
           expected: available < 640 ? 'untereinander' : 'nebeneinander',
-          actual: Math.abs(solar.y - second.y) < 1 ? 'nebeneinander' : 'untereinander',
-          solar, second,
+          actual: sameRow ? 'nebeneinander' : 'untereinander',
+          overlap, solar, second, history,
         }, null, 2);
       };
-      const observer = new ResizeObserver(updateDiagnostics);
+      let frame = null;
+      let settled = null;
+      const scheduleDiagnostics = (event) => {
+        cancelAnimationFrame(frame);
+        clearTimeout(settled);
+        const name = event.type;
+        frame = requestAnimationFrame(() => { frame = null; updateDiagnostics(name); });
+        settled = setTimeout(() => { settled = null; updateDiagnostics(`${name}:settled`); }, 400);
+      };
+      const observer = new ResizeObserver(() => scheduleDiagnostics({ type: 'layout-resize' }));
       observer.observe(diagnosticShell);
-      window.addEventListener('resize', updateDiagnostics);
-      visualViewport?.addEventListener('resize', updateDiagnostics);
+      observer.observe(diagnosticRoot);
+      const targets = [
+        [window, 'resize'], [window, 'orientationchange'], [window, 'pageshow'],
+        [visualViewport, 'resize'], [screen.orientation, 'change'], [document, 'visibilitychange'],
+      ];
+      for (const [target, event] of targets) target?.addEventListener(event, scheduleDiagnostics);
+      freeze.disabled = false;
+      freeze.addEventListener('click', () => {
+        if (!frozen) updateDiagnostics('festgehalten');
+        frozen = !frozen;
+        freeze.textContent = frozen ? 'Messung fortsetzen' : 'Messstand festhalten';
+        freeze.setAttribute('aria-pressed', String(frozen));
+        if (!frozen) updateDiagnostics('fortgesetzt');
+      });
       window.addEventListener('pagehide', () => {
         observer.disconnect();
-        window.removeEventListener('resize', updateDiagnostics);
-        visualViewport?.removeEventListener('resize', updateDiagnostics);
-        diagnosticView.destroy();
+        cancelAnimationFrame(frame);
+        clearTimeout(settled);
+        for (const [target, event] of targets) target?.removeEventListener(event, scheduleDiagnostics);
+        freeze.disabled = true;
+        diagnosticView.stop();
       }, { once: true });
-      updateDiagnostics();
+      updateDiagnostics('start');
       status.textContent = `Erfolg: Lit, Gridstack, Schema-5-Raster, Live-Widgets, Seitenwechsel, ${responsiveChecks} responsive Umbrüche und ${navigationChecks} Navigationslayouts wurden synthetisch geprüft.`;
+      scheduleDiagnostics({ type: 'ready' });
     } catch (error) {
       status.textContent = `Fehler beim Laden oder Prüfen der FCUI-Dateien: ${error.message}`;
     }
