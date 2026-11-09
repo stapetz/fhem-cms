@@ -11,7 +11,7 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
       this.tag = tag;
       this.children = [];
       this.attributes = {};
-      this.style = {};
+      this.style = { setProperty(name, value) { this[name] = value; } };
       this.classList = { toggle() {} };
     }
     append(child) { this.children.push(child); }

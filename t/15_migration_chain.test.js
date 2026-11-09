@@ -62,7 +62,7 @@ test('isolated migration, restart, versioned draft and restore form one protecte
       this.tag = tag;
       this.children = [];
       this.attributes = {};
-      this.style = {};
+      this.style = { setProperty(name, value) { this[name] = value; } };
       this.classList = { toggle() {} };
     }
     append(child) { this.children.push(child); }

@@ -111,10 +111,14 @@ test('schema 5 live page refreshes, reconnects and ignores results after stop', 
     assert.throws(() => live.start(), /bereits gestartet/);
 
     class Element {
-      constructor(tag) { this.tag = tag; this.children = []; this.attributes = {}; }
+      constructor(tag) {
+        this.tag = tag; this.children = []; this.attributes = {};
+        this.style = { setProperty(name, value) { this[name] = value; } };
+      }
       append(child) { this.children.push(child); }
       replaceChildren(...children) { this.children = children; }
       setAttribute(name, value) { this.attributes[name] = value; }
+      removeAttribute(name) { delete this.attributes[name]; }
     }
     globalThis.document.createElement = (tag) => new Element(tag);
     const { mountSchema5Widgets } = await import('../www/fhem-cms/js/fcui-schema5-widgets.js');

@@ -109,6 +109,17 @@ Resize-Schleife durch wechselnde Fensterbreiten und automatische Zellhöhen.
 Die Geräte-Vorschau ist auch in diesem Editor verfügbar: Sie öffnet die aktuelle
 Seite mit `?mode=preview` in einem maßgerechten Iframe, bietet Geräte- und
 Desktopauflösungen an und vertauscht beim Drehen Breite und Höhe.
+Homepage und Vorschau brechen Widgets anhand des benannten `cms-page`-
+Inhaltscontainers um: unter 768 CSS-Pixeln zwei Teilspalten, unter 1200 vier,
+darüber das unveränderte Gridstack-Raster. Bis 1/4 der gespeicherten Breite
+gilt ein Widget als klein (mobil eine, Tablet eine Teilspalte); bis 1/2 belegt
+es mobil zwei, auf Tablets zwei Teilspalten, darüber jeweils die ganze Zeile.
+Navigation kommt zuerst, Widgets folgen im DOM nach gespeicherter Zeile/Spalte.
+CSS verwendet das gespeicherte Seitenverhältnis mit 96 Pixeln Mindesthöhe;
+die Navigation wächst mit ihrem Inhalt. Container-Queries reagieren auch im
+gedrehten Vorschau-Iframe ohne Remount, neue Live-Abfragen oder Schreibaufrufe.
+`data-responsive` und die abgeleiteten CSS-Variablen sind reine Darstellung,
+kein Konfigurationsformat. Editierbare Raster bleiben davon ausgeschlossen.
 
 Am 08.11.2026 wurde für den Rasterübergang festgelegt: **Bestehende Layouts
 bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen

@@ -102,6 +102,28 @@ sie gerundet; Überschneidungen werden durch Verschieben nach unten aufgelöst.
 Die Vorschau zeigt das Ergebnis, gespeichert wird erst mit **Speichern** als
 Entwurf. **Abbrechen** verändert weder Live noch den vorhandenen Entwurf.
 
+### Mobile Darstellung und Drehen
+
+Homepage und Vorschau passen die Anordnung automatisch an die verfügbare
+Inhaltsbreite an, auch beim Drehen eines Smartphones oder Tablets:
+
+- **Unter 768 Pixeln:** Ein normales Widget pro Zeile, zwei kleine nebeneinander.
+  Klein sind Widgets bis zu einem Viertel der gespeicherten Rasterbreite
+  (3 von 12 bzw. 48 von 192 Spalten).
+- **768 bis unter 1200 Pixel:** Vier Teilspalten; kleine Widgets belegen eine,
+  Widgets bis zur halben Rasterbreite zwei, breitere die ganze Zeile.
+- **Ab 1200 Pixeln:** Die gespeicherten Desktoppositionen und Größen gelten.
+
+Die Navigation steht in mobilen Ansichten vor den Widgets; bei schmaler
+Inhaltsbreite ist sie als ☰-Menü aufklappbar. Widgets folgen ihrer ursprünglichen
+Zeilen-/Spaltenreihenfolge. Ihr Seitenverhältnis bleibt erhalten, mit mindestens
+96 Pixeln Höhe. Die Anordnung ist unabhängig von der gewählten Rasterdichte.
+Beim Drehen oder Vergrößern bleiben Inhalte und Live-Daten bestehen; es werden
+keine Positionen gespeichert. Im Editor selbst bleibt das präzise Raster aktiv.
+Zum Prüfen der Umbrüche dort die Geräte-Vorschau verwenden.
+
+### Navigation und Widgets bearbeiten
+
 Das Stiftsymbol an der Navigation öffnet **Navigation bearbeiten** – die zentrale
 Seitenverwaltung: Reihenfolge am ≡-Griff ziehen (oder Pfeiltasten), je Seite
 Dateiname, Seitentitel, Beschriftung, Größe und der Haken **Anzeigen**, dazu
