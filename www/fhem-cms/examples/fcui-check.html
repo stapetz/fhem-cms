@@ -10,6 +10,10 @@
     <h1>FCUI-Bibliotheken prüfen</h1>
     <p id="status" role="status">Prüfung wird geladen …</p>
     <p>Diese Prüfung verändert keine CMS-Daten und benötigt keine FHEM-Befehle.</p>
+    <details open>
+      <summary>Mobile Layoutdiagnose (zum Weitergeben markieren und kopieren)</summary>
+      <pre id="layout-diagnostics" style="white-space:pre-wrap;overflow-wrap:anywhere">Wird geladen …</pre>
+    </details>
     <div id="probe"></div>
   </main>
   <script nomodule>
@@ -298,6 +302,53 @@
       } finally {
         responsiveShell.remove();
       }
+      const diagnosticShell = document.createElement('section');
+      diagnosticShell.className = 'cms-shell';
+      const diagnosticRoot = document.createElement('div');
+      diagnosticRoot.className = 'grid-stack cms-schema5-grid';
+      diagnosticShell.append(diagnosticRoot);
+      document.getElementById('probe').append(diagnosticShell);
+      const diagnosticView = widgets.mountSchema5Widgets(GridStack, diagnosticRoot, responsiveConfig, 'check',
+        document.createElement('nav'), services, snapshot('100'));
+      const diagnosticNodes = [...diagnosticRoot.children];
+      const describe = (id) => {
+        const node = diagnosticNodes.find((entry) => entry.gridstackNode.id === id);
+        const rect = node.getBoundingClientRect();
+        return { x: Math.round(rect.left), y: Math.round(rect.top),
+          width: Math.round(rect.width), height: Math.round(rect.height) };
+      };
+      const updateDiagnostics = () => {
+        const available = diagnosticRoot.clientWidth;
+        const solar = describe('solar');
+        const second = describe('second');
+        document.getElementById('layout-diagnostics').textContent = JSON.stringify({
+          screen: { width: screen.width, height: screen.height },
+          viewport: { width: innerWidth, height: innerHeight,
+            clientWidth: document.documentElement.clientWidth },
+          visualViewport: visualViewport && { width: Math.round(visualViewport.width),
+            height: Math.round(visualViewport.height), scale: visualViewport.scale },
+          rootFont: getComputedStyle(document.documentElement).fontSize,
+          bodyPadding: getComputedStyle(document.body).padding,
+          container: { width: available, type: getComputedStyle(diagnosticShell).containerType,
+            name: getComputedStyle(diagnosticShell).containerName },
+          grid: { display: getComputedStyle(diagnosticRoot).display,
+            tracks: getComputedStyle(diagnosticRoot).gridTemplateColumns },
+          expected: available < 640 ? 'untereinander' : 'nebeneinander',
+          actual: Math.abs(solar.y - second.y) < 1 ? 'nebeneinander' : 'untereinander',
+          solar, second,
+        }, null, 2);
+      };
+      const observer = new ResizeObserver(updateDiagnostics);
+      observer.observe(diagnosticShell);
+      window.addEventListener('resize', updateDiagnostics);
+      visualViewport?.addEventListener('resize', updateDiagnostics);
+      window.addEventListener('pagehide', () => {
+        observer.disconnect();
+        window.removeEventListener('resize', updateDiagnostics);
+        visualViewport?.removeEventListener('resize', updateDiagnostics);
+        diagnosticView.destroy();
+      }, { once: true });
+      updateDiagnostics();
       status.textContent = `Erfolg: Lit, Gridstack, Schema-5-Raster, Live-Widgets, Seitenwechsel und ${responsiveChecks} responsive Umbrüche wurden synthetisch geprüft.`;
     } catch (error) {
       status.textContent = `Fehler beim Laden oder Prüfen der FCUI-Dateien: ${error.message}`;

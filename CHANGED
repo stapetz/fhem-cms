@@ -1,3 +1,9 @@
+2026-11-09 - Messbare mobile Browserdiagnose (Refs #101)
+
+Die rein lesende FCUI-Prüfseite zeigt Viewport- und Inhaltsbreite sowie den
+tatsächlichen Umbruch zweier Beispielwidgets. Die Anzeige aktualisiert sich
+beim Drehen und dient der Eingrenzung abweichenden Safari-Verhaltens.
+
 2026-11-09 - Späterer Widgetumbruch im Smartphone-Querformat (Refs #101)
 
 Normale Widgets passen ab 640 statt erst ab 768 Pixeln verfügbarer Inhaltsbreite

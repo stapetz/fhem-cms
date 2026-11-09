@@ -126,6 +126,11 @@ kein Konfigurationsformat. Editierbare Raster bleiben davon ausgeschlossen.
 Die Grenze von 640 statt 768 Pixeln verhindert zu frühe Widgetumbrüche bei
 verringerter Inhaltsbreite im iPhone-Querformat (z. B. seitliche Safari-
 Sicherheitsabstände). Die Navigation bleibt unabhängig unter 768 Pixeln kompakt.
+Die rein lesende FCUI-Prüfseite zeigt zusätzlich eine sichtbare responsive
+Beispielansicht samt automatisch aktualisierter Layoutdiagnose: Layout- und
+Visual-Viewport, Inhaltsbreite, CSS-Spalten und tatsächlicher Widgetumbruch.
+Dies dient der Safari-Geräteprüfung; feste synthetische Breiten allein weisen
+keine korrekte Viewportbreite auf dem echten Gerät nach.
 
 Am 08.11.2026 wurde für den Rasterübergang festgelegt: **Bestehende Layouts
 bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen
