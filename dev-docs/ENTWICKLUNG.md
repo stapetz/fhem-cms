@@ -95,14 +95,17 @@ Vor dem Schreiben werden alle Seiten einschließlich globaler Navigation geprüf
 Bekannte Layoutfehler setzen das Raster mit sichtbarer Meldung zurück;
 unklare Schreibantworten erfordern explizites Neuladen. `pagehide` verhindert
 noch nicht gestartete Pointer-Schreibaktionen und unterdrückt späte Antworten.
-Die numerische Rastermaske bleibt als präzise Tastaturbedienung erhalten.
+Die Seiteneinstellungen enthalten ausschließlich Look & Feel (Theme, Rahmen
+und Rasterdichte), keine Widgetauswahl, Rastervorschau oder Positions-/Größenmaske.
+Widgets werden nur direkt im Editiermodus verschoben und skaliert.
 Unter **Bearbeiten → Seiteneinstellungen** sind 12, 24, 48, 96 oder 192 Spalten wählbar.
 Die Auswahl gilt deviceweit, bleibt in Schema 5 und skaliert alle Seiten samt
 Navigation in beiden Achsen. Beim Vergröbern werden Koordinaten und Größen
 gerundet; Kollisionen werden in visueller Reihenfolge nach unten aufgelöst.
-Grenzüberschreitungen werden sichtbar abgewiesen. Die Vorschau bleibt lokal,
-bis der vollständige Kandidat als Entwurf gespeichert und zurückgelesen ist.
-Darstellung, Validierung, Positionseingabe, Hilfsraster und neue Widgetgrößen
+Grenzüberschreitungen werden sichtbar abgewiesen. Die Auswahl wird beim Speichern
+aus der unveränderten Ausgangskonfiguration umgerechnet und als Entwurf
+gespeichert und zurückgelesen; Zwischenwahlen verändern keine Positionen.
+Darstellung, Validierung, Hilfsraster und neue Widgetgrößen
 verwenden durchgängig die gewählte Spaltenzahl.
 Ein stabil reservierter Scrollbalkenplatz am Dokument verhindert eine
 Resize-Schleife durch wechselnde Fensterbreiten und automatische Zellhöhen.

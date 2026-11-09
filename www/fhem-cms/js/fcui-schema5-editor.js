@@ -458,7 +458,7 @@ export class Schema5Editor {
       this.#content.replaceChildren();
       const container = this.#panelContainer('page');
       this.#panel = new Schema5PagePanel({
-        GridStack: this.#GridStack, root: container, controller: this.#controller, pageId,
+        root: container, controller: this.#controller, pageId,
         token: state.token, browser: this.#browser,
         onClose: ({ requiresReload }) => {
           this.#panel = null;
