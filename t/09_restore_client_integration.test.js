@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { navigationDom } from './helpers/navigation-dom.js';
 import { spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, readdir, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -210,6 +211,7 @@ test('real versioned state reaches schema 5 view for live and draft without writ
   class Element {
     constructor(tag) {
       this.tag = tag;
+      navigationDom(this);
       this.children = [];
       this.attributes = {};
       this.style = { setProperty(name, value) { this[name] = value; } };

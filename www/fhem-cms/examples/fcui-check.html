@@ -302,6 +302,47 @@
       } finally {
         responsiveShell.remove();
       }
+      const { observeSchema5Navigation } = await import(url('../js/fcui-schema5-navigation-fit.js'));
+      const fitShell = document.createElement('section');
+      fitShell.className = 'cms-shell';
+      fitShell.style.cssText = 'position:fixed;left:-2000px;top:0;width:702px';
+      const fitNav = document.createElement('nav');
+      fitNav.className = 'cms-nav';
+      const fitBurger = document.createElement('button');
+      fitBurger.className = 'cms-nav-burger';
+      fitBurger.setAttribute('aria-expanded', 'false');
+      fitNav.append(fitBurger);
+      fitShell.append(fitNav);
+      document.getElementById('probe').append(fitShell);
+      const stopFit = observeSchema5Navigation(fitNav);
+      let navigationChecks = 0;
+      try {
+        for (const [width, count, label, compact] of [
+          [702, 2, 'Solar', false], [343, 2, 'Solar', false],
+          [343, 8, 'Solaranlage', true], [702, 2, 'Solar', false],
+          [702, 10, 'Solaranlage', true], [343, 2, 'Solar', false],
+          [343, 1, 'Sehr lange Navigationsbeschriftung mit vielen Zeichen', true],
+        ]) {
+          fitShell.style.width = `${width}px`;
+          fitNav.querySelectorAll('a').forEach((link) => link.remove());
+          for (let i = 0; i < count; i++) {
+            const link = document.createElement('a');
+            link.className = 'cms-nav-link';
+            link.href = '#';
+            link.textContent = `${label} ${i}`;
+            fitNav.append(link);
+          }
+          await new Promise((resolve) => setTimeout(resolve, 80));
+          if (fitNav.hasAttribute('data-compact') !== compact
+            || (getComputedStyle(fitBurger).display !== 'none') !== compact) {
+            throw new Error(`Platzabhängige Navigation bei ${width}px und ${count} Einträgen fehlerhaft`);
+          }
+          navigationChecks += 1;
+        }
+      } finally {
+        stopFit();
+        fitShell.remove();
+      }
       const diagnosticShell = document.createElement('section');
       diagnosticShell.className = 'cms-shell';
       const diagnosticRoot = document.createElement('div');
@@ -349,7 +390,7 @@
         diagnosticView.destroy();
       }, { once: true });
       updateDiagnostics();
-      status.textContent = `Erfolg: Lit, Gridstack, Schema-5-Raster, Live-Widgets, Seitenwechsel und ${responsiveChecks} responsive Umbrüche wurden synthetisch geprüft.`;
+      status.textContent = `Erfolg: Lit, Gridstack, Schema-5-Raster, Live-Widgets, Seitenwechsel, ${responsiveChecks} responsive Umbrüche und ${navigationChecks} Navigationslayouts wurden synthetisch geprüft.`;
     } catch (error) {
       status.textContent = `Fehler beim Laden oder Prüfen der FCUI-Dateien: ${error.message}`;
     }

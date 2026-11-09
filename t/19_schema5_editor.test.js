@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { navigationDom } from './helpers/navigation-dom.js';
 import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -9,6 +10,7 @@ import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js
 class Element {
   constructor(tag) {
     this.tag = tag;
+    navigationDom(this);
     this.children = [];
     this.attributes = {};
     this.listeners = {};

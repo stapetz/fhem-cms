@@ -125,7 +125,14 @@ gedrehten Vorschau-Iframe ohne Remount, neue Live-Abfragen oder Schreibaufrufe.
 kein Konfigurationsformat. Editierbare Raster bleiben davon ausgeschlossen.
 Die Grenze von 640 statt 768 Pixeln verhindert zu frühe Widgetumbrüche bei
 verringerter Inhaltsbreite im iPhone-Querformat (z. B. seitliche Safari-
-Sicherheitsabstände). Die Navigation bleibt unabhängig unter 768 Pixeln kompakt.
+Sicherheitsabstände). Die Schema-5-Navigation misst ihre sichtbaren Linkbreiten
+einschließlich Spaltenabständen im eigenen Container und schaltet nur bei
+Platzmangel auf den Burger. ResizeObserver, Inhalts-/Attributänderungen und
+Schriftladeereignisse lösen die Prüfung erneut aus, ohne Zustandsänderung.
+Der Aufrufer entfernt alle Beobachter beim Seitenwechsel und beim Verlassen.
+Feste Navigationsbreiten bleiben berücksichtigt, Messungen erfolgen ohne
+Flex-Schrumpfung oder Abschneiden natürlicher Textbreiten. Beim Aufklappen
+wird die ursprüngliche Breite für die Platzmessung beibehalten.
 Die rein lesende FCUI-Prüfseite zeigt zusätzlich eine sichtbare responsive
 Beispielansicht samt automatisch aktualisierter Layoutdiagnose: Layout- und
 Visual-Viewport, Inhaltsbreite, CSS-Spalten und tatsächlicher Widgetumbruch.

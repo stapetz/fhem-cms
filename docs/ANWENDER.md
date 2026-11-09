@@ -116,8 +116,11 @@ Inhaltsbreite an, auch beim Drehen eines Smartphones oder Tablets:
   Widgets bis zur halben Rasterbreite zwei, breitere die ganze Zeile.
 - **Ab 1200 Pixeln:** Die gespeicherten Desktoppositionen und Größen gelten.
 
-Die Navigation steht in mobilen Ansichten vor den Widgets; bei schmaler
-Inhaltsbreite unter 768 Pixeln ist sie als ☰-Menü aufklappbar. Der spätere
+Die Navigation steht in mobilen Ansichten vor den Widgets. Passen alle sichtbaren
+Menüeinträge einschließlich Abständen in ihre verfügbare Breite, bleiben sie
+direkt sichtbar; andernfalls erscheint das aufklappbare ☰-Menü. Die Platzprüfung
+reagiert auf Drehen, Größenänderungen, Beschriftungen und geladene Schriften.
+Der spätere
 Widgetumbruch berücksichtigt den im Smartphone-Querformat durch Browserränder
 und Sicherheitsabstände verringerten Platz: Ab 640 Pixeln verbleibender
 Inhaltsbreite passen zwei normale Widgets nebeneinander. Widgets folgen ihrer ursprünglichen
@@ -138,8 +141,9 @@ aber gedimmt erreichbar – zum Vorbereiten neuer Seiten oder als Parkplatz für
 gerade nicht benötigte Widgets. Unter „Größe für alle Navigationspunkte“
 überstimmen gemeinsame Werte die Einzelgrößen, bis die Option wieder
 deaktiviert wird. Feste Größen wirken als Maximum: Auf schmalen Kacheln und
-Fenstern schrumpfen die Punkte mit, unter etwa 640 Pixeln Fensterbreite wird
-die Navigation zum ☰-Menü.
+Fenstern schrumpfen die Punkte mit. Im Schema-5-Renderer entscheidet die
+tatsächlich benötigte Menübreite statt eines festen Bildschirm-Breakpoints
+über das ☰-Menü.
 
 Alle Dialoge haben unten die Knöpfe **Speichern** und **Abbrechen**: Speichern
 übernimmt die Änderungen als Entwurf und schließt den Dialog, Abbrechen verwirft

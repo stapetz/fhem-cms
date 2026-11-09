@@ -1,6 +1,7 @@
 import { schema5GridItems } from './fcui-schema5-layout.js';
 import { Schema5LivePage } from './fcui-schema5-live.js';
 import { mountSchema5Widgets } from './fcui-schema5-widgets.js';
+import { observeSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 
 export class Schema5View {
   constructor({ GridStack, root, status, config, client, services, browser = window, editing }) {
@@ -20,6 +21,7 @@ export class Schema5View {
     this.current = null;
     this.live = null;
     this.view = null;
+    this.stopNavigation = null;
     this.generation = 0;
     this.active = false;
     this.suspended = false;
@@ -113,6 +115,8 @@ export class Schema5View {
     if (pageId === this.current) return;
     const generation = ++this.generation;
     if (this.live) this.live.stop();
+    this.stopNavigation?.();
+    this.stopNavigation = null;
     if (this.view) this.view.destroy();
     this.live = null;
     this.view = null;
@@ -120,13 +124,15 @@ export class Schema5View {
     this.setStatus('Seite wird geladen …');
     try {
       const page = this.config.pages.find((entry) => entry.id === pageId);
+      const navigation = this.navigation(pageId);
       this.view = mountSchema5Widgets(this.GridStack, this.root, this.config, pageId,
-        this.navigation(pageId), this.services, new Map(), this.editing && {
+        navigation, this.services, new Map(), this.editing && {
           onChange: (items) => this.editing.onChange(pageId, items),
           onEdit: (id) => this.editing.onEdit(pageId, id),
           onMove: typeof this.editing.onMove === 'function'
             ? (id) => this.editing.onMove(pageId, id) : undefined,
         });
+      this.stopNavigation = observeSchema5Navigation(navigation);
       const view = this.view;
       this.live = new Schema5LivePage(this.client, page.widgets,
         (snapshots, stale) => view.update(snapshots, stale),
@@ -144,6 +150,8 @@ export class Schema5View {
     } catch (error) {
       if (generation !== this.generation || !this.active) return;
       if (this.live) this.live.stop();
+      this.stopNavigation?.();
+      this.stopNavigation = null;
       if (this.view) this.view.destroy();
       this.live = null;
       this.view = null;
@@ -169,6 +177,8 @@ export class Schema5View {
   clearPage() {
     this.generation += 1;
     if (this.live) this.live.stop();
+    this.stopNavigation?.();
+    this.stopNavigation = null;
     if (this.view) this.view.destroy();
     this.live = null;
     this.view = null;
