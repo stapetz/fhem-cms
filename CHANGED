@@ -1,3 +1,10 @@
+2026-11-09 - Homescreen-Rotation gezielt diagnostizieren (Refs #101)
+
+Die rein lesende FCUI-Prüfseite erfasst den Standalone-Modus, die adaptive
+Navigation und die getrennten Rahmen von Widgets und Inhalten nach Rotation.
+Eine kurze Messhistorie und ein festhaltbarer Messstand helfen, die bislang
+nicht reproduzierte Homescreen-Überlappung ohne Layoutänderung einzugrenzen.
+
 2026-11-09 - Navigation nur bei Platzmangel einklappen (Refs #103)
 
 Schema-5-Menüeinträge bleiben auch auf Smartphones sichtbar, solange sie samt

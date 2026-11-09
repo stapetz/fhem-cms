@@ -138,6 +138,15 @@ Beispielansicht samt automatisch aktualisierter Layoutdiagnose: Layout- und
 Visual-Viewport, Inhaltsbreite, CSS-Spalten und tatsächlicher Widgetumbruch.
 Dies dient der Safari-Geräteprüfung; feste synthetische Breiten allein weisen
 keine korrekte Viewportbreite auf dem echten Gerät nach.
+Für die isolierte Homescreen-Prüfung wird die Prüfseite selbst als eigenes
+Homescreen-Icon gestartet. Ihre Beispielansicht verwendet den echten
+Schema-5-Renderer mit vier Menübeschriftungen und Widgets im Seitenverhältnis
+4:3. Die Diagnose erfasst Standalone-/Fullscreen-Modus, Navigation, Rasterzeilen
+sowie getrennte Rechtecke von Wrapper, Inhalt und Widget. Eine begrenzte
+Ereignishistorie hält Rotation und nachgelagerte Messungen fest; der Messstand
+kann zum Kopieren eingefroren werden. Es werden keine CMS-Daten oder
+FHEM-Kommandos verwendet. Das ist eine Diagnose, kein nachgewiesener Fix für
+die bislang nur auf dem echten Homescreen-Aufruf beobachtete Überlappung.
 
 Am 08.11.2026 wurde für den Rasterübergang festgelegt: **Bestehende Layouts
 bleiben im 48-Spalten-Format erhalten und bearbeitbar; neue FCUI-Layouts nutzen
