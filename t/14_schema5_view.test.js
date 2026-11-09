@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { navigationDom } from './helpers/navigation-dom.js';
 import { test } from 'node:test';
 
 test('schema 5 view routes pages and cleans up old requests and subscriptions', async () => {
@@ -9,6 +10,7 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
   class Element {
     constructor(tag) {
       this.tag = tag;
+      navigationDom(this);
       this.children = [];
       this.attributes = {};
       this.style = { setProperty(name, value) { this[name] = value; } };

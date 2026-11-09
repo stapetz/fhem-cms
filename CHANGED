@@ -1,3 +1,9 @@
+2026-11-09 - Navigation nur bei Platzmangel einklappen (Refs #103)
+
+Schema-5-Menüeinträge bleiben auch auf Smartphones sichtbar, solange sie samt
+Abständen in die Navigationsbreite passen. Erst bei Platzmangel erscheint der
+Burger. Drehen, Größenänderungen und geänderte Beschriftungen werden neu geprüft.
+
 2026-11-09 - Messbare mobile Browserdiagnose (Refs #101)
 
 Die rein lesende FCUI-Prüfseite zeigt Viewport- und Inhaltsbreite sowie den

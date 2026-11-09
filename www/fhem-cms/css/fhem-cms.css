@@ -145,21 +145,21 @@ body {
 }
 
 @container cms-page (width < 768px) {
-  .cms-schema5-grid[data-responsive] .cms-nav-burger {
+  .cms-schema5-grid[data-responsive] .cms-nav:not([data-adaptive]) .cms-nav-burger {
     display: inline-flex;
   }
 
-  .cms-schema5-grid[data-responsive] .cms-nav-link {
+  .cms-schema5-grid[data-responsive] .cms-nav:not([data-adaptive]) .cms-nav-link {
     display: none;
   }
 
-  .cms-schema5-grid[data-responsive] .cms-nav[data-open] {
+  .cms-schema5-grid[data-responsive] .cms-nav:not([data-adaptive])[data-open] {
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
   }
 
-  .cms-schema5-grid[data-responsive] .cms-nav[data-open] .cms-nav-link {
+  .cms-schema5-grid[data-responsive] .cms-nav:not([data-adaptive])[data-open] .cms-nav-link {
     display: inline-flex;
     width: auto !important;
   }
@@ -760,24 +760,63 @@ body {
 
 /* Schmale Fenster: Navigation als Burger-Menü. */
 @media (max-width: 40rem) {
-  .cms-nav .cms-nav-burger {
+  .cms-nav:not([data-adaptive]) .cms-nav-burger {
     display: inline-flex;
   }
 
-  .cms-nav .cms-nav-link {
+  .cms-nav:not([data-adaptive]) .cms-nav-link {
     display: none;
   }
 
-  .cms-nav[data-open] {
+  .cms-nav:not([data-adaptive])[data-open] {
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
   }
 
-  .cms-nav[data-open] .cms-nav-link {
+  .cms-nav:not([data-adaptive])[data-open] .cms-nav-link {
     display: inline-flex;
     width: auto !important;
   }
+}
+
+.cms-nav[data-adaptive]:not([data-compact]) .cms-nav-link {
+  flex-shrink: 0;
+}
+
+.cms-nav[data-adaptive][data-compact] .cms-nav-burger {
+  display: inline-flex;
+}
+
+.cms-nav[data-adaptive][data-compact] .cms-nav-link {
+  display: none;
+}
+
+.cms-nav[data-adaptive][data-compact][data-open] {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.cms-nav[data-adaptive][data-compact][data-open]:not([data-measuring]) .cms-nav-link {
+  display: inline-flex;
+  width: auto !important;
+}
+
+/* Verborgene Links im selben Container und mit derselben Schrift ausmessen. */
+.cms-nav[data-adaptive][data-measuring] {
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+.cms-nav[data-adaptive][data-measuring] .cms-nav-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  max-width: none;
+}
+
+.cms-nav[data-adaptive][data-measuring] .cms-nav-burger {
+  display: none;
 }
 
 .cms-nav-link:hover {

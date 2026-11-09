@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { navigationDom } from './helpers/navigation-dom.js';
 import { spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -60,6 +61,7 @@ test('isolated migration, restart, versioned draft and restore form one protecte
   class Element {
     constructor(tag) {
       this.tag = tag;
+      navigationDom(this);
       this.children = [];
       this.attributes = {};
       this.style = { setProperty(name, value) { this[name] = value; } };

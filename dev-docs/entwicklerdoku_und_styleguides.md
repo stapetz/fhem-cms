@@ -181,9 +181,10 @@ Desktoppositionen. Klein bedeutet höchstens ein Viertel der gespeicherten
 Rasterbreite. Reflow verändert keine Konfiguration; der Editor behält sein
 präzises Raster, Geräte-Vorschau und Drehen zeigen den responsiven Umbruch.
 Dies implementiert noch nicht die folgenden App-Shell-/Drawer-Zielmodi.
-Die kompakte Schema-5-Navigation schaltet unabhängig unter 768 Pixeln um;
-seitliche Browser-/Sicherheitsabstände im Querformat lösen damit nicht schon
-den einspaltigen Widgetumbruch aus.
+Die Schema-5-Navigation schaltet unabhängig von Widget-Breakpoints nur dann
+auf den Burger um, wenn die gemessenen sichtbaren Menüeinträge samt Abständen
+nicht in die verfügbare Navigationsbreite passen. Wenige kurze Einträge bleiben
+auch auf dem Smartphone direkt sichtbar.
 
 Sobald die Viewport-Breite **`768px`** unterschreitet (Smartphones oder Tablets im engen Hochformat), schaltet das System unabhängig vom gewählten Layout (`sidebar` oder `topbar`) in den mobilen Modus:
 *   Die globale Navigationsleiste wird aus dem Grid ausgekoppelt und als verborgener Drawer (`transform: translateX(-100%)`) links platziert.
