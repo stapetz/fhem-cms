@@ -94,6 +94,12 @@ Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfigu
   und Widget hinzufügen (mit Suche).
 - **Ansicht:** Vorschau (zeigt die Seite ohne Bearbeitungselemente) und Raster anzeigen.
 
+Die Geräteauswahl oben rechts im Editiermodus bietet Smartphone- und
+Tabletprofile sowie verschiedene Desktopauflösungen. Die Drehfunktion wechselt
+zwischen Hoch- und Querformat. Die Vorschau zeigt den responsiven Entwurf,
+ohne die gespeicherten Desktoppositionen zu verändern; zum Positionieren und
+Skalieren der Widgets zurück in den Editor wechseln.
+
 Unter **Bearbeiten → Seiteneinstellungen → Rastergröße** wählen Sie 12, 24, 48,
 96 oder 192 Spalten: mehr Spalten erlauben feinere Positionen und Größen. Die Auswahl gilt
 für alle Seiten und die gemeinsame Navigation. Bestehende Positionen und Größen
