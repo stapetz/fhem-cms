@@ -1,3 +1,10 @@
+2026-11-09 - Feinere Schema-5-Rasterstufen (Refs #100)
+
+Die Seiteneinstellungen bieten zusätzlich 96 und 192 Spalten an. Umrechnung,
+Positionsmasken und serverseitige Prüfung unterstützen alle fünf Rasterstufen.
+Die bisherige Grenze von 1000 Rasterzeilen bleibt bestehen; zu hohe Layouts
+werden beim Umrechnen sichtbar abgewiesen.
+
 2026-11-09 - Pumpende Schema-5-Ansicht stabilisiert (Refs #99)
 
 Stabiler Scrollbalkenplatz verhindert das wiederholte Vergrößern und Verkleinern

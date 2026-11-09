@@ -184,7 +184,7 @@ Sobald die Viewport-Breite **`768px`** unterschreitet (Smartphones oder Tablets 
 
 Der Bearbeitungsmodus schaltet die Oberfläche von einem statischen Zustand in ein dynamisch veränderbares Grid auf Basis von **Gridstack.js** (standardmäßig 12 Spalten).
 Unter **Bearbeiten → Seiteneinstellungen** lässt sich die Schema-5-Rasterdichte
-deviceweit auf 12, 24 oder 48 Spalten einstellen. Positionen und Größen aller
+deviceweit auf 12, 24, 48, 96 oder 192 Spalten einstellen. Positionen und Größen aller
 Seiten samt Navigation werden proportional umgerechnet; beim Vergröbern werden
 sie gerundet und Kollisionen nach unten aufgelöst. Die Änderung bleibt bis zum
 Speichern eine lokale Vorschau und wird anschließend als Entwurf übernommen.

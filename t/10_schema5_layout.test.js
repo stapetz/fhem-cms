@@ -68,7 +68,7 @@ test('raster changes scale both axes on every page, preserve content and pass th
   const config = source();
   config.pages[0].widgets[1].grid.row = 20;
   const before = structuredClone(config);
-  for (const columns of [12, 24, 48]) {
+  for (const columns of [12, 24, 48, 96, 192]) {
     const changed = resizeSchema5Grid(config, columns);
     const scale = columns / 12;
     assert.equal(changed.settings.gridColumns, columns);
