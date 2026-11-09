@@ -48,7 +48,7 @@ function toolbarControls(toolbar) {
   const all = (node) => [node, ...node.children.flatMap(all)];
   const nodes = all(toolbar);
   return [
-    'Seite bearbeiten', null, 'Entwurf veröffentlichen', 'Entwurf verwerfen',
+    'Seiteneinstellungen', null, 'Entwurf veröffentlichen', 'Entwurf verwerfen',
     'Zustand erneut laden', 'Widget hinzufügen',
   ].map((label) => nodes.find((node) => label ? node.textContent === label : node.className === 'cms-editor-mode'));
 }
@@ -192,6 +192,8 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const [fileMenu, editMenu, viewMenu] = root.children[0].children;
     assert.deepEqual([fileMenu, editMenu, viewMenu].map((menu) => menu.children[0].textContent),
       ['Datei', 'Bearbeiten', 'Ansicht']);
+    assert.equal(editMenu.children[1].children[0].textContent, 'Seiteneinstellungen');
+    assert.deepEqual(viewMenu.children[1].children.map((item) => item.textContent), ['Vorschau', 'Raster anzeigen']);
     fileMenu.open = true;
     editMenu.open = true;
     editMenu.fire('toggle');
@@ -211,7 +213,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     assert.equal(grids[0].destroyed, true);
     assert.equal(unsubscribed, 1);
     const panel = content.children[0];
-    assert.equal(panel.children[0].textContent, 'Seite bearbeiten');
+    assert.equal(panel.children[0].textContent, 'Seiteneinstellungen');
     const form = panel.children[5];
     form.children[0].children[0].value = 'text';
     form.children[0].children[0].fire('change');

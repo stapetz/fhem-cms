@@ -738,11 +738,11 @@ sub FHEMCMS_ValidateConfig {
         return JSON::PP::is_bool($v);
     };
 
+    my $columns = 48;
     my $checkGrid = sub {
         my ($grid) = @_;
         my $gridError = $exact->($grid, 'grid', ['col', 'row', 'w', 'h']);
         return $gridError if ($gridError);
-        my $columns = $targetSchema == 5 ? 12 : 48;
         return 'Ungueltige Rasterwerte'
             if (!$isInt->($grid->{col}, 1, $columns) || !$isInt->($grid->{row}, 1, 1000)
                 || !$isInt->($grid->{w}, 1, $columns) || !$isInt->($grid->{h}, 1, 1000)
@@ -753,6 +753,8 @@ sub FHEMCMS_ValidateConfig {
 
     my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages'], ['navigation', 'theme', 'settings']);
     return $err if ($err);
+    return 'Nicht unterstuetzte schemaVersion'
+        if (!$isInt->($config->{schemaVersion}, $targetSchema, $targetSchema));
     if (exists($config->{settings})) {
         $err = $exact->($config->{settings}, 'settings', [], ['showFrames', 'layoutMode', 'gridColumns']);
         return $err if ($err);
@@ -766,6 +768,14 @@ sub FHEMCMS_ValidateConfig {
                 || $config->{settings}{gridColumns} !~ /\A(?:12|24|48)\z/));
         return 'Ungueltiger Wert fuer showFrames'
             if (exists($config->{settings}{showFrames}) && !$isBool->($config->{settings}{showFrames}));
+    }
+    if ($targetSchema == 5) {
+        return 'Schema 5 erfordert Navigation und ein 12-, 24- oder 48-Spalten-Raster'
+            if (!exists($config->{navigation}) || !exists($config->{settings})
+                || !defined($config->{settings}{layoutMode})
+                || $config->{settings}{layoutMode} ne 'grid'
+                || !defined($config->{settings}{gridColumns}));
+        $columns = $config->{settings}{gridColumns};
     }
     return 'Ungueltiges Theme'
         if (exists($config->{theme}) && (ref($config->{theme}) || !defined($config->{theme})
@@ -808,16 +818,6 @@ sub FHEMCMS_ValidateConfig {
                     if (exists($item->{hidden}) && !$isBool->($item->{hidden}));
             }
         }
-    }
-    return 'Nicht unterstuetzte schemaVersion'
-        if (!$isInt->($config->{schemaVersion}, $targetSchema, $targetSchema));
-    if ($targetSchema == 5) {
-        return 'Schema 5 erfordert Navigation und 12-Spalten-Raster'
-            if (!exists($config->{navigation}) || !exists($config->{settings})
-                || !defined($config->{settings}{layoutMode})
-                || $config->{settings}{layoutMode} ne 'grid'
-                || !defined($config->{settings}{gridColumns})
-                || $config->{settings}{gridColumns} ne '12');
     }
     return 'pages muss eine Liste mit 1 bis 50 Seiten sein'
         if (ref($config->{pages}) ne 'ARRAY' || @{$config->{pages}} < 1 || @{$config->{pages}} > 50);
@@ -1095,7 +1095,7 @@ sub FHEMCMS_ValidateConfig {
             if ($targetSchema == 5) {
                 my $grid = $widget->{grid};
                 for my $other (@targetGrids) {
-                    return 'Ueberschneidung im 12-Spalten-Raster'
+                    return 'Ueberschneidung im Schema-5-Raster'
                         if ($grid->{col} < $other->{col} + $other->{w}
                             && $other->{col} < $grid->{col} + $grid->{w}
                             && $grid->{row} < $other->{row} + $other->{h}

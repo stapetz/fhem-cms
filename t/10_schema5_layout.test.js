@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
-import { applySchema5GridItems, createSchema5Grid, schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
+import { applySchema5GridItems, createSchema5Grid, resizeSchema5Grid, schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
 
 const source = () => ({
   schemaVersion: 5, theme: 'light', settings: { layoutMode: 'grid', gridColumns: 12 },
@@ -62,6 +62,54 @@ test('schema 5 layout fails closed for invalid and cross-page collisions', () =>
   incompatible.schemaVersion = 4;
   assert.throws(() => schema5GridItems(incompatible, 'a'), /Schema 5/);
   assert.throws(() => schema5GridItems(config, 'missing'), /Unbekannte Seite/);
+});
+
+test('raster changes scale both axes on every page, preserve content and pass the backend validator', () => {
+  const config = source();
+  config.pages[0].widgets[1].grid.row = 20;
+  const before = structuredClone(config);
+  for (const columns of [12, 24, 48]) {
+    const changed = resizeSchema5Grid(config, columns);
+    const scale = columns / 12;
+    assert.equal(changed.settings.gridColumns, columns);
+    assert.deepEqual(changed.navigation.grid, { col: 1, row: 1, w: columns, h: scale });
+    assert.deepEqual(changed.pages[0].widgets[0].grid,
+      { col: scale + 1, row: 4 * scale + 1, w: 2 * scale, h: 2 * scale });
+    assert.deepEqual(changed.pages[1].widgets[0].grid, { col: 1, row: scale + 1, w: scale, h: scale });
+    assert.equal(changed.pages[0].widgets[0].html, config.pages[0].widgets[0].html);
+    assert.equal(changed.pages[0].widgets[1].html, config.pages[0].widgets[1].html);
+    assert.deepEqual(resizeSchema5Grid(changed, 12), config, 'exact roundtrip retains every field');
+    const script = 'use strict; use warnings; use JSON::PP (); require "./FHEM/01_FHEMCMS.pm";'
+      + ' local $/; my $v=JSON::PP->new->decode(<STDIN>); my $e=FHEMCMS_ValidateConfig($v,5); die $e if defined $e;';
+    const result = spawnSync('perl', ['-e', script], { input: JSON.stringify(changed), encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    const root = { children: [] };
+    const GridStack = { init(options) {
+      assert.equal(options.column, columns);
+      assert.equal(options.minRow, 8 * scale);
+      throw new Error('options verified');
+    } };
+    assert.throws(() => createSchema5Grid(GridStack, root, changed, 'a', () => {}, true), /options verified/);
+  }
+  assert.deepEqual(config, before);
+  assert.throws(() => resizeSchema5Grid(config, 36), /Rastergröße/);
+  assert.throws(() => resizeSchema5Grid(source(), 48), /Grenzen/, 'row overflow is reported, not clipped');
+});
+
+test('coarsening rounds and resolves collisions below the shared navigation without losing widgets', () => {
+  const config = source();
+  config.settings.gridColumns = 48;
+  config.navigation.grid = { col: 1, row: 1, w: 48, h: 4 };
+  config.pages[0].widgets[0].grid = { col: 1, row: 5, w: 1, h: 1 };
+  config.pages[0].widgets[1].grid = { col: 2, row: 5, w: 1, h: 1 };
+  config.pages[1].widgets[0].grid = { col: 48, row: 5, w: 1, h: 1 };
+  const coarse = resizeSchema5Grid(config, 12);
+  assert.deepEqual(coarse.pages[0].widgets.map((widget) => widget.grid), [
+    { col: 1, row: 2, w: 1, h: 1 }, { col: 1, row: 3, w: 1, h: 1 },
+  ]);
+  assert.deepEqual(coarse.pages[1].widgets[0].grid, { col: 12, row: 2, w: 1, h: 1 });
+  for (const page of coarse.pages) assert.equal(schema5GridItems(coarse, page.id).length, page.widgets.length + 1);
+  assert.deepEqual(coarse.pages[0].widgets.map((widget) => widget.id), config.pages[0].widgets.map((widget) => widget.id));
 });
 
 test('Gridstack initialization refuses to silently reposition or drop elements', () => {

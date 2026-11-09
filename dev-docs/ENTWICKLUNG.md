@@ -96,6 +96,14 @@ Bekannte Layoutfehler setzen das Raster mit sichtbarer Meldung zurück;
 unklare Schreibantworten erfordern explizites Neuladen. `pagehide` verhindert
 noch nicht gestartete Pointer-Schreibaktionen und unterdrückt späte Antworten.
 Die numerische Rastermaske bleibt als präzise Tastaturbedienung erhalten.
+Unter **Bearbeiten → Seiteneinstellungen** sind 12, 24 oder 48 Spalten wählbar.
+Die Auswahl gilt deviceweit, bleibt in Schema 5 und skaliert alle Seiten samt
+Navigation in beiden Achsen. Beim Vergröbern werden Koordinaten und Größen
+gerundet; Kollisionen werden in visueller Reihenfolge nach unten aufgelöst.
+Grenzüberschreitungen werden sichtbar abgewiesen. Die Vorschau bleibt lokal,
+bis der vollständige Kandidat als Entwurf gespeichert und zurückgelesen ist.
+Darstellung, Validierung, Positionseingabe, Hilfsraster und neue Widgetgrößen
+verwenden durchgängig die gewählte Spaltenzahl.
 Die Geräte-Vorschau ist auch in diesem Editor verfügbar: Sie öffnet die aktuelle
 Seite mit `?mode=preview` in einem maßgerechten Iframe, bietet Geräte- und
 Desktopauflösungen an und vertauscht beim Drehen Breite und Höhe.
@@ -411,7 +419,7 @@ Der separate Rasterbearbeitungsbaustein `www/fhem-cms/js/fcui-schema5-grid-edit.
 öffnet ausschließlich gegen die ausdrücklich angegebene aktuelle Zustandskennung
 ein Gridstack-Raster mit Textbezeichnungen statt aktiver Widgets. Er prüft beim
 Aktivieren, ob alle Positionen unverändert übernommen wurden, und akzeptiert
-Speichern nur in der 12-Spalten-Ansicht. Der explizite Speicherversuch friert
+Speichern nur in der zur Konfiguration passenden 12-/24-/48-Spalten-Ansicht. Der explizite Speicherversuch friert
 das Raster ein und nutzt die zustandsgebundene Entwurfsprüfung einschließlich
 seitenübergreifender Kollisionen. Nach jedem Versuch bleibt das Raster bis zum
 Schließen gesperrt; bei unklarem Fehler ist der Entwurfszustand neu zu laden.

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { resizeSchema5Grid } from '../www/fhem-cms/js/fcui-schema5-layout.js';
 
 class Element {
   constructor(tag) {
@@ -261,6 +262,22 @@ test('widget panel binds real draft controller, cancellation, failures and lifec
     assert.equal(state.draft.pages[0].widgets[1].html, 'Neuer Text');
     assert.equal(state.live.pages[0].widgets.length, 1);
     assert.equal(writes, 2);
+
+    state.draft = resizeSchema5Grid(state.draft, 48);
+    await controller.reload();
+    root = new Element('section');
+    new Schema5WidgetPanel({ root, controller, services: {}, pageId: 'one', token: controller.snapshot().token,
+      createElement, onClose: () => {} });
+    const textButton = root.children[4].children.find((button) => button.textContent === 'Textbaustein');
+    await textButton.fire('click');
+    await tick();
+    assert.deepEqual(item.config.grid, { col: 1, row: 21, w: 24, h: 8 },
+      'new widgets retain their visual default size on finer rasters');
+    item.dialog.open = false;
+    item.dialog.fire('close');
+    await tick();
+    root.children[6].children[0].fire('click');
+    assert.equal(writes, 2, 'cancelling the new widget does not save');
 
     // Fehlgeschlagene Änderung sperrt das Panel bis zum erneuten Laden
     fail = true;

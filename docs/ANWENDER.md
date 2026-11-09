@@ -90,10 +90,17 @@ Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfigu
 ## Schema-5-Editor bedienen
 
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
-- **Bearbeiten:** Widget hinzufügen (mit Suche).
-- **Ansicht:** Seite bearbeiten (Theme, Widget-Rahmen, Rasterart mit Vorschau und
-  numerische Positionseingabe), Vorschau (zeigt die Seite ohne Bearbeitungselemente)
-  und Raster anzeigen.
+- **Bearbeiten:** Seiteneinstellungen (Theme, Widget-Rahmen, Rastergröße mit
+  Vorschau und numerischer Positionseingabe) und Widget hinzufügen (mit Suche).
+- **Ansicht:** Vorschau (zeigt die Seite ohne Bearbeitungselemente) und Raster anzeigen.
+
+Unter **Bearbeiten → Seiteneinstellungen → Rastergröße** wählen Sie 12, 24 oder
+48 Spalten: mehr Spalten erlauben feinere Positionen und Größen. Die Auswahl gilt
+für alle Seiten und die gemeinsame Navigation. Bestehende Positionen und Größen
+werden proportional in beiden Richtungen umgerechnet. Beim Vergröbern werden
+sie gerundet; Überschneidungen werden durch Verschieben nach unten aufgelöst.
+Die Vorschau zeigt das Ergebnis, gespeichert wird erst mit **Speichern** als
+Entwurf. **Abbrechen** verändert weder Live noch den vorhandenen Entwurf.
 
 Das Stiftsymbol an der Navigation öffnet **Navigation bearbeiten** – die zentrale
 Seitenverwaltung: Reihenfolge am ≡-Griff ziehen (oder Pfeiltasten), je Seite
@@ -128,7 +135,7 @@ und das vorherige Raster wieder angezeigt.
 Während der Speicherung sind weitere Änderungen gesperrt. Bei einer verlorenen
 oder unklaren Antwort zuerst **Zustand erneut laden**, nicht blind wiederholen.
 Für genaue Koordinaten und Tastaturbedienung die Positionseingabe in
-**Ansicht → Seite bearbeiten** verwenden. Einstellungen öffnen als kompakte
+**Bearbeiten → Seiteneinstellungen** verwenden. Einstellungen öffnen als kompakte
 Dialoge; **Abbrechen** oder Escape schließt sie, bei ungespeicherten Änderungen
 mit Rückfrage.
 
