@@ -1,5 +1,40 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Release 1.1.0: bestätigter Umfang
+
+Am 09.11.2026 hat der Entwickler den aktuellen Stand als abgenommen bestätigt
+und die Veröffentlichung der Issues #97–#103 ausdrücklich nach `main`
+freigegeben. Ältere offene MVP-/Refactoringthemen sind nicht Teil dieser
+Abnahme und werden dadurch weder geschlossen noch als geprüft ausgewiesen.
+
+Der Release-Branch wurde von `main` 1.0.0 erstellt. Ausschließlich folgende
+issuebezogenen Entwicklungscommits wurden übernommen, ohne generierte
+Controls-Commits oder die reine dev-Versionsfortschreibung:
+
+| Issue | Entwicklungscommits | Umfang |
+|---|---|---|
+| #97 | `a19cc0d`, `73b7c36` | Geräte-/Desktopvorschau, Rotation, Anleitung |
+| #98 | `5ff7970` | Rasterauswahl und Seiteneinstellungen unter Bearbeiten |
+| #99 | `8eedfad` | Stabiler Scrollbalkenplatz gegen pumpende Darstellung |
+| #100 | `3844452` | Zusätzliche Rasterdichten 96 und 192 |
+| #101 | `1698548`, `e0530e5`, `09c83db`, `663ba3c`, `117dfed`, `2311635` | Responsive Umbrüche, Diagnose, Homescreen-Korrektur und Geräteabnahme |
+| #102 | `499e01b` | Seiteneinstellungen ausschließlich Look & Feel |
+| #103 | `cacf295` | Navigation anhand tatsächlichen Platzbedarfs |
+
+Vor den Release-Metadaten entsprach der gesamte getrackte Inhalt dem
+abgenommenen dev-Stand; einzige Ausnahmen waren Modulversion und die vom
+Workflow zu erzeugende Controls-Datei. Lokale, nicht committete Änderungen
+an Copilot-Anweisungen und dem bestehenden Backendtest wurden nicht übernommen.
+
+Releaseprüfung auf dem isolierten Branch:
+
+- `perl -c FHEM/01_FHEMCMS.pm`: Syntax korrekt.
+- `prove t/*.t`: 465 Prüfungen erfolgreich.
+- `node --test t/*.test.js`: 86 Tests erfolgreich.
+- `npm ci --ignore-scripts --no-audit --no-fund` und
+  `npm run build:check`: reproduzierbarer Build erfolgreich.
+- `git diff --check`: keine Patchfehler.
+
 ## Ergänzung 2026-11-09: responsive Schema-5-Ansicht
 
 Der Entwickler hat die responsive Ansicht und die platzabhängige Navigation
