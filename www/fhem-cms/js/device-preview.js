@@ -129,6 +129,14 @@ export class DevicePreview {
     document.removeEventListener('keydown', this.onKey);
   }
 
+  destroy() {
+    this.deviceId = '';
+    this.select_.value = '';
+    this.rotate.disabled = true;
+    this.close();
+    this.bar.remove();
+  }
+
   render() {
     const size = deviceSize(this.deviceId, this.rotated);
     if (!size) {

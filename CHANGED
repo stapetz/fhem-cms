@@ -1,3 +1,9 @@
+2026-11-09 - Geräte-Vorschau im Schema-5-Editor (Refs #97)
+
+Die Auswahl von iPhone-, iPad-, Android- und Desktop-Auflösungen steht jetzt
+auch im refaktorierten Bearbeitungsmodus bereit. Das simulierte Drehen wechselt
+zwischen Hoch- und Querformat.
+
 2026-11-08 - Neuer Schema-5-Editor: 12-Spalten-Raster, Menüleiste, Entwürfe und Sicherungen (1.0.0)
 
 Kompletter Umstieg auf das Schema-5-Layout mit Ein-Klick-Umstellung inklusive

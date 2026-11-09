@@ -13,14 +13,22 @@ class Element {
     this.attributes = {};
     this.listeners = {};
     this.classList = { toggle() {} };
-    this.style = {};
+    this.style = { setProperty(name, value) { this[name] = value; } };
     this.value = '';
   }
   append(...children) {
     this.children.push(...children);
+    for (const child of children) child.parent = this;
     if (this.tag === 'select' && !this.value && this.children.length) this.value = this.children[0].value;
   }
-  replaceChildren(...children) { this.children = children; }
+  replaceChildren(...children) {
+    this.children = children;
+    for (const child of children) child.parent = this;
+  }
+  remove() {
+    this.removed = true;
+    if (this.parent) this.parent.children = this.parent.children.filter((child) => child !== this);
+  }
   setAttribute(name, value) { this.attributes[name] = value; }
   getAttribute(name) { return Object.hasOwn(this.attributes, name) ? this.attributes[name] : null; }
   removeAttribute(name) { delete this.attributes[name]; }
@@ -50,8 +58,18 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     window: globalThis.window, document: globalThis.document,
     HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
   };
-  globalThis.window = { location: { href: 'https://example.test/' } };
-  globalThis.document = { createElement: (tag) => new Element(tag), documentElement: new Element('html') };
+  globalThis.window = {
+    location: { href: 'https://example.test/' },
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  globalThis.document = {
+    createElement: (tag) => new Element(tag),
+    documentElement: new Element('html'),
+    body: new Element('body'),
+    addEventListener() {},
+    removeEventListener() {},
+  };
   document.documentElement.setAttribute('data-cms-theme', 'light');
   document.documentElement.setAttribute('data-cms-frames', 'off');
   globalThis.HTMLElement = class {};
@@ -105,7 +123,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     let reloads = 0;
     let confirmed = false;
     const browser = {
-      location: { hash: '#/a', reload() { reloads += 1; } },
+      location: { href: 'https://example.test/?mode=edit#/a', hash: '#/a', reload() { reloads += 1; } },
       confirm() { return confirmed; },
       addEventListener(name, callback) {
         if (!listeners.has(name)) listeners.set(name, new Set());
@@ -140,6 +158,32 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const root = new Element('section');
     editor = new Schema5Editor({ GridStack, root, controller, client, services: {}, browser });
     await editor.start();
+    const deviceBar = document.body.children.find((node) => node.className === 'cms-device-bar');
+    assert.ok(deviceBar, 'device preview controls are available in the schema-5 editor');
+    const [deviceSelect, rotate] = deviceBar.children;
+    assert.deepEqual(deviceSelect.children.filter((node) => node.tag === 'optgroup').map((group) => group.label),
+      ['iPhone', 'iPad', 'Android', 'Desktop / Monitor']);
+    deviceSelect.value = 'iphone-se';
+    await deviceSelect.fire('change');
+    const preview = document.body.children.find((node) => node.className === 'cms-device-overlay');
+    let iframe = preview.children[0].children[0].children[0];
+    assert.equal(iframe.src, 'https://example.test/?mode=preview#/a');
+    assert.equal(iframe.style.width, '375px');
+    rotate.fire('click');
+    assert.equal(iframe.style.width, '667px', 'rotation swaps the phone dimensions');
+    assert.equal(iframe.style.height, '375px');
+    deviceSelect.value = 'desktop-1280';
+    await deviceSelect.fire('change');
+    iframe = document.body.children.find((node) => node.className === 'cms-device-overlay')
+      .children[0].children[0].children[0];
+    assert.equal(iframe.style.width, '1280px');
+    assert.equal(iframe.style.height, '720px');
+    rotate.fire('click');
+    assert.equal(iframe.style.width, '720px', 'desktop resolutions can also be rotated');
+    assert.equal(iframe.style.height, '1280px');
+    deviceSelect.value = '';
+    await deviceSelect.fire('change');
+    assert.equal(document.body.children.some((node) => node.className === 'cms-device-overlay'), false);
     assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'dark');
     assert.equal(document.documentElement.getAttribute('data-cms-frames'), 'on');
     const [, , content] = root.children;
@@ -317,8 +361,18 @@ test('editor lifecycle uses real isolated Perl draft transactions with stale-tab
     HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
   };
   const dir = await mkdtemp(join(tmpdir(), 'cms-v5-editor-'));
-  globalThis.window = { location: { href: 'https://example.test/' } };
-  globalThis.document = { createElement: (tag) => new Element(tag), documentElement: new Element('html') };
+  globalThis.window = {
+    location: { href: 'https://example.test/' },
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  globalThis.document = {
+    createElement: (tag) => new Element(tag),
+    documentElement: new Element('html'),
+    body: new Element('body'),
+    addEventListener() {},
+    removeEventListener() {},
+  };
   globalThis.HTMLElement = class {};
   const registry = new Map();
   globalThis.customElements = {
@@ -374,7 +428,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
   };
   const original = JSON.stringify(live, null, 2);
   const browser = {
-    location: { hash: '#/a', reload() {} },
+    location: { href: 'https://example.test/?mode=edit#/a', hash: '#/a', reload() {} },
     confirm: () => true,
     addEventListener() {}, removeEventListener() {},
   };
@@ -463,6 +517,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     assert.deepEqual(JSON.parse(await readFile(join(dir, 'config.json'), 'utf8')), published);
   } finally {
     if (editor) editor.stop();
+    assert.equal(document.body.children.some((node) => node.className === 'cms-device-bar'), false);
     globalThis.window = previous.window;
     globalThis.document = previous.document;
     globalThis.HTMLElement = previous.HTMLElement;

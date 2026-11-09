@@ -8,6 +8,7 @@ import { Schema5DraftController } from './fcui-schema5-draft.js';
 import { createSchema5Transport } from './fcui-schema5-transport.js';
 import { createSchema5WidgetServices } from './widget-services.js';
 import { applySchema5GridItems, schema5GridItems } from './fcui-schema5-layout.js';
+import { DevicePreview } from './device-preview.js';
 
 export function createSchema5Editor({ GridStack, root, draftClient, liveClient, services, browser = window }) {
   if (!draftClient || !liveClient || draftClient === liveClient) {
@@ -43,6 +44,7 @@ export class Schema5Editor {
   #content;
   #view = null;
   #panel = null;
+  #devicePreview = null;
   #active = false;
   #generation = 0;
   #suspended = false;
@@ -52,6 +54,7 @@ export class Schema5Editor {
   #previewMode = false;
   #gridElement = null;
   #layoutSaving = false;
+  #layoutSavePromise = Promise.resolve();
 
   constructor({ GridStack, root, controller, client, services, browser = window }) {
     if (!GridStack || !root || root.children.length || !controller
@@ -221,6 +224,8 @@ export class Schema5Editor {
     if (!this.#active || this.#suspended) return;
     this.#suspended = true;
     this.#generation += 1;
+    this.#devicePreview?.destroy();
+    this.#devicePreview = null;
     this.#setActions(false, false);
     this.#reloadButton.hidden = true;
     this.#mode.textContent = '';
@@ -240,6 +245,15 @@ export class Schema5Editor {
     if (this.#active) throw new Error('Schema-5-Editor ist bereits gestartet');
     this.#active = true;
     this.#suspended = false;
+    this.#devicePreview = new DevicePreview({
+      getUrl: () => {
+        const url = new URL(this.#browser.location.href);
+        url.search = '?mode=preview';
+        url.hash = this.#browser.location.hash;
+        return url.href;
+      },
+      beforeOpen: () => this.#layoutSavePromise,
+    });
     this.#appearance = ['data-cms-theme', 'data-cms-frames'].map((name) =>
       [name, document.documentElement.getAttribute(name)]);
     this.#root.append(this.#toolbar, this.#status, this.#content);
@@ -280,7 +294,10 @@ export class Schema5Editor {
     const view = new Schema5View({ GridStack: this.#GridStack, root: grid, status: this.#status,
       config, client: this.#client, services: this.#services, browser: this.#browser,
       editing: this.#previewMode ? undefined : {
-        onChange: (pageId, items) => this.#saveLayout(pageId, items),
+        onChange: (pageId, items) => {
+          this.#layoutSavePromise = this.#saveLayout(pageId, items);
+          return this.#layoutSavePromise;
+        },
         onEdit: (pageId, id) => id === '__nav' ? this.#openNavigation() : this.#openWidgets(id),
         onMove: (pageId, id) => this.#openMove(id),
       } });
@@ -294,7 +311,8 @@ export class Schema5Editor {
   }
 
   async #saveLayout(pageId, items) {
-    if (!this.#active || this.#suspended || this.#layoutSaving || !this.#view || this.#page.disabled) return;
+    if (!this.#active || this.#suspended || !this.#view || this.#page.disabled) return;
+    if (this.#layoutSaving) return this.#layoutSavePromise;
     this.#layoutSaving = true;
     const generation = ++this.#generation;
     this.#view.lock();
@@ -515,6 +533,8 @@ export class Schema5Editor {
     if (!this.#active) return;
     this.#active = false;
     this.#generation += 1;
+    this.#devicePreview?.destroy();
+    this.#devicePreview = null;
     this.#browser.removeEventListener('pagehide', this.#onHide);
     this.#browser.removeEventListener('pageshow', this.#onShow);
     this.#browser.removeEventListener('pointerdown', this.#onPointer);
