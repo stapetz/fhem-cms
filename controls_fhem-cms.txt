@@ -13,8 +13,8 @@ UPD 2026-11-08_22:22:21 9732 www/fhem-cms/components/cms-text.js
 UPD 2026-11-08_22:22:21 37225 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-08_22:22:21 24740 www/fhem-cms/components/cms-value.js
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
-UPD 2026-11-09_08:11:52 30429 www/fhem-cms/css/fhem-cms.css
-UPD 2026-11-09_08:46:39 25665 www/fhem-cms/examples/fcui-check.html
+UPD 2026-11-09_08:55:27 30505 www/fhem-cms/css/fhem-cms.css
+UPD 2026-11-09_08:55:27 25846 www/fhem-cms/examples/fcui-check.html
 UPD 2026-11-08_21:07:16 4844 www/fhem-cms/examples/migration-preview.html
 UPD 2026-11-04_21:52:16 5087 www/fhem-cms/js/device-picker.js
 UPD 2026-11-09_07:17:44 6725 www/fhem-cms/js/device-preview.js
@@ -36,7 +36,7 @@ UPD 2026-11-08_15:33:41 1766 www/fhem-cms/js/fcui-schema5-transport.js
 UPD 2026-11-09_08:11:52 7163 www/fhem-cms/js/fcui-schema5-view.js
 UPD 2026-11-09_07:18:21 10632 www/fhem-cms/js/fcui-schema5-widget-panel.js
 UPD 2026-11-08_15:33:41 3653 www/fhem-cms/js/fcui-schema5-widget-session.js
-UPD 2026-11-09_07:35:21 4560 www/fhem-cms/js/fcui-schema5-widgets.js
+UPD 2026-11-09_08:55:27 4565 www/fhem-cms/js/fcui-schema5-widgets.js
 UPD 2026-11-08_17:49:30 16403 www/fhem-cms/js/fhem-client.js
 UPD 2026-11-08_18:37:10 79201 www/fhem-cms/js/fhem-cms.js
 UPD 2026-10-31_16:30:23 12159 www/fhem-cms/js/freehtml.js
