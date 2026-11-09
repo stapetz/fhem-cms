@@ -19,16 +19,16 @@ export class Schema5GridEdit {
   #config;
   #phase = 'editing';
 
-  constructor({ GridStack, root, controller, pageId, token }) {
+  constructor({ GridStack, root, controller, pageId, token, config = undefined }) {
     if (!controller || typeof controller.snapshot !== 'function'
-      || typeof controller.saveLayout !== 'function') {
+      || typeof controller.saveDraft !== 'function') {
       throw new Error('Schema-5-Entwurfscontroller erforderlich');
     }
     const state = controller.snapshot();
     if (typeof token !== 'string' || state.token !== token) {
       throw new Error('Zustand ist veraltet; bitte erneut laden');
     }
-    const config = state.draft || state.live;
+    config ??= state.draft || state.live;
     const positions = schema5GridItems(config, pageId);
     const page = config.pages.find((entry) => entry.id === pageId);
     const labels = new Map(page.widgets.map((widget) => [widget.id, `${widget.type}: ${widget.id}`]));
@@ -46,7 +46,7 @@ export class Schema5GridEdit {
     });
     try {
       this.#grid.setStatic(false);
-      if (this.#grid.getColumn() !== 12 || !samePositions(positions, this.#grid.save(false))) {
+      if (this.#grid.getColumn() !== Number(config.settings.gridColumns) || !samePositions(positions, this.#grid.save(false))) {
         throw new Error('Raster wurde beim Aktivieren der Bearbeitung verändert');
       }
     } catch (error) {
@@ -62,14 +62,14 @@ export class Schema5GridEdit {
 
   positions() {
     if (!this.editing) throw new Error('Rasterbearbeitung ist nicht mehr aktiv');
-    if (this.#grid.getColumn() !== 12) throw new Error('Rasterbearbeitung erfordert eine 12-Spalten-Ansicht');
+    this.#checkColumns();
     const config = applySchema5GridItems(this.#config, this.#pageId, this.#grid.save(false));
     return schema5GridItems(config, this.#pageId);
   }
 
   setPosition(id, position) {
     if (this.#phase !== 'editing') throw new Error('Rasterbearbeitung ist nicht mehr aktiv');
-    if (this.#grid.getColumn() !== 12) throw new Error('Rasterbearbeitung erfordert eine 12-Spalten-Ansicht');
+    this.#checkColumns();
     if (!position || typeof position !== 'object' || Array.isArray(position)
       || Object.keys(position).sort().join(',') !== 'col,h,row,w'
       || !['col', 'row', 'w', 'h'].every((key) => Number.isInteger(position[key]))) {
@@ -86,7 +86,8 @@ export class Schema5GridEdit {
     if (!element) throw new Error('Rasterelement konnte nicht gefunden werden');
     try {
       this.#grid.update(element, { x: item.x, y: item.y, w: item.w, h: item.h });
-      if (this.#grid.getColumn() !== 12 || !samePositions(items, this.#grid.save(false))) {
+      this.#checkColumns();
+      if (!samePositions(items, this.#grid.save(false))) {
         throw new Error('Gridstack hat weitere Rasterpositionen verändert');
       }
     } catch (error) {
@@ -101,13 +102,19 @@ export class Schema5GridEdit {
     this.#phase = 'saving';
     try {
       this.#grid.setStatic(true);
-      if (this.#grid.getColumn() !== 12) {
-        throw new Error('Rasterbearbeitung erfordert eine 12-Spalten-Ansicht');
-      }
+      this.#checkColumns();
       const items = this.#grid.save(false);
-      return await this.#controller.saveLayout(this.#pageId, items, this.#token);
+      const candidate = applySchema5GridItems(this.#config, this.#pageId, items);
+      return await this.#controller.saveDraft(candidate, this.#token);
     } finally {
       this.#phase = 'locked';
+    }
+  }
+
+  #checkColumns() {
+    const columns = Number(this.#config.settings.gridColumns);
+    if (this.#grid.getColumn() !== columns) {
+      throw new Error(`Rasterbearbeitung erfordert eine ${columns}-Spalten-Ansicht`);
     }
   }
 

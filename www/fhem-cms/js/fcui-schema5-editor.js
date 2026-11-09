@@ -81,7 +81,7 @@ export class Schema5Editor {
     this.#toolbar.setAttribute('aria-label', 'Bearbeiten');
     this.#page = document.createElement('button');
     this.#page.type = 'button';
-    this.#page.textContent = 'Seite bearbeiten';
+    this.#page.textContent = 'Seiteneinstellungen';
     this.#page.disabled = true;
     this.#mode = document.createElement('span');
     this.#publish = document.createElement('button');
@@ -117,8 +117,8 @@ export class Schema5Editor {
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
     this.#menu('Datei', [this.#publish, this.#discard, this.#backup]);
-    this.#menu('Bearbeiten', [this.#widgets]);
-    this.#menu('Ansicht', [this.#page, this.#previewToggle, this.#gridToggle]);
+    this.#menu('Bearbeiten', [this.#page, this.#widgets]);
+    this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
     this.#status = document.createElement('p');
@@ -389,7 +389,11 @@ export class Schema5Editor {
   }
 
   #applyGridGuides() {
-    if (this.#gridElement) this.#gridElement.classList.toggle('cms-grid-guides', this.#showGrid);
+    if (this.#gridElement) {
+      const state = this.#controller.snapshot();
+      this.#gridElement.style.setProperty('--cms-grid-columns', String((state.draft || state.live).settings.gridColumns));
+      this.#gridElement.classList.toggle('cms-grid-guides', this.#showGrid);
+    }
   }
 
   #openMove(widgetId) {

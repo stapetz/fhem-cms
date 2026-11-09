@@ -1,5 +1,5 @@
 import { Schema5GridEdit } from './fcui-schema5-grid-edit.js';
-import { applySchema5GridItems, schema5GridItems } from './fcui-schema5-layout.js';
+import { applySchema5GridItems, resizeSchema5Grid, schema5GridItems, SCHEMA5_GRID_COLUMNS } from './fcui-schema5-layout.js';
 
 function element(tag, text) {
   const result = document.createElement(tag);
@@ -11,14 +11,17 @@ function samePosition(left, right) {
   return left && right && ['id', 'x', 'y', 'w', 'h'].every((key) => left[key] === right[key]);
 }
 
-/* Seite bearbeiten: Theme, Rahmen und Rasterart zusammen mit der Rastervorschau
+/* Seiteneinstellungen: Theme, Rahmen und Rastergröße zusammen mit der Rastervorschau
    und der präzisen Positionseingabe. Gespeichert wird alles in einem Entwurf. */
 export class Schema5PagePanel {
   #root;
   #controller;
   #browser;
   #token;
-  #state;
+  #config;
+  #GridStack;
+  #grid;
+  #columns;
   #pageId;
   #editor;
   #status;
@@ -45,7 +48,7 @@ export class Schema5PagePanel {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
       || typeof controller.saveDraft !== 'function'
       || !browser || typeof browser.confirm !== 'function' || typeof onClose !== 'function') {
-      throw new Error('Dienste und leerer Container für Seite bearbeiten erforderlich');
+      throw new Error('Dienste und leerer Container für Seiteneinstellungen erforderlich');
     }
     const state = controller.snapshot();
     if (state.token !== token) throw new Error('Zustand ist veraltet; bitte erneut laden');
@@ -56,13 +59,16 @@ export class Schema5PagePanel {
     this.#controller = controller;
     this.#browser = browser;
     this.#token = token;
-    this.#state = state;
+    this.#config = config;
+    this.#GridStack = GridStack;
     this.#pageId = pageId;
     this.#onClose = onClose;
 
-    const heading = element('h2', 'Seite bearbeiten');
+    const heading = element('h2', 'Seiteneinstellungen');
     const hint = element('p',
-      'Darstellung und Raster der Seite. Positionen in der Vorschau ziehen oder unten eingeben; gespeichert wird ein Entwurf.');
+      'Darstellung und Raster der Seite. Die Rastergröße gilt für alle Seiten und die Navigation. '
+      + 'Beim Vergröbern werden Positionen und Größen gerundet und Überschneidungen nach unten aufgelöst. '
+      + 'Positionen in der Vorschau ziehen oder unten eingeben; gespeichert wird ein Entwurf.');
     this.#status = element('p');
     this.#status.setAttribute('role', 'status');
 
@@ -81,20 +87,21 @@ export class Schema5PagePanel {
     this.#frames.type = 'checkbox';
     this.#frames.checked = config.settings.showFrames !== false;
     framesLabel.append(this.#frames);
-    const layoutLabel = element('label', 'Rasterart ');
-    const layout = element('select');
-    const gridOption = element('option', 'Gitter (12 Spalten)');
-    gridOption.value = 'grid';
-    layout.append(gridOption);
-    layout.value = 'grid';
-    layout.disabled = true;
-    layout.title = 'Weitere Rasterarten folgen in einer späteren Version.';
-    layoutLabel.append(layout);
+    const layoutLabel = element('label', 'Rastergröße ');
+    this.#columns = element('select');
+    for (const columns of SCHEMA5_GRID_COLUMNS) {
+      const option = element('option', `${columns} Spalten`);
+      option.value = String(columns);
+      this.#columns.append(option);
+    }
+    this.#columns.value = String(config.settings.gridColumns);
+    layoutLabel.append(this.#columns);
     this.#form.append(themeLabel, framesLabel, layoutLabel);
     this.#form.addEventListener('submit', (event) => event.preventDefault());
 
     const grid = element('div');
     grid.className = 'grid-stack cms-position-grid';
+    this.#grid = grid;
 
     this.#positionForm = element('form');
     const selectLabel = element('label', 'Element ');
@@ -109,7 +116,8 @@ export class Schema5PagePanel {
     this.#select.value = '__nav';
     this.#positionForm.append(selectLabel);
     for (const [key, label, max] of [
-      ['col', 'Spalte', 12], ['row', 'Zeile', 1000], ['w', 'Breite', 12], ['h', 'Höhe', 1000],
+      ['col', 'Spalte', Number(config.settings.gridColumns)], ['row', 'Zeile', 1000],
+      ['w', 'Breite', Number(config.settings.gridColumns)], ['h', 'Höhe', 1000],
     ]) {
       const wrapper = element('label', `${label} `);
       const input = element('input');
@@ -144,13 +152,14 @@ export class Schema5PagePanel {
     try {
       this.#editor = new Schema5GridEdit({ GridStack, root: grid, controller, pageId, token });
       this.#layoutBaseline = JSON.stringify(schema5GridItems(config, pageId));
-      this.#settingsBaseline = JSON.stringify([this.#theme.value, this.#frames.checked]);
+      this.#settingsBaseline = JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value]);
       this.#loadPosition();
     } catch (error) {
       if (this.#editor) this.#editor.close();
       root.replaceChildren();
       throw error;
     }
+    this.#columns.addEventListener('change', () => this.#changeColumns());
     this.#select.addEventListener('change', () => {
       if (this.#dirty) {
         this.#select.value = this.#selected;
@@ -183,7 +192,7 @@ export class Schema5PagePanel {
 
   #changed() {
     if (this.#dirty) return true;
-    if (JSON.stringify([this.#theme.value, this.#frames.checked]) !== this.#settingsBaseline) return true;
+    if (JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value]) !== this.#settingsBaseline) return true;
     if (!this.#editor.editing) return false;
     try {
       return JSON.stringify(this.#editor.positions()) !== this.#layoutBaseline;
@@ -210,6 +219,34 @@ export class Schema5PagePanel {
     } catch (error) {
       this.#baseline = null;
       this.#message(`Position konnte nicht geladen werden: ${error.message}`, true);
+    }
+  }
+
+  #changeColumns() {
+    if (this.#busy || this.#closed || this.#requiresReload) return;
+    try {
+      if (this.#dirty) throw new Error('Position zuerst übernehmen oder erneut laden.');
+      const current = applySchema5GridItems(this.#config, this.#pageId, this.#editor.positions());
+      const candidate = resizeSchema5Grid(current, Number(this.#columns.value));
+      this.#editor.close();
+      this.#editor = new Schema5GridEdit({
+        GridStack: this.#GridStack, root: this.#grid, controller: this.#controller,
+        pageId: this.#pageId, token: this.#token, config: candidate,
+      });
+      this.#config = candidate;
+      this.#fields.col.max = this.#columns.value;
+      this.#fields.w.max = this.#columns.value;
+      this.#loadPosition();
+      this.#message('Raster aller Seiten umgerechnet; noch nicht gespeichert.');
+    } catch (error) {
+      this.#columns.value = String(this.#config.settings.gridColumns);
+      if (!this.#editor.editing) {
+        this.#requiresReload = true;
+        this.#form.inert = true;
+        this.#positionForm.hidden = true;
+        this.#save.disabled = true;
+      }
+      this.#message(`Raster nicht übernommen: ${error.message}`, true);
     }
   }
 
@@ -246,7 +283,7 @@ export class Schema5PagePanel {
     let pending;
     try {
       const positions = this.#editor.positions();
-      const candidate = applySchema5GridItems(this.#state.draft || this.#state.live, this.#pageId, positions);
+      const candidate = applySchema5GridItems(this.#config, this.#pageId, positions);
       const [originalTheme, originalFrames] = JSON.parse(this.#settingsBaseline);
       if (this.#theme.value !== originalTheme) candidate.theme = this.#theme.value;
       if (this.#frames.checked !== originalFrames) candidate.settings.showFrames = this.#frames.checked;

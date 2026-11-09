@@ -401,11 +401,11 @@ body {
   margin: 0;
 }
 
-/* Ansicht > Raster anzeigen: 12-Spalten-Hilfsraster, nur Darstellung. */
+/* Ansicht > Raster anzeigen: Hilfsraster, nur Darstellung. */
 .cms-schema5-grid.cms-grid-guides {
   background-image: linear-gradient(to right, var(--cms-guide) 1px, transparent 1px),
     linear-gradient(to bottom, var(--cms-guide) 1px, transparent 1px);
-  background-size: calc(100% / 12) var(--gs-cell-height, 3rem);
+  background-size: calc(100% / var(--cms-grid-columns, 12)) var(--gs-cell-height, 3rem);
 }
 
 /* Navigation bearbeiten: kompakte Zeile je Seite; Spaltentitel stehen einmal in der Kopfzeile. */

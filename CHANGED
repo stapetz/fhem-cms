@@ -1,3 +1,10 @@
+2026-11-09 - Seiteneinstellungen und Rastergröße im Schema-5-Editor (Refs #98)
+
+Unter Bearbeiten > Seiteneinstellungen ist die Rastergröße mit 12, 24 oder
+48 Spalten wählbar. Alle Seiten und die Navigation werden proportional
+umgerechnet; Rundungskollisionen weichen nach unten aus. Die Auswahl wird
+als Entwurf gespeichert.
+
 2026-11-09 - Geräte-Vorschau im Schema-5-Editor (Refs #97)
 
 Die Auswahl von iPhone-, iPad-, Android- und Desktop-Auflösungen steht jetzt

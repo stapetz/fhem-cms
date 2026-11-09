@@ -140,7 +140,9 @@ export class Schema5WidgetPanel {
     while (ids.has(`${prefix}${number}`)) number += 1;
     const row = Math.max(Number(config.navigation.grid.row) + Number(config.navigation.grid.h),
       ...page.widgets.map((widget) => Number(widget.grid.row) + Number(widget.grid.h)));
-    const widget = { id: `${prefix}${number}`, type, ...structuredClone(fields), grid: { col: 1, row, w, h } };
+    const scale = Number(config.settings.gridColumns) / 12;
+    const widget = { id: `${prefix}${number}`, type, ...structuredClone(fields),
+      grid: { col: 1, row, w: w * scale, h: h * scale } };
     const candidate = structuredClone(config);
     candidate.pages.find((entry) => entry.id === this.#page).widgets.push(widget);
     schema5GridItems(candidate, this.#page);

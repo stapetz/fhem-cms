@@ -60,9 +60,9 @@ function fixture() {
     publish: async () => {},
     discard: async () => {},
   });
-  const GridStack = { init() {
+  const GridStack = { init(options) {
     grid = {
-      items: [], columns: 12, frozen: true, destroyed: false,
+      items: [], columns: options.column, frozen: true, destroyed: false,
       getColumn() { return this.columns; },
       makeWidget(wrapper, item) { wrapper.gridstackNode = { id: item.id }; this.items.push({ ...item }); },
       save() { return structuredClone(this.items); },
@@ -93,11 +93,12 @@ test('page panel protects unsaved input, stale coordinates, cancel and verified 
       onClose: (outcome) => { assert.equal(outcome.requiresReload, false); closed += 1; },
     });
     const panel = open();
-    assert.equal(root.children[0].textContent, 'Seite bearbeiten');
+    assert.equal(root.children[0].textContent, 'Seiteneinstellungen');
     const settings = root.children[3];
     assert.equal(settings.children[0].children[0].value, 'dark');
     assert.equal(settings.children[1].children[0].checked, true);
-    assert.equal(settings.children[2].children[0].attributes ? true : true, true);
+    assert.deepEqual(settings.children[2].children[0].children.map((option) => option.value), ['12', '24', '48']);
+    assert.notEqual(settings.children[2].children[0].disabled, true);
     const form = root.children[5];
     const footer = root.children[6];
     const [cancel, save] = footer.children;
@@ -162,6 +163,59 @@ test('page panel protects unsaved input, stale coordinates, cancel and verified 
     assert.equal(draft.theme, 'light');
     assert.equal(closed, 2);
     assert.equal(root.children.length, 0);
+  } finally {
+    globalThis.document = original;
+  }
+});
+
+test('raster selector previews all pages, protects pending input and cancel, and saves only a draft', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const f = fixture();
+    const state = await f.controller.reload();
+    const root = new Element('section');
+    let closed = 0;
+    const open = () => new Schema5PagePanel({
+      GridStack: f.GridStack, root, controller: f.controller, pageId: 'a', token: state.token,
+      browser: { confirm: () => true }, onClose: () => { closed += 1; },
+    });
+    open();
+    const columns = root.children[3].children[2].children[0];
+    const form = root.children[5];
+    form.children[2].children[0].value = '3';
+    form.children[2].children[0].fire('input');
+    columns.value = '24';
+    columns.fire('change');
+    assert.equal(columns.value, '12', 'unapplied numeric input blocks changing the raster');
+    form.children[5].fire('click');
+    columns.value = '24';
+    columns.fire('change');
+    assert.equal(f.grid.getColumn(), 24);
+    assert.equal(form.children[1].children[0].max, '24');
+    assert.equal(form.children[3].children[0].max, '24');
+    assert.equal(f.writes, 0);
+    assert.equal(f.controller.snapshot().draft, null);
+    root.children[6].children[0].fire('click');
+    assert.equal(closed, 1);
+    assert.equal(f.writes, 0, 'cancel leaves both live and draft unchanged');
+    open();
+    const nextColumns = root.children[3].children[2].children[0];
+    nextColumns.value = '48';
+    nextColumns.fire('change');
+    assert.equal(f.grid.getColumn(), 48);
+    nextColumns.value = '36';
+    nextColumns.fire('change');
+    assert.equal(nextColumns.value, '48');
+    assert.match(root.children[2].textContent, /Ungültige Rastergröße/);
+    await root.children[6].children[1].fire('click');
+    const saved = f.controller.snapshot();
+    assert.equal(f.writes, 1);
+    assert.equal(saved.draft.settings.gridColumns, 48);
+    assert.deepEqual(saved.live, f.live);
+    assert.deepEqual(saved.draft.pages[1].widgets[0].grid, { col: 1, row: 17, w: 8, h: 4 });
+    assert.equal(saved.draft.navigation.grid.w, 48);
+    assert.equal(closed, 2);
   } finally {
     globalThis.document = original;
   }
@@ -284,15 +338,19 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     form.children[2].children[0].fire('input');
     form.fire('submit');
     root.children[3].children[1].children[0].checked = false;
+    const columns = root.children[3].children[2].children[0];
+    columns.value = '48';
+    columns.fire('change');
     await root.children[6].children[1].fire('click');
     assert.deepEqual(closed, { requiresReload: false });
     const draft = controller.snapshot().draft;
-    assert.equal(draft.pages[0].widgets[0].grid.row, 4);
+    assert.equal(draft.pages[0].widgets[0].grid.row, 13);
     assert.equal(draft.pages[0].widgets[0].html, '{{Temp:state}}');
     assert.equal(draft.pages[0].widgets[1].html, '<span device="Temp" reading="state"></span>');
     assert.equal(draft.settings.showFrames, false);
+    assert.equal(draft.settings.gridColumns, 48);
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
-    assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages[0].widgets[0].grid.row, 4);
+    assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages[0].widgets[0].grid.row, 13);
   } finally {
     globalThis.document = originalDocument;
     await rm(dir, { recursive: true });

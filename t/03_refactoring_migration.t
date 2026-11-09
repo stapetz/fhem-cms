@@ -312,7 +312,7 @@ subtest 'prepares a fully specified target without writing or accepting schema 5
         ['missing navigation', sub { delete $_[0]{navigation} }],
         ['missing settings', sub { delete $_[0]{settings} }],
         ['wrong layout', sub { $_[0]{settings}{layoutMode} = 'flow' }],
-        ['wrong column count', sub { $_[0]{settings}{gridColumns} = 48 }],
+        ['wrong column count', sub { $_[0]{settings}{gridColumns} = 36 }],
         ['wrong schema', sub { $_[0]{schemaVersion} = 4 }],
         ['column overflow', sub { $_[0]{pages}[0]{widgets}[0]{grid}{col} = 12 }],
         ['row overflow', sub { $_[0]{pages}[0]{widgets}[0]{grid}{row} = 1000 }],

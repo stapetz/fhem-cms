@@ -1,5 +1,6 @@
 const NAVIGATION = '__nav';
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
+export const SCHEMA5_GRID_COLUMNS = [12, 24, 48];
 
 function integer(value, min, max) {
   if ((typeof value !== 'number' && typeof value !== 'string')
@@ -8,16 +9,16 @@ function integer(value, min, max) {
   return parsed >= min && parsed <= max ? parsed : null;
 }
 
-function geometry(grid) {
+function geometry(grid, columns) {
   if (!grid || typeof grid !== 'object' || Array.isArray(grid)
     || Object.keys(grid).sort().join(',') !== 'col,h,row,w') {
     throw new Error('Ungültiges Schema-5-Raster');
   }
-  const col = integer(grid.col, 1, 12);
+  const col = integer(grid.col, 1, columns);
   const row = integer(grid.row, 1, 1000);
-  const w = integer(grid.w, 1, 12);
+  const w = integer(grid.w, 1, columns);
   const h = integer(grid.h, 1, 1000);
-  if (col === null || row === null || w === null || h === null || col + w > 13 || row + h > 1001) {
+  if (col === null || row === null || w === null || h === null || col + w > columns + 1 || row + h > 1001) {
     throw new Error('Schema-5-Raster liegt außerhalb der Grenzen');
   }
   return { col, row, w, h };
@@ -30,11 +31,13 @@ function overlaps(a, b) {
 
 function validateLayout(config) {
   if (!config || integer(config.schemaVersion, 5, 5) === null
-    || config.settings?.layoutMode !== 'grid' || integer(config.settings?.gridColumns, 12, 12) === null
+    || config.settings?.layoutMode !== 'grid'
+    || !SCHEMA5_GRID_COLUMNS.includes(integer(config.settings?.gridColumns, 12, 48))
     || !Array.isArray(config.pages) || config.pages.length < 1 || config.pages.length > 50) {
-    throw new Error('Gültiges Schema 5 mit 12-Spalten-Raster erwartet');
+    throw new Error('Gültiges Schema 5 mit 12-, 24- oder 48-Spalten-Raster erwartet');
   }
-  const nav = geometry(config.navigation?.grid);
+  const columns = Number(config.settings.gridColumns);
+  const nav = geometry(config.navigation?.grid, columns);
   const pages = new Set();
   for (const page of config.pages) {
     if (!page || typeof page.id !== 'string' || !ID.test(page.id) || pages.has(page.id)
@@ -50,7 +53,7 @@ function validateLayout(config) {
         throw new Error(`Ungültige oder doppelte Widget-ID auf Seite ${page.id}`);
       }
       ids.add(widget.id);
-      const current = geometry(widget.grid);
+      const current = geometry(widget.grid, columns);
       if (grids.some((other) => overlaps(current, other))) {
         throw new Error(`Rasterüberschneidung auf Seite ${page.id}`);
       }
@@ -61,10 +64,11 @@ function validateLayout(config) {
 
 export function schema5GridItems(config, pageId) {
   validateLayout(config);
+  const columns = Number(config.settings.gridColumns);
   const page = config.pages.find((entry) => entry.id === pageId);
   if (!page) throw new Error('Unbekannte Seite');
-  return [{ id: NAVIGATION, grid: geometry(config.navigation.grid) },
-    ...page.widgets.map((widget) => ({ id: widget.id, grid: geometry(widget.grid) }))]
+  return [{ id: NAVIGATION, grid: geometry(config.navigation.grid, columns) },
+    ...page.widgets.map((widget) => ({ id: widget.id, grid: geometry(widget.grid, columns) }))]
     .map(({ id, grid }) => ({ id, x: grid.col - 1, y: grid.row - 1, w: grid.w, h: grid.h }));
 }
 
@@ -84,7 +88,7 @@ export function applySchema5GridItems(config, pageId, items) {
       || !Number.isInteger(x) || !Number.isInteger(y) || !Number.isInteger(w) || !Number.isInteger(h)) {
       throw new Error('Ungültige oder doppelte Rasterposition');
     }
-    positions.set(item.id, geometry({ col: x + 1, row: y + 1, w, h }));
+    positions.set(item.id, geometry({ col: x + 1, row: y + 1, w, h }, Number(config.settings.gridColumns)));
   }
   const result = structuredClone(config);
   result.navigation.grid = positions.get(NAVIGATION);
@@ -94,16 +98,55 @@ export function applySchema5GridItems(config, pageId, items) {
   return result;
 }
 
+export function resizeSchema5Grid(config, columns) {
+  validateLayout(config);
+  if (!SCHEMA5_GRID_COLUMNS.includes(columns)) throw new Error('Ungültige Rastergröße');
+  const result = structuredClone(config);
+  const ratio = columns / Number(config.settings.gridColumns);
+  if (ratio === 1) return result;
+  const resize = (source) => {
+    const grid = geometry(source, Number(config.settings.gridColumns));
+    const w = Math.max(1, Math.round(grid.w * ratio));
+    return geometry({
+      col: Math.min(columns - w, Math.round((grid.col - 1) * ratio)) + 1,
+      row: Math.round((grid.row - 1) * ratio) + 1,
+      w,
+      h: Math.max(1, Math.round(grid.h * ratio)),
+    }, columns);
+  };
+  result.settings.gridColumns = columns;
+  result.navigation.grid = resize(config.navigation.grid);
+  for (const page of result.pages) {
+    const placed = [result.navigation.grid];
+    // Keep visual order when rounding creates collisions, without reordering stored widgets.
+    const ordered = [...page.widgets].sort((a, b) => Number(a.grid.row) - Number(b.grid.row)
+      || Number(a.grid.col) - Number(b.grid.col));
+    for (const widget of ordered) {
+      const grid = resize(widget.grid);
+      let collisions = placed.filter((other) => overlaps(grid, other));
+      while (collisions.length) {
+        grid.row = Math.max(...collisions.map((other) => other.row + other.h));
+        collisions = placed.filter((other) => overlaps(grid, other));
+      }
+      widget.grid = geometry(grid, columns);
+      placed.push(widget.grid);
+    }
+  }
+  validateLayout(result);
+  return result;
+}
+
 export function createSchema5Grid(GridStack, element, config, pageId, renderContent, editable = false) {
   const items = schema5GridItems(config, pageId);
+  const columns = Number(config.settings.gridColumns);
   if (!element || element.children.length || element.gridstack || typeof renderContent !== 'function') {
     throw new Error('Leeres Rasterelement und Inhaltsfunktion erforderlich');
   }
-  const grid = GridStack.init({ column: 12, maxRow: 1000, minRow: editable ? 8 : 0, mode: 'float', staticGrid: true,
+  const grid = GridStack.init({ column: columns, maxRow: 1000, minRow: editable ? 8 * columns / 12 : 0, mode: 'float', staticGrid: true,
     draggable: { handle: '.cms-widget-drag' }, resizable: { handles: 'se' } }, element);
-  if (!grid) throw new Error('12-Spalten-Raster konnte nicht angelegt werden');
+  if (!grid) throw new Error(`${columns}-Spalten-Raster konnte nicht angelegt werden`);
   try {
-    if (grid.getColumn() !== 12) throw new Error('12-Spalten-Raster konnte nicht angelegt werden');
+    if (grid.getColumn() !== columns) throw new Error(`${columns}-Spalten-Raster konnte nicht angelegt werden`);
     const contents = new Map();
     for (const item of items) {
       const wrapper = document.createElement('div');
