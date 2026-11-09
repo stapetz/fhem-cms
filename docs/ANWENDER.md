@@ -130,6 +130,10 @@ Beim Drehen oder Vergrößern bleiben Inhalte und Live-Daten bestehen; es werden
 keine Positionen gespeichert. Im Editor selbst bleibt das präzise Raster aktiv.
 Zum Prüfen der Umbrüche dort die Geräte-Vorschau verwenden.
 
+Die mobile Ansicht funktioniert auch beim Start über ein iPhone-Homescreen-Icon.
+Nach dem Drehen bleiben die Kachelabstände erhalten; das Navigationsmenü wird
+anhand des tatsächlich verfügbaren Platzes erneut geprüft.
+
 ### Navigation und Widgets bearbeiten
 
 Das Stiftsymbol an der Navigation öffnet **Navigation bearbeiten** – die zentrale

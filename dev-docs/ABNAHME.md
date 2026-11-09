@@ -1,5 +1,30 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Ergänzung 2026-11-09: responsive Schema-5-Ansicht
+
+Der Entwickler hat die responsive Ansicht und die platzabhängige Navigation
+auf dem iPhone in Safari sowie beim isolierten Start über ein Homescreen-Icon
+bestätigt (Issues #101 und #103). Hochformat → Querformat → Hochformat zeigt
+nach der Korrektur `117dfed` keine überlappenden Widgets mehr; im Querformat
+werden passende Menüeinträge direkt statt als Burger angezeigt.
+
+Der vorherige Fehler ist durch die Diagnose belegt: Bei 361 Pixeln Inhaltsbreite
+reservierte WebKit Rasterzeilen von 216 Pixeln für 270,75 Pixel hohe Kacheln.
+Die paddingbasierte Höhenreservierung ersetzt `aspect-ratio` am Grid-Item.
+Die Prüfseite `www/fhem-cms/examples/fcui-check.html` zeigt seit Revision
+`standalone-rotation-2` getrennte Widget-/Content-/Wrapperrechtecke sowie
+eine begrenzte Ereignishistorie. Sie verwendet synthetische Daten und
+führt keine FHEM-Kommandos aus.
+
+Lokal wurden 50 Umbrüche über fünf Rasterdichten und sieben Navigationslayouts
+im Browser geprüft, zusätzlich mehrfache Wechsel zwischen 361 und 702 Pixeln
+Inhaltsbreite mit nichtquadratischen Kacheln und exakten Zeilenabständen.
+Die CI des Fixes prüfte Build, sämtliche Perl- und JavaScript-Tests erfolgreich.
+Das ist eine gezielte Geräteabnahme, keine vollständige Browser-, Rechte-
+oder Performanceabnahme der unten dokumentierten offenen MVP-Anforderungen.
+
+## Historisches MVP-Protokoll
+
 Stand: 2026-10-31, Branch `dev`. Dieses Protokoll trennt ehrlich zwischen **geprüft** und **nicht geprüft**. Die Abnahme ist damit **nicht abgeschlossen**; offene Punkte stehen unten.
 
 ## Geprüft
