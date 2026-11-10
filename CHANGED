@@ -1,3 +1,12 @@
+2026-11-10 - Vertikale Navigation passend darstellen und ausrichten (Refs #112)
+
+Die Burger-Prüfung berücksichtigt jetzt die Ausrichtung: Vertikal zählen die
+breiteste Schaltfläche und die Gesamthöhe statt aller Breiten nebeneinander.
+Im Editor wird auch die verfügbare Höhe geprüft; die Vorschau behält ihre
+automatische Höhe. Beim Wechsel horizontal/vertikal wird das Navigationswidget
+anhand der aktuellen Punkte auf passende Rastermaße gesetzt. Kollisionen auf
+allen Seiten weichen nach unten aus; gespeichert wird nur als Entwurf.
+
 2026-11-10 - Globale Navigation mit seitenübergreifenden Kollisionen skalieren (Refs #111)
 
 Beim Vergrößern oder Verschieben der Navigation werden kollidierende Widgets

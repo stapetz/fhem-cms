@@ -9,6 +9,7 @@ import { createSchema5Transport } from './fcui-schema5-transport.js';
 import { createSchema5WidgetServices } from './widget-services.js';
 import { applySchema5GridItems, schema5GridItems } from './fcui-schema5-layout.js';
 import { DevicePreview } from './device-preview.js';
+import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 
 export function createSchema5Editor({ GridStack, root, draftClient, liveClient, services, browser = window }) {
   if (!draftClient || !liveClient || draftClient === liveClient) {
@@ -505,6 +506,7 @@ export class Schema5Editor {
     if (!this.#active || this.#suspended || !this.#view || this.#widgets.disabled) return;
     try {
       const state = this.#controller.snapshot();
+      const view = this.#view;
       this.#generation += 1;
       this.#setActions(false, false);
       this.#view.stop();
@@ -513,6 +515,7 @@ export class Schema5Editor {
       const container = this.#panelContainer('navigation');
       this.#panel = new Schema5NavigationPanel({
         root: container, controller: this.#controller, token: state.token, browser: this.#browser,
+        fitNavigation: (config) => this.#fitNavigation(config, view),
         onClose: ({ requiresReload }) => {
           this.#panel = null;
           Promise.resolve().then(() => requiresReload
@@ -523,6 +526,36 @@ export class Schema5Editor {
     } catch (error) {
       this.#content.replaceChildren();
       this.#error(error);
+    }
+  }
+
+  #fitNavigation(config, view) {
+    const host = document.createElement('div');
+    host.className = 'cms-schema5-grid cms-grid-editable';
+    Object.assign(host.style, { position: 'absolute', visibility: 'hidden', pointerEvents: 'none',
+      width: 'calc(var(--cms-view-width) + var(--cms-view-gap))' });
+    const pageId = config.pages[0].id;
+    const nav = view.navigation(pageId, config, true);
+    nav.setAttribute('data-adaptive', '');
+    nav.style.marginRight = 'var(--cms-view-gap)';
+    host.append(nav);
+    this.#content.append(host);
+    try {
+      const columns = Number(config.settings.gridColumns);
+      const cell = host.getBoundingClientRect().width / columns;
+      const gap = Number.parseFloat(nav.ownerDocument.defaultView.getComputedStyle(nav).marginRight);
+      if (!Number.isFinite(cell) || cell <= 0 || !Number.isFinite(gap)) {
+        throw new Error('Navigationsgröße konnte nicht gemessen werden');
+      }
+      const required = measureSchema5Navigation(nav);
+      const items = schema5GridItems(config, pageId);
+      const item = items.find((entry) => entry.id === '__nav');
+      item.w = Math.min(columns, Math.max(1, Math.ceil((required.width + gap) / cell)));
+      item.h = Math.max(1, Math.ceil((required.height + gap) / cell));
+      item.x = Math.min(item.x, columns - item.w);
+      return applySchema5GridItems(config, pageId, items);
+    } finally {
+      host.remove();
     }
   }
 

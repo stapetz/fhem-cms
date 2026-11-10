@@ -1,4 +1,27 @@
-export function observeSchema5Navigation(nav) {
+export function measureSchema5Navigation(nav) {
+  const browser = nav.ownerDocument.defaultView;
+  const measuring = nav.hasAttribute('data-measuring');
+  nav.setAttribute('data-measuring', '');
+  try {
+    const style = browser.getComputedStyle(nav);
+    const links = [...nav.querySelectorAll('.cms-nav-link')].filter((link) => !link.hidden);
+    const sizes = links.map((link) => link.getBoundingClientRect());
+    const gap = Math.max(0, links.length - 1);
+    const vertical = nav.classList.contains('is-vertical');
+    return {
+      width: (vertical ? Math.max(0, ...sizes.map((size) => size.width))
+        : sizes.reduce((sum, size) => sum + size.width, 0) + gap * (Number.parseFloat(style.columnGap) || 0))
+        + (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0),
+      height: (vertical ? sizes.reduce((sum, size) => sum + size.height, 0)
+        + gap * (Number.parseFloat(style.rowGap) || 0) : Math.max(0, ...sizes.map((size) => size.height)))
+        + (Number.parseFloat(style.paddingTop) || 0) + (Number.parseFloat(style.paddingBottom) || 0),
+    };
+  } finally {
+    if (!measuring) nav.removeAttribute('data-measuring');
+  }
+}
+
+export function observeSchema5Navigation(nav, constrainHeight = false) {
   const browser = nav.ownerDocument.defaultView;
   const burger = nav.querySelector('.cms-nav-burger');
   if (!burger) throw new Error('Navigationsschalter fehlt');
@@ -6,21 +29,9 @@ export function observeSchema5Navigation(nav) {
   nav.setAttribute('data-adaptive', '');
   const measure = () => {
     if (stopped || nav.clientWidth <= 0) return;
-    nav.setAttribute('data-measuring', '');
-    let required;
-    let available;
-    try {
-      const style = browser.getComputedStyle(nav);
-      const links = [...nav.querySelectorAll('.cms-nav-link')].filter((link) => !link.hidden);
-      const gap = Number.parseFloat(style.columnGap) || 0;
-      required = links.reduce((width, link) => width + link.getBoundingClientRect().width, 0)
-        + Math.max(0, links.length - 1) * gap;
-      available = nav.clientWidth - (Number.parseFloat(style.paddingLeft) || 0)
-        - (Number.parseFloat(style.paddingRight) || 0);
-    } finally {
-      nav.removeAttribute('data-measuring');
-    }
-    const compact = required > available + 0.5;
+    const required = measureSchema5Navigation(nav);
+    const compact = required.width > nav.clientWidth + 0.5
+      || (constrainHeight && required.height > nav.clientHeight + 0.5);
     nav.toggleAttribute('data-compact', compact);
     if (!compact) {
       const focused = nav.ownerDocument.activeElement === burger;

@@ -1,0 +1,147 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navigation orientation regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<main class="cms-shell"><section id="editor"></section></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { measureSchema5Navigation, observeSchema5Navigation } from '../www/fhem-cms/js/fcui-schema5-navigation-fit.js';
+
+const output = document.querySelector('#result');
+const root = document.querySelector('#editor');
+let editor;
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
+try {
+  for (const columns of [12, 48, 192]) {
+    const scale = columns / 12;
+    const live = { schemaVersion: 5, theme: 'light',
+      settings: { layoutMode: 'grid', gridColumns: columns },
+      navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: columns, h: scale } },
+      pages: ['Start', 'Thermometer', 'Diverse neue Widgets', 'Solaranlage'].map((title, i) => ({
+        id: `page${i}`, title, widgets: i === 1 ? [
+          { id: 'value', type: 'text', html: '<p>Keep this</p>',
+            grid: { col: 1, row: 2 * scale + 1, w: 4 * scale, h: 2 * scale } },
+        ] : [],
+      })),
+    };
+    if (columns === 48) {
+      live.navigation.itemWidth = 240;
+      live.navigation.itemHeight = 48;
+    }
+    if (columns === 192) {
+      live.navigation.items = [{ page: 'page1', label: 'Custom label', width: 240, height: 40, hidden: true }];
+    }
+    const original = JSON.stringify(live);
+    let writes = 0;
+    let state = { live, draft: null, token: 'a'.repeat(64) };
+    const controller = new Schema5DraftController({
+      read: async () => structuredClone(state),
+      save: async (draft, token) => {
+        check(token === state.token, 'orientation change uses current token');
+        writes += 1;
+        state = { live, draft: structuredClone(draft), token: writes.toString(16).padStart(64, '0') };
+      },
+      publish: async () => { throw new Error('No publishing'); },
+      discard: async () => { throw new Error('No discard'); },
+    });
+    editor = new Schema5Editor({ GridStack, root, controller, browser: window,
+      services: { iconUrl: () => '', setCommand: async () => { throw new Error('No device commands'); } },
+      client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} } });
+    await editor.start();
+    await settle();
+    for (const orientation of ['vertical', 'horizontal']) {
+      root.querySelector('.cms-widget-config').click();
+      await settle();
+      const form = root.querySelector('.cms-navedit-shared').parentElement;
+      form.querySelector('select').value = orientation;
+      root.querySelector('.cms-panel-save').click();
+      for (let attempt = 0; attempt < 50 && !root.querySelector('.cms-nav'); attempt++) await settle();
+      const nav = root.querySelector('.cms-nav');
+      check(!!nav, `orientation saved: ${root.textContent}`);
+      check(state.draft.navigation.orientation === orientation, 'new orientation persists');
+      check(nav.classList.contains('is-vertical') === (orientation === 'vertical'), 'rendered orientation matches');
+      const required = measureSchema5Navigation(nav);
+      check(nav.clientWidth + 0.5 >= required.width, `auto width fits ${orientation}`);
+      check(nav.clientHeight + 0.5 >= required.height, `auto height fits ${orientation}`);
+      check(!nav.hasAttribute('data-compact'), 'auto-sized editor displays all navigation links');
+      const grid = root.querySelector('.cms-grid-editable');
+      const cell = grid.getBoundingClientRect().width / columns;
+      const gap = Number.parseFloat(getComputedStyle(nav.parentElement).right);
+      check(state.draft.navigation.grid.w === Math.ceil((required.width + gap) / cell), 'width rounded to actual raster');
+      check(state.draft.navigation.grid.h === Math.ceil((required.height + gap) / cell), 'height rounded to actual raster');
+      check(state.draft.navigation.grid.col + state.draft.navigation.grid.w <= columns + 1, 'within page width');
+      check(JSON.stringify(live) === original, 'live unchanged');
+      check(state.draft.navigation.itemWidth === live.navigation.itemWidth
+        && JSON.stringify(state.draft.navigation.items) === JSON.stringify(live.navigation.items),
+      'custom point dimensions, labels and hidden-page flags survive fitting');
+      const saved = JSON.stringify(state.draft);
+      await controller.reload();
+      check(JSON.stringify(controller.snapshot().draft) === saved, 'orientation and geometry survive reload');
+      if (orientation === 'vertical') {
+        const widget = state.draft.pages[1].widgets[0];
+        check(widget.grid.row > state.draft.navigation.grid.h, 'widgets on another page move below navigation');
+        check(widget.grid.w === 4 * scale && widget.grid.h === 2 * scale
+          && widget.html === '<p>Keep this</p>', 'reflow preserves content and size');
+      }
+    }
+    check(writes === 2, 'one atomic draft write per orientation switch');
+    const unchangedGrid = JSON.stringify(state.draft.navigation.grid);
+    root.querySelector('.cms-widget-config').click();
+    await settle();
+    root.querySelector('.cms-panel-save').click();
+    for (let attempt = 0; attempt < 50 && !root.querySelector('.cms-nav'); attempt++) await settle();
+    check(writes === 3, 'unchanged orientation can still be saved');
+    check(state.draft.navigation.orientation === 'horizontal', 'unchanged direction retained');
+    check(JSON.stringify(state.draft.navigation.grid) === unchangedGrid, 'same direction never resizes the widget');
+    editor.stop();
+    root.replaceChildren();
+  }
+
+  const host = document.createElement('div');
+  host.className = 'cms-schema5-grid cms-grid-editable';
+  const nav = document.createElement('nav');
+  nav.className = 'cms-nav is-vertical';
+  nav.innerHTML = '<button class="cms-nav-burger" aria-expanded="false">☰</button>'
+    + ['Start', 'Thermometer', 'Diverse neue Widgets', 'Solaranlage']
+      .map((label) => `<a class="cms-nav-link">${label}</a>`).join('');
+  nav.setAttribute('data-adaptive', '');
+  host.append(nav);
+  root.append(host);
+  const required = measureSchema5Navigation(nav);
+  nav.style.width = `${Math.ceil(required.width) + 2}px`;
+  nav.style.height = `${Math.ceil(required.height) + 2}px`;
+  const stop = observeSchema5Navigation(nav, true);
+  await settle();
+  check(!nav.hasAttribute('data-compact'), 'stacked links fit without summed horizontal widths');
+  nav.style.height = `${Math.floor(required.height) - 2}px`;
+  await settle();
+  check(nav.hasAttribute('data-compact'), 'insufficient vertical height triggers burger');
+  nav.style.height = `${Math.ceil(required.height) + 2}px`;
+  await settle();
+  check(!nav.hasAttribute('data-compact'), 'restoring height reveals links again');
+  nav.style.width = `${Math.floor(required.width) - 2}px`;
+  await settle();
+  check(nav.hasAttribute('data-compact'), 'insufficient width triggers burger');
+  nav.style.width = `${Math.ceil(required.width) + 2}px`;
+  await settle();
+  check(!nav.hasAttribute('data-compact'), 'restoring width reveals links again');
+  nav.classList.remove('is-vertical');
+  await settle();
+  check(nav.hasAttribute('data-compact'), 'same width does not fit horizontal row');
+  stop();
+  host.remove();
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  editor?.stop();
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>

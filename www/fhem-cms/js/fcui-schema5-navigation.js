@@ -30,8 +30,9 @@ export class Schema5NavigationPanel {
   #busy = false;
   #closed = false;
   #requiresReload = false;
+  #fitNavigation;
 
-  constructor({ root, controller, token, browser = window, onClose }) {
+  constructor({ root, controller, token, browser = window, onClose, fitNavigation }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
       || typeof controller.saveDraft !== 'function' || !browser || typeof browser.confirm !== 'function'
       || typeof onClose !== 'function') {
@@ -45,6 +46,7 @@ export class Schema5NavigationPanel {
     this.#browser = browser;
     this.#token = token;
     this.#onClose = onClose;
+    this.#fitNavigation = fitNavigation;
     this.#status = element('p');
     this.#status.setAttribute('role', 'status');
     this.#form = element('form');
@@ -407,6 +409,9 @@ export class Schema5NavigationPanel {
     }
     if (items.length) navigation.items = items;
     else delete navigation.items;
+    if (navigation.orientation !== (state.draft || state.live).navigation.orientation && this.#fitNavigation) {
+      return this.#fitNavigation(config);
+    }
     return config;
   }
 

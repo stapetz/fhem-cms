@@ -103,6 +103,26 @@ erhalten. Verkleinern zieht keine Widgets hoch. Unabhängige Widgetkollisionen
 und ein Überlauf hinter Zeile 1000 bleiben Fehler vor jedem Schreibzugriff.
 Der Controller überträgt Navigation und alle betroffenen Seiten in einer
 zustandsgebundenen Entwurfstransaktion; der Perl-Validator bleibt unverändert.
+Refs #112 korrigiert die richtungsabhängige Navigationsmessung: vertikal maximale
+Linkbreite und Summe der Linkhöhen plus Zeilenabstände, horizontal summierte
+Breiten plus Spaltenabstände und maximale Höhe, jeweils einschließlich Padding.
+Der Messmodus behält die vertikale Richtung bei und misst auch versteckte Links.
+Nur im präzisen Editor begrenzt zusätzlich die gespeicherte Höhe; Vorschau und
+Homepage behalten ihre inhaltsabhängige Höhe und responsive volle Breite.
+Beim Speichern einer geänderten Ausrichtung misst der Editor die neu
+konfigurierten Punkte in einem unsichtbaren Container mit denselben Raster-CSS-
+und Schriftbedingungen. Die erforderlichen Maße plus Rasterlücke werden auf
+quadratische Zellen aufgerundet, die Breite auf die Spaltenzahl begrenzt und
+die Spalte nötigenfalls nach links korrigiert. Zeile und individuelle Punktmaße
+bleiben erhalten; das gemeinsame `applySchema5GridItems` übernimmt Reflow und
+Grenzprüfung vor dem einen Entwurfsschreibzugriff. Unveränderte Ausrichtung
+löst keine automatische Größenänderung aus. Reicht selbst die volle Seitenbreite
+nicht, bleibt die Burger-Darstellung erhalten; Zeilenüberlauf wird abgewiesen.
+`t/33_schema5_navigation_fit.test.js` prüft die Achsen und Rückkehr vom Burger.
+`t/40_navigation_orientation.html` prüft reale CSS-Maße und beide
+Ausrichtungswechsel bei 12/48/192 Spalten, Reflow auf einer anderen Seite,
+Entwurfspersistenz sowie unveränderte Live-Daten; der bestehende Chrome-Runner
+`t/35_schema5_scaling.test.js` führt die Regression aus.
 Bekannte Layoutfehler setzen das Raster mit sichtbarer Meldung zurück;
 unklare Schreibantworten erfordern explizites Neuladen. `pagehide` verhindert
 noch nicht gestartete Pointer-Schreibaktionen und unterdrückt späte Antworten.
