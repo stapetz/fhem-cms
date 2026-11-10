@@ -1,0 +1,70 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Global widget title alignment regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<main class="cms-shell"><div id="grid" class="grid-stack cms-schema5-grid"></div></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+try {
+  const specifications = [
+    { type: 'thermostat', device: 'Test', readings: { actual: 'temperature', target: 'desiredTemperature' } },
+    { type: 'fhem-value', device: 'Test', reading: 'state' },
+    { type: 'fhem-switch', device: 'Test', reading: 'state', on: 'on', off: 'off' },
+    { type: 'fhem-button', device: 'Test', command: 'on', label: 'Test' },
+    { type: 'fhem-clock', style: 'digital' },
+    { type: 'fhem-icon', device: 'Test', reading: 'state', states: [] },
+    { type: 'fhem-slider', device: 'Test', reading: 'pct', command: 'pct' },
+    { type: 'fhem-table', rows: [{ device: 'Test', reading: 'state' }] },
+    { type: 'fhem-chart', device: 'Test', reading: 'state' },
+    { type: 'fhem-solarflow', readings: { pv: { device: 'Test', reading: 'power' } } },
+    { type: 'text', html: '<h3 style="text-align: center">Content heading</h3>' },
+    { type: 'fhem-html', devices: [], html: '<h3 style="text-align: center">Content heading</h3>' },
+  ];
+  const widgets = specifications.map((widget, index) => ({
+    ...widget, id: `w${index}`, title: `Title ${index}`,
+    grid: { col: 1 + index % 3 * 4, row: 2 + Math.floor(index / 3) * 3, w: 4, h: 3 },
+  }));
+  const root = document.querySelector('#grid');
+  const data = new Map([['Test', [{ name: 'Test', readings: { state: 'on', temperature: '21',
+    desiredTemperature: '22', pct: '40', power: '100' }, sets: 'desiredTemperature pct:slider,0,1,100' }]]]);
+  const services = { iconUrl: () => '', history: async () => ({ points: [] }) };
+  const contentAlignment = new Map();
+  for (const alignment of [undefined, 'left', 'center', 'right']) {
+    const config = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+      navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } }, pages: [{ id: 'one', widgets }] };
+    if (alignment) config.settings.titleAlign = alignment;
+    const original = JSON.stringify(config);
+    const mounted = mountSchema5Widgets(GridStack, root, config, 'one', document.createElement('nav'), services, data);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    try {
+      for (const host of root.querySelectorAll('.grid-stack-item-content > *')) {
+        if (!host.shadowRoot) continue;
+        const title = host.shadowRoot.querySelector('[data-title]');
+        check(getComputedStyle(title).textAlign === (alignment || 'left'), `${host.localName}: ${alignment}`);
+        const dialogHeading = host.shadowRoot.querySelector('dialog h3');
+        check(!dialogHeading || !['center', 'right'].includes(getComputedStyle(dialogHeading).textAlign),
+          `${host.localName}: dialog heading unaffected`);
+        const contentHeading = host.shadowRoot.querySelector('.body h3:not([data-title]), .content h3:not([data-title])');
+        if (contentHeading) {
+          if (!alignment) contentAlignment.set(host.localName, getComputedStyle(contentHeading).textAlign);
+          check(getComputedStyle(contentHeading).textAlign === contentAlignment.get(host.localName),
+            `${host.localName}: content formatting preserved`);
+        }
+      }
+      check(JSON.stringify(config) === original, 'Rendering does not change configuration');
+    } finally { mounted.destroy(); }
+  }
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || error.message;
+}
+</script>

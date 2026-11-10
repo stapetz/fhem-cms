@@ -56,6 +56,7 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
     const mounted = mountSchema5Widgets(api, root, config, 'one', navigation, services, new Map([['Temp', oldData]]));
     assert.equal(root.children.length, 3);
     assert.equal(root.attributes['data-responsive'], '');
+    assert.equal(root.style['--cms-widget-title-align'], 'left');
     assert.match(root.children[0].className, /cms-responsive-navigation/);
     assert.equal(root.children[1].style['--cms-widget-fraction'], '0.25');
     assert.equal(root.children[1].style['--cms-widget-padding'], `${100 / 3}%`);
@@ -100,6 +101,7 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
     mixed.pages[0].widgets = [wide, second, normal, small];
     for (const columns of [12, 24, 48, 96, 192]) {
       const current = resizeSchema5Grid(mixed, columns);
+      current.settings.titleAlign = 'right';
       const before = structuredClone(current);
       const view = mountSchema5Widgets(api, root, current, 'one', navigation, services, new Map());
       assert.deepEqual(root.children.map((child) => child.gridstackNode.id),
@@ -108,6 +110,7 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
         ['0.25', '0.25', '0.5', '1']);
       assert.equal(root.children[3].style['--cms-widget-padding'], `${100 / 3}%`);
       assert.deepEqual(current, before, 'responsive presentation never mutates the persisted configuration');
+      assert.equal(root.style['--cms-widget-title-align'], 'right');
       view.destroy();
       const editor = mountSchema5Widgets(api, root, current, 'one', navigation, services, new Map(),
         { onEdit() {}, onChange() {} });

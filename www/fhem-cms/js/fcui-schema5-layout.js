@@ -37,6 +37,9 @@ function validateLayout(config) {
     throw new Error('Gültiges Schema 5 mit 12, 24, 48, 96 oder 192 Rasterspalten erwartet');
   }
   const columns = Number(config.settings.gridColumns);
+  if (config.settings.titleAlign !== undefined && !['left', 'center', 'right'].includes(config.settings.titleAlign)) {
+    throw new Error('Ungültige Titelausrichtung');
+  }
   const nav = geometry(config.navigation?.grid, columns);
   const pages = new Set();
   for (const page of config.pages) {

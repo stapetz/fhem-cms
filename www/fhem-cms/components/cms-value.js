@@ -29,6 +29,7 @@ class FHEMCMSValue extends HTMLElement {
     }
     this.shadowRoot.innerHTML = `
       <style>
+        [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
         .tile { position: relative; height: 100%; overflow: hidden; container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;

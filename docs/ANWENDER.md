@@ -90,7 +90,7 @@ Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfigu
 ## Schema-5-Editor bedienen
 
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
-- **Bearbeiten:** Seiteneinstellungen (Theme, Widget-Rahmen und Rastergröße)
+- **Bearbeiten:** Seiteneinstellungen (Theme, Widget-Rahmen, Titelausrichtung und Rastergröße)
   und Widget hinzufügen (mit Suche).
 - **Ansicht:** Vorschau (zeigt die Seite ohne Bearbeitungselemente) und Raster anzeigen.
 
@@ -109,6 +109,12 @@ Die Umrechnung erfolgt erst mit **Speichern** als Entwurf. **Abbrechen**
 verändert weder Live noch den vorhandenen Entwurf. Der Dialog enthält nur
 Layout- und Look-&-Feel-Einstellungen, keine Widgetpositionen oder -größen.
 Widgets werden ausschließlich direkt im Editiermodus verschoben und skaliert.
+
+**Widgettitel ausrichten (alle Seiten)** legt linksbündige, zentrierte oder
+rechtsbündige Titel für alle Widgets dieses CMS-Devices fest. Ohne Einstellung
+bleiben Titel linksbündig. Die Auswahl wird als Entwurf gespeichert und gilt auch
+in der Vorschau; nach dem Veröffentlichen in der Homepage. Dialogüberschriften
+und Textformatierungen innerhalb von Text-/HTML-Widgets bleiben unverändert.
 
 ### Fenstergröße, Browser-Zoom und Drehen
 

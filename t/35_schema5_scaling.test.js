@@ -84,10 +84,7 @@ async function browserResult(profile, url, child) {
   } finally { socket.close(); }
 }
 
-test('real browser zoom and resizing scale widgets and navigation without writes', {
-  skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
-  timeout: 180000,
-}, async () => {
+async function testServer() {
   const server = createServer(async (request, response) => {
     const path = resolve(root, `.${new URL(request.url, 'http://localhost').pathname}`);
     if (!path.startsWith(root.endsWith(sep) ? root : `${root}${sep}`)) {
@@ -104,6 +101,43 @@ test('real browser zoom and resizing scale widgets and navigation without writes
     }
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  return server;
+}
+
+test('all widget titles inherit global alignment without changing dialogs or authored content', {
+  skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
+  timeout: 45000,
+}, async () => {
+  const server = await testServer();
+  const profile = await mkdtemp(join(tmpdir(), 'cms-titles-'));
+  const child = spawn(chrome, ['--headless=new', '--no-first-run', '--no-default-browser-check',
+    '--disable-background-networking', '--remote-debugging-address=127.0.0.1',
+    '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--window-size=1440,1000', 'about:blank']);
+  let stderr = '';
+  child.stdout.resume();
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  const closed = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+  const timeout = setTimeout(() => child.kill('SIGTERM'), 30000);
+  try {
+    const data = await browserResult(profile,
+      `http://127.0.0.1:${server.address().port}/t/36_widget_titles.html`, child);
+    assert.ok(data.checks >= 100, 'all twelve widget types and four alignment choices checked');
+  } catch (error) {
+    throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });
+  } finally {
+    child.kill('SIGTERM');
+    await closed;
+    clearTimeout(timeout);
+    await rm(profile, { recursive: true, force: true });
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('real browser zoom and resizing scale widgets and navigation without writes', {
+  skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
+  timeout: 180000,
+}, async () => {
+  const server = await testServer();
   const profiles = await mkdtemp(join(tmpdir(), 'cms-scaling-'));
   try {
     const results = new Map();

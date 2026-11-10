@@ -19,6 +19,25 @@ const source = () => ({
   ],
 });
 
+test('title alignment is optional, validated and preserved by frontend and Perl', () => {
+  const script = 'use strict; use warnings; use JSON::PP (); require "./FHEM/01_FHEMCMS.pm";'
+    + ' local $/; my $v=JSON::PP->new->decode(<STDIN>); my $e=FHEMCMS_ValidateConfig($v,5); print $e if defined $e;';
+  for (const alignment of [undefined, 'left', 'center', 'right', '', 'justify', null, [], {}, '<script>']) {
+    const config = source();
+    if (alignment !== undefined) config.settings.titleAlign = alignment;
+    const valid = alignment === undefined || ['left', 'center', 'right'].includes(alignment);
+    const result = spawnSync('perl', ['-e', script], { input: JSON.stringify(config), encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    if (valid) {
+      assert.equal(result.stdout, '');
+      assert.deepEqual(applySchema5GridItems(config, 'a', schema5GridItems(config, 'a')), config);
+    } else {
+      assert.match(result.stdout, /titleAlign/);
+      assert.throws(() => schema5GridItems(config, 'a'), /Titelausrichtung/);
+    }
+  }
+});
+
 test('schema 5 layout converts exact coordinates and roundtrips without changing content', () => {
   const config = source();
   const before = structuredClone(config);

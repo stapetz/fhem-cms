@@ -370,6 +370,7 @@ export class CmsPage {
     const theme = this.config?.theme === 'light' ? 'light' : 'dark';
     document.documentElement.dataset.cmsTheme = theme;
     document.documentElement.dataset.cmsFrames = this.config?.settings?.showFrames === false ? 'off' : 'on';
+    document.documentElement.style.setProperty('--cms-widget-title-align', this.config?.settings?.titleAlign || 'left');
     configureLayout(this.config?.settings);
   }
 
@@ -416,6 +417,14 @@ export class CmsPage {
     const frames = document.createElement('input');
     frames.type = 'checkbox';
     frames.checked = this.config.settings?.showFrames !== false;
+    const titleAlign = document.createElement('select');
+    for (const [value, text] of [['left', 'Links'], ['center', 'Zentriert'], ['right', 'Rechts']]) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = text;
+      titleAlign.append(option);
+    }
+    titleAlign.value = this.config.settings?.titleAlign || 'left';
     const modeValue = { current: LAYOUT_MODES.includes(this.config.settings?.layoutMode) ? this.config.settings.layoutMode : 'grid' };
     const columns = document.createElement('select');
     for (const count of GRID_COLUMN_CHOICES) {
@@ -468,6 +477,7 @@ export class CmsPage {
     look.append(field('Theme', 'Farbschema der Seite', theme));
     const widgets = section('Widgets', 'Allgemeine Einstellungen für alle Widgets.');
     widgets.append(field('Rahmen anzeigen', 'Zeichnet einen Rahmen um jedes Widget', frames));
+    widgets.append(field('Widgettitel ausrichten', 'Gilt für alle Widgets auf allen Seiten', titleAlign));
     body.append(look, arrangement, widgets, error);
     actions.append(this.button('Abbrechen', () => finish(null)), this.button('Speichern', async () => {
       const next = structuredClone(this.config);
@@ -475,6 +485,7 @@ export class CmsPage {
       next.settings = {
         ...next.settings,
         showFrames: frames.checked,
+        titleAlign: titleAlign.value,
         layoutMode: modeValue.current,
         gridColumns: Number(columns.value)
       };
@@ -2048,6 +2059,7 @@ async function startSchema5Device(client, shell, card, isSuspended) {
   const config = PREVIEW_MODE && state.draft ? state.draft : state.live;
   document.documentElement.setAttribute('data-cms-theme', config.theme === 'light' ? 'light' : 'dark');
   document.documentElement.setAttribute('data-cms-frames', config.settings?.showFrames === false ? 'off' : 'on');
+  document.documentElement.style.setProperty('--cms-widget-title-align', config.settings?.titleAlign || 'left');
   const grid = document.createElement('div');
   grid.className = 'grid-stack cms-schema5-grid';
   shell.append(grid);
