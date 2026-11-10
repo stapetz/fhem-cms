@@ -87,6 +87,19 @@ Der Schema-5-Editor verwendet wieder die gemeinsamen `cms-toolbar`-/`cms-menu`-
 Klassen und modale Einstellungsdialoge. Nur seine Widgetansicht aktiviert
 Gridstack-Drag/Resize; die Homepage bleibt statisch. Punktgriff und Eckgriff
 bearbeiten die echten Widgets, das Stiftsymbol öffnet deren Konfiguration.
+Refs #113 blendet `.cms-widget-tools` ausschließlich im editierbaren Raster und
+bei `(hover: hover) and (pointer: fine)` mit `opacity: 0`/`pointer-events: none`
+aus. Hover, `:focus-within` und aktive Gridstack-Drag-/Resize-Klassen zeigen
+die Werkzeuge wieder. Die Buttons bleiben in der Tab-Reihenfolge; ohne Hover
+bleiben sie dauerhaft sichtbar. Ein nicht interaktives absolutes `::after`
+markiert das jeweilige Widget mit Akzentumrandung und leichter Tönung innerhalb
+der Contentgrenzen, ohne Rastermaße oder gespeicherte Daten zu verändern.
+Der Resize-Griff bleibt separat erreichbar. `t/41_editor_hover.html` prüft
+Navigation und Inhaltswidget mit echten Maus- und Tab-Ereignissen sowie
+Touch-Emulation, Werkzeug-Trefferverhalten, Hervorhebung, unveränderte
+Layoutkoordinaten und fehlende Entwurfsschreibzugriffe. Der bestehende
+Chrome-Runner `t/35_schema5_scaling.test.js` führt die Prüfung und weiterhin
+echte Drag-/Resize-Aktionen durch.
 Nach `dragstop`/`resizestop` wird das Raster synchron `inert` gesetzt, weitere
 Editoraktionen werden gesperrt und die DD-Deaktivierung/Speicherung erst nach
 Gridstacks Pointer-Cleanup ausgeführt. Das vollständige Raster wird über

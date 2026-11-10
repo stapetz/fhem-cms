@@ -256,6 +256,34 @@ body:has(.cms-schema5-grid) {
   right: calc(var(--cms-view-gap) + 29px);
 }
 
+.cms-grid-editable > .grid-stack-item::after {
+  content: "";
+  position: absolute;
+  inset: 0 var(--cms-view-gap) var(--cms-view-gap) 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: .5rem;
+  box-shadow: inset 0 0 0 1px var(--cms-accent);
+  background: color-mix(in srgb, var(--cms-accent) 6%, transparent);
+  opacity: 0;
+}
+
+.cms-grid-editable > .grid-stack-item:is(:hover, :focus-within, .ui-draggable-dragging, .ui-resizable-resizing)::after {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cms-grid-editable > .grid-stack-item > .cms-widget-tools {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .cms-grid-editable > .grid-stack-item:is(:hover, :focus-within, .ui-draggable-dragging, .ui-resizable-resizing) > .cms-widget-tools {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 .cms-grid-editable .cms-widget-drag:active {
   cursor: grabbing;
 }

@@ -1,0 +1,99 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor hover regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<button id="outside">Outside editor</button>
+<main class="cms-shell"><section id="editor"></section></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+
+const output = document.querySelector('#result');
+let editor;
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+try {
+  const live = { schemaVersion: 5, theme: 'light', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'one', title: 'Home', widgets: [
+      { id: 'value', type: 'text', html: '<p>Visible widget content</p>',
+        grid: { col: 1, row: 3, w: 4, h: 2 } },
+    ] }],
+  };
+  const original = JSON.stringify(live);
+  const controller = new Schema5DraftController({
+    read: async () => ({ live: structuredClone(live), draft: null, token: 'a'.repeat(64) }),
+    save: async () => { throw new Error('Hover/focus must never save'); },
+    publish: async () => { throw new Error('No publishing'); },
+    discard: async () => { throw new Error('No discard'); },
+  });
+  const root = document.querySelector('#editor');
+  editor = new Schema5Editor({ GridStack, root, controller, browser: window,
+    services: { iconUrl: () => '', setCommand: async () => { throw new Error('No commands'); } },
+    client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} } });
+  await editor.start();
+  await document.fonts.ready;
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const items = [...root.querySelector('.cms-grid-editable').children];
+  const geometry = (item) => JSON.stringify([item.offsetLeft, item.offsetTop, item.offsetWidth, item.offsetHeight]);
+  const originalBoxes = items.map(geometry);
+  let pointer = false;
+  for (const [index, item] of items.entries()) {
+    item.id = `hover-item-${index}`;
+    item.addEventListener('mouseenter', () => { pointer = true; });
+  }
+  const inspect = (index, visible, highlighted) => {
+    const item = items[index];
+    check(getComputedStyle(item.querySelector('.cms-widget-tools')).opacity === (visible ? '1' : '0'),
+      `item ${index}: toolbar visibility ${visible}`);
+    check(getComputedStyle(item.querySelector('.cms-widget-tools')).pointerEvents === (visible ? 'auto' : 'none'),
+      'hidden tools cannot intercept clicks');
+    const overlay = getComputedStyle(item, '::after');
+    check(overlay.opacity === (highlighted ? '1' : '0'), 'highlight follows hover/focus');
+    check(overlay.pointerEvents === 'none', 'highlight never intercepts input');
+    check(geometry(item) === originalBoxes[index],
+      `hover/focus never changes geometry: ${originalBoxes[index]} → ${geometry(item)}`);
+  };
+  const desktop = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  output.dataset.ready = 'true';
+  document.addEventListener('regression-check', (event) => {
+    try {
+      const { phase, index } = event.detail;
+      if (phase === 'initial') {
+        check(desktop, 'desktop hover capability is available');
+        items.forEach((item, i) => inspect(i, false, false));
+      } else if (phase === 'hover') {
+        check(pointer, 'actual mouse entered widget');
+        inspect(index, true, true);
+        inspect(1 - index, false, false);
+      } else if (phase === 'leave') {
+        items.forEach((item, i) => inspect(i, false, false));
+      } else if (phase === 'focus') {
+        check(document.activeElement === items[index].querySelector('.cms-widget-drag'), 'Tab reaches hidden drag button');
+        inspect(index, true, true);
+      } else if (phase === 'touch') {
+        check(!matchMedia('(hover: hover) and (pointer: fine)').matches, 'touch has no hover');
+        items.forEach((item, i) => inspect(i, true, false));
+      } else if (phase === 'finish') {
+        check(JSON.stringify(controller.snapshot().live) === original, 'live unchanged');
+        check(controller.snapshot().draft === null, 'no draft created');
+        editor.stop();
+        output.dataset.result = 'pass';
+        output.textContent = JSON.stringify({ checks });
+      }
+    } catch (error) {
+      editor.stop();
+      output.dataset.result = 'fail';
+      output.textContent = error.stack || String(error);
+    }
+  });
+} catch (error) {
+  editor?.stop();
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>

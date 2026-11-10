@@ -1,3 +1,12 @@
+2026-11-10 - Editorwerkzeuge bei Hover und Fokus einblenden (Refs #113)
+
+Auf Geräten mit Maus erscheinen die Bearbeitungsknöpfe erst beim Überfahren
+des jeweiligen Widgets oder bei Tastaturfokus darin. Eine dezente Umrandung
+und Hintergrundtönung heben das aktive Widget hervor, ohne sein Layout zu ändern.
+Dies gilt auch für die Navigation. Beim Ziehen bleiben die Knöpfe sichtbar;
+auf Touchgeräten ohne Hover bleiben sie dauerhaft erreichbar. Ansicht und
+Vorschau bleiben unverändert.
+
 2026-11-10 - Vertikale Navigation passend darstellen und ausrichten (Refs #112)
 
 Die Burger-Prüfung berücksichtigt jetzt die Ausrichtung: Vertikal zählen die
