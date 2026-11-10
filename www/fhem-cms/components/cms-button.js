@@ -1,6 +1,7 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { openIconPicker } from '../js/icon-picker.js';
 import { switchCommands } from './cms-switch.js';
+import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const FEEDBACK_MS = 1500;
@@ -20,6 +21,7 @@ class FHEMCMSButton extends HTMLElement {
 
   connectedCallback() {
     if (this.shadowRoot.childElementCount > 0) {
+      this.stopContentFit = fitWidgetContent(this);
       return;
     }
     this.shadowRoot.innerHTML = `
@@ -40,17 +42,15 @@ class FHEMCMSButton extends HTMLElement {
           border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
         button:hover { background: var(--cms-surface-hover, #34493e); }
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
-        .main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0.4em 0.8em;
-          font-size: max(5px, min(22cqh, 8cqw)); }
-        .tile[data-has-title] .main { padding-top: 1.6em; font-size: max(5px, min(20cqh, 8cqw)); }
-        .push { display: inline-flex; align-items: center; justify-content: center; gap: 0.4em; max-width: 100%; min-width: 0;
-          padding: 0.35em 1em; border-radius: 0.8em; border: 0.06em solid var(--cms-accent, #8fd0a8); background: var(--cms-accent-strong, #2f6b47); color: var(--cms-on-accent, #e9f8ee);
-          font-size: 1em; font-weight: 600; transition: background 0.15s, transform 0.1s; }
+        ${fittedContentCss}
+        .push { display: inline-flex; align-items: center; justify-content: center; gap: 0.14em;
+          padding: 0.25em 0.35em; border-radius: 0.35em; border: 0.06em solid var(--cms-accent, #8fd0a8); background: var(--cms-accent-strong, #2f6b47); color: var(--cms-on-accent, #e9f8ee);
+          font-size: 1em; line-height: 1.1; font-weight: 600; transition: background 0.15s, transform 0.1s; }
         .push:hover { background: var(--cms-accent-hover, #3a7f55); }
         .push:active { transform: scale(0.96); }
         .push:disabled { cursor: default; opacity: 0.7; }
         .push[data-done] { background: var(--cms-accent, #8fd0a8); color: var(--cms-bg, #17211d); }
-        .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .label { white-space: nowrap; }
         .glyph { display: inline-block; flex: none; width: 1.1em; height: 1.1em; background-color: currentColor;
           -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
         .glyph[hidden] { display: none; }
@@ -83,7 +83,7 @@ class FHEMCMSButton extends HTMLElement {
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Taster konfigurieren">⚙</button>
         <div class="main">
-          <button type="button" class="push" data-push>
+          <button type="button" class="push" data-push data-fit-content>
             <span class="glyph" data-icon aria-hidden="true" hidden></span>
             <span class="label" data-label></span>
           </button>
@@ -142,7 +142,13 @@ class FHEMCMSButton extends HTMLElement {
       event.preventDefault();
       this.onSave();
     });
+    this.stopContentFit = fitWidgetContent(this);
     this.render();
+  }
+
+  disconnectedCallback() {
+    this.stopContentFit?.();
+    this.stopContentFit = null;
   }
 
   set config(value) {

@@ -1,3 +1,12 @@
+2026-11-10 - Widget-Inhalte bis nahe an die Innenränder skalieren (Refs #108)
+
+Wert, Schalter, Taster und Statussymbol passen ihre Inhalte an den tatsächlich
+verfügbaren Innenraum an. Titel und Fehlermeldungen behalten eigene Bereiche;
+auch lange Werte, Einheiten und Beschriftungen werden passend eingepasst.
+Icons und Schalter behalten ihre Proportionen. Schieberegler nutzen fast die
+gesamte Innenbreite. Größenwechsel, Live-Updates und Browser-Zoom werden
+berücksichtigt, ohne Konfiguration oder Gerätebefehle zu verändern.
+
 2026-11-10 - Globale Ausrichtung der Widgettitel (Refs #107)
 
 In den Seiteneinstellungen lassen sich Widgettitel deviceweit links, zentriert

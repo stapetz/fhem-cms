@@ -1,5 +1,6 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { openIconPicker } from '../js/icon-picker.js';
+import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const PENDING_MS = 4000;
@@ -29,6 +30,7 @@ class FHEMCMSSwitch extends HTMLElement {
 
   connectedCallback() {
     if (this.shadowRoot.childElementCount > 0) {
+      this.stopContentFit = fitWidgetContent(this);
       return;
     }
     this.shadowRoot.innerHTML = `
@@ -49,9 +51,7 @@ class FHEMCMSSwitch extends HTMLElement {
           border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
         button:hover { background: var(--cms-surface-hover, #34493e); }
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
-        .main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 0.5em; padding: 0 0.8em;
-          font-size: max(5px, min(30cqh, 9cqw)); }
-        .tile[data-has-title] .main { font-size: max(5px, min(26cqh, 9cqw)); }
+        ${fittedContentCss}
         .toggle { all: unset; box-sizing: border-box; display: block; width: 2.4em; height: 1.3em; flex: none; border-radius: 1em;
           background: var(--cms-bg, #17211d); border: 0.08em solid var(--cms-border, #43564a); position: relative; cursor: pointer; transition: background 0.2s; }
         .toggle::after { content: ""; position: absolute; top: 0.12em; left: 0.12em; width: 0.9em; height: 0.9em; border-radius: 50%;
@@ -94,8 +94,10 @@ class FHEMCMSSwitch extends HTMLElement {
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Schalter konfigurieren">⚙</button>
         <div class="main">
-          <span class="glyph" data-icon aria-hidden="true" hidden></span>
-          <button type="button" class="toggle" role="switch" aria-checked="false" data-toggle aria-label="Schalter"></button>
+          <div class="fit-row" data-fit-content>
+            <span class="glyph" data-icon aria-hidden="true" hidden></span>
+            <button type="button" class="toggle" role="switch" aria-checked="false" data-toggle aria-label="Schalter"></button>
+          </div>
         </div>
         <p class="msg" role="alert" data-msg></p>
       </article>
@@ -165,7 +167,13 @@ class FHEMCMSSwitch extends HTMLElement {
       event.preventDefault();
       this.onSave();
     });
+    this.stopContentFit = fitWidgetContent(this);
     this.render();
+  }
+
+  disconnectedCallback() {
+    this.stopContentFit?.();
+    this.stopContentFit = null;
   }
 
   set config(value) {
