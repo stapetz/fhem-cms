@@ -87,6 +87,8 @@ try {
     equal(tile.dataset.position, textPosition, 'text position');
     equal(tile.querySelectorAll('.link-text').length, Number(showText), 'text visibility');
     check(tile.querySelector('img').getAttribute('src') === image, 'optional image');
+    await tile.querySelector('img').decode();
+    check(tile.querySelector('img').naturalWidth > 0, 'local image is really loaded and decodable');
     equal(tile.getAttribute('aria-label'), initial.links[0].text, 'hidden text keeps accessible link label');
     if (showText && textPosition === 'below') equal(getComputedStyle(tile.querySelector('.link-text')).order, '1', 'text below image');
     if (showText && textPosition === 'overlay') equal(getComputedStyle(tile.querySelector('.link-text')).position, 'absolute', 'text integrated into image');
