@@ -243,7 +243,7 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
     assert.equal(commands.filter((command) => command.startsWith('set ')).length, noChange,
       'a grip click without geometry change does not write');
     const draftBytes = await readFile(join(dataDir, 'draft.json'), 'utf8');
-    grids.at(-1).items.find((item) => item.id === '__nav').y = 4;
+    Object.assign(grids.at(-1).items.find((item) => item.id === 'text'), { x: 4, y: 1 });
     grids.at(-1).onStop();
     await new Promise((resolve) => setTimeout(resolve, 20));
     assert.match(status.textContent, /Position nicht übernommen.*überschneidung/);
