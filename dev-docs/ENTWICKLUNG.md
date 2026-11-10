@@ -903,6 +903,25 @@ Menü, aktuelle Seite, Atomarität, Doppelklicksperre, gerenderte Positionen,
 unveränderte Größen/Inhalte und andere Seiten, erneutes Anordnen, Neustart
 und sichtbare Schreibfehler. Keine produktiven CMS-Daten werden verändert.
 
+## SolarFlow-Titelbereich (Refs #117)
+
+`cms-solarflow` legt Titel und SVG im normalen vertikalen Flexfluss an.
+Der Titel ist nicht mehr absolut über dem Diagramm positioniert, sondern
+belegt seine tatsächliche Höhe einschließlich Abstand. Das SVG erhält mit
+`flex: 1 1 0`, `height: 0` und `min-height: 0` ausschließlich die Resthöhe.
+`preserveAspectRatio="xMidYMid meet"` bleibt erhalten, sodass keine
+Leistungsstationen verzerrt werden. Der versteckte Titel belegt keinen Platz,
+Konfigurationsknopf und Screenreadertext bleiben unabhängig positioniert.
+
+`t/45_solarflow_sizing.html` prüft 868 Browserassertionen für sieben breite,
+hohe, quadratische und kleine Maße, alle drei Titelausrichtungen,
+ein-/ausgeblendeten Titel sowie mit/ohne `view-only`. Geprüft werden
+tatsächliche Titel-/SVG-Rechtecke und transformierte Stationskoordinaten,
+Inhaltsgrenzen, Leistungstext und unveränderte Konfiguration. Zusätzlich
+werden echte Gridstack-Widgets in Bearbeitung und responsiver Ansicht bei
+12/48/192 Spalten eingebettet; der Titel darf das Diagramm in keiner
+Variante überlagern. Der vorhandene Chrome-Runner führt die Fixture aus.
+
 ## Einheitenauswahl für Platzhalter (Refs #116)
 
 Der gemeinsame `placeholder-picker.js` bietet eine feste Einheiten-Auswahl für
