@@ -1,5 +1,6 @@
 import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
+import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const REFRESH_MS = 300000;
@@ -111,6 +112,7 @@ class FHEMCMSChart extends HTMLElement {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a9a8f' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
+        ${unitInputCss}
       </style>
       <article class="tile" data-tile>
         <header><h3 data-title></h3>
@@ -132,7 +134,8 @@ class FHEMCMSChart extends HTMLElement {
           </label>
           <label>Geloggtes Reading<select name="reading" required></select></label>
           <p class="hint" data-source-hint></p>
-          <label>Einheit (optional)<input name="unit" type="text" maxlength="16" autocomplete="off"></label>
+          <label>Einheit (optional, Vorschlag wählen oder frei eintragen)<input name="unit" type="text" maxlength="16" autocomplete="off"></label>
+          <div data-unit-choices></div>
           <label>Standard-Zeitraum<select name="range"></select></label>
           <label>Standard-Granularität<select name="granularity"></select></label>
           <label>Datenquelle<select name="source"></select></label>
@@ -147,6 +150,7 @@ class FHEMCMSChart extends HTMLElement {
     fillSelect($('[name="range"]'), RANGES);
     fillSelect($('[name="granularity"]'), GRANULARITIES);
     fillSelect($('[name="source"]'), SOURCES);
+    $('[data-unit-choices]').append(unitSuggestions($('[name="unit"]')));
     $('[data-range]').addEventListener('change', (event) => {
       this.range = event.target.value;
       this.load();

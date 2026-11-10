@@ -12,7 +12,7 @@ const services = { listAllDevices: async () => [{ name: 'Test', readings: { powe
 let checks = 0;
 const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
 const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
-const change = (input, value, event = 'change') => {
+const change = (input, value, event = 'input') => {
   input.value = value;
   input.dispatchEvent(new Event(event, { bubbles: true }));
 };
@@ -29,10 +29,12 @@ try {
     const unit = dialog.querySelector('[data-unit]');
     const filter = dialog.querySelector('[data-filter]');
     check(unit.value === '', 'existing numeric filter has no unit');
-    const units = [...unit.options].map((option) => option.value).filter(Boolean);
+    check(unit.localName === 'input' && unit.maxLength === 16, 'unit is a free-text field like the value widget');
+    const buttons = [...dialog.querySelectorAll('[data-unit-choice]')];
+    const units = buttons.map((button) => button.dataset.unitChoice);
     check(['°C', 'W', 'kWh', '%'].every((value) => units.includes(value)), 'required unit choices present');
     for (const value of units) {
-      change(unit, value);
+      buttons.find((button) => button.dataset.unitChoice === value).click();
       check(filter.value === `round(1)|suffix( ${value})`, `${value}: replaces rather than duplicates unit`);
       check(isValidFilter(filter.value), `${value}: compatible filter`);
       check(dialog.querySelector('[data-preview]').textContent === `Aktueller Wert: 21.4 ${value}`,
@@ -41,19 +43,19 @@ try {
     }
     change(unit, 'W');
     change(unit, '');
-    check(filter.value === 'round(1)', 'None removes unit without changing other filters');
-    change(filter, 'round(0)|suffix( custom)', 'input');
+    check(filter.value === 'round(1)', 'empty field removes unit without changing other filters');
+    change(filter, 'round(0)|suffix(custom)', 'input');
     check(unit.value === '', 'custom suffix left intact');
     change(unit, 'kWh');
-    check(filter.value === 'round(0)|suffix( custom)|suffix( kWh)', 'custom suffix preserved when adding a unit');
+    check(filter.value === 'round(0)|suffix(custom)|suffix( kWh)', 'custom suffix preserved when adding a unit');
     change(unit, '');
-    check(filter.value === 'round(0)|suffix( custom)', 'removing selected unit preserves custom suffix');
+    check(filter.value === 'round(0)|suffix(custom)', 'removing selected unit preserves custom suffix');
     change(filter, 'round(1)|suffix( °C)', 'input');
-    check(unit.value === '°C', 'manual and preset unit filters synchronize dropdown');
+    check(unit.value === '°C', 'manual and preset unit filters synchronize free-text field');
     dialog.querySelector('[data-filter-clear]').click();
     check(unit.value === '' && filter.value === '', 'clear resets both filter and unit');
     [...dialog.querySelectorAll('[data-presets] button')].find((button) => button.textContent === 'suffix( °C)').click();
-    check(unit.value === '°C' && filter.value === 'suffix( °C)', 'unit preset synchronizes dropdown');
+    check(unit.value === '°C' && filter.value === 'suffix( °C)', 'unit preset synchronizes free-text field');
     [...dialog.querySelectorAll('[data-presets] button')].find((button) => button.textContent === 'round(0)').click();
     check(unit.value === '°C' && filter.value === 'round(0)|suffix( °C)', 'rounding preset stays before unit');
     check(dialog.querySelector('[data-preview]').textContent === 'Aktueller Wert: 21 °C',
@@ -79,6 +81,16 @@ try {
     check(reopened.dialog.querySelector('[data-unit]').value === 'kWh', 'unit survives reopening');
     reopened.dialog.querySelector('[data-cancel]').click();
     check(await reopened.result === null, 'cancel leaves saved value unchanged');
+    const custom = await open({ ...saved, filter: 'round(1)|suffix( N·m)' });
+    const customUnit = custom.dialog.querySelector('[data-unit]');
+    check(customUnit.value === 'N·m', 'custom unit restored from saved suffix');
+    change(customUnit, '  kg/s  ');
+    check(custom.dialog.querySelector('[data-filter]').value === 'round(1)|suffix( kg/s)',
+      'free-text custom unit uses trimmed suffix without duplicate unit');
+    check(custom.dialog.querySelector('[data-preview]').textContent === 'Aktueller Wert: 21.4 kg/s',
+      'custom unit preview preserves numeric filter');
+    custom.dialog.querySelector('[data-ok]').click();
+    check((await custom.result).filter === 'round(1)|suffix( kg/s)', 'custom unit persists');
   }
   const invalid = await open(initial);
   change(invalid.dialog.querySelector('[data-filter]'), 'suffix(<script>)', 'input');
@@ -87,6 +99,19 @@ try {
   check(!!invalid.dialog.querySelector('[data-error]').textContent, 'invalid filter has visible error');
   invalid.dialog.querySelector('[data-cancel]').click();
   await invalid.result;
+  for (const value of ['x'.repeat(17), '<script>', 'a|b', 'a(b)', 'a{b}', 'a"b', 'a\u007fb']) {
+    const invalidUnit = await open(initial);
+    change(invalidUnit.dialog.querySelector('[data-unit]'), value);
+    check(invalidUnit.dialog.querySelector('[data-ok]').disabled, 'invalid custom unit cannot be saved');
+    check(invalidUnit.dialog.querySelector('[data-error]').textContent.includes('Einheit'),
+      'invalid unit has explicit error');
+    change(invalidUnit.dialog.querySelector('[data-reading]'), 'power');
+    check(invalidUnit.dialog.querySelector('[data-ok]').disabled, 'reading input cannot discard unit validation error');
+    change(invalidUnit.dialog.querySelector('[data-unit]'), 'N·m');
+    check(!invalidUnit.dialog.querySelector('[data-ok]').disabled, 'correcting unit restores save');
+    invalidUnit.dialog.querySelector('[data-cancel]').click();
+    await invalidUnit.result;
+  }
 
   const root = document.querySelector('#host').attachShadow({ mode: 'open' });
   const style = document.createElement('style');

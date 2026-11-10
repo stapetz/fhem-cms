@@ -1,9 +1,9 @@
 // Dialog zum Suchen und Einsetzen eines Platzhalters (Device, Reading, Filter), gemeinsam für Texteditor und freies HTML.
 import { formatValue, isValidDeviceName, isValidFilter, isValidReadingName } from './freehtml.js';
+import { UNIT_SUGGESTIONS, unitInputCss, unitSuggestions } from './unit-input.js';
 
 const MAX_ROWS = 40;
-const UNITS = ['°C', '°F', 'K', '%', 'W', 'kW', 'Wh', 'kWh', 'MWh', 'V', 'A', 'mA',
-  'Hz', 'lx', 's', 'min', 'h', 'm', 'cm', 'mm', 'm²', 'm³', 'l', 'l/min', 'm³/h', 'bar', 'hPa', 'ppm', 'µg/m³'];
+const validUnit = (value) => value.length <= 16 && !/[()|{}"<>\u0000-\u001f\u007f]/.test(value);
 const unitSuffix = (unit) => `suffix( ${unit})`;
 const PRESETS = [
   ['round(1)', 'Runden auf 1 Stelle'], ['round(0)', 'Runden ohne Nachkommastellen'], ['int', 'Ganzzahl'],
@@ -44,6 +44,7 @@ const STYLE = `
   .cms-ph-dialog .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
   .cms-ph-dialog .chips button { padding: 0.15rem 0.6rem; font-size: 0.8rem; border-radius: 1rem; font-family: ui-monospace, monospace; }
   .cms-ph-dialog .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
+  ${unitInputCss}
 `;
 
 const TEMPLATE = `
@@ -66,9 +67,10 @@ const TEMPLATE = `
         <p class="hint">@alias, @name und @type liefern Alias, Namen und Typ des Devices.</p>
       </div>
     </div>
-    <label>Einheit hinter dem Wert
-      <select data-unit aria-label="Einheit"><option value="">Keine</option></select>
+    <label>Einheit hinter dem Wert (optional, Vorschlag wählen oder frei eintragen)
+      <input data-unit aria-label="Einheit" maxlength="16" autocomplete="off">
     </label>
+    <div data-unit-choices></div>
     <div class="filter">
       <label>Filter (optional)
         <span class="row">
@@ -105,15 +107,11 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
     const elementBox = $('[data-element]');
     let devices = [];
     let loadError = '';
-    for (const unit of UNITS) {
-      const option = document.createElement('option');
-      option.value = unit;
-      option.textContent = unit;
-      unitInput.append(option);
-    }
+    $('[data-unit-choices]').append(unitSuggestions(unitInput));
     const selectedUnit = () => {
       const last = filterInput.value.trim().split('|').at(-1).trim();
-      return UNITS.find((unit) => last === unitSuffix(unit)) || '';
+      const match = /^suffix\( (.+)\)$/.exec(last);
+      return match && validUnit(match[1]) ? match[1] : '';
     };
 
     $('[data-element-row]').hidden = !allowElement;
@@ -135,9 +133,9 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
         const unit = selectedUnit();
         if (unit) filters.pop();
         filters.push(value);
-        if (unit && !UNITS.some((entry) => value === unitSuffix(entry))) filters.push(unitSuffix(unit));
+        if (unit && !UNIT_SUGGESTIONS.some((entry) => value === unitSuffix(entry))) filters.push(unitSuffix(unit));
         filterInput.value = filters.join('|');
-        refresh();
+        refresh(true);
         filterInput.focus();
       });
       return chip;
@@ -216,15 +214,17 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
         })));
     };
 
-    const refresh = () => {
-      unitInput.value = selectedUnit();
+    const refresh = (syncUnit = false) => {
+      if (syncUnit === true) unitInput.value = selectedUnit();
       renderDevices();
       renderReadings();
       const device = deviceInput.value.trim();
       const reading = readingInput.value.trim();
       const filter = filterInput.value.trim();
       let problem = '';
-      if (!isValidDeviceName(device)) {
+      if (!validUnit(unitInput.value.trim())) {
+        problem = 'Ungültige Einheit (max. 16 Zeichen; keine Steuerzeichen oder Filter-/HTML-Syntax)';
+      } else if (!isValidDeviceName(device)) {
         problem = device ? 'Ungültiger Device-Name (erlaubt: Buchstaben, Ziffern, _ . -)' : 'Bitte ein Device wählen';
       } else if (!isValidReadingName(reading)) {
         problem = reading ? 'Ungültiger Reading-Name' : 'Bitte ein Reading wählen';
@@ -253,18 +253,23 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
 
     deviceInput.addEventListener('input', refresh);
     readingInput.addEventListener('input', refresh);
-    filterInput.addEventListener('input', refresh);
-    unitInput.addEventListener('change', () => {
+    filterInput.addEventListener('input', () => refresh(true));
+    unitInput.addEventListener('input', () => {
+      const unit = unitInput.value.trim();
+      if (!validUnit(unit)) {
+        refresh(false);
+        return;
+      }
       const filters = filterInput.value.trim().split('|').filter((part) => part.trim());
       if (selectedUnit()) filters.pop();
-      if (UNITS.includes(unitInput.value)) filters.push(unitSuffix(unitInput.value));
+      if (unit) filters.push(unitSuffix(unit));
       filterInput.value = filters.join('|');
-      refresh();
+      refresh(false);
     });
     elementBox.addEventListener('change', refresh);
     $('[data-filter-clear]').addEventListener('click', () => {
       filterInput.value = '';
-      refresh();
+      refresh(true);
       filterInput.focus();
     });
     $('[data-cancel]').addEventListener('click', () => finish(null));
@@ -294,7 +299,7 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
 
     document.body.append(dialog);
     dialog.showModal();
-    refresh();
+    refresh(true);
     deviceInput.focus();
     Promise.resolve(services.listAllDevices()).then((list) => {
       devices = Array.isArray(list) ? list : [];

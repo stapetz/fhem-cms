@@ -87,8 +87,16 @@ vollständige Code-, Asset- und Datensicherung auf einer isolierten Instanz
 wiederherstellen: Ältere Module können Schema 5 nicht sicher interpretieren.
 Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfiguration.
 
+Einheiten zur Beschriftung werden in **Wert**, **Diagramm**, **Tabelle** und
+im Platzhalterdialog einheitlich eingegeben: freies Textfeld mit anklickbaren
+Vorschlägen darunter. Leeren bedeutet keine Einheit. Eigene Einheiten sind
+möglich (höchstens 16 Zeichen). Die Summeneinheit einer Tabelle kann alternativ
+automatisch aus den Einzelwerten übernommen werden; diese Automatik wird
+separat ein-/ausgeschaltet. SolarFlow behält die begrenzte W/kW-Auswahl, weil
+sie die Umrechnung seiner Leistungsreadings steuert.
+
 Im Platzhalterdialog des Texteditors können Sie unter **Einheit hinter dem
-Wert** etwa °C, W, kWh oder % wählen. Die Einheit wird hinter dem eingefügten
+Wert** etwa °C, W, kWh oder % anklicken oder eine eigene Einheit eingeben. Die Einheit wird hinter dem eingefügten
 Reading angezeigt und beim erneuten Bearbeiten übernommen. Details stehen
 unter [Platzhalter](./PLATZHALTER.md#platzhalter-suchen-statt-tippen).
 
