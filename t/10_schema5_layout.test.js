@@ -133,6 +133,32 @@ test('automatic arrangement respects horizontal navigation, empty pages and the 
   assert.throws(() => arrangeSchema5Widgets(config, 'a'), /überschneidung/);
 });
 
+test('automatic arrangement reads staggered visual rows left to right without merging rows through tall widgets', () => {
+  const config = source();
+  config.pages[0].widgets = [
+    { id: 'right', grid: { col: 9, row: 8, w: 4, h: 5 } },
+    { id: 'left', grid: { col: 1, row: 9, w: 4, h: 4 } },
+    { id: 'middle', grid: { col: 5, row: 10, w: 4, h: 3 } },
+    { id: 'secondRight', grid: { col: 9, row: 20, w: 4, h: 5 } },
+    { id: 'secondLeft', grid: { col: 1, row: 21, w: 4, h: 4 } },
+  ];
+  const changed = arrangeSchema5Widgets(config, 'a');
+  const ordered = [...changed.pages[0].widgets].sort((a, b) => a.grid.row - b.grid.row || a.grid.col - b.grid.col);
+  assert.deepEqual(ordered.map((widget) => widget.id), ['left', 'middle', 'right', 'secondLeft', 'secondRight']);
+  assert.deepEqual(ordered.map((widget) => [widget.grid.col, widget.grid.row]),
+    [[1, 2], [5, 2], [9, 2], [1, 7], [5, 7]]);
+  assert.deepEqual(arrangeSchema5Widgets(changed, 'a'), changed);
+  config.pages[0].widgets = [
+    { id: 'tall', grid: { col: 9, row: 2, w: 4, h: 20 } },
+    { id: 'upper', grid: { col: 1, row: 3, w: 4, h: 4 } },
+    { id: 'lower', grid: { col: 1, row: 10, w: 4, h: 4 } },
+  ];
+  const tall = arrangeSchema5Widgets(config, 'a');
+  assert.deepEqual([...tall.pages[0].widgets].sort((a, b) => a.grid.col - b.grid.col).map((widget) => widget.id),
+    ['upper', 'tall', 'lower'], 'tall widget cannot transitively join disjoint original rows');
+  assert.deepEqual(arrangeSchema5Widgets(tall, 'a'), tall);
+});
+
 test('automatic arrangement stays stable for 200 mixed-size widgets at maximum raster density', () => {
   const config = source();
   config.settings.gridColumns = 192;

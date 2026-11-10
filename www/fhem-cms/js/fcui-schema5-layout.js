@@ -128,11 +128,34 @@ export function arrangeSchema5Widgets(config, pageId) {
   const [navigation, ...widgets] = items;
   const placed = [{ col: navigation.x + 1, row: navigation.y + 1, w: navigation.w, h: navigation.h }];
   const positions = new Map();
+  const pending = widgets.sort((a, b) => a.y - b.y || a.x - b.x);
+  const ordered = [];
+  while (pending.length) {
+    const first = pending.shift();
+    const band = [first];
+    let top = first.y;
+    let bottom = first.y + first.h;
+    for (let i = 0; i < pending.length;) {
+      const widget = pending[i];
+      const overlap = Math.min(bottom, widget.y + widget.h) - Math.max(top, widget.y);
+      if (overlap >= Math.min(bottom - top, widget.h) / 2) {
+        band.push(...pending.splice(i, 1));
+        top = Math.max(top, widget.y);
+        bottom = Math.min(bottom, widget.y + widget.h);
+      } else {
+        i += 1;
+      }
+    }
+    ordered.push(...band.sort((a, b) => a.x - b.x || a.y - b.y));
+  }
   let cursor = { col: 1, row: 1 };
-  for (const widget of widgets.sort((a, b) => a.y - b.y || a.x - b.x)) {
+  for (const widget of ordered) {
     let position;
     // A first free rectangle starts at the cursor row or at an obstacle's bottom edge.
-    const rows = [...new Set([cursor.row, ...placed.map((grid) => grid.row + grid.h)])]
+    // Wrapped rows start below all earlier widgets, so tall tiles cannot mix reading rows.
+    const nextRow = Math.max(cursor.row + 1, ...[...positions.values()].map((grid) => grid.row + grid.h));
+    const rows = [...new Set([cursor.row, nextRow, ...placed.map((grid) => grid.row + grid.h)])]
+      .filter((row) => row === cursor.row || row >= nextRow)
       .filter((row) => row >= cursor.row && row + widget.h <= 1001).sort((a, b) => a - b);
     for (const row of rows) {
       let col = row === cursor.row ? cursor.col : 1;
