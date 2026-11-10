@@ -162,13 +162,14 @@ auf Rasterzellen aufgerundet und innerhalb der Seitenbreite platziert.
 Danach können Sie sie weiterhin manuell skalieren. Vertikal erscheint das
 Burger-Menü erst, wenn die breiteste Schaltfläche oder die gesamte Höhe der
 Punkte nicht in das Widget passt. Horizontal muss die ganze Zeile hineinpassen.
-Die Vorschau nutzt weiterhin die Seitenbreite und eine automatische Höhe.
+Auf dem Desktop nutzt die Vorschau dieselbe Navigationsposition und -größe
+wie der Editor. Nur auf schmalen Ansichten erhält die Navigation automatische Höhe.
 Auch dort folgen Widgetgrößen und Inhalte der Fenstergröße und dem Browser-Zoom.
 Das exakte Bearbeitungsraster bricht nicht um: Reicht der Platz nicht, scrollen
 Sie innerhalb des Arbeitsbereichs seitlich zu den übrigen Widgets. Die
 Browserseite und Werkzeugleiste bleiben dabei an ihrer Position. Zoom und
 Fensteränderungen verändern keine gespeicherten Rasterpositionen. Die Vorschau
-zeigt weiterhin den automatischen Umbruch der späteren Ansicht.
+zeigt dieselbe Anordnung wie die spätere Ansicht.
 
 **Widgettitel ausrichten (alle Seiten)** legt linksbündige, zentrierte oder
 rechtsbündige Titel für alle Widgets dieses CMS-Devices fest. Ohne Einstellung
@@ -178,8 +179,8 @@ und Textformatierungen innerhalb von Text-/HTML-Widgets bleiben unverändert.
 
 ### Fenstergröße, Browser-Zoom und Drehen
 
-Homepage und Vorschau passen die Anordnung automatisch an die verfügbare
-Inhaltsbreite an, auch beim Drehen eines Smartphones oder Tablets. Widgets und
+Homepage, Vorschau und Editor zeigen bei gleicher verfügbarer Inhaltsbreite
+auf dem Desktop dieselben Positionen, Zeilen und Größenverhältnisse. Widgets und
 Navigationsschaltflächen wachsen bzw. schrumpfen gemeinsam mit der Fensterbreite.
 Wertanzeigen, Schalter, Taster und Statussymbole nutzen ihren Innenraum mit
 kleinem Sicherheitsabstand aus. Titel und eventuelle Fehlermeldungen bleiben
@@ -187,18 +188,19 @@ separat; lange Werte und Beschriftungen werden kleiner eingepasst statt
 abgeschnitten. Schieberegler reichen bis nahe an die seitlichen Ränder.
 Der Browser-Zoom wird dabei nicht mehr durch vollständiges Einpassen aufgehoben:
 Hineinzoomen vergrößert Kacheln und Beschriftungen sichtbar, Hinauszoomen verkleinert
-sie. Bei Platzmangel rutschen Widgets in die nächste Zeile, statt horizontal aus
-dem Fenster zu laufen. Die Zeilen können deshalb auch auf dem Desktop von den
-gespeicherten Rasterpositionen abweichen; diese werden nicht verändert.
+sie. Reicht der Platz auf dem Desktop nicht, lässt sich der Rasterbereich
+seitlich scrollen; Werkzeugleiste und Browserseite bleiben an ihrer Position.
 
-Die gespeicherte Rasterbreite bestimmt die relative Kachelgröße; kleine Widgets
-erhalten mindestens ein Viertel der Bezugsbreite. Breite und Höhe verwenden
-dieselbe Skalierung, das gespeicherte Seitenverhältnis bleibt erhalten, mit
-mindestens 6 rem Höhe (bei Standardschrift 96 Pixel). Zwei kleine Widgets passen
-weiterhin auf übliche Smartphonebreiten. Der Umbruch hängt vom tatsächlichen
-Platzbedarf ab, nicht mehr von festen Geräte-Breakpoints.
+Bis einschließlich 600 Pixel Inhaltsbreite ordnen Homepage und Vorschau die
+Widgets automatisch in Leserichtung mit Zeilenumbruch an, auch beim Drehen eines
+Smartphones. Nur in dieser schmalen Ansicht erhalten kleine Widgets mindestens
+ein Viertel der Bezugsbreite und 6 rem Höhe (bei Standardschrift 96 Pixel).
+Breite und Höhe folgen dem gespeicherten Seitenverhältnis. Zwei kleine Widgets
+passen weiterhin auf übliche Smartphonebreiten. Gespeicherte Rasterpositionen
+werden dabei nicht verändert; der Editor bleibt immer beim exakten Raster.
 
-Die Navigation steht vor den Widgets. Auch ihre konfigurierten Buttonbreiten
+Die Navigation bleibt auf dem Desktop an ihrer Rasterposition und steht nur
+in der schmalen Ansicht vor den Widgets. Auch ihre konfigurierten Buttonbreiten
 und -höhen skalieren mit; Pixelangaben beziehen sich auf 1200 Pixel Inhaltsbreite
 bei Standardschrift. Passen alle sichtbaren
 Menüeinträge einschließlich Abständen in ihre verfügbare Breite, bleiben sie

@@ -76,7 +76,7 @@ async function browserResult(profile, url, child, interact) {
           resolve({ status: output.dataset.result, text: output.textContent });
         }, 50);
       })`,
-      awaitPromise: true, returnByValue: true, timeout: 20000,
+      awaitPromise: true, returnByValue: true, timeout: 30000,
     });
     assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
     const output = reply.result.value;
@@ -105,7 +105,14 @@ async function testServer() {
   return server;
 }
 
-test('widget titles inherit alignment and compact contents fill their available area', {
+for (const [name, fixtures] of [
+  ['widget titles inherit alignment and compact contents fill their available area',
+    [['36_widget_titles.html', 100], ['37_widget_content.html', 600],
+      ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],
+      ['42_richtext_selection.html', 85], ['43_auto_arrange.html', 84],
+      ['44_placeholder_units.html', 384], ['45_solarflow_sizing.html', 868], ['46_unit_inputs.html', 998]]],
+  ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 850]]],
+]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,
 }, async () => {
@@ -120,11 +127,7 @@ test('widget titles inherit alignment and compact contents fill their available 
   const closed = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
   const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
-    for (const [fixture, minimum] of [['36_widget_titles.html', 100], ['37_widget_content.html', 600],
-      ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],
-      ['42_richtext_selection.html', 85], ['43_auto_arrange.html', 84],
-      ['44_placeholder_units.html', 384], ['45_solarflow_sizing.html', 868],
-      ['46_unit_inputs.html', 998]]) {
+    for (const [fixture, minimum] of fixtures) {
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child);
       assert.ok(data.checks >= minimum, `${fixture}: complete regression coverage (${data.checks})`);
@@ -398,7 +401,8 @@ test('real browser zoom and resizing scale widgets and navigation without writes
     for (const zoom of [0.8, 1.25, 2]) {
       for (const font of ['navFont', 'widgetFont']) {
         const ratio = results.get(zoom).initial[font] * zoom / results.get(1).initial[font];
-        assert.ok(zoom < 1 ? ratio < 0.98 : ratio > 1.02, `${font} visibly follows real zoom ${zoom}`);
+        assert.ok(zoom < 1 ? ratio < 0.98 : ratio > 1.02,
+          `${font} visibly follows real zoom ${zoom}: ${ratio}`);
       }
       for (const element of ['widget', 'link']) {
         for (const dimension of ['width', 'height']) {
@@ -416,7 +420,7 @@ test('real browser zoom and resizing scale widgets and navigation without writes
     }
     const rowCount = (zoom) => results.get(zoom).initial.widgets.slice(0, 4)
       .filter((item) => Math.abs(item.y - results.get(zoom).initial.widgets[0].y) < 1).length;
-    assert.ok(rowCount(2) < rowCount(1), 'zooming in places fewer widgets on a row');
+    assert.equal(rowCount(2), rowCount(1), 'desktop zoom preserves saved rows just like the editor');
     console.log(JSON.stringify([...results].map(([zoom, data]) => ({
       zoom, viewport: data.initial.viewport, widget: data.initial.widget.width,
       button: data.initial.link.width, rowCount: rowCount(zoom),

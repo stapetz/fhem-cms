@@ -30,8 +30,9 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
   const measure = () => {
     if (stopped || nav.clientWidth <= 0) return;
     const required = measureSchema5Navigation(nav);
+    const fixedHeight = typeof constrainHeight === 'function' ? constrainHeight() : constrainHeight;
     const compact = required.width > nav.clientWidth + 0.5
-      || (constrainHeight && required.height > nav.clientHeight + 0.5);
+      || (fixedHeight && required.height > nav.clientHeight + 0.5);
     nav.toggleAttribute('data-compact', compact);
     if (!compact) {
       const focused = nav.ownerDocument.activeElement === burger;

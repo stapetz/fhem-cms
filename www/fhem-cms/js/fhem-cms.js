@@ -2062,7 +2062,10 @@ async function startSchema5Device(client, shell, card, isSuspended) {
   document.documentElement.style.setProperty('--cms-widget-title-align', config.settings?.titleAlign || 'left');
   const grid = document.createElement('div');
   grid.className = 'grid-stack cms-schema5-grid';
-  shell.append(grid);
+  const workspace = document.createElement('div');
+  workspace.className = 'cms-schema5-workspace';
+  workspace.append(grid);
+  shell.append(workspace);
   const view = new viewModule.Schema5View({
     GridStack: runtime.GridStack, root: grid, status: card, config, client: liveClient,
     services: createSchema5WidgetServices(client),

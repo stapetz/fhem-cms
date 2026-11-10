@@ -289,6 +289,8 @@ export class Schema5Editor {
 
   async #display(state, generation) {
     if (!this.#active || this.#suspended || generation !== this.#generation) return;
+    const scrollLeft = this.#content.scrollLeft;
+    const scrollTop = this.#content.scrollTop;
     if (this.#view) this.#view.stop();
     const config = state.draft || state.live;
     document.documentElement.setAttribute('data-cms-theme', config.theme === 'light' ? 'light' : 'dark');
@@ -314,6 +316,8 @@ export class Schema5Editor {
     await view.start();
     this.#applyGridGuides();
     if (this.#active && !this.#suspended && generation === this.#generation && this.#view === view) {
+      this.#content.scrollLeft = scrollLeft;
+      this.#content.scrollTop = scrollTop;
       this.#setActions(true, state.draft !== null);
       this.#reloadButton.hidden = true;
     }
