@@ -190,6 +190,12 @@ test('real editor pointer drag and resize preserve appearance on a scrollable ca
         })()`);
         await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
         await command('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+        if (selector === '.cms-widget-drag') {
+          // Gridstack sets its drag origin only after crossing the 3px activation threshold.
+          point.x += 4;
+          await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y, button: 'left', buttons: 1 });
+          await pause(25);
+        }
         for (let step = 1; step <= 12; step++) {
           await command('Input.dispatchMouseEvent', { type: 'mouseMoved',
             x: point.x + point.cell * dx * step / 12, y: point.y + point.cell * dy * step / 12,
