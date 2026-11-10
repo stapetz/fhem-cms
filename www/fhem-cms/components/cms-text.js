@@ -19,6 +19,7 @@ class FHEMCMSText extends HTMLElement {
     }
     this.shadowRoot.innerHTML = `
       <style>
+        [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
         :host { display: block; min-width: 0; }
         * { box-sizing: border-box; }
         .tile { height: 100%; padding: 1rem; container-type: size; overflow: hidden; border: 1px solid var(--cms-border, #43564a); border-radius: 1rem;

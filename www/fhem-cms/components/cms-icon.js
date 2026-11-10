@@ -20,6 +20,7 @@ class FHEMCMSIcon extends HTMLElement {
     }
     this.shadowRoot.innerHTML = `
       <style>
+        [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
         .tile { position: relative; display: grid; height: 100%; place-items: center; overflow: hidden; container-type: size;

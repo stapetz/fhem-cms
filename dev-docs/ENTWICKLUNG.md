@@ -96,8 +96,17 @@ Bekannte Layoutfehler setzen das Raster mit sichtbarer Meldung zurück;
 unklare Schreibantworten erfordern explizites Neuladen. `pagehide` verhindert
 noch nicht gestartete Pointer-Schreibaktionen und unterdrückt späte Antworten.
 Die Seiteneinstellungen enthalten ausschließlich Look & Feel (Theme, Rahmen
-und Rasterdichte), keine Widgetauswahl, Rastervorschau oder Positions-/Größenmaske.
+und Rasterdichte sowie Widget-Titelausrichtung), keine Widgetauswahl, Rastervorschau oder Positions-/Größenmaske.
 Widgets werden nur direkt im Editiermodus verschoben und skaliert.
+`settings.titleAlign` ist optional und akzeptiert ausschließlich `left`, `center`
+oder `right`; ohne Feld gilt `left`. Seiteneinstellungen (auch im alten Editor),
+Homepage, Vorschau und Editor vererben `--cms-widget-title-align` an die zwölf
+Shadow-DOM-Komponenten. Nur `[data-title]` verwendet diese Ausrichtung, nicht
+Dialogüberschriften oder benutzerformatierte Inhalte. Die Tests
+`t/10_schema5_layout.test.js` und `t/18_schema5_page_panel.test.js` prüfen
+Frontend-/Perl-Validierung, Entwurfspersistenz und unveränderte Positionen;
+`t/36_widget_titles.html`, automatisch über `t/35_schema5_scaling.test.js`
+ausgeführt, prüft alle Widgettypen im echten Chrome.
 Unter **Bearbeiten → Seiteneinstellungen** sind 12, 24, 48, 96 oder 192 Spalten wählbar.
 Die Auswahl gilt deviceweit, bleibt in Schema 5 und skaliert alle Seiten samt
 Navigation in beiden Achsen. Beim Vergröbern werden Koordinaten und Größen

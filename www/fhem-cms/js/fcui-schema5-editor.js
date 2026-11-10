@@ -285,6 +285,7 @@ export class Schema5Editor {
     const config = state.draft || state.live;
     document.documentElement.setAttribute('data-cms-theme', config.theme === 'light' ? 'light' : 'dark');
     document.documentElement.setAttribute('data-cms-frames', config.settings?.showFrames === false ? 'off' : 'on');
+    document.documentElement.style.setProperty('--cms-widget-title-align', config.settings?.titleAlign || 'left');
     this.#mode.textContent = state.draft ? 'Entwurf' : 'Live';
     this.#content.replaceChildren();
     const grid = document.createElement('div');

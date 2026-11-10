@@ -87,7 +87,9 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
     assert.ok(descendants(root).every((node) => node.type !== 'number'
       && !node.className?.includes('grid-stack') && node.textContent !== 'Position übernehmen'));
     const settings = root.children[3];
-    assert.equal(settings.children.length, 3, 'only theme, frames and raster density');
+    assert.equal(settings.children.length, 4, 'theme, frames, raster density and global title alignment');
+    assert.equal(settings.children[3].children[0].value, 'left');
+    assert.deepEqual(settings.children[3].children[0].children.map((option) => option.value), ['left', 'center', 'right']);
     assert.equal(settings.children[0].children[0].value, 'dark');
     assert.equal(settings.children[1].children[0].checked, true);
     assert.deepEqual(settings.children[2].children[0].children.map((option) => option.value), ['12', '24', '48', '96', '192']);
@@ -109,6 +111,7 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
     const next = open();
     root.children[3].children[0].children[0].value = 'light';
     root.children[3].children[1].children[0].checked = false;
+    root.children[3].children[3].children[0].value = 'center';
     const gate = f.delay();
     const saving = root.children[4].children[1].fire('click');
     assert.equal(root.children[4].children[0].disabled, true);
@@ -125,6 +128,7 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
     assert.equal(draft.pages[0].widgets[1].html, '<span device="Temp" reading="state"></span>');
     assert.equal(draft.theme, 'light');
     assert.equal(draft.settings.showFrames, false);
+    assert.equal(draft.settings.titleAlign, 'center');
     assert.equal(closed, 2);
     assert.equal(root.children.length, 0);
   } finally {
@@ -352,6 +356,12 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     new Schema5PagePanel({ root, controller, pageId: 'a', token: state.token,
       browser: { confirm: () => true }, onClose: (outcome) => { closed = outcome; } });
     root.children[3].children[1].children[0].checked = false;
+    const align = root.children[3].children[3].children[0];
+    align.value = 'justify';
+    await root.children[4].children[1].fire('click');
+    assert.match(root.children[2].textContent, /Ungültige Titelausrichtung/);
+    assert.equal(controller.snapshot().draft, null);
+    align.value = 'right';
     const columns = root.children[3].children[2].children[0];
     columns.value = '192';
     columns.fire('change');
@@ -363,6 +373,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     assert.equal(draft.pages[0].widgets[1].html, '<span device="Temp" reading="state"></span>');
     assert.equal(draft.settings.showFrames, false);
     assert.equal(draft.settings.gridColumns, 192);
+    assert.equal(draft.settings.titleAlign, 'right');
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
     assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages[0].widgets[0].grid.row, 17);
   } finally {

@@ -6,6 +6,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     throw new Error('Navigation, Widget-Dienste und Snapshot-Map erforderlich');
   }
   schema5GridItems(config, pageId);
+  root.style.setProperty('--cms-widget-title-align', config.settings.titleAlign || 'left');
   const page = config.pages.find((item) => item.id === pageId);
   const widgets = new Map(page.widgets.map((widget) => [widget.id, widget]));
   const elements = new Map();

@@ -756,7 +756,7 @@ sub FHEMCMS_ValidateConfig {
     return 'Nicht unterstuetzte schemaVersion'
         if (!$isInt->($config->{schemaVersion}, $targetSchema, $targetSchema));
     if (exists($config->{settings})) {
-        $err = $exact->($config->{settings}, 'settings', [], ['showFrames', 'layoutMode', 'gridColumns']);
+        $err = $exact->($config->{settings}, 'settings', [], ['showFrames', 'layoutMode', 'gridColumns', 'titleAlign']);
         return $err if ($err);
         return 'Ungueltiger Wert fuer layoutMode'
             if (exists($config->{settings}{layoutMode}) && (ref($config->{settings}{layoutMode})
@@ -770,6 +770,10 @@ sub FHEMCMS_ValidateConfig {
                     : $config->{settings}{gridColumns} !~ /\A(?:12|24|48)\z/)));
         return 'Ungueltiger Wert fuer showFrames'
             if (exists($config->{settings}{showFrames}) && !$isBool->($config->{settings}{showFrames}));
+        return 'Ungueltiger Wert fuer titleAlign'
+            if (exists($config->{settings}{titleAlign}) && (ref($config->{settings}{titleAlign})
+                || !defined($config->{settings}{titleAlign})
+                || $config->{settings}{titleAlign} !~ /\A(?:left|center|right)\z/));
     }
     if ($targetSchema == 5) {
         return 'Schema 5 erfordert Navigation und 12, 24, 48, 96 oder 192 Rasterspalten'

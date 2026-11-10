@@ -16,6 +16,7 @@ export class Schema5PagePanel {
   #status;
   #theme;
   #frames;
+  #titleAlign;
   #form;
   #save;
   #close;
@@ -75,7 +76,16 @@ export class Schema5PagePanel {
     }
     this.#columns.value = String(config.settings.gridColumns);
     layoutLabel.append(this.#columns);
-    this.#form.append(themeLabel, framesLabel, layoutLabel);
+    const titleLabel = element('label', 'Widgettitel ausrichten (alle Seiten) ');
+    this.#titleAlign = element('select');
+    for (const [value, title] of [['left', 'Links'], ['center', 'Zentriert'], ['right', 'Rechts']]) {
+      const option = element('option', title);
+      option.value = value;
+      this.#titleAlign.append(option);
+    }
+    this.#titleAlign.value = config.settings.titleAlign || 'left';
+    titleLabel.append(this.#titleAlign);
+    this.#form.append(themeLabel, framesLabel, layoutLabel, titleLabel);
     this.#form.addEventListener('submit', (event) => event.preventDefault());
 
     this.#save = element('button', 'Speichern');
@@ -89,7 +99,7 @@ export class Schema5PagePanel {
     footer.append(this.#close, this.#save);
     root.append(heading, hint, this.#status, this.#form, footer);
 
-    this.#settingsBaseline = JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value]);
+    this.#settingsBaseline = this.#settings();
     this.#columns.addEventListener('change', () => this.#changeColumns());
     this.#save.addEventListener('click', () => this.#saveDraft());
     this.#close.addEventListener('click', () => {
@@ -109,7 +119,11 @@ export class Schema5PagePanel {
   }
 
   #changed() {
-    return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value]) !== this.#settingsBaseline;
+    return this.#settings() !== this.#settingsBaseline;
+  }
+
+  #settings() {
+    return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value, this.#titleAlign.value]);
   }
 
   #changeColumns() {
@@ -129,12 +143,17 @@ export class Schema5PagePanel {
       this.#message('Ungültige Darstellung', true);
       return;
     }
+    if (!['left', 'center', 'right'].includes(this.#titleAlign.value)) {
+      this.#message('Ungültige Titelausrichtung', true);
+      return;
+    }
     let pending;
     try {
       const candidate = resizeSchema5Grid(this.#config, Number(this.#columns.value));
-      const [originalTheme, originalFrames] = JSON.parse(this.#settingsBaseline);
+      const [originalTheme, originalFrames, , originalTitleAlign] = JSON.parse(this.#settingsBaseline);
       if (this.#theme.value !== originalTheme) candidate.theme = this.#theme.value;
       if (this.#frames.checked !== originalFrames) candidate.settings.showFrames = this.#frames.checked;
+      if (this.#titleAlign.value !== originalTitleAlign) candidate.settings.titleAlign = this.#titleAlign.value;
       pending = this.#controller.saveDraft(candidate, this.#token);
     } catch (error) {
       this.#message(`Änderung ungültig: ${error.message || String(error)}`, true);
