@@ -163,27 +163,30 @@ test('real editor pointer drag and resize preserve appearance on a scrollable ca
         assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
         return reply.result.value;
       };
-      await evaluate(`new Promise(resolve => {
+      const readiness = await evaluate(`new Promise(resolve => {
         const timer = setInterval(() => {
           const output = document.querySelector('#result');
           if (!output.dataset.ready && !output.dataset.result) return;
-          clearInterval(timer); resolve();
+          clearInterval(timer); resolve({ready:output.dataset.ready, text:output.textContent});
         }, 25);
       })`);
-      for (const [selector, dx, dy, writes] of [
-        ['.cms-widget-drag', 2, 1, 1], ['.ui-resizable-se', 1, 1, 2],
+      assert.equal(readiness.ready, 'true', readiness.text);
+      for (const [id, selector, dx, dy, writes] of [
+        ['__nav', '.ui-resizable-se', 8, 2, 1],
+        ['value', '.cms-widget-drag', 2, 1, 2], ['value', '.ui-resizable-se', 1, 1, 3],
       ]) {
-        if (writes === 2) {
+        if (writes === 3) {
           await evaluate(`document.querySelector('.cms-schema5-workspace').scrollLeft = 100`);
           await pause(100);
         }
         const point = await evaluate(`(() => {
           const grid = document.querySelector('.cms-grid-editable');
-          const widget = [...grid.children].find(el => el.gridstackNode?.id === 'value');
+          const widget = [...grid.children].find(el => el.gridstackNode?.id === '${id}');
           const handle = widget.querySelector('${selector}');
           const rect = handle.getBoundingClientRect();
-          return { x:rect.x + rect.width/2, y:rect.y + rect.height/2,
-            cell:grid.getBoundingClientRect().width/12 };
+          return { x:'${selector}' === '.ui-resizable-se' ? rect.right - 2 : rect.x + rect.width/2,
+            y:'${selector}' === '.ui-resizable-se' ? rect.bottom - 2 : rect.y + rect.height/2,
+            cell:grid.getBoundingClientRect().width/grid.gridstack.getColumn() };
         })()`);
         await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
         await command('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
@@ -208,7 +211,7 @@ test('real editor pointer drag and resize preserve appearance on a scrollable ca
     };
     const result = await browserResult(profile,
       `http://127.0.0.1:${server.address().port}/t/38_editor_scaling.html`, child, interact);
-    assert.equal(result.writes, 2);
+    assert.equal(result.writes, 3);
     assert.ok(result.checks >= 20);
   } catch (error) {
     throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });
