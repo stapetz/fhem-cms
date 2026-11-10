@@ -7,13 +7,16 @@ Lokale Prüfung am 10.11.2026, noch keine Geräteabnahme oder `main`-Freigabe:
 - `perl -c FHEM/01_FHEMCMS.pm` und `prove -l t/*.t`: erfolgreich
   (487 Assertions einschließlich Gerätehilfe).
 - `node --test t/*.test.js`: 104 Tests erfolgreich, keine übersprungen.
+  Anschließend gezielt erneut geprüft: 28 Gerätehilfe-Assertions und zwei
+  LinkWidget-Tests einschließlich strikter JSON-Typen und aller Rasterdichten.
 - `node scripts/build-fcui.mjs --check` und `git diff --check`: erfolgreich.
 - `t/48_link_widget.test.js`: positive/negative Frontend-/Perl-Parität für
   Linkziele, Textpositionen, Unicode-Grenzen, Bildpfade und 1–200 Kacheln;
   unbekannte Felder, Überlappungen und Rasterüberläufe werden abgewiesen.
-- Chromium: `t/49_link_widget.html`, 93 Prüfungen einschließlich echter
+- Chromium: `t/49_link_widget.html`, 99 Prüfungen einschließlich echter
   Pointerbewegung um vier Spalten, Skalierung um zwei Spalten/eine Zeile,
-  Speichern/Wiederöffnen, Abbrechen, Upload-/Schreibfehler und Bereinigung.
+  Speichern/Wiederöffnen, Abbrechen, decodierter lokaler Bilder,
+  Upload-/Schreibfehler und Bereinigung.
 - `t/22_schema5_widget_panel.test.js`: Anlage über Typauswahl mit gültigem
   Standardlink, vollständiger Perl-Entwurfs-Write/Readback und unveränderte
   Live-Datei. Navigationstest: interne Referenzen folgen Seiten-ID-Änderungen,

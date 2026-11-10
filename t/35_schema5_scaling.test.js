@@ -87,6 +87,11 @@ async function browserResult(profile, url, child, interact) {
 
 async function testServer() {
   const server = createServer(async (request, response) => {
+    if (new URL(request.url, 'http://localhost').pathname === `/t/media/${'a'.repeat(32)}.png`) {
+      response.setHeader('Content-Type', 'image/png');
+      response.end(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jrJkAAAAASUVORK5CYII=', 'base64'));
+      return;
+    }
     const path = resolve(root, `.${new URL(request.url, 'http://localhost').pathname}`);
     if (!path.startsWith(root.endsWith(sep) ? root : `${root}${sep}`)) {
       response.writeHead(403).end(); return;

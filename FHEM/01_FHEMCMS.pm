@@ -1128,6 +1128,8 @@ sub FHEMCMS_ValidateConfig {
 # Ereignis-Attribute, keine Ressourcen. Platzhalter {{Device:reading}} sind reiner Text.
 sub FHEMCMS_ValidateLinks {
     my ($links, $pages) = @_;
+    my $json = JSON::PP->new;
+    my $isString = sub { defined($_[0]) && !ref($_[0]) && $json->encode($_[0]) =~ /\A"/ };
     return 'LinkWidget benoetigt 1 bis 200 Links'
         if (ref($links) ne 'ARRAY' || @{$links} < 1 || @{$links} > 200);
     my %pages = map { ref($_) eq 'HASH' && defined($_->{id}) && !ref($_->{id}) ? ($_->{id} => 1) : () } @{$pages};
@@ -1143,9 +1145,9 @@ sub FHEMCMS_ValidateLinks {
             if (grep { !exists($link->{$_}) } @required);
         return 'Fehlendes oder unbekanntes Linkfeld'
             if (grep { !$allowed{$_} } keys(%{$link}));
-        return 'Ungueltige Link-ID' if (!defined($link->{id}) || ref($link->{id})
+        return 'Ungueltige Link-ID' if (!$isString->($link->{id})
             || $link->{id} !~ /\A[A-Za-z0-9_-]{1,64}\z/ || $ids{$link->{id}}++);
-        return 'Ungueltiger Linktext' if (!defined($link->{text}) || ref($link->{text})
+        return 'Ungueltiger Linktext' if (!$isString->($link->{text})
             || $link->{text} !~ /\S/ || length($link->{text}) > 128 || $link->{text} =~ /[\x00-\x1f\x7f]/);
         return 'Ungueltige Linktext-Darstellung' if (!JSON::PP::is_bool($link->{showText})
             || !defined($link->{textPosition}) || ref($link->{textPosition})
@@ -1169,7 +1171,7 @@ sub FHEMCMS_ValidateLinks {
         return 'Ungueltiges Linkraster' if (ref($grid) ne 'HASH' || join(',', sort keys %{$grid}) ne 'col,h,row,w');
         for my $key (qw(col row w h)) {
             return 'Ungueltiges Linkraster' if (!defined($grid->{$key}) || ref($grid->{$key})
-                || JSON::PP->new->encode($grid->{$key}) !~ /\A[0-9]{1,4}\z/ || $grid->{$key} < 1);
+                || $json->encode($grid->{$key}) !~ /\A[0-9]{1,4}\z/ || $grid->{$key} < 1);
         }
         return 'Linkraster liegt ausserhalb der Grenzen'
             if ($grid->{col} + $grid->{w} > 13 || $grid->{row} + $grid->{h} > 1001);

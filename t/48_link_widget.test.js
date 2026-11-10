@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { linkHref, validateLinkItems, validLinkUrl } from '../www/fhem-cms/js/link-widget.js';
-import { schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
+import { resizeSchema5Grid, schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
 
 const link = () => ({ id: 'one', kind: 'internal', page: 'home', text: 'Startseite',
   showText: true, textPosition: 'overlay', target: 'self', grid: { col: 1, row: 1, w: 4, h: 3 } });
@@ -72,7 +72,9 @@ test('LinkWidget frontend and backend agree on content, targets, images and nest
     ['missing text', widget => { delete widget.links[0].text; }],
     ['unknown field', widget => { widget.links[0].onclick = 'alert(1)'; }],
     ['invalid id', widget => { widget.links[0].id = '<x>'; }],
+    ['numeric id', widget => { widget.links[0].id = 17; }],
     ['text empty', widget => { widget.links[0].text = '  '; }],
+    ['numeric text', widget => { widget.links[0].text = 17; }],
     ['text length', widget => { widget.links[0].text = 'x'.repeat(129); }],
     ['Unicode text length', widget => { widget.links[0].text = '🌞'.repeat(129); }],
     ['text control', widget => { widget.links[0].text = 'a\u0000b'; }],
@@ -107,4 +109,13 @@ test('LinkWidget frontend and backend agree on content, targets, images and nest
   config.pages[0].widgets[0].links.push({ ...link(), id: 'excess' });
   parity(config, false, '201 links rejected');
   assert.throws(() => validateLinkItems([link()], []), /CMS-Seite/);
+});
+
+test('changing page raster density never rescales the inner LinkWidget raster', () => {
+  const config = source();
+  for (const columns of [12, 24, 48, 96, 192]) {
+    const changed = resizeSchema5Grid(config, columns);
+    assert.deepEqual(changed.pages[0].widgets[0].links, config.pages[0].widgets[0].links);
+    parity(changed, true, `${columns} page columns`);
+  }
 });
