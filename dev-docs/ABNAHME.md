@@ -1,5 +1,38 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Freigegebener Release 1.6.1 (#127)
+
+Am 10.11.2026 hat der Entwickler LinkWidget und Assetmanager als abgenommen
+bestätigt und zur Veröffentlichung nach `main` freigegeben. Enthalten sind
+#123, #124, #125 und die bereits geschlossene Titelkorrektur #121.
+#122 (vollständige DE-/EN-Gerätehilfe) und #126 (Assetsuche) bleiben offen.
+
+Selektive Übernahme von `main` 48380ae, kein Merge des gesamten `dev`:
+
+| Issue | ursprüngliche dev-Commits |
+|---|---|
+| #121 | adb425a |
+| #123 | 91e5258, d862499 |
+| #124 | 9910165 |
+| #125 | 91521b3, c72fb2f, 28af769, 3278c4c, 42433be, b450453 |
+
+Der Versionskonflikt wurde für die anschließende stabile Version aufgelöst.
+Die durch einen Kontextkonflikt angebotene Gerätehilfe und ihr Changelog
+wurden ausdrücklich nicht übernommen. Runtime und Tests entsprechen dem
+abgenommenen dev-Stand mit Ausnahme der ausgeschlossenen Gerätehilfe und
+der stabilen Versionsnummer. KI-Anweisungen wurden nicht nach `main` kopiert.
+Die folgenden dev-Protokolle dokumentieren die historischen Zwischenschritte.
+
+Releaseprüfung auf dem isolierten Branch: `perl -c FHEM/01_FHEMCMS.pm`,
+639 Perl-Assertions (`prove -l t/*.t`) und alle 110 JS-Tests
+(`node --test t/*.test.js`) erfolgreich, einschließlich 204 Assetmanager-
+und 100 LinkWidget-Chromiumchecks.
+
+GitHub-CI und Controls-Generierung für `main` erfolgreich. Releasecommit:
+68d2e79, erzeugte Controls: fc6c01b. Nach Veröffentlichung wird `main`
+nach `dev` zurückgeführt; Weiterentwicklung als 1.6.2-dev. Die Gerätehilfe
+bleibt dort erhalten, aber ausdrücklich außerhalb von Release 1.6.1.
+
 ## Nachbesserung 1.6.1-dev: Informations- und Löschdialoge (#125)
 
 Anforderung vom 10.11.2026: Schließen bei EXIF rechts, Verwendungen als eigenes

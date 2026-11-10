@@ -2,13 +2,27 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
-**Aktuelle stabile Version: 1.2.0**
+**Aktuelle stabile Version: 1.6.1**
 
-**Auf `dev` zur Abnahme: 1.6.1-dev** – LinkWidget mit grafischem Kachelraster
-und gemeinsamer Assetmanager für Bilder/Dokumente, Ordner, Verwendungsschutz
-sowie konfigurierbare Typen und Speichergrenzen, Bildvorschau, EXIF-Anzeige
-und Mehrfachupload per Dateiauswahl oder Drag-and-drop.
-Noch kein `main`-Release.
+## Neu in 1.6.1
+
+- LinkWidget mit mehreren internen oder externen Links, optionalen Bildern
+  und Beschriftungen sowie frei platzierbaren Kacheln im feinen Raster.
+- Gemeinsamer Assetmanager für Text- und Linkwidget unter **Datei**:
+  Bilder und Dokumente in Ordnern verwalten, umbenennen und verschieben.
+- Mehrfachupload per Dateiauswahl oder Drag-and-drop direkt in den geöffneten
+  Ordner; Bildvorschau und EXIF-Informationen.
+- Verwendungsschutz mit Fundstellen in Live und Entwurf; einheitliche
+  Informations- und Bestätigungsdialoge.
+- Konfigurierbare Dateitypen und Speichergrenzen. Bestehende Bildadressen
+  und Hash-Dateinamen bleiben erhalten.
+- Einheitliche Titeldarstellung auch im Textwidget.
+
+Die Assetsuche und die vollständige deutsche/englische Gerätehilfe bleiben
+separaten Weiterentwicklungen vorbehalten.
+
+**Entwicklungsstand auf `dev`: 1.6.2-dev** – basiert auf Release 1.6.1;
+die vollständige DE/EN-Gerätehilfe bleibt als offene Arbeit auf `dev`.
 
 ## Neu in 1.2.0
 
@@ -36,7 +50,7 @@ Die wiederverwendbaren Web Components liegen unter `www/fhem-cms/components/`; d
 
 ## Version
 
-Die aktuelle stabile Version ist **1.2.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
+Die aktuelle stabile Version ist **1.6.1**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
 
 ## Installation und Update in FHEM
 
