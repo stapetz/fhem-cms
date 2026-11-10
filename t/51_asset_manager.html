@@ -21,6 +21,7 @@ let state = { token: String(revision).padStart(64, '0'), folders: [], assets: [i
     types: { png: true, jpg: true, gif: true, pdf: true, docx: true } } };
 let inUse = true;
 let failList = false;
+let failDeleteUsage = false;
 let deleteCalls = 0;
 let uploads = 0;
 const uploadedFolders = [];
@@ -51,7 +52,12 @@ const services = {
       if (!ignoreMove) Object.assign(state.assets.find(item => item.id === request.id), { name: request.name, folder: request.folder });
     }
     else if (request.op === 'policy') state.policy = structuredClone(request.policy);
-    else if (request.op === 'delete') { deleteCalls++; state.assets = state.assets.filter(item => item.id !== request.id); }
+    else if (request.op === 'delete') {
+      if (failDeleteUsage) throw Object.assign(new Error('Asset wird inzwischen verwendet'), {
+        usage: [{ source: 'Entwurf', page: 'neu', pageTitle: 'Neue Seite', widget: 'links2', title: 'Neuer Link' }],
+      });
+      deleteCalls++; state.assets = state.assets.filter(item => item.id !== request.id);
+    }
     else throw new Error(`Unknown operation ${request.op}`);
     return { state: tick() };
   },
@@ -115,6 +121,11 @@ try {
   check(root.querySelector('[data-exif-dialog]').textContent.includes('Test Camera'), 'EXIF popup shows extracted camera');
   check(root.querySelector('[data-exif-dialog]').textContent.includes('2026:11:10 12:34:56'), 'EXIF popup shows date');
   check(root.querySelector('[data-exif-dialog]').textContent.includes('GPS: Breitengrad'), 'EXIF popup shows GPS fields');
+  const exifClose = root.querySelector('[data-exif-close]');
+  check(exifClose.parentElement.classList.contains('footer'), 'EXIF close uses right aligned footer');
+  equal(getComputedStyle(exifClose.parentElement).justifyContent, 'flex-end', 'EXIF close aligned right');
+  check(Math.abs(exifClose.getBoundingClientRect().right - exifClose.parentElement.getBoundingClientRect().right) < 1,
+    'EXIF close rendered at right edge');
   await click(root, '[data-exif-close]');
   const nativeFetch = window.fetch;
   try {
@@ -129,12 +140,19 @@ try {
   } finally { window.fetch = nativeFetch; }
   await click(root, `[data-asset-id="${image.id}"]`);
   await click(root, '[data-usage-button]');
+  check(root.querySelector('[data-usage-dialog]').open, 'usage opens in its own modal');
+  check(!root.querySelector('[data-assets-dialog] [data-usage]'), 'usage never appears below manager content');
   check(root.querySelector('[data-usage]').textContent.includes('Solaranlage'), 'usage shows page title');
   check(root.querySelector('[data-usage]').textContent.includes('text1'), 'usage shows widget');
   check(root.querySelector('[data-usage]').textContent.includes('Entwurf'), 'usage distinguishes draft');
+  equal(getComputedStyle(root.querySelector('[data-usage-close]').parentElement).justifyContent, 'flex-end', 'usage close aligned right like EXIF');
+  await click(root, '[data-usage-close]');
+  check(!root.querySelector('[data-usage-dialog]'), 'usage popup closes and cleans up');
   await click(root, '[data-delete-asset]');
   equal(deleteCalls, 0, 'used asset not deleted');
   check(root.querySelector('[data-status]').textContent.includes('verwendet'), 'in-use warning visible');
+  check(root.querySelector('[data-usage-dialog]').open, 'blocked deletion displays usage in popup too');
+  await click(root, '[data-usage-close]');
   await click(root, '[data-mkdir]');
   check(root.querySelector('[data-folder-create]').textContent.includes('Stammordner'), 'creation dialog names current parent');
   set(root, '[data-folder-create] [data-folder-name]', '../invalid');
@@ -178,6 +196,14 @@ try {
   await click(root, `[data-edit-folder="${nested}"]`);
   await click(root, '[data-rmdir]');
   check(root.querySelector('[data-folder-delete]').open, 'folder deletion requires a separate confirmation');
+  const deleteCancel = root.querySelector('[data-delete-folder-cancel]');
+  const deleteAccept = root.querySelector('[data-delete-folder-accept]');
+  check(deleteCancel.parentElement === deleteAccept.parentElement, 'delete buttons share footer');
+  equal(getComputedStyle(deleteCancel.parentElement).justifyContent, 'flex-end', 'folder delete actions aligned right');
+  equal(getComputedStyle(deleteCancel).borderColor, getComputedStyle(deleteAccept).borderColor, 'cancel and delete have same standard border');
+  equal(getComputedStyle(deleteCancel).backgroundColor, getComputedStyle(deleteAccept).backgroundColor, 'cancel and delete have same standard background');
+  check(Math.abs(deleteAccept.getBoundingClientRect().right - deleteAccept.parentElement.getBoundingClientRect().right) < 1,
+    'folder delete rendered at right edge');
   await click(root, '[data-delete-folder-cancel]');
   equal(state.folders.length, 2, 'cancelling folder deletion preserves entries');
   await click(root, '[data-rmdir]');
@@ -285,11 +311,23 @@ try {
   }
   const beforeDelete = deleteCalls;
   await click(root, `[data-asset-id="${uploaded[0].id}"]`);
+  await click(root, '[data-usage-button]');
+  check(root.querySelector('[data-usage-dialog]').textContent.includes('Keine Verwendung'), 'unused assets report no references in popup');
+  await click(root, '[data-usage-close]');
   await click(root, '[data-delete-asset]');
   equal(deleteCalls, beforeDelete, 'unused asset still needs explicit delete confirmation');
   check(root.querySelector('[data-asset-delete]').open, 'delete button opens confirmation');
   await click(root, '[data-delete-asset-cancel]');
   equal(deleteCalls, beforeDelete, 'cancel leaves file untouched');
+  failDeleteUsage = true;
+  await click(root, '[data-delete-asset]');
+  await click(root, '[data-delete-asset-accept]');
+  equal(deleteCalls, beforeDelete, 'server-side usage race preserves asset');
+  check(root.querySelector('[data-usage-dialog]').open, 'server-side usage race opens popup');
+  check(root.querySelector('[data-usage]').textContent.includes('links2'), 'race popup reports new server reference');
+  root.querySelector('[data-usage-dialog]').dispatchEvent(new Event('cancel', { cancelable: true }));
+  check(!root.querySelector('[data-usage-dialog]'), 'usage cancel removes popup');
+  failDeleteUsage = false;
   await click(root, '[data-delete-asset]');
   await click(root, '[data-delete-asset-accept]');
   equal(deleteCalls, beforeDelete + 1, 'confirmed unused asset deleted');

@@ -45,7 +45,6 @@ export async function openAssetManager(services, { mode = null, owner = document
       .destination { width:min(90vw,48rem); }
       .folder-create { width:min(90vw,28rem); }
       .destination .assets { max-height:40vh; }
-      .danger { border-color:var(--cms-danger,#ffb4a8); }
       .assets { display:grid; grid-template-columns:repeat(auto-fill,minmax(7rem,1fr)); gap:.5rem;
         align-content:start; max-height:42vh; min-height:10rem; overflow:auto; }
       .assets.drag-over { outline:2px dashed var(--cms-accent,#8fd0a8); outline-offset:-2px;
@@ -101,7 +100,7 @@ export async function openAssetManager(services, { mode = null, owner = document
           <button type="button" data-policy>Administration speichern</button>
         </details>
       </form>
-      <p class="status" role="status" data-status></p><ul class="usage" data-usage></ul>
+      <p class="status" role="status" data-status></p>
       <p class="hint">Löschen ist bei Verwendung in Live oder Entwurf gesperrt. Frühere Sicherungen enthalten
         keine Assetdateien: Nach dem Löschen können Bild-/Dokumentverweise aus alten Sicherungen fehlen.
         Nur leere Ordner lassen sich löschen. Grenzen: 200 Ordner, 10 Ebenen, 2000 Assets.</p>
@@ -130,10 +129,12 @@ export async function openAssetManager(services, { mode = null, owner = document
     $('[data-status]').classList.toggle('error', error);
   };
   const usage = entries => {
-    $('[data-usage]').replaceChildren();
+    const list = element('ul'); list.className = 'usage'; list.dataset.usage = '';
     for (const entry of entries || []) {
-      $('[data-usage]').append(element('li', `${entry.source}: ${entry.pageTitle || entry.page} (${entry.page}) → ${entry.title} (${entry.widget})`));
+      list.append(element('li', `${entry.source}: ${entry.pageTitle || entry.page} (${entry.page}) → ${entry.title} (${entry.widget})`));
     }
+    if (!list.children.length) list.append(element('li', 'Keine Verwendung in Live oder Entwurf gefunden.'));
+    showInfo('Verwendungen', [list], 'usage');
   };
   const allowed = asset => !mode || (mode === 'image' ? asset.image : !asset.image);
   const folderName = id => id === 'root' ? 'Stammordner' : state.folders.find(item => item.id === id)?.name;
@@ -171,7 +172,7 @@ export async function openAssetManager(services, { mode = null, owner = document
         edit.dataset.editFolder = child.id;
         edit.setAttribute('aria-label', `Ordner „${child.name}“ bearbeiten`);
         edit.addEventListener('click', () => {
-          selected = null; selectedFolder = child.id; usage([]); render();
+          selected = null; selectedFolder = child.id; render();
         });
         entry.append(item, edit); container.append(entry);
       } else container.append(item);
@@ -255,7 +256,7 @@ export async function openAssetManager(services, { mode = null, owner = document
     dialog.append(title, element('p', message));
     const cancel = element('button', 'Abbrechen'); cancel.type = 'button'; cancel.dataset[`delete${kind === 'folder' ? 'Folder' : 'Asset'}Cancel`] = '';
     const accept = element('button', 'Löschen'); accept.type = 'button';
-    accept.className = 'danger'; accept.dataset[`delete${kind === 'folder' ? 'Folder' : 'Asset'}Accept`] = '';
+    accept.dataset[`delete${kind === 'folder' ? 'Folder' : 'Asset'}Accept`] = '';
     const finish = value => {
       dismissFolderDialog = undefined; dialog.close(); dialog.remove(); resolve(value);
     };
@@ -263,21 +264,29 @@ export async function openAssetManager(services, { mode = null, owner = document
     accept.addEventListener('click', () => finish(true));
     dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
     dismissFolderDialog = () => finish(false);
-    dialog.append(cancel, accept); root.append(dialog); dialog.showModal(); cancel.focus();
+    const footer = element('div'); footer.className = 'footer'; footer.append(cancel, accept);
+    dialog.append(footer); root.append(dialog); dialog.showModal(); cancel.focus();
   });
-  const showExif = (asset, rows) => {
-    const dialog = element('dialog'); dialog.className = 'exif'; dialog.dataset.exifDialog = '';
-    const title = element('h2', `EXIF: ${asset.name}`); title.id = 'asset-exif-title';
+  const showInfo = (heading, content, kind) => {
+    if (closed) return;
+    const dialog = element('dialog'); dialog.className = 'exif'; dialog.dataset[`${kind}Dialog`] = '';
+    const title = element('h2', heading); title.id = `asset-${kind}-title`;
     dialog.setAttribute('aria-labelledby', title.id);
-    const list = element('dl');
-    for (const row of rows) list.append(element('dt', row.name), element('dd', row.value));
-    const close = element('button', 'Schließen'); close.type = 'button'; close.dataset.exifClose = '';
+    const close = element('button', 'Schließen'); close.type = 'button'; close.dataset[`${kind}Close`] = '';
     const finish = () => { dismissFolderDialog = undefined; dialog.close(); dialog.remove(); };
     close.addEventListener('click', finish);
     dialog.addEventListener('cancel', event => { event.preventDefault(); finish(); });
-    dialog.append(title, element('p', 'Originalmetadaten können unter anderem Standort- und Kameradaten enthalten.'), list, close);
+    const footer = element('div'); footer.className = 'footer'; footer.append(close);
+    dialog.append(title, ...content, footer);
     dismissFolderDialog = finish;
     root.append(dialog); dialog.showModal();
+  };
+  const showExif = (asset, rows) => {
+    const list = element('dl');
+    for (const row of rows) list.append(element('dt', row.name), element('dd', row.value));
+    showInfo(`EXIF: ${asset.name}`, [
+      element('p', 'Originalmetadaten können unter anderem Standort- und Kameradaten enthalten.'), list,
+    ], 'exif');
   };
   const imagePreview = (asset, box, revision) => {
     const preview = element('div'); preview.className = 'preview'; preview.dataset.imagePreview = '';
@@ -304,11 +313,12 @@ export async function openAssetManager(services, { mode = null, owner = document
       note.classList.add('error');
     });
   };
-  const showUsage = async asset => {
+  const showUsage = async (asset, openPopup = true) => {
     const result = await services.assetAction({ op: 'usage', id: asset.id });
     if (!Array.isArray(result.usage)) throw new Error('Ungültige Verwendungsantwort');
-    usage(result.usage);
-    status(result.usage.length ? 'Asset wird an diesen Stellen verwendet:' : 'Keine Verwendung in Live oder Entwurf gefunden.');
+    if (closed) return [];
+    if (openPopup) usage(result.usage);
+    return result.usage;
   };
   const mutate = async request => {
     const result = await services.assetAction({ ...request, token: state.token });
@@ -325,7 +335,6 @@ export async function openAssetManager(services, { mode = null, owner = document
     $('[data-close]').disabled = true;
     $('[data-reload]').disabled = true;
     $('[data-select]').disabled = true;
-    usage([]);
     status('');
     try { await action(); }
     catch (error) {
@@ -416,8 +425,12 @@ export async function openAssetManager(services, { mode = null, owner = document
     }
     box.append(button('Verwendungen anzeigen', () => showUsage(asset), 'data-usage-button'));
     box.append(button('Löschen', async () => {
-      await showUsage(asset);
-      if ($('[data-usage]').children.length) throw new Error('Asset wird verwendet. Zuerst die oben genannten Verweise entfernen.');
+      const entries = await showUsage(asset, false);
+      if (closed) return;
+      if (entries.length) {
+        usage(entries);
+        throw new Error('Asset wird verwendet. Zuerst die im Popup genannten Verweise entfernen.');
+      }
       if (!await confirmDelete({ kind: 'asset', message: `„${asset.name}“ unwiderruflich löschen? Die Datei wird aus dem Assetmanager entfernt, nicht nur aus einem Widget.` })) return;
       await mutate({ op: 'delete', id: asset.id });
       selected = null; detail(); status('Asset gelöscht.');
@@ -439,7 +452,7 @@ export async function openAssetManager(services, { mode = null, owner = document
         const icon = element('span', '▤'); icon.className = 'document'; choose.append(icon);
       }
       choose.append(element('span', asset.name), element('small', sizeText(asset.bytes)));
-      choose.addEventListener('click', () => { selected = asset.id; selectedFolder = null; usage([]); render(); });
+      choose.addEventListener('click', () => { selected = asset.id; selectedFolder = null; render(); });
       box.append(choose);
     }
     if (!box.children.length) box.append(element('p', 'Dieser Ordner ist leer.'));
@@ -451,7 +464,7 @@ export async function openAssetManager(services, { mode = null, owner = document
     }
     function navigate(id) {
       if (busy || closed) return;
-      folder = id; selected = null; selectedFolder = null; usage([]); render();
+      folder = id; selected = null; selectedFolder = null; render();
     }
     for (const key of ['imageBytes', 'documentBytes', 'totalBytes']) {
       $(`[data-limit="${key}"]`).value = String(state.policy[key] / MiB);

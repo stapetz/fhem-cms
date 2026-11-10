@@ -1,3 +1,11 @@
+2026-11-10 - 1.6.1-dev: Einheitliche Asset-Popups (Refs #125)
+
+Verwendungen anzeigen oeffnet ein eigenes Popup statt einer Liste unterhalb
+des Managers, auch bei wegen Verwendung gesperrter Loeschung. EXIF und
+Verwendungen haben den Schliessen-Knopf rechts. Loeschbestaetigungen zeigen
+Abbrechen und Loeschen rechts in gleicher Standarddarstellung.
+Hash-Dateinamen und vorhandene Bildadressen bleiben unveraendert.
+
 2026-11-10 - 1.6.0-dev: Mehrfachupload und Drag-and-drop im Assetordner (Refs #125)
 
 Mehrere Dateien per Dateiauswahl oder Drag-and-drop in die Inhaltsansicht

@@ -1,5 +1,36 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Nachbesserung 1.6.1-dev: Informations- und Löschdialoge (#125)
+
+Anforderung vom 10.11.2026: Schließen bei EXIF rechts, Verwendungen als eigenes
+Popup, beide Löschdialogbuttons rechts und in gleicher Standarddarstellung.
+Die zunächst angefragte Dateisystem-Umbenennung wurde ausdrücklich zurückgezogen:
+Hash-Dateinamen und bestehende Bildverweise bleiben unverändert. Kein
+Migrations-/Namenskonfliktvertrag und keine produktiven Dateiumbenennungen.
+
+- Chromium: `t/51_asset_manager.html` mit 204 Prüfungen. EXIF-Schließen und
+  Löschbuttons sind über berechnete Stile und tatsächliche rechte Kanten
+  geprüft; Abbrechen/Löschen haben identische Standardrahmen/-hintergründe.
+- Verwendungen öffnen ein Modal mit Live-/Entwurfsfundstellen, Seiten und
+  Widgets; keine Liste unterhalb des Managers. Auch Löschsperren öffnen dieses
+  Popup. Leere Listen melden „Keine Verwendung“. Schließen bereinigt den Dialog.
+- Eine erst beim serverseitigen Löschen erkannte Referenz zeigt ebenfalls das
+  Popup mit der neuen Fundstelle; Abbrechen per Dialog-Cancel bereinigt es.
+- Bestehende Upload-/Drop-/EXIF-/Dateiaktionen bleiben Teil derselben Fixture.
+- Zielprüfung: zehn JS-Tests einschließlich 100 LinkWidget-Browserchecks;
+  251 Perl-Assertions (`t/04_fcui_assets.t`, `t/06_commandref.t`,
+  `t/07_asset_manager.t`), `perl -c FHEM/01_FHEMCMS.pm`,
+  `scripts/build-fcui.mjs --check` und `git diff --check` erfolgreich.
+  Safari-/FHEM-Geräteabnahme steht weiterhin aus.
+
+Issue-/Kanban-Abgleich: #123 und #124 bleiben zur Geräteabnahme In Review,
+#125 nach dieser Nachbesserung ebenfalls; #126 bleibt later/Backlog.
+#122 bleibt In Progress: Die Geräteabnahme hat dort zusätzlich vollständige
+deutsche **und** englische Hilfe angefordert (Issuekommentar vom 10.11.2026).
+Das ist nicht Bestandteil der Asset-Popup-Korrektur. Das bereits durch den
+Entwickler geschlossene #121 wird nicht eigenmächtig wieder geöffnet oder als
+neuer Release ausgegeben. Kein neuer `main`-Release durch diesen Abgleich.
+
 ## Entwicklungsstand 1.6.0-dev: Mehrfachupload und Datei-Drops (#125)
 
 Anforderung vom 10.11.2026: mehrere Bilder auswählen oder per Drag-and-drop
