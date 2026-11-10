@@ -48,6 +48,14 @@ try {
         if (!host.shadowRoot) continue;
         const title = host.shadowRoot.querySelector('[data-title]');
         check(getComputedStyle(title).textAlign === (alignment || 'left'), `${host.localName}: ${alignment}`);
+        if (host.localName === 'cms-text') {
+          const reference = root.querySelector('cms-value').shadowRoot.querySelector('[data-title]');
+          for (const theme of ['light', 'dark']) {
+            document.documentElement.dataset.cmsTheme = theme;
+            check(getComputedStyle(title).color === getComputedStyle(reference).color, `text title color: ${theme}`);
+            check(getComputedStyle(title).fontWeight === getComputedStyle(reference).fontWeight, `text title weight: ${theme}`);
+          }
+        }
         const dialogHeading = host.shadowRoot.querySelector('dialog h3');
         check(!dialogHeading || !['center', 'right'].includes(getComputedStyle(dialogHeading).textAlign),
           `${host.localName}: dialog heading unaffected`);

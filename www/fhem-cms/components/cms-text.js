@@ -26,7 +26,9 @@ class FHEMCMSText extends HTMLElement {
           background: var(--cms-surface, #202e27); display: grid; gap: 0.5rem; align-content: start; }
         header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
         h3 { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
-        h3[data-title] { font-size: max(6px, min(10cqh, 4.5cqw)); }
+        h3[data-title] { font-size: calc(1.1 * max(5px, min(13cqh, 5cqw))); font-weight: 400;
+          color: var(--cms-muted, #a5c9b2); font-family: inherit;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         ${contentCss('.body')}
         /* Inhalt skaliert mit der Kachel; Überschriften im Text relativ dazu. */
         .body { overflow-y: auto; min-height: 0; font-size: max(10px, min(6.5cqh, 3.2cqw)); }
