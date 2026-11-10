@@ -134,6 +134,8 @@ test('real browser zoom and resizing scale widgets and navigation without writes
         data = await browserResult(profile,
           `http://127.0.0.1:${server.address().port}/t/35_schema5_scaling.html`);
         assert.equal(child.exitCode, null, stderr);
+      } catch (error) {
+        throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });
       } finally {
         child.kill('SIGTERM');
         await closed;
