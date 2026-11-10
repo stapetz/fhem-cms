@@ -861,12 +861,21 @@ Der Schema-5-Editor ergänzt unter Bearbeiten den Punkt
 `Widgets automatisch anordnen`. Die explizite Aktion arbeitet ausschließlich auf
 der aktuellen Seite und verwendet den vorhandenen Entwurf, sonst Live als
 Vorlage. `arrangeSchema5Widgets` im gemeinsamen Layoutmodul validiert zunächst
-die gesamte Konfiguration. Widgets werden nach bisheriger Zeile/Spalte sortiert
-und ohne Größenänderung am ersten freien Rasterplatz von oben nach unten und
-links nach rechts platziert. Die globale Navigation bleibt ein unveränderliches
+die gesamte Konfiguration. Leicht versetzte Widgets werden zu Lesezeilen
+gruppiert: Ausgehend vom obersten Widget wird ein Nachbar aufgenommen, wenn
+sich sein Höhenbereich und das gemeinsame vertikale Schnittintervall der
+Gruppe mindestens zur Hälfte des kleineren Bereichs überdecken. Das Intervall
+wird nach jeder Aufnahme auf den gemeinsamen Schnitt begrenzt; ein hohes
+Widget verbindet daher keine getrennten Zeilen transitiv. Innerhalb einer
+Lesezeile gilt links nach rechts, danach folgt die nächste Gruppe.
+Widgets werden ohne Größenänderung am ersten freien Rasterplatz von oben
+nach unten und links nach rechts platziert. Die globale Navigation bleibt ein unveränderliches
 Hindernis. Ein monotoner Zeilen-/Spalten-Cursor verhindert, dass spätere Widgets
 vor frühere rutschen; dadurch sind einzelne Lücken zugunsten der Leserichtung
-beabsichtigt. Kandidatenzeilen sind die Cursorzeile und Hindernisunterkanten;
+beabsichtigt. Bei einem Umbruch beginnt die nächste Ergebniszeile frühestens
+unter sämtlichen bereits platzierten Widgets. So bleiben auch gemischte Höhen
+visuell zeilenweise und ein erneuter Aufruf idempotent.
+Kandidatenzeilen sind die Cursorzeile, diese Umbruchzeile und Hindernisunterkanten;
 bei Kollisionen wird zur rechten Hinderniskante gesprungen statt jede Rasterzelle
 einzeln zu prüfen. Die Grenze bleibt 1000 Zeilen; fehlender Platz wird sichtbar
 abgewiesen, nie durch Größenänderung oder Weglassen von Widgets kaschiert.
@@ -884,7 +893,8 @@ Prüfung: `node --test t/10_schema5_layout.test.js t/19_schema5_editor.test.js
 t/26_schema5_editor_transport.test.js t/35_schema5_scaling.test.js` sowie
 `node scripts/build-fcui.mjs --check` und `perl -c FHEM/01_FHEMCMS.pm`.
 Die Layouttests prüfen alle fünf Rasterdichten, Navigation als Hindernis,
-gemischte Größen, Leserichtung statt Arrayreihenfolge, 200 Widgets,
+gemischte Größen, leicht versetzte Lesezeilen und hohe Widgets ohne transitive
+Zeilenverknüpfung, Leserichtung statt Arrayreihenfolge, 200 Widgets,
 Idempotenz, Leerseiten, Zeilengrenzen und Perl-Validierung.
 Der Editor-Lebenszyklustest speichert die Anordnung mit echten Perl-Routinen
 auf isolierten temporären Dateien und prüft unveränderte Live-Daten.

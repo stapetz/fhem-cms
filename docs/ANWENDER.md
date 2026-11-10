@@ -102,7 +102,10 @@ Skalieren der Widgets zurück in den Editor wechseln.
 
 Unter **Bearbeiten → Widgets automatisch anordnen** rücken die Widgets der
 aktuellen Seite kompakt nach oben und links. Ihre bisherige Reihenfolge
-(von oben nach unten, bei gleicher Zeile von links nach rechts) bleibt erhalten.
+(zeilenweise von links nach rechts, dann von oben nach unten) bleibt erhalten.
+Leicht vertikal versetzte Nachbarn werden dabei als gemeinsame Zeile erkannt,
+wenn sich ihre Höhenbereiche mindestens zur Hälfte des kleineren Bereichs
+überdecken. Ein hohes Widget zieht keine getrennten Zeilen zusammen.
 Widgetgrößen und Inhalte, die Navigation und alle anderen Seiten bleiben
 unverändert. Zugunsten der Reihenfolge können einzelne Lücken bleiben; Widgets
 werden nicht beliebig vertauscht. Die Anordnung wird sofort als Entwurf
