@@ -13,7 +13,7 @@ UPD 2026-11-10_08:07:09 9842 www/fhem-cms/components/cms-text.js
 UPD 2026-11-10_08:07:09 37318 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-10_08:13:56 24736 www/fhem-cms/components/cms-value.js
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
-UPD 2026-11-10_07:50:19 30771 www/fhem-cms/css/fhem-cms.css
+UPD 2026-11-10_08:26:44 31160 www/fhem-cms/css/fhem-cms.css
 UPD 2026-11-10_07:50:19 26290 www/fhem-cms/examples/fcui-check.html
 UPD 2026-11-08_21:07:16 4844 www/fhem-cms/examples/migration-preview.html
 UPD 2026-11-04_21:52:16 5087 www/fhem-cms/js/device-picker.js
@@ -24,9 +24,9 @@ UPD 2026-11-08_15:33:41 2186 www/fhem-cms/js/fcui-migration-transport.js
 UPD 2026-11-08_10:43:57 111967 www/fhem-cms/js/fcui-runtime.js
 UPD 2026-11-08_20:31:10 8243 www/fhem-cms/js/fcui-schema5-backup-panel.js
 UPD 2026-11-08_14:00:37 9170 www/fhem-cms/js/fcui-schema5-draft.js
-UPD 2026-11-10_08:07:09 22356 www/fhem-cms/js/fcui-schema5-editor.js
+UPD 2026-11-10_08:26:44 22411 www/fhem-cms/js/fcui-schema5-editor.js
 UPD 2026-11-09_07:18:21 4934 www/fhem-cms/js/fcui-schema5-grid-edit.js
-UPD 2026-11-10_08:07:09 8268 www/fhem-cms/js/fcui-schema5-layout.js
+UPD 2026-11-10_08:26:44 8308 www/fhem-cms/js/fcui-schema5-layout.js
 UPD 2026-11-08_12:55:40 4931 www/fhem-cms/js/fcui-schema5-live.js
 UPD 2026-11-08_22:00:37 5107 www/fhem-cms/js/fcui-schema5-move-panel.js
 UPD 2026-11-09_08:11:52 2013 www/fhem-cms/js/fcui-schema5-navigation-fit.js
