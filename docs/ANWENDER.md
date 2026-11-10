@@ -91,7 +91,7 @@ Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfigu
 
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
 - **Bearbeiten:** Seiteneinstellungen (Theme, Widget-Rahmen, Titelausrichtung und Rastergröße)
-  und Widget hinzufügen (mit Suche).
+  sowie Widget hinzufügen (mit Suche) und Widgets automatisch anordnen.
 - **Ansicht:** Vorschau (zeigt die Seite ohne Bearbeitungselemente) und Raster anzeigen.
 
 Die Geräteauswahl oben rechts im Editiermodus bietet Smartphone- und
@@ -99,6 +99,16 @@ Tabletprofile sowie verschiedene Desktopauflösungen. Die Drehfunktion wechselt
 zwischen Hoch- und Querformat. Die Vorschau zeigt den responsiven Entwurf,
 ohne die gespeicherten Desktoppositionen zu verändern; zum Positionieren und
 Skalieren der Widgets zurück in den Editor wechseln.
+
+Unter **Bearbeiten → Widgets automatisch anordnen** rücken die Widgets der
+aktuellen Seite kompakt nach oben und links. Ihre bisherige Reihenfolge
+(von oben nach unten, bei gleicher Zeile von links nach rechts) bleibt erhalten.
+Widgetgrößen und Inhalte, die Navigation und alle anderen Seiten bleiben
+unverändert. Zugunsten der Reihenfolge können einzelne Lücken bleiben; Widgets
+werden nicht beliebig vertauscht. Die Anordnung wird sofort als Entwurf
+gespeichert, nicht veröffentlicht. Ein vorhandener Entwurf wird verwendet;
+Live ändert sich erst mit **Entwurf veröffentlichen**. Bereits angeordnete
+Seiten und leere Seiten verursachen keinen zusätzlichen Schreibzugriff.
 
 Unter **Bearbeiten → Seiteneinstellungen → Rastergröße** wählen Sie 12, 24, 48,
 96 oder 192 Spalten: mehr Spalten erlauben feinere Positionen und Größen. Die Auswahl gilt
