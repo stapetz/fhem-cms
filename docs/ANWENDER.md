@@ -92,6 +92,10 @@ Wert** etwa °C, W, kWh oder % wählen. Die Einheit wird hinter dem eingefügten
 Reading angezeigt und beim erneuten Bearbeiten übernommen. Details stehen
 unter [Platzhalter](./PLATZHALTER.md#platzhalter-suchen-statt-tippen).
 
+Beim **SolarFlow** bleibt der sichtbare Titel oberhalb des Diagramms frei.
+Das Diagramm skaliert in der verbleibenden Widgetfläche; bei ausgeblendetem
+Titel steht diese Fläche wieder dem Diagramm zur Verfügung.
+
 ## Schema-5-Editor bedienen
 
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.

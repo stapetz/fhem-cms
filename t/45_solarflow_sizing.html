@@ -1,0 +1,98 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>SolarFlow title and diagram sizing regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<style>body { margin: 0; font-family: Arial, sans-serif; } #fixture > * { display: block; }</style>
+<div id="fixture"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+const fixture = document.querySelector('#fixture');
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const settle = () => new Promise((resolve) => setTimeout(resolve, 40));
+const data = new Map([['Test', [{ name: 'Test', readings: { pv: '1250', home: '800', grid: '200', battery: '250', soc: '65' } }]]]);
+try {
+  for (const viewOnly of [false, true]) {
+    const config = { id: 'solar', type: 'fhem-solarflow', title: 'SolarFlow Leistung und Ladestand', showTitle: true,
+      readings: Object.fromEntries(['pv', 'home', 'grid', 'battery', 'soc'].map((reading) => [reading, { device: 'Test', reading }])) };
+    const original = JSON.stringify(config);
+    const host = createWidgetElement(config, {}, data, viewOnly);
+    fixture.append(host);
+    for (const [width, height] of [[320, 320], [640, 360], [320, 180], [180, 320], [500, 90], [96, 96], [120, 40]]) {
+      host.style.cssText = `width:${width}px;height:${height}px`;
+      for (const alignment of ['left', 'center', 'right']) {
+        host.style.setProperty('--cms-widget-title-align', alignment);
+        for (const showTitle of [true, false]) {
+          host.config = { ...config, showTitle };
+          await settle();
+          const root = host.shadowRoot;
+          const header = root.querySelector('[data-header]');
+          const title = root.querySelector('[data-title]');
+          const svg = root.querySelector('[data-svg]');
+          const titleRect = header.getBoundingClientRect();
+          const graphRect = svg.getBoundingClientRect();
+          const tileRect = root.querySelector('.tile').getBoundingClientRect();
+          check(header.hidden === !showTitle, 'title visibility respected');
+          check(getComputedStyle(title).textAlign === alignment, 'global title alignment retained');
+          check(!showTitle || graphRect.top >= titleRect.bottom, `${width}x${height}: diagram below title`);
+          check(graphRect.height > 0 && graphRect.width > 0, 'diagram remains visible at small dimensions');
+          check(graphRect.top >= tileRect.top && graphRect.bottom <= tileRect.bottom
+            && graphRect.left >= tileRect.left && graphRect.right <= tileRect.right, 'diagram stays inside widget');
+          const stations = svg.querySelectorAll('[data-station]');
+          check(stations.length === 4, 'all configured stations rendered');
+          for (const station of stations) {
+            const box = station.getBBox();
+            const screen = new DOMPoint(box.x, box.y).matrixTransform(station.getScreenCTM());
+            check(!showTitle || screen.y >= titleRect.bottom - 0.5, 'rendered stations do not overlap title');
+          }
+        }
+      }
+    }
+    check(JSON.stringify(config) === original, 'sizing does not mutate configuration');
+    check(host.shadowRoot.querySelector('[data-accessible]').textContent.includes('1250W'), 'live power values preserved');
+    host.remove();
+  }
+  for (const editing of [false, true]) {
+    for (const columns of [12, 48, 192]) {
+      const scale = columns / 12;
+      const config = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: columns },
+        navigation: { grid: { col: 1, row: 1, w: columns, h: scale } },
+        pages: [{ id: 'one', widgets: [{ id: 'solar', type: 'fhem-solarflow', title: 'SolarFlow',
+          readings: { pv: { device: 'Test', reading: 'pv' } },
+          grid: { col: 1, row: scale + 1, w: 6 * scale, h: 4 * scale } }] }] };
+      const grid = document.createElement('div');
+      grid.className = 'grid-stack cms-schema5-grid';
+      grid.style.width = '640px';
+      fixture.append(grid);
+      const mounted = mountSchema5Widgets(GridStack, grid, config, 'one', document.createElement('nav'), {}, data,
+        editing ? { onEdit() {}, onChange() { throw new Error('No layout writes expected'); } } : undefined);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        const host = grid.querySelector('cms-solarflow');
+        const header = host.shadowRoot.querySelector('[data-header]').getBoundingClientRect();
+        const svg = host.shadowRoot.querySelector('[data-svg]').getBoundingClientRect();
+        const tile = host.shadowRoot.querySelector('.tile').getBoundingClientRect();
+        check(host.clientWidth > 0 && host.clientHeight > 0, 'widget mounted in real grid');
+        check(svg.top >= header.bottom, `real grid ${columns} / editing=${editing}: no title overlap`);
+        check(svg.height > 0 && svg.bottom <= tile.bottom, 'real grid diagram fits available height');
+        check(grid.classList.contains('cms-grid-editable') === editing, 'actual edit and responsive modes exercised');
+      } finally {
+        mounted.destroy();
+        grid.remove();
+      }
+    }
+  }
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+} finally {
+  fixture.replaceChildren();
+}
+</script>

@@ -1,3 +1,10 @@
+2026-11-10 - SolarFlow-Diagramm hält den Titelbereich frei (Refs #117)
+
+Der Titel erhält einen eigenen Bereich über dem Diagramm. Die SVG-Darstellung
+skaliert im verbleibenden Platz, statt unter den absolut positionierten Titel
+zu rutschen. Ohne Titel nutzt das Diagramm weiter die verfügbare Fläche.
+Globale Titelausrichtung, Leistungswerte und Flussdarstellung bleiben erhalten.
+
 2026-11-10 - 1.4.0-dev: Einheit für Text-Readings auswählen (Refs #116)
 
 Der gemeinsame Platzhalterdialog bietet eine Einheiten-Auswahl mit °C, W,
