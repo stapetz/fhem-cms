@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
-import { applySchema5GridItems, createSchema5Grid, resizeSchema5Grid, schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
+import { applySchema5GridItems, arrangeSchema5Widgets, createSchema5Grid, resizeSchema5Grid, schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
 
 const source = () => ({
   schemaVersion: 5, theme: 'light', settings: { layoutMode: 'grid', gridColumns: 12 },
@@ -78,6 +78,72 @@ test('schema 5 layout fails closed for invalid positions and widget collisions',
   incompatible.schemaVersion = 4;
   assert.throws(() => schema5GridItems(incompatible, 'a'), /Schema 5/);
   assert.throws(() => schema5GridItems(config, 'missing'), /Unbekannte Seite/);
+});
+
+test('automatic arrangement packs left and up in visual order without changing navigation, sizes or other pages', () => {
+  for (const columns of [12, 24, 48, 96, 192]) {
+    const config = source();
+    config.settings.gridColumns = columns;
+    config.navigation.grid = { col: 1, row: 1, w: 2, h: 5 };
+    config.pages[0].widgets = [
+      { id: 'last', type: 'text', html: '<p>Last</p>', grid: { col: 1, row: 30, w: 3, h: 2 } },
+      { id: 'right', type: 'text', html: '<p>Right</p>', grid: { col: 8, row: 10, w: 3, h: 4 } },
+      { id: 'first', type: 'text', html: '<p>First</p>', grid: { col: 3, row: 10, w: 4, h: 2 } },
+      { id: 'wide', type: 'text', html: '<p>Wide</p>', grid: { col: 1, row: 20, w: columns, h: 3 } },
+    ];
+    config.pages[1].widgets[0].grid = { col: 4, row: 2, w: 1, h: 1 };
+    const before = structuredClone(config);
+    const changed = arrangeSchema5Widgets(config, 'a');
+    const ordered = [...changed.pages[0].widgets].sort((a, b) => a.grid.row - b.grid.row || a.grid.col - b.grid.col);
+    assert.deepEqual(ordered.map((widget) => widget.id), ['first', 'right', 'wide', 'last']);
+    assert.deepEqual(ordered[0].grid, { col: 3, row: 1, w: 4, h: 2 });
+    assert.deepEqual(ordered[1].grid, { col: 7, row: 1, w: 3, h: 4 });
+    assert.deepEqual(ordered[2].grid, { col: 1, row: 6, w: columns, h: 3 });
+    assert.deepEqual(ordered[3].grid, { col: 1, row: 9, w: 3, h: 2 });
+    for (const [i, widget] of changed.pages[0].widgets.entries()) {
+      const { grid, ...content } = widget;
+      const { grid: original, ...originalContent } = config.pages[0].widgets[i];
+      assert.deepEqual(content, originalContent, 'stored order and all content survive');
+      assert.equal(grid.w, original.w);
+      assert.equal(grid.h, original.h);
+    }
+    assert.deepEqual(changed.navigation, config.navigation);
+    assert.deepEqual(changed.pages[1], config.pages[1]);
+    assert.deepEqual(config, before, 'input not mutated');
+    assert.deepEqual(arrangeSchema5Widgets(changed, 'a'), changed, 'repeating is a no-op');
+    const script = 'use strict; use warnings; use JSON::PP (); require "./FHEM/01_FHEMCMS.pm";'
+      + ' local $/; my $v=JSON::PP->new->decode(<STDIN>); my $e=FHEMCMS_ValidateConfig($v,5); die $e if defined $e;';
+    const result = spawnSync('perl', ['-e', script], { input: JSON.stringify(changed), encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+  }
+});
+
+test('automatic arrangement respects horizontal navigation, empty pages and the last raster row', () => {
+  const config = source();
+  const changed = arrangeSchema5Widgets(config, 'a');
+  assert.deepEqual(changed.pages[0].widgets.map((widget) => widget.grid), [
+    { col: 1, row: 2, w: 2, h: 2 }, { col: 3, row: 2, w: 1, h: 1 },
+  ]);
+  config.pages[0].widgets = [];
+  assert.deepEqual(arrangeSchema5Widgets(config, 'a'), config);
+  config.pages[0].widgets = [{ id: 'tall', grid: { col: 1, row: 2, w: 12, h: 999 } }];
+  assert.deepEqual(arrangeSchema5Widgets(config, 'a'), config);
+  assert.throws(() => arrangeSchema5Widgets(config, 'missing'), /Unbekannte Seite/);
+  config.pages[0].widgets[0].grid.row = 1;
+  assert.throws(() => arrangeSchema5Widgets(config, 'a'), /überschneidung/);
+});
+
+test('automatic arrangement stays stable for 200 mixed-size widgets at maximum raster density', () => {
+  const config = source();
+  config.settings.gridColumns = 192;
+  config.pages[0].widgets = Array.from({ length: 200 }, (_, i) => ({
+    id: `widget${i}`, grid: { col: 20 + i % 10, row: 5 * i + 1, w: 1 + i % 20, h: 1 + i % 4 },
+  })).reverse();
+  const changed = arrangeSchema5Widgets(config, 'a');
+  assert.deepEqual(arrangeSchema5Widgets(changed, 'a'), changed);
+  const ordered = [...changed.pages[0].widgets].sort((a, b) => a.grid.row - b.grid.row || a.grid.col - b.grid.col);
+  assert.deepEqual(ordered.map((widget) => widget.id), Array.from({ length: 200 }, (_, i) => `widget${i}`));
+  assert.ok(Math.max(...ordered.map((widget) => widget.grid.row + widget.grid.h)) < 100);
 });
 
 test('navigation changes move collisions down on every page without changing sizes or content', () => {

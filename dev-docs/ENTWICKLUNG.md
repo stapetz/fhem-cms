@@ -855,6 +855,44 @@ stabilen Version zu prüfen; verwendete FHEM-Version und Plattform werden beim
 Test festgehalten. Die unten beschriebene breitere Browsermatrix bleibt bestehen.
 Ohne dokumentierte Durchführung und Messwerte ist keine Geräteabnahme erfolgt.
 
+## Widgets automatisch anordnen (Refs #115)
+
+Der Schema-5-Editor ergänzt unter Bearbeiten den Punkt
+`Widgets automatisch anordnen`. Die explizite Aktion arbeitet ausschließlich auf
+der aktuellen Seite und verwendet den vorhandenen Entwurf, sonst Live als
+Vorlage. `arrangeSchema5Widgets` im gemeinsamen Layoutmodul validiert zunächst
+die gesamte Konfiguration. Widgets werden nach bisheriger Zeile/Spalte sortiert
+und ohne Größenänderung am ersten freien Rasterplatz von oben nach unten und
+links nach rechts platziert. Die globale Navigation bleibt ein unveränderliches
+Hindernis. Ein monotoner Zeilen-/Spalten-Cursor verhindert, dass spätere Widgets
+vor frühere rutschen; dadurch sind einzelne Lücken zugunsten der Leserichtung
+beabsichtigt. Kandidatenzeilen sind die Cursorzeile und Hindernisunterkanten;
+bei Kollisionen wird zur rechten Hinderniskante gesprungen statt jede Rasterzelle
+einzeln zu prüfen. Die Grenze bleibt 1000 Zeilen; fehlender Platz wird sichtbar
+abgewiesen, nie durch Größenänderung oder Weglassen von Widgets kaschiert.
+
+Die Arrayreihenfolge und sämtliche Inhalte bleiben erhalten. Die Funktion
+mutiert keine Eingabe und validiert das Ergebnis mit `applySchema5GridItems`.
+Da die Navigation unverändert bleibt, wird kein seitenübergreifender Reflow
+ausgelöst. Die Speicherung nutzt unverändert `#saveLayout`, Controller und
+zustandsgebundene Entwurfstransaktion einschließlich Schreibsperre, Rücklesen und
+Neuladepflicht bei unklaren Schreibfehlern. Leere/kompakte Seiten sind No-ops.
+Es gibt keine automatische Anordnung beim Laden, bei Browsergrößenänderungen
+oder beim Veröffentlichen.
+
+Prüfung: `node --test t/10_schema5_layout.test.js t/19_schema5_editor.test.js
+t/26_schema5_editor_transport.test.js t/35_schema5_scaling.test.js` sowie
+`node scripts/build-fcui.mjs --check` und `perl -c FHEM/01_FHEMCMS.pm`.
+Die Layouttests prüfen alle fünf Rasterdichten, Navigation als Hindernis,
+gemischte Größen, Leserichtung statt Arrayreihenfolge, 200 Widgets,
+Idempotenz, Leerseiten, Zeilengrenzen und Perl-Validierung.
+Der Editor-Lebenszyklustest speichert die Anordnung mit echten Perl-Routinen
+auf isolierten temporären Dateien und prüft unveränderte Live-Daten.
+`t/43_auto_arrange.html` prüft mit echtem Gridstack bei 12/48/192 Spalten
+Menü, aktuelle Seite, Atomarität, Doppelklicksperre, gerenderte Positionen,
+unveränderte Größen/Inhalte und andere Seiten, erneutes Anordnen, Neustart
+und sichtbare Schreibfehler. Keine produktiven CMS-Daten werden verändert.
+
 ## Richtext-Auswahl in Safari (Refs #114)
 
 Der Texteditor liegt im Shadow-DOM. Safari/WebKit unterstützt dort kein

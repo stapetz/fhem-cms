@@ -356,7 +356,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
   }
 });
 
-test('editor lifecycle uses real isolated Perl draft transactions with stale-tab protection', async () => {
+test('editor lifecycle and auto-arrangement use real isolated Perl draft transactions with stale-tab protection', async () => {
   const previous = {
     window: globalThis.window, document: globalThis.document,
     HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
@@ -422,9 +422,9 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
     navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
     pages: [{ id: 'a', title: 'A', widgets: [
-      { id: 'text', type: 'text', html: '{{Temp:state}}', grid: { col: 1, row: 2, w: 4, h: 2 } },
+      { id: 'text', type: 'text', html: '{{Temp:state}}', grid: { col: 2, row: 10, w: 4, h: 2 } },
       { id: 'html', type: 'fhem-html', devices: ['Temp'],
-        html: '<span device="Temp" reading="state"></span>', grid: { col: 5, row: 2, w: 4, h: 2 } },
+        html: '<span device="Temp" reading="state"></span>', grid: { col: 8, row: 20, w: 4, h: 2 } },
     ] }],
   };
   const original = JSON.stringify(live, null, 2);
@@ -440,7 +440,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
       makeWidget(wrapper, item) { wrapper.gridstackNode = { id: item.id }; this.items.push({ ...item }); },
       save() { return structuredClone(this.items); },
       update(wrapper, position) { Object.assign(this.items.find((item) => item.id === wrapper.gridstackNode.id), position); },
-      setStatic() {}, on() {}, destroy() {},
+      setStatic() {}, enableMove() {}, enableResize() {}, on() {}, destroy() {},
     };
   } };
   const client = {
@@ -456,6 +456,17 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     const [, status, content] = root.children;
     const toolbar = { children: toolbarControls(root.children[0]) };
     const [edit, mode, publish, discard, reload] = toolbar.children;
+    const all = (node) => [node, ...node.children.flatMap(all)];
+    const arrange = all(root.children[0]).find((node) => node.textContent === 'Widgets automatisch anordnen');
+    await arrange.fire('click');
+    const arranged = JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8'));
+    assert.deepEqual(arranged.pages[0].widgets.map((widget) => widget.grid), [
+      { col: 1, row: 2, w: 4, h: 2 }, { col: 5, row: 2, w: 4, h: 2 },
+    ]);
+    assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
+    const persistedToken = controller.snapshot().token;
+    await arrange.fire('click');
+    assert.equal(controller.snapshot().token, persistedToken, 'already arranged does not rewrite the draft');
     edit.fire('click');
     content.children[0].children[3].children[1].children[0].checked = false;
     await content.children[0].children[4].children[1].fire('click');

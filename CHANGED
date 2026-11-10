@@ -1,3 +1,12 @@
+2026-11-10 - 1.3.0-dev: Widgets automatisch kompakt anordnen (Refs #115)
+
+Unter Bearbeiten ordnet „Widgets automatisch anordnen“ die Widgets der
+aktuellen Seite nach oben und links. Die bisherige Leserichtung von oben nach
+unten und links nach rechts bleibt erhalten; Größen, Inhalte, Navigation und
+andere Seiten ändern sich nicht. Das Ergebnis wird als Entwurf gespeichert,
+Live bleibt bis zum Veröffentlichen unverändert. Erneutes Anordnen eines
+bereits kompakten Rasters benötigt keinen Schreibzugriff.
+
 2026-11-10 - Safari-Auswahl bei Richtextformatierung erhalten (Refs #114)
 
 Fett, Kursiv, Unterstreichen, Farben und weitere Formatierungen stellen die

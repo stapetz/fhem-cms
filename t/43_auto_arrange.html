@@ -1,0 +1,124 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automatic widget arrangement regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<main class="cms-shell"><section id="editor"></section></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+const root = document.querySelector('#editor');
+const output = document.querySelector('#result');
+let editor;
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+const find = (label) => [...root.querySelectorAll('button')].find((button) => button.textContent === label);
+const ready = async () => {
+  for (let i = 0; i < 80 && (!find('Widgets automatisch anordnen') || find('Widgets automatisch anordnen').disabled); i++) {
+    await settle();
+  }
+  check(!find('Widgets automatisch anordnen')?.disabled, `editor ready: ${root.textContent}`);
+};
+try {
+  for (const columns of [12, 48, 192]) {
+    location.hash = '#/page1';
+    const live = { schemaVersion: 5, theme: 'light', settings: { layoutMode: 'grid', gridColumns: columns },
+      navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: columns, h: 1 } },
+      pages: [{ id: 'page0', title: 'Unchanged', widgets: [] },
+        { id: 'page1', title: 'Arrange', widgets: [
+          { id: 'later', type: 'text', html: '<p>Later</p>', grid: { col: 8, row: 20, w: 3, h: 3 } },
+          { id: 'first', type: 'text', html: '<p>First</p>', grid: { col: 5, row: 10, w: 4, h: 2 } },
+        ] }],
+    };
+    const original = JSON.stringify(live);
+    let writes = 0;
+    let fail = false;
+    let release;
+    let state = { live, draft: null, token: 'a'.repeat(64) };
+    const controller = new Schema5DraftController({
+      read: async () => structuredClone(state),
+      save: async (draft, token) => {
+        check(token === state.token, 'current token required');
+        writes++;
+        if (fail) throw new Error('Simulated write failure');
+        await new Promise((resolve) => { release = resolve; });
+        state = { live, draft: structuredClone(draft), token: writes.toString(16).padStart(64, '0') };
+      },
+      publish: async () => { throw new Error('No publishing'); },
+      discard: async () => { throw new Error('No discard'); },
+    });
+    const start = async () => {
+      editor = new Schema5Editor({ GridStack, root, controller, browser: window,
+        services: { iconUrl: () => '', setCommand: async () => { throw new Error('No device commands'); } },
+        client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} } });
+      await editor.start();
+      await ready();
+    };
+    await start();
+    const action = find('Widgets automatisch anordnen');
+    const menu = action.closest('details');
+    check(menu.querySelector('summary').textContent === 'Bearbeiten', 'action belongs to Edit menu');
+    menu.querySelector('summary').click();
+    action.click();
+    check(!menu.open, 'menu closes after action');
+    check(action.disabled && find('Entwurf veröffentlichen').disabled
+      && find('Vorschau').disabled, 'actions locked during save');
+    check(root.querySelector('.cms-grid-editable').inert, 'raster locked during save');
+    action.click();
+    await settle();
+    check(writes === 1, 'double click cannot create concurrent writes');
+    release();
+    await ready();
+    const saved = structuredClone(state.draft);
+    check(saved.pages[1].widgets[1].grid.col === 1 && saved.pages[1].widgets[1].grid.row === 2,
+      'first visual widget moves up and left, not first array item');
+    check(saved.pages[1].widgets[0].grid.col === 5 && saved.pages[1].widgets[0].grid.row === 2,
+      'second visual widget follows first');
+    check(JSON.stringify(saved.navigation) === JSON.stringify(live.navigation), 'navigation unchanged');
+    check(JSON.stringify(saved.pages[0]) === JSON.stringify(live.pages[0]), 'other page unchanged');
+    check(JSON.stringify(live) === original, 'live unchanged');
+    for (const widget of saved.pages[1].widgets) {
+      const originalWidget = live.pages[1].widgets.find((item) => item.id === widget.id);
+      check(widget.grid.w === originalWidget.grid.w && widget.grid.h === originalWidget.grid.h
+        && widget.html === originalWidget.html, 'content and dimensions preserved');
+      const node = root.querySelector(`[gs-id="${widget.id}"]`).gridstackNode;
+      check(node.x === widget.grid.col - 1 && node.y === widget.grid.row - 1
+        && node.w === widget.grid.w && node.h === widget.grid.h, 'rendered raster matches saved draft');
+    }
+    find('Widgets automatisch anordnen').click();
+    await ready();
+    check(writes === 1, 'already compact layout needs no new write');
+    editor.stop();
+    root.replaceChildren();
+    await start();
+    check(JSON.stringify(controller.snapshot().draft) === JSON.stringify(saved), 'draft survives editor restart');
+    check(location.hash === '#/page1', 'current page retained');
+    editor.stop();
+    root.replaceChildren();
+
+    state.draft = null;
+    fail = true;
+    await start();
+    find('Widgets automatisch anordnen').click();
+    for (let i = 0; i < 80 && !root.querySelector('.cms-status[data-error]'); i++) await settle();
+    check(root.querySelector('.cms-status').textContent.includes('Simulated write failure'),
+      'write failure shown explicitly');
+    check(!root.querySelector('.cms-grid-editable'), 'uncertain state blocks further raster editing');
+    check(find('Widgets automatisch anordnen').disabled && !find('Zustand erneut laden').hidden,
+      'reload required after write failure');
+    check(state.draft === null && JSON.stringify(state.live) === original, 'failed write leaves stored state unchanged');
+    editor.stop();
+    root.replaceChildren();
+  }
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  editor?.stop();
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>

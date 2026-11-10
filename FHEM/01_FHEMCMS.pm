@@ -15,7 +15,7 @@ use MIME::Base64 qw(decode_base64 encode_base64);
 use POSIX qw(strftime);
 use Time::Local ();
 
-our $FHEMCMS_VERSION = '1.2.0-dev';
+our $FHEMCMS_VERSION = '1.3.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;

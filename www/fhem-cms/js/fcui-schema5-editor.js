@@ -7,7 +7,7 @@ import { Schema5NavigationPanel } from './fcui-schema5-navigation.js';
 import { Schema5DraftController } from './fcui-schema5-draft.js';
 import { createSchema5Transport } from './fcui-schema5-transport.js';
 import { createSchema5WidgetServices } from './widget-services.js';
-import { applySchema5GridItems, schema5GridItems } from './fcui-schema5-layout.js';
+import { applySchema5GridItems, arrangeSchema5Widgets, schema5GridItems } from './fcui-schema5-layout.js';
 import { DevicePreview } from './device-preview.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 
@@ -35,6 +35,7 @@ export class Schema5Editor {
   #page;
   #mode;
   #widgets;
+  #arrange;
   #backup;
   #gridToggle;
   #previewToggle;
@@ -98,7 +99,10 @@ export class Schema5Editor {
     this.#widgets = document.createElement('button');
     this.#widgets.type = 'button';
     this.#widgets.textContent = 'Widget hinzufügen';
-    for (const button of [this.#page, this.#publish, this.#discard, this.#reloadButton, this.#widgets]) {
+    this.#arrange = document.createElement('button');
+    this.#arrange.type = 'button';
+    this.#arrange.textContent = 'Widgets automatisch anordnen';
+    for (const button of [this.#page, this.#publish, this.#discard, this.#reloadButton, this.#widgets, this.#arrange]) {
       button.className = 'cms-button';
     }
     this.#publish.className = 'cms-button cms-publish';
@@ -118,7 +122,7 @@ export class Schema5Editor {
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
     this.#menu('Datei', [this.#publish, this.#discard, this.#backup]);
-    this.#menu('Bearbeiten', [this.#page, this.#widgets]);
+    this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#arrange]);
     this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
@@ -129,6 +133,7 @@ export class Schema5Editor {
     this.#content.className = 'cms-schema5-workspace';
     this.#page.addEventListener('click', () => this.#openPage());
     this.#widgets.addEventListener('click', () => this.#openWidgets());
+    this.#arrange.addEventListener('click', () => this.#arrangeWidgets());
     this.#backup.addEventListener('click', () => this.#openBackup());
     this.#previewToggle.addEventListener('click', () => {
       this.#previewMode = !this.#previewMode;
@@ -215,6 +220,7 @@ export class Schema5Editor {
   #setActions(enabled, hasDraft) {
     this.#page.disabled = !enabled;
     this.#widgets.disabled = !enabled;
+    this.#arrange.disabled = !enabled;
     this.#backup.disabled = !enabled;
     this.#gridToggle.disabled = !enabled;
     this.#previewToggle.disabled = !enabled;
@@ -310,6 +316,20 @@ export class Schema5Editor {
     if (this.#active && !this.#suspended && generation === this.#generation && this.#view === view) {
       this.#setActions(true, state.draft !== null);
       this.#reloadButton.hidden = true;
+    }
+  }
+
+  #arrangeWidgets() {
+    if (!this.#active || this.#suspended || !this.#view || this.#arrange.disabled) return;
+    try {
+      const state = this.#controller.snapshot();
+      const pageId = this.#view.current;
+      const candidate = arrangeSchema5Widgets(state.draft || state.live, pageId);
+      this.#layoutSavePromise = this.#saveLayout(pageId, schema5GridItems(candidate, pageId));
+      return this.#layoutSavePromise;
+    } catch (error) {
+      this.#status.setAttribute('data-error', 'true');
+      this.#status.textContent = `Widgets nicht angeordnet: ${error.message}`;
     }
   }
 

@@ -122,6 +122,42 @@ export function applySchema5GridItems(config, pageId, items) {
   return result;
 }
 
+export function arrangeSchema5Widgets(config, pageId) {
+  const items = schema5GridItems(config, pageId);
+  const columns = Number(config.settings.gridColumns);
+  const [navigation, ...widgets] = items;
+  const placed = [{ col: navigation.x + 1, row: navigation.y + 1, w: navigation.w, h: navigation.h }];
+  const positions = new Map();
+  let cursor = { col: 1, row: 1 };
+  for (const widget of widgets.sort((a, b) => a.y - b.y || a.x - b.x)) {
+    let position;
+    // A first free rectangle starts at the cursor row or at an obstacle's bottom edge.
+    const rows = [...new Set([cursor.row, ...placed.map((grid) => grid.row + grid.h)])]
+      .filter((row) => row >= cursor.row && row + widget.h <= 1001).sort((a, b) => a - b);
+    for (const row of rows) {
+      let col = row === cursor.row ? cursor.col : 1;
+      while (col + widget.w <= columns + 1) {
+        const grid = { col, row, w: widget.w, h: widget.h };
+        const collisions = placed.filter((other) => overlaps(grid, other));
+        if (!collisions.length) {
+          position = grid;
+          break;
+        }
+        col = Math.max(...collisions.map((other) => other.col + other.w));
+      }
+      if (position) break;
+    }
+    if (!position) throw new Error('Widgets passen in dieser Reihenfolge nicht in die 1000 Rasterzeilen');
+    positions.set(widget.id, position);
+    placed.push(position);
+    cursor = position;
+  }
+  return applySchema5GridItems(config, pageId, items.map((item) => {
+    const grid = positions.get(item.id);
+    return grid ? { ...item, x: grid.col - 1, y: grid.row - 1 } : item;
+  }));
+}
+
 export function resizeSchema5Grid(config, columns) {
   validateLayout(config);
   if (!SCHEMA5_GRID_COLUMNS.includes(columns)) throw new Error('Ungültige Rastergröße');

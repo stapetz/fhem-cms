@@ -122,7 +122,7 @@ test('widget titles inherit alignment and compact contents fill their available 
   try {
     for (const [fixture, minimum] of [['36_widget_titles.html', 100], ['37_widget_content.html', 600],
       ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],
-      ['42_richtext_selection.html', 85]]) {
+      ['42_richtext_selection.html', 85], ['43_auto_arrange.html', 84]]) {
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child);
       assert.ok(data.checks >= minimum, `${fixture}: complete regression coverage (${data.checks})`);
