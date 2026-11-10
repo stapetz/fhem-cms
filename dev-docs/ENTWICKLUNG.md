@@ -855,6 +855,29 @@ stabilen Version zu prüfen; verwendete FHEM-Version und Plattform werden beim
 Test festgehalten. Die unten beschriebene breitere Browsermatrix bleibt bestehen.
 Ohne dokumentierte Durchführung und Messwerte ist keine Geräteabnahme erfolgt.
 
+## Richtext-Auswahl in Safari (Refs #114)
+
+Der Texteditor liegt im Shadow-DOM. Safari/WebKit unterstützt dort kein
+`shadowRoot.getSelection()`; die bestehende `getComposedRanges`-Behandlung
+liest deshalb die tatsächlichen Endpunkte. Zum Wiederherstellen vor
+Formatierung und nach Einfügungen wird `Selection.setBaseAndExtent` verwendet.
+`removeAllRanges` gefolgt von `addRange` verliert in WebKit die Shadow-Auswahl
+vollständig, obwohl der zuvor gespeicherte Range gültig ist. Der Fehler wurde
+mit echtem WebKit und einem Maus-Klick auf Fett reproduziert.
+
+`t/42_richtext_selection.html` prüft im modalen Shadow-DOM vorwärts/rückwärts
+markierten Text, Fett/Kursiv/Unterstreichen, aufeinanderfolgende Befehle,
+Formatierung entfernen, Text-/Hintergrundfarbe nach Input-Fokus, Links nach
+URL-Fokus, Einfügen am kollabierten Cursor sowie Platzhaltereinfügung und
+Cursorposition nach dem überlagerten Suchdialog. Es prüft sowohl die native
+Shadow-Auswahl (wo verfügbar) als auch ausdrücklich den Composed-Range-Pfad.
+Der Chrome-Runner `t/35_schema5_scaling.test.js` führt die 85 Prüfungen aus.
+Für die WebKit-Gegenprüfung dieselbe Fixture mit einem vorhandenen
+Playwright-WebKit öffnen und `#result[data-result="pass"]` erwarten; keine
+echte FHEM-Instanz erforderlich. Lokaler Rot/Grün-Nachweis: Die alte
+Range-Wiederherstellung scheitert bereits an der ersten Fett-Prüfung,
+die korrigierte Variante besteht alle 85 Prüfungen.
+
 ## Repositorystruktur
 
 | Pfad | Zweck |
