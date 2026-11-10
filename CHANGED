@@ -1,3 +1,17 @@
+2026-11-10 - 1.6.1: LinkWidget und gemeinsamer Assetmanager
+
+Freigegebener Umfang: #123, #124, #125 und Titelkorrektur #121.
+Releaseabgleich: #127. LinkWidget zeigt mehrere interne/externe Links mit
+optionalem Bild und Text als grafisch platzierbare Kacheln im feinen Raster.
+Der gemeinsame Assetmanager fuer Text- und Linkwidget verwaltet Bilder und
+Dokumente, Ordner und Unterordner, Umbenennen und Verschieben.
+Mehrfachupload und Drag-and-drop laden direkt in den geoeffneten Ordner.
+Bildvorschau, EXIF-Popup, Verwendungsschutz mit Live-/Entwurfsfundstellen
+und einheitliche Informations-/Loeschdialoge ergaenzen die Verwaltung.
+Dateitypen und Speicherlimits sind konfigurierbar; bestehende Bildadressen
+und Hash-Dateinamen bleiben erhalten. Textwidget-Titel ist vereinheitlicht.
+Nicht enthalten: offene DE/EN-Geraetehilfe #122 und spaetere Assetsuche #126.
+
 2026-11-10 - 1.6.1-dev: Einheitliche Asset-Popups (Refs #125)
 
 Verwendungen anzeigen oeffnet ein eigenes Popup statt einer Liste unterhalb
