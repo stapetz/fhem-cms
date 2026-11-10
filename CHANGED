@@ -1,3 +1,10 @@
+2026-11-10 - Thermostat-Gerätewechsel übernehmen (Refs #105)
+
+Die Thermostat-Kachel übernimmt beim Bearbeiten genau das ausgewählte Device
+statt einen gewählten Kanal durch sein Hauptdevice zu ersetzen. Die Readings
+werden passend zur neuen Auswahl angeboten und gespeichert; Solltemperatur-
+und Betriebsartsteuerung verwenden danach das neu zugeordnete Gerät.
+
 2026-11-09 - Version 1.1.0
 
 Geräte-Vorschau mit Hoch-/Querformat und Desktopauflösungen wiederhergestellt.
