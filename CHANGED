@@ -1,3 +1,11 @@
+2026-11-10 - Editorraster zoomfähig an die Ansicht angleichen (Refs #109)
+
+Der reine Bearbeitungsmodus verwendet dieselbe zoomfähige Bezugsbreite und
+dieselben Widgetabstände wie die Ansicht. Bei Platzmangel scrollt nur der
+Arbeitsbereich, statt die Widgets vollständig klein einzupassen. Exakte
+Rasterpositionen, Verschieben und Größenändern bleiben erhalten; Zoom und
+Fensteränderungen schreiben keine Layoutdaten. Die Vorschau bricht weiterhin um.
+
 2026-11-10 - Widget-Inhalte bis nahe an die Innenränder skalieren (Refs #108)
 
 Wert, Schalter, Taster und Statussymbol passen ihre Inhalte an den tatsächlich

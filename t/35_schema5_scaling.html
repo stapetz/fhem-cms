@@ -5,7 +5,7 @@
 <title>Schema 5 scaling regression</title>
 <link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
 <link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
-<main class="cms-shell"><div class="grid-stack cms-schema5-grid" id="grid"></div></main>
+<main class="cms-shell"><div class="cms-schema5-workspace"><div class="grid-stack cms-schema5-grid" id="grid"></div></div></main>
 <pre id="result">RUNNING</pre>
 <script type="module">
 import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
@@ -61,7 +61,7 @@ try {
   };
   await settle();
   const initial = metrics();
-  const shell = root.parentElement;
+  const shell = root.closest('.cms-shell');
   const resize = [];
   for (const width of [1000, 600, 393, 734, 1000]) {
     shell.style.width = `${width}px`;
@@ -91,15 +91,26 @@ try {
     services: { iconUrl: () => '' }, editing: { onChange() {}, onEdit() {} },
   });
   await editor.start();
+  await settle();
+  const editorInitial = metrics();
+  const editorResize = [];
   const positions = JSON.stringify(root.gridstack.save(false));
   let editorPreserved = !root.hasAttribute('data-responsive') && getComputedStyle(root).display !== 'flex';
   for (const width of [1000, 600, 393, 1000]) {
     shell.style.width = `${width}px`;
     await settle();
+    editorResize.push(metrics());
     editorPreserved &&= JSON.stringify(root.gridstack.save(false)) === positions && JSON.stringify(config) === before;
   }
+  shell.style.width = '';
+  await settle();
+  const workspace = root.parentElement;
+  const editorScroll = { client: workspace.clientWidth, width: workspace.scrollWidth,
+    overflow: getComputedStyle(workspace).overflowX,
+    pageOverflow: document.documentElement.scrollWidth > innerWidth };
   editor.stop();
-  output.textContent = JSON.stringify({ initial, resize, restored, longCompact, openLinks, unchanged, editorPreserved });
+  output.textContent = JSON.stringify({ initial, resize, restored, longCompact, openLinks, unchanged,
+    editorPreserved, editorInitial, editorResize, editorScroll });
   output.dataset.result = 'pass';
 } catch (error) {
   output.textContent = error.stack || error.message;

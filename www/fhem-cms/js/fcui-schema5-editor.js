@@ -125,6 +125,7 @@ export class Schema5Editor {
     this.#status.className = 'cms-status';
     this.#status.setAttribute('role', 'status');
     this.#content = document.createElement('div');
+    this.#content.className = 'cms-schema5-workspace';
     this.#page.addEventListener('click', () => this.#openPage());
     this.#widgets.addEventListener('click', () => this.#openWidgets());
     this.#backup.addEventListener('click', () => this.#openBackup());
