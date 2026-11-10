@@ -3,6 +3,8 @@
 Die Modulhilfe beschreibt Definition, Startlink, oeffentliche Befehle,
 Historienattribute und den Einstieg in Entwurf, Vorschau und Veroeffentlichen.
 Loesch- und Umstellungshinweise sowie der Verweis auf die Anleitung sind enthalten.
+Ein Standardsprachblock verweist auch ohne global language DE auf die
+vollstaendige deutsche Hilfe (help <Device> de).
 
 2026-11-10 - Textwidget-Titel vereinheitlicht (Refs #121)
 

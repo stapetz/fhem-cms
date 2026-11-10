@@ -2442,6 +2442,27 @@ sub FHEMCMS_HtmlEscape {
 
 =pod
 
+=item summary Configurable CMS dashboards with a draft editor
+=item summary_DE Konfigurierbare CMS-Seiten mit Entwurfseditor
+
+=begin html
+
+<a id="FHEMCMS"></a>
+<h3>FHEMCMS</h3>
+<p>FHEM CMS provides configurable dashboard pages and a draft editor.
+Define a device with <code>define &lt;name&gt; fhemcms</code>, then use its
+<code>CMS starten</code> or <code>Zeige Homepage</code> link.
+<code>get &lt;name&gt; url</code> returns the homepage URL.</p>
+<p>The complete embedded device reference is available in German:
+<code>help &lt;name&gt; de</code>. With
+<code>attr global language DE</code>, FHEM selects that reference automatically.</p>
+<p>See the
+<a href="https://github.com/stapetz/fhem-cms/blob/main/docs/ANWENDER.md">user guide</a>
+for setup, editing and updates. Editing URLs are not an access-control boundary;
+use FHEMWEB and FHEM permissions.</p>
+
+=end html
+
 =begin html_DE
 
 <a id="FHEMCMS"></a>
@@ -2458,7 +2479,8 @@ sub FHEMCMS_HtmlEscape {
   <p>Beispiel: <code>define CMS FHEMCMS</code>. Der Name darf Buchstaben,
   Ziffern, Punkt, Unterstrich und Bindestrich enthalten. Das Device wird
   standardmaessig dem Raum <code>FHEM CMS</code> zugeordnet.
-  <b>CMS starten</b> in der Device-/Raumansicht oeffnet die Homepage.
+  <b>CMS starten</b> in der Device-/Raumansicht oeffnet den Editor;
+  <b>Zeige Homepage</b> oeffnet den veroeffentlichten Stand.
   <code>get CMS url</code> liefert deren relativen URL-Pfad.</p>
 
   <a id="FHEMCMSset"></a>

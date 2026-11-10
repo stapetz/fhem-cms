@@ -20,6 +20,8 @@ define CMS fhemcms
 ```
 
 Das Device erscheint im Raum `FHEM CMS` mit den Links `CMS starten` und `Zeige Homepage`. Alternativ: `get CMS url`.
+Die eingebettete deutsche Gerätehilfe öffnen Sie mit `help CMS de`
+(bei `attr global language DE` genügt `help CMS`).
 Neu angelegte Devices verwenden Schema 5 mit 12 Spalten. Vorhandene
 Konfigurationen behalten ihr bisheriges Format bis zur bestätigten Umstellung.
 Fehlt die Live-Konfiguration in einem bereits vorhandenen Datenverzeichnis oder
