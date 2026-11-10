@@ -19,16 +19,17 @@ for (const path of candidates) {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 
-async function browserResult(profile, url) {
+async function browserResult(profile, url, child) {
   let port;
-  for (let attempt = 0; attempt < 200; attempt++) {
+  for (let attempt = 0; attempt < 600; attempt++) {
+    if (child.exitCode !== null) throw new Error(`Chrome exited before debugging was ready (${child.exitCode})`);
     try {
       port = Number((await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]);
-      break;
+      if (Number.isInteger(port) && port > 0 && port <= 65535) break;
     } catch (error) {
       if (error.code !== 'ENOENT') throw error;
-      await pause(25);
     }
+    await pause(25);
   }
   assert.ok(port, 'Chrome exposes its isolated debugging port');
   const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
@@ -85,7 +86,7 @@ async function browserResult(profile, url) {
 
 test('real browser zoom and resizing scale widgets and navigation without writes', {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
-  timeout: 120000,
+  timeout: 180000,
 }, async () => {
   const server = createServer(async (request, response) => {
     const path = resolve(root, `.${new URL(request.url, 'http://localhost').pathname}`);
@@ -132,7 +133,7 @@ test('real browser zoom and resizing scale widgets and navigation without writes
       let data;
       try {
         data = await browserResult(profile,
-          `http://127.0.0.1:${server.address().port}/t/35_schema5_scaling.html`);
+          `http://127.0.0.1:${server.address().port}/t/35_schema5_scaling.html`, child);
         assert.equal(child.exitCode, null, stderr);
       } catch (error) {
         throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });
