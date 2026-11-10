@@ -69,7 +69,10 @@ class FHEMCMSLink extends HTMLElement {
         .check input { width:auto; }
         .editor { display:grid; grid-template-columns:minmax(0,2fr) minmax(12rem,1fr); gap:1rem; }
         .canvas { min-width:0; max-height:50vh; overflow:auto; border:1px solid var(--cms-border,#43564a); }
-        .grid-stack { min-height:12rem; }
+        .grid-stack { min-height:12rem;
+          background-image:linear-gradient(to right, var(--cms-border,#43564a) 1px, transparent 1px),
+            linear-gradient(to bottom, var(--cms-border,#43564a) 1px, transparent 1px);
+          background-size:calc(100% / 12) var(--gs-cell-height,3rem); }
         .grid-stack-item-content { display:flex; flex-direction:column; gap:.25rem; padding:.3rem;
           border:1px solid var(--cms-border,#43564a); background:var(--cms-surface-raised,#2a3b32); border-radius:.5rem; }
         .grid-stack-item[data-selected] .grid-stack-item-content { outline:2px solid var(--cms-accent,#8fd0a8); outline-offset:-2px; }
@@ -208,10 +211,6 @@ class FHEMCMSLink extends HTMLElement {
       this.grid.on('dragstop resizestop', () => {
         try {
           this.syncGrid();
-          for (const key of ['col', 'row', 'w', 'h']) {
-            const input = this.$(`[data-geometry="${key}"]`);
-            if (input) input.value = String(this.links.find(link => link.id === this.selected).grid[key]);
-          }
           this.message('');
         }
         catch (error) { this.message(error.message); }
@@ -352,24 +351,6 @@ class FHEMCMSLink extends HTMLElement {
     clear.disabled = !link.image;
     clear.addEventListener('click', () => { delete link.image; this.editSelected(); });
     settings.append(mediaButton, media, clear);
-    for (const key of ['col', 'row', 'w', 'h']) {
-      const label = node('label', ({ col: 'Spalte', row: 'Zeile', w: 'Breite', h: 'Höhe' })[key]);
-      const value = node('input');
-      value.type = 'number'; value.min = '1'; value.max = key === 'col' || key === 'w' ? '12' : '1000';
-      value.value = String(link.grid[key]); value.dataset.geometry = key;
-      value.addEventListener('change', () => {
-        const candidate = structuredClone(this.links);
-        candidate.find(item => item.id === link.id).grid[key] = Number(value.value);
-        try {
-          validateLinkItems(candidate, this.pages);
-          const grid = candidate.find(item => item.id === link.id).grid;
-          const wrapper = [...this.$('[data-grid]').children].find(item => item.gridstackNode.id === link.id);
-          this.grid.update(wrapper, { x: grid.col - 1, y: grid.row - 1, w: grid.w, h: grid.h });
-          this.syncGrid(); this.message('');
-        } catch (error) { value.value = String(link.grid[key]); this.message(error.message); }
-      });
-      label.append(value); settings.append(label);
-    }
     const remove = node('button', 'Link entfernen'); remove.type = 'button'; remove.dataset.removeLink = '';
     remove.disabled = this.links.length === 1;
     remove.addEventListener('click', () => {

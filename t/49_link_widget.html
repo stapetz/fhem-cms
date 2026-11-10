@@ -97,6 +97,8 @@ try {
   await widget.openConfig();
   check($('[data-dialog]').open && widget.grid, 'nested Gridstack opened');
   equal(widget.grid.opts.column, 12, 'own 12-column raster');
+  check(!$('[data-geometry]') && !$('input[type=number]'), 'placement is purely graphical');
+  check(getComputedStyle($('[data-grid]')).backgroundImage.includes('linear-gradient'), 'fine grid always visible in tile editor');
   equal(widget.grid.engine.nodes.length, 2, 'all nested tiles mounted');
   field('text', 'Geänderter Linktext');
   field('kind', 'external');

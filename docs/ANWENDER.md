@@ -244,7 +244,8 @@ Im **Konfigurationsdialog** eine Kachel über ihren Griff verschieben und unten
 rechts skalieren. Das innere Raster hat unabhängig vom Seitenraster 12 Spalten
 und höchstens 1000 Zeilen; bei vielen Kacheln scrollt der Rasterbereich.
 Über die Beschriftung der Kachel wählen Sie deren Einstellungen aus.
-Spalte, Zeile, Breite und Höhe lassen sich alternativ numerisch einstellen.
+Ein feines Raster bleibt während der Kachelbearbeitung dauerhaft sichtbar.
+Position und Größe werden ausschließlich grafisch geändert.
 Überlappungen sind nicht speicherbar. Das äußere LinkWidget verschieben und
 skalieren Sie weiterhin wie andere Widgets auf der CMS-Seite.
 
