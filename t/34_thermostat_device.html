@@ -1,0 +1,111 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Thermostat device regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-thermostat.js';
+
+const result = document.querySelector('#result');
+const checks = [];
+function check(condition, message) {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+}
+
+try {
+  const devices = [
+    { name: 'Old', parent: '', alias: 'Old thermostat', type: 'CUL_HM',
+      readings: { 'measured-temp': '19', 'desired-temp': '20', battery: 'ok' },
+      sets: 'desired-temp:5,20,30 controlMode:auto,manual' },
+    { name: 'NewClimate', parent: 'Old', alias: 'New climate channel', type: 'CUL_HM',
+      readings: { temperature: '21', desiredTemperature: '22', valveposition: '30' },
+      sets: 'desiredTemperature:10,22,25 controlMode:manual,boost' },
+    { name: 'Other', parent: '', alias: 'Other thermostat', type: 'MAX',
+      readings: { temperature: '18', desiredTemperature: '19' },
+      sets: 'desiredTemperature' },
+    { name: 'OtherClimate', parent: 'Old', alias: 'Other climate channel', type: 'CUL_HM',
+      readings: { 'measured-temp': '17', 'desired-temp': '18' },
+      sets: 'desired-temp:6,18,28' },
+  ].map((device) => ({ room: 'Test', ...device }));
+  const original = {
+    id: 't1', type: 'thermostat', device: 'Old', title: 'Test',
+    readings: { actual: 'measured-temp', target: 'desired-temp', battery: 'battery' },
+    grid: { col: 1, row: 1, w: 4, h: 2 },
+  };
+  const saved = [];
+  const widget = document.createElement('cms-thermostat');
+  widget.services = {
+    listDevices: async () => devices,
+    saveWidget: async (value) => saved.push(structuredClone(value)),
+  };
+  widget.config = structuredClone(original);
+  document.body.append(widget);
+  const root = widget.shadowRoot;
+  const form = root.querySelector('[data-form]');
+  const field = (key) => form.elements[`reading-${key}`];
+  const choose = async (name, keyboard = false) => {
+    await widget.openPicker();
+    root.querySelector('[data-picker-search]').value = name;
+    widget.renderPickerRows();
+    const row = [...root.querySelector('[data-picker-rows]').children]
+      .find((item) => item.firstElementChild.textContent === name);
+    check(Boolean(row), `Picker offers ${name}`);
+    if (keyboard) row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    else row.click();
+  };
+
+  await widget.openConfig();
+  check(field('actual').value === 'measured-temp', 'Opening preserves saved reading choices');
+  await choose('NewClimate');
+  check(form.elements.device.value === 'NewClimate', 'Selected channel is not replaced by its parent');
+  check(root.querySelector('[data-device-alias]').textContent.includes('New climate channel'),
+    'Alias follows selected channel');
+  check(field('actual').value === 'temperature' && field('target').value === 'desiredTemperature',
+    'Device change reselects actual and target readings from the new device');
+  check(![...field('actual').options].some((option) => option.value === 'measured-temp'),
+    'Old device readings are removed');
+  check(field('battery').value === '' && field('valve').value === 'valveposition',
+    'Optional readings follow the new device');
+  check(widget.config.device === 'Old', 'Unsaved selection does not change stored config');
+  await widget.onSave();
+  check(saved.length === 1 && saved[0].device === 'NewClimate'
+    && saved[0].readings.target === 'desiredTemperature', 'Saving retains exact device and new readings');
+  check(JSON.stringify(saved[0].grid) === JSON.stringify(original.grid), 'Saving preserves layout');
+
+  widget.config = saved[0];
+  widget.data = [devices[1]];
+  check(widget.control.device === 'NewClimate' && widget.control.min === 10 && widget.control.max === 25,
+    'Target setter device and range follow saved device');
+  check(widget.control.modeDevice === 'NewClimate'
+    && widget.control.modes.join(',') === 'manual,boost', 'Mode setter follows saved device');
+  await widget.openConfig();
+  check(form.elements.device.value === 'NewClimate' && field('target').value === 'desiredTemperature',
+    'Reopening retains saved device and readings');
+  await choose('OtherClimate', true);
+  check(form.elements.device.value === 'OtherClimate' && field('target').value === 'desired-temp',
+    'Keyboard selection switches between channels of the same parent');
+  widget.closeDialog(true);
+  await widget.openConfig();
+  check(form.elements.device.value === 'NewClimate' && saved.length === 1,
+    'Cancelling does not save device changes');
+  await choose('Other');
+  check(form.elements.device.value === 'Other' && field('target').value === 'desiredTemperature',
+    'Standalone devices remain selectable');
+  await widget.openPicker();
+  root.querySelector('[data-picker-cancel]').click();
+  check(form.elements.device.value === 'Other', 'Cancelling picker preserves dialog selection');
+  await choose('Old');
+  check(form.elements.device.value === 'Old'
+    && [...field('target').options].some((option) => option.value === 'desired-temp'),
+    'Selecting a main device retains its own readings');
+  check([...field('actual').options].some((option) => option.value === 'temperature'),
+    'Main device selection still includes channel readings');
+  widget.closeDialog(true);
+  widget.remove();
+  result.textContent = `PASS (${checks.length} checks)\n${checks.join('\n')}`;
+  result.dataset.result = 'pass';
+} catch (error) {
+  result.textContent = `FAIL: ${error.stack || error.message}`;
+  result.dataset.result = 'fail';
+}
+</script>

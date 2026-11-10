@@ -528,6 +528,14 @@ andere übergebene Dienste bleiben verfügbar und sind keine allgemeine
 Sicherheitsgrenze. Laufende Schreibvorgänge sperren den Dialog und dürfen bei
 Tabende zwar abgeschlossen werden, aber die Ansicht nicht wieder öffnen.
 Die Tests verwenden auch interne Perl-Transaktionen auf temporären Dateien.
+`t/34_thermostat_device.html` prüft den Gerätewechsel im echten Thermostat-Dialog
+mit synthetischen Geräten (Refs #105): exakte Kanalwahl per Klick und Tastatur,
+neue Readings und Setter, Speichern/Wiederöffnen, Abbruch und Hauptgeräte samt
+Kanälen. Reproduzierbar aus dem Repository-Root mit
+`python3 -m http.server 8765 --bind 127.0.0.1` und Chrome
+`--headless=new --virtual-time-budget=4000 --dump-dom http://127.0.0.1:8765/t/34_thermostat_device.html`.
+Erwartet wird `data-result="pass"` mit `PASS (22 checks)`; der Test schreibt
+nicht nach FHEM und ersetzt keine Geräteabnahme.
 Ein lokaler Browsertest öffnete alle zwölf Bestandsdialoge und prüfte Anlegen,
 Abbrechen und HTML-Speichern mit simuliertem Transport. Das Panel ist noch nicht
 mit dem Device-Einstieg oder einem öffentlichen Schreibtransport verbunden.

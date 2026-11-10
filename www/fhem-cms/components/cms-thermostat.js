@@ -677,7 +677,7 @@ class FHEMCMSThermostat extends HTMLElement {
 
   pickDevice(device) {
     const form = this.shadowRoot.querySelector('[data-form]');
-    form.elements.device.value = device.parent || device.name;
+    form.elements.device.value = device.name;
     this.showAlias();
     this.closePicker();
     this.onDeviceChanged();
