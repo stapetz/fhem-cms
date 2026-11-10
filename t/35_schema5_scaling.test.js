@@ -145,6 +145,7 @@ test('editor tools follow real hover, keyboard focus and touch capability withou
   const server = await testServer();
   const profile = await mkdtemp(join(tmpdir(), 'cms-hover-'));
   const child = spawn(chrome, ['--headless=new', '--no-first-run', '--no-default-browser-check',
+    '--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4',
     '--disable-background-networking', '--remote-debugging-address=127.0.0.1',
     '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--window-size=1440,1000', 'about:blank']);
   let stderr = '';
@@ -175,9 +176,12 @@ test('editor tools follow real hover, keyboard focus and touch capability withou
       await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
       await check('initial');
       for (const index of [0, 1]) {
+        await evaluate(`document.querySelector('#hover-item-${index}').scrollIntoView({block:'center'})`);
+        await pause(100);
         const point = await evaluate(`(() => { const r = document.querySelector('#hover-item-${index}').getBoundingClientRect();
           return {x:r.x + 10, y:r.y + 10}; })()`);
         await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+        await pause(50);
         await check('hover', index);
         await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
         await check('leave');
