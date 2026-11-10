@@ -1,5 +1,57 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Release 1.2.0: freigegebener Umfang
+
+Am 10.11.2026 hat der Entwickler nach den heutigen Korrekturen ausdrücklich
+Aufräumen von Issues/Kanban, Dokumentationspflege und einen neuen Release auf
+`main` beauftragt. Diese Freigabe umfasst #105–#119. Sie ersetzt keine
+vollständige Prüfung aller Browser, Geräte oder der älteren offenen
+MVP-/Refactoringanforderungen. Releaseverfolgung: #120.
+
+Alle 15 Umsetzungsthemen waren bereits als Issues und Projektkarten vorhanden.
+Die Releasefreigabe wird bei ihnen dokumentiert, `needs-test` entfernt und
+der Status vor Veröffentlichung auf `Ready to publish` gesetzt. #104 ist ein
+bereits geschlossenes Einheiten-/Schreibweisenthema vom Vortag und wird ohne
+doppeltes Issue ins Projekt nachgetragen. Der gewünschte kWh-Hinweis steht in
+der README; vorhandene Einheiten werden nicht automatisch umgerechnet.
+#96 (HMCCUCHN-Auswahl bei neuen Thermostaten) und andere ältere offene Aufgaben
+sind ausdrücklich nicht Bestandteil dieser Gerätewechselkorrektur.
+
+Basis ist der stabile Release 1.1.0. Neue rückwärtskompatible Funktionen
+ergeben nach SemVer 1.2.0, unabhängig von den zwischenzeitlichen
+Entwicklungsversionsnummern. Der Release-Branch startet auf `main`; nur die
+folgenden issuebezogenen Commits werden in dieser Reihenfolge übernommen.
+Generierte Controls-Commits, reine dev-Versionsfortschreibungen und
+KI-Anweisungen gehören nicht zur Auswahl:
+
+| Issue | Entwicklungscommits | Umfang |
+|---|---|---|
+| #105 | `79fc3ad` | Thermostat-Gerätewechsel und erneutes Lesen der Bindungen |
+| #106 | `d944cfc`, `9aca214`, `306dfad` | Fenster-/Zoomskalierung und Browserregression |
+| #107 | `3e51283`, `747d34a` | Globale Titelausrichtung und Änderungshistorie |
+| #108 | `34c3c61` | Widget-Inhalte an verfügbare Innenfläche anpassen |
+| #109 | `a9412a8` | Zoomfähiges präzises Editorraster |
+| #110 | `eab3568` | Standardsymbole und optionale Beschriftung |
+| #111 | `4480184`, `6a1c976`, `5898afc`, `d197923` | Resize-Griff, Navigation und seitenübergreifender Reflow |
+| #112 | `47ab489` | Vertikale Platzprüfung und Ausrichtungswechsel |
+| #113 | `a20d12f`, `8019ba5`, `13c75eb`, `b584617` | Werkzeuge bei Hover/Fokus und Touchregression |
+| #114 | `3f914f8` | Safari-Auswahl beim Formatieren erhalten |
+| #115 | `9c21af0`, `8f29ff3` | Automatisches Anordnen mit stabiler Leserichtung |
+| #116 | `6e212bf` | Einheiten für Text-Readings |
+| #117 | `8cb5ae4` | SolarFlow-Titelbereich freihalten |
+| #118 | `7bbd5a2` | Gemeinsame freie Einheitenfelder mit Vorschlägen |
+| #119 | `cb85b80` | Gemeinsame Rastergeometrie in Editor und Ansicht |
+
+Die issuebezogenen Prüfungen und vollständige CI auf `dev` waren erfolgreich.
+Für #119 bestehen 850 Geometrieprüfungen in Chromium und WebKit 17.4 über alle
+fünf Rasterdichten; das ursprüngliche CSS reproduziert die Abweichung in WebKit.
+Echter Browserzoom bei 80/100/125/200 Prozent sowie Pointer-Drag/Resize sind
+ebenfalls geprüft. Die isolierte Releaseprüfung wiederholt Perl-Syntax,
+Perl-/JavaScript-Tests, Buildvergleich und vollständigen Diffabgleich.
+Ein stabiler FHEM-Update-Stand ist erst nach erfolgreichem `main`-Push und
+abgeschlossenem Controls-Workflow verfügbar. Erst dann werden die tatsächlich
+enthaltenen Issues geschlossen und nach `Done` überführt.
+
 ## Release 1.1.0: bestätigter Umfang
 
 Am 09.11.2026 hat der Entwickler den aktuellen Stand als abgenommen bestätigt
