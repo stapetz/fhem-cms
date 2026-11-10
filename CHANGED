@@ -1,3 +1,10 @@
+2026-11-10 - Globale Ausrichtung der Widgettitel (Refs #107)
+
+In den Seiteneinstellungen lassen sich Widgettitel deviceweit links, zentriert
+oder rechts ausrichten. Alle zwölf Widgettypen übernehmen die Einstellung in
+Homepage, Vorschau und Editor. Vorhandene Konfigurationen bleiben linksbündig;
+Dialogüberschriften und frei formatierte Inhalte bleiben unverändert.
+
 2026-11-10 - Navigation und Widgets zoomfähig skalieren (Refs #106)
 
 Navigationsbuttons samt Text und eingestellten Abmessungen skalieren mit der
@@ -401,9 +408,3 @@ to the device's content structure, not to separate surface directories.
 
 Add the FHEMCMS device module, generated test page, and shared frontend component.
 Add repository-wide FHEM update controls and installation instructions.
-2026-11-10 - Globale Ausrichtung der Widgettitel (Refs #107)
-
-In den Seiteneinstellungen lassen sich Widgettitel deviceweit links, zentriert
-oder rechts ausrichten. Alle zwölf Widgettypen übernehmen die Einstellung in
-Homepage, Vorschau und Editor. Vorhandene Konfigurationen bleiben linksbündig;
-Dialogüberschriften und frei formatierte Inhalte bleiben unverändert.
