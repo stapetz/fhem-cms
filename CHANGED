@@ -1,3 +1,12 @@
+2026-11-10 - 1.4.2-dev: Assetordner direkt in der Inhaltsansicht bedienen (Refs #125)
+
+Linke Baumstruktur und Bereich Ordner verwalten entfernt. Navigation erfolgt
+in Hauptansicht und Zielauswahl ausschliesslich per Ordnerkachel und Pfad.
+Ordner erstellen oberhalb der Uebersicht legt im aktuell geoeffneten Ordner
+einen Unterordner an; die Ansicht bleibt dort und zeigt die neue Kachel.
+Umbenennen/Verschieben/Loeschen sind kontextbezogen ueber das Kachelmenue
+erreichbar. Ohne Auswahl nutzt die Uebersicht die volle Breite.
+
 2026-11-10 - 1.4.1-dev: Assetordner grafisch durchsuchen und Verschieben bestaetigen (Refs #125)
 
 Finder-artige Ordnerleiste, Ordnerkacheln und klickbarer Pfad ersetzen die

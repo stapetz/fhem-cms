@@ -69,6 +69,11 @@ const click = async (root, selector) => { root.querySelector(selector).click(); 
 const set = (root, selector, value, event = 'input') => {
   const input = root.querySelector(selector); input.value = value; input.dispatchEvent(new Event(event));
 };
+const createFolder = async (root, name) => {
+  await click(root, '[data-mkdir]');
+  set(root, '[data-folder-create] [data-folder-name]', name);
+  await click(root, '[data-folder-create-accept]');
+};
 try {
   let pending = openAssetManager(services);
   await pause();
@@ -76,6 +81,14 @@ try {
   check(root.querySelector('[data-assets-dialog]').open, 'manager opens as modal');
   check(root.querySelectorAll('[data-asset-id]').length === 2, 'images and documents share catalog');
   check(root.querySelector('[data-select]').hidden, 'File menu management has no insertion action');
+  check(!root.querySelector('[data-folder-tools]'), 'no separate folder management area');
+  check(!root.querySelector('[data-folders]') && !root.querySelector('nav'), 'no left folder tree');
+  equal(root.querySelector('[data-mkdir]').textContent, 'Ordner erstellen', 'folder creation available above content');
+  check(root.querySelector('[data-mkdir]').compareDocumentPosition(root.querySelector('[data-assets]')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    'create action precedes the large content view');
+  check(root.querySelector('[data-detail]').hidden, 'empty details never reserve space in overview');
+  equal(Math.round(root.querySelector('[data-assets]').getBoundingClientRect().width),
+    Math.round(root.querySelector('.layout').getBoundingClientRect().width), 'overview fills the available width');
   const thumb = root.querySelector('img');
   await thumb.decode();
   check(thumb.naturalWidth > 0, 'asset thumbnails really load');
@@ -88,32 +101,47 @@ try {
   await click(root, '[data-delete-asset]');
   equal(deleteCalls, 0, 'used asset not deleted');
   check(root.querySelector('[data-status]').textContent.includes('verwendet'), 'in-use warning visible');
-  set(root, '[data-folder-name]', 'Bilder');
   await click(root, '[data-mkdir]');
+  check(root.querySelector('[data-folder-create]').textContent.includes('Stammordner'), 'creation dialog names current parent');
+  set(root, '[data-folder-create] [data-folder-name]', '../invalid');
+  await click(root, '[data-folder-create-accept]');
+  check(root.querySelector('[data-folder-create] [role=alert]').textContent.includes('gültigen'), 'invalid folder name reported explicitly');
+  equal(state.folders.length, 0, 'invalid name never reaches backend');
+  await click(root, '[data-folder-create-cancel]');
+  equal(state.folders.length, 0, 'cancelling creation writes nothing');
+  await createFolder(root, 'Bilder');
   const folder = state.folders[0].id;
-  check(root.querySelector(`[data-folders] [data-folder-id="${folder}"]`).getAttribute('aria-current') === 'true', 'new folder selected');
+  equal(state.folders[0].parent, 'root', 'folder created inside current root');
+  check(root.querySelector(`[data-assets] [data-open-folder="${folder}"]`), 'new folder immediately visible without leaving parent');
+  equal(root.querySelector('[data-path]').textContent, 'Stammordner', 'creating folder does not change location');
   const beforeNavigation = actions.filter(op => op !== 'list' && op !== 'usage').length;
-  await click(root, '[data-folders] [data-folder-id="root"]');
   check(root.querySelector(`[data-open-folder="${folder}"]`), 'folders appear as tiles next to their contents');
   await click(root, `[data-open-folder="${folder}"]`);
   equal(actions.filter(op => op !== 'list' && op !== 'usage').length, beforeNavigation, 'folder clicks never send mutations');
-  set(root, '[data-folder-name]', 'Unterordner');
-  await click(root, '[data-mkdir]');
+  check(root.querySelector('[data-path]').textContent.includes('Bilder'), 'tile navigation updates breadcrumb');
+  await createFolder(root, 'Unterordner');
   equal(state.folders[1].parent, folder, 'nested folders created in selected parent');
+  const nested = state.folders[1].id;
+  await click(root, `[data-edit-folder="${nested}"]`);
   set(root, '[data-folder-name]', 'Solar');
   await click(root, '[data-folder-save]');
   equal(state.folders[1].name, 'Solar', 'folder renamed');
   await click(root, '[data-parent]');
-  check(!root.querySelector(`[data-folder-picker] [data-folder-id="${state.folders[1].id}"]`), 'folder cannot select itself as its parent');
-  await click(root, '[data-folder-picker] [data-folder-id="root"]');
+  check(!root.querySelector(`[data-folder-picker] [data-open-folder="${nested}"]`), 'folder cannot select itself as its parent');
+  check(!root.querySelector('[data-folder-picker] nav'), 'destination picker also omits tree');
+  await click(root, '[data-folder-picker] [data-path-folder="root"]');
   await click(root, '[data-folder-accept]');
   await click(root, '[data-folder-save]');
   equal(state.folders[1].parent, 'root', 'folder itself can move via the same visual picker');
+  await click(root, '[data-path] [data-path-folder="root"]');
+  await click(root, `[data-edit-folder="${nested}"]`);
   await click(root, '[data-parent]');
-  await click(root, `[data-folder-picker] [data-folder-id="${folder}"]`);
+  await click(root, `[data-folder-picker] [data-open-folder="${folder}"]`);
   await click(root, '[data-folder-accept]');
   await click(root, '[data-folder-save]');
   equal(state.folders[1].parent, folder, 'folder can be moved back to nested position');
+  await click(root, `[data-open-folder="${folder}"]`);
+  await click(root, `[data-edit-folder="${nested}"]`);
   await click(root, '[data-rmdir]');
   check(root.querySelector('[data-folder-delete]').open, 'folder deletion requires a separate confirmation');
   await click(root, '[data-delete-folder-cancel]');
@@ -121,17 +149,17 @@ try {
   await click(root, '[data-rmdir]');
   await click(root, '[data-delete-folder-accept]');
   equal(state.folders.length, 1, 'empty folder removed');
-  await click(root, '[data-folders] [data-folder-id="root"]');
+  await click(root, '[data-path] [data-path-folder="root"]');
   await click(root, `[data-asset-id="${image.id}"]`);
   set(root, '[data-asset-name]', 'Neuer Name.png');
   await click(root, '[data-choose-destination]');
   check(root.querySelector('[data-folder-picker]').open, 'move destination opens a visual folder picker');
   check(root.querySelector(`[data-folder-preview="${image.id}"]`), 'destination picker shows folder contents too');
-  await click(root, `[data-folder-picker] [data-folder-id="${folder}"]`);
+  await click(root, `[data-folder-picker] [data-open-folder="${folder}"]`);
   await click(root, '[data-folder-cancel]');
   check(root.querySelector('[data-asset-folder]').textContent.endsWith('Stammordner'), 'cancelling picker retains original destination');
   await click(root, '[data-choose-destination]');
-  await click(root, `[data-folder-picker] [data-folder-id="${folder}"]`);
+  await click(root, `[data-folder-picker] [data-open-folder="${folder}"]`);
   await click(root, '[data-folder-accept]');
   check(root.querySelector('[data-asset-folder]').textContent.includes('Bilder'), 'chosen destination visible before committing move');
   ignoreMove = true;
@@ -140,7 +168,7 @@ try {
   equal(state.assets[0].folder, 'root', 'unconfirmed move leaves asset in its original folder');
   ignoreMove = false;
   await click(root, '[data-choose-destination]');
-  await click(root, `[data-folder-picker] [data-folder-id="${folder}"]`);
+  await click(root, `[data-folder-picker] [data-open-folder="${folder}"]`);
   await click(root, '[data-folder-accept]');
   set(root, '[data-asset-name]', 'Neuer Name.png');
   await click(root, '[data-move]');
@@ -150,9 +178,12 @@ try {
   check(root.querySelector(`[data-asset-id="${image.id}"]`), 'successful move follows image into destination folder');
   await click(root, '[data-reload]');
   check(root.querySelector(`[data-asset-id="${image.id}"]`), 'moved image remains visible after reload');
+  await click(root, '[data-path] [data-path-folder="root"]');
+  await click(root, `[data-edit-folder="${folder}"]`);
   await click(root, '[data-rmdir]');
   check(root.querySelector('[data-status]').textContent.includes('nicht gelöscht'), 'nonempty folder is never deleted');
   equal(state.folders.length, 1, 'nonempty folder and contents preserved');
+  await click(root, `[data-open-folder="${folder}"]`);
   const transfer = new DataTransfer();
   transfer.items.add(new File(['image'], 'Upload.png', { type: 'image/png' }));
   root.querySelector('[data-upload]').files = transfer.files;
@@ -259,12 +290,15 @@ try {
     folder,
     image: image.id,
     async finish() {
-      equal(actions.filter(op => !['list', 'usage'].includes(op)).length, mutationsBeforePointer + 1,
-        'real pointer navigation sends exactly one explicit move, no other mutations');
+      equal(actions.filter(op => !['list', 'usage'].includes(op)).length, mutationsBeforePointer + 2,
+        'real pointer navigation sends only the explicit move and folder creation');
       equal(deleteCalls, deletesBeforePointer, 'real folder clicks never delete');
       equal(state.assets.find(item => item.id === image.id).folder, 'd'.repeat(32), 'real pointer move selects nested destination');
       equal(state.assets.find(item => item.id === image.id).href, image.href, 'real pointer move preserves image address');
-      check(root.querySelector('[data-status]').textContent.includes('Unterordner'), 'real pointer move names destination');
+      const created = state.folders.find(item => item.name === 'Mausordner');
+      equal(created?.parent, 'd'.repeat(32), 'real pointer creation uses currently opened nested folder');
+      check(root.querySelector(`[data-open-folder="${created.id}"]`), 'real pointer creation leaves new tile in current contents');
+      check(root.querySelector('[data-status]').textContent.includes('Unterordner'), 'real pointer creation names current location');
       await click(root, '[data-reload]');
       check(root.querySelector(`[data-asset-id="${image.id}"]`), 'real pointer move persists after reload');
       await click(root, '[data-close]'); await pending;

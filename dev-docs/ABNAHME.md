@@ -1,5 +1,35 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Nachbesserung 1.4.2-dev: ausschließlich Kacheln und Pfad (#125)
+
+Anforderung vom 10.11.2026: kein Bereich „Ordner verwalten“, keine linke
+Baumstruktur. Hauptansicht und Zielordnerauswahl navigieren ausschließlich per
+Ordnerkachel und klickbarem Pfad. „Ordner erstellen“ steht oberhalb des
+Inhaltsfensters, fragt den Namen ab und legt im aktuell geöffneten Ordner an.
+Die Ansicht bleibt beim Elternordner und zeigt unmittelbar die neue Kachel.
+Bestehende Ordneraktionen bleiben über „⋯“ direkt an der Kachel verfügbar;
+Details beanspruchen nur bei Auswahl Platz, sonst volle Breite für die Übersicht.
+
+Lokale Prüfung:
+
+- `t/51_asset_manager.html`: 116 Chromium-Prüfungen. Kein Baum/separater
+  Verwaltungsbereich, volle Inhaltsbreite, Erstellen im Stamm-/Unterordner,
+  ungültiger Name und Abbruch ohne Schreibzugriff, Kachel-/Pfadnavigation ohne
+  Mutation. Echte Pointerklicks erstellen einen Ordner auf der aktuell geöffneten
+  Unterebene und verschieben ein Bild mit anschließendem Reload.
+- Weiterhin Umbenennen/Verschieben/Löschen über kontextbezogene Kachelaktionen,
+  Schutz nichtleerer Ordner, Löschbestätigung, Zielabbruch und Texteditor-
+  Integration. LinkWidget: weitere 100 Browserprüfungen erfolgreich.
+- Zusammen 7 gezielte JS-Tests erfolgreich in
+  `t/19_schema5_editor.test.js`, `t/35_schema5_scaling.test.js`,
+  `t/48_link_widget.test.js`, `t/50_asset_client.test.js`.
+- `perl -c FHEM/01_FHEMCMS.pm`,
+  `prove -l t/07_asset_manager.t t/06_commandref.t` (194 Assertions),
+  `node scripts/build-fcui.mjs --check` und `git diff --check`: erfolgreich.
+
+Geräteabnahme in Safari/Edge weiterhin offen. Keine produktiven Dateien oder
+Ordner für diese Prüfungen verändert; `main` bleibt unverändert.
+
 ## Nachbesserung 1.4.1-dev: Ordnerbrowser und Verschieben (#125)
 
 Geräterückmeldung am 10.11.2026: Bildverschieben ohne Fehlermeldung unklar bzw.
