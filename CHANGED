@@ -1,3 +1,14 @@
+2026-11-10 - 1.5.0-dev: Einheitliche Einheitenfelder mit Vorschlägen (Refs #118)
+
+Texteditor/Platzhalterdialog, Wert, Diagramm und Tabelle verwenden ein freies
+Einheitenfeld mit gemeinsamen anklickbaren Vorschlägen wie beim Wert-Widget.
+Eigene Einheiten sind ohne „Andere …“-Auswahl möglich. Tabellen behalten
+automatische Summeneinheiten und ausdrücklich leere Einheiten unverändert.
+Der Texteditor erkennt auch eigene Einheiten beim Wiederöffnen und prüft
+unzulässige Eingaben sichtbar. Das Muster ist für bestehende und zukünftige
+Widgets im führenden Entwicklerstyleguide verbindlich dokumentiert.
+SolarFlows W/kW-Umrechnungswahl bleibt fachlich begrenzt.
+
 2026-11-10 - SolarFlow-Diagramm hält den Titelbereich frei (Refs #117)
 
 Der Titel erhält einen eigenen Bereich über dem Diagramm. Die SVG-Darstellung

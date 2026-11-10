@@ -924,24 +924,27 @@ Variante überlagern. Der vorhandene Chrome-Runner führt die Fixture aus.
 
 ## Einheitenauswahl für Platzhalter (Refs #116)
 
-Der gemeinsame `placeholder-picker.js` bietet eine feste Einheiten-Auswahl für
+Der gemeinsame `placeholder-picker.js` bietet ein freies Einheitenfeld mit
+Vorschlagsbuttons für
 Textbaustein und freies HTML, einschließlich Attribut-Schreibweise.
 Sie erzeugt ausschließlich den bestehenden letzten Filter `suffix( Einheit)`;
 kein neues Schemafeld, keine Migration und keine Umrechnung.
-Ein abschließender Suffix aus der Auswahlliste wird beim Öffnen, manuellen
+Ein abschließender Suffix mit führendem Leerzeichen wird beim Öffnen, manuellen
 Filterändern oder Preset-Klick erkannt und beim Einheitenwechsel ersetzt.
-Andere Filter bleiben erhalten; unbekannte/nicht abschließende Suffixe werden
-nicht umgeschrieben. `Keine` entfernt nur den erkannten letzten Einheitensuffix.
+Andere Filter bleiben erhalten; Suffixe ohne führendes Leerzeichen und nicht
+abschließende Suffixe werden nicht umgeschrieben. Leeren des Einheitenfelds
+entfernt nur den erkannten letzten Einheitensuffix. Auch eigene Einheiten
+werden erkannt; maximal 16 Zeichen ohne Steuerzeichen und Filter-/HTML-Syntax.
 Filter-Presets werden vor dem abschließenden Einheitensuffix eingefügt, damit
 nachträgliches Runden die Einheit nicht wieder entfernt. Ein Einheitenpreset
 ersetzt eine bereits ausgewählte Einheit.
 Filter leeren setzt auch die Einheit zurück. Vorschau, Validierung und
 Ergebnis verwenden denselben Filtertext und die vorhandene Filter-Allowlist.
-Die Auswahlliste wird über DOM-Optionen ohne HTML-Interpolation erzeugt.
+Vorschlagsbuttons werden über DOM-Elemente ohne HTML-Interpolation erzeugt.
 Vorhandene Richtextchips und deren Formatierung/Safari-Auswahlpfad bleiben
 unverändert; sie transportieren den Filter schon beim Öffnen/Bearbeiten.
 
-`t/44_placeholder_units.html` prüft 274 Browserassertionen für alle angebotenen
+`t/44_placeholder_units.html` prüft 384 Browserassertionen für alle angebotenen
 Einheiten, Vorschau, Wechsel ohne Duplikate, Entfernen, Rundungsfilter, eigene
 Suffixe, manuelle Filter/Preset-Synchronisierung, Leeren, Validierungsfehler,
 Abbrechen und Wiederöffnen. Beide Schreibweisen werden nach Bereinigung mit
@@ -949,6 +952,36 @@ dem echten Template-Renderer auf den erwarteten Text geprüft. Ein echter
 Shadow-DOM-Texteditor fügt einen Readingchip mit Einheit ein, serialisiert
 ihn, rendert seinen Wert und ändert die Einheit beim Wiederöffnen.
 Der bestehende Chrome-Runner `t/35_schema5_scaling.test.js` führt die Fixture aus.
+
+### Verbindliche Einheitenfelder aller Widgets (Refs #118)
+
+Die führende Vorgabe für bestehende und neue Widgets steht in
+[Styleguide §5.3](./entwicklerdoku_und_styleguides.md#53-einheiteneingaben-freitext-mit-vorschlagsbuttons-verbindlich):
+freies Textfeld plus umbrechende Vorschlagsbuttons wie beim Wert-Widget.
+`js/unit-input.js` teilt Liste, DOM-Buttons und CSS zwischen Wert, Diagramm,
+Tabellenzeilen, Tabellensumme und Platzhalterdialog. Keine parallelen
+Vorschlagslisten hinzufügen. Der Hilfsbaustein ändert nur den Feldwert und
+sendet `input`/`change`, niemals `submit`; Beschriftung und Validierung
+verbleiben beim jeweiligen Formular.
+
+Die Tabelle verwendet nun ebenfalls direkt das freie Einheitenfeld. Die
+Checkbox `sumUnitAuto` ist ausschließlich UI-Zustand:
+aktiv = kein `sumUnit` im bestehenden Schema, inaktiv = Feldwert in
+`sumUnit`, einschließlich explizit leerem String. Dadurch bleiben automatische
+Übernahme, eigene und ausdrücklich fehlende Summeneinheit unterscheidbar.
+Zeileneinheiten bleiben optional; leere Eingabe lässt das Feld weg.
+Keine Schemaänderung und keine Migration.
+
+`t/46_unit_inputs.html` prüft 998 Browserassertionen: gemeinsame Vorschläge,
+korrekte Zielzuordnung und Ereignisse ohne Formularübermittlung, CSS-Maße,
+Light/Dark, eigene Einheit, Leeren, Speichern/Wiederöffnen und sichtbare
+Validierungsfehler in Wert, Diagramm und Tabelle. Summenautomatik, explizit
+leere Summeneinheit und eigene Zeileneinheit werden getrennt geprüft.
+Auch dynamisch hinzugefügte Zeilen haben unabhängige Vorschlagsbuttons und
+behalten ihre Einheiten bei einem Wechsel des Device-Modus.
+Die bestehende Browserregression führt beide Einheiten-Fixtures aus.
+SolarFlows W/kW-Auswahl bleibt bewusst begrenzt, weil sie eine Umrechnung
+steuert und keine frei wählbare Beschriftung ist.
 
 ## Richtext-Auswahl in Safari (Refs #114)
 

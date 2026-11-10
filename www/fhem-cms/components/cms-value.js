@@ -1,6 +1,6 @@
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 
-const UNITS = ['°C', '%', 'W', 'kW', 'kWh', 'V', 'A', 'hPa', 'lx', 'mm', 'm', 'km', 'km/h', 'm/s', 'l', 'ppm', 'dB'];
+import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 const ICON_PAGE = 120;
 const PICKER_MAX_ROWS = 200;
 const PICKER_COLUMNS = [
@@ -104,6 +104,7 @@ class FHEMCMSValue extends HTMLElement {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a9a8f' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
+        ${unitInputCss}
       </style>
       <article class="tile" data-tile>
         <header data-header hidden>
@@ -137,7 +138,7 @@ class FHEMCMSValue extends HTMLElement {
           <label>Einheit (optional, Vorschlag wählen oder frei eintragen)
             <input name="unit" autocomplete="off" maxlength="16">
           </label>
-          <div class="chips" role="group" aria-label="Einheiten-Vorschläge">${UNITS.map((unit) => `<button type="button" data-unit-choice="${unit}">${unit}</button>`).join('')}</div>
+          <div data-unit-choices></div>
           <div>
             <span class="hint">Icon (optional)</span>
             <div class="icon-row">
@@ -188,11 +189,7 @@ class FHEMCMSValue extends HTMLElement {
     $('[data-icon-clear]').addEventListener('click', () => this.setIcon(''));
     $('[data-icon-filter]').addEventListener('input', () => this.renderIcons());
     const form = $('[data-form]');
-    for (const chip of this.shadowRoot.querySelectorAll('[data-unit-choice]')) {
-      chip.addEventListener('click', () => {
-        form.elements.unit.value = chip.dataset.unitChoice;
-      });
-    }
+    $('[data-unit-choices]').append(unitSuggestions(form.elements.unit));
     $('[data-pick-device]').addEventListener('click', () => this.openPicker());
     form.elements.device.addEventListener('click', () => this.openPicker());
     $('[data-picker-cancel]').addEventListener('click', () => this.closePicker());
@@ -484,8 +481,8 @@ class FHEMCMSValue extends HTMLElement {
     if (!NAME_PATTERN.test(reading)) {
       throw new Error('Bitte ein gültiges Reading angeben');
     }
-    if (/[\u0000-\u001f\u007f]/.test(unit)) {
-      throw new Error('Die Einheit enthält ungültige Zeichen');
+    if (unit.length > 16 || /[\u0000-\u001f\u007f]/.test(unit)) {
+      throw new Error('Die Einheit ist ungültig (max. 16 Zeichen, keine Steuerzeichen)');
     }
     const widget = { id: this.widgetConfig.id, type: 'fhem-value', device, reading, grid: { ...this.widgetConfig.grid } };
     const title = form.elements.title.value.trim();

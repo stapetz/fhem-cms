@@ -1,40 +1,7 @@
 import { openDevicePicker } from '../js/device-picker.js';
+import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 
 const MAX_ROWS = 40;
-const UNITS = [
-  ['', 'Keine Einheit'],
-  ['°C', '°C (Celsius)'],
-  ['°F', '°F (Fahrenheit)'],
-  ['km', 'km'],
-  ['m', 'm'],
-  ['cm', 'cm'],
-  ['mm', 'mm'],
-  ['km/h', 'km/h'],
-  ['m/s', 'm/s'],
-  ['%', '%'],
-  ['W', 'W'],
-  ['kW', 'kW'],
-  ['Wh', 'Wh'],
-  ['kWh', 'kWh'],
-  ['V', 'V'],
-  ['A', 'A'],
-  ['mA', 'mA'],
-  ['L', 'L'],
-  ['ml', 'ml'],
-  ['l/min', 'l/min'],
-  ['m³', 'm³'],
-  ['Pa', 'Pa'],
-  ['hPa', 'hPa'],
-  ['ppm', 'ppm'],
-  ['dB', 'dB'],
-  ['lx', 'lx'],
-  ['kg', 'kg'],
-  ['g', 'g'],
-  ['s', 's'],
-  ['min', 'min'],
-  ['h', 'h'],
-  ['custom', 'Andere …']
-];
 
 class FHEMCMSReadingsTable extends HTMLElement {
   constructor() {
@@ -108,6 +75,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a9a8f' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
+        ${unitInputCss}
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>
@@ -135,8 +103,12 @@ class FHEMCMSReadingsTable extends HTMLElement {
             <div data-sum-field hidden>
               <label>Beschriftung<input name="sumLabel" type="text" maxlength="32" placeholder="Summe" autocomplete="off"></label>
               <label class="check"><input name="showSumLabel" type="checkbox" checked>Beschriftung anzeigen</label>
-              <label>Einheit<span class="unit-fields"><select name="sumUnitSelect" data-sum-unit></select>
-                <input name="sumUnitCustom" type="text" maxlength="16" placeholder="Eigene Einheit" autocomplete="off" hidden></span></label>
+              <label class="check"><input name="sumUnitAuto" type="checkbox" checked>Einheit automatisch wie die Einzelwerte</label>
+              <div data-sum-unit-fields hidden>
+                <label>Einheit (optional, Vorschlag wählen oder frei eintragen)
+                  <input name="sumUnit" type="text" maxlength="16" autocomplete="off"></label>
+                <div data-sum-unit-choices></div>
+              </div>
             </div></fieldset>
           <fieldset class="mode"><legend>Herkunft der Werte</legend>
             <label class="check"><input type="radio" name="mode" value="single" checked>Werte kommen aus einem Device</label>
@@ -161,21 +133,10 @@ class FHEMCMSReadingsTable extends HTMLElement {
     this.shadowRoot.querySelector('[name="header"]').addEventListener('change', (event) => {
       this.shadowRoot.querySelector('[data-header-fields]').hidden = !event.target.checked;
     });
-    const sumUnit = this.shadowRoot.querySelector('[data-sum-unit]');
-    sumUnit.replaceChildren(...[['auto', 'Automatisch (wie die Einzelwerte)'], ...UNITS].map(([value, label]) => {
-      const option = document.createElement('option');
-      option.value = value;
-      option.textContent = label;
-      return option;
-    }));
-    sumUnit.addEventListener('change', () => {
-      const custom = this.shadowRoot.querySelector('[name="sumUnitCustom"]');
-      custom.hidden = sumUnit.value !== 'custom';
-      if (custom.hidden) {
-        custom.value = '';
-      } else {
-        custom.focus();
-      }
+    this.shadowRoot.querySelector('[data-sum-unit-choices]')
+      .append(unitSuggestions(this.shadowRoot.querySelector('[name="sumUnit"]')));
+    this.shadowRoot.querySelector('[name="sumUnitAuto"]').addEventListener('change', (event) => {
+      this.shadowRoot.querySelector('[data-sum-unit-fields]').hidden = event.target.checked;
     });
     const pickSingle = () => this.pickSingleDevice();
     this.shadowRoot.querySelector('[data-pick-single]').addEventListener('click', pickSingle);
@@ -233,18 +194,10 @@ class FHEMCMSReadingsTable extends HTMLElement {
     this.shadowRoot.querySelector('[data-header-fields]').hidden = !form.elements.header.checked;
     form.elements.valueLabel.value = this.widgetConfig.valueLabel || '';
     form.elements.showValueLabel.checked = this.widgetConfig.hideValueLabel !== true;
-    const unitSelect = form.elements.sumUnitSelect;
-    const customUnit = form.elements.sumUnitCustom;
     const savedUnit = this.widgetConfig.sumUnit;
-    if (savedUnit === undefined) {
-      unitSelect.value = 'auto';
-    } else if (UNITS.some(([value]) => value === savedUnit && value !== 'custom')) {
-      unitSelect.value = savedUnit;
-    } else {
-      unitSelect.value = 'custom';
-    }
-    customUnit.hidden = unitSelect.value !== 'custom';
-    customUnit.value = unitSelect.value === 'custom' ? savedUnit : '';
+    form.elements.sumUnitAuto.checked = savedUnit === undefined;
+    form.elements.sumUnit.value = savedUnit || '';
+    this.shadowRoot.querySelector('[data-sum-unit-fields]').hidden = savedUnit === undefined;
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
     const container = this.shadowRoot.querySelector('[data-config-rows]');
@@ -305,7 +258,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
   applySharedDevice(name) {
     const device = this.devices.find((item) => item.name === name);
     for (const row of this.rowsInDialog()) {
-      this.setRowDevice(row, device, row.querySelector('select:not([data-unit-select])').value);
+      this.setRowDevice(row, device, row.querySelector('select').value);
     }
   }
 
@@ -371,34 +324,16 @@ class FHEMCMSReadingsTable extends HTMLElement {
     readingLabel.append(readingSelect);
     const unitLabel = document.createElement('label');
     unitLabel.className = 'unit-label';
-    unitLabel.textContent = 'Einheit';
-    const unitFields = document.createElement('span');
-    unitFields.className = 'unit-fields';
-    const unitSelect = document.createElement('select');
-    unitSelect.dataset.unitSelect = '';
-    unitSelect.replaceChildren(...UNITS.map(([value, label]) => {
-      const option = document.createElement('option');
-      option.value = value;
-      option.textContent = label;
-      return option;
-    }));
-    const customUnit = document.createElement('input');
-    customUnit.type = 'text';
-    customUnit.maxLength = 16;
-    customUnit.placeholder = 'Eigene Einheit';
-    customUnit.autocomplete = 'off';
-    customUnit.dataset.customUnit = '';
-    customUnit.hidden = true;
-    unitSelect.addEventListener('change', () => {
-      customUnit.hidden = unitSelect.value !== 'custom';
-      if (customUnit.hidden) {
-        customUnit.value = '';
-      } else {
-        customUnit.focus();
-      }
-    });
-    unitFields.append(unitSelect, customUnit);
-    unitLabel.append(unitFields);
+    unitLabel.textContent = 'Einheit (optional, Vorschlag wählen oder frei eintragen)';
+    const unitInput = document.createElement('input');
+    unitInput.type = 'text';
+    unitInput.maxLength = 16;
+    unitInput.autocomplete = 'off';
+    unitInput.dataset.unit = '';
+    unitLabel.append(unitInput);
+    const unitFields = document.createElement('div');
+    unitFields.className = 'unit-fields unit-label';
+    unitFields.append(unitLabel, unitSuggestions(unitInput));
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = 'Entfernen';
@@ -416,7 +351,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
       }
     });
-    row.append(deviceLabel, nameLabel, readingLabel, unitLabel, remove);
+    row.append(deviceLabel, nameLabel, readingLabel, unitFields, remove);
     container.append(row);
     this.setRowUnit(row, initial.unit || '');
     if (initial.device) {
@@ -445,17 +380,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
   }
 
   setRowUnit(row, unit) {
-    const select = row.querySelector('[data-unit-select]');
-    const customUnit = row.querySelector('[data-custom-unit]');
-    if (UNITS.some(([value]) => value === unit && value !== 'custom')) {
-      select.value = unit;
-      customUnit.value = '';
-      customUnit.hidden = true;
-      return;
-    }
-    select.value = 'custom';
-    customUnit.value = unit;
-    customUnit.hidden = false;
+    row.querySelector('[data-unit]').value = unit;
   }
 
   async saveConfig() {
@@ -464,12 +389,10 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const deviceLabel = form.elements.deviceLabel.value.trim();
     const sumLabel = form.elements.sumLabel.value.trim();
     const valueLabel = form.elements.valueLabel.value.trim();
-    const sumUnitChoice = form.elements.sumUnitSelect.value;
-    const sumUnit = sumUnitChoice === 'custom' ? form.elements.sumUnitCustom.value.trim() : sumUnitChoice;
+    const sumUnit = form.elements.sumUnitAuto.checked ? '' : form.elements.sumUnit.value.trim();
     const badText = (text, max) => text.length > max || /[\u0000-\u001f\u007f]/.test(text);
-    if (badText(sumLabel, 32) || badText(valueLabel, 32) || badText(sumUnit, 16)
-      || (form.elements.sum.checked && sumUnitChoice === 'custom' && !sumUnit)) {
-      this.shadowRoot.querySelector('[data-error]').textContent = 'Beschriftung oder Einheit der Tabelle ist ungültig (Überschriften max. 32, Einheit max. 16 Zeichen, eigene Einheit nicht leer).';
+    if (badText(sumLabel, 32) || badText(valueLabel, 32) || badText(sumUnit, 16)) {
+      this.shadowRoot.querySelector('[data-error]').textContent = 'Beschriftung oder Einheit der Tabelle ist ungültig (Überschriften max. 32, Einheit max. 16 Zeichen).';
       return;
     }
     const sharedDevice = form.elements.deviceSingle.value.trim();
@@ -478,24 +401,17 @@ class FHEMCMSReadingsTable extends HTMLElement {
       return;
     }
     const rows = [...this.shadowRoot.querySelectorAll('[data-config-rows] .row')].map((row) => {
-      const unitSelect = row.querySelector('[data-unit-select]');
-      const customUnit = row.querySelector('[data-custom-unit]').value.trim();
+      const unit = row.querySelector('[data-unit]').value.trim();
       const label = row.querySelector('[data-row-label]').value.trim();
       return {
         device: this.mode === 'multi' ? row.querySelector('.device input').value : sharedDevice,
         ...(label ? { label } : {}),
-        reading: row.querySelector('select:not([data-unit-select])').value,
-        ...(unitSelect.value === 'custom' ? (customUnit ? { unit: customUnit } : {}) : (unitSelect.value ? { unit: unitSelect.value } : {}))
+        reading: row.querySelector('select').value,
+        ...(unit ? { unit } : {})
       };
     });
     if (!rows.length || rows.some((row) => !row.device || !row.reading)) {
       this.shadowRoot.querySelector('[data-error]').textContent = 'Für jede Zeile Device und Reading wählen.';
-      return;
-    }
-    if ([...this.shadowRoot.querySelectorAll('[data-config-rows] .row')]
-      .some((row) => row.querySelector('[data-unit-select]').value === 'custom'
-        && !row.querySelector('[data-custom-unit]').value.trim())) {
-      this.shadowRoot.querySelector('[data-error]').textContent = 'Bitte die eigene Einheit eingeben oder eine andere Einheit wählen.';
       return;
     }
     if (deviceLabel.length > 32 || /[\u0000-\u001f\u007f]/.test(deviceLabel)
@@ -527,7 +443,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
       if (!form.elements.showSumLabel.checked) {
         next.hideSumLabel = true;
       }
-      if (sumUnitChoice !== 'auto') {
+      if (!form.elements.sumUnitAuto.checked) {
         next.sumUnit = sumUnit;
       }
     }

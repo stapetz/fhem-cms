@@ -1,0 +1,149 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shared unit input regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<div id="fixture"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+import { UNIT_SUGGESTIONS } from '../www/fhem-cms/js/unit-input.js';
+const fixture = document.querySelector('#fixture');
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+let saved;
+const services = {
+  iconUrl: () => '',
+  listAllDevices: async () => [{ name: 'Test', readings: { power: '21.35', voltage: '230' } }],
+  logReadings: async () => ({ readings: ['power'], source: 'filelog' }),
+  history: async () => ({ points: [] }),
+  saveWidget: async (widget) => { saved = structuredClone(widget); },
+};
+const input = (field, value) => {
+  field.value = value;
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+};
+const choices = (group, field) => {
+  check(group.getAttribute('role') === 'group'
+    && group.getAttribute('aria-label') === 'Einheiten-Vorschläge', 'accessible suggestions');
+  check(field.localName === 'input' && field.maxLength === 16 && !field.readOnly, 'free input limited to 16 characters');
+  const buttons = [...group.querySelectorAll('button')];
+  check(JSON.stringify(buttons.map((button) => button.dataset.unitChoice)) === JSON.stringify(UNIT_SUGGESTIONS),
+    'same suggested units in every widget');
+  for (const button of buttons) {
+    let inputs = 0;
+    let changes = 0;
+    const onInput = () => inputs++;
+    const onChange = () => changes++;
+    field.addEventListener('input', onInput);
+    field.addEventListener('change', onChange);
+    button.click();
+    check(field.value === button.dataset.unitChoice, 'suggestion fills corresponding input');
+    check(inputs === 1 && changes === 1 && button.type === 'button', 'suggestion notifies without submitting');
+    const css = getComputedStyle(button);
+    check(css.paddingRight === '8.8px' && css.borderRadius === '8px'
+      && getComputedStyle(group).flexWrap === 'wrap', 'shared value-widget presentation');
+    field.removeEventListener('input', onInput);
+    field.removeEventListener('change', onChange);
+  }
+};
+const snapshots = new Map([['Test', [{ name: 'Test', readings: { power: '21.35' } }]]]);
+try {
+  for (const theme of ['light', 'dark']) {
+    document.documentElement.setAttribute('data-cms-theme', theme);
+    for (const type of ['fhem-value', 'fhem-chart', 'fhem-table']) {
+      const config = { id: 'test', type, grid: { col: 1, row: 2, w: 4, h: 3 },
+        ...(type === 'fhem-table' ? { sum: true, rows: [{ device: 'Test', reading: 'power', unit: 'N·m' }] }
+          : { device: 'Test', reading: 'power', unit: 'N·m' }) };
+      const original = JSON.stringify(config);
+      const host = createWidgetElement(config, services, snapshots, false);
+      host.style.cssText = 'display:block;width:320px;height:240px';
+      fixture.append(host);
+      await host.openConfig();
+      const root = host.shadowRoot;
+      const form = root.querySelector('[data-form]');
+      if (type !== 'fhem-table') {
+        const field = form.elements.unit;
+        check(field.value === 'N·m', 'existing custom unit restored');
+        choices(root.querySelector('.cms-unit-choices'), field);
+        input(field, 'kg/s');
+        saved = null;
+        await (type === 'fhem-value' ? host.onSave() : host.saveConfig());
+        check(saved?.unit === 'kg/s', 'typed custom unit saved');
+        host.config = saved;
+        await host.openConfig();
+        check(form.elements.unit.value === 'kg/s', 'custom unit survives reopen');
+        input(form.elements.unit, '');
+        await (type === 'fhem-value' ? host.onSave() : host.saveConfig());
+        check(!Object.hasOwn(saved, 'unit'), 'empty field removes unit');
+      } else {
+        const row = root.querySelector('[data-config-rows] .row');
+        const field = row.querySelector('[data-unit]');
+        check(field.value === 'N·m', 'existing custom row unit restored');
+        choices(row.querySelector('.cms-unit-choices'), field);
+        input(field, 'kg/s');
+        await host.addRow({ device: 'Test', reading: 'voltage', unit: 'V' });
+        const secondRow = root.querySelectorAll('[data-config-rows] .row')[1];
+        secondRow.querySelector('[data-unit-choice="A"]').click();
+        check(secondRow.querySelector('[data-unit]').value === 'A' && field.value === 'kg/s',
+          'dynamic row suggestions affect only their own field');
+        host.setMode('multi');
+        host.setMode('single');
+        check(field.value === 'kg/s' && secondRow.querySelector('[data-unit]').value === 'A',
+          'unit values survive device mode changes');
+        check(form.elements.sumUnitAuto.checked && root.querySelector('[data-sum-unit-fields]').hidden,
+          'sum automatic by default');
+        await host.saveConfig();
+        check(saved.rows[0].unit === 'kg/s' && !Object.hasOwn(saved, 'sumUnit'), 'automatic sum and typed row unit saved');
+        check(saved.rows[1].unit === 'A' && saved.rows[1].reading === 'voltage', 'dynamic row unit persists');
+        host.config = saved;
+        await host.openConfig();
+        check(root.querySelectorAll('[data-config-rows] [data-unit]')[1].value === 'A', 'dynamic row unit restored');
+        form.elements.sumUnitAuto.click();
+        check(!root.querySelector('[data-sum-unit-fields]').hidden, 'disabling automatic sum reveals editable unit');
+        choices(root.querySelector('[data-sum-unit-choices] .cms-unit-choices'), form.elements.sumUnit);
+        input(form.elements.sumUnit, 'N·m');
+        await host.saveConfig();
+        check(saved.sumUnit === 'N·m', 'custom sum unit saved');
+        host.config = saved;
+        await host.openConfig();
+        check(form.elements.sumUnit.value === 'N·m' && !form.elements.sumUnitAuto.checked, 'custom sum unit restored');
+        input(form.elements.sumUnit, '');
+        await host.saveConfig();
+        check(saved.sumUnit === '', 'explicit no sum unit remains distinct from automatic');
+        host.config = saved;
+        await host.openConfig();
+        check(form.elements.sumUnit.value === '' && !form.elements.sumUnitAuto.checked, 'explicit empty sum survives reopen');
+        form.elements.sumUnitAuto.click();
+        await host.saveConfig();
+        check(!Object.hasOwn(saved, 'sumUnit'), 'automatic sum restored without schema change');
+        host.config = saved;
+        await host.openConfig();
+        const currentRow = root.querySelector('[data-config-rows] .row');
+        input(currentRow.querySelector('[data-unit]'), '');
+        await host.saveConfig();
+        check(!Object.hasOwn(saved.rows[0], 'unit'), 'empty row unit removed');
+      }
+      check(JSON.stringify(config) === original, 'dialog never mutates original configuration');
+      const last = structuredClone(saved);
+      host.config = saved;
+      await host.openConfig();
+      const field = type === 'fhem-table' ? root.querySelector('[data-config-rows] [data-unit]') : form.elements.unit;
+      input(field, 'x'.repeat(17));
+      await (type === 'fhem-value' ? host.onSave() : host.saveConfig());
+      check(JSON.stringify(saved) === JSON.stringify(last), 'invalid custom unit never saved');
+      check(!!root.querySelector('[data-dialog-error], [data-error]').textContent, 'invalid unit error visible');
+      root.querySelector('[data-dialog]').close();
+      host.remove();
+    }
+  }
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+} finally {
+  fixture.replaceChildren();
+}
+</script>

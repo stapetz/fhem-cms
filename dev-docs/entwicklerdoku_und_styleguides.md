@@ -366,7 +366,48 @@ Standard-Kacheln dürfen den Nutzer nicht mit Text überladen. Jede Karte ist st
 *   **Mindest-Interaktionsfläche:** Kein klickbares Element oder Steuerung darf eine physische Touch-Fläche von weniger als **`48px × 48px`** aufweisen, um Fehlbedienungen an der Wand zu minimieren.
 *   **Visuelles Klick-Feedback:** Jedes interaktive Element muss bei Berührung (`:active`) unverzüglich über CSS herunterskaliert werden (`transform: scale(0.96)`). Dieses haptisch-visuelle Feedback muss stattfinden, noch bevor das WebSocket-Event den Server erreicht hat, um Mehrfachtips ungeduldiger Nutzer zu unterbinden.
 
-### 5.3 Semantische Farb-Zustände nach Gewerken
+### 5.3 Einheiteneingaben: Freitext mit Vorschlagsbuttons (verbindlich)
+
+Für **alle bestehenden und künftigen Widgets und gemeinsamen Dialoge** gilt
+bei frei wählbaren Anzeigeeinheiten das Muster des Widgets **Wert**:
+
+- Beschriftetes, jederzeit frei editierbares Textfeld, maximal 16 Zeichen,
+  `autocomplete="off"`. Ein leeres Feld bedeutet **keine Einheit**.
+- Direkt darunter eine umbrechende Gruppe anklickbarer Einheiten-Vorschläge
+  wie °C, %, W oder kWh. Vorschläge sind keine abschließende Allowlist:
+  eigene Beschriftungen wie `N·m` oder `kg/s` bleiben möglich.
+- **Kein Einheiten-Dropdown, kein „Andere …“-Zwischenschritt und kein
+  ausschließliches Datalist-Popup** für solche Anzeigeeinheiten.
+- Gemeinsame Umsetzung über
+  [`unit-input.js`](../www/fhem-cms/js/unit-input.js):
+  `unitSuggestions(input)` für Vorschlagsbuttons und `unitInputCss` für
+  Darstellung in Light DOM und Shadow DOM. Keine widgeteigenen Kopien der
+  Vorschlagsliste oder abweichende Chip-Styles einführen.
+- Native `button type="button"` in einer beschrifteten Gruppe
+  `Einheiten-Vorschläge`; ein Vorschlag füllt ausschließlich sein zugehöriges
+  Feld und löst `input`/`change`, aber keine Formularübermittlung aus.
+  Eingaben und Buttons müssen per Tastatur bedienbar bleiben.
+- Vorhandene Units, eigene Texte und ausdrücklich leere Units beim
+  Speichern/Wiederöffnen erhalten. Steuerzeichen und Überlänge sichtbar
+  ablehnen; zusätzliche Grenzen des Speicherformats beachten. Beim
+  Textplatzhalter sind außerdem Filter-/HTML-Trennzeichen unzulässig.
+- Einheiten ändern nur die **Beschriftung**, nicht den Messwert. Falls eine
+  Auswahl fachlich eine **Umrechnung** steuert oder ausschließlich definierte
+  Werte erlaubt, muss sie gesondert beschriftet und validiert bleiben.
+  Beispiel: SolarFlow-Leistungsreadings akzeptieren nur W/kW und rechnen
+  diese auf Watt um; dort ist die begrenzte Auswahl beabsichtigt.
+- Ein Automatikmodus ist separat von der Einheit abzubilden: Bei
+  Tabellensummen schaltet eine Checkbox die Übernahme aus den Einzelwerten.
+  Ausgeschaltete Automatik plus leeres Feld bedeutet ausdrücklich keine
+  Summeneinheit; dieser Zustand ist nicht mit Automatik gleichzusetzen.
+
+Bei Erweiterungen sind mindestens Vorschlagsklick, eigene Einheit, Leeren,
+Speichern/Wiederöffnen, Validierungsfehler und Light-/Dark-Darstellung zu
+prüfen. Bestehende Referenztests:
+[`44_placeholder_units.html`](../t/44_placeholder_units.html) und
+[`46_unit_inputs.html`](../t/46_unit_inputs.html).
+
+### 5.4 Semantische Farb-Zustände nach Gewerken
 Aktive Zustände verändern flächig die Hintergrundbeleuchtung oder die Farbintensität des zugehörigen Icons:
 *   💡 **Beleuchtungs-Gewerk:** Kräftiges, warmes Amber/Gelb (`#ffb300`) für aktive Leuchtmittel.
 *   🌡️ **Klima / Heizungs-Gewerk:** Signal-Orange/Rot (`#ff5722`) im aktiven Heizmodus, kühles Blau (`#2196f3`) im Kühlmodus.
