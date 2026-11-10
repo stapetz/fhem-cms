@@ -52,6 +52,20 @@ Ein stabiler FHEM-Update-Stand ist erst nach erfolgreichem `main`-Push und
 abgeschlossenem Controls-Workflow verfügbar. Erst dann werden die tatsächlich
 enthaltenen Issues geschlossen und nach `Done` überführt.
 
+Ergebnis der isolierten Releaseprüfung:
+
+- `perl -c FHEM/01_FHEMCMS.pm`: Syntax korrekt.
+- `prove t/*.t`: 465 Prüfungen erfolgreich.
+- `node --test t/*.test.js`: 102 Tests erfolgreich, keine übersprungen.
+- `node scripts/build-fcui.mjs --check`: reproduzierbarer Build erfolgreich,
+  mit identischen Abhängigkeiten aus dem unveränderten Lockfile.
+- `git diff --check`: keine Patchfehler.
+- Vollständiger Inhaltsabgleich gegen den freigegebenen `dev`-Stand:
+  vor Release-Metadaten ausschließlich die generierte Controls-Datei verschieden;
+  danach zusätzlich stabile Modulversion und dieses Prüfprotokoll.
+- Keine Änderungen unter `.github/` im Release-Diff; die beiden fremden lokalen
+  Änderungen an KI-Anweisungen und Backendtest wurden nicht übernommen.
+
 ## Release 1.1.0: bestätigter Umfang
 
 Am 09.11.2026 hat der Entwickler den aktuellen Stand als abgenommen bestätigt
