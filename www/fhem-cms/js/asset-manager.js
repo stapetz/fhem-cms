@@ -48,6 +48,8 @@ export async function openAssetManager(services, { mode = null, owner = document
       .danger { border-color:var(--cms-danger,#ffb4a8); }
       .assets { display:grid; grid-template-columns:repeat(auto-fill,minmax(7rem,1fr)); gap:.5rem;
         align-content:start; max-height:42vh; min-height:10rem; overflow:auto; }
+      .assets.drag-over { outline:2px dashed var(--cms-accent,#8fd0a8); outline-offset:-2px;
+        background:var(--cms-bg,#17211d); }
       .asset { display:flex; flex-direction:column; gap:.3rem; align-items:center; overflow-wrap:anywhere; }
       .asset[aria-pressed=true] { outline:2px solid var(--cms-accent,#8fd0a8); outline-offset:-2px; }
       .asset img { width:100%; height:5rem; object-fit:contain; }
@@ -78,10 +80,11 @@ export async function openAssetManager(services, { mode = null, owner = document
       <p class="hint">Gemeinsame Assets dieses CMS-Devices. Änderungen gelten sofort, unabhängig vom Seitenentwurf.
         „Bild entfernen“ im Widget entfernt nur den Verweis.</p>
       <form data-form>
-        <div class="row"><label>Dateien in diesen Ordner hochladen<input type="file" multiple data-upload></label>
-          <input type="search" data-search placeholder="Dateiname suchen" aria-label="Dateiname suchen"></div>
+        <div class="row"><label>Dateien in diesen Ordner hochladen<input type="file" multiple data-upload></label></div>
         <div class="path" data-path aria-label="Aktueller Ordner"></div>
         <div class="row"><button type="button" data-mkdir>Ordner erstellen</button></div>
+        <p class="hint">Mehrere Dateien auswählen oder hier in die Ordneransicht ziehen.
+          Uploads landen direkt im aktuell geöffneten Ordner.</p>
         <div class="layout"><div class="assets" data-assets role="group" aria-label="Ordnerinhalt"></div>
           <div class="detail" data-detail></div></div>
         <details data-admin><summary>Administration: Dateitypen und Speichergrenzen</summary>
@@ -422,11 +425,10 @@ export async function openAssetManager(services, { mode = null, owner = document
   }
   function render() {
     breadcrumbs($('[data-path]'), folder, navigate);
-    const query = $('[data-search]').value.trim().toLocaleLowerCase('de');
     const box = $('[data-assets]'); box.replaceChildren();
     folderTiles(box, folder, navigate, new Set(), true);
-    const assets = state.assets.filter(asset => asset.folder === folder && allowed(asset)
-      && asset.name.toLocaleLowerCase('de').includes(query)).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    const assets = state.assets.filter(asset => asset.folder === folder && allowed(asset))
+      .sort((a, b) => a.name.localeCompare(b.name, 'de'));
     for (const asset of assets) {
       const choose = element('button');
       choose.type = 'button'; choose.className = 'asset'; choose.dataset.assetId = asset.id;
@@ -493,7 +495,6 @@ export async function openAssetManager(services, { mode = null, owner = document
     if (asset) close(structuredClone(asset));
   });
   $('[data-reload]').addEventListener('click', () => operation(reload));
-  $('[data-search]').addEventListener('input', () => render());
   $('[data-mkdir]').addEventListener('click', () => operation(async () => {
     const name = await createFolderName();
     if (name === null || closed) return;
@@ -518,24 +519,66 @@ export async function openAssetManager(services, { mode = null, owner = document
     const policy = policyFromForm();
     await mutate({ op: 'policy', policy }); status('Asset-Administration gespeichert.');
   }));
-  $('[data-upload]').addEventListener('change', () => {
-    const files = [...$('[data-upload]').files]; $('[data-upload]').value = '';
-    operation(async () => {
+  const uploadFiles = files => {
+    if (!files.length) return;
+    return operation(async () => {
+      if (!state) throw new Error('Bitte zuerst den Assetkatalog neu laden.');
+      const destination = folder;
+      selected = null; selectedFolder = null; detail();
       uploadController = new AbortController();
       $('[data-abort]').hidden = false;
+      let completed = 0;
+      let duplicates = 0;
       try {
         for (const file of files) {
-          if (uploadController.signal.aborted) throw new Error('Upload abgebrochen');
-          const result = await services.uploadAsset(file, folder, state.token, {
+          if (uploadController.signal.aborted || closed) throw new Error('Upload abgebrochen');
+          const result = await services.uploadAsset(file, destination, state.token, {
             signal: uploadController.signal,
-            onProgress: (done, total) => status(`${file.name}: ${Math.round(done / total * 100)} %`),
+            onProgress: (done, total) => {
+              if (!closed) status(`${completed + 1}/${files.length} · ${file.name}: ${Math.round(done / total * 100)} %`);
+            },
           });
-          state = validateAssetState(result.state); selected = result.selected;
+          if (closed) return;
+          state = validateAssetState(result.state);
+          completed++;
+          if (result.duplicate) duplicates++;
           render();
-          status(result.duplicate ? 'Identische Datei bereits vorhanden; vorhandenes Asset ausgewählt.' : 'Upload abgeschlossen.');
         }
+        status(`Upload abgeschlossen: ${completed} Datei(en) · ${pathText(destination)}.`
+          + (duplicates ? ` ${duplicates} identische Datei(en) waren bereits vorhanden und wurden nicht erneut abgelegt.` : ''));
+      } catch (error) {
+        throw new Error(`${error.message || 'Upload fehlgeschlagen'} · ${completed}/${files.length} Datei(en) abgeschlossen.`);
       } finally { $('[data-abort]').hidden = true; uploadController = null; }
     });
+  };
+  $('[data-upload]').addEventListener('change', () => {
+    const files = [...$('[data-upload]').files]; $('[data-upload]').value = '';
+    uploadFiles(files);
+  });
+  const dropZone = $('[data-assets]');
+  const hasFiles = event => [...(event.dataTransfer?.types || [])].includes('Files');
+  for (const type of ['dragenter', 'dragover']) dropZone.addEventListener(type, event => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = busy || !state ? 'none' : 'copy';
+    dropZone.classList.toggle('drag-over', !busy && !!state);
+  });
+  dropZone.addEventListener('dragleave', event => {
+    if (!dropZone.contains(event.relatedTarget)) dropZone.classList.remove('drag-over');
+  });
+  $('[data-assets-dialog]').addEventListener('dragover', event => {
+    if (hasFiles(event)) event.preventDefault();
+  });
+  $('[data-assets-dialog]').addEventListener('drop', event => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (busy || closed || !dropZone.contains(event.composedPath()[0])) return;
+    const items = [...(event.dataTransfer.items || [])];
+    if (items.some(item => item.webkitGetAsEntry?.()?.isDirectory)) {
+      status('Bitte Dateien statt ganzer Ordner hineinziehen.', true); return;
+    }
+    uploadFiles([...event.dataTransfer.files]);
   });
   $('[data-abort]').addEventListener('click', () => uploadController?.abort());
   owner.append(host);

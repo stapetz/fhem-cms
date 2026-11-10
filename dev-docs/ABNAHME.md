@@ -1,5 +1,35 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Entwicklungsstand 1.6.0-dev: Mehrfachupload und Datei-Drops (#125)
+
+Anforderung vom 10.11.2026: mehrere Bilder auswählen oder per Drag-and-drop
+in den geöffneten Ordner ablegen. Nach Upload keine automatisch ausgewählten
+Assets/Dateidetails. Die Suche wird vorerst entfernt und separat als #126
+mit `later` im Projekt-Backlog geplant; kein aktueller Such-Abnahmeumfang.
+
+Lokale Prüfung:
+
+- `t/51_asset_manager.html`: 185 Chromium-Prüfungen. Mehrere echte `File`-Objekte
+  aus der Dateiauswahl werden nacheinander mit aktualisiertem Token direkt in
+  den geöffneten Ordner hochgeladen; Detailspalte bleibt geschlossen.
+  Drop-Ereignisse prüfen Browser-Standardunterdrückung, Hervorhebung,
+  Mehrfachdateien, Zielordner und denselben Uploadpfad.
+- Zusätzlich echte Browser-Drag-Events via CDP mit zwei lokalen PNG-Dateien:
+  Nach Navigation auf eine Unterebene gehen beide Uploads genau dort hin,
+  ohne Dateiauswahl/Details zu öffnen; Wiederladen bestätigt die Ansicht.
+- Fehler und Abbruch melden den abgeschlossenen Anteil und starten keine
+  folgenden Dateien. Bereits erfolgreiche Dateien bleiben erhalten.
+  Die Suche ist weder als Eingabe noch als Filter vorhanden.
+- Gemeinsam 10 gezielte JS-Tests erfolgreich, einschließlich Editor,
+  100 LinkWidget-Browserprüfungen, EXIF und echtem Perl-Client.
+- `perl -c FHEM/01_FHEMCMS.pm` sowie
+  `prove -l t/04_fcui_assets.t t/06_commandref.t t/07_asset_manager.t`:
+  251 Assertions erfolgreich. Buildcheck und `git diff --check` erfolgreich.
+
+Zur Geräteabnahme: Mehrfachauswahl im nativen Safari-/Edge-Dateidialog sowie
+Datei-Drops vom Finder/Explorer testen. Keine produktiven Dateien für lokale
+Prüfungen verändert; `main` bleibt unverändert.
+
 ## Entwicklungsstand 1.5.0-dev: Dateiaktionen und EXIF (#125)
 
 Anforderung vom 10.11.2026: Umbenennen direkt nach Dateiname, unveränderbare

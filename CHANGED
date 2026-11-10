@@ -1,3 +1,11 @@
+2026-11-10 - 1.6.0-dev: Mehrfachupload und Drag-and-drop im Assetordner (Refs #125)
+
+Mehrere Dateien per Dateiauswahl oder Drag-and-drop in die Inhaltsansicht
+hochladen. Alle Dateien eines Auftrags gehen direkt in den aktuell geoeffneten
+Ordner; die Ansicht bleibt dort ohne automatisch geoeffnete Dateidetails.
+Fortschritt und Fehler zeigen den Bearbeitungsstand des Auftrags. Die Suche
+wurde vorerst entfernt und ist als spaetere Erweiterung separat geplant.
+
 2026-11-10 - 1.5.0-dev: Getrennte Dateiaktionen, Bildvorschau und EXIF (Refs #125)
 
 Umbenennen steht direkt unter Dateiname; die Endung wird getrennt und nicht

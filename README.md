@@ -4,9 +4,10 @@ Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freie
 
 **Aktuelle stabile Version: 1.2.0**
 
-**Auf `dev` zur Abnahme: 1.5.0-dev** – LinkWidget mit grafischem Kachelraster
+**Auf `dev` zur Abnahme: 1.6.0-dev** – LinkWidget mit grafischem Kachelraster
 und gemeinsamer Assetmanager für Bilder/Dokumente, Ordner, Verwendungsschutz
-sowie konfigurierbare Typen und Speichergrenzen, Bildvorschau und EXIF-Anzeige.
+sowie konfigurierbare Typen und Speichergrenzen, Bildvorschau, EXIF-Anzeige
+und Mehrfachupload per Dateiauswahl oder Drag-and-drop.
 Noch kein `main`-Release.
 
 ## Neu in 1.2.0

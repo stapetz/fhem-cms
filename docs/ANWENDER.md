@@ -279,9 +279,22 @@ Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
   lassen sich löschen, nach einer zusätzlichen Bestätigung mit vollständigem Pfad.
   Auch die Zielordnerauswahl verwendet ausschließlich Kacheln und Pfad.
 - Unter **Dateien in diesen Ordner hochladen** eine oder mehrere Dateien wählen.
-  Uploads landen direkt im gewählten Ordner. Fortschritt und Fehler werden
-  angezeigt; **Upload abbrechen** verwirft den laufenden Upload.
-  Identische Dateien werden wiederverwendet, nicht dupliziert.
+  Alternativ eine oder mehrere Bild-/Dokumentdateien vom Rechner direkt in die
+  große Ordneransicht ziehen (**Drag-and-drop**). Die Ablagefläche wird beim
+  Darüberziehen hervorgehoben. Ganze Ordner werden nicht importiert.
+  Alle Dateien eines Auftrags landen direkt im aktuell geöffneten Ordner.
+  Die Übersicht bleibt dort; Dateidetails mit Umbenennen/Verschieben werden
+  nach dem Upload nicht automatisch geöffnet. Erst der Klick auf eine Datei
+  öffnet deren Eigenschaften.
+  Fortschritt und Fehler werden mit der Anzahl abgeschlossener Dateien
+  angezeigt. **Upload abbrechen** verwirft den laufenden Upload und startet
+  die übrigen Dateien nicht; bereits abgeschlossene Uploads bleiben erhalten.
+  Dasselbe gilt beim ersten Fehler eines Auftrags.
+  Identische Dateien werden wiederverwendet, nicht dupliziert; eine vorhandene
+  Datei bleibt dabei in ihrem bisherigen Ordner.
+- Die Suche ist vorerst nicht verfügbar. Eine verlässliche Suchfunktion ist als
+  spätere Erweiterung in [Issue #126](https://github.com/stapetz/fhem-cms/issues/126)
+  vorgemerkt. Zur Navigation Ordnerkacheln und Pfad verwenden.
 - Ein Asset anklicken: Dateinamen ändern (ohne Wechsel der Endung),
   herunterladen oder Verwendungen anzeigen. Der **Dateiname** ist ohne
   Endung editierbar, die unveränderbare Endung steht daneben.
