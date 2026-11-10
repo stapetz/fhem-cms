@@ -174,6 +174,7 @@ test('editor tools follow real hover, keyboard focus and touch capability withou
         assert.equal(error, null, error);
       };
       await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
+      await pause(50);
       await check('initial');
       for (const index of [0, 1]) {
         await evaluate(`document.querySelector('#hover-item-${index}').scrollIntoView({block:'center'})`);
@@ -184,6 +185,7 @@ test('editor tools follow real hover, keyboard focus and touch capability withou
         await pause(50);
         await check('hover', index);
         await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
+        await pause(50);
         await check('leave');
         await evaluate(`(() => { const button = document.querySelector('#hover-item-${index} .cms-widget-drag');
           const focusable = [...document.querySelectorAll('button,a[href],select,input')].filter(el => el.getClientRects().length);
@@ -195,8 +197,10 @@ test('editor tools follow real hover, keyboard focus and touch capability withou
         await check('leave');
       }
       await command('Emulation.setTouchEmulationEnabled', { enabled: true });
+      await pause(50);
       await check('touch');
       await command('Emulation.setTouchEmulationEnabled', { enabled: false });
+      await pause(50);
       await check('leave');
       await check('finish');
     };
