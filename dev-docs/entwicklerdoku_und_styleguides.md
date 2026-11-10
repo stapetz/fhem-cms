@@ -260,6 +260,14 @@ Datei-Inputs, Uploadabläufe oder Mediengalerien in Widgets ergänzen.
 `owner` bindet den Dialog an den Lebenszyklus des aufrufenden Widgets/Editors.
 Auswahl liefert ein Asset mit stabilem `href`, Abbrechen liefert `null`.
 „Bild entfernen“ entfernt nur den lokalen Verweis, nie die Assetdatei.
+Ordnernavigation erfolgt über Ordnerleiste, Kacheln und Breadcrumbs, nicht über
+Dropdowns. Ein Ordner zeigt ausschließlich seine direkten Dateien/Unterordner.
+Zielordner für Assets und Ordner werden über denselben grafischen Ordnerpicker
+gewählt; Auswahl allein schreibt noch nichts. Navigation darf keine Mutation
+auslösen. Move-Antworten müssen die angeforderte ID, den Namen und Zielordner
+bestätigen; danach zum Ziel navigieren und den Speicherort sichtbar melden.
+Ordnerlöschung bleibt auf leere Ordner beschränkt und benötigt eine getrennte
+Bestätigung mit Pfad. Keine rekursive Löschung an Navigationsaktionen koppeln.
 
 Assetänderungen sind unabhängig vom Entwurf sofort wirksam. Der Datei-Menüpunkt
 öffnet dieselbe Implementierung. Administration ist vorerst für alle

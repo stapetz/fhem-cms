@@ -79,6 +79,18 @@ test('asset client roundtrips chunked files, administration and deletion through
     state = result.state;
     const image = state.assets.find(asset => asset.image);
     assert.match(image.href, /^media\//);
+    state = (await act({ op: 'mkdir', token: state.token, name: 'Bilder', parent: folder })).state;
+    const imageFolder = state.folders.find(item => item.name === 'Bilder').id;
+    state = (await act({ op: 'move', token: state.token, id: image.id, name: 'Verschoben.png', folder: imageFolder })).state;
+    state = await act({ op: 'list' });
+    const movedImage = state.assets.find(asset => asset.id === image.id);
+    assert.equal(movedImage.folder, imageFolder, 'image move persists across independent backend read');
+    assert.equal(movedImage.name, 'Verschoben.png');
+    assert.equal(movedImage.href, image.href, 'image move preserves existing widget URL');
+    await assert.rejects(() => act({ op: 'rmdir', token: state.token, id: imageFolder }), /leere/);
+    state = await act({ op: 'list' });
+    assert.ok(state.assets.some(asset => asset.id === image.id), 'nonempty folder refusal keeps image');
+    assert.ok(state.folders.some(item => item.id === imageFolder), 'nonempty folder refusal keeps folder');
     const policy = structuredClone(state.policy);
     policy.types.pdf = false;
     policy.types.epub = true;

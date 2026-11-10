@@ -1,5 +1,40 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Nachbesserung 1.4.1-dev: Ordnerbrowser und Verschieben (#125)
+
+Geräterückmeldung am 10.11.2026: Bildverschieben ohne Fehlermeldung unklar bzw.
+wirkungslos; gewünscht ist eine Finder-artige Auswahl statt Ordner-Dropdowns.
+Der Entwickler hat ausdrücklich klargestellt, dass Einträge nicht verschwunden
+sind. Kein bestätigter Datenverlust und keine produktiven Testlöschungen.
+
+- Ordnerleiste, Ordnerkacheln und Breadcrumbs; jede Ebene zeigt nur direkte
+  Unterordner/Dateien. Ordnerklicks senden keine Schreibbefehle.
+- Eigener grafischer Zielordnerdialog mit Inhalt/Vorschau für Asset- und
+  Ordnerbewegungen, Abbrechen ohne Zieländerung. Nach Asset-Move wird die
+  Antwort auf ID/Name/Ziel geprüft und das Asset im Zielordner angezeigt.
+  Nicht übernommene Änderungen führen zu einer sichtbaren Fehlermeldung.
+- Leere Ordner benötigen eine getrennte Löschbestätigung mit Pfad.
+  Nichtleere Ordner bleiben frontend- und backendseitig geschützt.
+- Chromium: `t/51_asset_manager.html`, 95 Prüfungen einschließlich echter
+  Pointerklicks auf Ordner, Asset, Zielauswahl und Verschieben, anschließend
+  Wiederladen und Prüfung unveränderter Bildadresse. Navigation erzeugt nur
+  den ausdrücklich ausgelösten Move und keine Löschaktion.
+  Zielabbruch, Ordnerbewegung, negative Move-Bestätigung und Owner-Cleanup
+  bei geöffnetem Unterdialog werden zusätzlich geprüft.
+- `t/50_asset_client.test.js`: echte Client-/Perl-Persistenz für Bildbewegung
+  in Unterordner; erneutes Lesen bestätigt Ziel, Namen und stabile URL.
+  Nichtleere Ordnerlöschung wird ohne Bild-/Ordnerverlust abgelehnt.
+- Gezielter JS-Lauf beider Tests erfolgreich; `perl -c FHEM/01_FHEMCMS.pm`,
+  `prove -l t/07_asset_manager.t t/06_commandref.t` (194 Assertions) und
+  `node scripts/build-fcui.mjs --check` erfolgreich.
+  Angrenzende Editor-/LinkWidget-Regression gemeinsam erneut geprüft:
+  7 JS-Tests erfolgreich, darunter 100 LinkWidget-Browserprüfungen und
+  Frontend-/Perl-Parität. `git diff --check` erfolgreich.
+
+Zur erneuten Geräteabnahme: Bild im eigenen Browser auswählen, Zielordner
+bestätigen, „Umbenennen / verschieben“ auslösen und nach Neuladen prüfen.
+Keine Aussage einer bereits abgeschlossenen Safari-/Edge-Geräteabnahme.
+
 ## Entwicklungsstand 1.4.0-dev: Assetmanager und Linkraster (#124, #125)
 
 Lokale Prüfung am 10.11.2026; keine Geräteabnahme und keine `main`-Freigabe:
