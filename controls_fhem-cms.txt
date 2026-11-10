@@ -45,7 +45,7 @@ UPD 2026-11-10_09:09:16 4991 www/fhem-cms/js/icon-picker.js
 UPD 2026-11-08_11:00:11 7487 www/fhem-cms/js/layout.js
 UPD 2026-10-31_10:55:33 3145 www/fhem-cms/js/markdown.js
 UPD 2026-11-04_21:52:16 12908 www/fhem-cms/js/placeholder-picker.js
-UPD 2026-11-08_21:18:38 37808 www/fhem-cms/js/richtext.js
+UPD 2026-11-10_10:44:29 37990 www/fhem-cms/js/richtext.js
 UPD 2026-11-10_08:13:56 2769 www/fhem-cms/js/widget-content-fit.js
 UPD 2026-11-08_12:37:55 3127 www/fhem-cms/js/widget-factory.js
 UPD 2026-11-08_15:33:41 1733 www/fhem-cms/js/widget-services.js
