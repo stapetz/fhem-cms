@@ -1,3 +1,9 @@
+2026-11-10 - Eingebettete deutsche FHEM-Geraetehilfe (Refs #122)
+
+Die Modulhilfe beschreibt Definition, Startlink, oeffentliche Befehle,
+Historienattribute und den Einstieg in Entwurf, Vorschau und Veroeffentlichen.
+Loesch- und Umstellungshinweise sowie der Verweis auf die Anleitung sind enthalten.
+
 2026-11-10 - Textwidget-Titel vereinheitlicht (Refs #121)
 
 Der Titel des Textwidgets verwendet dieselbe dezente Farbe und normale

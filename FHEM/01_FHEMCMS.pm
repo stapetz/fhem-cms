@@ -2376,3 +2376,93 @@ sub FHEMCMS_HtmlEscape {
 }
 
 1;
+
+=pod
+
+=begin html_DE
+
+<a id="FHEMCMS"></a>
+<h3>FHEMCMS</h3>
+<ul>
+  <p>Grafische FHEM-Oberflaechen mit Seiten, Widgets und einer gemeinsamen
+  Navigation. Jedes FHEMCMS-Device verwaltet eigene Inhalte, Entwuerfe und Bilder.
+  Der Zugriff erfolgt ueber FHEMWEB; es gibt keine separate CMS-Anmeldung.
+  Berechtigungen und Zugriffsschutz werden in FHEM/FHEMWEB eingerichtet.</p>
+
+  <a id="FHEMCMSdefine"></a>
+  <h4>Define</h4>
+  <code>define &lt;name&gt; FHEMCMS</code>
+  <p>Beispiel: <code>define CMS FHEMCMS</code>. Der Name darf Buchstaben,
+  Ziffern, Punkt, Unterstrich und Bindestrich enthalten. Das Device wird
+  standardmaessig dem Raum <code>FHEM CMS</code> zugeordnet.
+  <b>CMS starten</b> in der Device-/Raumansicht oeffnet die Homepage.
+  <code>get CMS url</code> liefert deren relativen URL-Pfad.</p>
+
+  <a id="FHEMCMSset"></a>
+  <h4>Set</h4>
+  <ul>
+    <li><code>set &lt;name&gt; rebuild</code>: erzeugt die Startseite mit aktuellen
+    Asset-Verweisen neu. Gespeicherte Seiten und Widgets bleiben erhalten.</li>
+    <li><code>set &lt;name&gt; layoutupgrade</code>: stellt aeltere Layoutdaten auf
+    Schema 5 um. Live und vorhandener Entwurf werden getrennt gesichert;
+    Positionen und Groessen werden neu vergeben. Vorher Daten sichern.</li>
+    <li><code>set &lt;name&gt; purge &lt;name&gt;</code>: loescht die zugehoerigen
+    CMS-Daten, Bilder und Startseite dauerhaft. Der wiederholte Device-Name
+    bestaetigt die Loeschung. Anschliessend das FHEM-Device loeschen.
+    <code>delete &lt;name&gt;</code> allein laesst CMS-Dateien erhalten.</li>
+    <li>Entwurf, Veroeffentlichen, Verwerfen, Sicherungen und Bilder werden
+    vorzugsweise im CMS-Editor bedient. Die dort verwendeten technischen
+    Transportbefehle sind keine Anleitung zum manuellen Schreiben von JSON.
+    Alte <code>config</code>-/ <code>draft</code>-Schreibwege sind fuer Schema 5
+    gesperrt; Sicherungen nur ueber den passenden Editorablauf wiederherstellen.</li>
+  </ul>
+
+  <a id="FHEMCMSget"></a>
+  <h4>Get</h4>
+  <ul>
+    <li><code>get &lt;name&gt; url</code>: URL der CMS-Homepage.</li>
+    <li><code>get &lt;name&gt; status</code>: zeigt an, ob ein Entwurf vorhanden ist.</li>
+    <li><code>get &lt;name&gt; backups</code>: verfuegbare Konfigurationssicherungen.</li>
+    <li><code>get &lt;name&gt; media</code>: gespeicherte Bilder.</li>
+    <li><code>get &lt;name&gt; icons</code>: verfuegbare FHEM-Symbole.</li>
+    <li><code>get &lt;name&gt; layoutformat</code>: gespeicherte Schema-Version.</li>
+    <li><code>get &lt;name&gt; logreadings &lt;device&gt; [auto|dblog|filelog]</code>:
+    verfuegbare protokollierte Readings fuer Diagramme.</li>
+    <li><code>get &lt;name&gt; history &lt;device&gt; &lt;reading&gt;
+    [24h|7d|30d|365d] [auto|raw|15m|1h|1d] [auto|dblog|filelog]</code>:
+    historische Werte aus der ausgewaehlten Protokollquelle.</li>
+  </ul>
+
+  <a id="FHEMCMSattr"></a>
+  <h4>Attribute</h4>
+  <ul>
+    <li><code>historySource auto|dblog|filelog</code>: bevorzugte Quelle fuer
+    Diagrammdaten; <code>auto</code> waehlt eine verfuegbare Quelle.</li>
+    <li><code>dbLog &lt;DbLog-Device&gt;</code>: DbLog-Quelle fuer historische Werte.</li>
+    <li><code>fileLog &lt;FileLog-Device&gt;</code>: FileLog-Quelle fuer historische Werte.</li>
+    <li>Allgemeine FHEM-Attribute wie <code>room</code>, <code>alias</code> und
+    <code>verbose</code> koennen wie gewohnt verwendet werden.</li>
+  </ul>
+
+  <h4>CMS bedienen</h4>
+  <p>Die Homepage zeigt den veroeffentlichten Stand. Zum Bearbeiten den
+  URL-Parameter <code>?mode=edit</code> verwenden. Im Editor Seiten verwalten,
+  Widgets einfuegen, verschieben und skalieren. Aenderungen werden als Entwurf
+  gespeichert; erst <b>Veroeffentlichen</b> uebernimmt sie in die Homepage.
+  <b>Vorschau</b> zeigt den Entwurf, ohne ihn zu veroeffentlichen.
+  <b>Verwerfen</b> entfernt nur den Entwurf. Der Bearbeitungsparameter ist
+  keine Zugriffssperre.</p>
+  <p>Seiteneinstellungen enthalten Theme, Rahmen, Rasterdichte und globale
+  Titelausrichtung. Bilder werden im jeweiligen CMS-Device gespeichert:
+  PNG, JPEG oder GIF bis 3 MiB, hoechstens 200 Bilder pro Device.
+  Die installierte Modulversion steht im Internal <code>VERSION</code>.
+  Nach Updates FHEM neu starten und CMS-Browserseiten vollstaendig neu laden.</p>
+  <p>Ausfuehrliche Anleitung:
+  <a href="https://github.com/stapetz/fhem-cms/blob/main/docs/ANWENDER.md">Anwenderdokumentation</a>.
+  Rueckmeldungen ohne Zugangsdaten oder andere sensible Inhalte als
+  <a href="https://github.com/stapetz/fhem-cms/issues">GitHub-Issue</a> melden.</p>
+</ul>
+
+=end html_DE
+
+=cut
