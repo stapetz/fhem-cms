@@ -138,6 +138,78 @@ test('widget titles inherit alignment and compact contents fill their available 
   }
 });
 
+test('editor tools follow real hover, keyboard focus and touch capability without layout changes', {
+  skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
+  timeout: 45000,
+}, async () => {
+  const server = await testServer();
+  const profile = await mkdtemp(join(tmpdir(), 'cms-hover-'));
+  const child = spawn(chrome, ['--headless=new', '--no-first-run', '--no-default-browser-check',
+    '--disable-background-networking', '--remote-debugging-address=127.0.0.1',
+    '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--window-size=1440,1000', 'about:blank']);
+  let stderr = '';
+  child.stdout.resume();
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  const closed = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+  const timeout = setTimeout(() => child.kill('SIGTERM'), 35000);
+  try {
+    const interact = async (command) => {
+      const evaluate = async (expression) => {
+        const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 15000 });
+        assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
+        return reply.result.value;
+      };
+      await evaluate(`new Promise(resolve => {
+        const timer = setInterval(() => {
+          const output = document.querySelector('#result');
+          if (!output.dataset.ready && !output.dataset.result) return;
+          clearInterval(timer); resolve();
+        }, 25);
+      })`);
+      const check = async (phase, index = 0) => {
+        await evaluate(`document.dispatchEvent(new CustomEvent('regression-check', {detail:${JSON.stringify({ phase, index })}}))`);
+        const error = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
+          ? document.querySelector('#result').textContent : null`);
+        assert.equal(error, null, error);
+      };
+      await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
+      await check('initial');
+      for (const index of [0, 1]) {
+        const point = await evaluate(`(() => { const r = document.querySelector('#hover-item-${index}').getBoundingClientRect();
+          return {x:r.x + 10, y:r.y + 10}; })()`);
+        await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+        await check('hover', index);
+        await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
+        await check('leave');
+        await evaluate(`(() => { const button = document.querySelector('#hover-item-${index} .cms-widget-drag');
+          const focusable = [...document.querySelectorAll('button,a[href],select,input')].filter(el => el.getClientRects().length);
+          focusable[focusable.indexOf(button) - 1].focus(); })()`);
+        await command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
+        await command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
+        await check('focus', index);
+        await evaluate(`document.querySelector('#outside').focus()`);
+        await check('leave');
+      }
+      await command('Emulation.setTouchEmulationEnabled', { enabled: true });
+      await check('touch');
+      await command('Emulation.setTouchEmulationEnabled', { enabled: false });
+      await check('leave');
+      await check('finish');
+    };
+    const result = await browserResult(profile,
+      `http://127.0.0.1:${server.address().port}/t/41_editor_hover.html`, child, interact);
+    assert.ok(result.checks >= 70);
+  } catch (error) {
+    throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });
+  } finally {
+    child.kill('SIGTERM');
+    await closed;
+    clearTimeout(timeout);
+    await rm(profile, { recursive: true, force: true });
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test('real editor pointer drag and resize preserve appearance on a scrollable canvas', {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 45000,

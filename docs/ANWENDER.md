@@ -109,6 +109,12 @@ Die Umrechnung erfolgt erst mit **Speichern** als Entwurf. **Abbrechen**
 verändert weder Live noch den vorhandenen Entwurf. Der Dialog enthält nur
 Layout- und Look-&-Feel-Einstellungen, keine Widgetpositionen oder -größen.
 Widgets werden ausschließlich direkt im Editiermodus verschoben und skaliert.
+Mit der Maus erscheinen die Bearbeitungsknöpfe erst, wenn Sie das jeweilige
+Widget überfahren. Eine dezente farbige Hervorhebung zeigt das aktive Widget.
+Die Knöpfe werden auch bei Tastaturfokus im Widget sichtbar und bleiben beim
+Ziehen eingeblendet. Auf Touchgeräten ohne Hover werden sie dauerhaft angezeigt.
+Dies gilt ebenfalls für das Navigationswidget; Ansicht und Vorschau ändern sich
+dadurch nicht.
 Die Größenänderung erfolgt über die Ecke unten rechts, auch bei der Navigation.
 Die Werkzeugknöpfe stehen links neben dieser Griffzone, damit flache Widgets
 weiterhin greifbar bleiben. Die optionalen Größen der Navigationspunkte sind
