@@ -165,29 +165,36 @@ Resize-Schleife durch wechselnde Fensterbreiten und automatische Zellhöhen.
 Die Geräte-Vorschau ist auch in diesem Editor verfügbar: Sie öffnet die aktuelle
 Seite mit `?mode=preview` in einem maßgerechten Iframe, bietet Geräte- und
 Desktopauflösungen an und vertauscht beim Drehen Breite und Höhe.
-Homepage und Vorschau verwenden einen zoomfähigen Flex-Umbruch (Refs #106).
+Homepage, Vorschau und Editor verwenden dasselbe zoomfähige Raster (Refs #119).
 Die gemeinsame Bezugsbreite `25rem + 66.666667cqi` entspricht bei 1200 Pixeln
 CMS-Inhaltsbreite und Standardschrift wieder 1200 Pixeln. Ein Drittel bleibt
 schrift-/zoomabhängig, zwei Drittel reagieren auf die Breite des benannten
 `cms-page`-Containers: Reine Prozent-/Containergrößen würden Browser-Zoom
 physisch wieder ausgleichen. Es gibt keine Zoom-Erkennung über Bildschirmdaten
 und keine kompensierenden Resize-Schreibzugriffe.
-Widgetbreiten folgen ihrem gespeicherten Rasteranteil, mindestens 1/4 der
-Bezugsbreite; die Lücken werden anteilig berücksichtigt. Passt die nächste
-Kachel nicht, beginnt eine neue Zeile, auch auf dem Desktop. Ein einzelnes
-Widget bleibt höchstens containerbreit. Navigation kommt zuerst, Widgets
-folgen im DOM nach gespeicherter Zeile/Spalte. Der Editor bleibt beim präzisen
-Gridstack-Raster, gespeicherte Positionen und Größen ändern sich nicht.
-Seit Refs #109 verwendet auch dieses Editorraster die gemeinsame zoomfähige
-Bezugsbreite statt `width: 100%`. Seine Breite umfasst die zusätzliche letzte
-Rasterlücke; Gridstack arbeitet ohne eigene Margins, der Content erhält
-`--cms-view-gap` rechts/unten. Damit entsprechen Widgetbreiten ab einem
-Viertelraster der Ansicht, ohne präzise kleine Rasterfelder künstlich zu
-vergrößern. Das quadratische Koordinatenraster bleibt erhalten; die Ansicht
-verwendet weiterhin das gespeicherte Seitenverhältnis und ihre Mindesthöhe.
-Nur `.cms-schema5-workspace` scrollt bei Platzmangel; Vorschau und Dialoge
-behalten ihren bisherigen Ablauf. Es werden weder CSS-Transforms noch
-Zoom-Kompensation eingesetzt, sodass Gridstack echte Pointerkoordinaten nutzt.
+Oberhalb von 600 Pixeln Inhaltsbreite behalten alle drei Ansichten die exakten
+gespeicherten Gridstack-Koordinaten bei, einschließlich kleiner Widgets,
+Leerstellen und Navigation. Die gemeinsame Rasterbreite umfasst die zusätzliche
+letzte Rasterlücke; Gridstack arbeitet immer ohne eigene Margins, der Content
+erhält `--cms-view-gap` rechts/unten. Damit stimmen Positionen und beide
+Abmessungen auch unterhalb eines Viertelrasters überein. Das quadratische
+Koordinatenraster bleibt erhalten. Bei Platzmangel scrollt ausschließlich
+`.cms-schema5-workspace`, auch auf der Homepage und in der Vorschau; ein
+vollständiges Einpassen würde Browserzoom wieder aufheben. Der Editor stellt
+die Scrollposition nach dem Neurendern einer gespeicherten Rasteränderung wieder
+her. Die feste Navigationshöhe wird auf dem Desktop in allen Ansichten geprüft;
+auf schmalen Ansichten prüft der bestehende Observer nur die verfügbare Breite.
+Nur innerhalb `@container cms-page (width <= 600px)` verwenden Homepage und
+Vorschau den Flex-Umbruch: Navigation zuerst mit automatischer Höhe, Widgets
+nach gespeicherter Zeile/Spalte, mindestens ein Viertel der Bezugsbreite und
+6 rem Höhe. Gespeicherte Positionen und Größen bleiben unverändert. Der Editor
+bricht auch dort nicht um. Es werden weder CSS-Transforms noch Zoom-Kompensation
+eingesetzt, sodass Gridstack echte Pointerkoordinaten nutzt.
+`t/47_view_editor_layout.html` vergleicht Navigation sowie Thermostat, Text,
+Wert und HTML in allen fünf Rasterdichten bei 1000/800/700/601 Pixeln in beiden
+Ansichten pixelgenau (Toleranz kleiner 1 Pixel). Das 96er-Raster reproduziert
+die gemeldeten 14-/15-Spalten-Widgets; bei 600/393 Pixeln werden überlappungsfreier
+Umbruch, Rückkehr zum Desktop und unveränderte Rasterdaten geprüft.
 `t/35_schema5_scaling.test.js` vergleicht Editor-/Ansichtsbreiten und prüft
 Editor-Zoom bei 80/100/125/200 Prozent sowie unveränderte Rasterkoordinaten beim
 Resize. `t/38_editor_scaling.html` prüft im echten Editor Titelzentrierung,

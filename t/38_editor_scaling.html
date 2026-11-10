@@ -16,7 +16,7 @@ const output = document.querySelector('#result');
 let editor;
 let checks = 0;
 const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
-const settle = () => new Promise((resolve) => setTimeout(resolve, 250));
+const settle = () => new Promise((resolve) => setTimeout(resolve, 450));
 const fail = (error) => { output.dataset.result = 'fail'; output.textContent = error.stack || error.message; };
 try {
   const live = { schemaVersion: 5, theme: 'light',

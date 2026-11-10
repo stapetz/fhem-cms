@@ -131,7 +131,8 @@ export class Schema5View {
           onMove: typeof this.editing.onMove === 'function'
             ? (id) => this.editing.onMove(pageId, id) : undefined,
         });
-      this.stopNavigation = observeSchema5Navigation(navigation, Boolean(this.editing));
+      this.stopNavigation = observeSchema5Navigation(navigation,
+        () => Boolean(this.editing) || getComputedStyle(this.root).display !== 'flex');
       const view = this.view;
       this.live = new Schema5LivePage(this.client, page.widgets,
         (snapshots, stale) => view.update(snapshots, stale),

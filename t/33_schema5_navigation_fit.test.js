@@ -120,4 +120,14 @@ test('vertical navigation needs only the widest link but reserves full stacked h
   const stopPreview = observeSchema5Navigation(nav);
   assert.ok(!attributes.has('data-compact'), 'auto-height preview is not constrained by collapsed height');
   stopPreview();
+  let constrained = true;
+  const stopResponsive = observeSchema5Navigation(nav, () => constrained);
+  assert.ok(attributes.has('data-compact'), 'desktop view respects saved navigation height');
+  constrained = false;
+  callbacks.at(-2)();
+  assert.ok(!attributes.has('data-compact'), 'mobile auto-height responds to container changes');
+  constrained = true;
+  callbacks.at(-2)();
+  assert.ok(attributes.has('data-compact'), 'returning to desktop restores height constraint');
+  stopResponsive();
 });

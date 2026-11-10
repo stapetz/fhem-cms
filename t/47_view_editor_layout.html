@@ -1,0 +1,111 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>View and editor geometry regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<style>.grid-stack-animate, .grid-stack-animate .grid-stack-item { transition: none !important; }</style>
+<main class="cms-shell"><div class="cms-schema5-workspace"><div id="grid" class="grid-stack cms-schema5-grid"></div></div></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5View } from '../www/fhem-cms/js/fcui-schema5-view.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const settle = () => new Promise(resolve => setTimeout(resolve, 230));
+const root = document.querySelector('#grid');
+const shell = root.closest('.cms-shell');
+const rect = element => {
+  const box = element.getBoundingClientRect();
+  const origin = root.getBoundingClientRect();
+  return { x: box.x - origin.x, y: box.y - origin.y, width: box.width, height: box.height };
+};
+try {
+  for (const columns of [12, 24, 48, 96, 192]) {
+    const scale = columns / 12;
+    const precise = columns >= 96;
+    const grids = precise
+      ? [[1, 9, 32, 24], [33, 9, 31, 23], [64, 9, 14, 11], [78, 9, 15, 10]]
+        .map(grid => grid.map(value => value * columns / 96))
+      : [[1, 9, 4, 3], [5, 9, 4, 3], [9, 9, 2, 2], [11, 9, 2, 2]]
+        .map(([col, row, w, h]) => [1 + (col - 1) * scale, row * scale, w * scale, h * scale]);
+    // Schema coordinates are one-based; scaling keeps the first column anchored.
+    if (precise) for (const grid of grids) grid[0] -= columns / 96 - 1;
+    const specifications = [
+      { type: 'thermostat', device: 'Test', readings: { actual: 'temperature', target: 'desiredTemperature' } },
+      { type: 'text', html: '<p>Text content</p>' },
+      { type: 'fhem-value', device: 'Test', reading: 'temperature' },
+      { type: 'fhem-html', devices: [], html: '<p>HTML content</p>' },
+    ];
+    const widgets = specifications.map((spec, i) => {
+      const [col, row, w, h] = grids[i];
+      return { ...spec, id: `widget${i}`, title: `Title ${i}`, grid: { col, row, w, h } };
+    });
+    const config = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: columns },
+      navigation: { grid: precise ? { col: 1, row: 2 * columns / 96, w: 91 * columns / 96, h: 6 * columns / 96 }
+        : { col: 1, row: 1, w: 11 * scale, h: scale } },
+      pages: [{ id: 'one', title: 'Home', widgets: [widgets[1], widgets[0], widgets[3], widgets[2]] },
+        { id: 'two', title: 'Other page', widgets: [] }] };
+    const original = JSON.stringify(config);
+    const measurements = [];
+    for (const editing of [null, { onChange() { throw new Error('Rendering must not save'); }, onEdit() {} }]) {
+      const view = new Schema5View({ GridStack, root, config, status: document.createElement('p'), editing,
+        client: { jsonlist: async () => [{ name: 'Test',
+          readings: { temperature: '21', desiredTemperature: '22' } }], subscribe() {}, unsubscribe() {} },
+        services: { iconUrl: () => '' } });
+      await view.start();
+      const states = [];
+      try {
+        for (const width of [1000, 800, 700, 601, 600, 393, 1000]) {
+          shell.style.width = `${width}px`;
+          await settle();
+          const items = Object.fromEntries([...root.children].map(element => [
+            element.gridstackNode.id, rect(element.querySelector('.grid-stack-item-content')),
+          ]));
+          states.push({ width, items, compact: root.querySelector('.cms-nav').hasAttribute('data-compact') });
+          check(JSON.stringify(config) === original, `${columns}/${width}: no config mutation`);
+          check(JSON.stringify(root.gridstack.save(false).map(({ id, x = 0, y = 0, w = 1, h = 1 }) => ({ id, x, y, w, h }))
+            .sort((a, b) => a.id.localeCompare(b.id))) === JSON.stringify(
+            [{ id: '__nav', ...config.navigation.grid }, ...widgets.map(widget => ({ id: widget.id, ...widget.grid }))]
+              .map(({ id, col, row, w, h }) => ({ id, x: col - 1, y: row - 1, w, h }))
+              .sort((a, b) => a.id.localeCompare(b.id))), `${columns}/${width}: saved raster retained`);
+          if (!editing && width <= 600) {
+            const boxes = Object.values(items);
+            for (const box of boxes) {
+              check(box.x >= -1 && box.x + box.width <= width + 1, 'mobile content stays within container');
+            }
+            for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+              const a = boxes[i]; const b = boxes[j];
+              check(a.x + a.width <= b.x + 1 || b.x + b.width <= a.x + 1
+                || a.y + a.height <= b.y + 1 || b.y + b.height <= a.y + 1, 'mobile widgets do not overlap');
+            }
+          }
+        }
+      } finally { view.stop(); }
+      measurements.push(states);
+    }
+    for (let i = 0; i < measurements[0].length; i++) {
+      const live = measurements[0][i]; const editor = measurements[1][i];
+      if (live.width <= 600) continue;
+      check(live.compact === editor.compact, `${columns}/${live.width}: same navigation mode`);
+      for (const id of Object.keys(live.items)) {
+        for (const key of ['x', 'y', 'width', 'height']) {
+          check(Math.abs(live.items[id][key] - editor.items[id][key]) < 1,
+            `${columns}/${live.width}/${id}: same ${key}: ${live.items[id][key]} vs ${editor.items[id][key]}`);
+        }
+      }
+      const first = live.items.widget0;
+      check(Object.entries(live.items).filter(([id]) => id !== '__nav')
+        .every(([, box]) => Math.abs(box.y - first.y) < 1), 'all four desktop widgets stay in saved row');
+      if (precise) check(live.items.widget2.width < first.width * .5, 'small value is not enlarged to 25 percent');
+    }
+  }
+  output.textContent = JSON.stringify({ checks });
+  output.dataset.result = 'pass';
+} catch (error) {
+  output.textContent = `${error.message}\n${error.stack || ''}`;
+  output.dataset.result = 'fail';
+}
+</script>

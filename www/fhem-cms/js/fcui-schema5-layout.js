@@ -220,7 +220,7 @@ export function createSchema5Grid(GridStack, element, config, pageId, renderCont
     throw new Error('Leeres Rasterelement und Inhaltsfunktion erforderlich');
   }
   const grid = GridStack.init({ column: columns, maxRow: 1000, minRow: editable ? 8 * columns / 12 : 0, mode: 'float', staticGrid: true,
-    ...(editable ? { margin: 0 } : {}),
+    margin: 0,
     draggable: { handle: '.cms-widget-drag' }, resizable: { handles: 'se' } }, element);
   if (!grid) throw new Error(`${columns}-Spalten-Raster konnte nicht angelegt werden`);
   try {

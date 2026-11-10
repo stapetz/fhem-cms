@@ -1,3 +1,12 @@
+2026-11-10 - 1.5.1-dev: Ansicht und Editor verwenden dasselbe Raster (Refs #119)
+
+Homepage, Vorschau und Editor behalten auf Desktopbreiten dieselben gespeicherten
+Positionen, Zeilen und Größenverhältnisse einschließlich der Navigation.
+Kleine Widgets werden dort nicht mehr auf mindestens 25 Prozent verbreitert.
+Nur bis 600 Pixel Inhaltsbreite bricht die Ansicht weiterhin automatisch um.
+Browserzoom bleibt wirksam; bei Platzmangel scrollt nur der Rasterbereich.
+Der Editor behält die Scrollposition nach dem Speichern einer Rasteränderung.
+
 2026-11-10 - 1.5.0-dev: Einheitliche Einheitenfelder mit Vorschlägen (Refs #118)
 
 Texteditor/Platzhalterdialog, Wert, Diagramm und Tabelle verwenden ein freies
