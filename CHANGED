@@ -1,3 +1,20 @@
+2026-11-10 - 1.2.0: Editor, Widgets, Navigation und Einheiten
+
+Freigegebener Umfang: #105-#119; Releaseabgleich und Dokumentation: #120.
+Thermostat-Gerätewechsel übernimmt die neue Auswahl samt Readings.
+Widgets und Navigation skalieren mit Fenstergröße und Browserzoom; Editor,
+Vorschau und Homepage verwenden auf dem Desktop dasselbe präzise Raster.
+Widget-Inhalte nutzen die Innenfläche besser, Titel lassen sich global ausrichten.
+Schalter und Taster erhalten Standardsymbole mit optionaler Beschriftung.
+Navigation lässt sich zuverlässig skalieren und beim Ausrichtungswechsel einpassen;
+Editorwerkzeuge erscheinen auf Mausgeräten bei Hover oder Tastaturfokus.
+Safari behält die Textauswahl beim Formatieren. Widgets lassen sich automatisch
+in Leserichtung anordnen. Text-Readings erhalten frei wählbare Einheiten;
+Wert, Diagramm, Tabelle und Texteditor verwenden gemeinsame Einheitenvorschläge.
+Energie wird als kWh beschriftet (Hinweis #104); keine numerische Umrechnung.
+SolarFlow reserviert Platz für seinen Titel. Bestehende Konfigurationen bleiben
+erhalten. Ältere offene MVP-/Refactoringthemen sind nicht Teil dieses Releases.
+
 2026-11-10 - 1.5.1-dev: Ansicht und Editor verwenden dasselbe Raster (Refs #119)
 
 Homepage, Vorschau und Editor behalten auf Desktopbreiten dieselben gespeicherten

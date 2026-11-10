@@ -2,7 +2,18 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
-**Aktuelle stabile Version: 1.1.0**
+**Aktuelle stabile Version: 1.2.0**
+
+## Neu in 1.2.0
+
+- Einheitliche Rasterdarstellung in Editor und Ansicht, besser ausgefüllte
+  Widgets und globale Titelausrichtung.
+- Zuverlässiger Thermostat-Gerätewechsel, skalierbare Navigation und
+  Bearbeitungsknöpfe bei Hover oder Tastaturfokus.
+- Automatisches Anordnen der Widgets unter Beibehaltung der Leserichtung.
+- Safari-Textformatierung, Einheiten hinter eingefügten Readings und gemeinsame
+  Einheitenfelder mit Vorschlägen; SolarFlow hält den Titelbereich frei.
+- speziel Fehler von Herrn Professor bzgl kWh Darstellung gefixt
 
 ## Repositorystruktur
 
@@ -19,7 +30,7 @@ Die wiederverwendbaren Web Components liegen unter `www/fhem-cms/components/`; d
 
 ## Version
 
-Die aktuelle stabile Version ist **1.1.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
+Die aktuelle stabile Version ist **1.2.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
 
 ## Installation und Update in FHEM
 
