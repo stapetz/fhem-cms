@@ -1,3 +1,12 @@
+2026-11-10 - 1.4.0-dev: Einheit für Text-Readings auswählen (Refs #116)
+
+Der gemeinsame Platzhalterdialog bietet eine Einheiten-Auswahl mit °C, W,
+kWh, % und weiteren üblichen Einheiten. Die Einheit erscheint mit Leerzeichen
+hinter dem Wert und bleibt beim Bearbeiten erhalten. Gespeichert wird der
+bestehende suffix-Filter; Textbausteine, freies HTML und Element-Schreibweise
+bleiben kompatibel. Ein Einheitenwechsel ersetzt die vorherige Auswahl, ohne
+andere Filter zu verlieren.
+
 2026-11-10 - Leserichtung leicht versetzter Widgets erhalten (Refs #115)
 
 Automatisches Anordnen erkennt nebeneinander liegende Widgets auch bei

@@ -87,6 +87,11 @@ vollständige Code-, Asset- und Datensicherung auf einer isolierten Instanz
 wiederherstellen: Ältere Module können Schema 5 nicht sicher interpretieren.
 Die automatische Konfigurationssicherung enthält keine Medien oder FHEM-Konfiguration.
 
+Im Platzhalterdialog des Texteditors können Sie unter **Einheit hinter dem
+Wert** etwa °C, W, kWh oder % wählen. Die Einheit wird hinter dem eingefügten
+Reading angezeigt und beim erneuten Bearbeiten übernommen. Details stehen
+unter [Platzhalter](./PLATZHALTER.md#platzhalter-suchen-statt-tippen).
+
 ## Schema-5-Editor bedienen
 
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.

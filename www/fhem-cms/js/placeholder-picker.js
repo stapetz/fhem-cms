@@ -2,6 +2,9 @@
 import { formatValue, isValidDeviceName, isValidFilter, isValidReadingName } from './freehtml.js';
 
 const MAX_ROWS = 40;
+const UNITS = ['°C', '°F', 'K', '%', 'W', 'kW', 'Wh', 'kWh', 'MWh', 'V', 'A', 'mA',
+  'Hz', 'lx', 's', 'min', 'h', 'm', 'cm', 'mm', 'm²', 'm³', 'l', 'l/min', 'm³/h', 'bar', 'hPa', 'ppm', 'µg/m³'];
+const unitSuffix = (unit) => `suffix( ${unit})`;
 const PRESETS = [
   ['round(1)', 'Runden auf 1 Stelle'], ['round(0)', 'Runden ohne Nachkommastellen'], ['int', 'Ganzzahl'],
   ['upper', 'Großbuchstaben'], ['lower', 'Kleinbuchstaben'], ['default(–)', 'Ersatz bei leerem Wert'],
@@ -63,6 +66,9 @@ const TEMPLATE = `
         <p class="hint">@alias, @name und @type liefern Alias, Namen und Typ des Devices.</p>
       </div>
     </div>
+    <label>Einheit hinter dem Wert
+      <select data-unit aria-label="Einheit"><option value="">Keine</option></select>
+    </label>
     <div class="filter">
       <label>Filter (optional)
         <span class="row">
@@ -95,9 +101,20 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
     const deviceInput = $('[data-device]');
     const readingInput = $('[data-reading]');
     const filterInput = $('[data-filter]');
+    const unitInput = $('[data-unit]');
     const elementBox = $('[data-element]');
     let devices = [];
     let loadError = '';
+    for (const unit of UNITS) {
+      const option = document.createElement('option');
+      option.value = unit;
+      option.textContent = unit;
+      unitInput.append(option);
+    }
+    const selectedUnit = () => {
+      const last = filterInput.value.trim().split('|').at(-1).trim();
+      return UNITS.find((unit) => last === unitSuffix(unit)) || '';
+    };
 
     $('[data-element-row]').hidden = !allowElement;
     if (initial) {
@@ -114,8 +131,12 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
       chip.textContent = value;
       chip.title = label;
       chip.addEventListener('click', () => {
-        const current = filterInput.value.trim();
-        filterInput.value = current ? `${current}|${value}` : value;
+        const filters = filterInput.value.trim().split('|').filter((part) => part.trim());
+        const unit = selectedUnit();
+        if (unit) filters.pop();
+        filters.push(value);
+        if (unit && !UNITS.some((entry) => value === unitSuffix(entry))) filters.push(unitSuffix(unit));
+        filterInput.value = filters.join('|');
         refresh();
         filterInput.focus();
       });
@@ -196,6 +217,7 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
     };
 
     const refresh = () => {
+      unitInput.value = selectedUnit();
       renderDevices();
       renderReadings();
       const device = deviceInput.value.trim();
@@ -232,6 +254,13 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
     deviceInput.addEventListener('input', refresh);
     readingInput.addEventListener('input', refresh);
     filterInput.addEventListener('input', refresh);
+    unitInput.addEventListener('change', () => {
+      const filters = filterInput.value.trim().split('|').filter((part) => part.trim());
+      if (selectedUnit()) filters.pop();
+      if (UNITS.includes(unitInput.value)) filters.push(unitSuffix(unitInput.value));
+      filterInput.value = filters.join('|');
+      refresh();
+    });
     elementBox.addEventListener('change', refresh);
     $('[data-filter-clear]').addEventListener('click', () => {
       filterInput.value = '';

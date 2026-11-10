@@ -1,0 +1,129 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Placeholder unit selection regression</title>
+<main id="host"></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { openPlaceholderPicker } from '../www/fhem-cms/js/placeholder-picker.js';
+import { formatValue, isValidFilter, renderTemplate, sanitize, substitute } from '../www/fhem-cms/js/freehtml.js';
+import { createEditor, editorCss, contentCss } from '../www/fhem-cms/js/richtext.js';
+const output = document.querySelector('#result');
+const services = { listAllDevices: async () => [{ name: 'Test', readings: { power: '21.35' } }] };
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+const change = (input, value, event = 'change') => {
+  input.value = value;
+  input.dispatchEvent(new Event(event, { bubbles: true }));
+};
+const open = async (initial, allowElement = false) => {
+  const result = openPlaceholderPicker({ services, initial, allowElement });
+  await settle();
+  return { dialog: document.querySelector('.cms-ph-dialog'), result };
+};
+let editor;
+try {
+  const initial = { device: 'Test', reading: 'power', filter: 'round(1)' };
+  for (const asElement of [false, true]) {
+    const { dialog, result } = await open(initial, asElement);
+    const unit = dialog.querySelector('[data-unit]');
+    const filter = dialog.querySelector('[data-filter]');
+    check(unit.value === '', 'existing numeric filter has no unit');
+    const units = [...unit.options].map((option) => option.value).filter(Boolean);
+    check(['°C', 'W', 'kWh', '%'].every((value) => units.includes(value)), 'required unit choices present');
+    for (const value of units) {
+      change(unit, value);
+      check(filter.value === `round(1)|suffix( ${value})`, `${value}: replaces rather than duplicates unit`);
+      check(isValidFilter(filter.value), `${value}: compatible filter`);
+      check(dialog.querySelector('[data-preview]').textContent === `Aktueller Wert: 21.4 ${value}`,
+        `${value}: unit follows formatted value`);
+      check(!dialog.querySelector('[data-ok]').disabled, `${value}: selection can be saved`);
+    }
+    change(unit, 'W');
+    change(unit, '');
+    check(filter.value === 'round(1)', 'None removes unit without changing other filters');
+    change(filter, 'round(0)|suffix( custom)', 'input');
+    check(unit.value === '', 'custom suffix left intact');
+    change(unit, 'kWh');
+    check(filter.value === 'round(0)|suffix( custom)|suffix( kWh)', 'custom suffix preserved when adding a unit');
+    change(unit, '');
+    check(filter.value === 'round(0)|suffix( custom)', 'removing selected unit preserves custom suffix');
+    change(filter, 'round(1)|suffix( °C)', 'input');
+    check(unit.value === '°C', 'manual and preset unit filters synchronize dropdown');
+    dialog.querySelector('[data-filter-clear]').click();
+    check(unit.value === '' && filter.value === '', 'clear resets both filter and unit');
+    [...dialog.querySelectorAll('[data-presets] button')].find((button) => button.textContent === 'suffix( °C)').click();
+    check(unit.value === '°C' && filter.value === 'suffix( °C)', 'unit preset synchronizes dropdown');
+    [...dialog.querySelectorAll('[data-presets] button')].find((button) => button.textContent === 'round(0)').click();
+    check(unit.value === '°C' && filter.value === 'round(0)|suffix( °C)', 'rounding preset stays before unit');
+    check(dialog.querySelector('[data-preview]').textContent === 'Aktueller Wert: 21 °C',
+      'rounding after unit selection retains visible unit');
+    change(filter, 'round(1)', 'input');
+    change(unit, 'kWh');
+    if (asElement) {
+      const element = dialog.querySelector('[data-element]');
+      element.checked = true;
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const source = dialog.querySelector('[data-result]').textContent;
+    check(asElement ? source.includes('filter="round(1)|suffix( kWh)"') : source === '{{Test:power|round(1)|suffix( kWh)}}',
+      'text and element previews carry compatible filter');
+    dialog.querySelector('[data-ok]').click();
+    const saved = await result;
+    check(saved.filter === 'round(1)|suffix( kWh)' && saved.asElement === asElement, 'saved filter includes unit');
+    check(JSON.stringify(initial) === '{"device":"Test","reading":"power","filter":"round(1)"}', 'initial input not mutated');
+    check(formatValue('21.35', saved.filter) === '21.4 kWh', 'saved value renders correctly');
+    check(renderTemplate(sanitize(source), () => '21.35').textContent === '21.4 kWh',
+      'sanitized text and element forms render the saved unit');
+    const reopened = await open(saved, asElement);
+    check(reopened.dialog.querySelector('[data-unit]').value === 'kWh', 'unit survives reopening');
+    reopened.dialog.querySelector('[data-cancel]').click();
+    check(await reopened.result === null, 'cancel leaves saved value unchanged');
+  }
+  const invalid = await open(initial);
+  change(invalid.dialog.querySelector('[data-filter]'), 'suffix(<script>)', 'input');
+  change(invalid.dialog.querySelector('[data-unit]'), 'W');
+  check(invalid.dialog.querySelector('[data-ok]').disabled, 'unit cannot bypass invalid-filter validation');
+  check(!!invalid.dialog.querySelector('[data-error]').textContent, 'invalid filter has visible error');
+  invalid.dialog.querySelector('[data-cancel]').click();
+  await invalid.result;
+
+  const root = document.querySelector('#host').attachShadow({ mode: 'open' });
+  const style = document.createElement('style');
+  style.textContent = editorCss + contentCss;
+  root.append(style);
+  editor = createEditor({ root, services, html: '<p>Reading: </p>',
+    onError: (message) => { if (message) throw new Error(message); } });
+  root.append(editor.element);
+  const area = root.querySelector('.editor-area');
+  area.focus();
+  const text = area.querySelector('p').firstChild;
+  document.getSelection().setBaseAndExtent(text, text.length, text, text.length);
+  await settle();
+  [...root.querySelectorAll('button')].find((button) => button.title.startsWith('Platzhalter für')).click();
+  await settle();
+  const picker = document.querySelector('.cms-ph-dialog');
+  change(picker.querySelector('[data-device]'), 'Test', 'input');
+  change(picker.querySelector('[data-reading]'), 'power', 'input');
+  change(picker.querySelector('[data-unit]'), 'W');
+  picker.querySelector('[data-ok]').click();
+  await settle();
+  check(editor.getHtml().includes('{{Test:power|suffix( W)}}'), 'richtext inserts reading with selected unit');
+  check(substitute(editor.getHtml(), () => '42').includes('42 W'), 'view renders unit after inserted reading');
+  root.querySelector('.cms-ph').click();
+  await settle();
+  const editPicker = document.querySelector('.cms-ph-dialog');
+  check(editPicker.querySelector('[data-unit]').value === 'W', 'richtext chip reopens with selected unit');
+  change(editPicker.querySelector('[data-unit]'), 'kWh');
+  editPicker.querySelector('[data-ok]').click();
+  await settle();
+  check(editor.getHtml().includes('{{Test:power|suffix( kWh)}}'), 'editing chip replaces its unit');
+  editor.destroy();
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  editor?.destroy();
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>
