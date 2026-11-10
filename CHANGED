@@ -1,3 +1,13 @@
+2026-11-10 - 1.4.1-dev: Assetordner grafisch durchsuchen und Verschieben bestaetigen (Refs #125)
+
+Finder-artige Ordnerleiste, Ordnerkacheln und klickbarer Pfad ersetzen die
+Ordner-Dropdowns. Jeder Ordner zeigt nur seinen eigenen Inhalt.
+Bild-/Dokumentverschieben und Ordnerwechsel verwenden einen eigenen grafischen
+Zielordnerdialog. Nach dem Speichern wird das verschobene Asset im Zielordner
+angezeigt; nicht uebernommene Aenderungen melden einen Fehler.
+Ordnerklicks navigieren ausschliesslich, ohne Schreibbefehle.
+Leere Ordner lassen sich nur nach separater Bestaetigung loeschen.
+
 2026-11-10 - Eingebettete deutsche FHEM-Geraetehilfe (Refs #122)
 
 Die Modulhilfe beschreibt Definition, Startlink, oeffentliche Befehle,

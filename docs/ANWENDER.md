@@ -265,16 +265,26 @@ Denselben Dialog öffnen **Bild hinzufügen …** im Texteditor und LinkWidget s
 die Dokumentauswahl nur Dokumente. Bereits früher im Textwidget hochgeladene
 Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
 
-- Im **Ordner**-Feld navigieren. Der Stammordner zeigt zur Übersicht alle Assets.
-  Unter **Ordner verwalten** Unterordner anlegen, umbenennen oder über den
-  übergeordneten Ordner verschieben. Nur leere Ordner lassen sich löschen.
+- Wie im Finder links in der **Ordnerleiste** oder rechts auf eine **Ordnerkachel**
+  klicken. Ein Klick öffnet den Ordner; er verändert oder löscht keine Dateien.
+  Rechts stehen dessen direkte Unterordner und Dateien. Der **Stammordner**
+  zeigt ebenfalls nur seine eigenen Inhalte, nicht zusätzlich alle Unterordner.
+  Über den klickbaren Pfad oberhalb zur übergeordneten Ebene zurückkehren.
+  Unter **Ordner verwalten** Unterordner anlegen, umbenennen oder über
+  **Übergeordneten Ordner auswählen …** verschieben. Nur leere Ordner lassen
+  sich löschen, nach einer zusätzlichen Bestätigung mit ihrem vollständigen Pfad.
 - Unter **Dateien in diesen Ordner hochladen** eine oder mehrere Dateien wählen.
   Uploads landen direkt im gewählten Ordner. Fortschritt und Fehler werden
   angezeigt; **Upload abbrechen** verwirft den laufenden Upload.
   Identische Dateien werden wiederverwendet, nicht dupliziert.
-- Ein Asset anklicken: Dateinamen ändern (ohne Wechsel der Endung), in einen
-  anderen Ordner verschieben, öffnen/herunterladen oder Verwendungen anzeigen.
-  Verschieben/Umbenennen ändert gespeicherte Bild-/Dokumentadressen nicht.
+- Ein Asset anklicken: Dateinamen ändern (ohne Wechsel der Endung),
+  öffnen/herunterladen oder Verwendungen anzeigen. Zum Verschieben:
+  **Zielordner auswählen …** öffnen, in der grafischen Ordneransicht zum Ziel
+  navigieren und **Diesen Ordner verwenden** wählen. Dann **Umbenennen /
+  verschieben** drücken. Der Manager zeigt das Asset anschließend im Zielordner
+  und bestätigt den Speicherort. Abbrechen der Zielauswahl lässt das bisherige
+  Ziel unverändert. Verschieben/Umbenennen ändert gespeicherte
+  Bild-/Dokumentadressen nicht.
 - **Asset endgültig löschen** erfordert die Bestätigungs-Checkbox. Verwendete
   Assets sind auch nach Bestätigung gesperrt: Die Warnung nennt **Live/Entwurf,
   Seite und Widget**. Zuerst diese Verweise entfernen; die Verwendung wird beim

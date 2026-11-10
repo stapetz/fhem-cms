@@ -24,6 +24,8 @@ let failList = false;
 let deleteCalls = 0;
 let uploads = 0;
 let pickerModes = [];
+const actions = [];
+let ignoreMove = false;
 const tick = () => {
   state.token = String(++revision).padStart(64, '0');
   state.totalBytes = state.assets.reduce((sum, asset) => sum + asset.bytes, 0);
@@ -31,6 +33,7 @@ const tick = () => {
 };
 const services = {
   async assetAction(request) {
+    actions.push(request.op);
     if (request.op === 'list') {
       if (failList) throw new Error('Test: Assetkatalog nicht erreichbar');
       return structuredClone(state);
@@ -43,7 +46,9 @@ const services = {
     if (request.op === 'mkdir') state.folders.push({ id: String(state.folders.length + 1).repeat(32), name: request.name, parent: request.parent });
     else if (request.op === 'folder') Object.assign(state.folders.find(item => item.id === request.id), { name: request.name, parent: request.parent });
     else if (request.op === 'rmdir') state.folders = state.folders.filter(item => item.id !== request.id);
-    else if (request.op === 'move') Object.assign(state.assets.find(item => item.id === request.id), { name: request.name, folder: request.folder });
+    else if (request.op === 'move') {
+      if (!ignoreMove) Object.assign(state.assets.find(item => item.id === request.id), { name: request.name, folder: request.folder });
+    }
     else if (request.op === 'policy') state.policy = structuredClone(request.policy);
     else if (request.op === 'delete') { deleteCalls++; state.assets = state.assets.filter(item => item.id !== request.id); }
     else throw new Error(`Unknown operation ${request.op}`);
@@ -86,23 +91,68 @@ try {
   set(root, '[data-folder-name]', 'Bilder');
   await click(root, '[data-mkdir]');
   const folder = state.folders[0].id;
-  equal(root.querySelector('[data-folder]').value, folder, 'new folder selected');
+  check(root.querySelector(`[data-folders] [data-folder-id="${folder}"]`).getAttribute('aria-current') === 'true', 'new folder selected');
+  const beforeNavigation = actions.filter(op => op !== 'list' && op !== 'usage').length;
+  await click(root, '[data-folders] [data-folder-id="root"]');
+  check(root.querySelector(`[data-open-folder="${folder}"]`), 'folders appear as tiles next to their contents');
+  await click(root, `[data-open-folder="${folder}"]`);
+  equal(actions.filter(op => op !== 'list' && op !== 'usage').length, beforeNavigation, 'folder clicks never send mutations');
   set(root, '[data-folder-name]', 'Unterordner');
   await click(root, '[data-mkdir]');
   equal(state.folders[1].parent, folder, 'nested folders created in selected parent');
   set(root, '[data-folder-name]', 'Solar');
   await click(root, '[data-folder-save]');
   equal(state.folders[1].name, 'Solar', 'folder renamed');
+  await click(root, '[data-parent]');
+  check(!root.querySelector(`[data-folder-picker] [data-folder-id="${state.folders[1].id}"]`), 'folder cannot select itself as its parent');
+  await click(root, '[data-folder-picker] [data-folder-id="root"]');
+  await click(root, '[data-folder-accept]');
+  await click(root, '[data-folder-save]');
+  equal(state.folders[1].parent, 'root', 'folder itself can move via the same visual picker');
+  await click(root, '[data-parent]');
+  await click(root, `[data-folder-picker] [data-folder-id="${folder}"]`);
+  await click(root, '[data-folder-accept]');
+  await click(root, '[data-folder-save]');
+  equal(state.folders[1].parent, folder, 'folder can be moved back to nested position');
   await click(root, '[data-rmdir]');
+  check(root.querySelector('[data-folder-delete]').open, 'folder deletion requires a separate confirmation');
+  await click(root, '[data-delete-folder-cancel]');
+  equal(state.folders.length, 2, 'cancelling folder deletion preserves entries');
+  await click(root, '[data-rmdir]');
+  await click(root, '[data-delete-folder-accept]');
   equal(state.folders.length, 1, 'empty folder removed');
-  set(root, '[data-folder]', 'root', 'change');
+  await click(root, '[data-folders] [data-folder-id="root"]');
   await click(root, `[data-asset-id="${image.id}"]`);
   set(root, '[data-asset-name]', 'Neuer Name.png');
-  set(root, '[data-asset-folder]', folder, 'change');
+  await click(root, '[data-choose-destination]');
+  check(root.querySelector('[data-folder-picker]').open, 'move destination opens a visual folder picker');
+  check(root.querySelector(`[data-folder-preview="${image.id}"]`), 'destination picker shows folder contents too');
+  await click(root, `[data-folder-picker] [data-folder-id="${folder}"]`);
+  await click(root, '[data-folder-cancel]');
+  check(root.querySelector('[data-asset-folder]').textContent.endsWith('Stammordner'), 'cancelling picker retains original destination');
+  await click(root, '[data-choose-destination]');
+  await click(root, `[data-folder-picker] [data-folder-id="${folder}"]`);
+  await click(root, '[data-folder-accept]');
+  check(root.querySelector('[data-asset-folder]').textContent.includes('Bilder'), 'chosen destination visible before committing move');
+  ignoreMove = true;
+  await click(root, '[data-move]');
+  check(root.querySelector('[data-status]').textContent.includes('nicht übernommen'), 'unconfirmed move is an explicit error');
+  equal(state.assets[0].folder, 'root', 'unconfirmed move leaves asset in its original folder');
+  ignoreMove = false;
+  await click(root, '[data-choose-destination]');
+  await click(root, `[data-folder-picker] [data-folder-id="${folder}"]`);
+  await click(root, '[data-folder-accept]');
+  set(root, '[data-asset-name]', 'Neuer Name.png');
   await click(root, '[data-move]');
   equal(state.assets[0].folder, folder, 'asset moved logically');
   equal(state.assets[0].href, image.href, 'moving does not break saved path');
-  set(root, '[data-folder]', folder, 'change');
+  check(root.querySelector('[data-status]').textContent.includes('gespeichert in'), 'successful move explicitly names destination');
+  check(root.querySelector(`[data-asset-id="${image.id}"]`), 'successful move follows image into destination folder');
+  await click(root, '[data-reload]');
+  check(root.querySelector(`[data-asset-id="${image.id}"]`), 'moved image remains visible after reload');
+  await click(root, '[data-rmdir]');
+  check(root.querySelector('[data-status]').textContent.includes('nicht gelöscht'), 'nonempty folder is never deleted');
+  equal(state.folders.length, 1, 'nonempty folder and contents preserved');
   const transfer = new DataTransfer();
   transfer.items.add(new File(['image'], 'Upload.png', { type: 'image/png' }));
   root.querySelector('[data-upload]').files = transfer.files;
@@ -138,6 +188,7 @@ try {
   check(!document.querySelector('[data-asset-manager]'), 'manager DOM cleaned up');
   pending = openAssetManager(services, { mode: 'image' });
   await pause(); root = manager(document);
+  await click(root, `[data-open-folder="${folder}"]`);
   equal(root.querySelectorAll('[data-asset-id]').length, 1, 'image picker filters out documents');
   await click(root, `[data-asset-id="${image.id}"]`);
   await click(root, '[data-select]');
@@ -154,7 +205,7 @@ try {
   check(root.querySelector('[data-status]').textContent.includes('nicht erreichbar'), 'read errors visible');
   failList = false;
   await click(root, '[data-reload]');
-  check(root.querySelectorAll('[data-asset-id]').length === 2, 'reload recovers from explicit failure');
+  check(root.querySelector(`[data-open-folder="${folder}"]`) && root.querySelector(`[data-asset-id="${pdf.id}"]`), 'reload recovers with folders and direct contents');
   await click(root, '[data-close]'); await pending;
   const host = document.createElement('div'); document.body.append(host);
   const shadow = host.attachShadow({ mode: 'open' });
@@ -167,6 +218,7 @@ try {
   check(addImage && !shadow.querySelector('input[type=file]'), 'Textwidget has no competing direct uploader');
   addImage.click(); await pause(); root = manager(shadow);
   equal(pickerModes.at(-1), 'image', 'Textwidget uses same image picker');
+  await click(root, `[data-open-folder="${folder}"]`);
   await click(root, `[data-asset-id="${image.id}"]`); await click(root, '[data-select]'); await pause();
   check(editor.getHtml().includes(image.href), 'selected asset inserted in rich text');
   const removeImage = [...shadow.querySelectorAll('button')].find(item => item.textContent === 'Bild entfernen');
@@ -182,10 +234,44 @@ try {
   check(cleanHtml(`<p><a href="${pdf.href}">PDF</a></p>`).includes(pdf.href), 'document URL explicitly allowed');
   const owner = document.createElement('div'); document.body.append(owner);
   pending = openAssetManager(services, { owner });
-  await pause(); owner.remove();
+  await pause(); root = manager(owner);
+  await click(root, `[data-open-folder="${folder}"]`);
+  await click(root, `[data-asset-id="${image.id}"]`);
+  await click(root, '[data-choose-destination]');
+  owner.remove();
   equal(await pending, null, 'removing owner closes nested manager');
   editor.destroy(); host.remove();
-  result.dataset.result = 'pass'; result.textContent = JSON.stringify({ checks });
+  state.folders.push({ id: 'd'.repeat(32), name: 'Unterordner', parent: folder });
+  tick();
+  pending = openAssetManager(services);
+  await pause(); root = manager(document);
+  const mutationsBeforePointer = actions.filter(op => !['list', 'usage'].includes(op)).length;
+  const deletesBeforePointer = deleteCalls;
+  window.assetRegression = {
+    point(selector) {
+      const item = root.querySelector(selector);
+      check(!!item, `pointer target exists: ${selector}`);
+      item.scrollIntoView({ block: 'center' });
+      const rect = item.getBoundingClientRect();
+      check(rect.width > 0 && rect.height > 0, 'pointer target is actually visible');
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    },
+    folder,
+    image: image.id,
+    async finish() {
+      equal(actions.filter(op => !['list', 'usage'].includes(op)).length, mutationsBeforePointer + 1,
+        'real pointer navigation sends exactly one explicit move, no other mutations');
+      equal(deleteCalls, deletesBeforePointer, 'real folder clicks never delete');
+      equal(state.assets.find(item => item.id === image.id).folder, 'd'.repeat(32), 'real pointer move selects nested destination');
+      equal(state.assets.find(item => item.id === image.id).href, image.href, 'real pointer move preserves image address');
+      check(root.querySelector('[data-status]').textContent.includes('Unterordner'), 'real pointer move names destination');
+      await click(root, '[data-reload]');
+      check(root.querySelector(`[data-asset-id="${image.id}"]`), 'real pointer move persists after reload');
+      await click(root, '[data-close]'); await pending;
+      result.dataset.result = 'pass'; result.textContent = JSON.stringify({ checks });
+    },
+  };
+  result.dataset.ready = 'true';
 } catch (error) {
   result.dataset.result = 'fail'; result.textContent = error.stack || String(error);
 }

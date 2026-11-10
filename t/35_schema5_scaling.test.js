@@ -118,7 +118,7 @@ for (const [name, fixtures] of [
       ['44_placeholder_units.html', 384], ['45_solarflow_sizing.html', 868], ['46_unit_inputs.html', 998]]],
   ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 850]]],
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
-  ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 55]]],
+  ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 95]]],
 ]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,
@@ -135,7 +135,7 @@ for (const [name, fixtures] of [
   const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
     for (const [fixture, minimum] of fixtures) {
-      const interact = fixture !== '49_link_widget.html' ? undefined : async command => {
+      const interact = !['49_link_widget.html', '51_asset_manager.html'].includes(fixture) ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
           assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
@@ -149,6 +149,24 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
+        if (fixture === '51_asset_manager.html') {
+          const click = async selector => {
+            const point = await evaluate(`window.assetRegression.point(${JSON.stringify(selector)})`);
+            await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+            await command('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button: 'left', clickCount: 1 });
+            await command('Input.dispatchMouseEvent', { type: 'mouseReleased', ...point, button: 'left', clickCount: 1 });
+            await pause(100);
+          };
+          const ids = await evaluate('({folder:window.assetRegression.folder,image:window.assetRegression.image})');
+          await click(`[data-open-folder="${ids.folder}"]`);
+          await click(`[data-asset-id="${ids.image}"]`);
+          await click('[data-choose-destination]');
+          await click(`[data-folder-picker] [data-open-folder="${'d'.repeat(32)}"]`);
+          await click('[data-folder-accept]');
+          await click('[data-move]');
+          await evaluate('window.assetRegression.finish()');
+          return;
+        }
         const move = async (point, dx, dy) => {
           await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
           await command('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button: 'left', clickCount: 1 });
