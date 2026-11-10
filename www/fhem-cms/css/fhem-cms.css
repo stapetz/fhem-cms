@@ -846,6 +846,10 @@ body:has(.cms-schema5-grid) {
   flex-wrap: nowrap;
 }
 
+.cms-nav[data-adaptive][data-measuring].is-vertical {
+  flex-direction: column;
+}
+
 .cms-nav[data-adaptive][data-measuring] .cms-nav-link {
   display: inline-flex;
   flex: 0 0 auto;

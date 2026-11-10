@@ -73,10 +73,10 @@ export class Schema5View {
     }
   }
 
-  navigation(pageId) {
+  navigation(pageId, config = this.config, editing = this.editing) {
     const nav = document.createElement('nav');
     nav.className = 'cms-nav';
-    nav.classList.toggle('is-vertical', this.config.navigation.orientation === 'vertical');
+    nav.classList.toggle('is-vertical', config.navigation.orientation === 'vertical');
     nav.setAttribute('aria-label', 'Seiten');
     const burger = document.createElement('button');
     burger.type = 'button';
@@ -90,16 +90,16 @@ export class Schema5View {
       burger.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
     nav.append(burger);
-    for (const page of this.config.pages) {
-      const item = (this.config.navigation.items || []).find((entry) => entry.page === page.id) || {};
-      if (item.hidden === true && !this.editing) continue;
+    for (const page of config.pages) {
+      const item = (config.navigation.items || []).find((entry) => entry.page === page.id) || {};
+      if (item.hidden === true && !editing) continue;
       const link = document.createElement('a');
       link.className = 'cms-nav-link';
       if (item.hidden === true) link.classList.add('cms-nav-hiddenpage');
       link.href = `#/${page.id}`;
       link.textContent = item.label || page.title;
-      const width = this.config.navigation.itemWidth || item.width;
-      const height = this.config.navigation.itemHeight || item.height;
+      const width = config.navigation.itemWidth || item.width;
+      const height = config.navigation.itemHeight || item.height;
       if (width) link.style.width = `min(calc(var(--cms-view-width) * ${Number(width) / 1200}), 100%)`;
       if (height) link.style.height = `calc(var(--cms-view-width) * ${Number(height) / 1200})`;
       if (page.id === pageId) link.setAttribute('aria-current', 'page');
@@ -131,7 +131,7 @@ export class Schema5View {
           onMove: typeof this.editing.onMove === 'function'
             ? (id) => this.editing.onMove(pageId, id) : undefined,
         });
-      this.stopNavigation = observeSchema5Navigation(navigation);
+      this.stopNavigation = observeSchema5Navigation(navigation, Boolean(this.editing));
       const view = this.view;
       this.live = new Schema5LivePage(this.client, page.widgets,
         (snapshots, stale) => view.update(snapshots, stale),

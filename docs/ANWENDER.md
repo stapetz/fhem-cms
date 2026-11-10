@@ -120,6 +120,13 @@ werden gemeinsam als Entwurf gespeichert. Widgetgrößen und Inhalte bleiben
 erhalten; Verkleinern zieht Widgets nicht automatisch wieder nach oben.
 Reicht das Raster nach unten nicht aus, wird die gesamte Änderung mit einer
 Fehlermeldung verworfen; Live bleibt unverändert.
+Beim Wechsel zwischen horizontaler und vertikaler Ausrichtung mit **Speichern**
+wird die äußere Navigationsgröße automatisch passend zu den aktuellen Punkten
+auf Rasterzellen aufgerundet und innerhalb der Seitenbreite platziert.
+Danach können Sie sie weiterhin manuell skalieren. Vertikal erscheint das
+Burger-Menü erst, wenn die breiteste Schaltfläche oder die gesamte Höhe der
+Punkte nicht in das Widget passt. Horizontal muss die ganze Zeile hineinpassen.
+Die Vorschau nutzt weiterhin die Seitenbreite und eine automatische Höhe.
 Auch dort folgen Widgetgrößen und Inhalte der Fenstergröße und dem Browser-Zoom.
 Das exakte Bearbeitungsraster bricht nicht um: Reicht der Platz nicht, scrollen
 Sie innerhalb des Arbeitsbereichs seitlich zu den übrigen Widgets. Die
