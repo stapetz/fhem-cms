@@ -216,6 +216,42 @@ Die mobile Ansicht funktioniert auch beim Start über ein iPhone-Homescreen-Icon
 Nach dem Drehen bleiben die Kachelabstände erhalten; das Navigationsmenü wird
 anhand des tatsächlich verfügbaren Platzes erneut geprüft.
 
+### LinkWidget: Seiten- und Bildlinks
+
+Im Schema-5-Editor unter **Widget hinzufügen → LinkWidget** anlegen.
+Das Widget kann 1 bis 200 Linkkacheln enthalten. Ein neuer Link verweist zunächst
+auf eine vorhandene CMS-Seite; im Dialog wählen Sie das gewünschte Ziel:
+
+- **Interne CMS-Seite:** Auswahl aus den vorhandenen Seiten. Öffnet immer im
+  gleichen Fenster/Tab und erhält den aktuellen Ansichtsmodus.
+- **Externe Webseite:** Vollständige `http://`- oder `https://`-Adresse.
+  Wahlweise gleiches Fenster, neuer Tab oder neues Browserfenster.
+  Ein separates Fenster wird vom Browser angefordert; Browser- und Popupregeln
+  können daraus einen Tab machen oder das Öffnen verhindern.
+  Zugangsdaten in der Adresse und andere Protokolle sind nicht erlaubt.
+
+Jede Kachel benötigt einen **Linktext**, der auch bei ausgeblendetem Text als
+zugängliche Linkbeschriftung erhalten bleibt. Mit **Linktext anzeigen** lässt er
+sich ein-/ausblenden. Bei sichtbarem Text sind **Oberhalb des Bildes**, **Im Bild**
+und **Unterhalb des Bildes** möglich. Ein Bild ist optional: PNG, JPEG oder GIF
+bis 3 MiB hochladen oder aus den vorhandenen CMS-Medien wählen. Die gemeinsame
+Medienverwaltung erlaubt höchstens 200 Bilder pro CMS-Device. Uploads bleiben
+auch nach Abbrechen des Dialogs in der Medienverwaltung.
+
+Im **Konfigurationsdialog** eine Kachel über ihren Griff verschieben und unten
+rechts skalieren. Das innere Raster hat unabhängig vom Seitenraster 12 Spalten
+und höchstens 1000 Zeilen; bei vielen Kacheln scrollt der Rasterbereich.
+Über die Beschriftung der Kachel wählen Sie deren Einstellungen aus.
+Spalte, Zeile, Breite und Höhe lassen sich alternativ numerisch einstellen.
+Überlappungen sind nicht speicherbar. Das äußere LinkWidget verschieben und
+skalieren Sie weiterhin wie andere Widgets auf der CMS-Seite.
+
+**Speichern** übernimmt Links und innere Positionen gemeinsam in den Entwurf;
+**Abbrechen** verwirft diese Dialogänderungen. Die Homepage ändert sich erst mit
+**Veröffentlichen**. Interne Links werden beim Umbenennen einer Seitendatei
+automatisch mitgeführt. Vor dem Löschen einer verlinkten Seite müssen die
+betroffenen Links geändert oder entfernt werden.
+
 ### Navigation und Widgets bearbeiten
 
 Das Stiftsymbol an der Navigation öffnet **Navigation bearbeiten** – die zentrale

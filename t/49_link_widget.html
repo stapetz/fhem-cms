@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<title>LinkWidget regression</title>
+<style>body { background:#eee; } cms-link { width:720px; height:360px; }</style>
+<pre id="result"></pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-link.js';
+const result = document.querySelector('#result');
+let checks = 0;
+const check = (condition, name) => { checks++; if (!condition) throw new Error(name); };
+const equal = (actual, expected, name) => check(JSON.stringify(actual) === JSON.stringify(expected),
+  `${name}: ${JSON.stringify(actual)} !== ${JSON.stringify(expected)}`);
+const pause = () => new Promise(resolve => setTimeout(resolve, 50));
+const fail = error => { result.dataset.result = 'fail'; result.textContent = error.stack || String(error); };
+const pages = [{ id: 'home', title: 'Startseite' }, { id: 'solar', title: 'Solar' }];
+const image = `media/${'a'.repeat(32)}.png`;
+const initial = { id: 'links', type: 'fhem-link', title: 'Meine Links', showTitle: true,
+  grid: { col: 3, row: 5, w: 6, h: 4 }, links: [
+    { id: 'one', kind: 'internal', page: 'solar', text: 'Zur Solarseite', showText: true,
+      textPosition: 'above', target: 'self', grid: { col: 1, row: 1, w: 4, h: 3 } },
+    { id: 'two', kind: 'external', url: 'https://example.test/energy', text: 'Energie',
+      showText: true, textPosition: 'overlay', target: 'tab', grid: { col: 1, row: 4, w: 4, h: 3 } },
+  ] };
+let saved;
+let writes = 0;
+let deletes = 0;
+let uploads = 0;
+let saveError = false;
+let mediaError = false;
+let widget;
+const services = { pages,
+  saveWidget: async value => {
+    if (saveError) throw new Error('Test: Schreiben fehlgeschlagen');
+    saved = structuredClone(value); writes++;
+  },
+  deleteWidget: async id => { equal(id, 'links', 'delete binds outer ID'); deletes++; },
+  listMedia: async () => {
+    if (mediaError) throw new Error('Test: Medien nicht verfügbar');
+    return [image];
+  },
+  uploadMedia: async bytes => {
+    check(bytes instanceof Uint8Array && bytes.length > 8, 'upload receives checked bytes');
+    uploads++; return image;
+  },
+};
+const $ = selector => widget.shadowRoot.querySelector(selector);
+function field(key, value) {
+  const input = $(`[data-field="${key}"]`);
+  check(Boolean(input), `field ${key} exists`);
+  if (input.type === 'checkbox') input.checked = value;
+  else input.value = value;
+  input.dispatchEvent(new Event(input.tagName === 'SELECT' || input.type === 'checkbox' ? 'change' : 'input'));
+}
+async function click(selector) { $(selector).click(); await pause(); }
+try {
+  widget = document.createElement('cms-link');
+  widget.services = services;
+  widget.config = structuredClone(initial);
+  widget.setAttribute('view-only', '');
+  document.body.prepend(widget);
+  check($('[data-title]').textContent === initial.title, 'title rendered');
+  check(getComputedStyle($('[data-title]')).fontWeight === '400', 'shared lightweight title');
+  check($('[data-open-config]').getClientRects().length === 0, 'live view has no configuration button');
+  check($('[data-links]').children.length === 2, 'two links rendered');
+  const internal = $('[data-links]').children[0];
+  equal(internal.getAttribute('href'), '#/solar', 'internal CMS route');
+  equal(internal.target, '_self', 'internal link same window');
+  internal.click();
+  equal(location.hash, '#/solar', 'internal link really changes route without opening a window');
+  const external = $('[data-links]').children[1];
+  equal(external.target, '_blank', 'external new tab');
+  check(external.rel.includes('noopener') && external.rel.includes('noreferrer'), 'new tabs isolate opener');
+  equal(external.getAttribute('href'), initial.links[1].url, 'external URL retained');
+  const open = window.open;
+  let opened;
+  window.open = (...args) => { opened = args; return null; };
+  widget.config = { ...structuredClone(initial), links: [{ ...initial.links[1], target: 'window' }] };
+  $('[data-links] a').click();
+  equal(opened.slice(0, 2), [initial.links[1].url, '_blank'], 'window target URL');
+  check(opened[2].includes('popup') && opened[2].includes('noopener'), 'separate window requested safely');
+  check(!$('[data-view-error]').textContent, 'noopener null return does not falsely report a blocked popup');
+  window.open = open;
+  for (const textPosition of ['above', 'overlay', 'below']) for (const showText of [true, false]) {
+    widget.config = { ...structuredClone(initial), links: [{ ...initial.links[0], image, textPosition, showText }] };
+    const tile = $('[data-links] a');
+    equal(tile.dataset.position, textPosition, 'text position');
+    equal(tile.querySelectorAll('.link-text').length, Number(showText), 'text visibility');
+    check(tile.querySelector('img').getAttribute('src') === image, 'optional image');
+    equal(tile.getAttribute('aria-label'), initial.links[0].text, 'hidden text keeps accessible link label');
+    if (showText && textPosition === 'below') equal(getComputedStyle(tile.querySelector('.link-text')).order, '1', 'text below image');
+    if (showText && textPosition === 'overlay') equal(getComputedStyle(tile.querySelector('.link-text')).position, 'absolute', 'text integrated into image');
+  }
+  widget.config = structuredClone(initial);
+  await widget.openConfig();
+  check($('[data-dialog]').open && widget.grid, 'nested Gridstack opened');
+  equal(widget.grid.opts.column, 12, 'own 12-column raster');
+  equal(widget.grid.engine.nodes.length, 2, 'all nested tiles mounted');
+  field('text', 'Geänderter Linktext');
+  field('kind', 'external');
+  field('url', 'javascript:alert(1)');
+  await widget.save();
+  equal(writes, 0, 'invalid URL never saved');
+  check($('[data-error]').textContent.includes('HTTP'), 'invalid URL reported');
+  field('url', 'https://example.test/path');
+  field('target', 'self');
+  field('textPosition', 'below');
+  field('showText', false);
+  check($('[data-field=textPosition]').disabled, 'text position inactive while text hidden');
+  field('showText', true);
+  await click('[data-media]');
+  check($('.media button'), 'existing media selectable');
+  await click('.media button');
+  equal(widget.links[0].image, image, 'selected image attached to selected tile');
+  await widget.uploadImage(widget.links[0], new File(['not a picture'], 'bad.png'));
+  equal(uploads, 0, 'image signature checked before upload');
+  check($('[data-error]').textContent.includes('PNG'), 'invalid image error visible');
+  await widget.uploadImage(widget.links[0], { size: 3145729 });
+  check($('[data-error]').textContent.includes('3 MiB'), 'oversize image error visible');
+  const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg=='), value => value.charCodeAt(0));
+  await widget.uploadImage(widget.links[0], new File([png], 'tile.png', { type: 'image/png' }));
+  equal(uploads, 1, 'valid image uploaded once');
+  equal(widget.links[0].image, image, 'uploaded image retained');
+  await click('[data-clear-image]');
+  check(!Object.hasOwn(widget.links[0], 'image'), 'image removable');
+  mediaError = true;
+  await click('[data-media]');
+  check($('[data-error]').textContent.includes('Medien nicht verfügbar'), 'media failure visible');
+  mediaError = false;
+  saveError = true;
+  await widget.save();
+  check($('[data-dialog]').open, 'save failure keeps dialog open');
+  check($('[data-error]').textContent.includes('Schreiben fehlgeschlagen'), 'write failure visible');
+  equal(writes, 0, 'failed save not counted');
+  saveError = false;
+  await widget.save();
+  equal(writes, 1, 'one successful save');
+  equal(saved.grid, initial.grid, 'nested editing never changes outer placement');
+  equal(saved.links[0].text, 'Geänderter Linktext', 'text saved');
+  equal(saved.links[0].target, 'self', 'target saved');
+  equal(saved.links[0].textPosition, 'below', 'text placement saved');
+  check(!$('[data-dialog]').open && !widget.grid, 'save destroys nested grid');
+  widget.config = structuredClone(saved);
+  await widget.openConfig();
+  equal(widget.links, saved.links, 'reopen preserves all fields');
+  await click('[data-add]');
+  equal(widget.links.length, 3, 'link added');
+  await click('[data-remove-link]');
+  equal(widget.links.length, 2, 'selected link removed');
+  const beforeCancel = structuredClone(widget.config);
+  field('text', 'Nur lokal');
+  await click('[data-cancel]');
+  equal(widget.config, beforeCancel, 'cancel leaves saved configuration unchanged');
+  equal(writes, 1, 'cancel does not write');
+  widget.config = structuredClone(initial);
+  await widget.openConfig();
+  window.linkRegression = {
+    points(kind) {
+      const wrappers = [...$('[data-grid]').children];
+      wrappers[kind === 'resize' ? 1 : 0].scrollIntoView({ block: 'center' });
+      const rect = wrappers[0].querySelector('.handle').getBoundingClientRect();
+      const handle = wrappers[1].querySelector('.ui-resizable-se').getBoundingClientRect();
+      const cell = $('[data-grid]').getBoundingClientRect().width / 12;
+      const hit = widget.shadowRoot.elementFromPoint(handle.x + handle.width / 2, handle.y + handle.height / 2);
+      if (kind === 'resize') check(handle.width > 0 && hit?.classList.contains('ui-resizable-se'),
+        `resize handle is reachable: ${JSON.stringify({ handle: handle.toJSON(), hit: hit?.className,
+          canvas: $('.canvas').getBoundingClientRect().toJSON(), style: $('[data-grid]').style.cssText,
+          rows: widget.grid.getRow(), cellHeight: widget.grid.opts.cellHeight,
+          nodes: widget.grid.save(false) })}`);
+      return { drag: { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 },
+        resize: { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }, cell };
+    },
+    async finish() {
+      try {
+        widget.syncGrid();
+        equal(widget.links[0].grid.col, 5, 'real drag moves tile four columns');
+        equal(widget.links[0].grid.row, 1, 'drag keeps row');
+        equal(widget.links[1].grid.w, 6, 'real corner resize adds two columns');
+        equal(widget.links[1].grid.h, 4, 'real corner resize adds one row');
+        const geometry = widget.links.map(link => structuredClone(link.grid));
+        await widget.save();
+        equal(writes, 2, 'drag and resize saved once together');
+        equal(saved.links.map(link => link.grid), geometry, 'all dragged/resized positions saved');
+        equal(saved.grid, initial.grid, 'outer raster unchanged after actual drag');
+        widget.config = structuredClone(saved);
+        await widget.openConfig();
+        widget.syncGrid();
+        equal(widget.links.map(link => link.grid), geometry, 'drag and resize survive reopening');
+        await widget.removeWidget();
+        equal(deletes, 1, 'widget deletion uses existing service');
+        check(!widget.grid, 'delete cleans grid');
+        await widget.openConfig({ isNew: true });
+        check($('[data-delete]').hidden, 'unsaved new widget cannot delete an existing widget');
+        await widget.removeWidget();
+        equal(deletes, 1, 'new widget deletion refused');
+        widget.remove();
+        check(!widget.grid && !$('[data-dialog]').open, 'disconnect closes dialog and destroys Gridstack');
+        result.dataset.result = 'pass'; result.textContent = JSON.stringify({ checks });
+      } catch (error) { fail(error); }
+    },
+  };
+  result.dataset.ready = 'true';
+} catch (error) { fail(error); }
+</script>
+</html>

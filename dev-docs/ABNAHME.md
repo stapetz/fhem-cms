@@ -1,5 +1,29 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Entwicklungsstand 1.3.0-dev: LinkWidget (#123)
+
+Lokale Prüfung am 10.11.2026, noch keine Geräteabnahme oder `main`-Freigabe:
+
+- `perl -c FHEM/01_FHEMCMS.pm` und `prove -l t/*.t`: erfolgreich
+  (487 Assertions einschließlich Gerätehilfe).
+- `node --test t/*.test.js`: 104 Tests erfolgreich, keine übersprungen.
+- `node scripts/build-fcui.mjs --check` und `git diff --check`: erfolgreich.
+- `t/48_link_widget.test.js`: positive/negative Frontend-/Perl-Parität für
+  Linkziele, Textpositionen, Unicode-Grenzen, Bildpfade und 1–200 Kacheln;
+  unbekannte Felder, Überlappungen und Rasterüberläufe werden abgewiesen.
+- Chromium: `t/49_link_widget.html`, 93 Prüfungen einschließlich echter
+  Pointerbewegung um vier Spalten, Skalierung um zwei Spalten/eine Zeile,
+  Speichern/Wiederöffnen, Abbrechen, Upload-/Schreibfehler und Bereinigung.
+- `t/22_schema5_widget_panel.test.js`: Anlage über Typauswahl mit gültigem
+  Standardlink, vollständiger Perl-Entwurfs-Write/Readback und unveränderte
+  Live-Datei. Navigationstest: interne Referenzen folgen Seiten-ID-Änderungen,
+  das Löschen einer verlinkten Zielseite bleibt ohne Schreibzugriff gesperrt.
+
+Zur Geräteabnahme: reale interne Ziele, Medien-Upload, Popupregeln sowie
+Touch und Safari mit dem üblichen Entwurf-/Veröffentlichungsablauf prüfen.
+Linkkacheln werden im Widgetdialog angeordnet, nicht direkt im Seiteneditor.
+Popup-Widgetgruppen aus #31 gehören nicht zum Umfang.
+
 ## Release 1.2.0: freigegebener Umfang
 
 Am 10.11.2026 hat der Entwickler nach den heutigen Korrekturen ausdrücklich

@@ -165,6 +165,32 @@ test('widget panel binds real draft controller, cancellation, failures and lifec
         assert.equal(editRoot.children.length, 0);
         assert.deepEqual(controller.snapshot().draft.pages[0].widgets, []);
         assert.equal(await readFile(path, 'utf8'), original);
+
+        const linkRoot = new Element('section');
+        let linkClosed;
+        new Schema5WidgetPanel({ root: linkRoot, controller, services: {}, pageId: 'one',
+          token: controller.snapshot().token, createElement,
+          onClose: value => { linkClosed = value; } });
+        const linkSearch = linkRoot.children[3].children[0];
+        linkSearch.value = 'linkwidget';
+        linkSearch.fire('input');
+        assert.equal(linkRoot.children[4].children.length, 1);
+        await linkRoot.children[4].children[0].fire('click');
+        await tick();
+        assert.equal(widget.config.type, 'fhem-link');
+        assert.equal(widget.config.links[0].page, 'one', 'new LinkWidget starts with a valid local page');
+        assert.deepEqual(widget.services.pages, [{ id: 'one', title: 'Eins' }]);
+        const candidate = structuredClone(widget.config);
+        candidate.links[0].grid.col = 5;
+        candidate.links[0].text = 'Startseite öffnen';
+        await widget.services.saveWidget(candidate);
+        await tick();
+        assert.deepEqual(linkClosed, { requiresReload: false });
+        const persisted = controller.snapshot().draft.pages[0].widgets[0];
+        assert.deepEqual(persisted, candidate, 'nested geometry and link text survive a real Perl draft write/readback');
+        assert.equal(await readFile(path, 'utf8'), original, 'LinkWidget saves do not publish live configuration');
+        const reread = await controller.reload();
+        assert.deepEqual(reread.draft.pages[0].widgets[0], candidate);
       } finally {
         Object.assign(globalThis, previous);
         await rm(dir, { recursive: true, force: true });

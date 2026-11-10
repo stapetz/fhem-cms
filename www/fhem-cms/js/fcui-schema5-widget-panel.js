@@ -15,6 +15,7 @@ const WIDGET_TYPES = [
   ['fhem-chart', 'Diagramm', 'g', 6, 10, { device: '', reading: '' }],
   ['fhem-solarflow', 'SolarFlow', 'f', 5, 14, { readings: {} }],
   ['text', 'Textbaustein', 'x', 6, 2, { html: '' }],
+  ['fhem-link', 'LinkWidget', 'k', 6, 4, { links: [] }],
 ];
 
 function element(tag, text) {
@@ -143,6 +144,9 @@ export class Schema5WidgetPanel {
     const scale = Number(config.settings.gridColumns) / 12;
     const widget = { id: `${prefix}${number}`, type, ...structuredClone(fields),
       grid: { col: 1, row, w: w * scale, h: h * scale } };
+    if (type === 'fhem-link') widget.links = [{ id: 'link1', kind: 'internal', page: page.id,
+      text: page.title, showText: true, textPosition: 'overlay', target: 'self',
+      grid: { col: 1, row: 1, w: 4, h: 3 } }];
     const candidate = structuredClone(config);
     candidate.pages.find((entry) => entry.id === this.#page).widgets.push(widget);
     schema5GridItems(candidate, this.#page);
@@ -161,6 +165,7 @@ export class Schema5WidgetPanel {
       this.#status.textContent = 'Widgetdialog wird geöffnet …';
       const rejectCommand = async () => { throw new Error('Geräteaktionen sind im Widgetdialog gesperrt'); };
       const services = session.services({ ...this.#services, setCommand: rejectCommand, setTarget: rejectCommand });
+      services.pages = (this.#state.draft || this.#state.live).pages.map(({ id, title }) => ({ id, title }));
       const invoke = (name) => async (...args) => {
         if (this.#closed || this.#busy) throw new Error('Widget-Bearbeitung ist nicht mehr aktiv');
         this.#busy = true;

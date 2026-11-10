@@ -15,7 +15,7 @@ use MIME::Base64 qw(decode_base64 encode_base64);
 use POSIX qw(strftime);
 use Time::Local ();
 
-our $FHEMCMS_VERSION = '1.2.0';
+our $FHEMCMS_VERSION = '1.3.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -853,13 +853,16 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'fhem-switch' && $widget->{type} ne 'fhem-button'
                         && $widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-icon'
                         && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-slider'
-                        && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'));
+                        && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'
+                        && !($targetSchema == 5 && $widget->{type} eq 'fhem-link')));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
                 $err = $exact->($widget, 'Widget', ['id', 'type', $body, 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-html') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'html', 'devices', 'grid'], ['title', 'showTitle']);
+            } elsif ($widget->{type} eq 'fhem-link') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'links', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-value') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['title', 'showTitle', 'unit', 'icon']);
             } elsif ($widget->{type} eq 'fhem-switch') {
@@ -922,6 +925,9 @@ sub FHEMCMS_ValidateConfig {
                     return 'Ungueltiger Wert fuer devices' if (!$isName->($name));
                     return 'Doppeltes Device in devices' if ($seenDevice{$name}++);
                 }
+            } elsif ($widget->{type} eq 'fhem-link') {
+                my $linkError = FHEMCMS_ValidateLinks($widget->{links}, $config->{pages});
+                return $linkError if (defined($linkError));
             } elsif ($widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-table'
                 && !($widget->{type} eq 'fhem-solarflow' && !exists($widget->{device}))) {
                 return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
@@ -936,7 +942,7 @@ sub FHEMCMS_ValidateConfig {
                             || length($widget->{label}) < 1 || length($widget->{label}) > 32
                             || $widget->{label} =~ /[\x00-\x1f\x7f]/));
             }
-            if ($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html') {
+            if ($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html' || $widget->{type} eq 'fhem-link') {
                 # keine weiteren Felder
             } elsif ($widget->{type} eq 'fhem-button') {
                 return 'Ungueltiger Wert fuer command' if (!$isName->($widget->{command}));
@@ -1120,6 +1126,63 @@ sub FHEMCMS_ValidateConfig {
 
 # Freies HTML (fhem-html): strenge Allowlist fuer Elemente und Attribute; kein Skript, keine
 # Ereignis-Attribute, keine Ressourcen. Platzhalter {{Device:reading}} sind reiner Text.
+sub FHEMCMS_ValidateLinks {
+    my ($links, $pages) = @_;
+    return 'LinkWidget benoetigt 1 bis 200 Links'
+        if (ref($links) ne 'ARRAY' || @{$links} < 1 || @{$links} > 200);
+    my %pages = map { ref($_) eq 'HASH' && defined($_->{id}) && !ref($_->{id}) ? ($_->{id} => 1) : () } @{$pages};
+    my %ids;
+    my @placed;
+    for my $link (@{$links}) {
+        return 'Link muss ein Objekt sein' if (ref($link) ne 'HASH');
+        return 'Ungueltige Linkart' if (!defined($link->{kind}) || ref($link->{kind})
+            || $link->{kind} !~ /\A(?:internal|external)\z/);
+        my @required = (qw(id kind text showText textPosition target grid), $link->{kind} eq 'internal' ? 'page' : 'url');
+        my %allowed = map { $_ => 1 } (@required, 'image');
+        return 'Fehlendes oder unbekanntes Linkfeld'
+            if (grep { !exists($link->{$_}) } @required);
+        return 'Fehlendes oder unbekanntes Linkfeld'
+            if (grep { !$allowed{$_} } keys(%{$link}));
+        return 'Ungueltige Link-ID' if (!defined($link->{id}) || ref($link->{id})
+            || $link->{id} !~ /\A[A-Za-z0-9_-]{1,64}\z/ || $ids{$link->{id}}++);
+        return 'Ungueltiger Linktext' if (!defined($link->{text}) || ref($link->{text})
+            || $link->{text} !~ /\S/ || length($link->{text}) > 128 || $link->{text} =~ /[\x00-\x1f\x7f]/);
+        return 'Ungueltige Linktext-Darstellung' if (!JSON::PP::is_bool($link->{showText})
+            || !defined($link->{textPosition}) || ref($link->{textPosition})
+            || $link->{textPosition} !~ /\A(?:above|overlay|below)\z/);
+        return 'Ungueltiges Linkziel' if (!defined($link->{target}) || ref($link->{target}));
+        if ($link->{kind} eq 'internal') {
+            return 'Link verweist auf eine unbekannte CMS-Seite'
+                if (!defined($link->{page}) || ref($link->{page}) || !$pages{$link->{page}});
+            return 'Interne Links oeffnen immer im selben Fenster' if ($link->{target} ne 'self');
+        } else {
+            return 'Ungueltige externe Link-URL' if (!defined($link->{url}) || ref($link->{url}) || length($link->{url}) > 2000);
+            return 'Ungueltige externe Link-URL'
+                if ($link->{url} !~ m{\Ahttps?://(?:[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?|\[[0-9A-Fa-f:]+\])(?::([0-9]{1,5}))?(?:[/?#][A-Za-z0-9._~:/?#\[\]\@!\$&'()*+,;=%-]*)?\z});
+            my $port = $1;
+            return 'Ungueltiger Link-Port' if (defined($port) && ($port < 1 || $port > 65535));
+            return 'Ungueltiges externes Linkziel' if ($link->{target} !~ /\A(?:self|tab|window)\z/);
+        }
+        return 'Ungueltiges Linkbild' if (exists($link->{image}) && (!defined($link->{image}) || ref($link->{image})
+            || $link->{image} !~ m{\Amedia/[0-9a-f]{32}\.(?:png|jpg|gif)\z}));
+        my $grid = $link->{grid};
+        return 'Ungueltiges Linkraster' if (ref($grid) ne 'HASH' || join(',', sort keys %{$grid}) ne 'col,h,row,w');
+        for my $key (qw(col row w h)) {
+            return 'Ungueltiges Linkraster' if (!defined($grid->{$key}) || ref($grid->{$key})
+                || JSON::PP->new->encode($grid->{$key}) !~ /\A[0-9]{1,4}\z/ || $grid->{$key} < 1);
+        }
+        return 'Linkraster liegt ausserhalb der Grenzen'
+            if ($grid->{col} + $grid->{w} > 13 || $grid->{row} + $grid->{h} > 1001);
+        for my $other (@placed) {
+            return 'Linkkacheln duerfen sich nicht ueberlappen'
+                if ($grid->{col} < $other->{col} + $other->{w} && $other->{col} < $grid->{col} + $grid->{w}
+                    && $grid->{row} < $other->{row} + $other->{h} && $other->{row} < $grid->{row} + $grid->{h});
+        }
+        push(@placed, $grid);
+    }
+    return undef;
+}
+
 sub FHEMCMS_ValidateFreeHtml {
     my ($html) = @_;
     return 'kein Text' if (ref($html) || !defined($html));

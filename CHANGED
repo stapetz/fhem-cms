@@ -554,3 +554,12 @@ to the device's content structure, not to separate surface directories.
 
 Add the FHEMCMS device module, generated test page, and shared frontend component.
 Add repository-wide FHEM update controls and installation instructions.
+2026-11-10 - 1.3.0-dev: LinkWidget mit frei angeordneten Bildkacheln (Refs #123)
+
+Ein LinkWidget enthaelt interne Seitenlinks oder externe HTTP(S)-Links mit
+wahlweise gleichem Fenster, neuem Tab oder angefordertem Browserfenster.
+Linktexte lassen sich ausblenden oder oberhalb, im Bild oder darunter anzeigen.
+Je Kachel ist ein Bild aus Upload oder Medienverwaltung moeglich.
+Im Widgetdialog lassen sich bis zu 200 Linkkacheln in einem eigenen Raster
+verschieben und skalieren. Interne Links folgen Seitenumbenennungen;
+verlinkte Seiten koennen erst nach Anpassung ihrer Links geloescht werden.

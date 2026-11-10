@@ -373,12 +373,19 @@ export class Schema5NavigationPanel {
       }
     }
     const byId = new Map(config.pages.map((page) => [page.id, page]));
+    const renamed = new Map(this.#rows.map(row => [row.page.id, row.file]));
     config.pages = this.#rows.map((row) => {
       const page = byId.get(row.page.id) || { id: row.file, title: row.title, widgets: [] };
       page.id = row.file;
       page.title = row.title;
       return page;
     });
+    for (const page of config.pages) for (const widget of page.widgets) {
+      if (widget.type !== 'fhem-link') continue;
+      for (const link of widget.links) {
+        if (link.kind === 'internal' && renamed.has(link.page)) link.page = renamed.get(link.page);
+      }
+    }
     const navigation = config.navigation;
     navigation.orientation = this.#orientation.value;
     delete navigation.itemWidth;
