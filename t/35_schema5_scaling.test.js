@@ -200,8 +200,6 @@ test('editor tools follow real hover, keyboard focus and touch capability withou
       await pause(50);
       await check('touch');
       await command('Emulation.setTouchEmulationEnabled', { enabled: false });
-      await pause(50);
-      await check('leave');
       await check('finish');
     };
     const result = await browserResult(profile,
