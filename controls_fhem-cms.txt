@@ -1,4 +1,4 @@
-UPD 2026-11-10_09:09:16 118093 FHEM/01_FHEMCMS.pm
+UPD 2026-11-10_10:54:53 118093 FHEM/01_FHEMCMS.pm
 UPD 2026-11-08_10:43:57 7458 www/fhem-cms/FCUI-LICENSES.txt
 UPD 2026-11-10_09:09:16 17108 www/fhem-cms/components/cms-button.js
 UPD 2026-11-10_08:07:09 20302 www/fhem-cms/components/cms-chart.js
@@ -25,9 +25,9 @@ UPD 2026-11-08_15:33:41 2186 www/fhem-cms/js/fcui-migration-transport.js
 UPD 2026-11-08_10:43:57 111967 www/fhem-cms/js/fcui-runtime.js
 UPD 2026-11-08_20:31:10 8243 www/fhem-cms/js/fcui-schema5-backup-panel.js
 UPD 2026-11-08_14:00:37 9170 www/fhem-cms/js/fcui-schema5-draft.js
-UPD 2026-11-10_10:01:41 24023 www/fhem-cms/js/fcui-schema5-editor.js
+UPD 2026-11-10_10:54:53 24950 www/fhem-cms/js/fcui-schema5-editor.js
 UPD 2026-11-09_07:18:21 4934 www/fhem-cms/js/fcui-schema5-grid-edit.js
-UPD 2026-11-10_09:45:28 9059 www/fhem-cms/js/fcui-schema5-layout.js
+UPD 2026-11-10_10:54:53 10652 www/fhem-cms/js/fcui-schema5-layout.js
 UPD 2026-11-08_12:55:40 4931 www/fhem-cms/js/fcui-schema5-live.js
 UPD 2026-11-08_22:00:37 5107 www/fhem-cms/js/fcui-schema5-move-panel.js
 UPD 2026-11-10_10:01:41 2724 www/fhem-cms/js/fcui-schema5-navigation-fit.js
