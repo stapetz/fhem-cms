@@ -274,6 +274,14 @@ Assetaktionen bleiben getrennt: „Umbenennen“ unmittelbar nach dem Namensfeld
 aus. Dabei den gespeicherten Namen verwenden, keine ungespeicherten Eingaben.
 Löschen benötigt einen modalen Bestätigungsdialog statt persistentem Haken;
 Verwendungsprüfung bleibt zusätzlich frontend- und backendseitig wirksam.
+EXIF und Verwendungen verwenden denselben Informationsdialog mit rechts
+ausgerichtetem Schließen-Footer. Keine Verwendungsliste im Hauptdialog:
+auch Löschsperren zeigen die Fundstellen im Popup. Eine leere Referenzliste
+explizit als „Keine Verwendung“ kennzeichnen. Löschdialoge haben beide
+Standardbuttons im rechten Footer, keine gesonderte Danger-Darstellung.
+Anzeigenamen bleiben von Hash-Dateinamen getrennt; die zwischenzeitlich
+angefragte physische Umbenennung wurde zurückgezogen. Keine Migration von
+Dateipfaden oder neuen Namenseindeutigkeitsregeln daraus ableiten.
 Die Bildvorschau verlinkt auf die unveränderte Originaldatei mit dem Tooltip
 „Bild in voller Größe anschauen“. `asset-exif.js` liest JPEG-APP1-/PNG-eXIf-
 TIFF-Daten ausschließlich lokal mit begrenzten Offsets, Eintragszahlen,

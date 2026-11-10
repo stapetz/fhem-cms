@@ -320,6 +320,15 @@ Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
   Assets sind unabhängig davon gesperrt: Die Warnung nennt **Live/Entwurf,
   Seite und Widget**. Zuerst diese Verweise entfernen; die Verwendung wird beim
   Löschen serverseitig erneut geprüft.
+  **Verwendungen anzeigen** öffnet dafür ein eigenes Popup, ebenso die
+  Verwendungswarnung bei gesperrter Löschung. Ohne Verweise steht dies
+  ausdrücklich im Popup. **Schließen** steht wie bei EXIF rechts.
+  Löschdialoge zeigen **Abbrechen** und **Löschen** ebenfalls rechts,
+  beide als normale Standardbuttons.
+
+Dateinamen im Assetmanager sind Anzeigenamen. Die Dateien behalten ihre
+Hash-Dateinamen im Dateisystem; Umbenennen verändert keine eingebundenen
+Bildadressen. Eine Umstellung auf echte Dateinamen ist nicht vorgesehen.
 
 Assetänderungen gelten **sofort**, nicht erst nach Veröffentlichen des
 Seitenentwurfs. Entfernen eines Bildes/Links aus einem Widget löscht niemals das
