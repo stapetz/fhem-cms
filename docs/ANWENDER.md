@@ -110,28 +110,32 @@ verändert weder Live noch den vorhandenen Entwurf. Der Dialog enthält nur
 Layout- und Look-&-Feel-Einstellungen, keine Widgetpositionen oder -größen.
 Widgets werden ausschließlich direkt im Editiermodus verschoben und skaliert.
 
-### Mobile Darstellung und Drehen
+### Fenstergröße, Browser-Zoom und Drehen
 
 Homepage und Vorschau passen die Anordnung automatisch an die verfügbare
-Inhaltsbreite an, auch beim Drehen eines Smartphones oder Tablets:
+Inhaltsbreite an, auch beim Drehen eines Smartphones oder Tablets. Widgets und
+Navigationsschaltflächen wachsen bzw. schrumpfen gemeinsam mit der Fensterbreite.
+Der Browser-Zoom wird dabei nicht mehr durch vollständiges Einpassen aufgehoben:
+Hineinzoomen vergrößert Kacheln und Beschriftungen sichtbar, Hinauszoomen verkleinert
+sie. Bei Platzmangel rutschen Widgets in die nächste Zeile, statt horizontal aus
+dem Fenster zu laufen. Die Zeilen können deshalb auch auf dem Desktop von den
+gespeicherten Rasterpositionen abweichen; diese werden nicht verändert.
 
-- **Unter 640 Pixeln:** Ein normales Widget pro Zeile, zwei kleine nebeneinander.
-  Klein sind Widgets bis zu einem Viertel der gespeicherten Rasterbreite
-  (3 von 12 bzw. 48 von 192 Spalten).
-- **640 bis unter 1200 Pixel:** Vier Teilspalten; kleine Widgets belegen eine,
-  Widgets bis zur halben Rasterbreite zwei, breitere die ganze Zeile.
-- **Ab 1200 Pixeln:** Die gespeicherten Desktoppositionen und Größen gelten.
+Die gespeicherte Rasterbreite bestimmt die relative Kachelgröße; kleine Widgets
+erhalten mindestens ein Viertel der Bezugsbreite. Breite und Höhe verwenden
+dieselbe Skalierung, das gespeicherte Seitenverhältnis bleibt erhalten, mit
+mindestens 6 rem Höhe (bei Standardschrift 96 Pixel). Zwei kleine Widgets passen
+weiterhin auf übliche Smartphonebreiten. Der Umbruch hängt vom tatsächlichen
+Platzbedarf ab, nicht mehr von festen Geräte-Breakpoints.
 
-Die Navigation steht in mobilen Ansichten vor den Widgets. Passen alle sichtbaren
+Die Navigation steht vor den Widgets. Auch ihre konfigurierten Buttonbreiten
+und -höhen skalieren mit; Pixelangaben beziehen sich auf 1200 Pixel Inhaltsbreite
+bei Standardschrift. Passen alle sichtbaren
 Menüeinträge einschließlich Abständen in ihre verfügbare Breite, bleiben sie
 direkt sichtbar; andernfalls erscheint das aufklappbare ☰-Menü. Die Platzprüfung
 reagiert auf Drehen, Größenänderungen, Beschriftungen und geladene Schriften.
-Der spätere
-Widgetumbruch berücksichtigt den im Smartphone-Querformat durch Browserränder
-und Sicherheitsabstände verringerten Platz: Ab 640 Pixeln verbleibender
-Inhaltsbreite passen zwei normale Widgets nebeneinander. Widgets folgen ihrer ursprünglichen
-Zeilen-/Spaltenreihenfolge. Ihr Seitenverhältnis bleibt erhalten, mit mindestens
-96 Pixeln Höhe. Die Anordnung ist unabhängig von der gewählten Rasterdichte.
+Widgets folgen ihrer ursprünglichen Zeilen-/Spaltenreihenfolge.
+Die Anordnung ist unabhängig von der gewählten Rasterdichte.
 Beim Drehen oder Vergrößern bleiben Inhalte und Live-Daten bestehen; es werden
 keine Positionen gespeichert. Im Editor selbst bleibt das präzise Raster aktiv.
 Zum Prüfen der Umbrüche dort die Geräte-Vorschau verwenden.

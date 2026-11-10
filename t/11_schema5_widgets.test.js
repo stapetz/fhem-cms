@@ -57,8 +57,7 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
     assert.equal(root.children.length, 3);
     assert.equal(root.attributes['data-responsive'], '');
     assert.match(root.children[0].className, /cms-responsive-navigation/);
-    assert.equal(root.children[1].style['--cms-mobile-span'], '1');
-    assert.equal(root.children[1].style['--cms-tablet-span'], '1');
+    assert.equal(root.children[1].style['--cms-widget-fraction'], '0.25');
     assert.equal(root.children[1].style['--cms-widget-padding'], `${100 / 3}%`);
     assert.equal(root.children[0].children[0].children[0], navigation);
     const html = root.children[1].children[0].children[0];
@@ -105,15 +104,15 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
       const view = mountSchema5Widgets(api, root, current, 'one', navigation, services, new Map());
       assert.deepEqual(root.children.map((child) => child.gridstackNode.id),
         ['__nav', 'html', 'button', 'normal', 'wide'], 'DOM and tab order follow the original visual order');
-      assert.deepEqual(root.children.slice(1).map((child) => child.style['--cms-mobile-span']), ['1', '1', '2', '2']);
-      assert.deepEqual(root.children.slice(1).map((child) => child.style['--cms-tablet-span']), ['1', '1', '2', '4']);
+      assert.deepEqual(root.children.slice(1).map((child) => child.style['--cms-widget-fraction']),
+        ['0.25', '0.25', '0.5', '1']);
       assert.equal(root.children[3].style['--cms-widget-padding'], `${100 / 3}%`);
       assert.deepEqual(current, before, 'responsive presentation never mutates the persisted configuration');
       view.destroy();
       const editor = mountSchema5Widgets(api, root, current, 'one', navigation, services, new Map(),
         { onEdit() {}, onChange() {} });
       assert.equal('data-responsive' in root.attributes, false, 'editing is never reflowed');
-      assert.ok(root.children.every((child) => !('--cms-mobile-span' in child.style)));
+      assert.ok(root.children.every((child) => !('--cms-widget-fraction' in child.style)));
       assert.ok(root.children.every((child) => !('--cms-widget-padding' in child.style)));
       assert.equal(grid.static, false);
       assert.deepEqual(current, before);

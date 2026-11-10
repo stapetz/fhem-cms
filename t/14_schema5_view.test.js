@@ -95,7 +95,7 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
     assert.equal(firstNav.children[1].href, '#/first');
     assert.equal(firstNav.children[1].attributes['aria-current'], 'page');
     assert.equal(firstNav.children[2].textContent, 'Zwei');
-    assert.equal(firstNav.children[2].style.width, 'min(90px, 100%)');
+    assert.equal(firstNav.children[2].style.width, 'min(calc(var(--cms-view-width) * 0.075), 100%)');
     browser.location.hash = '#/second';
     listeners.get('hashchange')();
     assert.equal(requests[1].spec, 'Other,device=Other');

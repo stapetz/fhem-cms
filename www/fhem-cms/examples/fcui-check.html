@@ -284,13 +284,18 @@
               const solar = rect('solar');
               const second = rect('second');
               const sameRow = Math.abs(solar.top - second.top) < 1;
-              if (sameRow !== (width >= 640)
-                || (width < 640 && Math.abs(solar.width - width) > 1)
-                || (width >= 640 && width < 1200 && Math.abs(solar.width - (width - 12) / 2) > 1)
-                || (width < 1200 && Math.abs(solar.height - Math.max(96, solar.width * 3 / 4)) > 1)
-                || (width < 640 && Math.abs(second.top - solar.bottom - 12) > 1)
-                || Math.abs(rect('small1').top - rect('small2').top) > 1) {
-                throw new Error(`Widgetumbruch bei ${width}px und ${columns} Spalten fehlerhaft`);
+              const reference = 25 * parseFloat(getComputedStyle(document.documentElement).fontSize) + width * 2 / 3;
+              const gap = reference / 100;
+              const expectedWidth = Math.min(width, reference / 3 - gap * 2 / 3);
+              const expectedRow = 2 * expectedWidth + gap <= width + 0.5;
+              if (sameRow !== expectedRow
+                || Math.abs(solar.width - expectedWidth) > 1
+                || Math.abs(solar.height - Math.max(96, solar.width * 3 / 4)) > 1
+                || (!sameRow && Math.abs(second.top - solar.bottom - gap) > 1)) {
+                throw new Error(`Widgetumbruch bei ${width}px und ${columns} Spalten fehlerhaft: ${JSON.stringify({
+                  solar: { width: solar.width, height: solar.height }, expectedWidth, expectedRow,
+                  rowGap: second.top - solar.bottom, gap,
+                })}`);
               }
               if ((getComputedStyle(burger).display !== 'none') !== (width < 768 || matchMedia('(max-width: 40rem)').matches)
                 || !nodes.every((node, index) => root.children[index] === node)
@@ -390,7 +395,7 @@
         const node = diagnosticRoot.querySelector(`[gs-id="${id}"]`);
         const content = node.querySelector('.grid-stack-item-content');
         return { wrapper: rectangle(node), content: rectangle(content),
-          widget: rectangle(content.firstElementChild), padding: getComputedStyle(node).paddingTop };
+          widget: rectangle(content.firstElementChild), padding: getComputedStyle(node, '::before').paddingTop };
       };
       const freeze = document.getElementById('freeze-diagnostics');
       let frozen = false;
@@ -412,11 +417,12 @@
         });
         if (history.length > 12) history.shift();
         document.getElementById('layout-diagnostics').textContent = JSON.stringify({
-          revision: 'standalone-rotation-2',
+          revision: 'zoom-aware-reflow-3',
           standalone: { navigator: navigator.standalone ?? null,
             displayMode: matchMedia('(display-mode: standalone)').matches,
             fullscreen: matchMedia('(display-mode: fullscreen)').matches },
           screen: { width: screen.width, height: screen.height },
+          devicePixelRatio,
           orientation: screen.orientation?.type ?? null,
           viewport: { width: innerWidth, height: innerHeight,
             clientWidth: document.documentElement.clientWidth },
@@ -438,7 +444,8 @@
               label: link.textContent, width: rectangle(link).width,
               font: getComputedStyle(link).fontSize, display: getComputedStyle(link).display,
             })) },
-          expected: available < 640 ? 'untereinander' : 'nebeneinander',
+          expected: 2 * solar.wrapper.width + parseFloat(getComputedStyle(diagnosticRoot).columnGap) <= available + .5
+            ? 'nebeneinander' : 'untereinander',
           actual: sameRow ? 'nebeneinander' : 'untereinander',
           overlap, solar, second, history,
         }, null, 2);
