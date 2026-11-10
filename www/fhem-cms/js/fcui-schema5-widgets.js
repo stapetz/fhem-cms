@@ -23,8 +23,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       } else {
         const { w, h } = widgets.get(id).grid;
         const fraction = Number(w) / Number(config.settings.gridColumns);
-        wrapper.style.setProperty('--cms-mobile-span', fraction <= 0.25 ? '1' : '2');
-        wrapper.style.setProperty('--cms-tablet-span', fraction <= 0.25 ? '1' : fraction <= 0.5 ? '2' : '4');
+        wrapper.style.setProperty('--cms-widget-fraction', String(Math.max(0.25, fraction)));
         wrapper.style.setProperty('--cms-widget-padding', `${100 * Number(h) / Number(w)}%`);
       }
     }

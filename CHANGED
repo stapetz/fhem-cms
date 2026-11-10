@@ -1,3 +1,11 @@
+2026-11-10 - Navigation und Widgets zoomfähig skalieren (Refs #106)
+
+Navigationsbuttons samt Text und eingestellten Abmessungen skalieren mit der
+Fenstergröße. Homepage und Vorschau berücksichtigen Browser-Zoom sichtbar,
+statt ihn durch vollständiges Einpassen auszugleichen. Widgets brechen bei
+Platzmangel auch auf dem Desktop um; Navigation klappt bei Bedarf zum Burger.
+Gespeicherte Rasterpositionen und das präzise Editorraster bleiben unverändert.
+
 2026-11-10 - Thermostat-Gerätewechsel übernehmen (Refs #105)
 
 Die Thermostat-Kachel übernimmt beim Bearbeiten genau das ausgewählte Device

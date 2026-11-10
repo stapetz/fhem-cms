@@ -174,12 +174,15 @@ Das Root-Layout des Frameworks unterstützt drei frei wählbare Struktur-Modi. D
 ```
 
 ### 2.3 Responsives Verhalten & Hamburger-Menü
-Im aktuellen Schema-5-Renderer werden Homepage und Vorschau anhand der
-CMS-Inhaltsbreite umgebrochen: unter 640 Pixeln ein normales oder zwei kleine
-Widgets, von 640 bis unter 1200 Pixeln vier Teilspalten, danach gespeicherte
-Desktoppositionen. Klein bedeutet höchstens ein Viertel der gespeicherten
-Rasterbreite. Reflow verändert keine Konfiguration; der Editor behält sein
-präzises Raster, Geräte-Vorschau und Drehen zeigen den responsiven Umbruch.
+Im aktuellen Schema-5-Renderer teilen Homepage und Vorschau eine Bezugsbreite
+aus `25rem + 66.666667cqi`. So skalieren Widgets und Navigationsschaltflächen
+mit Fenstergröße und Browser-Zoom, ohne den Zoom durch vollständiges Einpassen
+aufzuheben. Widgetbreiten folgen dem gespeicherten Rasteranteil, mindestens
+einem Viertel der Bezugsbreite; bei Platzmangel wird auch auf dem Desktop
+umgebrochen. Die Navigation wächst mit ihrem Inhalt. Reflow verändert keine
+Konfiguration; der Editor behält sein präzises Raster, Geräte-Vorschau und
+Drehen zeigen den responsiven Umbruch. Konfigurierte Navigationsmaße sind
+Referenzpixel bei 1200 Pixeln Inhaltsbreite und Standardschrift.
 Dies implementiert noch nicht die folgenden App-Shell-/Drawer-Zielmodi.
 Die Schema-5-Navigation schaltet unabhängig von Widget-Breakpoints nur dann
 auf den Burger um, wenn die gemessenen sichtbaren Menüeinträge samt Abständen

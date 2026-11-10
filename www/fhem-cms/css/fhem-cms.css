@@ -91,57 +91,75 @@ body {
   height: 100%;
 }
 
-/* Nur Ansichten umbrechen; der Editor verwendet die gespeicherten Koordinaten. */
-@container cms-page (width < 1200px) {
-  .cms-schema5-grid[data-responsive] {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: .75rem;
-    align-items: start;
-    height: auto !important;
-    min-height: 0 !important;
-  }
-
-  .cms-schema5-grid[data-responsive] > .grid-stack-item {
-    position: relative !important;
-    inset: auto !important;
-    width: auto !important;
-    height: auto !important;
-    min-width: 0;
-    min-height: 96px;
-    max-width: 100%;
-    grid-column: span var(--cms-tablet-span);
-    /* Padding trägt die volle Kachelhöhe auch zu WebKits Rasterzeilen nach Rotation bei. */
-    padding-top: var(--cms-widget-padding, 0px);
-  }
-
-  .cms-schema5-grid[data-responsive] > .grid-stack-item > .grid-stack-item-content {
-    inset: 0 !important;
-  }
-
-  .cms-schema5-grid[data-responsive] > .cms-responsive-navigation {
-    grid-column: 1 / -1;
-    min-height: 0;
-  }
-
-  .cms-schema5-grid[data-responsive] > .cms-responsive-navigation > .grid-stack-item-content {
-    position: relative !important;
-    overflow: visible;
-  }
-
-  .cms-schema5-grid[data-responsive] .cms-nav {
-    height: auto;
-  }
+/* Der rem-Anteil erhält Browser-Zoom, der Container-Anteil reagiert auf Fenstergrößen. */
+.cms-schema5-grid {
+  --cms-view-width: calc(25rem + 66.666667cqi);
+  --cms-view-gap: calc(var(--cms-view-width) / 100);
 }
 
-@container cms-page (width < 640px) {
-  .cms-schema5-grid[data-responsive] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+body:has(.cms-schema5-grid[data-responsive]) {
+  min-width: 0;
+}
 
-  .cms-schema5-grid[data-responsive] > .grid-stack-item:not(.cms-responsive-navigation) {
-    grid-column: span var(--cms-mobile-span);
-  }
+.cms-schema5-grid[data-responsive] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cms-view-gap);
+  align-items: flex-start;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.cms-schema5-grid[data-responsive] > .grid-stack-item {
+  position: relative !important;
+  inset: auto !important;
+  flex: 0 0 min(100%, calc((var(--cms-view-width) + var(--cms-view-gap)) * var(--cms-widget-fraction) - var(--cms-view-gap)));
+  width: auto !important;
+  height: auto !important;
+  min-width: 0;
+  min-height: 6rem;
+  max-width: 100%;
+}
+
+.cms-schema5-grid[data-responsive] > .grid-stack-item::before {
+  content: "";
+  display: block;
+  /* Ein inneres Padding reserviert auch in WebKit die volle Höhe im Flex-Fluss. */
+  padding-top: var(--cms-widget-padding, 0px);
+}
+
+.cms-schema5-grid[data-responsive] > .grid-stack-item > .grid-stack-item-content {
+  inset: 0 !important;
+}
+
+.cms-schema5-grid[data-responsive] > .cms-responsive-navigation {
+  flex-basis: 100%;
+  min-height: 0;
+}
+
+.cms-schema5-grid[data-responsive] > .cms-responsive-navigation > .grid-stack-item-content {
+  position: relative !important;
+  overflow: visible;
+}
+
+.cms-schema5-grid .cms-nav {
+  container-type: normal;
+  font-size: max(.75rem, calc(var(--cms-view-width) / 75));
+  gap: .5em;
+}
+
+.cms-schema5-grid[data-responsive] .cms-nav {
+  height: auto;
+}
+
+.cms-schema5-grid .cms-nav-link {
+  font-size: 1.05em;
+  padding: .3em .9em;
+}
+
+.cms-schema5-grid .cms-nav-burger {
+  padding: .3em .65em;
+  border-radius: .5em;
 }
 
 @container cms-page (width < 768px) {

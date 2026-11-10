@@ -112,25 +112,29 @@ Resize-Schleife durch wechselnde Fensterbreiten und automatische Zellhöhen.
 Die Geräte-Vorschau ist auch in diesem Editor verfügbar: Sie öffnet die aktuelle
 Seite mit `?mode=preview` in einem maßgerechten Iframe, bietet Geräte- und
 Desktopauflösungen an und vertauscht beim Drehen Breite und Höhe.
-Homepage und Vorschau brechen Widgets anhand des benannten `cms-page`-
-Inhaltscontainers um: unter 640 CSS-Pixeln zwei Teilspalten, unter 1200 vier,
-darüber das unveränderte Gridstack-Raster. Bis 1/4 der gespeicherten Breite
-gilt ein Widget als klein (mobil eine, Tablet eine Teilspalte); bis 1/2 belegt
-es mobil zwei, auf Tablets zwei Teilspalten, darüber jeweils die ganze Zeile.
-Navigation kommt zuerst, Widgets folgen im DOM nach gespeicherter Zeile/Spalte.
-CSS verwendet das gespeicherte Seitenverhältnis mit 96 Pixeln Mindesthöhe;
-die Höhe wird als breitenabhängiges prozentuales Padding am Wrapper reserviert.
-Ein `aspect-ratio` direkt auf dem Grid-Item führte im iPhone-Homescreen-Modus
-nach Rotation zu Rasterzeilen von 216 Pixeln bei tatsächlich 270,75 Pixeln
-hohen Kacheln. Das Padding trägt die vollständige Höhe zum normalen Rasterfluss
-bei, ohne Resize-Schreibzugriffe oder Änderungen der gespeicherten Positionen.
-Die Navigation wächst mit ihrem Inhalt. Container-Queries reagieren auch im
-gedrehten Vorschau-Iframe ohne Remount, neue Live-Abfragen oder Schreibaufrufe.
+Homepage und Vorschau verwenden einen zoomfähigen Flex-Umbruch (Refs #106).
+Die gemeinsame Bezugsbreite `25rem + 66.666667cqi` entspricht bei 1200 Pixeln
+CMS-Inhaltsbreite und Standardschrift wieder 1200 Pixeln. Ein Drittel bleibt
+schrift-/zoomabhängig, zwei Drittel reagieren auf die Breite des benannten
+`cms-page`-Containers: Reine Prozent-/Containergrößen würden Browser-Zoom
+physisch wieder ausgleichen. Es gibt keine Zoom-Erkennung über Bildschirmdaten
+und keine kompensierenden Resize-Schreibzugriffe.
+Widgetbreiten folgen ihrem gespeicherten Rasteranteil, mindestens 1/4 der
+Bezugsbreite; die Lücken werden anteilig berücksichtigt. Passt die nächste
+Kachel nicht, beginnt eine neue Zeile, auch auf dem Desktop. Ein einzelnes
+Widget bleibt höchstens containerbreit. Navigation kommt zuerst, Widgets
+folgen im DOM nach gespeicherter Zeile/Spalte. Der Editor bleibt beim präzisen
+Gridstack-Raster, gespeicherte Positionen und Größen ändern sich nicht.
+CSS verwendet das gespeicherte Seitenverhältnis mit 6 rem Mindesthöhe;
+ein inneres Pseudoelement mit prozentualem Padding reserviert die vollständige
+Höhe im Flex-Fluss. Das vermeidet den bekannten iPhone-Homescreen-Fehler
+mit überlappenden Zeilen bei einem direkten `aspect-ratio` am Rasterelement.
 `data-responsive` und die abgeleiteten CSS-Variablen sind reine Darstellung,
-kein Konfigurationsformat. Editierbare Raster bleiben davon ausgeschlossen.
-Die Grenze von 640 statt 768 Pixeln verhindert zu frühe Widgetumbrüche bei
-verringerter Inhaltsbreite im iPhone-Querformat (z. B. seitliche Safari-
-Sicherheitsabstände). Die Schema-5-Navigation misst ihre sichtbaren Linkbreiten
+kein Konfigurationsformat. Größenänderungen und Vorschau-Rotation benötigen
+keinen Remount, keine neuen Live-Abfragen und keine Konfigurationsschreibaufrufe.
+Navigationsschrift, Abstände und konfigurierte Buttonmaße verwenden dieselbe
+Bezugsbreite; bestehende Pixelangaben sind Referenzmaße bei 1200 Pixeln.
+Die Schema-5-Navigation misst ihre sichtbaren Linkbreiten
 einschließlich Spaltenabständen im eigenen Container und schaltet nur bei
 Platzmangel auf den Burger. ResizeObserver, Inhalts-/Attributänderungen und
 Schriftladeereignisse lösen die Prüfung erneut aus, ohne Zustandsänderung.
@@ -143,6 +147,19 @@ Beispielansicht samt automatisch aktualisierter Layoutdiagnose: Layout- und
 Visual-Viewport, Inhaltsbreite, CSS-Spalten und tatsächlicher Widgetumbruch.
 Dies dient der Safari-Geräteprüfung; feste synthetische Breiten allein weisen
 keine korrekte Viewportbreite auf dem echten Gerät nach.
+`node --test t/35_schema5_scaling.test.js` startet ein isoliertes Chrome-Profil
+mit echtem Seitenzoom (80/100/125/200 Prozent) und prüft physische Breiten/Höhen,
+Umbruch, Navigation, Überlappungen, Wiederverkleinern und unveränderte Daten.
+Ein zusätzliches schmales Fenster mit 200 Prozent Zoom prüft 300 CSS-Pixel
+ohne horizontalen Seitenüberlauf; nur responsive Ansichten dürfen deshalb die
+bisherige 320-Pixel-Mindestbreite des Dokuments unterschreiten.
+`devicePixelRatio` und CSS-Viewport werden dabei gegen den eingestellten Zoom
+geprüft, nicht durch CSS-`zoom` oder reine Bildschirmemulation ersetzt.
+Die Prüfung erfolgt über Chromes lokales Debugging-Protokoll nach echten
+Browserframes, damit ResizeObserver und Animationen vollständig ablaufen.
+Chrome wird lokal bzw. über `CHROME_BIN` gefunden; ohne Chrome wird der Browsertest
+explizit übersprungen. Die synthetische Testseite verwendet den echten Renderer
+mit simulierten Gerätedaten; sie ersetzt keine FHEM-/Safari-Abnahme.
 Für die isolierte Homescreen-Prüfung wird die Prüfseite selbst als eigenes
 Homescreen-Icon gestartet. Ihre Beispielansicht verwendet den echten
 Schema-5-Renderer mit vier Menübeschriftungen und Widgets im Seitenverhältnis

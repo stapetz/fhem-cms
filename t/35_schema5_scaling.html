@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schema 5 scaling regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<main class="cms-shell"><div class="grid-stack cms-schema5-grid" id="grid"></div></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5View } from '../www/fhem-cms/js/fcui-schema5-view.js';
+
+const output = document.querySelector('#result');
+try {
+  const config = {
+    schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 },
+      itemWidth: 150, itemHeight: 40 },
+    pages: ['Home', 'Heating', 'Energy', 'Weather', 'Settings'].map((title, index) => ({
+      id: `page${index}`, title, widgets: index ? [] : [
+        ...[0, 1, 2, 3].map((number) => ({
+          id: `value${number}`, type: 'fhem-value', device: 'Test', reading: 'state',
+          grid: { col: 1 + number * 3, row: 2, w: 3, h: 2 },
+        })),
+        { id: 'wide', type: 'fhem-value', device: 'Test', reading: 'state',
+          grid: { col: 1, row: 4, w: 6, h: 2 } },
+      ],
+    })),
+  };
+  const before = JSON.stringify(config);
+  let requests = 0;
+  const client = {
+    jsonlist: async () => { requests += 1; return [{ name: 'Test', readings: { state: '21' } }]; },
+    subscribe() {}, unsubscribe() {},
+  };
+  const root = document.querySelector('#grid');
+  const view = new Schema5View({
+    GridStack, root, status: document.createElement('p'), config, client,
+    services: { iconUrl: () => '' },
+  });
+  await view.start();
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 400));
+  const rect = (element) => {
+    const { x, y, width, height } = element.getBoundingClientRect();
+    return { x, y, width, height };
+  };
+  const metrics = () => {
+    const nav = root.querySelector('.cms-nav');
+    const link = nav.querySelector('a');
+    const widget = root.querySelector('cms-value');
+    return {
+      viewport: innerWidth, dpr: devicePixelRatio,
+      root: rect(root), widget: rect(widget), link: rect(link),
+      navFont: parseFloat(getComputedStyle(link).fontSize),
+      widgetFont: parseFloat(getComputedStyle(widget.shadowRoot.querySelector('.main')).fontSize),
+      compact: nav.hasAttribute('data-compact'),
+      widgets: [...root.querySelectorAll('cms-value')].map(rect),
+      overflow: document.documentElement.scrollWidth > innerWidth,
+    };
+  };
+  await settle();
+  const initial = metrics();
+  const shell = root.parentElement;
+  const resize = [];
+  for (const width of [1000, 600, 393, 734, 1000]) {
+    shell.style.width = `${width}px`;
+    await settle();
+    resize.push(metrics());
+  }
+  shell.style.width = '';
+  await settle();
+  const nav = root.querySelector('.cms-nav');
+  const long = nav.querySelector('a');
+  const originalWidth = long.style.width;
+  long.style.width = 'auto';
+  long.textContent = 'A very long navigation label '.repeat(20);
+  await settle();
+  const longCompact = nav.hasAttribute('data-compact');
+  nav.querySelector('.cms-nav-burger').click();
+  await settle();
+  const openLinks = [...nav.querySelectorAll('a')].every((link) => getComputedStyle(link).display !== 'none');
+  long.textContent = 'Home';
+  long.style.width = originalWidth;
+  await settle();
+  const restored = metrics();
+  const unchanged = JSON.stringify(config) === before && requests === 1;
+  view.stop();
+  const editor = new Schema5View({
+    GridStack, root, status: document.createElement('p'), config, client,
+    services: { iconUrl: () => '' }, editing: { onChange() {}, onEdit() {} },
+  });
+  await editor.start();
+  const positions = JSON.stringify(root.gridstack.save(false));
+  let editorPreserved = !root.hasAttribute('data-responsive') && getComputedStyle(root).display !== 'flex';
+  for (const width of [1000, 600, 393, 1000]) {
+    shell.style.width = `${width}px`;
+    await settle();
+    editorPreserved &&= JSON.stringify(root.gridstack.save(false)) === positions && JSON.stringify(config) === before;
+  }
+  editor.stop();
+  output.textContent = JSON.stringify({ initial, resize, restored, longCompact, openLinks, unchanged, editorPreserved });
+  output.dataset.result = 'pass';
+} catch (error) {
+  output.textContent = error.stack || error.message;
+  output.dataset.result = 'fail';
+}
+</script>
+</html>
