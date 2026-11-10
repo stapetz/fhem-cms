@@ -97,8 +97,22 @@ body {
   --cms-view-gap: calc(var(--cms-view-width) / 100);
 }
 
-body:has(.cms-schema5-grid[data-responsive]) {
+body:has(.cms-schema5-grid) {
   min-width: 0;
+}
+
+.cms-schema5-workspace:has(> .cms-grid-editable) {
+  overflow: auto;
+  max-width: 100%;
+}
+
+.cms-schema5-grid.cms-grid-editable {
+  width: calc(var(--cms-view-width) + var(--cms-view-gap));
+  max-width: none;
+}
+
+.cms-grid-editable > .grid-stack-item > .grid-stack-item-content {
+  inset: 0 var(--cms-view-gap) var(--cms-view-gap) 0 !important;
 }
 
 .cms-schema5-grid[data-responsive] {
@@ -237,6 +251,10 @@ body:has(.cms-schema5-grid[data-responsive]) {
   touch-action: none;
 }
 
+.cms-grid-editable .cms-widget-tools {
+  right: calc(var(--cms-view-gap) + 0.4rem);
+}
+
 .cms-grid-editable .cms-widget-drag:active {
   cursor: grabbing;
 }
@@ -246,8 +264,8 @@ body:has(.cms-schema5-grid[data-responsive]) {
   display: block !important;
   width: 18px;
   height: 18px;
-  right: calc(var(--gs-item-margin-right, 0px) + 7px);
-  bottom: calc(var(--gs-item-margin-bottom, 0px) + 7px);
+  right: calc(var(--cms-view-gap) + 7px);
+  bottom: calc(var(--cms-view-gap) + 7px);
   z-index: 6;
   transform: none;
   background: none;

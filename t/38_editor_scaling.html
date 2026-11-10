@@ -1,0 +1,101 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor canvas interaction regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<main class="cms-shell" style="width:700px"><section id="editor"></section></main>
+<button id="finish" hidden>Finish regression</button>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+
+const output = document.querySelector('#result');
+let editor;
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+const settle = () => new Promise((resolve) => setTimeout(resolve, 250));
+const fail = (error) => { output.dataset.result = 'fail'; output.textContent = error.stack || error.message; };
+try {
+  const live = { schemaVersion: 5, theme: 'light',
+    settings: { layoutMode: 'grid', gridColumns: 12, titleAlign: 'center', showFrames: false },
+    navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'one', title: 'Home', widgets: [
+      { id: 'value', type: 'fhem-value', title: 'Temperature', device: 'Test', reading: 'state',
+        grid: { col: 1, row: 3, w: 3, h: 2 } },
+    ] }],
+  };
+  const original = JSON.stringify(live);
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let writes = 0;
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async (draft, token) => {
+      check(token === state.token, 'drag/resize uses current state token');
+      writes += 1;
+      state = { live, draft: structuredClone(draft), token: writes.toString(16).padStart(64, '0') };
+      output.dataset.writes = String(writes);
+    },
+    publish: async () => { throw new Error('No publishing in regression'); },
+    discard: async () => { throw new Error('No discard in regression'); },
+  });
+  let commands = 0;
+  const root = document.querySelector('#editor');
+  editor = new Schema5Editor({ GridStack, root, controller, browser: window,
+    services: { iconUrl: () => '', setCommand: async () => { commands += 1; } },
+    client: { jsonlist: async () => [{ name: 'Test', readings: { state: '21' } }],
+      subscribe() {}, unsubscribe() {} } });
+  await editor.start();
+  await settle();
+  const appearance = () => {
+    const widget = root.querySelector('cms-value');
+    check(document.documentElement.dataset.cmsTheme === 'light', 'editor retains theme');
+    check(document.documentElement.dataset.cmsFrames === 'off', 'editor retains hidden frames');
+    check(getComputedStyle(widget.shadowRoot.querySelector('[data-title]')).textAlign === 'center',
+      'editor retains global centered title');
+    check(getComputedStyle(widget.shadowRoot.querySelector('.tile')).borderTopColor === 'rgba(0, 0, 0, 0)',
+      'widget frame actually hidden');
+  };
+  appearance();
+  const workspace = root.querySelector('.cms-schema5-workspace');
+  check(workspace.scrollWidth > workspace.clientWidth, 'editing workspace scrolls rather than shrinking widgets');
+  const toolbar = root.querySelector('.cms-toolbar');
+  const previewButton = [...toolbar.querySelectorAll('button')].find((button) => button.textContent === 'Vorschau');
+  const width = root.querySelector('cms-value').getBoundingClientRect().width;
+  previewButton.click();
+  await settle();
+  check(root.querySelector('.cms-schema5-grid').hasAttribute('data-responsive'), 'preview uses responsive view');
+  check(Math.abs(root.querySelector('cms-value').getBoundingClientRect().width - width) < 2,
+    'preview and editor have matching widget widths');
+  appearance();
+  previewButton.click();
+  await settle();
+  check(!root.querySelector('.cms-schema5-grid').hasAttribute('data-responsive'), 'return restores precise editing');
+  check(writes === 0, 'switching preview never writes layout');
+  appearance();
+  output.dataset.ready = 'true';
+  document.querySelector('#finish').addEventListener('click', async () => {
+    try {
+      await settle();
+      const current = state.draft.pages[0].widgets[0].grid;
+      check(writes === 2, `one write per drag/resize, got ${writes}`);
+      check(current.col === 3 && current.row === 4, `drag coordinates: ${JSON.stringify(current)}`);
+      check(current.w === 4 && current.h === 3, `resize dimensions: ${JSON.stringify(current)}`);
+      check(JSON.stringify(live) === original, 'live config remains byte-for-byte unchanged');
+      check(JSON.stringify(state.draft.settings) === JSON.stringify(live.settings), 'saving layout preserves settings');
+      check(commands === 0, 'editing sends no device commands');
+      check(Math.abs(devicePixelRatio - 1.25) < 0.02, 'pointer interactions use real 125 percent browser zoom');
+      check(workspace.scrollLeft > 0, 'resize works after horizontally scrolling the editing workspace');
+      appearance();
+      editor.stop();
+      output.dataset.result = 'pass';
+      output.textContent = JSON.stringify({ checks, writes });
+    } catch (error) { fail(error); }
+  });
+} catch (error) {
+  editor?.stop();
+  fail(error);
+}
+</script>

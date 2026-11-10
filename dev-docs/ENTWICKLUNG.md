@@ -134,6 +134,23 @@ Kachel nicht, beginnt eine neue Zeile, auch auf dem Desktop. Ein einzelnes
 Widget bleibt höchstens containerbreit. Navigation kommt zuerst, Widgets
 folgen im DOM nach gespeicherter Zeile/Spalte. Der Editor bleibt beim präzisen
 Gridstack-Raster, gespeicherte Positionen und Größen ändern sich nicht.
+Seit Refs #109 verwendet auch dieses Editorraster die gemeinsame zoomfähige
+Bezugsbreite statt `width: 100%`. Seine Breite umfasst die zusätzliche letzte
+Rasterlücke; Gridstack arbeitet ohne eigene Margins, der Content erhält
+`--cms-view-gap` rechts/unten. Damit entsprechen Widgetbreiten ab einem
+Viertelraster der Ansicht, ohne präzise kleine Rasterfelder künstlich zu
+vergrößern. Das quadratische Koordinatenraster bleibt erhalten; die Ansicht
+verwendet weiterhin das gespeicherte Seitenverhältnis und ihre Mindesthöhe.
+Nur `.cms-schema5-workspace` scrollt bei Platzmangel; Vorschau und Dialoge
+behalten ihren bisherigen Ablauf. Es werden weder CSS-Transforms noch
+Zoom-Kompensation eingesetzt, sodass Gridstack echte Pointerkoordinaten nutzt.
+`t/35_schema5_scaling.test.js` vergleicht Editor-/Ansichtsbreiten und prüft
+Editor-Zoom bei 80/100/125/200 Prozent sowie unveränderte Rasterkoordinaten beim
+Resize. `t/38_editor_scaling.html` prüft im echten Editor Titelzentrierung,
+Light-Theme, ausgeblendete Rahmen, Hin-/Rückwechsel zur Vorschau und echte
+Pointer-Drag-/Resize-Aktionen nach horizontalem Scrollen bei 125 Prozent Zoom:
+genau ein Entwurfsschreibzugriff pro Aktion, keine Gerätebefehle und keine
+Änderung an Live oder Darstellungseinstellungen.
 CSS verwendet das gespeicherte Seitenverhältnis mit 6 rem Mindesthöhe;
 ein inneres Pseudoelement mit prozentualem Padding reserviert die vollständige
 Höhe im Flex-Fluss. Das vermeidet den bekannten iPhone-Homescreen-Fehler

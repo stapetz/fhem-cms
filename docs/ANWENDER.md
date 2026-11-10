@@ -109,6 +109,12 @@ Die Umrechnung erfolgt erst mit **Speichern** als Entwurf. **Abbrechen**
 verändert weder Live noch den vorhandenen Entwurf. Der Dialog enthält nur
 Layout- und Look-&-Feel-Einstellungen, keine Widgetpositionen oder -größen.
 Widgets werden ausschließlich direkt im Editiermodus verschoben und skaliert.
+Auch dort folgen Widgetgrößen und Inhalte der Fenstergröße und dem Browser-Zoom.
+Das exakte Bearbeitungsraster bricht nicht um: Reicht der Platz nicht, scrollen
+Sie innerhalb des Arbeitsbereichs seitlich zu den übrigen Widgets. Die
+Browserseite und Werkzeugleiste bleiben dabei an ihrer Position. Zoom und
+Fensteränderungen verändern keine gespeicherten Rasterpositionen. Die Vorschau
+zeigt weiterhin den automatischen Umbruch der späteren Ansicht.
 
 **Widgettitel ausrichten (alle Seiten)** legt linksbündige, zentrierte oder
 rechtsbündige Titel für alle Widgets dieses CMS-Devices fest. Ohne Einstellung

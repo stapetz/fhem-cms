@@ -19,7 +19,7 @@ for (const path of candidates) {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 
-async function browserResult(profile, url, child) {
+async function browserResult(profile, url, child, interact) {
   let port;
   for (let attempt = 0; attempt < 600; attempt++) {
     if (child.exitCode !== null) throw new Error(`Chrome exited before debugging was ready (${child.exitCode})`);
@@ -66,6 +66,7 @@ async function browserResult(profile, url, child) {
     const loaded = new Promise((resolve, reject) => { onLoad = { resolve, reject }; });
     await command('Page.navigate', { url });
     await loaded;
+    if (interact) await interact(command);
     const reply = await command('Runtime.evaluate', {
       expression: `new Promise(resolve => {
         const timer = setInterval(() => {
@@ -136,6 +137,89 @@ test('widget titles inherit alignment and compact contents fill their available 
   }
 });
 
+test('real editor pointer drag and resize preserve appearance on a scrollable canvas', {
+  skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
+  timeout: 45000,
+}, async () => {
+  const server = await testServer();
+  const profile = await mkdtemp(join(tmpdir(), 'cms-editor-'));
+  await mkdir(join(profile, 'Default'));
+  await writeFile(join(profile, 'Default', 'Preferences'), JSON.stringify({
+    partition: { default_zoom_level: { x: Math.log(1.25) / Math.log(1.2) } },
+  }));
+  const child = spawn(chrome, ['--headless=new', '--no-first-run', '--no-default-browser-check',
+    '--disable-background-networking', '--force-device-scale-factor=1', '--remote-debugging-address=127.0.0.1',
+    '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--window-size=1100,1000', 'about:blank']);
+  child.stdout.resume();
+  let stderr = '';
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  const closed = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+  const timeout = setTimeout(() => child.kill('SIGTERM'), 35000);
+  try {
+    const interact = async (command) => {
+      const evaluate = async (expression) => {
+        const reply = await command('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true, timeout: 15000 });
+        assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
+        return reply.result.value;
+      };
+      await evaluate(`new Promise(resolve => {
+        const timer = setInterval(() => {
+          const output = document.querySelector('#result');
+          if (!output.dataset.ready && !output.dataset.result) return;
+          clearInterval(timer); resolve();
+        }, 25);
+      })`);
+      for (const [selector, dx, dy, writes] of [
+        ['.cms-widget-drag', 2, 1, 1], ['.ui-resizable-se', 1, 1, 2],
+      ]) {
+        if (writes === 2) {
+          await evaluate(`document.querySelector('.cms-schema5-workspace').scrollLeft = 100`);
+          await pause(100);
+        }
+        const point = await evaluate(`(() => {
+          const grid = document.querySelector('.cms-grid-editable');
+          const widget = [...grid.children].find(el => el.gridstackNode?.id === 'value');
+          const handle = widget.querySelector('${selector}');
+          const rect = handle.getBoundingClientRect();
+          return { x:rect.x + rect.width/2, y:rect.y + rect.height/2,
+            cell:grid.getBoundingClientRect().width/12 };
+        })()`);
+        await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+        await command('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+        for (let step = 1; step <= 12; step++) {
+          await command('Input.dispatchMouseEvent', { type: 'mouseMoved',
+            x: point.x + point.cell * dx * step / 12, y: point.y + point.cell * dy * step / 12,
+            button: 'left', buttons: 1 });
+          await pause(25);
+        }
+        await command('Input.dispatchMouseEvent', { type: 'mouseReleased',
+          x: point.x + point.cell * dx, y: point.y + point.cell * dy, button: 'left', clickCount: 1 });
+        await evaluate(`new Promise(resolve => {
+          const timer = setInterval(() => {
+            if (Number(document.querySelector('#result').dataset.writes) < ${writes}
+              || document.querySelector('.cms-grid-editable')?.inert) return;
+            clearInterval(timer); resolve();
+          }, 25);
+        })`);
+        await pause(300);
+      }
+      await evaluate(`document.querySelector('#finish').click()`);
+    };
+    const result = await browserResult(profile,
+      `http://127.0.0.1:${server.address().port}/t/38_editor_scaling.html`, child, interact);
+    assert.equal(result.writes, 2);
+    assert.ok(result.checks >= 20);
+  } catch (error) {
+    throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });
+  } finally {
+    child.kill('SIGTERM');
+    await closed;
+    clearTimeout(timeout);
+    await rm(profile, { recursive: true, force: true });
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test('real browser zoom and resizing scale widgets and navigation without writes', {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 180000,
@@ -184,6 +268,14 @@ test('real browser zoom and resizing scale widgets and navigation without writes
       assert.ok(Math.abs(data.initial.viewport - windowWidth / zoom) < 2, 'zoom changes the CSS viewport');
       assert.ok(data.unchanged, 'resize and zoom do not mutate config or restart requests');
       assert.ok(data.editorPreserved, 'editor retains precise saved grid coordinates and does not reflow');
+      assert.equal(data.editorScroll.overflow, 'auto', 'only the editing workspace scrolls');
+      assert.ok(!data.editorScroll.pageOverflow, 'editor canvas never overflows the document');
+      assert.ok(Math.abs(data.editorInitial.widget.width - data.initial.widget.width) < 2,
+        `editor uses the same widget width as the view: ${JSON.stringify({view:data.initial.widget, editor:data.editorInitial.widget})}`);
+      const [editorWide, editorNarrow] = data.editorResize;
+      assert.ok(editorWide.widget.width > editorNarrow.widget.width * 1.1, 'editor widgets follow window size');
+      assert.ok(editorWide.widget.height > editorNarrow.widget.height * 1.1, 'editor height follows window size');
+      if (zoom === 2) assert.ok(data.editorScroll.width > data.editorScroll.client, 'zoomed editing canvas scrolls at narrow widths');
       assert.ok(data.longCompact && data.openLinks, 'long navigation switches to a usable burger');
       assert.equal(data.restored.compact, data.initial.compact,
         `navigation recovers after label changes: ${JSON.stringify({ initial: data.initial, restored: data.restored })}`);
@@ -221,6 +313,12 @@ test('real browser zoom and resizing scale widgets and navigation without writes
           assert.ok(zoom < 1 ? ratio < 0.98 : ratio > 1.02,
             `${element} ${dimension} visibly follows real zoom ${zoom}: ratio ${ratio}`);
         }
+        for (const key of ['width', 'height']) {
+          const ratio = results.get(zoom).editorInitial.widget[key] * zoom / results.get(1).editorInitial.widget[key];
+          assert.ok(zoom < 1 ? ratio < 0.98 : ratio > 1.02, `editor ${key} visibly follows real zoom ${zoom}: ${ratio}`);
+        }
+        const fontRatio = results.get(zoom).editorInitial.widgetFont * zoom / results.get(1).editorInitial.widgetFont;
+        assert.ok(zoom < 1 ? fontRatio < 0.98 : fontRatio > 1.02, 'editor widget contents visibly follow real zoom');
       }
     }
     const rowCount = (zoom) => results.get(zoom).initial.widgets.slice(0, 4)
