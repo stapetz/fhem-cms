@@ -1180,6 +1180,28 @@ Neue Widgets übernehmen diesen Ablauf; Abweichungen werden vorher in `STORIES.m
 
 ## Live-Zustände und Verbindungsverhalten (S09)
 
+### Inhaltsgröße kompakter Widgets (Refs #108)
+
+Wert, Schalter, Taster und Statussymbol verwenden `widget-content-fit.js`.
+Ein ungeschrumpftes `data-fit-content`-Element wird mit Referenzschrift gemessen
+und proportional in den verfügbaren `.main`-Bereich eingepasst. Drei Prozent
+Innenabstand sowie die tatsächlichen Titel-/Fehlerhöhen bleiben frei; die
+knappere Achse bestimmt die Schrift- und Icongröße, ohne feste Maximalgröße.
+Schieberegler haben ebenfalls drei Prozent horizontalen Innenabstand.
+ResizeObserver, gezielt gefilterter MutationObserver und Schriftladeereignisse
+planen höchstens einen Messdurchlauf pro Animationsframe. Beim Entfernen werden
+Observer und Listener abgemeldet, ausstehende Frames abgebrochen; Wiederanfügen
+registriert sie erneut. Es werden weder Konfigurationen noch Geräte verändert.
+
+Regression: `node --test t/35_schema5_scaling.test.js` führt zusätzlich
+`t/37_widget_content.html` in isoliertem Chrome aus. Erwartet: mindestens
+90 Prozent Ausnutzung in einer der verfügbaren Achsen, kein Überlauf oder
+Titel-/Fehlerüberlappung bei 320×180, 180×320, 500×90, 96×96, 120×40 und
+640×360 Pixeln; Varianten mit/ohne Titel und Icon, lange Live-Werte/-Labels,
+Fehlermeldungen, Wiederanfügen und vollständiges Observer-Cleanup. Der Slider
+nutzt mehr als 92 Prozent der Kachelbreite. Der bestehende reale Browser-Zoomtest
+prüft weiterhin 80, 100, 125 und 200 Prozent ohne gespeicherte Layoutänderung.
+
 - **Abrufe:** Ein Refresh ist genau ein `jsonlist2`-Aufruf je Seite (Hauptdevices plus Kanäle über `device=<name>`), unabhängig von der Widget-Zahl. Das Polling läuft alle 30 s, nur bei sichtbarem Tab. Beim Sichtbarwerden und bei `online` wird sofort neu gelesen.
 - **Live-Hinweise:** Eine WebSocket-Verbindung (`inform`) je geöffneter Seite, gefiltert auf die Namen der aktuellen Seite. Ereignisse lösen ein entprelltes (300 ms) Neulesen aus, die Werte kommen nie aus dem Ereignis-HTML. Der WebSocket wird bei Seitenwechsel neu aufgebaut und bei `pagehide` beendet; Reconnect mit Backoff (1 s bis 30 s).
 - **Reconnect:** Nach dem Wiederverbinden wird sofort der aktuelle Zustand neu gelesen. Aus dem Back-Forward-Cache zurückkehrende Seiten starten Polling und Refresh neu (`pageshow`).

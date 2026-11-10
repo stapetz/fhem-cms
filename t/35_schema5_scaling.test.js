@@ -104,9 +104,9 @@ async function testServer() {
   return server;
 }
 
-test('all widget titles inherit global alignment without changing dialogs or authored content', {
+test('widget titles inherit alignment and compact contents fill their available area', {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
-  timeout: 45000,
+  timeout: 90000,
 }, async () => {
   const server = await testServer();
   const profile = await mkdtemp(join(tmpdir(), 'cms-titles-'));
@@ -117,11 +117,14 @@ test('all widget titles inherit global alignment without changing dialogs or aut
   child.stdout.resume();
   child.stderr.on('data', (chunk) => { stderr += chunk; });
   const closed = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
-  const timeout = setTimeout(() => child.kill('SIGTERM'), 30000);
+  const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
-    const data = await browserResult(profile,
-      `http://127.0.0.1:${server.address().port}/t/36_widget_titles.html`, child);
-    assert.ok(data.checks >= 100, 'all twelve widget types and four alignment choices checked');
+    for (const [fixture, minimum] of [['36_widget_titles.html', 100], ['37_widget_content.html', 600]]) {
+      const data = await browserResult(profile,
+        `http://127.0.0.1:${server.address().port}/t/${fixture}`, child);
+      assert.ok(data.checks >= minimum, `${fixture}: complete regression coverage (${data.checks})`);
+      console.log(`${fixture}: ${data.checks} browser checks`);
+    }
   } catch (error) {
     throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });
   } finally {

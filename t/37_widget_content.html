@@ -1,0 +1,106 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Widget interior sizing regression</title>
+<style>
+  body { margin: 0; font-family: Arial, sans-serif; }
+  #fixture > * { display: block; }
+</style>
+<div id="fixture"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+
+const output = document.querySelector('#result');
+const fixture = document.querySelector('#fixture');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+const settle = () => new Promise((resolve) => setTimeout(resolve, 70));
+const icon = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"%3E%3Cpath d="M1 1h8v8H1z"/%3E%3C/svg%3E';
+const services = { iconUrl: () => icon };
+const snapshots = (state) => new Map([['Test', [{ name: 'Test', readings: { state }, sets: 'on:noArg off:noArg' }]]]);
+const nativeResize = window.ResizeObserver;
+const nativeMutation = window.MutationObserver;
+let observers = 0;
+for (const name of ['ResizeObserver', 'MutationObserver']) {
+  const Native = window[name];
+  window[name] = class extends Native {
+    constructor(callback) { super(callback); this.active = true; observers += 1; }
+    disconnect() { super.disconnect(); if (this.active) { observers -= 1; this.active = false; } }
+  };
+}
+const measure = (host, context) => {
+  const $ = (selector) => host.shadowRoot.querySelector(selector);
+  const area = $('.main').getBoundingClientRect();
+  const group = $('[data-fit-content]').getBoundingClientRect();
+  const title = $('[data-header]').getBoundingClientRect();
+  const status = $('[data-msg]')?.getBoundingClientRect();
+  const ratio = Math.max(group.width / area.width, group.height / area.height);
+  check(ratio >= 0.90 && ratio <= 1.005, `${context}: occupancy ${ratio}`);
+  check(group.left >= area.left - 1 && group.right <= area.right + 1
+    && group.top >= area.top - 1 && group.bottom <= area.bottom + 1, `${context}: content stays inside usable area`);
+  check(!title.height || group.top >= title.bottom, `${context}: no title overlap`);
+  check(!status?.height || group.bottom <= status.top, `${context}: no error overlap`);
+  for (const selector of ['[data-value]', '[data-label]', '[data-state]']) {
+    const text = $(selector);
+    if (!text?.textContent) continue;
+    check(text.scrollWidth <= text.clientWidth + 1 || getComputedStyle(text).display === 'inline',
+      `${context}: no ellipsis or clipped text`);
+  }
+};
+try {
+  for (const type of ['fhem-value', 'fhem-switch', 'fhem-button', 'fhem-icon']) {
+    for (const titled of [false, true]) {
+      for (const withIcon of [false, true]) {
+        const config = { type, id: 'test', title: titled ? 'Widget title' : '', device: 'Test',
+          reading: 'state', command: 'on', on: 'on', off: 'off', label: 'Start', unit: 'W',
+          icon: withIcon ? 'test' : '', states: withIcon ? [{ value: 'on', icon: 'test', color: '#ffffff' }] : [] };
+        const original = JSON.stringify(config);
+        const host = createWidgetElement(config, services, snapshots('on'), true);
+        fixture.append(host);
+        for (const [width, height] of [[320, 180], [180, 320], [500, 90], [96, 96], [120, 40], [640, 360]]) {
+          host.style.width = `${width}px`;
+          host.style.height = `${height}px`;
+          await settle();
+          measure(host, `${type}/${width}x${height}/title=${titled}/icon=${withIcon}`);
+        }
+        host.config = { ...config, label: 'Eine lange Beschriftung mit 32 Z.', unit: 'kWh' };
+        host.data = snapshots('Ein langer neuer Reading-Wert mit 40 Z.').get('Test');
+        await settle();
+        measure(host, `${type}: live content update`);
+        const msg = host.shadowRoot.querySelector('[data-msg]');
+        if (msg) {
+          msg.textContent = 'Testfehler: Verbindung unterbrochen';
+          await settle();
+          measure(host, `${type}: visible error`);
+        }
+        check(JSON.stringify(config) === original, 'Sizing never mutates widget config');
+        host.remove();
+        check(observers === 0, 'Removing a widget disconnects all sizing observers');
+        fixture.append(host);
+        await settle();
+        measure(host, `${type}: reconnected`);
+        host.remove();
+        check(observers === 0, 'Reconnected observers are cleaned up');
+      }
+    }
+  }
+  const slider = createWidgetElement({ type: 'fhem-slider', id: 'slider', device: 'Test',
+    reading: 'state', command: 'pct', min: 0, max: 100, step: 1 }, services, snapshots('50'), true);
+  slider.style.cssText = 'width:320px;height:180px';
+  fixture.append(slider);
+  await settle();
+  const range = slider.shadowRoot.querySelector('input[type="range"]').getBoundingClientRect();
+  check(range.width / slider.getBoundingClientRect().width > 0.92, 'Slider reaches near both widget edges');
+  slider.remove();
+  check(observers === 0, 'No observers left behind');
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks, zoom: devicePixelRatio });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || error.message;
+} finally {
+  fixture.replaceChildren();
+  window.ResizeObserver = nativeResize;
+  window.MutationObserver = nativeMutation;
+}
+</script>

@@ -121,6 +121,10 @@ und Textformatierungen innerhalb von Text-/HTML-Widgets bleiben unverändert.
 Homepage und Vorschau passen die Anordnung automatisch an die verfügbare
 Inhaltsbreite an, auch beim Drehen eines Smartphones oder Tablets. Widgets und
 Navigationsschaltflächen wachsen bzw. schrumpfen gemeinsam mit der Fensterbreite.
+Wertanzeigen, Schalter, Taster und Statussymbole nutzen ihren Innenraum mit
+kleinem Sicherheitsabstand aus. Titel und eventuelle Fehlermeldungen bleiben
+separat; lange Werte und Beschriftungen werden kleiner eingepasst statt
+abgeschnitten. Schieberegler reichen bis nahe an die seitlichen Ränder.
 Der Browser-Zoom wird dabei nicht mehr durch vollständiges Einpassen aufgehoben:
 Hineinzoomen vergrößert Kacheln und Beschriftungen sichtbar, Hinauszoomen verkleinert
 sie. Bei Platzmangel rutschen Widgets in die nächste Zeile, statt horizontal aus

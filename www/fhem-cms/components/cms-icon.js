@@ -1,5 +1,6 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { openIconPicker } from '../js/icon-picker.js';
+import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 
 const MAX_STATES = 20;
 
@@ -16,6 +17,7 @@ class FHEMCMSIcon extends HTMLElement {
 
   connectedCallback() {
     if (this.shadowRoot.childElementCount) {
+      this.stopContentFit = fitWidgetContent(this);
       return;
     }
     this.shadowRoot.innerHTML = `
@@ -29,10 +31,12 @@ class FHEMCMSIcon extends HTMLElement {
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 1.05rem; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         h3[data-title] { font-size: max(5px, min(12cqh, 5cqw)); }
         header[hidden] { display: none; }
-        .glyph { width: min(42cqh, 42cqw); height: min(42cqh, 42cqw); background-color: var(--state-color, var(--cms-accent, #8fd0a8));
+        ${fittedContentCss}
+        .glyph { display: block; width: 1em; height: 1em; background-color: var(--state-color, var(--cms-accent, #8fd0a8));
           -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
         .glyph[hidden] { display: none; }
-        .state { max-width: 100%; overflow-wrap: anywhere; text-align: center; font-size: 0.85em; }
+        .state { white-space: nowrap; text-align: center; line-height: 1.1; }
+        .state:empty { display: none; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         .gear, button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
@@ -66,8 +70,10 @@ class FHEMCMSIcon extends HTMLElement {
       <article class="tile">
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Status-Symbol konfigurieren">⚙</button>
-        <span class="glyph" data-icon aria-hidden="true" hidden></span>
-        <span class="state" data-state>–</span>
+        <div class="main"><div class="fit-row" data-fit-content>
+          <span class="glyph" data-icon aria-hidden="true" hidden></span>
+          <span class="state" data-state>–</span>
+        </div></div>
         <span class="sr-only" data-accessible></span>
       </article>
       <dialog data-dialog aria-labelledby="icon-dialog-title">
@@ -105,7 +111,13 @@ class FHEMCMSIcon extends HTMLElement {
       event.preventDefault();
       this.closeConfig(false);
     });
+    this.stopContentFit = fitWidgetContent(this);
     this.render();
+  }
+
+  disconnectedCallback() {
+    this.stopContentFit?.();
+    this.stopContentFit = null;
   }
 
   set config(value) {

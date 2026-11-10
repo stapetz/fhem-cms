@@ -1,3 +1,5 @@
+import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
+
 const UNITS = ['°C', '%', 'W', 'kW', 'kWh', 'V', 'A', 'hPa', 'lx', 'mm', 'm', 'km', 'km/h', 'm/s', 'l', 'ppm', 'dB'];
 const ICON_PAGE = 120;
 const PICKER_MAX_ROWS = 200;
@@ -25,6 +27,7 @@ class FHEMCMSValue extends HTMLElement {
 
   connectedCallback() {
     if (this.shadowRoot.childElementCount > 0) {
+      this.stopContentFit = fitWidgetContent(this);
       return;
     }
     this.shadowRoot.innerHTML = `
@@ -39,7 +42,7 @@ class FHEMCMSValue extends HTMLElement {
         header[hidden] { display: none; }
         h3 { margin: 0; font-size: 1.1em; font-weight: 400; color: var(--cms-muted, #a5c9b2); font-family: inherit;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 0.5em; padding: 0 0.8em; }
+        ${fittedContentCss}
         .gear.solo { position: absolute; top: 0.2rem; right: 0.3rem; font-size: 0.75rem; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
         :host { --cms-icon-color: var(--cms-accent, #8fd0a8); }
@@ -48,17 +51,14 @@ class FHEMCMSValue extends HTMLElement {
         .glyph[hidden] { display: none; }
         .icon { height: 1.1em; width: 1.1em; flex: none; }
         .icon-row .icon { width: 2rem; height: 2rem; }
-        .value { font-size: max(5px, min(var(--vh, 38cqh), 11cqw)); min-width: 0; line-height: 1.1; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .main { font-size: max(5px, min(var(--vh, 38cqh), 11cqw)); }
-        .value { font-size: inherit; flex: 0 1 auto; text-align: center; }
-        .unit { margin-left: 0.25rem; font-size: 0.6em; font-weight: 400; color: var(--cms-muted, #a5c9b2); }
+        .value { font-size: inherit; line-height: 1.1; font-weight: 600; white-space: nowrap; }
+        .unit { margin-left: 0.12em; font-size: 0.6em; font-weight: 400; color: var(--cms-muted, #a5c9b2); }
+        .unit:empty { display: none; }
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
         button:hover { background: var(--cms-surface-hover, #34493e); }
         button:focus-visible, input:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
-        .tile[data-has-title] { --vh: 32cqh; }
         .gear { padding: 0 0.35em; font-size: 1em; line-height: 1.4; flex: none; }
-        @container (max-height: 3rem) { header { display: none; } .tile[data-has-title] { --vh: 38cqh; } }
         @container (max-width: 6rem) { .gear { display: none; } }
         :host([view-only]) [data-open-config] { display: none; }
         dialog { border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef);
@@ -111,8 +111,10 @@ class FHEMCMSValue extends HTMLElement {
         </header>
         <button type="button" class="gear solo" data-open-config title="Widget konfigurieren" aria-label="Wert-Anzeige konfigurieren">⚙</button>
         <div class="main">
-          <span class="glyph icon" data-icon aria-hidden="true" hidden></span>
-          <div class="value"><span data-value>–</span><span class="unit" data-unit></span></div>
+          <div class="fit-row" data-fit-content>
+            <span class="glyph icon" data-icon aria-hidden="true" hidden></span>
+            <div class="value"><span data-value>–</span><span class="unit" data-unit></span></div>
+          </div>
         </div>
       </article>
       <dialog data-dialog aria-labelledby="value-dialog-title">
@@ -202,7 +204,13 @@ class FHEMCMSValue extends HTMLElement {
       event.preventDefault();
       this.onSave();
     });
+    this.stopContentFit = fitWidgetContent(this);
     this.render();
+  }
+
+  disconnectedCallback() {
+    this.stopContentFit?.();
+    this.stopContentFit = null;
   }
 
   set config(value) {
