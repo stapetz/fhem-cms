@@ -4,6 +4,7 @@
 
 import { placeholderText, splitPlaceholders } from './freehtml.js';
 import { openPlaceholderPicker } from './placeholder-picker.js';
+import { ASSET_DOCUMENT } from './asset-contract.js';
 
 export const MAX_HTML = 50000;
 export const MAX_IMAGE_BYTES = 3145728;
@@ -93,7 +94,7 @@ function convert(source, parent, state, depth) {
 
     if (tag === 'a') {
       const href = (node.getAttribute('href') || '').trim();
-      if (HREF.test(href)) {
+      if (HREF.test(href) || ASSET_DOCUMENT.test(href)) {
         const link = document.createElement('a');
         link.setAttribute('href', href);
         state.count += 1;
@@ -577,9 +578,7 @@ export function createEditor({ root, services, html, onError }) {
     }
     const open = panels[name];
     if (!open.hidden) {
-      if (name === 'image') {
-        loadMedia();
-      } else if (name === 'link') {
+      if (name === 'link') {
         linkInput.focus();
       }
     }
@@ -620,7 +619,7 @@ export function createEditor({ root, services, html, onError }) {
   linkRow.append(linkInput,
     button('Setzen', 'Link setzen', () => {
       const href = linkInput.value.trim();
-      if (!HREF.test(href)) {
+      if (!HREF.test(href) && !ASSET_DOCUMENT.test(href)) {
         onError('Ungültiger Link: erlaubt sind http(s)://, mailto: und #/seitenname');
         return;
       }
@@ -632,6 +631,19 @@ export function createEditor({ root, services, html, onError }) {
       exec('unlink');
       linkPanel.hidden = true;
     }));
+  linkRow.append(button('Dokument auswählen …', 'Dokument aus dem Assetmanager verlinken', async () => {
+    remember();
+    try {
+      const asset = await services.pickAsset({ mode: 'document', owner: root });
+      if (!asset) return;
+      const link = document.createElement('a');
+      link.href = asset.href;
+      link.textContent = asset.name;
+      insertNode(link);
+      linkPanel.hidden = true;
+      onError('');
+    } catch (error) { onError(error.message || 'Assetmanager konnte nicht geöffnet werden'); }
+  }));
   linkPanel.append(linkRow);
   panels.link = linkPanel;
 
@@ -775,12 +787,6 @@ export function createEditor({ root, services, html, onError }) {
   const imagePanel = document.createElement('div');
   imagePanel.className = 'rt-panel';
   imagePanel.hidden = true;
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = 'image/png,image/jpeg,image/gif';
-  fileInput.hidden = true;
-  const mediaList = document.createElement('div');
-  mediaList.className = 'rt-media';
   const insertImage = (src) => {
     const image = document.createElement('img');
     image.setAttribute('src', src);
@@ -788,50 +794,15 @@ export function createEditor({ root, services, html, onError }) {
     insertNode(image);
     selectImage(image);
   };
-  const loadMedia = async () => {
-    mediaList.replaceChildren();
-    try {
-      for (const src of await services.listMedia()) {
-        const thumb = document.createElement('img');
-        thumb.src = src;
-        thumb.alt = '';
-        const choose = button('', 'Vorhandenes Bild einfügen', () => insertImage(src));
-        choose.append(thumb);
-        mediaList.append(choose);
-      }
-    } catch (error) {
-      onError(error.message || 'Bilder konnten nicht geladen werden');
-    }
-  };
-  const upload = async (file) => {
-    if (file.size > MAX_IMAGE_BYTES) {
-      onError('Das Bild darf höchstens 3 MiB groß sein');
-      return;
-    }
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    if (!detectImageType(bytes)) {
-      onError('Nur PNG-, JPEG- und GIF-Bilder sind erlaubt');
-      return;
-    }
-    try {
-      onError('');
-      const src = await services.uploadMedia(bytes);
-      await loadMedia();
-      insertImage(src);
-    } catch (error) {
-      onError(error.message || 'Upload fehlgeschlagen');
-    }
-  };
-  fileInput.addEventListener('change', () => {
-    const [file] = fileInput.files;
-    fileInput.value = '';
-    if (file) {
-      upload(file);
-    }
-  });
   const uploadRow = document.createElement('div');
   uploadRow.className = 'rt-row';
-  uploadRow.append(fileInput, button('Bild hochladen …', 'Bild hochladen', () => fileInput.click()));
+  uploadRow.append(button('Bild hinzufügen …', 'Bild im Assetmanager auswählen oder hochladen', async () => {
+    remember();
+    try {
+      const asset = await services.pickAsset({ mode: 'image', owner: root });
+      if (asset) { insertImage(asset.href); onError(''); }
+    } catch (error) { onError(error.message || 'Assetmanager konnte nicht geöffnet werden'); }
+  }));
   const props = document.createElement('div');
   props.className = 'rt-row';
   props.hidden = true;
@@ -868,7 +839,7 @@ export function createEditor({ root, services, html, onError }) {
         selectImage(null);
       }
     }));
-  imagePanel.append(uploadRow, mediaList, props);
+  imagePanel.append(uploadRow, props);
   panels.image = imagePanel;
 
   const handle = document.createElement('button');

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<title>Shared Assetmanager regression</title>
+<pre id="result"></pre>
+<script type="module">
+import { openAssetManager } from '../www/fhem-cms/js/asset-manager.js';
+import { createEditor, cleanHtml } from '../www/fhem-cms/js/richtext.js';
+const result = document.querySelector('#result');
+let checks = 0;
+const check = (condition, name) => { checks++; if (!condition) throw new Error(name); };
+const equal = (actual, expected, name) => check(JSON.stringify(actual) === JSON.stringify(expected), `${name}: ${JSON.stringify(actual)}`);
+const pause = () => new Promise(resolve => setTimeout(resolve, 30));
+let revision = 1;
+const image = { id: 'a'.repeat(32), name: 'Solar.png', file: `${'a'.repeat(32)}.png`,
+  href: `media/${'a'.repeat(32)}.png`, bytes: 100, image: true, folder: 'root' };
+const pdf = { id: 'b'.repeat(32), name: 'Anleitung.pdf', file: `${'b'.repeat(32)}.bin`,
+  href: `../../fhemcms-assets/CMS/${'b'.repeat(32)}`, bytes: 200, image: false, folder: 'root' };
+let state = { token: String(revision).padStart(64, '0'), folders: [], assets: [image, pdf], totalBytes: 300,
+  policy: { imageBytes: 3145728, documentBytes: 20971520, totalBytes: 524288000,
+    types: { png: true, jpg: true, gif: true, pdf: true, docx: true } } };
+let inUse = true;
+let failList = false;
+let deleteCalls = 0;
+let uploads = 0;
+let pickerModes = [];
+const tick = () => {
+  state.token = String(++revision).padStart(64, '0');
+  state.totalBytes = state.assets.reduce((sum, asset) => sum + asset.bytes, 0);
+  return structuredClone(state);
+};
+const services = {
+  async assetAction(request) {
+    if (request.op === 'list') {
+      if (failList) throw new Error('Test: Assetkatalog nicht erreichbar');
+      return structuredClone(state);
+    }
+    if (request.op === 'usage') return { usage: inUse ? [
+      { source: 'Live', page: 'solar', pageTitle: 'Solaranlage', widget: 'text1', title: 'Text' },
+      { source: 'Entwurf', page: 'start', pageTitle: 'Startseite', widget: 'links1', title: 'Links' },
+    ] : [] };
+    check(request.token === state.token, 'mutations bind current catalog token');
+    if (request.op === 'mkdir') state.folders.push({ id: String(state.folders.length + 1).repeat(32), name: request.name, parent: request.parent });
+    else if (request.op === 'folder') Object.assign(state.folders.find(item => item.id === request.id), { name: request.name, parent: request.parent });
+    else if (request.op === 'rmdir') state.folders = state.folders.filter(item => item.id !== request.id);
+    else if (request.op === 'move') Object.assign(state.assets.find(item => item.id === request.id), { name: request.name, folder: request.folder });
+    else if (request.op === 'policy') state.policy = structuredClone(request.policy);
+    else if (request.op === 'delete') { deleteCalls++; state.assets = state.assets.filter(item => item.id !== request.id); }
+    else throw new Error(`Unknown operation ${request.op}`);
+    return { state: tick() };
+  },
+  async uploadAsset(file, folder, token, options) {
+    equal(token, state.token, 'upload bound to catalog token');
+    check(file instanceof File, 'real File passed to shared uploader');
+    options.onProgress(file.size, file.size);
+    const item = { ...structuredClone(image), id: 'c'.repeat(32), name: file.name, folder };
+    state.assets.push(item); uploads++;
+    return { state: tick(), selected: item.id };
+  },
+};
+services.pickAsset = options => { pickerModes.push(options.mode); return openAssetManager(services, options); };
+const manager = owner => owner.querySelector('[data-asset-manager]').shadowRoot;
+const click = async (root, selector) => { root.querySelector(selector).click(); await pause(); };
+const set = (root, selector, value, event = 'input') => {
+  const input = root.querySelector(selector); input.value = value; input.dispatchEvent(new Event(event));
+};
+try {
+  let pending = openAssetManager(services);
+  await pause();
+  let root = manager(document);
+  check(root.querySelector('[data-assets-dialog]').open, 'manager opens as modal');
+  check(root.querySelectorAll('[data-asset-id]').length === 2, 'images and documents share catalog');
+  check(root.querySelector('[data-select]').hidden, 'File menu management has no insertion action');
+  const thumb = root.querySelector('img');
+  await thumb.decode();
+  check(thumb.naturalWidth > 0, 'asset thumbnails really load');
+  await click(root, `[data-asset-id="${image.id}"]`);
+  await click(root, '[data-usage-button]');
+  check(root.querySelector('[data-usage]').textContent.includes('Solaranlage'), 'usage shows page title');
+  check(root.querySelector('[data-usage]').textContent.includes('text1'), 'usage shows widget');
+  check(root.querySelector('[data-usage]').textContent.includes('Entwurf'), 'usage distinguishes draft');
+  root.querySelector('[data-confirm-delete]').checked = true;
+  await click(root, '[data-delete-asset]');
+  equal(deleteCalls, 0, 'used asset not deleted');
+  check(root.querySelector('[data-status]').textContent.includes('verwendet'), 'in-use warning visible');
+  set(root, '[data-folder-name]', 'Bilder');
+  await click(root, '[data-mkdir]');
+  const folder = state.folders[0].id;
+  equal(root.querySelector('[data-folder]').value, folder, 'new folder selected');
+  set(root, '[data-folder-name]', 'Unterordner');
+  await click(root, '[data-mkdir]');
+  equal(state.folders[1].parent, folder, 'nested folders created in selected parent');
+  set(root, '[data-folder-name]', 'Solar');
+  await click(root, '[data-folder-save]');
+  equal(state.folders[1].name, 'Solar', 'folder renamed');
+  await click(root, '[data-rmdir]');
+  equal(state.folders.length, 1, 'empty folder removed');
+  set(root, '[data-folder]', 'root', 'change');
+  await click(root, `[data-asset-id="${image.id}"]`);
+  set(root, '[data-asset-name]', 'Neuer Name.png');
+  set(root, '[data-asset-folder]', folder, 'change');
+  await click(root, '[data-move]');
+  equal(state.assets[0].folder, folder, 'asset moved logically');
+  equal(state.assets[0].href, image.href, 'moving does not break saved path');
+  set(root, '[data-folder]', folder, 'change');
+  const transfer = new DataTransfer();
+  transfer.items.add(new File(['image'], 'Upload.png', { type: 'image/png' }));
+  root.querySelector('[data-upload]').files = transfer.files;
+  root.querySelector('[data-upload]').dispatchEvent(new Event('change'));
+  await pause();
+  equal(uploads, 1, 'upload uses unified service');
+  equal(state.assets.at(-1).folder, folder, 'upload goes directly to selected folder');
+  check(root.querySelector('[data-status]').textContent.includes('Upload abgeschlossen'), 'upload success visible');
+  root.querySelector('[data-type=pdf]').checked = false;
+  set(root, '[data-limit=documentBytes]', '30');
+  set(root, '[data-limit=totalBytes]', '600');
+  await click(root, '[data-policy]');
+  equal(state.policy.types.pdf, false, 'type can be disabled');
+  equal(state.policy.documentBytes, 30 * 1048576, 'document quota configurable');
+  equal(state.policy.totalBytes, 600 * 1048576, 'total quota configurable');
+  check(state.assets.some(asset => asset.id === pdf.id), 'disabling a type does not delete existing documents');
+  set(root, '[data-new-type]', 'epub');
+  await click(root, '[data-add-type]');
+  check(state.policy.types.epub, 'new passive extension enabled');
+  set(root, '[data-new-type]', 'svg');
+  await click(root, '[data-add-type]');
+  check(!state.policy.types.svg, 'active types cannot be added');
+  check(root.querySelector('[data-status]').classList.contains('error'), 'invalid admin setting explicitly reported');
+  inUse = false;
+  await click(root, `[data-asset-id="${'c'.repeat(32)}"]`);
+  await click(root, '[data-delete-asset]');
+  equal(deleteCalls, 0, 'unused asset still needs explicit delete confirmation');
+  root.querySelector('[data-confirm-delete]').checked = true;
+  await click(root, '[data-delete-asset]');
+  equal(deleteCalls, 1, 'confirmed unused asset deleted');
+  await click(root, '[data-close]');
+  equal(await pending, null, 'closing management returns no insertion');
+  check(!document.querySelector('[data-asset-manager]'), 'manager DOM cleaned up');
+  pending = openAssetManager(services, { mode: 'image' });
+  await pause(); root = manager(document);
+  equal(root.querySelectorAll('[data-asset-id]').length, 1, 'image picker filters out documents');
+  await click(root, `[data-asset-id="${image.id}"]`);
+  await click(root, '[data-select]');
+  equal((await pending).href, image.href, 'image selection returns stable address');
+  pending = openAssetManager(services, { mode: 'document' });
+  await pause(); root = manager(document);
+  equal(root.querySelectorAll('[data-asset-id]').length, 1, 'document picker filters out images');
+  await click(root, `[data-asset-id="${pdf.id}"]`);
+  await click(root, '[data-select]');
+  equal((await pending).href, pdf.href, 'document selection returns download URL');
+  failList = true;
+  pending = openAssetManager(services);
+  await pause(); root = manager(document);
+  check(root.querySelector('[data-status]').textContent.includes('nicht erreichbar'), 'read errors visible');
+  failList = false;
+  await click(root, '[data-reload]');
+  check(root.querySelectorAll('[data-asset-id]').length === 2, 'reload recovers from explicit failure');
+  await click(root, '[data-close]'); await pending;
+  const host = document.createElement('div'); document.body.append(host);
+  const shadow = host.attachShadow({ mode: 'open' });
+  let error;
+  const editor = createEditor({ root: shadow, html: '<p>Beispieltext</p>', services,
+    onError: message => { error = message; } });
+  shadow.append(editor.element);
+  const button = title => [...shadow.querySelectorAll('button')].find(item => item.title === title);
+  const addImage = [...shadow.querySelectorAll('button')].find(item => item.textContent === 'Bild hinzufügen …');
+  check(addImage && !shadow.querySelector('input[type=file]'), 'Textwidget has no competing direct uploader');
+  addImage.click(); await pause(); root = manager(shadow);
+  equal(pickerModes.at(-1), 'image', 'Textwidget uses same image picker');
+  await click(root, `[data-asset-id="${image.id}"]`); await click(root, '[data-select]'); await pause();
+  check(editor.getHtml().includes(image.href), 'selected asset inserted in rich text');
+  const removeImage = [...shadow.querySelectorAll('button')].find(item => item.textContent === 'Bild entfernen');
+  removeImage.click();
+  check(!editor.getHtml().includes('<img'), 'remove image clears only rich-text element');
+  check(state.assets.some(asset => asset.id === image.id), 'image retained in shared manager');
+  button('Dokument aus dem Assetmanager verlinken').click();
+  await pause(); root = manager(shadow);
+  equal(pickerModes.at(-1), 'document', 'Textwidget documents use same picker');
+  await click(root, `[data-asset-id="${pdf.id}"]`); await click(root, '[data-select]'); await pause();
+  check(editor.getHtml().includes(pdf.href), 'document hyperlink survives Textwidget cleaner');
+  check(!error, 'insertion has no error');
+  check(cleanHtml(`<p><a href="${pdf.href}">PDF</a></p>`).includes(pdf.href), 'document URL explicitly allowed');
+  const owner = document.createElement('div'); document.body.append(owner);
+  pending = openAssetManager(services, { owner });
+  await pause(); owner.remove();
+  equal(await pending, null, 'removing owner closes nested manager');
+  editor.destroy(); host.remove();
+  result.dataset.result = 'pass'; result.textContent = JSON.stringify({ checks });
+} catch (error) {
+  result.dataset.result = 'fail'; result.textContent = error.stack || String(error);
+}
+</script>
+</html>

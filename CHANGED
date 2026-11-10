@@ -575,3 +575,15 @@ verlinkte Seiten koennen erst nach Anpassung ihrer Links geloescht werden.
 
 Numerische Positions-/Groessenfelder im Linkdialog entfallen.
 Das feine innere Raster ist beim Bearbeiten dauerhaft sichtbar.
+2026-11-10 - 1.4.0-dev: Gemeinsamer Assetmanager (Refs #125)
+
+Datei > Assetmanager und die Bild-/Dokumentauswahl in Text- und Linkwidget
+verwenden denselben Manager mit Ordnern, Unterordnern, Upload, Umbenennen,
+Verschieben, Downloads und Loeschen. Bestehende Bildadressen bleiben erhalten.
+Bild entfernen loescht nur den Widgetverweis. Verwendete Assets sind vor
+Loeschung geschuetzt; die Warnung nennt Live/Entwurf, Seite und Widget.
+PDF, Office alt/neu, OpenDocument und TXT/CSV sind standardmaessig erlaubt.
+Administration fuer Dateitypen und Limits ist vorerst fuer alle Bearbeiter offen.
+Vorgaben: Bilder3MiB, Dokumente20MiB, gesamt500MiB. Dokumente liegen ausserhalb
+des Webverzeichnisses und werden als Download angeboten. Upload und Download
+erfolgen in begrenzten Bloecken. Assetaenderungen gelten unabhaengig vom Entwurf.

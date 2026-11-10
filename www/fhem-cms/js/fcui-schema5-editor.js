@@ -37,6 +37,7 @@ export class Schema5Editor {
   #widgets;
   #arrange;
   #backup;
+  #assets;
   #gridToggle;
   #previewToggle;
   #publish;
@@ -111,6 +112,10 @@ export class Schema5Editor {
     this.#backup.type = 'button';
     this.#backup.textContent = 'Sicherungen / Wiederherstellung';
     this.#backup.className = 'cms-button';
+    this.#assets = document.createElement('button');
+    this.#assets.type = 'button';
+    this.#assets.textContent = 'Assetmanager';
+    this.#assets.className = 'cms-button';
     this.#gridToggle = document.createElement('button');
     this.#gridToggle.type = 'button';
     this.#gridToggle.textContent = 'Raster anzeigen';
@@ -121,7 +126,7 @@ export class Schema5Editor {
     this.#previewToggle.textContent = 'Vorschau';
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
-    this.#menu('Datei', [this.#publish, this.#discard, this.#backup]);
+    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets]);
     this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#arrange]);
     this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
@@ -135,6 +140,15 @@ export class Schema5Editor {
     this.#widgets.addEventListener('click', () => this.#openWidgets());
     this.#arrange.addEventListener('click', () => this.#arrangeWidgets());
     this.#backup.addEventListener('click', () => this.#openBackup());
+    this.#assets.addEventListener('click', async () => {
+      if (!this.#active || this.#suspended || this.#assets.disabled) return;
+      this.#setActions(false, false);
+      try { await this.#services.pickAsset({ owner: this.#root }); }
+      catch (error) { this.#status.textContent = error.message || 'Assetmanager konnte nicht geöffnet werden'; }
+      finally {
+        if (this.#active && !this.#suspended) this.#setActions(Boolean(this.#view), Boolean(this.#controller.snapshot().draft));
+      }
+    });
     this.#previewToggle.addEventListener('click', () => {
       this.#previewMode = !this.#previewMode;
       this.#previewToggle.setAttribute('aria-pressed', this.#previewMode ? 'true' : 'false');
@@ -222,6 +236,7 @@ export class Schema5Editor {
     this.#widgets.disabled = !enabled;
     this.#arrange.disabled = !enabled;
     this.#backup.disabled = !enabled;
+    this.#assets.disabled = !enabled;
     this.#gridToggle.disabled = !enabled;
     this.#previewToggle.disabled = !enabled;
     this.#publish.disabled = !enabled || !hasDraft;

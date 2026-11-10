@@ -33,6 +33,9 @@ my @assets = (
     'www/fhem-cms/js/fcui-migration-transport.js',
     'www/fhem-cms/js/fcui-migration-controller.js',
     'www/fhem-cms/js/widget-services.js',
+    'www/fhem-cms/js/asset-manager.js',
+    'www/fhem-cms/js/asset-contract.js',
+    'FHEM/lib/FHEMCMS/Assets.pm',
 );
 for my $asset (@assets) {
     ok(-s $asset, "$asset exists and is not empty");

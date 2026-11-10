@@ -158,7 +158,15 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
       unsubscribe() { unsubscribed += 1; },
     };
     const root = new Element('section');
-    editor = new Schema5Editor({ GridStack, root, controller, client, services: {}, browser });
+    let assetCalls = 0;
+    editor = new Schema5Editor({ GridStack, root, controller, client, services: {
+      pickAsset: async options => {
+        assert.equal(options.owner, root, 'File menu Assetmanager follows editor lifecycle');
+        assert.equal(options.mode, undefined, 'File menu opens management, not a filtered picker');
+        assetCalls++;
+        return null;
+      },
+    }, browser });
     await editor.start();
     const deviceBar = document.body.children.find((node) => node.className === 'cms-device-bar');
     assert.ok(deviceBar, 'device preview controls are available in the schema-5 editor');
@@ -196,6 +204,11 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
       ['Datei', 'Bearbeiten', 'Ansicht']);
     assert.equal(editMenu.children[1].children[0].textContent, 'Seiteneinstellungen');
     assert.deepEqual(viewMenu.children[1].children.map((item) => item.textContent), ['Vorschau', 'Raster anzeigen']);
+    const assetButton = fileMenu.children[1].children.find(item => item.textContent === 'Assetmanager');
+    assert.ok(assetButton, 'File menu exposes shared Assetmanager');
+    await assetButton.fire('click');
+    assert.equal(assetCalls, 1);
+    assert.equal(writes, 0, 'opening Assetmanager never saves or publishes a page draft');
     fileMenu.open = true;
     editMenu.open = true;
     editMenu.fire('toggle');

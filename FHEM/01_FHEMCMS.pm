@@ -9,15 +9,18 @@ use Fcntl qw(O_CREAT O_EXCL O_WRONLY);
 use File::Copy qw(copy);
 use File::Path qw(make_path remove_tree);
 use File::Spec;
+use File::Basename ();
 use IO::Handle ();
 use JSON::PP ();
 use MIME::Base64 qw(decode_base64 encode_base64);
 use POSIX qw(strftime);
 use Time::Local ();
 
-our $FHEMCMS_VERSION = '1.3.0-dev';
+require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
+
+our $FHEMCMS_VERSION = '1.4.0-dev';
 our ($readingFnAttributes, $FW_ME);
-our (%attr);
+our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
 our $FHEMCMS_MAX_BACKUPS = 20;
 our $FHEMCMS_MAX_TEXT = 20000;
@@ -42,6 +45,7 @@ sub FHEMCMS_Initialize {
     $modHash->{SetFn} = 'FHEMCMS_Set';
     $modHash->{FW_summaryFn} = 'FHEMCMS_Summary';
     $modHash->{AttrList} = 'dbLog fileLog historySource:auto,dblog,filelog ' . ($readingFnAttributes // '');
+    $data{FWEXT}{'/fhemcms-assets'}{FUNC} = 'FHEMCMS_AssetDownload';
 }
 
 sub FHEMCMS_Define {
@@ -87,6 +91,12 @@ sub FHEMCMS_Define {
 }
 
 sub FHEMCMS_Undef {
+    my ($hash) = @_;
+    for my $id (keys %main::FHEMCMS_ASSET_UPLOADS) {
+        next if ($main::FHEMCMS_ASSET_UPLOADS{$id}{name} ne $hash->{NAME});
+        RemoveInternalTimer($id, 'FHEMCMS_AssetUploadExpired');
+        FHEMCMS_AssetUploadExpired($id);
+    }
     return undef;
 }
 
@@ -221,6 +231,11 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->canonical->encode($config);
     }
 
+    if ($cmd eq 'assets') {
+        return 'assets erwartet keine Parameter' if (@args);
+        return FHEMCMS_AssetsDispatch($name, {op => 'list'});
+    }
+
     if ($cmd eq 'media') {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
         my ($error, $mediaDir) = FHEMCMS_MediaDir($name);
@@ -232,7 +247,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg icons:noArg logreadings history layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings history layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -292,6 +307,11 @@ sub FHEMCMS_SetCommand {
         my ($backup, $migrationError) = FHEMCMS_MigrationCommand($dataDir, @args);
         return $migrationError if (defined($migrationError));
         return JSON::PP->new->utf8->canonical->encode({backup => $backup});
+    }
+
+    if ($cmd eq 'assets') {
+        return 'assets erwartet genau eine kodierte Anfrage' if (@args != 1);
+        return FHEMCMS_AssetsDispatch($name, $args[0]);
     }
 
     if ($cmd eq 'media') {
@@ -1138,8 +1158,9 @@ sub FHEMCMS_ValidateLinks {
     for my $link (@{$links}) {
         return 'Link muss ein Objekt sein' if (ref($link) ne 'HASH');
         return 'Ungueltige Linkart' if (!defined($link->{kind}) || ref($link->{kind})
-            || $link->{kind} !~ /\A(?:internal|external)\z/);
-        my @required = (qw(id kind text showText textPosition target grid), $link->{kind} eq 'internal' ? 'page' : 'url');
+            || $link->{kind} !~ /\A(?:internal|external|asset)\z/);
+        my @required = (qw(id kind text showText textPosition target grid),
+            $link->{kind} eq 'internal' ? 'page' : $link->{kind} eq 'asset' ? 'asset' : 'url');
         my %allowed = map { $_ => 1 } (@required, 'image');
         return 'Fehlendes oder unbekanntes Linkfeld'
             if (grep { !exists($link->{$_}) } @required);
@@ -1157,6 +1178,10 @@ sub FHEMCMS_ValidateLinks {
             return 'Link verweist auf eine unbekannte CMS-Seite'
                 if (!defined($link->{page}) || ref($link->{page}) || !$pages{$link->{page}});
             return 'Interne Links oeffnen immer im selben Fenster' if ($link->{target} ne 'self');
+        } elsif ($link->{kind} eq 'asset') {
+            return 'Ungueltiger Dokumentlink' if (!defined($link->{asset}) || ref($link->{asset})
+                || $link->{asset} !~ m{\A\.\./\.\./fhemcms-assets/[A-Za-z0-9_.-]{1,128}/[0-9a-f]{32}\z}
+                || $link->{target} !~ /\A(?:self|tab|window)\z/);
         } else {
             return 'Ungueltige externe Link-URL' if (!defined($link->{url}) || ref($link->{url}) || length($link->{url}) > 2000);
             return 'Ungueltige externe Link-URL'
@@ -1282,7 +1307,7 @@ sub FHEMCMS_ValidateHtml {
                 (my $decoded = $value) =~ s/&amp;/&/g;
                 if ($attr eq 'href') {
                     return 'ungueltiger Link'
-                        if ($decoded !~ m{\A(?:https?://[A-Za-z0-9._~:/?\#\[\]\@!\$&'()*+,;=%-]{1,2000}|mailto:[A-Za-z0-9._%+-]{1,64}\@[A-Za-z0-9.-]{1,255}|\#/[A-Za-z0-9_-]{1,64})\z});
+                        if ($decoded !~ m{\A(?:https?://[A-Za-z0-9._~:/?\#\[\]\@!\$&'()*+,;=%-]{1,2000}|mailto:[A-Za-z0-9._%+-]{1,64}\@[A-Za-z0-9.-]{1,255}|\#/[A-Za-z0-9_-]{1,64}|\.\./\.\./fhemcms-assets/[A-Za-z0-9_.-]{1,128}/[0-9a-f]{32})\z});
                 } elsif ($attr eq 'src') {
                     return 'ungueltige Bildquelle'
                         if ($decoded !~ m{\Amedia/[0-9a-f]{32}\.(?:png|jpg|gif)\z});
@@ -1385,6 +1410,8 @@ sub FHEMCMS_StoreMedia {
         $ext = 'gif';
     }
     return ('Nur PNG-, JPEG- und GIF-Bilder sind erlaubt') if (!defined($ext));
+    my $policyError = FHEMCMS_AssetLegacyPolicy($name, $ext, $data);
+    return ($policyError) if (defined($policyError));
 
     my ($error, $mediaDir) = FHEMCMS_MediaDir($name);
     return ($error) if (defined($error));
@@ -2541,7 +2568,12 @@ use FHEMWEB and FHEM permissions.</p>
   keine Zugriffssperre.</p>
   <p>Seiteneinstellungen enthalten Theme, Rahmen, Rasterdichte und globale
   Titelausrichtung. Bilder werden im jeweiligen CMS-Device gespeichert:
-  PNG, JPEG oder GIF bis 3 MiB, hoechstens 200 Bilder pro Device.
+  Der gemeinsame <b>Assetmanager</b> unter <b>Datei</b> verwaltet Bilder und
+  Dokumente mit Ordnern. Bild-/Dokumentauswahl in Widgets verwendet denselben
+  Dialog. Vorgaben: Bilder bis 3 MiB, Dokumente bis 20 MiB, zusammen 500 MiB
+  pro Device; die Administration erlaubt angepasste Typfreigaben und Limits.
+  Bild entfernen loescht nur den Widgetverweis. Verwendete Assets sind vor
+  Loeschung geschuetzt. Assetaenderungen gelten unabhaengig vom Seitenentwurf.
   Die installierte Modulversion steht im Internal <code>VERSION</code>.
   Nach Updates FHEM neu starten und CMS-Browserseiten vollstaendig neu laden.</p>
   <p>Ausfuehrliche Anleitung:

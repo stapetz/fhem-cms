@@ -1,3 +1,5 @@
+import { validateAssetState } from './asset-contract.js';
+
 const NAME_PATTERN = /^[A-Za-z0-9_.-]{1,128}(?![\s\S])/;
 
 export const ICON_NAME = /^(?!.*\.\.)[A-Za-z0-9_][A-Za-z0-9_./-]{0,79}$/;
@@ -322,6 +324,52 @@ export class FhemClient {
     return Array.isArray(list)
       ? list.filter((name) => typeof name === 'string' && /^[0-9a-f]{32}\.(png|jpg|gif)$/.test(name)).map((name) => `media/${name}`)
       : [];
+  }
+
+  async assetAction(request) {
+    const text = request.op === 'list'
+      ? await this.command(`get ${this.cmsDevice} assets`)
+      : await this.command(`set ${this.cmsDevice} assets ${toBase64(JSON.stringify(request))}`);
+    const result = await this.parseJsonResult(text, 'Asset-Aktion lieferte keine gültige Antwort');
+    if (!result || typeof result !== 'object' || Array.isArray(result)) throw new Error('Ungültige Assetantwort');
+    if (result.error) {
+      const error = new Error(result.error);
+      error.usage = result.usage;
+      throw error;
+    }
+    if (request.op === 'list') validateAssetState(result);
+    if (result.state) validateAssetState(result.state);
+    return result;
+  }
+
+  async uploadAsset(file, folder, token, { signal, onProgress = () => {} } = {}) {
+    const started = await this.assetAction({ op: 'begin', token, folder, name: file.name, size: file.size });
+    if (!/^[0-9a-f]{32}$/.test(started.upload) || started.chunkBytes !== 65536) throw new Error('Ungültige Uploadantwort');
+    let finished = false;
+    try {
+      for (let offset = 0; offset < file.size; offset += started.chunkBytes) {
+        if (signal?.aborted) throw new Error('Upload abgebrochen');
+        const bytes = new Uint8Array(await file.slice(offset, offset + started.chunkBytes).arrayBuffer());
+        let binary = '';
+        for (let index = 0; index < bytes.length; index += 0x8000) {
+          binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+        }
+        const reply = await this.assetAction({ op: 'chunk', upload: started.upload, offset, data: btoa(binary) });
+        if (reply.received !== offset + bytes.length) throw new Error('Uploadblock wurde nicht bestätigt');
+        onProgress(reply.received, file.size);
+      }
+      if (signal?.aborted) throw new Error('Upload abgebrochen');
+      const reply = await this.assetAction({ op: 'finish', token, upload: started.upload });
+      if (!reply.state || typeof reply.selected !== 'string') throw new Error('Upload wurde nicht bestätigt');
+      finished = true;
+      return reply;
+    } catch (error) {
+      if (!finished) {
+        try { await this.assetAction({ op: 'cancel', upload: started.upload }); }
+        catch (cleanupError) { throw new Error(`${error.message}; Uploadbereinigung: ${cleanupError.message}`); }
+      }
+      throw error;
+    }
   }
 
   async uploadMedia(bytes) {

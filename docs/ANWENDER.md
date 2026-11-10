@@ -231,14 +231,16 @@ auf eine vorhandene CMS-Seite; im Dialog wählen Sie das gewünschte Ziel:
   Ein separates Fenster wird vom Browser angefordert; Browser- und Popupregeln
   können daraus einen Tab machen oder das Öffnen verhindern.
   Zugangsdaten in der Adresse und andere Protokolle sind nicht erlaubt.
+- **Dokument aus Assetmanager:** Ein abgelegtes Dokument auswählen.
+  Es wird über einen Download-Link angeboten.
 
 Jede Kachel benötigt einen **Linktext**, der auch bei ausgeblendetem Text als
 zugängliche Linkbeschriftung erhalten bleibt. Mit **Linktext anzeigen** lässt er
 sich ein-/ausblenden. Bei sichtbarem Text sind **Oberhalb des Bildes**, **Im Bild**
-und **Unterhalb des Bildes** möglich. Ein Bild ist optional: PNG, JPEG oder GIF
-bis 3 MiB hochladen oder aus den vorhandenen CMS-Medien wählen. Die gemeinsame
-Medienverwaltung erlaubt höchstens 200 Bilder pro CMS-Device. Uploads bleiben
-auch nach Abbrechen des Dialogs in der Medienverwaltung.
+und **Unterhalb des Bildes** möglich. **Bild hinzufügen …** öffnet den gemeinsamen
+Assetmanager für Auswahl und Upload. **Bild entfernen** entfernt nur den Verweis
+aus dieser Kachel, nicht die Datei. Uploads bleiben auch nach Abbrechen des
+Widgetdialogs im Assetmanager erhalten.
 
 Im **Konfigurationsdialog** eine Kachel über ihren Griff verschieben und unten
 rechts skalieren. Das innere Raster hat unabhängig vom Seitenraster 12 Spalten
@@ -254,6 +256,67 @@ skalieren Sie weiterhin wie andere Widgets auf der CMS-Seite.
 **Veröffentlichen**. Interne Links werden beim Umbenennen einer Seitendatei
 automatisch mitgeführt. Vor dem Löschen einer verlinkten Seite müssen die
 betroffenen Links geändert oder entfernt werden.
+
+### Assetmanager: Bilder und Dokumente
+
+Über **Datei → Assetmanager** verwalten Sie die Assets des aktuellen CMS-Devices.
+Denselben Dialog öffnen **Bild hinzufügen …** im Texteditor und LinkWidget sowie
+**Dokument auswählen …** bei Dokumentlinks. Die Bildauswahl zeigt nur Bilder,
+die Dokumentauswahl nur Dokumente. Bereits früher im Textwidget hochgeladene
+Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
+
+- Im **Ordner**-Feld navigieren. Der Stammordner zeigt zur Übersicht alle Assets.
+  Unter **Ordner verwalten** Unterordner anlegen, umbenennen oder über den
+  übergeordneten Ordner verschieben. Nur leere Ordner lassen sich löschen.
+- Unter **Dateien in diesen Ordner hochladen** eine oder mehrere Dateien wählen.
+  Uploads landen direkt im gewählten Ordner. Fortschritt und Fehler werden
+  angezeigt; **Upload abbrechen** verwirft den laufenden Upload.
+  Identische Dateien werden wiederverwendet, nicht dupliziert.
+- Ein Asset anklicken: Dateinamen ändern (ohne Wechsel der Endung), in einen
+  anderen Ordner verschieben, öffnen/herunterladen oder Verwendungen anzeigen.
+  Verschieben/Umbenennen ändert gespeicherte Bild-/Dokumentadressen nicht.
+- **Asset endgültig löschen** erfordert die Bestätigungs-Checkbox. Verwendete
+  Assets sind auch nach Bestätigung gesperrt: Die Warnung nennt **Live/Entwurf,
+  Seite und Widget**. Zuerst diese Verweise entfernen; die Verwendung wird beim
+  Löschen serverseitig erneut geprüft.
+
+Assetänderungen gelten **sofort**, nicht erst nach Veröffentlichen des
+Seitenentwurfs. Entfernen eines Bildes/Links aus einem Widget löscht niemals das
+Asset. Umgekehrt ist eine bestätigte Assetlöschung unwiderruflich. Ältere
+Konfigurationssicherungen enthalten keine Assetdateien und können auf danach
+gelöschte Dateien verweisen. Assets deshalb separat mit sichern.
+Die Verwendungsprüfung umfasst die gespeicherten Live-/Entwurfsseiten dieses
+CMS-Devices, nicht externe Verweise oder noch ungespeicherte Dialogänderungen.
+
+Unter **Administration: Dateitypen und Speichergrenzen** sind zunächst alle
+CMS-Bearbeiter gleichberechtigt; ein eigenes Rollen-/Berechtigungskonzept folgt
+später. FHEM-/FHEMWEB-Zugriffsschutz bleibt bestehen.
+
+| Vorgabe | Standard |
+|---|---|
+| Bilder | PNG, JPEG, GIF; höchstens 3 MiB je Datei |
+| Dokumente | PDF, Word (`doc`, `docx`), Excel (`xls`, `xlsx`), PowerPoint (`ppt`, `pptx`), OpenDocument (`odt`, `ods`, `odp`), TXT und CSV |
+| Dokumentgröße | höchstens 20 MiB je Datei |
+| Gesamtspeicher | 500 MiB je CMS-Device |
+
+Typen können per Checkbox für neue Uploads gesperrt/freigegeben werden.
+Weitere Endungen können ergänzt werden; aktive Web-/Skriptformate wie HTML,
+SVG oder JavaScript bleiben gesperrt. Bestehende Dateien eines später gesperrten
+Typs bleiben erhalten. Größenlimits lassen sich konfigurieren, mit technischen
+Obergrenzen von 50 MiB je Datei und 2048 MiB gesamt. Ein niedrigeres Limit löscht
+keine vorhandenen Assets, verhindert aber weitere Uploads, solange es überschritten
+ist. Weitere Schutzgrenzen: 2000 Assets, 200 Ordner, höchstens 10 Ordnerebenen.
+Der Katalog selbst darf 1 MiB Metadaten enthalten; sehr lange Namen können
+diese Grenze vor der maximalen Assetanzahl erreichen.
+
+Dokumente werden außerhalb des Web-Verzeichnisses abgelegt und ausschließlich
+als Download ausgeliefert; es gibt keine Office-Vorschau oder Skriptausführung im
+CMS. Formatprüfungen sind **kein Virenscanner** – nur vertrauenswürdige Dokumente
+öffnen. Größere Uploads und Dokumentdownloads werden in 64-KiB-Blöcken übertragen,
+damit FHEM zwischen den Blöcken weiterarbeiten kann. Ein Upload läuft höchstens
+15 Minuten; je Device ist ein gleichzeitiger Upload möglich.
+Bei parallelen Katalogänderungen erscheint eine Konfliktmeldung: **Neu laden**
+und die gewünschte Aktion erneut ausführen.
 
 ### Navigation und Widgets bearbeiten
 

@@ -19,7 +19,7 @@ export function validateLinkItems(links, pages) {
   for (const link of links) {
     if (!link || typeof link !== 'object' || Array.isArray(link)) throw new Error('Ungültiger Link');
     const required = ['id', 'kind', 'text', 'showText', 'textPosition', 'target', 'grid',
-      link.kind === 'internal' ? 'page' : 'url'];
+      link.kind === 'internal' ? 'page' : link.kind === 'asset' ? 'asset' : 'url'];
     const keys = new Set([...required, 'image']);
     if (required.some(key => !Object.hasOwn(link, key)) || Object.keys(link).some(key => !keys.has(key))) {
       throw new Error('Fehlendes oder unbekanntes Linkfeld');
@@ -37,6 +37,9 @@ export function validateLinkItems(links, pages) {
         throw new Error('Link verweist auf eine unbekannte CMS-Seite');
       }
       if (link.target !== 'self') throw new Error('Interne Links öffnen immer im selben Fenster');
+    } else if (link.kind === 'asset') {
+      if (typeof link.asset !== 'string' || !ASSET_DOCUMENT.test(link.asset)
+        || !['self', 'tab', 'window'].includes(link.target)) throw new Error('Ungültiger Dokumentlink');
     } else if (link.kind !== 'external' || !validLinkUrl(link.url) || !['self', 'tab', 'window'].includes(link.target)) {
       throw new Error('Externe Links benötigen eine gültige HTTP(S)-URL und ein gültiges Ziel');
     }
@@ -60,6 +63,8 @@ export function validateLinkItems(links, pages) {
 
 export function linkHref(link) {
   if (link.kind === 'internal' && typeof link.page === 'string' && ID.test(link.page)) return `#/${link.page}`;
+  if (link.kind === 'asset' && typeof link.asset === 'string' && ASSET_DOCUMENT.test(link.asset)) return link.asset;
   if (link.kind === 'external' && validLinkUrl(link.url)) return link.url;
   throw new Error('Ungültiges Linkziel');
 }
+import { ASSET_DOCUMENT } from './asset-contract.js';

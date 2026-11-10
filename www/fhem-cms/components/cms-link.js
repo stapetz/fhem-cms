@@ -1,5 +1,4 @@
-import { LINK_COLUMNS, LINK_MEDIA, MAX_LINKS, linkHref, validateLinkItems } from '../js/link-widget.js';
-import { MAX_IMAGE_BYTES, detectImageType } from '../js/richtext.js';
+import { LINK_COLUMNS, MAX_LINKS, linkHref, validateLinkItems } from '../js/link-widget.js';
 
 function node(tag, text) {
   const result = document.createElement(tag);
@@ -102,7 +101,7 @@ class FHEMCMSLink extends HTMLElement {
             <button type="button" data-add>Link hinzufügen</button></div>
             <div class="settings" data-settings></div></div>
           <p class="hint">Neue Fenster werden angefordert; Browser können sie stattdessen als Tab öffnen.
-          Bilder: PNG/JPEG/GIF bis 3 MiB. Hochgeladene Bilder bleiben auch nach Abbrechen in der Medienverwaltung.</p>
+          Bilder und Dokumente werden gemeinsam im Assetmanager verwaltet. Bild entfernen löscht nur den Verweis.</p>
           <p class="error" role="alert" data-error></p>
           <div class="actions">
             <button type="button" data-delete>Widget löschen</button>
@@ -313,15 +312,22 @@ class FHEMCMSLink extends HTMLElement {
       label.append(input); settings.append(label); return input;
     };
     field('Linktext (auch bei ausgeblendetem Text erforderlich)', 'text');
-    field('Linkziel', 'kind', [['internal', 'Interne CMS-Seite'], ['external', 'Externe Webseite']], () => {
-      delete link.page; delete link.url;
+    field('Linkziel', 'kind', [['internal', 'Interne CMS-Seite'], ['external', 'Externe Webseite'], ['asset', 'Dokument aus Assetmanager']], () => {
+      delete link.page; delete link.url; delete link.asset;
       if (link.kind === 'internal') { link.page = this.pages[0].id; link.target = 'self'; }
-      else { link.url = ''; link.target = 'tab'; }
+      else if (link.kind === 'external') { link.url = ''; link.target = 'tab'; }
+      else { link.asset = ''; link.target = 'self'; }
       this.editSelected();
     });
     if (link.kind === 'internal') field('CMS-Seite', 'page', this.pages.map(page => [page.id, page.title]));
     else {
-      field('URL (http:// oder https://)', 'url');
+      if (link.kind === 'external') field('URL (http:// oder https://)', 'url');
+      else {
+        const documentButton = node('button', link.asset ? 'Dokument ändern …' : 'Dokument auswählen …');
+        documentButton.type = 'button'; documentButton.dataset.document = '';
+        documentButton.addEventListener('click', () => this.chooseAsset(link, 'document'));
+        settings.append(documentButton, node('small', link.asset || 'Noch kein Dokument ausgewählt.'));
+      }
       field('Öffnen in', 'target', [['self', 'Gleiches Fenster'], ['tab', 'Neuer Tab'], ['window', 'Neues Browserfenster']]);
     }
     const label = node('label', ' Linktext anzeigen');
@@ -336,21 +342,13 @@ class FHEMCMSLink extends HTMLElement {
     image.hidden = !link.image;
     if (link.image) image.src = link.image;
     settings.append(image);
-    const upload = node('input');
-    upload.type = 'file'; upload.accept = 'image/png,image/jpeg,image/gif'; upload.dataset.upload = '';
-    const uploadLabel = node('label', 'Bild hochladen'); uploadLabel.append(upload); settings.append(uploadLabel);
-    upload.addEventListener('change', () => {
-      const file = upload.files[0]; upload.value = '';
-      if (file) this.uploadImage(link, file);
-    });
-    const mediaButton = node('button', 'Vorhandenes Bild auswählen');
+    const mediaButton = node('button', 'Bild hinzufügen …');
     mediaButton.type = 'button'; mediaButton.dataset.media = '';
-    const media = node('div'); media.className = 'media';
-    mediaButton.addEventListener('click', () => this.loadMedia(link, media));
+    mediaButton.addEventListener('click', () => this.chooseAsset(link, 'image'));
     const clear = node('button', 'Bild entfernen'); clear.type = 'button'; clear.dataset.clearImage = '';
     clear.disabled = !link.image;
     clear.addEventListener('click', () => { delete link.image; this.editSelected(); });
-    settings.append(mediaButton, media, clear);
+    settings.append(mediaButton, clear);
     const remove = node('button', 'Link entfernen'); remove.type = 'button'; remove.dataset.removeLink = '';
     remove.disabled = this.links.length === 1;
     remove.addEventListener('click', () => {
@@ -371,36 +369,14 @@ class FHEMCMSLink extends HTMLElement {
     finally { this.busy = false; this.$('[data-form]').inert = false; }
   }
 
-  async loadMedia(link, box) {
+  async chooseAsset(link, mode) {
     const generation = this.generation;
     await this.operation(async () => {
-      const media = await this.services.listMedia();
-      if (!Array.isArray(media) || media.some(src => typeof src !== 'string' || !LINK_MEDIA.test(src))) {
-        throw new Error('Ungültige Bildliste');
-      }
+      const asset = await this.services.pickAsset({ mode, owner: this.shadowRoot });
       if (generation !== this.generation) return;
-      box.replaceChildren();
-      if (!media.length) box.append(node('p', 'Noch keine Bilder vorhanden.'));
-      for (const src of media) {
-        const button = node('button'); button.type = 'button'; button.title = 'Bild auswählen';
-        const image = node('img'); image.src = src; image.alt = 'Gespeichertes Bild';
-        button.append(image);
-        button.addEventListener('click', () => { link.image = src; this.editSelected(); });
-        box.append(button);
-      }
-    });
-  }
-
-  async uploadImage(link, file) {
-    const generation = this.generation;
-    await this.operation(async () => {
-      if (file.size > MAX_IMAGE_BYTES) throw new Error('Das Bild darf höchstens 3 MiB groß sein');
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      if (!detectImageType(bytes)) throw new Error('Nur PNG-, JPEG- und GIF-Bilder sind erlaubt');
-      const src = await this.services.uploadMedia(bytes);
-      if (typeof src !== 'string' || !LINK_MEDIA.test(src)) throw new Error('Ungültige Uploadantwort');
-      if (generation !== this.generation) return;
-      link.image = src;
+      if (!asset) return;
+      if (mode === 'image') link.image = asset.href;
+      else link.asset = asset.href;
       this.editSelected();
       this.message('');
     });
