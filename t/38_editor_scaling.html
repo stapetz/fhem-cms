@@ -25,6 +25,13 @@ try {
     pages: [{ id: 'one', title: 'Home', widgets: [
       { id: 'value', type: 'fhem-value', title: 'Temperature', device: 'Test', reading: 'state',
         grid: { col: 1, row: 17, w: 48, h: 32 } },
+    ] }, { id: 'other', title: 'Other page', widgets: [
+      { id: 'collision', type: 'text', html: '<p>Keep this content</p>',
+        grid: { col: 118, row: 1, w: 32, h: 10 } },
+      { id: 'following', type: 'text', html: '<p>Following</p>',
+        grid: { col: 118, row: 11, w: 32, h: 10 } },
+      { id: 'untouched', type: 'text', html: '<p>Unchanged</p>',
+        grid: { col: 160, row: 1, w: 32, h: 10 } },
     ] }],
   };
   const original = JSON.stringify(live);
@@ -35,6 +42,12 @@ try {
     save: async (draft, token) => {
       check(token === state.token, 'drag/resize uses current state token');
       writes += 1;
+      if (writes === 2) {
+        check(draft.navigation.grid.w === 121 && draft.navigation.grid.h === 11,
+          'actual pointer shrinking is persisted');
+        check(JSON.stringify(draft.pages[1].widgets.map((widget) => widget.grid.row)) === '[13,23,1]',
+          'pointer shrinking does not pull displaced widgets upward');
+      }
       state = { live, draft: structuredClone(draft), token: writes.toString(16).padStart(64, '0') };
       output.dataset.writes = String(writes);
     },
@@ -95,11 +108,21 @@ try {
     try {
       await settle();
       const current = state.draft.pages[0].widgets[0].grid;
-      check(writes === 3, `one write per drag/resize, got ${writes}`);
+      check(writes === 5, `one write per drag/resize, got ${writes}`);
       check(current.col === 3 && current.row === 18, `drag coordinates: ${JSON.stringify(current)}`);
       check(current.w === 49 && current.h === 33, `resize dimensions: ${JSON.stringify(current)}`);
       check(state.draft.navigation.grid.w === 125 && state.draft.navigation.grid.h === 12,
         'flat navigation resized through its actual corner without fixed link dimensions');
+      check(JSON.stringify(state.draft.pages[1].widgets.map((widget) => widget.grid.row)) === '[13,23,1]',
+        'navigation resize persists collisions and cascading displacement on another page');
+      check(state.draft.pages[1].widgets.every((widget, i) => {
+        const original = live.pages[1].widgets[i];
+        return widget.html === original.html && widget.grid.col === original.grid.col
+          && widget.grid.w === original.grid.w && widget.grid.h === original.grid.h;
+      }), 'cross-page reflow preserves content, columns and sizes');
+      const saved = JSON.stringify(state.draft);
+      await controller.reload();
+      check(JSON.stringify(controller.snapshot().draft) === saved, 'resized cross-page layout survives reload');
       check(!('itemWidth' in state.draft.navigation) && !('itemHeight' in state.draft.navigation),
         'resizing does not add fixed navigation link sizes');
       check(JSON.stringify(live) === original, 'live config remains byte-for-byte unchanged');
@@ -108,6 +131,13 @@ try {
       check(Math.abs(devicePixelRatio - 1.25) < 0.02, 'pointer interactions use real 125 percent browser zoom');
       check(workspace.scrollLeft > 0, 'resize works after horizontally scrolling the editing workspace');
       appearance();
+      editor.stop();
+      await editor.start();
+      await settle();
+      const restored = [...root.querySelector('.cms-grid-editable').children]
+        .find((widget) => widget.gridstackNode.id === '__nav').gridstackNode;
+      check(restored.w === 125 && restored.h === 12, 'reopening editor restores saved navigation dimensions');
+      check(writes === 5, 'reopening never rewrites the layout');
       editor.stop();
       output.dataset.result = 'pass';
       output.textContent = JSON.stringify({ checks, writes });

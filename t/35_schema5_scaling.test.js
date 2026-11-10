@@ -173,9 +173,11 @@ test('real editor pointer drag and resize preserve appearance on a scrollable ca
       assert.equal(readiness.ready, 'true', readiness.text);
       for (const [id, selector, dx, dy, writes] of [
         ['__nav', '.ui-resizable-se', 8, 2, 1],
-        ['value', '.cms-widget-drag', 2, 1, 2], ['value', '.ui-resizable-se', 1, 1, 3],
+        ['__nav', '.ui-resizable-se', -4, -1, 2],
+        ['__nav', '.ui-resizable-se', 4, 1, 3],
+        ['value', '.cms-widget-drag', 2, 1, 4], ['value', '.ui-resizable-se', 1, 1, 5],
       ]) {
-        if (writes === 3) {
+        if (writes === 5) {
           await evaluate(`document.querySelector('.cms-schema5-workspace').scrollLeft = 100`);
           await pause(100);
         }
@@ -217,7 +219,7 @@ test('real editor pointer drag and resize preserve appearance on a scrollable ca
     };
     const result = await browserResult(profile,
       `http://127.0.0.1:${server.address().port}/t/38_editor_scaling.html`, child, interact);
-    assert.equal(result.writes, 3);
+    assert.equal(result.writes, 5);
     assert.ok(result.checks >= 20);
   } catch (error) {
     throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });

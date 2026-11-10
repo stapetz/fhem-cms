@@ -1,3 +1,12 @@
+2026-11-10 - Globale Navigation mit seitenübergreifenden Kollisionen skalieren (Refs #111)
+
+Beim Vergrößern oder Verschieben der Navigation werden kollidierende Widgets
+auf allen Seiten kontrolliert nach unten verschoben. Navigation und betroffene
+Seiten werden gemeinsam als Entwurf gespeichert, statt die gezogene Größe beim
+Loslassen wegen einer anderen Seite zurückzusetzen. Inhalte, Widgetgrößen und
+nicht betroffene Positionen bleiben erhalten; Live wird nicht verändert.
+Rastergrenzen und unabhängige Widgetüberschneidungen werden weiterhin abgewiesen.
+
 2026-11-10 - Größenänderungsgriff flacher Widgets freihalten (Refs #111)
 
 Editorwerkzeuge stehen seitlich neben der Größenänderungszone statt darüber.
