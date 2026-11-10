@@ -903,6 +903,34 @@ Menü, aktuelle Seite, Atomarität, Doppelklicksperre, gerenderte Positionen,
 unveränderte Größen/Inhalte und andere Seiten, erneutes Anordnen, Neustart
 und sichtbare Schreibfehler. Keine produktiven CMS-Daten werden verändert.
 
+## Einheitenauswahl für Platzhalter (Refs #116)
+
+Der gemeinsame `placeholder-picker.js` bietet eine feste Einheiten-Auswahl für
+Textbaustein und freies HTML, einschließlich Attribut-Schreibweise.
+Sie erzeugt ausschließlich den bestehenden letzten Filter `suffix( Einheit)`;
+kein neues Schemafeld, keine Migration und keine Umrechnung.
+Ein abschließender Suffix aus der Auswahlliste wird beim Öffnen, manuellen
+Filterändern oder Preset-Klick erkannt und beim Einheitenwechsel ersetzt.
+Andere Filter bleiben erhalten; unbekannte/nicht abschließende Suffixe werden
+nicht umgeschrieben. `Keine` entfernt nur den erkannten letzten Einheitensuffix.
+Filter-Presets werden vor dem abschließenden Einheitensuffix eingefügt, damit
+nachträgliches Runden die Einheit nicht wieder entfernt. Ein Einheitenpreset
+ersetzt eine bereits ausgewählte Einheit.
+Filter leeren setzt auch die Einheit zurück. Vorschau, Validierung und
+Ergebnis verwenden denselben Filtertext und die vorhandene Filter-Allowlist.
+Die Auswahlliste wird über DOM-Optionen ohne HTML-Interpolation erzeugt.
+Vorhandene Richtextchips und deren Formatierung/Safari-Auswahlpfad bleiben
+unverändert; sie transportieren den Filter schon beim Öffnen/Bearbeiten.
+
+`t/44_placeholder_units.html` prüft 274 Browserassertionen für alle angebotenen
+Einheiten, Vorschau, Wechsel ohne Duplikate, Entfernen, Rundungsfilter, eigene
+Suffixe, manuelle Filter/Preset-Synchronisierung, Leeren, Validierungsfehler,
+Abbrechen und Wiederöffnen. Beide Schreibweisen werden nach Bereinigung mit
+dem echten Template-Renderer auf den erwarteten Text geprüft. Ein echter
+Shadow-DOM-Texteditor fügt einen Readingchip mit Einheit ein, serialisiert
+ihn, rendert seinen Wert und ändert die Einheit beim Wiederöffnen.
+Der bestehende Chrome-Runner `t/35_schema5_scaling.test.js` führt die Fixture aus.
+
 ## Richtext-Auswahl in Safari (Refs #114)
 
 Der Texteditor liegt im Shadow-DOM. Safari/WebKit unterstützt dort kein

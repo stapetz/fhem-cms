@@ -8,6 +8,16 @@ Im Dialog der Kachel **Freies HTML** öffnet der Knopf *Platzhalter suchen und e
 
 Dieselbe Suche gibt es im **Textbaustein** (Knopf `{{ }}` in der Werkzeugleiste). Dort erscheint der Platzhalter als grüner Baustein im Text; ein Klick darauf öffnet die Suche zum nachträglichen Ändern, die Entf-Taste löscht ihn. Im Textbaustein kannst du formatierten Text, Bilder und Tabellen mit Platzhaltern mischen, z. B. in einer Tabellenzelle oder mitten im Satz. Intern wird er als `{{Device:reading|filter}}` gespeichert; Filter und `@alias` funktionieren wie hier beschrieben. Das Element `device`/`reading` und die Zustandsklassen gibt es nur im freien HTML.
 
+Unter **Einheit hinter dem Wert** wählst du beispielsweise **°C**, **W**,
+**kWh** oder **%**. Die Vorschau zeigt die Einheit mit einem Leerzeichen hinter
+dem Wert. **Keine** entfernt die zuvor ausgewählte Einheit; andere Filter wie
+`round(1)` bleiben erhalten. Die Auswahl wird als letzter Filter
+`suffix( Einheit)` gespeichert und beim erneuten Bearbeiten wiedererkannt.
+Ein Wechsel ersetzt diesen letzten Einheitenfilter, statt ihn mehrfach
+anzuhängen. Eigene Suffixe und nicht abschließende Filter bleiben unverändert.
+Das gilt sowohl für Textplatzhalter als auch für die Element-Schreibweise.
+Es ist eine Beschriftung, keine Umrechnung von W in kW oder Wh in kWh.
+
 ## Platzhalter
 
 Ein Platzhalter hat die Form `{{Device:reading}}`:
