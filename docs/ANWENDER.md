@@ -281,15 +281,28 @@ Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
   angezeigt; **Upload abbrechen** verwirft den laufenden Upload.
   Identische Dateien werden wiederverwendet, nicht dupliziert.
 - Ein Asset anklicken: Dateinamen ändern (ohne Wechsel der Endung),
-  öffnen/herunterladen oder Verwendungen anzeigen. Zum Verschieben:
-  **Zielordner auswählen …** öffnen, in der grafischen Ordneransicht zum Ziel
-  navigieren und **Diesen Ordner verwenden** wählen. Dann **Umbenennen /
-  verschieben** drücken. Der Manager zeigt das Asset anschließend im Zielordner
-  und bestätigt den Speicherort. Abbrechen der Zielauswahl lässt das bisherige
-  Ziel unverändert. Verschieben/Umbenennen ändert gespeicherte
-  Bild-/Dokumentadressen nicht.
-- **Asset endgültig löschen** erfordert die Bestätigungs-Checkbox. Verwendete
-  Assets sind auch nach Bestätigung gesperrt: Die Warnung nennt **Live/Entwurf,
+  herunterladen oder Verwendungen anzeigen. Der **Dateiname** ist ohne
+  Endung editierbar, die unveränderbare Endung steht daneben.
+  **Umbenennen** direkt darunter speichert nur den Namen.
+  **Verschieben** öffnet die grafische Zielauswahl: Zum Ziel navigieren und
+  **Diesen Ordner verwenden** wählen. Diese Bestätigung führt das Verschieben
+  sofort aus; ein weiterer Speichern-Knopf ist nicht notwendig. Nicht gespeicherte
+  Änderungen im Namensfeld werden dabei nicht übernommen. Der Manager zeigt
+  das Asset anschließend im Zielordner und bestätigt den Speicherort.
+  Abbrechen der Zielauswahl verschiebt nichts. Verschieben/Umbenennen ändert
+  gespeicherte Bild-/Dokumentadressen nicht.
+- Ausgewählte Bilder werden rechts als **Bildvorschau** angezeigt. Beim
+  Darüberfahren steht **Bild in voller Größe anschauen**; Klick öffnet das
+  Original in einem neuen Tab. Vorhandene EXIF-Daten in JPEG-/PNG-Bildern werden
+  lokal im Browser ausgelesen. **i** auf der Vorschau öffnet die Informationen
+  (z. B. Kamera, Aufnahmedatum, Belichtung und gegebenenfalls GPS-Standort).
+  Es werden keine Metadaten an externe Dienste übertragen. Ohne EXIF erscheint
+  kein i; Lesefehler werden ausdrücklich angezeigt. Herstellerspezifische
+  Binärfelder erscheinen als Rohwerte, lange Werte gekürzt und unbekannte Tags
+  mit ihrer Nummer. Die Originaldatei wird nicht verändert oder bereinigt.
+- **Löschen** öffnet einen Bestätigungsdialog mit dem Dateinamen; der bisherige
+  dauerhafte Bestätigungshaken entfällt. Verwendete
+  Assets sind unabhängig davon gesperrt: Die Warnung nennt **Live/Entwurf,
   Seite und Widget**. Zuerst diese Verweise entfernen; die Verwendung wird beim
   Löschen serverseitig erneut geprüft.
 

@@ -1,3 +1,14 @@
+2026-11-10 - 1.5.0-dev: Getrennte Dateiaktionen, Bildvorschau und EXIF (Refs #125)
+
+Umbenennen steht direkt unter Dateiname; die Endung wird getrennt und nicht
+editierbar angezeigt. Verschieben oeffnet die Zielauswahl und fuehrt mit deren
+Bestaetigung sofort die Bewegung aus, ohne ungespeicherte Namensaenderungen.
+Ausgewaehlte Bilder erscheinen rechts nochmals als anklickbare Vorschau mit
+Tooltip fuer volle Groesse. EXIF aus JPEG/PNG wird lokal im Browser gelesen und
+bei vorhandenen Eintraegen ueber i und Popup angezeigt; auch GPS-Felder.
+Fehler und fehlende Metadaten werden unterschieden. Loeschen oeffnet einen
+Bestaetigungsdialog statt dauerhaftem Haken. Verwendungsschutz bleibt bestehen.
+
 2026-11-10 - 1.4.2-dev: Assetordner direkt in der Inhaltsansicht bedienen (Refs #125)
 
 Linke Baumstruktur und Bereich Ordner verwalten entfernt. Navigation erfolgt

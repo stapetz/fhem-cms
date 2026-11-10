@@ -1,5 +1,41 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Entwicklungsstand 1.5.0-dev: Dateiaktionen und EXIF (#125)
+
+Anforderung vom 10.11.2026: Umbenennen direkt nach Dateiname, unveränderbare
+Endung; Verschieben mit sofortiger Ausführung bei Zielbestätigung; Bildvorschau
+mit Vollgrößen-Tooltip und EXIF-Info. Entwicklerentscheidung: Löschbestätigungs-
+dialog statt dauerhaftem Haken. Verwendungsschutz bleibt bestehen.
+
+Lokale Prüfung:
+
+- `t/51_asset_manager.html`: 136 Chromium-Prüfungen. Nicht editierbare Endung,
+  eigener Umbenennen-Knopf unmittelbar nach Namensfeld, keine gekoppelte
+  Move-/Rename-Aktion, ungespeicherte Namensänderung bleibt beim Verschieben
+  unberücksichtigt. Zielbestätigung führt den Move aus, Abbrechen schreibt nicht.
+  Bildvorschau wird tatsächlich decodiert, Vollgrößen-Link und Tooltip vorhanden.
+- Echtes PNG-eXIf-Testbild liefert Kamera, Datum und GPS für das i-Popup;
+  ohne EXIF kein i, HTTP-Fehler sichtbar statt als fehlende Metadaten ausgegeben.
+  Löschen: kein Haken, kurzer Knopftext, Modal mit Abbruch/Bestätigung;
+  verwendete Assets bleiben vor dem Dialog gesperrt. Echte Pointerbewegungen
+  prüfen weiterhin Ordnernavigation, Verschieben, Erstellen und Reload.
+- `t/52_asset_exif.test.js`: JPEG/PNG, beide Byte-Reihenfolgen, Unter-IFDs,
+  Aufnahmedatum/GPS, unveränderte Bytes, beschädigte Längen/Offsets,
+  zyklische IFDs und Eintragsgrenzen. Loader nutzt Same-Origin-Credentials,
+  unterstützt Abbruch, meldet HTTP-Fehler und beendet Antworten über 50MiB.
+- Gemeinsam 10 gezielte JS-Tests erfolgreich, einschließlich Editor,
+  100 LinkWidget-Browserprüfungen, Frontend-/Perl-Parität und echtem Perl-Client.
+- `perl -c FHEM/01_FHEMCMS.pm` sowie
+  `prove -l t/04_fcui_assets.t t/06_commandref.t t/07_asset_manager.t`:
+  251 Assertions erfolgreich. Neue EXIF-Datei wird von Controls erfasst.
+  Buildcheck und `git diff --check` erfolgreich.
+
+Keine externen Metadatendienste oder neuen Paketabhängigkeiten. Rohmetadaten
+einschließlich möglicher Standortinformationen werden nur im lokalen Browser
+angezeigt; Originalbilder bleiben unverändert. Herstellerspezifische Binärdaten
+sind Rohwerte, lange Werte werden gekennzeichnet gekürzt. Safari/Edge und eigene
+Kamerabilder müssen noch am Device abgenommen werden; kein `main`-Release.
+
 ## Nachbesserung 1.4.2-dev: ausschließlich Kacheln und Pfad (#125)
 
 Anforderung vom 10.11.2026: kein Bereich „Ordner verwalten“, keine linke

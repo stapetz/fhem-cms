@@ -35,6 +35,7 @@ my @assets = (
     'www/fhem-cms/js/widget-services.js',
     'www/fhem-cms/js/asset-manager.js',
     'www/fhem-cms/js/asset-contract.js',
+    'www/fhem-cms/js/asset-exif.js',
     'FHEM/lib/FHEMCMS/Assets.pm',
 );
 for my $asset (@assets) {
