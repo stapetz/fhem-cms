@@ -119,7 +119,7 @@ for (const [name, fixtures] of [
       ['44_placeholder_units.html', 384], ['45_solarflow_sizing.html', 868], ['46_unit_inputs.html', 998]]],
   ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 850]]],
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
-  ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 136]]],
+  ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 185]]],
 ]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,
@@ -167,6 +167,14 @@ for (const [name, fixtures] of [
           await click('[data-mkdir]');
           await command('Input.insertText', { text: 'Mausordner' });
           await click('[data-folder-create-accept]');
+          const files = [join(profile, 'PointerDrop1.png'), join(profile, 'PointerDrop2.png')];
+          for (const file of files) await writeFile(file, pngFixture());
+          const point = await evaluate('window.assetRegression.point("[data-assets]")');
+          const data = { items: [], files, dragOperationsMask: 1 };
+          await command('Input.dispatchDragEvent', { type: 'dragEnter', ...point, data });
+          await command('Input.dispatchDragEvent', { type: 'dragOver', ...point, data });
+          await command('Input.dispatchDragEvent', { type: 'drop', ...point, data });
+          await pause(150);
           await evaluate('window.assetRegression.finish()');
           return;
         }

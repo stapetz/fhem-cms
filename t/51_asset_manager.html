@@ -23,6 +23,7 @@ let inUse = true;
 let failList = false;
 let deleteCalls = 0;
 let uploads = 0;
+const uploadedFolders = [];
 let pickerModes = [];
 const actions = [];
 let ignoreMove = false;
@@ -57,8 +58,14 @@ const services = {
   async uploadAsset(file, folder, token, options) {
     equal(token, state.token, 'upload bound to catalog token');
     check(file instanceof File, 'real File passed to shared uploader');
+    uploadedFolders.push(folder);
     options.onProgress(file.size, file.size);
-    const item = { ...structuredClone(image), id: 'c'.repeat(32), name: file.name, folder };
+    if (file.name === 'Error.png') throw new Error('Test: Upload fehlgeschlagen');
+    if (file.name === 'Abort.png') {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (options.signal.aborted) throw new Error('Upload abgebrochen');
+    }
+    const item = { ...structuredClone(image), id: (12 + uploads).toString(16).padStart(32, '0'), name: file.name, folder };
     state.assets.push(item); uploads++;
     return { state: tick(), selected: item.id };
   },
@@ -83,6 +90,7 @@ try {
   check(root.querySelector('[data-select]').hidden, 'File menu management has no insertion action');
   check(!root.querySelector('[data-folder-tools]'), 'no separate folder management area');
   check(!root.querySelector('[data-folders]') && !root.querySelector('nav'), 'no left folder tree');
+  check(!root.querySelector('[data-search]') && !root.querySelector('input[type=search]'), 'search removed until later version');
   equal(root.querySelector('[data-mkdir]').textContent, 'Ordner erstellen', 'folder creation available above content');
   check(root.querySelector('[data-mkdir]').compareDocumentPosition(root.querySelector('[data-assets]')) & Node.DOCUMENT_POSITION_FOLLOWING,
     'create action precedes the large content view');
@@ -217,12 +225,42 @@ try {
   await click(root, `[data-open-folder="${folder}"]`);
   const transfer = new DataTransfer();
   transfer.items.add(new File(['image'], 'Upload.png', { type: 'image/png' }));
+  transfer.items.add(new File(['image2'], 'Upload2.png', { type: 'image/png' }));
+  check(root.querySelector('[data-upload]').multiple, 'native file chooser allows multiple selection');
   root.querySelector('[data-upload]').files = transfer.files;
   root.querySelector('[data-upload]').dispatchEvent(new Event('change'));
   await pause();
-  equal(uploads, 1, 'upload uses unified service');
+  equal(uploads, 2, 'file chooser uploads all selected files');
   equal(state.assets.at(-1).folder, folder, 'upload goes directly to selected folder');
+  equal(uploadedFolders, [folder, folder], 'all chosen images use current folder');
+  check(root.querySelector('[data-detail]').hidden, 'batch upload never opens details');
+  check(!root.querySelector('[data-rename]') && !root.querySelector('[data-choose-destination]'), 'upload does not offer unneeded move controls');
   check(root.querySelector('[data-status]').textContent.includes('Upload abgeschlossen'), 'upload success visible');
+  const drop = async names => {
+    const dataTransfer = new DataTransfer();
+    for (const name of names) dataTransfer.items.add(new File(['dropped'], name, { type: 'image/png' }));
+    const zone = root.querySelector('[data-assets]');
+    const over = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer });
+    zone.dispatchEvent(over);
+    check(over.defaultPrevented, 'file drag prevents browser navigation');
+    check(zone.classList.contains('drag-over'), 'drop area highlights for files');
+    const event = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer });
+    zone.dispatchEvent(event); await pause();
+    check(event.defaultPrevented, 'drop prevents opening files in browser');
+    check(!zone.classList.contains('drag-over'), 'drop removes highlight');
+  };
+  await drop(['Drop.png', 'Drop2.png']);
+  equal(uploads, 4, 'drop uploads multiple files through shared service');
+  check(uploadedFolders.every(id => id === folder), 'drop also uses currently opened folder');
+  check(root.querySelector('[data-detail]').hidden, 'drop leaves overview without details');
+  await drop(['Error.png', 'NotStarted.png']);
+  equal(uploads, 4, 'failed batch stops before later files');
+  check(root.querySelector('[data-status]').textContent.includes('0/2'), 'failure reports completed count');
+  await drop(['Abort.png', 'NotStarted.png']);
+  await click(root, '[data-abort]'); await new Promise(resolve => setTimeout(resolve, 120));
+  equal(uploads, 4, 'cancel stops current batch and later files');
+  check(root.querySelector('[data-status]').textContent.includes('abgebrochen'), 'cancellation visible');
+  check(root.querySelector('[data-detail]').hidden, 'error and cancellation do not reopen details');
   root.querySelector('[data-type=pdf]').checked = false;
   set(root, '[data-limit=documentBytes]', '30');
   set(root, '[data-limit=totalBytes]', '600');
@@ -239,15 +277,22 @@ try {
   check(!state.policy.types.svg, 'active types cannot be added');
   check(root.querySelector('[data-status]').classList.contains('error'), 'invalid admin setting explicitly reported');
   inUse = false;
-  await click(root, `[data-asset-id="${'c'.repeat(32)}"]`);
+  const uploaded = state.assets.filter(item => item.id !== image.id && item.id !== pdf.id);
+  for (const item of uploaded.slice(1)) {
+    await click(root, `[data-asset-id="${item.id}"]`);
+    await click(root, '[data-delete-asset]');
+    await click(root, '[data-delete-asset-accept]');
+  }
+  const beforeDelete = deleteCalls;
+  await click(root, `[data-asset-id="${uploaded[0].id}"]`);
   await click(root, '[data-delete-asset]');
-  equal(deleteCalls, 0, 'unused asset still needs explicit delete confirmation');
+  equal(deleteCalls, beforeDelete, 'unused asset still needs explicit delete confirmation');
   check(root.querySelector('[data-asset-delete]').open, 'delete button opens confirmation');
   await click(root, '[data-delete-asset-cancel]');
-  equal(deleteCalls, 0, 'cancel leaves file untouched');
+  equal(deleteCalls, beforeDelete, 'cancel leaves file untouched');
   await click(root, '[data-delete-asset]');
   await click(root, '[data-delete-asset-accept]');
-  equal(deleteCalls, 1, 'confirmed unused asset deleted');
+  equal(deleteCalls, beforeDelete + 1, 'confirmed unused asset deleted');
   await click(root, '[data-close]');
   equal(await pending, null, 'closing management returns no insertion');
   check(!document.querySelector('[data-asset-manager]'), 'manager DOM cleaned up');
@@ -332,7 +377,13 @@ try {
       const created = state.folders.find(item => item.name === 'Mausordner');
       equal(created?.parent, 'd'.repeat(32), 'real pointer creation uses currently opened nested folder');
       check(root.querySelector(`[data-open-folder="${created.id}"]`), 'real pointer creation leaves new tile in current contents');
-      check(root.querySelector('[data-status]').textContent.includes('Unterordner'), 'real pointer creation names current location');
+      for (const name of ['PointerDrop1.png', 'PointerDrop2.png']) {
+        const uploaded = state.assets.find(item => item.name === name);
+        check(!!uploaded, 'real browser file drop uploads each file');
+        equal(uploaded.folder, 'd'.repeat(32), 'real browser drop uses currently opened nested folder');
+      }
+      check(root.querySelector('[data-detail]').hidden, 'real drop closes details even after image move');
+      check(root.querySelector('[data-status]').textContent.includes('Unterordner'), 'real drop names current location');
       await click(root, '[data-reload]');
       check(root.querySelector(`[data-asset-id="${image.id}"]`), 'real pointer move persists after reload');
       await click(root, '[data-close]'); await pending;

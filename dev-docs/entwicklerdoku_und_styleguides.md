@@ -283,6 +283,15 @@ unbekannte Tags/Rohwerte und gekürzte Werte bleiben erkennbar.
 Metadatenanzeige verwendet ausschließlich Textknoten. Fehlende EXIF und
 Lesefehler unterscheiden; i nur bei vorhandenen Einträgen. Requests beim
 Auswahlwechsel/Schließen abbrechen und verspätete Ergebnisse verwerfen.
+Mehrfachauswahl und Datei-Drops in der Inhaltsansicht verwenden denselben
+sequenziellen Uploadablauf. Zielordner beim Start festhalten, Navigation während
+des Auftrags sperren und Katalogtoken nach jeder Datei aktualisieren.
+Upload wählt keine Datei automatisch aus: Detailspalte und EXIF-Anfragen bleiben
+geschlossen. Drop-Standardverhalten verhindern, Ablagefläche hervorheben und
+Ordner-Drops explizit ablehnen. Nach Abbruch/erstem Fehler keine weiteren Dateien
+starten; erfolgreiche Dateien erhalten und Anzahl sichtbar melden.
+Die bisherige Suche ist entfernt; Weiterentwicklung ausschließlich in #126
+(later/Backlog), nicht Bestandteil des aktuellen Assetmanager-Abnahmeumfangs.
 Zielordner für Assets und Ordner werden über denselben grafischen Ordnerpicker
 gewählt; Auswahl allein schreibt noch nichts. Navigation darf keine Mutation
 auslösen. Move-Antworten müssen die angeforderte ID, den Namen und Zielordner
