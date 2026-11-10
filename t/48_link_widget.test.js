@@ -47,6 +47,14 @@ test('LinkWidget frontend and backend agree on content, targets, images and nest
     assert.equal(validLinkUrl(url), true);
   }
   assert.equal(linkHref(link()), '#/home');
+  for (const target of ['self', 'tab', 'window']) {
+    const config = source();
+    const item = config.pages[0].widgets[0].links[0];
+    delete item.page;
+    Object.assign(item, { kind: 'asset', asset: `../../fhemcms-assets/CMS/${'a'.repeat(32)}`, target });
+    parity(config, true, `document/${target}`);
+    assert.equal(linkHref(item), item.asset);
+  }
   for (const text of ['Übersicht °C', '☀️ Solar', '🌞'.repeat(128)]) {
     const config = source();
     config.pages[0].widgets[0].links[0].text = text;

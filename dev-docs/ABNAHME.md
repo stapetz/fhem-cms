@@ -1,5 +1,43 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Entwicklungsstand 1.4.0-dev: Assetmanager und Linkraster (#124, #125)
+
+Lokale Prüfung am 10.11.2026; keine Geräteabnahme und keine `main`-Freigabe:
+
+- LinkWidget: Position/Größe nur grafisch, dauerhaft feines Kachelraster.
+- Gemeinsamer Assetmanager über Datei-Menü sowie Bild-/Dokumentauswahl in
+  Text- und Linkwidget. Ordner/Unterordner, direkte Ordneruploads,
+  Umbenennen/Verschieben, konfigurierbare Typen/Limits und geschützte Löschung.
+  Administration vorerst für alle Bearbeiter, Rollen später.
+- `perl -c FHEM/01_FHEMCMS.pm` und
+  `perl -c FHEM/lib/FHEMCMS/Assets.pm`: erfolgreich.
+- `prove -l t/*.t`: 667 Assertions in 7 Dateien erfolgreich, davon
+  166 im neuen Assetmanager-Test. Erfasst u.a. Dokumentformate, Limits,
+  parallele Katalogänderungen, Altmedienimport, Legacy-Upload-Policy,
+  Verwendungen in Live/Entwurf, Löschsperren, ungültige Konfigurationen,
+  Metadatengröße und bytegenaue blockweise Downloads mit Zugriffsschutz.
+- `node --test t/*.test.js`: 107 Tests erfolgreich, keine übersprungen.
+  Nach abschließenden Randfallanpassungen gezielt erneut
+  `t/19_schema5_editor.test.js`, `t/35_schema5_scaling.test.js` und
+  `t/50_asset_client.test.js`: 10 Tests erfolgreich.
+  Datei-Menü-Aufruf ohne Entwurfsschreibzugriff, echter persistenter
+  Perl-Client mit Uploadfortschritt/Abbruch und unveränderter Live-Datei.
+- Chromium: LinkWidget 100 Prüfungen einschließlich echtem Drag/Resize,
+  gemeinsamen Auswahlaktionen und Dokumentlinks; Assetmanager 55 Prüfungen
+  für Ordner, Dateien, Administration, Verwendungswarnungen, Texteditor-
+  Einfügung, Entfernen nur des Verweises, Fehler und Lifecycle-Bereinigung.
+  Übrige Browserregressionen zu Layout, Navigation und Textformatierung grün.
+- `node scripts/build-fcui.mjs --check` und `git diff --check`: erfolgreich.
+  Der abhängige Migrationsbuild wurde mit dem vorhandenen Buildskript erneuert.
+
+Zur Geräteabnahme: reale FHEMWEB-Uploads und größere Dokumentdownloads,
+Authentifizierung/Device-Rechte, Ordnerverwaltung, Live-/Entwurfswarnungen und
+Einfügen/Formatierung in Safari/Edge prüfen. Die neuen Assetdialoge wurden lokal
+in Chromium, nicht in Safari validiert. Aktive Dokumentinhalte werden nicht
+ausgeführt; Signaturprüfungen ersetzen keinen Virenscanner.
+Assetdateien separat sichern; ältere Konfigurationsbackups sind keine
+Löschsperre. Keine Löschtests auf ungesicherten produktiven Dateien.
+
 ## Entwicklungsstand 1.3.0-dev: LinkWidget (#123)
 
 Lokale Prüfung am 10.11.2026, noch keine Geräteabnahme oder `main`-Freigabe:

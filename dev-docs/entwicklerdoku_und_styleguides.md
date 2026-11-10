@@ -250,6 +250,63 @@ function saveLayoutToFhem() {
 
 ---
 
+### Einheitliche Assetverwaltung (verbindlich für alle Widgets)
+
+Alle bestehenden und zukünftigen Widgets verwenden für **Bild hinzufügen** und
+Dokumentauswahl ausschließlich `services.pickAsset({mode, owner})`.
+`mode: "image"` filtert Bilder, `"document"` Dokumente; ohne Modus wird verwaltet.
+Der gemeinsame Dialog kommt aus `js/asset-manager.js`. Keine eigenen
+Datei-Inputs, Uploadabläufe oder Mediengalerien in Widgets ergänzen.
+`owner` bindet den Dialog an den Lebenszyklus des aufrufenden Widgets/Editors.
+Auswahl liefert ein Asset mit stabilem `href`, Abbrechen liefert `null`.
+„Bild entfernen“ entfernt nur den lokalen Verweis, nie die Assetdatei.
+
+Assetänderungen sind unabhängig vom Entwurf sofort wirksam. Der Datei-Menüpunkt
+öffnet dieselbe Implementierung. Administration ist vorerst für alle
+CMS-Bearbeiter zugänglich, kein vorgetäuschtes Rollen-/Passwortsystem.
+FHEM-Authentifizierung, Geräte-/Befehlsrechte und CSRF bleiben wirksam.
+
+Persistenz: `fhem-cms-data/<Device>/assets.json` enthält Ordner, Assetmetadaten
+und Policy. Ordner sind logische Metadaten: Umbenennen/Verschieben darf keine
+Datei-URLs verändern. Bestehende `media/<md5>.(png|jpg|gif)`-Bilder werden ohne
+Verschieben automatisch erfasst. Dokumente liegen als opake `.bin`-Dateien unter
+`fhem-cms-data/<Device>/assets/`, niemals im statischen Webverzeichnis.
+Gespeicherte Dokumentlinks haben die Form
+`../../fhemcms-assets/<Device>/<32hex>`. Änderungen am Linkvertrag müssen
+Richtext-Cleaner, Perl-HTML-Validator und LinkWidget gemeinsam berücksichtigen.
+
+Backend: `FHEM/lib/FHEMCMS/Assets.pm`, geladen von `01_FHEMCMS.pm`.
+`get <Device> assets` liest den Katalog; `set <Device> assets <base64-json>`
+führt die klar begrenzten Aktionen aus. Zustandsänderungen binden den SHA256-
+Katalogtoken, schreiben atomar und weisen veraltete Zustände sichtbar ab.
+Upload: `begin`, geordnete `chunk`-Blöcke (64 KiB), `finish` oder `cancel`.
+Je Device höchstens ein Upload, Ablauf nach 15 Minuten, keine Gesamtdatei im
+FHEM-Speicher. Dokumentdownloads verwenden FHEMWEB-Authentifizierung und
+`Authorized` für `get`/Device, liefern `attachment`, `octet-stream`,
+`nosniff` und `sandbox`; nach jedem 64-KiB-Schreibpuffer wird der Eventloop
+freigegeben. Keine blockierende Ganzdatei-Streaming-Schleife verwenden.
+
+Löschen muss serverseitig alle Verwendungen in Live und Entwurf prüfen,
+unabhängig von einer vorausgegangenen UI-Abfrage. Fundstellen enthalten Quelle,
+Seite und Widget. Bei fehlenden/ungültigen Konfigurationen nicht löschen.
+Historische Sicherungen und ungespeicherte Dialoge sind keine aktuellen
+Referenzen; der Manager warnt vor fehlenden Dateien bei späterem Restore.
+Sicherungen benötigen die Assetdateien zusätzlich zum Konfigurationsbackup.
+Fehler protokollieren ohne Uploadinhalte; JSON-Parserfehler nicht mit
+Originalinhalten an Log oder Browser weiterreichen.
+
+Vorgaben: Bild3MiB, Dokument20MiB, insgesamt500MiB. Policy enthält erlaubte
+Endungen mit boolescher Freigabe und Byte-Limits. Bekannte aktive Web-/Skript-
+Endungen sind unabhängig von der Policy gesperrt; zusätzliche Dokumenttypen
+werden nur als Download behandelt. Kein Virenscanner oder Office-Parser.
+Harte Grenzen: 50MiB je Datei, 2048MiB gesamt, 2000 Assets, 200 Ordner,
+10 Ordnerebenen, 1MiB serialisierte Katalogmetadaten (vor dem Schreiben prüfen).
+Legacy-Bild-Uploads dürfen die Policy nicht umgehen.
+
+Prüfungen: `t/07_asset_manager.t` (Backend/Downloads), `t/50_asset_client.test.js`
+(echter persistenter Perl-Prozess mit Client-Uploads), `t/51_asset_manager.html`
+(gemeinsamer Dialog, Ordner, Policy, Warnungen und Texteditorintegration).
+
 ### LinkWidget-Vertrag (Schema 5)
 
 `fhem-link` / `cms-link` ist ein statisches Widget ohne Devices, Readings oder
@@ -259,7 +316,9 @@ Jeder der 1–200 Links besitzt eine eindeutige `id`, `kind`, `text` (1–128 Ze
 `showText` (Boolean), `textPosition` (`above`, `overlay`, `below`), `target`,
 `grid` und optional `image`. Interne Links besitzen `page` (existierende Seiten-ID)
 und zwingend `target: "self"`; externe Links `url` (HTTP(S), höchstens 2000 Zeichen,
-ohne Zugangsdaten) und `target: "self" | "tab" | "window"`.
+ohne Zugangsdaten) und `target: "self" | "tab" | "window"`. Dokumentlinks besitzen
+`kind: "asset"` und `asset` mit dem stabilen Dokument-Downloadpfad anstelle
+von `page`/`url`; die gleichen externen Zielmodi sind möglich.
 
 Das innere `grid` enthält exakt numerische, positive Ganzzahlen `col,row,w,h`,
 1-basiert, 12 Spalten, höchstens 1000 Zeilen und keine Überlappungen.
@@ -272,7 +331,7 @@ an der Konfigurationsvalidierung, ohne Links stillschweigend zu entfernen.
 
 Frontend- und Perl-Validierung müssen denselben Vertrag durchsetzen
 (`js/link-widget.js`, `FHEMCMS_ValidateLinks`). Bilder verwenden ausschließlich
-`media/<32 hex>.(png|jpg|gif)` und die bestehenden geprüften Medien-APIs.
+`media/<32 hex>.(png|jpg|gif)` und den gemeinsamen Assetpicker.
 Linktexte werden als Textknoten, nicht als HTML eingesetzt. Neue Tabs verwenden
 `noopener noreferrer`; Fensteranfragen zusätzlich `popup`. Ein `null`-Ergebnis
 bei `window.open` mit `noopener` beweist keinen Popupblocker und darf nicht als

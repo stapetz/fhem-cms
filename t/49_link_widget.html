@@ -25,7 +25,7 @@ const initial = { id: 'links', type: 'fhem-link', title: 'Meine Links', showTitl
 let saved;
 let writes = 0;
 let deletes = 0;
-let uploads = 0;
+let picks = 0;
 let saveError = false;
 let mediaError = false;
 let widget;
@@ -35,13 +35,11 @@ const services = { pages,
     saved = structuredClone(value); writes++;
   },
   deleteWidget: async id => { equal(id, 'links', 'delete binds outer ID'); deletes++; },
-  listMedia: async () => {
+  pickAsset: async ({mode, owner}) => {
     if (mediaError) throw new Error('Test: Medien nicht verfügbar');
-    return [image];
-  },
-  uploadMedia: async bytes => {
-    check(bytes instanceof Uint8Array && bytes.length > 8, 'upload receives checked bytes');
-    uploads++; return image;
+    check(owner === widget.shadowRoot, 'asset picker bound to widget lifecycle');
+    picks++;
+    return { image: mode === 'image', href: mode === 'image' ? image : `../../fhemcms-assets/CMS/${'b'.repeat(32)}` };
   },
 };
 const $ = selector => widget.shadowRoot.querySelector(selector);
@@ -113,18 +111,8 @@ try {
   check($('[data-field=textPosition]').disabled, 'text position inactive while text hidden');
   field('showText', true);
   await click('[data-media]');
-  check($('.media button'), 'existing media selectable');
-  await click('.media button');
+  equal(picks, 1, 'image opens shared asset picker');
   equal(widget.links[0].image, image, 'selected image attached to selected tile');
-  await widget.uploadImage(widget.links[0], new File(['not a picture'], 'bad.png'));
-  equal(uploads, 0, 'image signature checked before upload');
-  check($('[data-error]').textContent.includes('PNG'), 'invalid image error visible');
-  await widget.uploadImage(widget.links[0], { size: 3145729 });
-  check($('[data-error]').textContent.includes('3 MiB'), 'oversize image error visible');
-  const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg=='), value => value.charCodeAt(0));
-  await widget.uploadImage(widget.links[0], new File([png], 'tile.png', { type: 'image/png' }));
-  equal(uploads, 1, 'valid image uploaded once');
-  equal(widget.links[0].image, image, 'uploaded image retained');
   await click('[data-clear-image]');
   check(!Object.hasOwn(widget.links[0], 'image'), 'image removable');
   mediaError = true;
@@ -147,6 +135,10 @@ try {
   widget.config = structuredClone(saved);
   await widget.openConfig();
   equal(widget.links, saved.links, 'reopen preserves all fields');
+  field('kind', 'asset');
+  await click('[data-document]');
+  equal(widget.links[0].asset, `../../fhemcms-assets/CMS/${'b'.repeat(32)}`, 'document chosen from shared asset picker');
+  equal(widget.links[0].target, 'self', 'document link default');
   await click('[data-add]');
   equal(widget.links.length, 3, 'link added');
   await click('[data-remove-link]');

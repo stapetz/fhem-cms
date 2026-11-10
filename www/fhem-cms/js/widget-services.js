@@ -1,8 +1,14 @@
+import { openAssetManager } from './asset-manager.js';
+
 export function createWidgetServices({ client, listDevices, listAllDevices, listIcons, saveWidget, deleteWidget }) {
   if (!client || [listDevices, listAllDevices, listIcons, saveWidget, deleteWidget]
     .some((service) => typeof service !== 'function')) {
     throw new Error('Vollständige Widget-Dienste erforderlich');
   }
+  const assets = {
+    assetAction: request => client.assetAction(request),
+    uploadAsset: (file, folder, token, options) => client.uploadAsset(file, folder, token, options),
+  };
   return {
     listDevices,
     listAllDevices,
@@ -14,6 +20,8 @@ export function createWidgetServices({ client, listDevices, listAllDevices, list
     logReadings: (device, source) => client.logReadings(device, source),
     history: (device, reading, range, granularity, source) => client.history(device, reading, range, granularity, source),
     uploadMedia: (bytes) => client.uploadMedia(bytes),
+    ...assets,
+    pickAsset: options => openAssetManager(assets, options),
     saveWidget,
     deleteWidget,
   };
