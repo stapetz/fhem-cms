@@ -563,3 +563,7 @@ Je Kachel ist ein Bild aus Upload oder Medienverwaltung moeglich.
 Im Widgetdialog lassen sich bis zu 200 Linkkacheln in einem eigenen Raster
 verschieben und skalieren. Interne Links folgen Seitenumbenennungen;
 verlinkte Seiten koennen erst nach Anpassung ihrer Links geloescht werden.
+2026-11-10 - Linkkacheln grafisch auf feinem Raster anordnen (Refs #124)
+
+Numerische Positions-/Groessenfelder im Linkdialog entfallen.
+Das feine innere Raster ist beim Bearbeiten dauerhaft sichtbar.
