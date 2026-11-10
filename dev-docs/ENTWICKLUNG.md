@@ -1219,6 +1219,44 @@ Fehlermeldungen, Wiederanfügen und vollständiges Observer-Cleanup. Der Slider
 nutzt mehr als 92 Prozent der Kachelbreite. Der bestehende reale Browser-Zoomtest
 prüft weiterhin 80, 100, 125 und 200 Prozent ohne gespeicherte Layoutänderung.
 
+### Gemeinsame Präsentation von Aktionswidgets (Refs #110)
+
+Taster und Schalter speichern optional `showLabel` (echter JSON-Boolean,
+Standard `false`) und `label` (1–32 Zeichen ohne Steuerzeichen, auch für
+Schalter). Bestehende Daten bleiben gültig; ohne explizites `showLabel: true`
+wird absichtlich nur das Symbol angezeigt, gespeicherte Labels bleiben erhalten.
+Der Widgettitel und seine globale Ausrichtung sind davon unabhängig.
+
+`action-presentation.js` liefert feste lokale SVG-Standardsymbole als Daten-URL
+(Toggle, An, Aus, unbekannt, Taster), die gemeinsame Darstellungsauswahl und ihre
+strikte Erfassung. Keine Abfrage der Iconliste für Standardsymbole. Eigene
+`icon`-/`iconOff`-Namen verwenden weiterhin den FHEMWEB-Iconservice. Beim Schalter
+erbt Aus ein eigenes An-Icon, sonst gilt das zustandsabhängige Standardsymbol.
+Zurücksetzen im gemeinsamen Icon-Picker liefert weiterhin `''`; dessen
+optionales `clearLabel` erklärt für diese Aufrufer die Standard-/Vererbungsregel.
+Andere Icon-Picker-Aufrufer behalten ihre bisherige Beschriftung und Bedeutung.
+
+Der Schalter ist ein natives Button-Element mit `role="switch"` und
+`aria-checked`; Symbol und optionale Beschriftung liegen innerhalb derselben
+Schaltfläche. Bekannte Zustände unterscheiden sich per Symbol und Hintergrund,
+unbekannt zusätzlich durch gestrichelten Rand, Tooltip und zugänglichen Namen.
+Taster haben auch ohne sichtbares Label einen zugänglichen Namen und Tooltip.
+Befehle, Erfolg-/Fehlerrückmeldung und Bearbeitungssperren bleiben unverändert.
+
+Für kommende Widgets mit vergleichbarer diskreter Schalt-/Tastfunktion gilt
+derselbe Vertrag: thematisch passendes Standardsymbol, eigener Icon-Override,
+optionale Beschriftung über `showLabel`, davon unabhängiger Titel, bedienbarer
+und zugänglicher Zustand, gemeinsamer Helper statt eigener Symbol-/Dialoglogik.
+Thermostat- und Slider-Steuerungen sind nicht Teil dieser Umstellung.
+
+Prüfung: `node --test t/39_action_presentation.test.js` validiert die Defaults,
+ungültige Beschriftungen/Booleans und echte isolierte Perl-Entwurf-/Publish-
+Transaktionen mit unveränderter Geometrie. `t/39_action_presentation.html` läuft
+über `t/35_schema5_scaling.test.js`: reale Widgetdialoge und Icon-Picker,
+Abbruch, Speichern, Reset, Zustandswechsel, Beschriftungen, Originalbefehle und
+sichtbare Fehler. `t/37_widget_content.html` misst beide Darstellungsvarianten
+weiterhin bei sechs Größen ohne Überlauf oder Titel-/Fehlerüberlappung.
+
 - **Abrufe:** Ein Refresh ist genau ein `jsonlist2`-Aufruf je Seite (Hauptdevices plus Kanäle über `device=<name>`), unabhängig von der Widget-Zahl. Das Polling läuft alle 30 s, nur bei sichtbarem Tab. Beim Sichtbarwerden und bei `online` wird sofort neu gelesen.
 - **Live-Hinweise:** Eine WebSocket-Verbindung (`inform`) je geöffneter Seite, gefiltert auf die Namen der aktuellen Seite. Ereignisse lösen ein entprelltes (300 ms) Neulesen aus, die Werte kommen nie aus dem Ereignis-HTML. Der WebSocket wird bei Seitenwechsel neu aufgebaut und bei `pagehide` beendet; Reconnect mit Backoff (1 s bis 30 s).
 - **Reconnect:** Nach dem Wiederverbinden wird sofort der aktuelle Zustand neu gelesen. Aus dem Back-Forward-Cache zurückkehrende Seiten starten Polling und Refresh neu (`pageshow`).

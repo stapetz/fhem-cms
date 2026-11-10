@@ -54,6 +54,7 @@ try {
         const config = { type, id: 'test', title: titled ? 'Widget title' : '', device: 'Test',
           reading: 'state', command: 'on', on: 'on', off: 'off', label: 'Start', unit: 'W',
           icon: withIcon ? 'test' : '', states: withIcon ? [{ value: 'on', icon: 'test', color: '#ffffff' }] : [] };
+        if (type === 'fhem-button' || type === 'fhem-switch') config.showLabel = withIcon;
         const original = JSON.stringify(config);
         const host = createWidgetElement(config, services, snapshots('on'), true);
         fixture.append(host);

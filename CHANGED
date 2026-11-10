@@ -1,3 +1,12 @@
+2026-11-10 - Aktionswidgets mit Standardsymbolen (1.2.0-dev, Refs #110)
+
+Schalter und Taster zeigen standardmäßig nur ein passendes Symbol, auch bei
+bestehenden Widgets. Toggle-Taster erhalten Umschaltpfeile; Schalter zeigen
+An/Aus über das bedienbare Zustandssymbol statt einen zusätzlichen Schieber.
+Je Widget ist Symbol + Beschriftung wählbar. Eigene Icons aus der Auswahlliste
+überschreiben den Standard und lassen sich zurücksetzen. Widgettitel bleiben
+unabhängig, zugängliche Namen und Fehlermeldungen bleiben erhalten.
+
 2026-11-10 - Editorraster zoomfähig an die Ansicht angleichen (Refs #109)
 
 Der reine Bearbeitungsmodus verwendet dieselbe zoomfähige Bezugsbreite und
