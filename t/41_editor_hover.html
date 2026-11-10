@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
 <link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
 <button id="outside">Outside editor</button>
-<main class="cms-shell"><section id="editor"></section></main>
+<main class="cms-shell" style="width:700px"><section id="editor"></section></main>
 <pre id="result">RUNNING</pre>
 <script type="module">
 import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
@@ -40,6 +40,8 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 300));
   const items = [...root.querySelector('.cms-grid-editable').children];
   const geometry = (item) => JSON.stringify([item.offsetLeft, item.offsetTop, item.offsetWidth, item.offsetHeight]);
+  // Gridstack animates its initial automatic cell-height correction.
+  await new Promise((resolve) => setTimeout(resolve, 1000));
   const originalBoxes = items.map(geometry);
   let pointer = false;
   for (const [index, item] of items.entries()) {
