@@ -8,6 +8,7 @@ import '../components/cms-clock.js';
 import '../components/cms-icon.js';
 import '../components/cms-table.js';
 import '../components/cms-slider.js';
+import '../components/cms-link.js';
 import '../components/cms-chart.js';
 import { devicesOfSolarFlow } from '../components/cms-solarflow.js';
 import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
@@ -26,15 +27,16 @@ const tags = new Map([
   ['fhem-slider', 'cms-slider'],
   ['fhem-html', 'cms-html'],
   ['text', 'cms-text'],
+  ['fhem-link', 'cms-link'],
 ]);
-const withoutSnapshots = new Set(['fhem-button', 'fhem-clock', 'fhem-chart']);
+const withoutSnapshots = new Set(['fhem-button', 'fhem-clock', 'fhem-chart', 'fhem-link']);
 const groupedSnapshots = new Set(['fhem-html', 'text', 'fhem-table', 'fhem-solarflow']);
 
 export function devicesOf(widget) {
   if (widget.type === 'fhem-table') {
     return [...new Set((widget.rows || []).map((row) => row.device).filter(isValidName))];
   }
-  if (widget.type === 'fhem-chart') return [];
+  if (widget.type === 'fhem-chart' || widget.type === 'fhem-link') return [];
   if (widget.type === 'fhem-solarflow') return devicesOfSolarFlow(widget);
   if (widget.type === 'fhem-html') return widget.devices;
   if (widget.type === 'text') return extractDevices(widget.html || '').slice(0, MAX_FREE_DEVICES);

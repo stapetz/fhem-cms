@@ -30,7 +30,9 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     }
     if (id === '__nav') return navigation;
     const widget = widgets.get(id);
-    const element = createWidgetElement(widget, services, snapshots, true);
+    const widgetServices = widget.type === 'fhem-link' ? { ...services,
+      pages: config.pages.map(({ id, title }) => ({ id, title })) } : services;
+    const element = createWidgetElement(widget, widgetServices, snapshots, true);
     elements.set(id, element);
     return element;
   }, Boolean(editing));

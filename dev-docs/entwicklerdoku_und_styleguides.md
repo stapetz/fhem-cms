@@ -250,6 +250,39 @@ function saveLayoutToFhem() {
 
 ---
 
+### LinkWidget-Vertrag (Schema 5)
+
+`fhem-link` / `cms-link` ist ein statisches Widget ohne Devices, Readings oder
+Set-Kommandos. Widgetfelder: `id`, `type`, `grid`, `links`; optional `title` und
+`showTitle`. Die äußere Position gehört weiterhin der Widget-Session.
+Jeder der 1–200 Links besitzt eine eindeutige `id`, `kind`, `text` (1–128 Zeichen),
+`showText` (Boolean), `textPosition` (`above`, `overlay`, `below`), `target`,
+`grid` und optional `image`. Interne Links besitzen `page` (existierende Seiten-ID)
+und zwingend `target: "self"`; externe Links `url` (HTTP(S), höchstens 2000 Zeichen,
+ohne Zugangsdaten) und `target: "self" | "tab" | "window"`.
+
+Das innere `grid` enthält exakt numerische, positive Ganzzahlen `col,row,w,h`,
+1-basiert, 12 Spalten, höchstens 1000 Zeilen und keine Überlappungen.
+Die Seitendichte skaliert nur das äußere Raster. Gridstack wird erst beim Öffnen
+des Dialogs geladen; `save(false)` erfasst **alle** inneren Knoten einschließlich
+mitverschobener Kollisionspartner. Schließen/Entfernen zerstört die Instanz.
+`services.pages` liefert nur `{id,title}` für die Zielauswahl. Seiten-ID-Änderungen
+müssen interne Referenzen atomar mitführen; Ziel-Löschungen scheitern sichtbar
+an der Konfigurationsvalidierung, ohne Links stillschweigend zu entfernen.
+
+Frontend- und Perl-Validierung müssen denselben Vertrag durchsetzen
+(`js/link-widget.js`, `FHEMCMS_ValidateLinks`). Bilder verwenden ausschließlich
+`media/<32 hex>.(png|jpg|gif)` und die bestehenden geprüften Medien-APIs.
+Linktexte werden als Textknoten, nicht als HTML eingesetzt. Neue Tabs verwenden
+`noopener noreferrer`; Fensteranfragen zusätzlich `popup`. Ein `null`-Ergebnis
+bei `window.open` mit `noopener` beweist keinen Popupblocker und darf nicht als
+fehlgeschlagenes Öffnen ausgegeben werden.
+
+Regressionen: `t/48_link_widget.test.js` vergleicht Frontend und Perl;
+`t/49_link_widget.html` prüft Dialog, Medien, Fehler, Rendern und echte Pointer-
+Interaktionen über `t/35_schema5_scaling.test.js`. Panel-/Navigationstests sichern
+tokengebundenes Speichern, unveränderte Live-Datei und Seitenreferenzen ab.
+
 ## 4. Freies HTML-Widget & Universelles Navigations-Widget
 
 ### 4.1 Freies HTML-Widget (`fcui-html-widget`)

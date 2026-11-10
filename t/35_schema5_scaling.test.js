@@ -112,6 +112,7 @@ for (const [name, fixtures] of [
       ['42_richtext_selection.html', 85], ['43_auto_arrange.html', 84],
       ['44_placeholder_units.html', 384], ['45_solarflow_sizing.html', 868], ['46_unit_inputs.html', 998]]],
   ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 850]]],
+  ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
 ]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,
@@ -128,8 +129,40 @@ for (const [name, fixtures] of [
   const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
     for (const [fixture, minimum] of fixtures) {
+      const interact = fixture !== '49_link_widget.html' ? undefined : async command => {
+        const evaluate = async expression => {
+          const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
+          assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
+          return reply.result.value;
+        };
+        await evaluate(`new Promise(resolve => { const timer=setInterval(() => {
+          const output=document.querySelector('#result');
+          if (!output.dataset.ready && !output.dataset.result) return;
+          clearInterval(timer); resolve();
+        },25); })`);
+        const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
+          ? document.querySelector('#result').textContent : null`);
+        assert.equal(failure, null, failure);
+        const move = async (point, dx, dy) => {
+          await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+          await command('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button: 'left', clickCount: 1 });
+          for (let step = 1; step <= 12; step++) {
+            await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x + dx * step / 12,
+              y: point.y + dy * step / 12, button: 'left', buttons: 1 });
+            await pause(30);
+          }
+          await command('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x + dx,
+            y: point.y + dy, button: 'left', clickCount: 1 });
+          await pause(350);
+        };
+        let points = await evaluate('window.linkRegression.points("drag")');
+        await move(points.drag, 4 * points.cell, 0);
+        points = await evaluate('window.linkRegression.points("resize")');
+        await move(points.resize, 2 * points.cell, points.cell);
+        await evaluate('window.linkRegression.finish()');
+      };
       const data = await browserResult(profile,
-        `http://127.0.0.1:${server.address().port}/t/${fixture}`, child);
+        `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact);
       assert.ok(data.checks >= minimum, `${fixture}: complete regression coverage (${data.checks})`);
       console.log(`${fixture}: ${data.checks} browser checks`);
     }

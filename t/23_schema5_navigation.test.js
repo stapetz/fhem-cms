@@ -53,6 +53,10 @@ test('navigation panel manages pages, order, shared sizes and files against real
         items: [{ page: 'one', label: 'Start', width: 40 }] },
       pages: [{ id: 'one', title: 'Eins', widgets: [
         { id: 'text', type: 'text', html: '{{Temp:state}}', grid: { col: 1, row: 2, w: 4, h: 2 } },
+        { id: 'links', type: 'fhem-link', grid: { col: 5, row: 2, w: 6, h: 4 }, links: [
+          { id: 'target', kind: 'internal', page: 'two', text: 'Zweite Seite', target: 'self',
+            showText: true, textPosition: 'above', grid: { col: 1, row: 1, w: 4, h: 3 } },
+        ] },
       ] }, { id: 'two', title: 'Zwei', widgets: [] }],
     };
     const original = JSON.stringify(config, null, 2);
@@ -154,6 +158,8 @@ test('navigation panel manages pages, order, shared sizes and files against real
     assert.deepEqual(draft.navigation.items,
       [{ page: 'one', label: 'Home', width: 40, hidden: true }]);
     assert.equal(draft.pages[1].widgets[0].html, '{{Temp:state}}');
+    assert.equal(draft.pages[1].widgets[1].links[0].page, 'zweite-seite',
+      'internal LinkWidget references follow page ID renames in the same transaction');
     assert.equal(await readFile(path, 'utf8'), original);
 
     // Gemeinsame Größe deaktivieren entfernt sie; leere Seite löschen
@@ -170,6 +176,9 @@ test('navigation panel manages pages, order, shared sizes and files against real
     const draft2 = controller.snapshot().draft;
     assert.equal(draft2.navigation.itemWidth, undefined);
     assert.deepEqual(draft2.pages.map((page) => page.id), ['zweite-seite', 'one']);
+    const beforeDelete = controller.snapshot();
+    assert.throws(() => controller.deleteEmptyPage('zweite-seite', beforeDelete.token), /CMS-Seite/);
+    assert.deepEqual(controller.snapshot(), beforeDelete, 'linked target deletion is refused without a write');
 
     // Veralteter Tab wird abgewiesen
     const other = new Schema5DraftController(transport);

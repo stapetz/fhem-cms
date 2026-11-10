@@ -1,3 +1,5 @@
+import { validateLinkItems } from './link-widget.js';
+
 const NAVIGATION = '__nav';
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 export const SCHEMA5_GRID_COLUMNS = [12, 24, 48, 96, 192];
@@ -56,6 +58,7 @@ function validateLayout(config, includeNavigation = true) {
         throw new Error(`Ungültige oder doppelte Widget-ID auf Seite ${page.id}`);
       }
       ids.add(widget.id);
+      if (widget.type === 'fhem-link') validateLinkItems(widget.links, config.pages);
       const current = geometry(widget.grid, columns);
       if (grids.some((other) => overlaps(current, other))) {
         throw new Error(`Rasterüberschneidung auf Seite ${page.id}`);
