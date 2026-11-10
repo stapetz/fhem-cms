@@ -1,6 +1,7 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { openIconPicker } from '../js/icon-picker.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
+import { actionIconUrl, actionPresentationFields, collectActionPresentation } from '../js/action-presentation.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const PENDING_MS = 4000;
@@ -52,14 +53,12 @@ class FHEMCMSSwitch extends HTMLElement {
         button:hover { background: var(--cms-surface-hover, #34493e); }
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         ${fittedContentCss}
-        .toggle { all: unset; box-sizing: border-box; display: block; width: 2.4em; height: 1.3em; flex: none; border-radius: 1em;
+        .toggle { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 0.14em; padding: 0.15em; flex: none; border-radius: 0.3em;
           background: var(--cms-bg, #17211d); border: 0.08em solid var(--cms-border, #43564a); position: relative; cursor: pointer; transition: background 0.2s; }
-        .toggle::after { content: ""; position: absolute; top: 0.12em; left: 0.12em; width: 0.9em; height: 0.9em; border-radius: 50%;
-          background: var(--cms-muted, #a5c9b2); transition: transform 0.2s, background 0.2s; }
         .toggle[aria-checked="true"] { background: var(--cms-accent-strong, #2f6b47); border-color: var(--cms-accent, #8fd0a8); }
-        .toggle[aria-checked="true"]::after { transform: translateX(1.1em); background: var(--cms-on-accent, #e9f8ee); }
         .toggle[data-unknown] { border-style: dashed; }
-        .toggle[data-unknown]::after { transform: translateX(0.55em); opacity: 0.5; }
+        .label { white-space: nowrap; line-height: 1.1; }
+        .label[hidden] { display: none; }
         .toggle:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 3px; }
         .toggle:disabled { cursor: default; }
         .glyph { display: inline-block; flex: none; width: 1.1em; height: 1.1em; background-color: var(--cms-icon-color);
@@ -94,10 +93,10 @@ class FHEMCMSSwitch extends HTMLElement {
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Schalter konfigurieren">⚙</button>
         <div class="main">
-          <div class="fit-row" data-fit-content>
+          <button type="button" class="toggle" role="switch" aria-checked="false" data-toggle data-fit-content aria-label="Schalter">
             <span class="glyph" data-icon aria-hidden="true" hidden></span>
-            <button type="button" class="toggle" role="switch" aria-checked="false" data-toggle aria-label="Schalter"></button>
-          </div>
+            <span class="label" data-label></span>
+          </button>
         </div>
         <p class="msg" role="alert" data-msg></p>
       </article>
@@ -125,8 +124,12 @@ class FHEMCMSSwitch extends HTMLElement {
             <select name="off" required></select>
           </label>
           <p class="hint">Der Schalter gilt als „an“, wenn das Reading den Wert des An-Befehls hat, und als „aus“, wenn es den Wert des Aus-Befehls hat.</p>
+          <label>Beschriftung (leer = An/Aus/Zustand unbekannt)
+            <input name="label" maxlength="32" autocomplete="off">
+          </label>
+          ${actionPresentationFields}
           <div>
-            <span class="hint">Icon bei „An“ (optional)</span>
+            <span class="hint">Icon bei „An“ (leer = Standardsymbol)</span>
             <div class="icon-row">
               <span class="glyph" data-icon-preview="on" aria-hidden="true" hidden></span>
               <span data-icon-name="on">kein Icon</span>
@@ -134,7 +137,7 @@ class FHEMCMSSwitch extends HTMLElement {
             </div>
           </div>
           <div>
-            <span class="hint">Icon bei „Aus“ (optional, leer = wie bei „An“)</span>
+            <span class="hint">Icon bei „Aus“ (leer = eigenes An-Icon oder Standardsymbol)</span>
             <div class="icon-row">
               <span class="glyph" data-icon-preview="off" aria-hidden="true" hidden></span>
               <span data-icon-name="off">kein Icon</span>
@@ -239,7 +242,13 @@ class FHEMCMSSwitch extends HTMLElement {
     toggle.setAttribute('aria-checked', String(state === 'on'));
     toggle.toggleAttribute('data-unknown', state === null);
     const title = this.widgetConfig.showTitle === false ? '' : (this.widgetConfig.title || '');
-    toggle.setAttribute('aria-label', title || `${this.widgetConfig.device || 'Schalter'}`);
+    const stateLabel = state === 'on' ? 'An' : state === 'off' ? 'Aus' : 'Zustand unbekannt';
+    const label = this.widgetConfig.label || stateLabel;
+    toggle.setAttribute('aria-label', `${title || this.widgetConfig.device || 'Schalter'}: ${label}${this.widgetConfig.label ? ` (${stateLabel})` : ''}`);
+    toggle.title = stateLabel;
+    const caption = this.shadowRoot.querySelector('[data-label]');
+    caption.textContent = label;
+    caption.hidden = this.widgetConfig.showLabel !== true;
     const raw = this.readingValue();
     const tile = this.shadowRoot.querySelector('[data-tile]');
     tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''} = ${raw === null ? '–' : raw}`;
@@ -247,7 +256,7 @@ class FHEMCMSSwitch extends HTMLElement {
     this.shadowRoot.querySelector('[data-title]').textContent = title;
     this.shadowRoot.querySelector('[data-header]').hidden = !title;
     const name = state === 'off' && this.widgetConfig.iconOff ? this.widgetConfig.iconOff : this.widgetConfig.icon;
-    const url = name && this.services ? this.services.iconUrl(name) : '';
+    const url = actionIconUrl(name, state || 'unknown', this.services);
     const icon = this.shadowRoot.querySelector('[data-icon]');
     icon.hidden = !url;
     this.setIconSrc(icon, url);
@@ -306,6 +315,8 @@ class FHEMCMSSwitch extends HTMLElement {
     form.elements.title.value = this.widgetConfig.title || '';
     form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.device.value = this.widgetConfig.device || '';
+    form.elements.label.value = this.widgetConfig.label || '';
+    form.elements.showLabel.value = String(this.widgetConfig.showLabel === true);
     this.setIcon('on', this.widgetConfig.icon || '');
     this.setIcon('off', this.widgetConfig.iconOff || '');
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
@@ -377,14 +388,16 @@ class FHEMCMSSwitch extends HTMLElement {
       this.iconOff = name;
     }
     const preview = this.shadowRoot.querySelector(`[data-icon-preview="${which}"]`);
-    const url = name && this.services ? this.services.iconUrl(name) : '';
+    const url = actionIconUrl(name || (which === 'off' ? this.iconOn : ''), which, this.services);
     preview.hidden = !url;
     this.setIconSrc(preview, url);
-    this.shadowRoot.querySelector(`[data-icon-name="${which}"]`).textContent = name || 'kein Icon';
+    this.shadowRoot.querySelector(`[data-icon-name="${which}"]`).textContent = name || 'Standardsymbol / Vererbung';
+    if (which === 'on') this.setIcon('off', this.iconOff);
   }
 
   async chooseIcon(which) {
-    const name = await openIconPicker({ services: this.services, title: which === 'on' ? 'Icon bei „An“' : 'Icon bei „Aus“' });
+    const name = await openIconPicker({ services: this.services, title: which === 'on' ? 'Icon bei „An“' : 'Icon bei „Aus“',
+      clearLabel: 'Standardsymbol / Vererbung' });
     if (name !== null) {
       this.setIcon(which, name);
     }
@@ -406,6 +419,13 @@ class FHEMCMSSwitch extends HTMLElement {
       id: this.widgetConfig.id, type: 'fhem-switch', device: value('device'), reading: value('reading'),
       on: value('on'), off: value('off'), grid: { ...this.widgetConfig.grid }
     };
+    widget.showLabel = collectActionPresentation(form);
+    if (value('label')) {
+      if (value('label').length > 32 || /[\u0000-\u001f\u007f]/.test(value('label'))) {
+        throw new Error('Die Beschriftung ist ungültig');
+      }
+      widget.label = value('label');
+    }
     if (value('title')) {
       widget.title = value('title');
     }

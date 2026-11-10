@@ -15,7 +15,7 @@ use MIME::Base64 qw(decode_base64 encode_base64);
 use POSIX qw(strftime);
 use Time::Local ();
 
-our $FHEMCMS_VERSION = '1.1.0';
+our $FHEMCMS_VERSION = '1.2.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -864,10 +864,10 @@ sub FHEMCMS_ValidateConfig {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['title', 'showTitle', 'unit', 'icon']);
             } elsif ($widget->{type} eq 'fhem-switch') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'on', 'off', 'grid'],
-                    ['title', 'showTitle', 'icon', 'iconOff']);
+                    ['title', 'showTitle', 'icon', 'iconOff', 'label', 'showLabel']);
             } elsif ($widget->{type} eq 'fhem-button') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'grid'],
-                    ['title', 'showTitle', 'label', 'icon']);
+                    ['title', 'showTitle', 'label', 'icon', 'showLabel']);
             } elsif ($widget->{type} eq 'fhem-clock') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'style', 'showSeconds', 'showDate', 'showWeekday', 'grid'],
                     ['title', 'showTitle']);
@@ -927,15 +927,19 @@ sub FHEMCMS_ValidateConfig {
                 return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
             }
 
-            if ($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html') {
-                # keine weiteren Felder
-            } elsif ($widget->{type} eq 'fhem-button') {
-                return 'Ungueltiger Wert fuer command' if (!$isName->($widget->{command}));
+            if ($widget->{type} eq 'fhem-button' || $widget->{type} eq 'fhem-switch') {
+                return 'Ungueltiger Wert fuer showLabel'
+                    if (exists($widget->{showLabel}) && !$isBool->($widget->{showLabel}));
                 return 'Ungueltige Beschriftung'
                     if (exists($widget->{label})
                         && (ref($widget->{label}) || !defined($widget->{label})
                             || length($widget->{label}) < 1 || length($widget->{label}) > 32
                             || $widget->{label} =~ /[\x00-\x1f\x7f]/));
+            }
+            if ($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html') {
+                # keine weiteren Felder
+            } elsif ($widget->{type} eq 'fhem-button') {
+                return 'Ungueltiger Wert fuer command' if (!$isName->($widget->{command}));
                 return 'Ungueltiges Icon'
                     if (exists($widget->{icon})
                         && (ref($widget->{icon}) || !defined($widget->{icon})

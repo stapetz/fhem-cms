@@ -2,6 +2,7 @@ import { openDevicePicker } from '../js/device-picker.js';
 import { openIconPicker } from '../js/icon-picker.js';
 import { switchCommands } from './cms-switch.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
+import { actionIconUrl, actionPresentationFields, collectActionPresentation } from '../js/action-presentation.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const FEEDBACK_MS = 1500;
@@ -51,6 +52,7 @@ class FHEMCMSButton extends HTMLElement {
         .push:disabled { cursor: default; opacity: 0.7; }
         .push[data-done] { background: var(--cms-accent, #8fd0a8); color: var(--cms-bg, #17211d); }
         .label { white-space: nowrap; }
+        .label[hidden] { display: none; }
         .glyph { display: inline-block; flex: none; width: 1.1em; height: 1.1em; background-color: currentColor;
           -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
         .glyph[hidden] { display: none; }
@@ -110,8 +112,9 @@ class FHEMCMSButton extends HTMLElement {
           <label>Beschriftung des Knopfs (leer = Befehl)
             <input name="label" maxlength="32" autocomplete="off">
           </label>
+          ${actionPresentationFields}
           <div>
-            <span class="hint">Icon (optional)</span>
+            <span class="hint">Icon (leer = passendes Standardsymbol)</span>
             <div class="icon-row">
               <span class="glyph" data-icon-preview aria-hidden="true" hidden></span>
               <span data-icon-name>kein Icon</span>
@@ -138,6 +141,7 @@ class FHEMCMSButton extends HTMLElement {
     $('[data-pick-device]').addEventListener('click', () => this.pickDevice());
     form.elements.device.addEventListener('click', () => this.pickDevice());
     $('[data-icon-choose]').addEventListener('click', () => this.chooseIcon());
+    form.elements.command.addEventListener('change', () => this.setIcon(this.icon));
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       this.onSave();
@@ -178,14 +182,19 @@ class FHEMCMSButton extends HTMLElement {
       return;
     }
     const config = this.widgetConfig;
-    this.shadowRoot.querySelector('[data-label]').textContent = config.label || config.command || '';
+    const label = config.label || config.command || 'Taster';
+    const caption = this.shadowRoot.querySelector('[data-label]');
+    caption.textContent = label;
+    caption.hidden = config.showLabel !== true;
+    push.setAttribute('aria-label', label);
+    push.title = label;
     const title = config.showTitle === false ? '' : (config.title || '');
     this.shadowRoot.querySelector('[data-title]').textContent = title;
     this.shadowRoot.querySelector('[data-header]').hidden = !title;
     const tile = this.shadowRoot.querySelector('[data-tile]');
     tile.toggleAttribute('data-has-title', Boolean(title));
     tile.title = `${config.device || ''}: set ${config.command || ''}`;
-    const url = config.icon && this.services ? this.services.iconUrl(config.icon) : '';
+    const url = actionIconUrl(config.icon, config.command, this.services);
     const icon = this.shadowRoot.querySelector('[data-icon]');
     icon.hidden = !url;
     this.setIconSrc(icon, url);
@@ -236,6 +245,7 @@ class FHEMCMSButton extends HTMLElement {
     form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.device.value = this.widgetConfig.device || '';
     form.elements.label.value = this.widgetConfig.label || '';
+    form.elements.showLabel.value = String(this.widgetConfig.showLabel === true);
     this.setIcon(this.widgetConfig.icon || '');
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.setDialogError('');
@@ -266,6 +276,7 @@ class FHEMCMSButton extends HTMLElement {
     });
     form.elements.command.replaceChildren(...options);
     form.elements.command.value = wanted && names.has(wanted) ? wanted : (options[0]?.value || '');
+    this.setIcon(this.icon);
     this.shadowRoot.querySelector('[data-device-alias]').textContent =
       device && device.alias && device.alias !== name ? `Alias: ${device.alias}` : '';
   }
@@ -290,14 +301,15 @@ class FHEMCMSButton extends HTMLElement {
   setIcon(name) {
     this.icon = name;
     const preview = this.shadowRoot.querySelector('[data-icon-preview]');
-    const url = name && this.services ? this.services.iconUrl(name) : '';
+    const command = this.shadowRoot.querySelector('[data-form]').elements.command.value;
+    const url = actionIconUrl(name, command, this.services);
     preview.hidden = !url;
     this.setIconSrc(preview, url);
-    this.shadowRoot.querySelector('[data-icon-name]').textContent = name || 'kein Icon';
+    this.shadowRoot.querySelector('[data-icon-name]').textContent = name || 'Standardsymbol';
   }
 
   async chooseIcon() {
-    const name = await openIconPicker({ services: this.services });
+    const name = await openIconPicker({ services: this.services, clearLabel: 'Standardsymbol' });
     if (name !== null) {
       this.setIcon(name);
     }
@@ -312,13 +324,14 @@ class FHEMCMSButton extends HTMLElement {
     if (!NAME_PATTERN.test(value('command'))) {
       throw new Error('Bitte einen Befehl wählen');
     }
-    if (/[\u0000-\u001f\u007f]/.test(value('label'))) {
+    if (value('label').length > 32 || /[\u0000-\u001f\u007f]/.test(value('label'))) {
       throw new Error('Die Beschriftung enthält ungültige Zeichen');
     }
     const widget = {
       id: this.widgetConfig.id, type: 'fhem-button', device: value('device'), command: value('command'),
       grid: { ...this.widgetConfig.grid }
     };
+    widget.showLabel = collectActionPresentation(form);
     for (const field of ['title', 'label']) {
       if (value(field)) {
         widget[field] = value(field);

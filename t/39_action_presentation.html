@@ -1,0 +1,129 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Action widget presentation regression</title>
+<style>
+  #fixture > * { display: block; width: 320px; height: 200px; }
+</style>
+<div id="fixture"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+import { defaultActionIcon } from '../www/fhem-cms/js/action-presentation.js';
+
+const output = document.querySelector('#result');
+const fixture = document.querySelector('#fixture');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+const settle = () => new Promise(resolve => setTimeout(resolve, 80));
+const device = { name: 'Lamp', readings: { state: 'off' }, sets: 'on:noArg off:noArg toggle:noArg' };
+const snapshots = (state) => new Map([['Lamp', [{ ...device, readings: { state } }]]]);
+const commands = [];
+let saved;
+const services = {
+  iconUrl: (name) => defaultActionIcon(name === 'off.svg' ? 'off' : 'press'), listAllDevices: async () => [device],
+  listIcons: async () => ['custom.svg'],
+  saveWidget: async (config) => { saved = structuredClone(config); },
+  setCommand: async (...args) => { commands.push(args); },
+};
+try {
+  for (const type of ['fhem-button', 'fhem-switch']) {
+    const config = { type, id: 'test', title: 'Licht', label: 'Umschalten', device: 'Lamp',
+      command: 'toggle', reading: 'state', on: 'on', off: 'off', grid: { col: 1, row: 2, w: 3, h: 2 } };
+    const original = JSON.stringify(config);
+    const host = createWidgetElement(config, services, snapshots('off'), true);
+    fixture.append(host);
+    const $ = (selector) => host.shadowRoot.querySelector(selector);
+    const control = $('[data-push], [data-toggle]');
+    const icon = $('[data-icon]');
+    check(!icon.hidden && icon.style.getPropertyValue('--icon-url').includes('data:image/svg+xml'),
+      `${type}: built-in default icon without FHEM icon dependency`);
+    check($('[data-label]').hidden, `${type}: existing widgets default to icon only`);
+    check(control.getAttribute('aria-label').includes('Umschalten'), 'Icon-only control has an accessible name');
+    check(!$('[data-header]').hidden, 'Title remains independent from action caption');
+    if (type === 'fhem-switch') {
+      const off = icon.style.getPropertyValue('--icon-url');
+      host.data = snapshots('on').get('Lamp');
+      check(control.getAttribute('aria-checked') === 'true', 'Known on state remains accessible');
+      check(icon.style.getPropertyValue('--icon-url') !== off, 'On/off have different built-in symbols');
+      host.data = snapshots('unknown').get('Lamp');
+      check(control.hasAttribute('data-unknown') && control.title === 'Zustand unbekannt', 'Unknown state is explicit');
+      host.data = snapshots('off').get('Lamp');
+    } else {
+      check(icon.style.getPropertyValue('--icon-url').includes(encodeURIComponent('M4 7h15')), 'Toggle uses toggle arrows');
+    }
+    control.click();
+    await settle();
+    check(JSON.stringify(commands.at(-1)) === JSON.stringify(['Lamp', type === 'fhem-button' ? 'toggle' : 'on']),
+      'Original device and command sent');
+    await host.openConfig();
+    const form = $('[data-form]');
+    check(form.elements.showLabel.value === 'false', 'Dialog opens with icon-only selection');
+    form.elements.showLabel.value = 'true';
+    form.elements.label.value = 'Meine Beschriftung';
+    const choosing = host.chooseIcon(...(type === 'fhem-switch' ? ['on'] : []));
+    await settle();
+    const picker = document.querySelector('.cms-ip-dialog');
+    check(picker.querySelector('[data-clear]').textContent.includes('Standard'), 'Picker can restore standard');
+    picker.querySelector('[data-grid] button').click();
+    await choosing;
+    check($('[data-icon-name]').textContent === 'custom.svg', 'Custom icon selected from real picker');
+    const candidate = host.collectWidget();
+    check(candidate.showLabel === true && candidate.icon === 'custom.svg' && candidate.label === 'Meine Beschriftung',
+      'Dialog collects shared presentation and custom icon');
+    check(JSON.stringify(config) === original, 'Unsaved changes leave configuration untouched');
+    $('[data-cancel]').click();
+    check(JSON.stringify(config) === original && $('[data-label]').hidden, 'Cancel keeps original rendering');
+    await host.openConfig();
+    check(form.elements.showLabel.value === 'false', 'Reopening resets cancelled text choice');
+    form.elements.showLabel.value = 'true';
+    form.elements.label.value = 'Meine Beschriftung';
+    if (type === 'fhem-switch') host.setIcon('on', 'custom.svg');
+    else host.setIcon('custom.svg');
+    saved = null;
+    await host.onSave();
+    check(saved.showLabel && saved.icon === 'custom.svg', 'Save persists selected presentation');
+    check(JSON.stringify(saved.grid) === JSON.stringify(config.grid), 'Presentation save preserves geometry');
+    host.config = saved;
+    await settle();
+    check(!$('[data-label]').hidden && $('[data-label]').textContent === 'Meine Beschriftung', 'Saved caption visible');
+    check(icon.style.getPropertyValue('--icon-url').includes(defaultActionIcon('press')), 'Saved custom icon rendered');
+    if (type === 'fhem-switch') {
+      host.data = snapshots('on').get('Lamp');
+      host.data = snapshots('off').get('Lamp');
+      check(icon.style.getPropertyValue('--icon-url').includes(defaultActionIcon('press')), 'Off inherits custom on icon');
+      host.config = { ...saved, iconOff: 'off.svg' };
+      check(icon.style.getPropertyValue('--icon-url').includes(defaultActionIcon('off')), 'Own off icon overrides inheritance');
+      host.config = saved;
+    }
+    await host.openConfig();
+    const clearing = host.chooseIcon(...(type === 'fhem-switch' ? ['on'] : []));
+    await settle();
+    document.querySelector('.cms-ip-dialog [data-clear]').click();
+    await clearing;
+    form.elements.showLabel.value = 'false';
+    await host.onSave();
+    host.config = saved;
+    check(!('icon' in saved) && !$('[data-icon]').hidden, 'Reset removes override but retains default symbol');
+    check($('[data-label]').hidden, 'Can return to icon-only mode');
+    host.services = { ...services, setCommand: async () => { throw new Error('Testfehler'); } };
+    control.click();
+    await settle();
+    check($('[data-msg]').textContent === 'Testfehler', 'Command failures remain visible');
+    host.removeAttribute('view-only');
+    const sent = commands.length;
+    host.services = services;
+    control.click();
+    await settle();
+    check(commands.length === sent, 'Editing never sends device commands');
+    host.remove();
+    window.clearTimeout(host.feedbackTimer);
+    window.clearTimeout(host.pendingTimer);
+    window.clearTimeout(host.errorTimer);
+  }
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || error.message;
+} finally { fixture.replaceChildren(); }
+</script>

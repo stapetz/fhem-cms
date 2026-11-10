@@ -22,7 +22,7 @@ const STYLE = `
   .cms-ip-dialog .actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
 `;
 
-export function openIconPicker({ services, title = 'Icon wählen' }) {
+export function openIconPicker({ services, title = 'Icon wählen', clearLabel = 'Kein Icon' }) {
   return new Promise((resolve) => {
     const dialog = document.createElement('dialog');
     dialog.className = 'cms-ip-dialog';
@@ -37,6 +37,7 @@ export function openIconPicker({ services, title = 'Icon wählen' }) {
         <div class="actions"><button type="button" data-clear>Kein Icon</button><button type="button" data-cancel>Abbrechen</button></div>
       </form>`;
     dialog.querySelector('h3').textContent = title;
+    dialog.querySelector('[data-clear]').textContent = clearLabel;
     const $ = (selector) => dialog.querySelector(selector);
     let icons = [];
     let done = false;
