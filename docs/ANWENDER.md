@@ -265,14 +265,19 @@ Denselben Dialog öffnen **Bild hinzufügen …** im Texteditor und LinkWidget s
 die Dokumentauswahl nur Dokumente. Bereits früher im Textwidget hochgeladene
 Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
 
-- Wie im Finder links in der **Ordnerleiste** oder rechts auf eine **Ordnerkachel**
-  klicken. Ein Klick öffnet den Ordner; er verändert oder löscht keine Dateien.
-  Rechts stehen dessen direkte Unterordner und Dateien. Der **Stammordner**
+- In der großen Übersicht auf eine **Ordnerkachel** klicken. Ein Klick öffnet den
+  Ordner; er verändert oder löscht keine Dateien. Es gibt keine linke
+  Baumstruktur und keinen getrennten Bereich „Ordner verwalten“.
+  Die Übersicht zeigt dessen direkte Unterordner und Dateien. Der **Stammordner**
   zeigt ebenfalls nur seine eigenen Inhalte, nicht zusätzlich alle Unterordner.
   Über den klickbaren Pfad oberhalb zur übergeordneten Ebene zurückkehren.
-  Unter **Ordner verwalten** Unterordner anlegen, umbenennen oder über
-  **Übergeordneten Ordner auswählen …** verschieben. Nur leere Ordner lassen
-  sich löschen, nach einer zusätzlichen Bestätigung mit ihrem vollständigen Pfad.
+  **Ordner erstellen** oberhalb der Übersicht öffnet die Namenseingabe und legt
+  den neuen Ordner im aktuell geöffneten Ordner an. Die Ansicht bleibt im
+  bisherigen Ordner, sodass die neue Kachel direkt sichtbar ist.
+  Zum Umbenennen, Verschieben oder Löschen **⋯** an der jeweiligen Ordnerkachel
+  wählen. Die Eigenschaften erscheinen dann bei Bedarf rechts. Nur leere Ordner
+  lassen sich löschen, nach einer zusätzlichen Bestätigung mit vollständigem Pfad.
+  Auch die Zielordnerauswahl verwendet ausschließlich Kacheln und Pfad.
 - Unter **Dateien in diesen Ordner hochladen** eine oder mehrere Dateien wählen.
   Uploads landen direkt im gewählten Ordner. Fortschritt und Fehler werden
   angezeigt; **Upload abbrechen** verwirft den laufenden Upload.

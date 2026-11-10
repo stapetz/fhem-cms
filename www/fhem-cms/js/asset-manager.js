@@ -33,17 +33,16 @@ export async function openAssetManager(services, { mode = null, owner = document
       label { display:grid; gap:.2rem; }
       .row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
       .row > input,.row > select { flex:1; }
-      .layout { display:grid; grid-template-columns:minmax(0,3fr) minmax(13rem,1fr); gap:1rem; }
-      .browser { display:grid; grid-template-columns:minmax(9rem,1fr) minmax(0,3fr); gap:.7rem; }
-      .folders { display:grid; align-content:start; gap:.2rem; max-height:42vh; overflow:auto;
-        border-right:1px solid var(--cms-border,#43564a); padding-right:.5rem; }
-      .folders button { text-align:left; overflow-wrap:anywhere; }
-      .folders button[aria-current=true] { background:var(--cms-border,#43564a); }
+      .layout { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; }
+      .layout.has-detail { grid-template-columns:minmax(0,3fr) minmax(13rem,1fr); }
       .path { display:flex; flex-wrap:wrap; gap:.2rem; margin-bottom:.5rem; }
+      .folder-entry { position:relative; min-width:0; }
+      .folder-entry > .folder-tile { width:100%; height:100%; padding-top:2rem; }
+      .folder-edit { position:absolute; top:.2rem; right:.2rem; padding:.1rem .5rem; }
       .folder-tile { justify-content:center; min-height:7rem; }
       .folder-icon { font-size:2rem; }
       .destination { width:min(90vw,48rem); }
-      .destination .browser { min-height:16rem; }
+      .folder-create { width:min(90vw,28rem); }
       .destination .assets { max-height:40vh; }
       .danger { border-color:var(--cms-danger,#ffb4a8); }
       .assets { display:grid; grid-template-columns:repeat(auto-fill,minmax(7rem,1fr)); gap:.5rem;
@@ -62,28 +61,19 @@ export async function openAssetManager(services, { mode = null, owner = document
       details { border:1px solid var(--cms-border,#43564a); padding:.5rem; border-radius:.5rem; }
       summary { cursor:pointer; margin-bottom:.4rem; }
       .footer { display:flex; justify-content:flex-end; gap:.5rem; }
-      @media(max-width:650px) { .layout { grid-template-columns:minmax(0,1fr); }
-        .browser { grid-template-columns:minmax(7rem,1fr) minmax(0,2fr); } .assets { max-height:30vh; } }
+      .detail[hidden] { display:none; }
+      @media(max-width:650px) { .layout.has-detail { grid-template-columns:minmax(0,1fr); } .assets { max-height:30vh; } }
     </style>
     <dialog aria-labelledby="asset-title" data-assets-dialog>
       <h2 id="asset-title">Assetmanager</h2>
       <p class="hint">Gemeinsame Assets dieses CMS-Devices. Änderungen gelten sofort, unabhängig vom Seitenentwurf.
         „Bild entfernen“ im Widget entfernt nur den Verweis.</p>
       <form data-form>
-        <details data-folder-tools><summary>Ordner verwalten</summary>
-          <label>Ordnername<input data-folder-name maxlength="128"></label>
-          <p>Übergeordneter Ordner: <span data-parent-name></span></p>
-          <button type="button" data-parent>Übergeordneten Ordner auswählen …</button>
-          <div class="row"><button type="button" data-mkdir>Unterordner anlegen</button>
-            <button type="button" data-folder-save>Ordner umbenennen / verschieben</button>
-            <button type="button" class="danger" data-rmdir>Leeren Ordner löschen …</button></div>
-        </details>
         <div class="row"><label>Dateien in diesen Ordner hochladen<input type="file" multiple data-upload></label>
           <input type="search" data-search placeholder="Dateiname suchen" aria-label="Dateiname suchen"></div>
         <div class="path" data-path aria-label="Aktueller Ordner"></div>
-        <div class="layout"><div class="browser">
-          <nav class="folders" data-folders aria-label="Ordner"></nav>
-          <div class="assets" data-assets role="group" aria-label="Ordnerinhalt"></div></div>
+        <div class="row"><button type="button" data-mkdir>Ordner erstellen</button></div>
+        <div class="layout"><div class="assets" data-assets role="group" aria-label="Ordnerinhalt"></div>
           <div class="detail" data-detail></div></div>
         <details data-admin><summary>Administration: Dateitypen und Speichergrenzen</summary>
           <p class="hint">Vorerst darf jeder CMS-Bearbeiter diese Einstellungen ändern.
@@ -112,12 +102,12 @@ export async function openAssetManager(services, { mode = null, owner = document
   let state;
   let folder = 'root';
   let selected = null;
+  let selectedFolder = null;
   let busy = false;
   let closed = false;
   let uploadController;
   let resolveClosed;
   let observer;
-  let parentFolder = 'root';
   let dismissFolderDialog;
   const completion = new Promise(resolve => { resolveClosed = resolve; });
   const originalFocus = document.activeElement;
@@ -144,29 +134,16 @@ export async function openAssetManager(services, { mode = null, owner = document
     return ['root', ...path];
   };
   const pathText = id => folderPath(id).map(folderName).join(' / ');
-  const folderTree = (container, current, navigate, excluded = new Set()) => {
-    container.replaceChildren();
-    const append = (parent, depth) => {
-      if (excluded.has(parent)) return;
-      const item = element('button', `📁 ${folderName(parent)}`);
-      item.type = 'button'; item.dataset.folderId = parent;
-      item.style.paddingInlineStart = `${.5 + depth * .8}rem`;
-      item.setAttribute('aria-current', String(parent === current));
-      item.addEventListener('click', () => navigate(parent));
-      container.append(item);
-      for (const child of children(parent)) append(child.id, depth + 1);
-    };
-    append('root', 0);
-  };
   const breadcrumbs = (container, current, navigate) => {
     container.replaceChildren();
     for (const id of folderPath(current)) {
       const item = element('button', folderName(id));
-      item.type = 'button'; item.addEventListener('click', () => navigate(id));
+      item.type = 'button'; item.dataset.pathFolder = id;
+      item.addEventListener('click', () => navigate(id));
       container.append(item);
     }
   };
-  const folderTiles = (container, current, navigate, excluded = new Set()) => {
+  const folderTiles = (container, current, navigate, excluded = new Set(), editable = false) => {
     for (const child of children(current)) {
       if (excluded.has(child.id)) continue;
       const item = element('button'); item.type = 'button'; item.className = 'asset folder-tile';
@@ -174,7 +151,16 @@ export async function openAssetManager(services, { mode = null, owner = document
       const icon = element('span', '📁'); icon.className = 'folder-icon';
       item.append(icon, element('span', child.name));
       item.addEventListener('click', () => navigate(child.id));
-      container.append(item);
+      if (editable) {
+        const entry = element('div'); entry.className = 'folder-entry';
+        const edit = element('button', '⋯'); edit.type = 'button'; edit.className = 'folder-edit';
+        edit.dataset.editFolder = child.id;
+        edit.setAttribute('aria-label', `Ordner „${child.name}“ bearbeiten`);
+        edit.addEventListener('click', () => {
+          selected = null; selectedFolder = child.id; usage([]); render();
+        });
+        entry.append(item, edit); container.append(entry);
+      } else container.append(item);
     }
   };
   const chooseFolder = (initial, exclude = null) => new Promise(resolve => {
@@ -187,10 +173,8 @@ export async function openAssetManager(services, { mode = null, owner = document
     const title = element('h2', 'Zielordner auswählen'); title.id = 'folder-picker-title';
     dialog.setAttribute('aria-labelledby', title.id);
     const path = element('div'); path.className = 'path';
-    const browser = element('div'); browser.className = 'browser';
-    const tree = element('nav'); tree.className = 'folders'; tree.setAttribute('aria-label', 'Zielordner');
     const content = element('div'); content.className = 'assets';
-    browser.append(tree, content);
+    content.setAttribute('role', 'group'); content.setAttribute('aria-label', 'Zielordnerinhalt');
     const selectedPath = element('p'); selectedPath.dataset.destinationPath = '';
     const footer = element('div'); footer.className = 'footer';
     const cancel = element('button', 'Abbrechen'); cancel.type = 'button'; cancel.dataset.folderCancel = '';
@@ -200,7 +184,7 @@ export async function openAssetManager(services, { mode = null, owner = document
     };
     const navigate = id => {
       current = id;
-      folderTree(tree, current, navigate, excluded); breadcrumbs(path, current, navigate);
+      breadcrumbs(path, current, navigate);
       content.replaceChildren(); folderTiles(content, current, navigate, excluded);
       for (const asset of state.assets.filter(item => item.folder === current)) {
         const preview = element('div'); preview.className = 'asset'; preview.dataset.folderPreview = asset.id;
@@ -215,15 +199,46 @@ export async function openAssetManager(services, { mode = null, owner = document
     cancel.addEventListener('click', () => finish(null));
     accept.addEventListener('click', () => finish(current));
     dialog.addEventListener('cancel', event => { event.preventDefault(); finish(null); });
-    footer.append(cancel, accept); dialog.append(title, path, browser, selectedPath, footer);
+    footer.append(cancel, accept); dialog.append(title, path, content, selectedPath, footer);
     dismissFolderDialog = () => finish(null);
     root.append(dialog); navigate(current); dialog.showModal();
   });
-  const confirmFolderDelete = () => new Promise(resolve => {
+  const createFolderName = () => new Promise(resolve => {
+    const dialog = element('dialog'); dialog.className = 'folder-create'; dialog.dataset.folderCreate = '';
+    const title = element('h2', 'Ordner erstellen'); title.id = 'folder-create-title';
+    dialog.setAttribute('aria-labelledby', title.id);
+    const form = element('form');
+    const label = element('label', 'Ordnername');
+    const name = element('input'); name.maxLength = 128; name.required = true; name.dataset.folderName = '';
+    label.append(name);
+    const error = element('p'); error.className = 'error'; error.setAttribute('role', 'alert');
+    const footer = element('div'); footer.className = 'footer';
+    const cancel = element('button', 'Abbrechen'); cancel.type = 'button'; cancel.dataset.folderCreateCancel = '';
+    const accept = element('button', 'Erstellen'); accept.type = 'submit'; accept.dataset.folderCreateAccept = '';
+    const finish = value => {
+      dismissFolderDialog = undefined; dialog.close(); dialog.remove(); resolve(value);
+    };
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const value = name.value.trim();
+      if (!value || value === '.' || value === '..' || /[\x00-\x1f\x7f/\\]/.test(value)) {
+        error.textContent = 'Bitte einen gültigen Ordnernamen ohne Schrägstriche eingeben.'; return;
+      }
+      finish(value);
+    });
+    cancel.addEventListener('click', () => finish(null));
+    dialog.addEventListener('cancel', event => { event.preventDefault(); finish(null); });
+    footer.append(cancel, accept);
+    form.append(element('p', `Anlegen in: ${pathText(folder)}`), label, error, footer);
+    dialog.append(title, form); root.append(dialog);
+    dismissFolderDialog = () => finish(null);
+    dialog.showModal(); name.focus();
+  });
+  const confirmFolderDelete = id => new Promise(resolve => {
     const dialog = element('dialog'); dialog.dataset.folderDelete = '';
     const title = element('h2', 'Leeren Ordner löschen?'); title.id = 'folder-delete-title';
     dialog.setAttribute('aria-labelledby', title.id);
-    dialog.append(title, element('p', `„${pathText(folder)}“ endgültig löschen? Nur ein leerer Ordner kann gelöscht werden. Inhalte werden niemals mitgelöscht.`));
+    dialog.append(title, element('p', `„${pathText(id)}“ endgültig löschen? Nur ein leerer Ordner kann gelöscht werden. Inhalte werden niemals mitgelöscht.`));
     const cancel = element('button', 'Abbrechen'); cancel.type = 'button'; cancel.dataset.deleteFolderCancel = '';
     const accept = element('button', 'Ordner endgültig löschen'); accept.type = 'button';
     accept.className = 'danger'; accept.dataset.deleteFolderAccept = '';
@@ -283,7 +298,36 @@ export async function openAssetManager(services, { mode = null, owner = document
     box.replaceChildren();
     const asset = state.assets.find(item => item.id === selected);
     $('[data-select]').disabled = busy || !asset || !allowed(asset);
-    if (!asset) { box.append(element('p', 'Asset auswählen, um Details und Verwendungen zu sehen.')); return; }
+    const directory = state.folders.find(item => item.id === selectedFolder);
+    box.hidden = !asset && !directory;
+    box.parentElement.classList.toggle('has-detail', !box.hidden);
+    if (directory) {
+      box.append(element('strong', `Ordner: ${directory.name}`));
+      const label = element('label', 'Ordnername');
+      const name = element('input'); name.value = directory.name; name.maxLength = 128; name.dataset.folderName = '';
+      label.append(name); box.append(label);
+      let parent = directory.parent;
+      const target = element('p', `Übergeordneter Ordner: ${pathText(parent)}`); target.dataset.parentName = '';
+      const choose = element('button', 'Übergeordneten Ordner auswählen …'); choose.type = 'button'; choose.dataset.parent = '';
+      choose.addEventListener('click', async () => {
+        const destination = await chooseFolder(parent, directory.id);
+        if (destination === null || closed) return;
+        parent = destination; target.textContent = `Übergeordneter Ordner: ${pathText(parent)}`;
+      });
+      box.append(target, choose, button('Ordner umbenennen / verschieben', async () => {
+        await mutate({ op: 'folder', id: directory.id, name: name.value, parent });
+        status(`Ordner gespeichert: ${pathText(directory.id)}.`);
+      }, 'data-folder-save'), button('Leeren Ordner löschen …', async () => {
+        if (state.assets.some(item => item.folder === directory.id) || children(directory.id).length) {
+          throw new Error('Der Ordner enthält noch Dateien oder Unterordner und wird nicht gelöscht.');
+        }
+        if (!await confirmFolderDelete(directory.id)) return;
+        await mutate({ op: 'rmdir', id: directory.id });
+        selectedFolder = null; render(); status('Leerer Ordner gelöscht.');
+      }, 'data-rmdir'));
+      return;
+    }
+    if (!asset) return;
     box.append(element('strong', asset.name), element('p', `${asset.image ? 'Bild' : 'Dokument'} · ${sizeText(asset.bytes)}`));
     const label = element('label', 'Dateiname');
     const name = element('input'); name.value = asset.name; name.maxLength = 180; name.dataset.assetName = '';
@@ -321,18 +365,10 @@ export async function openAssetManager(services, { mode = null, owner = document
     }, 'data-delete-asset'));
   }
   function render() {
-    const current = state.folders.find(item => item.id === folder);
-    $('[data-folder-name]').value = current?.name || '';
-    parentFolder = current?.parent || 'root';
-    $('[data-parent-name]').textContent = pathText(parentFolder);
-    $('[data-parent]').disabled = !current;
-    $('[data-folder-save]').disabled = !current;
-    $('[data-rmdir]').disabled = !current;
-    folderTree($('[data-folders]'), folder, navigate);
     breadcrumbs($('[data-path]'), folder, navigate);
     const query = $('[data-search]').value.trim().toLocaleLowerCase('de');
     const box = $('[data-assets]'); box.replaceChildren();
-    folderTiles(box, folder, navigate);
+    folderTiles(box, folder, navigate, new Set(), true);
     const assets = state.assets.filter(asset => asset.folder === folder && allowed(asset)
       && asset.name.toLocaleLowerCase('de').includes(query)).sort((a, b) => a.name.localeCompare(b.name, 'de'));
     for (const asset of assets) {
@@ -345,7 +381,7 @@ export async function openAssetManager(services, { mode = null, owner = document
         const icon = element('span', '▤'); icon.className = 'document'; choose.append(icon);
       }
       choose.append(element('span', asset.name), element('small', sizeText(asset.bytes)));
-      choose.addEventListener('click', () => { selected = asset.id; usage([]); render(); });
+      choose.addEventListener('click', () => { selected = asset.id; selectedFolder = null; usage([]); render(); });
       box.append(choose);
     }
     if (!box.children.length) box.append(element('p', 'Dieser Ordner ist leer.'));
@@ -357,7 +393,7 @@ export async function openAssetManager(services, { mode = null, owner = document
     }
     function navigate(id) {
       if (busy || closed) return;
-      folder = id; selected = null; usage([]); render();
+      folder = id; selected = null; selectedFolder = null; usage([]); render();
     }
     for (const key of ['imageBytes', 'documentBytes', 'totalBytes']) {
       $(`[data-limit="${key}"]`).value = String(state.policy[key] / MiB);
@@ -399,30 +435,18 @@ export async function openAssetManager(services, { mode = null, owner = document
     if (asset) close(structuredClone(asset));
   });
   $('[data-reload]').addEventListener('click', () => operation(reload));
-  $('[data-parent]').addEventListener('click', async () => {
-    const destination = await chooseFolder(parentFolder, folder);
-    if (destination === null || closed) return;
-    parentFolder = destination; $('[data-parent-name]').textContent = pathText(parentFolder);
-  });
   $('[data-search]').addEventListener('input', () => render());
   $('[data-mkdir]').addEventListener('click', () => operation(async () => {
-    const name = $('[data-folder-name]').value;
+    const name = await createFolderName();
+    if (name === null || closed) return;
+    const parent = folder;
     await mutate({ op: 'mkdir', name, parent: folder });
-    folder = state.folders.find(item => item.name === name && item.parent === folder).id;
-    render();
-  }));
-  $('[data-folder-save]').addEventListener('click', () => operation(() => mutate({
-    op: 'folder', id: folder, name: $('[data-folder-name]').value, parent: parentFolder,
-  })));
-  $('[data-rmdir]').addEventListener('click', () => operation(async () => {
-    const current = folder;
-    const parent = state.folders.find(item => item.id === current)?.parent;
-    if (state.assets.some(item => item.folder === current) || children(current).length) {
-      throw new Error('Der Ordner enthält noch Dateien oder Unterordner und wird nicht gelöscht.');
+    const created = state.folders.find(item => item.name === name && item.parent === parent);
+    if (!created) {
+      throw new Error('Ordner wurde nicht angelegt. Bitte neu laden und erneut prüfen.');
     }
-    if (!await confirmFolderDelete()) return;
-    await mutate({ op: 'rmdir', id: current });
-    folder = parent || 'root'; selected = null; render(); status('Leerer Ordner gelöscht.');
+    selected = null; selectedFolder = null; detail();
+    status(`Ordner „${name}“ erstellt in ${pathText(parent)}.`);
   }));
   $('[data-add-type]').addEventListener('click', () => operation(async () => {
     const ext = $('[data-new-type]').value.trim().toLowerCase().replace(/^\./, '');

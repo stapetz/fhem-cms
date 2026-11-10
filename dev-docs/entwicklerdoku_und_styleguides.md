@@ -260,8 +260,14 @@ Datei-Inputs, Uploadabläufe oder Mediengalerien in Widgets ergänzen.
 `owner` bindet den Dialog an den Lebenszyklus des aufrufenden Widgets/Editors.
 Auswahl liefert ein Asset mit stabilem `href`, Abbrechen liefert `null`.
 „Bild entfernen“ entfernt nur den lokalen Verweis, nie die Assetdatei.
-Ordnernavigation erfolgt über Ordnerleiste, Kacheln und Breadcrumbs, nicht über
-Dropdowns. Ein Ordner zeigt ausschließlich seine direkten Dateien/Unterordner.
+Ordnernavigation erfolgt ausschließlich über Kacheln und Breadcrumbs, ohne
+Baum-/Ordnerleiste, Dropdowns oder separaten Bereich „Ordner verwalten“.
+Ein Ordner zeigt ausschließlich seine direkten Dateien/Unterordner.
+„Ordner erstellen“ steht oberhalb der Inhaltsansicht und fragt den Namen ab.
+Es legt im aktuell geöffneten Ordner an, ohne diesen zu verlassen.
+Vorhandene Ordneraktionen liegen kontextbezogen unter „⋯“ an der Kachel.
+Die Detailspalte erscheint nur bei ausgewähltem Asset/Ordner; sonst nutzt die
+Übersicht die volle Breite. Auch der Zielpicker verwendet nur Kacheln und Pfad.
 Zielordner für Assets und Ordner werden über denselben grafischen Ordnerpicker
 gewählt; Auswahl allein schreibt noch nichts. Navigation darf keine Mutation
 auslösen. Move-Antworten müssen die angeforderte ID, den Namen und Zielordner

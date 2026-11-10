@@ -118,7 +118,7 @@ for (const [name, fixtures] of [
       ['44_placeholder_units.html', 384], ['45_solarflow_sizing.html', 868], ['46_unit_inputs.html', 998]]],
   ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 850]]],
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
-  ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 95]]],
+  ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 116]]],
 ]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,
@@ -164,6 +164,9 @@ for (const [name, fixtures] of [
           await click(`[data-folder-picker] [data-open-folder="${'d'.repeat(32)}"]`);
           await click('[data-folder-accept]');
           await click('[data-move]');
+          await click('[data-mkdir]');
+          await command('Input.insertText', { text: 'Mausordner' });
+          await click('[data-folder-create-accept]');
           await evaluate('window.assetRegression.finish()');
           return;
         }
