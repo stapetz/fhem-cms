@@ -108,7 +108,7 @@ test('successful writes with failed or conflicting verification require explicit
   assert.equal((await controller.reload()).live.theme, 'light');
 });
 
-test('first layout edit copies live and rejects a navigation collision on another page', async () => {
+test('first navigation edit persists cross-page reflow atomically and leaves live untouched', async () => {
   const live = config();
   live.pages.push({ id: 'second', title: 'Zweite', widgets: [
     { id: 'clock', type: 'fhem-clock', style: 'digital', showSeconds: false, showDate: false, showWeekday: false,
@@ -130,15 +130,20 @@ test('first layout edit copies live and rejects a navigation collision on anothe
   await controller.reload();
   const positions = schema5GridItems(live, 'start');
   const invalid = structuredClone(positions);
-  invalid[0].y = 4;
-  assert.throws(() => controller.saveLayout('start', invalid, 'a'.repeat(64)), /Seite second/);
+  invalid[1].y = 0;
+  assert.throws(() => controller.saveLayout('start', invalid, 'a'.repeat(64)), /überschneidung/);
   assert.equal(writes, 0);
-  positions[1].y = 3;
+  positions[0].h = 5;
+  positions[1].y = 5;
+  positions[2].y = 5;
   const saved = await controller.saveLayout('start', positions, 'a'.repeat(64));
   assert.equal(writes, 1);
   assert.deepEqual(saved.live, live);
-  assert.equal(saved.draft.pages[0].widgets[0].grid.row, 4);
-  assert.deepEqual(saved.draft.pages[1], live.pages[1]);
+  assert.equal(saved.draft.pages[0].widgets[0].grid.row, 6);
+  assert.equal(saved.draft.pages[1].widgets[0].grid.row, 6);
+  assert.deepEqual(saved.draft.navigation.grid, { col: 1, row: 1, w: 12, h: 5 });
+  const reloaded = await controller.reload();
+  assert.deepEqual(reloaded.draft, saved.draft, 'all page changes survive reload');
   assert.equal(saved.draft.pages[0].widgets[1].html, live.pages[0].widgets[1].html);
 });
 
@@ -165,6 +170,58 @@ if ($operation eq 'read') {
 }
 print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error});
 `;
+
+test('navigation reflow survives real Perl persistence and rejects overflow before any write', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-navigation-reflow-'));
+  const live = config();
+  live.pages.push({ id: 'other', title: 'Other', widgets: [
+    { id: 'first', type: 'text', html: '<p>First</p>', grid: { col: 1, row: 2, w: 4, h: 2 } },
+    { id: 'next', type: 'text', html: '<p>Next</p>', grid: { col: 1, row: 4, w: 4, h: 2 } },
+  ] });
+  const original = JSON.stringify(live, null, 2);
+  const livePath = join(dir, 'config.json');
+  const draftPath = join(dir, 'draft.json');
+  let writes = 0;
+  const invoke = (operation, ...args) => {
+    const process = spawnSync('perl', ['-e', perl, dir, operation, ...args], { encoding: 'utf8' });
+    assert.equal(process.status, 0, process.stderr);
+    const { result, error } = JSON.parse(process.stdout);
+    if (error) throw new Error(error);
+    return result;
+  };
+  const controller = new Schema5DraftController({
+    read: async () => invoke('read'),
+    save: async (value, token) => {
+      writes += 1;
+      invoke('save', Buffer.from(JSON.stringify(value)).toString('base64'), token);
+    },
+    publish: async () => { throw new Error('No publishing'); },
+    discard: async () => { throw new Error('No discard'); },
+  });
+  try {
+    await writeFile(livePath, original);
+    const state = await controller.reload();
+    const items = schema5GridItems(live, 'start');
+    items[0].h = 5;
+    items[1].y = 5;
+    items[2].y = 5;
+    const saved = await controller.saveLayout('start', items, state.token);
+    assert.equal(writes, 1, 'all page changes are one version-bound transaction');
+    assert.deepEqual(saved.draft.pages[1].widgets.map((widget) => widget.grid.row), [6, 8]);
+    assert.equal(await readFile(livePath, 'utf8'), original);
+    assert.deepEqual(JSON.parse(await readFile(draftPath, 'utf8')), saved.draft);
+    assert.deepEqual((await controller.reload()).draft, saved.draft);
+    const draftBytes = await readFile(draftPath, 'utf8');
+    const overflow = schema5GridItems(saved.draft, 'start');
+    overflow[0].h = 1000;
+    assert.throws(() => controller.saveLayout('start', overflow, saved.token), /Grenzen/);
+    assert.equal(writes, 1, 'overflow never reaches persistence');
+    assert.equal(await readFile(draftPath, 'utf8'), draftBytes);
+    assert.equal(await readFile(livePath, 'utf8'), original);
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
 
 test('controller runs against isolated real Perl draft transactions and rejects stale tabs', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cms-v5-draft-'));
@@ -421,8 +478,8 @@ test('grid editing is explicit, state-bound and never changes live bytes', async
     await assert.rejects(cancelled.save(), /nicht mehr aktiv/);
 
     const collision = new Schema5GridEdit({ GridStack, root, controller, pageId: 'start', token: state.token });
-    grid.items[0].y = 4;
-    await assert.rejects(collision.save(), /Seite second/);
+    grid.items[1].y = 0;
+    await assert.rejects(collision.save(), /überschneidung/);
     assert.equal(grid.static, true);
     await assert.rejects(collision.save(), /nicht mehr aktiv/);
     collision.close();
@@ -438,7 +495,8 @@ test('grid editing is explicit, state-bound and never changes live bytes', async
     assert.throws(() => precise.setPosition('missing', { col: 1, row: 4, w: 1, h: 1 }), /Unbekannt/);
     assert.throws(() => precise.setPosition('text', { col: '9', row: 2, w: 4, h: 2 }), /Ungültige/);
     assert.throws(() => precise.setPosition('text', { col: 5, row: 2, w: 4, h: 2 }), /überschneidung/);
-    assert.throws(() => precise.setPosition('__nav', { col: 1, row: 5, w: 12, h: 1 }), /Seite second/);
+    precise.setPosition('__nav', { col: 1, row: 5, w: 12, h: 1 });
+    assert.deepEqual(grid.items[0], { id: '__nav', x: 0, y: 4, w: 12, h: 1 });
     precise.setPosition('text', { col: 9, row: 2, w: 4, h: 2 });
     assert.deepEqual(grid.items[1], { id: 'text', x: 8, y: 1, w: 4, h: 2 });
     precise.close();

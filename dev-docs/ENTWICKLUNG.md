@@ -92,6 +92,17 @@ Editoraktionen werden gesperrt und die DD-Deaktivierung/Speicherung erst nach
 Gridstacks Pointer-Cleanup ausgeführt. Das vollständige Raster wird über
 `saveLayout` zustandsgebunden als Entwurf gespeichert und zurückgelesen.
 Vor dem Schreiben werden alle Seiten einschließlich globaler Navigation geprüft.
+Seit Refs #111 löst eine geänderte Navigationsgeometrie vor dieser Gesamtprüfung
+ihre Kollisionen auf allen Seiten nach unten auf, einschließlich Folgekollisionen.
+`applySchema5GridItems` prüft zunächst die Widgetgeometrien untereinander,
+ordnet dann je Seite in Zeilen-/Spaltenreihenfolge unterhalb kollidierender
+Elemente ein und validiert das gesamte Ergebnis erneut. Dabei wird dieselbe
+Platzierungsfunktion wie beim Rasterwechsel verwendet. Nur Zeilen betroffener
+Widgets ändern sich; IDs, Arrayreihenfolge, Spalten, Größen und Inhalte bleiben
+erhalten. Verkleinern zieht keine Widgets hoch. Unabhängige Widgetkollisionen
+und ein Überlauf hinter Zeile 1000 bleiben Fehler vor jedem Schreibzugriff.
+Der Controller überträgt Navigation und alle betroffenen Seiten in einer
+zustandsgebundenen Entwurfstransaktion; der Perl-Validator bleibt unverändert.
 Bekannte Layoutfehler setzen das Raster mit sichtbarer Meldung zurück;
 unklare Schreibantworten erfordern explizites Neuladen. `pagehide` verhindert
 noch nicht gestartete Pointer-Schreibaktionen und unterdrückt späte Antworten.
@@ -159,6 +170,16 @@ Hit-Tests prüfen Überlappungsfreiheit und Ecke vor/nach dem Vorschauwechsel.
 Echte Mausaktionen vergrößern die Navigation auf 125×12 Zellen und bearbeiten
 danach das Wertwidget: genau drei Entwurfsschreibzugriffe, keine Änderungen
 an Live oder Navigationspunktmaßen.
+Die Folgeprüfung für Refs #111 enthält auf einer nicht angezeigten Seite
+eine direkte Navigationskollision, eine Folgekollision und ein unbetroffenes
+Widget. Fünf echte Mausaktionen prüfen Vergrößern, Verkleinern und erneutes
+Vergrößern der Navigation sowie Drag/Resize des Wertwidgets mit je genau einem
+Entwurfsschreibzugriff. Nach Pointer-Resize bleiben die verschobenen Zeilen und die
+Navigationsgröße auch nach erneutem Start des Editors erhalten. Ergänzend
+prüfen `t/10_schema5_layout.test.js` unveränderte Inhalte/Größen, Verkleinern
+ohne Hochziehen und Grenzfehler; `t/17_schema5_draft.test.js` prüft das gemeinsame
+Speichern und erneute Lesen über echte isolierte Perl-Dateitransaktionen.
+Bei Überlauf bleiben Entwurf und Live bytegenau erhalten.
 CSS verwendet das gespeicherte Seitenverhältnis mit 6 rem Mindesthöhe;
 ein inneres Pseudoelement mit prozentualem Padding reserviert die vollständige
 Höhe im Flex-Fluss. Das vermeidet den bekannten iPhone-Homescreen-Fehler
@@ -499,6 +520,8 @@ internen Perl-Transaktionen auf isolierten Dateien, aber keinen FHEMWEB-Transpor
 Ein Raster-Roundtrip wendet Gridstack-Positionen auf den aktuellen Entwurf oder
 bei fehlendem Entwurf auf Live an, prüft auch seitenübergreifende Kollisionen der
 globalen Navigation und speichert ausschließlich über diesen Entwurfsvertrag.
+Bei geänderter Navigationsgeometrie werden deren seitenübergreifende Kollisionen
+vorher wie oben beschrieben nach unten aufgelöst.
 Widget-Änderungen und explizites Löschen werden ebenfalls auf einer Kopie des
 aktuellen Entwurfs vorbereitet und über dieselbe Zustandssperre gespeichert;
 unbekannte Seiten oder Widget-IDs beim Löschen werden abgewiesen.

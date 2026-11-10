@@ -63,12 +63,9 @@ test('schema 5 layout converts exact coordinates and roundtrips without changing
   assert.equal(result.status, 0, result.stderr);
 });
 
-test('schema 5 layout fails closed for invalid and cross-page collisions', () => {
+test('schema 5 layout fails closed for invalid positions and widget collisions', () => {
   const config = source();
   const items = schema5GridItems(config, 'a');
-  const invalid = structuredClone(items);
-  invalid[0].y = 1;
-  assert.throws(() => applySchema5GridItems(config, 'a', invalid), /Seite b/);
   assert.throws(() => applySchema5GridItems(config, 'a', items.slice(1)), /fehlende/);
   assert.throws(() => applySchema5GridItems(config, 'a', [items[0], items[1], items[1]]), /doppelte/);
   const outOfBounds = structuredClone(items);
@@ -81,6 +78,66 @@ test('schema 5 layout fails closed for invalid and cross-page collisions', () =>
   incompatible.schemaVersion = 4;
   assert.throws(() => schema5GridItems(incompatible, 'a'), /Schema 5/);
   assert.throws(() => schema5GridItems(config, 'missing'), /Unbekannte Seite/);
+});
+
+test('navigation changes move collisions down on every page without changing sizes or content', () => {
+  const config = source();
+  config.navigation.grid = { col: 1, row: 1, w: 2, h: 3 };
+  config.pages[0].widgets[0].grid = { col: 3, row: 1, w: 4, h: 2 };
+  config.pages[0].widgets[1].grid = { col: 3, row: 3, w: 4, h: 2 };
+  const clock = config.pages[1].widgets[0];
+  clock.grid = { col: 3, row: 1, w: 2, h: 1 };
+  config.pages[1].widgets = [
+    { ...clock, id: 'later', grid: { col: 3, row: 2, w: 2, h: 1 } },
+    clock,
+    { ...clock, id: 'untouched', grid: { col: 9, row: 1, w: 2, h: 1 } },
+  ];
+  const before = structuredClone(config);
+  const items = schema5GridItems(config, 'a');
+  items[0].w = 4;
+  // Gridstack already pushes widgets on the visible page.
+  items[1].y = 3;
+  items[2].y = 5;
+  const changed = applySchema5GridItems(config, 'a', items);
+  assert.deepEqual(changed.navigation.grid, { col: 1, row: 1, w: 4, h: 3 });
+  assert.deepEqual(changed.pages.map((page) => page.widgets.map((widget) => widget.grid.row)), [[4, 6], [5, 4, 1]]);
+  for (const [p, page] of changed.pages.entries()) {
+    assert.deepEqual(page.widgets.map(({ grid, ...widget }) => widget),
+      before.pages[p].widgets.map(({ grid, ...widget }) => widget));
+    for (const [i, widget] of page.widgets.entries()) {
+      const { row, ...grid } = widget.grid;
+      const { row: originalRow, ...originalGrid } = before.pages[p].widgets[i].grid;
+      assert.deepEqual(grid, originalGrid);
+      assert.ok(row >= originalRow);
+    }
+    schema5GridItems(changed, page.id);
+  }
+  assert.deepEqual(config, before, 'input is never mutated');
+  const smaller = schema5GridItems(changed, 'a');
+  smaller[0].w = 2;
+  const shrunk = applySchema5GridItems(changed, 'a', smaller);
+  assert.deepEqual(shrunk.pages, changed.pages, 'shrinking never pulls widgets upward');
+  assert.deepEqual(applySchema5GridItems(shrunk, 'a', schema5GridItems(shrunk, 'a')), shrunk);
+  const script = 'use strict; use warnings; use JSON::PP (); require "./FHEM/01_FHEMCMS.pm";'
+    + ' local $/; my $v=JSON::PP->new->decode(<STDIN>); my $e=FHEMCMS_ValidateConfig($v,5); die $e if defined $e;';
+  const result = spawnSync('perl', ['-e', script], { input: JSON.stringify(changed), encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test('navigation reflow rejects row overflow and unrelated widget overlaps without mutating input', () => {
+  const config = source();
+  config.navigation.grid = { col: 1, row: 999, w: 1, h: 1 };
+  config.pages[1].widgets[0].grid = { col: 1, row: 1000, w: 1, h: 1 };
+  const before = structuredClone(config);
+  const items = schema5GridItems(config, 'a');
+  items[0].h = 2;
+  assert.throws(() => applySchema5GridItems(config, 'a', items), /Grenzen/);
+  assert.deepEqual(config, before);
+  items[0].y = 0;
+  items[0].h = 1;
+  Object.assign(items[2], { x: items[1].x, y: items[1].y });
+  assert.throws(() => applySchema5GridItems(config, 'a', items), /überschneidung/);
+  assert.deepEqual(config, before);
 });
 
 test('raster changes scale both axes on every page, preserve content and pass the backend validator', () => {

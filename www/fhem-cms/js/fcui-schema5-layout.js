@@ -29,7 +29,7 @@ function overlaps(a, b) {
     && a.row < b.row + b.h && b.row < a.row + a.h;
 }
 
-function validateLayout(config) {
+function validateLayout(config, includeNavigation = true) {
   if (!config || integer(config.schemaVersion, 5, 5) === null
     || config.settings?.layoutMode !== 'grid'
     || !SCHEMA5_GRID_COLUMNS.includes(integer(config.settings?.gridColumns, 12, 192))
@@ -49,7 +49,7 @@ function validateLayout(config) {
     }
     pages.add(page.id);
     const ids = new Set();
-    const grids = [nav];
+    const grids = includeNavigation ? [nav] : [];
     for (const widget of page.widgets) {
       if (!widget || typeof widget.id !== 'string' || !ID.test(widget.id)
         || widget.id === NAVIGATION || ids.has(widget.id)) {
@@ -63,6 +63,15 @@ function validateLayout(config) {
       grids.push(current);
     }
   }
+}
+
+function moveBelowCollisions(grid, placed, columns) {
+  let collisions = placed.filter((other) => overlaps(grid, other));
+  while (collisions.length) {
+    grid.row = Math.max(...collisions.map((other) => other.row + other.h));
+    collisions = placed.filter((other) => overlaps(grid, other));
+  }
+  return geometry(grid, columns);
 }
 
 export function schema5GridItems(config, pageId) {
@@ -97,6 +106,18 @@ export function applySchema5GridItems(config, pageId, items) {
   result.navigation.grid = positions.get(NAVIGATION);
   const page = result.pages.find((entry) => entry.id === pageId);
   for (const widget of page.widgets) widget.grid = positions.get(widget.id);
+  if (['col', 'row', 'w', 'h'].some((key) => result.navigation.grid[key] !== Number(config.navigation.grid[key]))) {
+    // Only navigation collisions may trigger reflow; unrelated widget overlaps remain invalid.
+    validateLayout(result, false);
+    for (const entry of result.pages) {
+      const placed = [result.navigation.grid];
+      const ordered = [...entry.widgets].sort((a, b) => a.grid.row - b.grid.row || a.grid.col - b.grid.col);
+      for (const widget of ordered) {
+        widget.grid = moveBelowCollisions(widget.grid, placed, Number(result.settings.gridColumns));
+        placed.push(widget.grid);
+      }
+    }
+  }
   validateLayout(result);
   return result;
 }
@@ -125,13 +146,7 @@ export function resizeSchema5Grid(config, columns) {
     const ordered = [...page.widgets].sort((a, b) => Number(a.grid.row) - Number(b.grid.row)
       || Number(a.grid.col) - Number(b.grid.col));
     for (const widget of ordered) {
-      const grid = resize(widget.grid);
-      let collisions = placed.filter((other) => overlaps(grid, other));
-      while (collisions.length) {
-        grid.row = Math.max(...collisions.map((other) => other.row + other.h));
-        collisions = placed.filter((other) => overlaps(grid, other));
-      }
-      widget.grid = geometry(grid, columns);
+      widget.grid = moveBelowCollisions(resize(widget.grid), placed, columns);
       placed.push(widget.grid);
     }
   }

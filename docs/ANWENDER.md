@@ -113,6 +113,13 @@ Die Größenänderung erfolgt über die Ecke unten rechts, auch bei der Navigati
 Die Werkzeugknöpfe stehen links neben dieser Griffzone, damit flache Widgets
 weiterhin greifbar bleiben. Die optionalen Größen der Navigationspunkte sind
 davon unabhängig und können auf automatisch bleiben.
+Die Navigation gilt für alle Seiten. Wird sie vergrößert oder verschoben,
+weichen kollidierende Widgets auf allen Seiten nach unten aus, einschließlich
+dadurch entstehender Folgeüberschneidungen. Navigation und betroffene Seiten
+werden gemeinsam als Entwurf gespeichert. Widgetgrößen und Inhalte bleiben
+erhalten; Verkleinern zieht Widgets nicht automatisch wieder nach oben.
+Reicht das Raster nach unten nicht aus, wird die gesamte Änderung mit einer
+Fehlermeldung verworfen; Live bleibt unverändert.
 Auch dort folgen Widgetgrößen und Inhalte der Fenstergröße und dem Browser-Zoom.
 Das exakte Bearbeitungsraster bricht nicht um: Reicht der Platz nicht, scrollen
 Sie innerhalb des Arbeitsbereichs seitlich zu den übrigen Widgets. Die
