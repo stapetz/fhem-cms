@@ -151,6 +151,14 @@ Light-Theme, ausgeblendete Rahmen, Hin-/Rückwechsel zur Vorschau und echte
 Pointer-Drag-/Resize-Aktionen nach horizontalem Scrollen bei 125 Prozent Zoom:
 genau ein Entwurfsschreibzugriff pro Aktion, keine Gerätebefehle und keine
 Änderung an Live oder Darstellungseinstellungen.
+Refs #111 ergänzt eine flache Navigation aus 117×10 Zellen im 192-Spalten-Raster,
+ohne feste Navigationspunktbreite/-höhe. Werkzeuge stehen horizontal außerhalb
+der Resize-Zone (7px Rand + 18px Griff + 4px Abstand); die Resize-Ecke ist nicht
+abgerundet, damit ihr äußerster sichtbarer Bereich auch Pointertreffer erhält.
+Hit-Tests prüfen Überlappungsfreiheit und Ecke vor/nach dem Vorschauwechsel.
+Echte Mausaktionen vergrößern die Navigation auf 125×12 Zellen und bearbeiten
+danach das Wertwidget: genau drei Entwurfsschreibzugriffe, keine Änderungen
+an Live oder Navigationspunktmaßen.
 CSS verwendet das gespeicherte Seitenverhältnis mit 6 rem Mindesthöhe;
 ein inneres Pseudoelement mit prozentualem Padding reserviert die vollständige
 Höhe im Flex-Fluss. Das vermeidet den bekannten iPhone-Homescreen-Fehler

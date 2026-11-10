@@ -1,3 +1,10 @@
+2026-11-10 - Größenänderungsgriff flacher Widgets freihalten (Refs #111)
+
+Editorwerkzeuge stehen seitlich neben der Größenänderungszone statt darüber.
+Dadurch bleibt insbesondere die flache Navigation im feinen Raster per Maus
+skalierbar. Auch die äußerste Resize-Ecke nimmt Treffer vollständig an.
+Feste Navigationspunktgrößen sind dafür nicht erforderlich.
+
 2026-11-10 - Aktionswidgets mit Standardsymbolen (1.2.0-dev, Refs #110)
 
 Schalter und Taster zeigen standardmäßig nur ein passendes Symbol, auch bei

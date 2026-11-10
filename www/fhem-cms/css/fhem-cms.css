@@ -252,7 +252,8 @@ body:has(.cms-schema5-grid) {
 }
 
 .cms-grid-editable .cms-widget-tools {
-  right: calc(var(--cms-view-gap) + 0.4rem);
+  /* 7px Griffabstand + 18px Griffbreite + 4px freie Trefferzone, auch bei flachen Widgets. */
+  right: calc(var(--cms-view-gap) + 29px);
 }
 
 .cms-grid-editable .cms-widget-drag:active {
@@ -272,7 +273,7 @@ body:has(.cms-schema5-grid) {
   border: 0;
   border-right: 3px solid var(--cms-accent);
   border-bottom: 3px solid var(--cms-accent);
-  border-radius: 0 0 .45rem 0;
+  border-radius: 0;
   opacity: .7;
   cursor: nwse-resize;
   touch-action: none;
