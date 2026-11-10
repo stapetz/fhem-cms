@@ -1,3 +1,12 @@
+2026-11-10 - Safari-Auswahl bei Richtextformatierung erhalten (Refs #114)
+
+Fett, Kursiv, Unterstreichen, Farben und weitere Formatierungen stellen die
+markierte Textstelle im Shadow-DOM jetzt über explizite Auswahlgrenzen wieder
+her. WebKit verlor sie zuvor beim Entfernen und erneuten Hinzufügen des Range,
+sodass Formatierungen nicht griffen. Auch der Cursor nach Einfügungen bleibt
+erhalten. Auswahlgrenzen, Texte außerhalb der Markierung und Chromium-Verhalten
+werden durch Browserregressionen geprüft.
+
 2026-11-10 - Editorwerkzeuge bei Hover und Fokus einblenden (Refs #113)
 
 Auf Geräten mit Maus erscheinen die Bearbeitungsknöpfe erst beim Überfahren

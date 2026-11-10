@@ -471,8 +471,8 @@ export function createEditor({ root, services, html, onError }) {
     area.focus();
     if (saved) {
       const sel = selection();
-      sel.removeAllRanges();
-      sel.addRange(saved);
+      // WebKit verliert Shadow-DOM-Auswahlen bei removeAllRanges()/addRange().
+      sel.setBaseAndExtent(saved.startContainer, saved.startOffset, saved.endContainer, saved.endOffset);
     }
   };
   const currentRange = () => {
@@ -553,8 +553,7 @@ export function createEditor({ root, services, html, onError }) {
     range.setStartAfter(node);
     range.collapse(true);
     const sel = selection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+    sel.setBaseAndExtent(range.startContainer, range.startOffset, range.endContainer, range.endOffset);
     saved = range.cloneRange();
   };
 

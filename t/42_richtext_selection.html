@@ -1,0 +1,147 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Richtext selection regression</title>
+<main id="host"></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { createEditor, editorCss, contentCss } from '../www/fhem-cms/js/richtext.js';
+const output = document.querySelector('#result');
+const root = document.querySelector('#host').attachShadow({ mode: 'open' });
+const style = document.createElement('style');
+style.textContent = editorCss + contentCss;
+root.append(style);
+const dialog = document.createElement('dialog');
+root.append(dialog);
+dialog.showModal();
+let editor;
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+const button = (label) => [...root.querySelectorAll('button')].find((item) => item.title === label);
+const selection = () => typeof root.getSelection === 'function' ? root.getSelection() : document.getSelection();
+const reset = (html = '<p>Alpha Bravo Charlie</p>') => {
+  editor?.destroy();
+  editor = createEditor({ root, services: { listAllDevices: async () => [] }, html,
+    onError: (message) => { if (message) throw new Error(message); } });
+  dialog.replaceChildren(editor.element);
+};
+const select = async (backward = false) => {
+  const area = root.querySelector('.editor-area');
+  area.focus();
+  const text = area.querySelector('p').firstChild;
+  document.getSelection().setBaseAndExtent(text, backward ? 11 : 6, text, backward ? 6 : 11);
+  await settle();
+  check(selection().toString() === 'Bravo', 'exact source selection established');
+};
+const click = async (label) => {
+  const target = button(label);
+  check(!!target, `toolbar button exists: ${label}`);
+  target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+  target.click();
+  await settle();
+};
+try {
+  for (const composed of [false, true]) {
+    if (composed) {
+      Object.defineProperty(root, 'getSelection', { value: undefined, configurable: true });
+      check(typeof document.getSelection().getComposedRanges === 'function', 'composed-range fallback supported');
+    }
+    for (const [label, expected] of [['Fett', '<strong>Bravo</strong>'], ['Kursiv', '<em>Bravo</em>'],
+      ['Unterstrichen', '<u>Bravo</u>']]) {
+      reset();
+      await select();
+      await click(label);
+      check(editor.getHtml() === `<p>Alpha ${expected} Charlie</p>`, `${label}: only selected text formatted`);
+      check(selection().toString() === 'Bravo', `${label}: selection survives formatting`);
+    }
+    reset();
+    await select(true);
+    await click('Fett');
+    check(editor.getHtml() === '<p>Alpha <strong>Bravo</strong> Charlie</p>', 'backwards selection formats same text');
+    await click('Kursiv');
+    check(/<(?:strong|em)><(?:strong|em)>Bravo<\/(?:strong|em)><\/(?:strong|em)>/.test(editor.getHtml()),
+      'successive commands retain the same text selection');
+    await click('Formatierung entfernen');
+    check(editor.getHtml() === '<p>Alpha Bravo Charlie</p>', 'remove formatting keeps surrounding text unchanged');
+
+    for (const [name, expected] of [['Textfarbe', 'color:#123456'], ['Hervorhebung', 'background-color:#123456']]) {
+      reset();
+      await select();
+      await click('Textfarbe und Hervorhebung');
+      const input = root.querySelector(`input[aria-label="${name}"]`);
+      input.focus();
+      input.value = '#123456';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      await settle();
+      await click(`${name} auf die Auswahl anwenden`);
+      const html = editor.getHtml();
+      check(html === `<p>Alpha <span style="${expected}">Bravo</span> Charlie</p>`,
+        `${name}: selection survives color input focus: ${html}`);
+      check(selection().toString() === 'Bravo', 'selected text restored after native input focus');
+    }
+    reset();
+    await select();
+    await click('Link einfügen');
+    const url = root.querySelector('input[type="url"]');
+    url.focus();
+    url.value = 'https://example.test/';
+    await settle();
+    await click('Link setzen');
+    check(root.querySelector('.editor-area a')?.getAttribute('href') === 'https://example.test/',
+      `link target applied after URL input focus: ${editor.getHtml()}`);
+    check(root.querySelector('.editor-area a').textContent === 'Bravo', 'link covers selected text only');
+
+    reset();
+    await select();
+    const area = root.querySelector('.editor-area');
+    const text = area.querySelector('p').firstChild;
+    document.getSelection().setBaseAndExtent(text, 11, text, 11);
+    await settle();
+    const paste = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, 'clipboardData', { value: { getData: (type) => type === 'text/plain' ? '!' : '' } });
+    area.dispatchEvent(paste);
+    check(editor.getHtml() === '<p>Alpha Bravo! Charlie</p>', 'collapsed caret insertion remains at exact position');
+
+    reset();
+    await select();
+    await click('Platzhalter für einen FHEM-Wert einfügen (Device suchen, Reading wählen)');
+    const picker = document.querySelector('.cms-ph-dialog');
+    check(!!picker?.open, 'placeholder picker opens over shadow editor');
+    for (const [field, value] of [['device', 'TestDevice'], ['reading', 'state']]) {
+      const input = picker.querySelector(`[data-${field}]`);
+      input.focus();
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    picker.querySelector('[data-ok]').click();
+    await settle();
+    check(!document.querySelector('.cms-ph-dialog'), 'placeholder picker closes');
+    check(editor.getHtml() === '<p>Alpha {{TestDevice:state}} Charlie</p>',
+      'placeholder replaces only the saved selection');
+    const afterChip = selection();
+    let range = typeof root.getSelection === 'function' ? afterChip.getRangeAt(0) : null;
+    if (!range) {
+      try { [range] = afterChip.getComposedRanges({ shadowRoots: [root] }); } catch { /* Older WebKit signature below. */ }
+      if (!range || !root.contains(range.startContainer)) [range] = afterChip.getComposedRanges(root);
+    }
+    const before = document.createRange();
+    before.selectNodeContents(root.querySelector('.editor-area p'));
+    before.setEnd(range.startContainer, range.startOffset);
+    const after = document.createRange();
+    after.selectNodeContents(root.querySelector('.editor-area p'));
+    after.setStart(range.endContainer, range.endOffset);
+    check(range.startContainer === range.endContainer && range.startOffset === range.endOffset
+      && !!before.cloneContents().querySelector('.cms-ph') && after.toString() === ' Charlie',
+    'caret restored immediately after inserted placeholder');
+  }
+  editor.destroy();
+  dialog.close();
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  editor?.destroy();
+  output.dataset.result = 'fail';
+  output.textContent = `${error.message}\n${error.stack || ''}`;
+}
+</script>
