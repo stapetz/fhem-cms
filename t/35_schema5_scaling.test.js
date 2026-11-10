@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { pngFixture } from './lib/asset-exif-fixtures.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -89,7 +90,7 @@ async function testServer() {
   const server = createServer(async (request, response) => {
     if (new URL(request.url, 'http://localhost').pathname === `/t/media/${'a'.repeat(32)}.png`) {
       response.setHeader('Content-Type', 'image/png');
-      response.end(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jrJkAAAAASUVORK5CYII=', 'base64'));
+      response.end(pngFixture());
       return;
     }
     const path = resolve(root, `.${new URL(request.url, 'http://localhost').pathname}`);
@@ -118,7 +119,7 @@ for (const [name, fixtures] of [
       ['44_placeholder_units.html', 384], ['45_solarflow_sizing.html', 868], ['46_unit_inputs.html', 998]]],
   ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 850]]],
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
-  ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 116]]],
+  ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 136]]],
 ]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,
@@ -163,7 +164,6 @@ for (const [name, fixtures] of [
           await click('[data-choose-destination]');
           await click(`[data-folder-picker] [data-open-folder="${'d'.repeat(32)}"]`);
           await click('[data-folder-accept]');
-          await click('[data-move]');
           await click('[data-mkdir]');
           await command('Input.insertText', { text: 'Mausordner' });
           await click('[data-folder-create-accept]');

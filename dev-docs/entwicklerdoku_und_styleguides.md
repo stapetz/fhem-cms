@@ -268,6 +268,21 @@ Es legt im aktuell geöffneten Ordner an, ohne diesen zu verlassen.
 Vorhandene Ordneraktionen liegen kontextbezogen unter „⋯“ an der Kachel.
 Die Detailspalte erscheint nur bei ausgewähltem Asset/Ordner; sonst nutzt die
 Übersicht die volle Breite. Auch der Zielpicker verwendet nur Kacheln und Pfad.
+Assetaktionen bleiben getrennt: „Umbenennen“ unmittelbar nach dem Namensfeld
+ändert nur den Basisnamen; die Originalendung ist ein nicht editierbarer Text.
+„Verschieben“ öffnet den Zielpicker und dessen Bestätigung führt den Move sofort
+aus. Dabei den gespeicherten Namen verwenden, keine ungespeicherten Eingaben.
+Löschen benötigt einen modalen Bestätigungsdialog statt persistentem Haken;
+Verwendungsprüfung bleibt zusätzlich frontend- und backendseitig wirksam.
+Die Bildvorschau verlinkt auf die unveränderte Originaldatei mit dem Tooltip
+„Bild in voller Größe anschauen“. `asset-exif.js` liest JPEG-APP1-/PNG-eXIf-
+TIFF-Daten ausschließlich lokal mit begrenzten Offsets, Eintragszahlen,
+Wertlängen und maximal 50MiB Bildantwort. Keine externen EXIF-Dienste.
+IFD/EXIF/GPS/Interoperabilität werden rekursiv und zyklusgeschützt gelesen;
+unbekannte Tags/Rohwerte und gekürzte Werte bleiben erkennbar.
+Metadatenanzeige verwendet ausschließlich Textknoten. Fehlende EXIF und
+Lesefehler unterscheiden; i nur bei vorhandenen Einträgen. Requests beim
+Auswahlwechsel/Schließen abbrechen und verspätete Ergebnisse verwerfen.
 Zielordner für Assets und Ordner werden über denselben grafischen Ordnerpicker
 gewählt; Auswahl allein schreibt noch nichts. Navigation darf keine Mutation
 auslösen. Move-Antworten müssen die angeforderte ID, den Namen und Zielordner

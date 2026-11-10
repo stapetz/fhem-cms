@@ -1,4 +1,5 @@
 import { ASSET_BLOCKED, validateAssetState } from './asset-contract.js';
+import { loadAssetExif } from './asset-exif.js';
 
 const MiB = 1048576;
 const element = (tag, text) => {
@@ -52,6 +53,14 @@ export async function openAssetManager(services, { mode = null, owner = document
       .asset img { width:100%; height:5rem; object-fit:contain; }
       .asset .document { font-size:2rem; height:5rem; display:grid; place-items:center; }
       .detail { display:grid; align-content:start; gap:.5rem; }
+      .preview { position:relative; }
+      .preview img { width:100%; max-height:15rem; object-fit:contain; display:block; }
+      .preview .info { position:absolute; right:.3rem; top:.3rem; border-radius:50%; font-weight:bold; }
+      .filename { display:flex; align-items:center; gap:.3rem; }
+      .filename input { flex:1; }
+      .exif { width:min(90vw,48rem); }
+      .exif dl { display:grid; grid-template-columns:minmax(8rem,1fr) minmax(0,2fr); gap:.4rem 1rem; }
+      .exif dt { font-weight:bold; } .exif dd { margin:0; overflow-wrap:anywhere; white-space:pre-wrap; }
       .status { min-height:1.3em; color:var(--cms-muted,#a5c9b2); }
       .error { color:var(--cms-danger,#ffb4a8); }
       .usage { padding-left:1.3rem; margin:.2rem 0; }
@@ -109,6 +118,8 @@ export async function openAssetManager(services, { mode = null, owner = document
   let resolveClosed;
   let observer;
   let dismissFolderDialog;
+  let metadataController;
+  let detailRevision = 0;
   const completion = new Promise(resolve => { resolveClosed = resolve; });
   const originalFocus = document.activeElement;
   const status = (text, error = false) => {
@@ -234,14 +245,14 @@ export async function openAssetManager(services, { mode = null, owner = document
     dismissFolderDialog = () => finish(null);
     dialog.showModal(); name.focus();
   });
-  const confirmFolderDelete = id => new Promise(resolve => {
-    const dialog = element('dialog'); dialog.dataset.folderDelete = '';
-    const title = element('h2', 'Leeren Ordner löschen?'); title.id = 'folder-delete-title';
+  const confirmDelete = ({ kind, message }) => new Promise(resolve => {
+    const dialog = element('dialog'); dialog.dataset[`${kind}Delete`] = '';
+    const title = element('h2', 'Löschen?'); title.id = 'asset-delete-title';
     dialog.setAttribute('aria-labelledby', title.id);
-    dialog.append(title, element('p', `„${pathText(id)}“ endgültig löschen? Nur ein leerer Ordner kann gelöscht werden. Inhalte werden niemals mitgelöscht.`));
-    const cancel = element('button', 'Abbrechen'); cancel.type = 'button'; cancel.dataset.deleteFolderCancel = '';
-    const accept = element('button', 'Ordner endgültig löschen'); accept.type = 'button';
-    accept.className = 'danger'; accept.dataset.deleteFolderAccept = '';
+    dialog.append(title, element('p', message));
+    const cancel = element('button', 'Abbrechen'); cancel.type = 'button'; cancel.dataset[`delete${kind === 'folder' ? 'Folder' : 'Asset'}Cancel`] = '';
+    const accept = element('button', 'Löschen'); accept.type = 'button';
+    accept.className = 'danger'; accept.dataset[`delete${kind === 'folder' ? 'Folder' : 'Asset'}Accept`] = '';
     const finish = value => {
       dismissFolderDialog = undefined; dialog.close(); dialog.remove(); resolve(value);
     };
@@ -251,6 +262,45 @@ export async function openAssetManager(services, { mode = null, owner = document
     dismissFolderDialog = () => finish(false);
     dialog.append(cancel, accept); root.append(dialog); dialog.showModal(); cancel.focus();
   });
+  const showExif = (asset, rows) => {
+    const dialog = element('dialog'); dialog.className = 'exif'; dialog.dataset.exifDialog = '';
+    const title = element('h2', `EXIF: ${asset.name}`); title.id = 'asset-exif-title';
+    dialog.setAttribute('aria-labelledby', title.id);
+    const list = element('dl');
+    for (const row of rows) list.append(element('dt', row.name), element('dd', row.value));
+    const close = element('button', 'Schließen'); close.type = 'button'; close.dataset.exifClose = '';
+    const finish = () => { dismissFolderDialog = undefined; dialog.close(); dialog.remove(); };
+    close.addEventListener('click', finish);
+    dialog.addEventListener('cancel', event => { event.preventDefault(); finish(); });
+    dialog.append(title, element('p', 'Originalmetadaten können unter anderem Standort- und Kameradaten enthalten.'), list, close);
+    dismissFolderDialog = finish;
+    root.append(dialog); dialog.showModal();
+  };
+  const imagePreview = (asset, box, revision) => {
+    const preview = element('div'); preview.className = 'preview'; preview.dataset.imagePreview = '';
+    const link = element('a'); link.href = asset.href; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    link.title = 'Bild in voller Größe anschauen'; link.setAttribute('aria-label', link.title);
+    const image = element('img'); image.src = asset.href; image.alt = asset.name;
+    image.addEventListener('error', () => {
+      if (revision === detailRevision && !closed) status('Bildvorschau konnte nicht geladen werden.', true);
+    });
+    link.append(image); preview.append(link);
+    const note = element('p', 'EXIF-Daten werden gelesen …'); note.className = 'hint'; note.dataset.exifStatus = '';
+    box.append(preview, note);
+    metadataController = new AbortController();
+    loadAssetExif(asset.href, { signal: metadataController.signal }).then(rows => {
+      if (closed || revision !== detailRevision) return;
+      note.textContent = rows.length ? `${rows.length} EXIF-Einträge vorhanden.` : 'Keine EXIF-Daten vorhanden.';
+      if (!rows.length) return;
+      const info = element('button', 'i'); info.type = 'button'; info.className = 'info'; info.dataset.exifInfo = '';
+      info.title = 'EXIF-Informationen anzeigen'; info.setAttribute('aria-label', info.title);
+      info.addEventListener('click', () => showExif(asset, rows)); preview.append(info);
+    }).catch(error => {
+      if (closed || revision !== detailRevision) return;
+      note.textContent = error.message || 'EXIF-Daten konnten nicht gelesen werden.';
+      note.classList.add('error');
+    });
+  };
   const showUsage = async asset => {
     const result = await services.assetAction({ op: 'usage', id: asset.id });
     if (!Array.isArray(result.usage)) throw new Error('Ungültige Verwendungsantwort');
@@ -294,6 +344,8 @@ export async function openAssetManager(services, { mode = null, owner = document
     return result;
   };
   function detail() {
+    const revision = ++detailRevision;
+    metadataController?.abort();
     const box = $('[data-detail]');
     box.replaceChildren();
     const asset = state.assets.find(item => item.id === selected);
@@ -321,7 +373,7 @@ export async function openAssetManager(services, { mode = null, owner = document
         if (state.assets.some(item => item.folder === directory.id) || children(directory.id).length) {
           throw new Error('Der Ordner enthält noch Dateien oder Unterordner und wird nicht gelöscht.');
         }
-        if (!await confirmFolderDelete(directory.id)) return;
+        if (!await confirmDelete({ kind: 'folder', message: `„${pathText(directory.id)}“ unwiderruflich löschen? Nur leere Ordner lassen sich löschen. Inhalte werden niemals mitgelöscht.` })) return;
         await mutate({ op: 'rmdir', id: directory.id });
         selectedFolder = null; render(); status('Leerer Ordner gelöscht.');
       }, 'data-rmdir'));
@@ -329,37 +381,41 @@ export async function openAssetManager(services, { mode = null, owner = document
     }
     if (!asset) return;
     box.append(element('strong', asset.name), element('p', `${asset.image ? 'Bild' : 'Dokument'} · ${sizeText(asset.bytes)}`));
+    if (asset.image) imagePreview(asset, box, revision);
     const label = element('label', 'Dateiname');
-    const name = element('input'); name.value = asset.name; name.maxLength = 180; name.dataset.assetName = '';
-    label.append(name); box.append(label);
-    let targetFolder = asset.folder;
-    const target = element('p', `Ziel: ${pathText(targetFolder)}`); target.dataset.assetFolder = '';
-    const choose = element('button', 'Zielordner auswählen …'); choose.type = 'button'; choose.dataset.chooseDestination = '';
-    choose.addEventListener('click', async () => {
-      const destination = await chooseFolder(targetFolder);
-      if (destination === null || closed) return;
-      targetFolder = destination; target.textContent = `Ziel: ${pathText(targetFolder)}`;
-    });
-    box.append(target, choose);
-    box.append(button('Umbenennen / verschieben', async () => {
-      const requestedName = name.value;
+    const dot = asset.name.lastIndexOf('.');
+    const suffix = asset.name.slice(dot);
+    const filename = element('span'); filename.className = 'filename';
+    const name = element('input'); name.value = asset.name.slice(0, dot); name.maxLength = 180 - suffix.length; name.dataset.assetName = '';
+    const extension = element('span', suffix); extension.dataset.assetSuffix = '';
+    filename.append(name, extension); label.append(filename); box.append(label);
+    const saveAsset = async (requestedName, targetFolder) => {
       await mutate({ op: 'move', id: asset.id, name: requestedName, folder: targetFolder });
       const saved = state.assets.find(item => item.id === asset.id);
       if (!saved || saved.folder !== targetFolder || saved.name !== requestedName) {
-        throw new Error('Verschieben wurde nicht übernommen. Bitte neu laden und erneut prüfen.');
+        throw new Error('Änderung wurde nicht übernommen. Bitte neu laden und erneut prüfen.');
       }
       folder = saved.folder; selected = saved.id; render();
       status(`„${saved.name}“ gespeichert in ${pathText(saved.folder)}.`);
-    }, 'data-move'));
-    const download = element('a', asset.image ? 'Bild öffnen' : 'Dokument herunterladen');
-    download.href = asset.href; download.target = '_blank'; download.rel = 'noopener noreferrer';
-    box.append(download, button('Verwendungen anzeigen', () => showUsage(asset), 'data-usage-button'));
-    const confirmBox = element('label', ' Löschen bestätigen (unwiderruflich)');
-    const confirm = element('input'); confirm.type = 'checkbox'; confirm.dataset.confirmDelete = ''; confirmBox.prepend(confirm);
-    box.append(confirmBox, button('Asset endgültig löschen', async () => {
+    };
+    box.append(button('Umbenennen', async () => {
+      if (!name.value.trim()) throw new Error('Bitte einen Dateinamen eingeben.');
+      await saveAsset(name.value.trim() + suffix, asset.folder);
+    }, 'data-rename'));
+    box.append(element('p', `Ordner: ${pathText(asset.folder)}`), button('Verschieben', async () => {
+      const destination = await chooseFolder(asset.folder);
+      if (destination === null || closed) return;
+      await saveAsset(asset.name, destination);
+    }, 'data-choose-destination'));
+    if (!asset.image) {
+      const download = element('a', 'Dokument herunterladen');
+      download.href = asset.href; download.target = '_blank'; download.rel = 'noopener noreferrer'; box.append(download);
+    }
+    box.append(button('Verwendungen anzeigen', () => showUsage(asset), 'data-usage-button'));
+    box.append(button('Löschen', async () => {
       await showUsage(asset);
       if ($('[data-usage]').children.length) throw new Error('Asset wird verwendet. Zuerst die oben genannten Verweise entfernen.');
-      if (!confirm.checked) throw new Error('Bitte die endgültige Löschung bestätigen.');
+      if (!await confirmDelete({ kind: 'asset', message: `„${asset.name}“ unwiderruflich löschen? Die Datei wird aus dem Assetmanager entfernt, nicht nur aus einem Widget.` })) return;
       await mutate({ op: 'delete', id: asset.id });
       selected = null; detail(); status('Asset gelöscht.');
     }, 'data-delete-asset'));
@@ -411,6 +467,8 @@ export async function openAssetManager(services, { mode = null, owner = document
   const close = value => {
     if (busy || closed) return;
     closed = true;
+    ++detailRevision;
+    metadataController?.abort();
     dismissFolderDialog?.();
     observer?.disconnect();
     $('[data-assets-dialog]').close();
