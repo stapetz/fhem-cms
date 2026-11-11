@@ -58,6 +58,13 @@ separaten Weiterentwicklungen vorbehalten.
 
 Die wiederverwendbaren Web Components liegen unter `www/fhem-cms/components/`; die gemeinsamen Styles und der Modul-Einstieg liegen unter `css/` und `js/`.
 
+Die Update-Historie wird aus den JSON-Dateien unter `release-notes/` und dem
+unveränderten historischen Archiv erzeugt: `python3 scripts/generate_changed.py`.
+Der Update-Workflow aktualisiert `CHANGED` automatisch. Die neueste
+Zusammenfassung steht ohne Leerzeilen am Anfang, damit FHEM sie beim Update
+ausgeben kann. `CHANGED` wird nicht als installierbare Datei geführt und
+überschreibt nicht die gleichnamige FHEM-Datei.
+
 ## Version
 
 Die aktuelle stabile Version ist **1.7.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
