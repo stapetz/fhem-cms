@@ -70,14 +70,15 @@ test('setup wizard detects thermostats and switches only with corresponding avai
   }]);
   assert.deepEqual(schema5WidgetSuggestions({
     name: 'Light', readings: { state: 'off', power: '1' }, sets: 'on:noArg off:noArg toggle:noArg',
-  }), [{ type: 'fhem-switch', device: 'Light', title: 'Light', reading: 'state',
-    on: 'on', off: 'off', label: 'Schalter' }]);
-  assert.ok(schema5WidgetSuggestions({ ...thermostat, sets: '' })
-    .every(({ type }) => type === 'fhem-value'));
-  assert.ok(schema5WidgetSuggestions({ ...thermostat, sets: 'desiredTemperature:noArg' })
-    .every(({ type }) => type === 'fhem-value'));
-  assert.ok(schema5WidgetSuggestions({ ...thermostat, sets: 'desiredTemperature:auto,off' })
-    .every(({ type }) => type === 'fhem-value'));
+  }), [
+    { type: 'fhem-switch', device: 'Light', title: 'Light', reading: 'state',
+      on: 'on', off: 'off', label: 'Schalter' },
+    { type: 'fhem-value', device: 'Light', reading: 'power', label: 'Leistung',
+      title: 'Light — Leistung', unit: '' },
+  ]);
+  assert.deepEqual(schema5WidgetSuggestions({ ...thermostat, sets: '' }), []);
+  assert.deepEqual(schema5WidgetSuggestions({ ...thermostat, sets: 'desiredTemperature:noArg' }), []);
+  assert.deepEqual(schema5WidgetSuggestions({ ...thermostat, sets: 'desiredTemperature:auto,off' }), []);
   assert.ok(schema5WidgetSuggestions({ name: 'Light', readings: { state: 'off' },
     sets: 'on:slider,0,1,100 off:noArg' }).every(({ type }) => type === 'fhem-value'));
   assert.deepEqual(schema5WidgetSuggestions({ name: 'Unknown', readings: { custom: 'x' } }), []);
@@ -91,7 +92,7 @@ test('wizard groups multiple sensor readings into a valid table with enough spac
   assert.deepEqual(plan.widgets[0].rows.map(({ reading }) => reading), ['temperature', 'humidity']);
   const config = buildSchema5SetupConfig(initialConfig(), [plan], 'Wohnzimmer');
   const widget = config.pages[0].widgets[0];
-  assert.equal(widget.grid.h, 6);
+  assert.equal(widget.grid.h, 2);
   assert.equal(widget.device, undefined);
   const validation = spawnSync('perl', ['-e', `
     use strict; use warnings; use JSON::PP ();
@@ -104,6 +105,60 @@ test('wizard groups multiple sensor readings into a valid table with enough spac
   `], { input: JSON.stringify(config), encoding: 'utf8' });
   assert.equal(validation.status, 0, validation.stderr);
   assert.doesNotThrow(() => arrangeSchema5SetupPages(config));
+});
+
+test('magic excludes technical rooms and resolves thermostat commands on Homematic channels', () => {
+  const devices = [
+    { name: 'Heat', type: 'CUL_HM', rooms: ['Wohnzimmer', 'CUL_HM'],
+      readings: { 'measured-temp': '21', 'desired-temp': '20', batteryLevel: '2.5' }, sets: '' },
+    { name: 'Heat_Climate', parent: 'Heat', type: 'CUL_HM', rooms: ['CUL_HM'],
+      readings: { 'measured-temp': '21', 'desired-temp': '20', ValvePosition: '4' },
+      sets: 'desired-temp:on,off,5.0,5.5,20.0,30.0' },
+    { name: 'Unresolved', type: 'CUL_HM', rooms: ['Wohnzimmer'],
+      readings: { 'measured-temp': '20', 'desired-temp': '21', batteryLevel: '3' }, sets: '' },
+  ];
+  const { pages } = createSchema5MagicPlan(devices);
+  assert.deepEqual(pages.map(({ room }) => room), ['Wohnzimmer']);
+  assert.deepEqual(pages[0].widgets.map(({ type, device }) => ({ type, device })),
+    [{ type: 'thermostat', device: 'Heat_Climate' }]);
+  assert.equal(pages[0].widgets[0].readings.actual, 'measured-temp');
+  assert.equal(pages[0].widgets[0].readings.target, 'desired-temp');
+  assert.equal(pages[0].widgets[0].readings.battery, undefined);
+});
+
+test('wizard ignores invalid humidity rather than interpreting battery-coded sensor values as humidity', () => {
+  for (const humidity of ['106', '-1', 'battery low', '']) {
+    const readings = schema5ReadingSuggestions({ name: 'Sensor', readings: {
+      temperature: '21', humidity, batteryLevel: '2.5',
+    } });
+    assert.ok(!readings.some(({ reading }) => reading === 'humidity'));
+    assert.ok(readings.some(({ reading }) => reading === 'batteryLevel'));
+  }
+  assert.ok(schema5ReadingSuggestions({ name: 'Sensor', readings: { humidity: '51.2' } })
+    .some(({ reading }) => reading === 'humidity'));
+});
+
+test('magic groups equivalent individual thermometers and sizes tables by row count', () => {
+  const devices = Array.from({ length: 4 }, (_, index) => ({
+    name: `Thermometer${index}`, type: 'LaCrosse', rooms: ['Wohnzimmer'],
+    readings: { temperature: '21' }, sets: '',
+  }));
+  const plan = createSchema5MagicPlan(devices);
+  assert.equal(plan.pages[0].widgets.length, 1);
+  assert.deepEqual(plan.pages[0].widgets[0].rows.map(({ device, reading }) => [device, reading]),
+    devices.map(({ name }) => [name, 'temperature']));
+  const config = buildSchema5SetupConfig(initialConfig(), plan.pages, plan.startRoom);
+  assert.equal(config.pages[0].widgets[0].grid.h, 3);
+  assert.doesNotThrow(() => arrangeSchema5SetupPages(config));
+  const many = Array.from({ length: 41 }, (_, index) => ({
+    name: `Thermometer${index}`, type: 'LaCrosse', rooms: ['Wohnzimmer'],
+    readings: { temperature: '21' }, sets: '',
+  }));
+  const limited = createSchema5MagicPlan(many);
+  assert.ok(limited.pages[0].widgets.filter(({ rows }) => rows).every(({ rows }) => rows.length <= 8));
+  assert.equal(limited.pages[0].widgets.flatMap((widget) => widget.rows || [widget]).length, 41);
+  assert.doesNotThrow(() => arrangeSchema5SetupPages(
+    buildSchema5SetupConfig(initialConfig(), limited.pages, limited.startRoom)));
 });
 
 test('magic limits rooms and widgets, prioritizes living room and excludes technical and unknown types', () => {

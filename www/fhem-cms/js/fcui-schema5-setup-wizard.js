@@ -12,6 +12,10 @@ const READING_PRESETS = [
 const MAGIC_DEVICE_TYPES = new Set(['CUL_HM', 'MAX', 'LaCrosse', 'Shelly', 'IT', 'MQTT2_DEVICE', 'MQTT_DEVICE']);
 const MAGIC_MAX_ROOMS = 8;
 const MAGIC_MAX_WIDGETS = 8;
+const MAGIC_TECHNICAL_ROOMS = new Set([
+  ...[...MAGIC_DEVICE_TYPES].map((type) => type.toLowerCase()),
+  'at', 'dblog', 'filelog', 'fhem cms', 'fhem-cms', 'hidden', 'notify', 'unsorted',
+]);
 
 function element(tag, text) {
   const result = document.createElement(tag);
@@ -68,6 +72,10 @@ export function schema5ReadingSuggestions(device) {
   return READING_PRESETS.flatMap(({ names, label, unit }) => {
     const reading = names.find((name) => Object.hasOwn(device.readings, name));
     if (!reading) return [];
+    if (label === 'Luftfeuchtigkeit') {
+      const value = String(device.readings[reading]).trim();
+      if (!/^\d+(?:\.\d+)?$/.test(value) || Number(value) > 100) return [];
+    }
     const alias = typeof device.alias === 'string' && device.alias.trim()
       && !/[\x00-\x1f\x7f]/.test(device.alias)
       ? device.alias.trim()
@@ -104,9 +112,17 @@ export function schema5WidgetSuggestions(device) {
     return [{ type: 'thermostat', device: device.name, title, readings: fields, label: 'Thermostat' }];
   }
   if (Object.hasOwn(readings, 'state') && hasNoArg('on') && hasNoArg('off')) {
+    const values = schema5ReadingSuggestions(device).filter(({ reading }) => reading !== 'state');
+    const extra = values.length > 1
+      ? [{ type: 'fhem-table', device: device.name, title, label: 'Messwerte',
+        rows: values.map(({ device: name, reading, label, unit }) => ({
+          device: name, reading, label, ...(unit ? { unit } : {}),
+        })) }]
+      : values.map((suggestion) => ({ ...suggestion, type: 'fhem-value' }));
     return [{ type: 'fhem-switch', device: device.name, title, reading: 'state',
-      on: 'on', off: 'off', label: 'Schalter' }];
+      on: 'on', off: 'off', label: 'Schalter' }, ...extra];
   }
+  if (actual && target) return [];
   const values = schema5ReadingSuggestions(device).filter(({ reading }) => reading !== 'state');
   if (values.length > 1) {
     return [{ type: 'fhem-table', device: device.name, title, label: 'Messwerte',
@@ -120,11 +136,40 @@ export function schema5WidgetSuggestions(device) {
 
 export function createSchema5MagicPlan(devices) {
   const grouped = groupSchema5DevicesByRoom(devices);
+  const childrenByParent = new Map();
+  for (const device of devices) {
+    if (!device?.parent) continue;
+    if (!childrenByParent.has(device.parent)) childrenByParent.set(device.parent, []);
+    childrenByParent.get(device.parent).push(device);
+  }
   const roomPriority = (room) => /^(wohnzimmer|living(?:room)?)$/i.test(room) ? 0
     : /^(küche|kueche|kitchen)$/i.test(room) ? 1 : 2;
-  const candidates = [...grouped].map(([room, entries]) => {
-    const widgets = entries.filter((device) => MAGIC_DEVICE_TYPES.has(device.type))
-      .flatMap(schema5WidgetSuggestions)
+  const candidates = [...grouped].filter(([room]) => !MAGIC_TECHNICAL_ROOMS.has(room.toLowerCase()))
+    .map(([room, entries]) => {
+    const resolved = new Map();
+    for (const device of entries.filter((entry) => MAGIC_DEVICE_TYPES.has(entry.type))) {
+      const child = (childrenByParent.get(device.name) || []).find((entry) =>
+        schema5WidgetSuggestions(entry).some(({ type }) => type === 'thermostat'));
+      const selected = child || device;
+      resolved.set(selected.name, selected);
+    }
+    const suggestions = [...resolved.values()].flatMap(schema5WidgetSuggestions);
+    const temperatures = suggestions.filter((widget) =>
+      widget.type === 'fhem-value' && widget.label === 'Temperatur');
+    if (temperatures.length > 1) {
+      for (let index = 0; index < temperatures.length; index += 8) {
+        const group = temperatures.slice(index, index + 8);
+        if (group.length === 1) continue;
+        suggestions.push({
+          type: 'fhem-table', device: group[0].device, title: 'Temperaturen', label: 'Messwerte',
+          rows: group.map(({ device, reading, title, unit }) => ({
+            device, reading, label: title.replace(/ — Temperatur$/, '').slice(0, 32), unit,
+          })),
+        });
+        for (const widget of group) suggestions.splice(suggestions.indexOf(widget), 1);
+      }
+    }
+    const widgets = suggestions
       .sort((a, b) => {
         const rank = (widget) => widget.type === 'thermostat' ? 0
           : widget.type === 'fhem-switch' ? 1 : widget.type === 'fhem-table' ? 2 : 3;
@@ -242,17 +287,25 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
       : { id: uniqueId(`setup-${Date.now().toString(36)}-${pageIndex + 1}`, pageIds),
         title: plan.title.trim(), widgets: [] };
     const included = plan.widgets.filter(({ included }) => included);
-    const rowHeight = included.some(({ type }) => type === 'fhem-table') ? 6 * scale : widgetHeight;
+    let row = firstRow;
+    let rowHeight = widgetHeight;
     included.forEach((suggestion, index) => {
+      if (index && index % widgetsPerRow === 0) {
+        row += rowHeight;
+        rowHeight = widgetHeight;
+      }
+      const height = suggestion.type === 'fhem-table'
+        ? Math.max(2, Math.ceil((suggestion.rows.length + 2) / 2)) * scale : widgetHeight;
+      rowHeight = Math.max(rowHeight, height);
       const widget = {
         id: uniqueId(`setup-${pageIndex + 1}-${index + 1}`, widgetIds),
         type: suggestion.type || 'fhem-value',
         title: suggestion.title,
         grid: {
           col: (index % widgetsPerRow) * widgetWidth + 1,
-          row: firstRow + Math.floor(index / widgetsPerRow) * rowHeight,
+          row,
           w: widgetWidth,
-          h: suggestion.type === 'fhem-table' ? rowHeight : widgetHeight,
+          h: height,
         },
       };
       if (widget.type === 'fhem-table') widget.rows = structuredClone(suggestion.rows);
