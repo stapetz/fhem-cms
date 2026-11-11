@@ -36,6 +36,7 @@ try {
     desiredTemperature: '22', pct: '40', power: '100' }, sets: 'desiredTemperature pct:slider,0,1,100' }]]]);
   const services = { iconUrl: () => '', history: async () => ({ points: [] }) };
   const contentAlignment = new Map();
+  document.documentElement.dataset.cmsTheme = 'liquid-glass';
   for (const alignment of [undefined, 'left', 'center', 'right']) {
     const config = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
       navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } }, pages: [{ id: 'one', widgets }] };
@@ -47,10 +48,12 @@ try {
       for (const host of root.querySelectorAll('.grid-stack-item-content > *')) {
         if (!host.shadowRoot) continue;
         const title = host.shadowRoot.querySelector('[data-title]');
+        check(getComputedStyle(host.parentElement).backdropFilter.includes('blur'),
+          `${host.localName}: liquid glass blur`);
         check(getComputedStyle(title).textAlign === (alignment || 'left'), `${host.localName}: ${alignment}`);
         if (host.localName === 'cms-text') {
           const reference = root.querySelector('cms-value').shadowRoot.querySelector('[data-title]');
-          for (const theme of ['light', 'dark']) {
+          for (const theme of ['light', 'dark', 'liquid-glass']) {
             document.documentElement.dataset.cmsTheme = theme;
             check(getComputedStyle(title).color === getComputedStyle(reference).color, `text title color: ${theme}`);
             check(getComputedStyle(title).fontWeight === getComputedStyle(reference).fontWeight, `text title weight: ${theme}`);

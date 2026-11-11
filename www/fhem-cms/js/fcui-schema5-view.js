@@ -2,6 +2,7 @@ import { schema5GridItems } from './fcui-schema5-layout.js';
 import { Schema5LivePage } from './fcui-schema5-live.js';
 import { mountSchema5Widgets } from './fcui-schema5-widgets.js';
 import { observeSchema5Navigation } from './fcui-schema5-navigation-fit.js';
+import { schema5PageBackground } from './fcui-schema5-appearance.js';
 
 export class Schema5View {
   constructor({ GridStack, root, status, config, client, services, browser = window, editing }) {
@@ -123,6 +124,10 @@ export class Schema5View {
     this.setStatus('Seite wird geladen …');
     try {
       const page = this.config.pages.find((entry) => entry.id === pageId);
+      const background = schema5PageBackground(this.config, pageId);
+      const image = background
+        ? `url("${new URL(background, this.browser.location.href).href}")` : 'none';
+      document.documentElement.style.setProperty('--cms-page-image', image);
       const navigation = this.navigation(pageId);
       this.view = mountSchema5Widgets(this.GridStack, this.root, this.config, pageId,
         navigation, this.services, new Map(), this.editing && {
@@ -167,6 +172,7 @@ export class Schema5View {
     this.browser.removeEventListener('pagehide', this.onPageHide);
     this.browser.removeEventListener('pageshow', this.onPageShow);
     this.clearPage();
+    document.documentElement.style.setProperty('--cms-page-image', 'none');
   }
 
   lock() {

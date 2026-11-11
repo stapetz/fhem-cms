@@ -1,0 +1,60 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liquid Glass regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<main class="cms-shell"><div class="cms-schema5-workspace"><div id="grid" class="grid-stack cms-schema5-grid"></div></div></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5View } from '../www/fhem-cms/js/fcui-schema5-view.js';
+
+const first = `media/${'a'.repeat(32)}.png`;
+const second = `media/${'b'.repeat(32)}.jpg`;
+const config = {
+  schemaVersion: 5, theme: 'liquid-glass',
+  settings: { layoutMode: 'grid', gridColumns: 12, sharedBackground: false },
+  navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+  pages: [
+    { id: 'start', title: 'Start', background: first,
+      widgets: [{ id: 'text', type: 'text', title: 'Wohnzimmer', html: '<p>Beispielansicht</p>',
+        grid: { col: 1, row: 2, w: 5, h: 3 } }] },
+    { id: 'room', title: 'Küche', background: second, widgets: [] },
+  ],
+};
+const result = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+try {
+  document.documentElement.dataset.cmsTheme = config.theme;
+  const view = new Schema5View({ GridStack, root: document.querySelector('#grid'), status: result,
+    config, client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} }, services: {} });
+  await view.start();
+  check(document.documentElement.style.getPropertyValue('--cms-page-image').includes(first), 'start image');
+  check(getComputedStyle(document.documentElement).backgroundImage.includes(first), 'start image rendered');
+  const tile = document.querySelector('.grid-stack-item-content');
+  check(getComputedStyle(tile).backdropFilter.includes('blur'), 'glass blur applied');
+  await view.showPage('room');
+  check(document.documentElement.style.getPropertyValue('--cms-page-image').includes(second), 'individual image');
+  config.settings.sharedBackground = true;
+  await view.showPage('start');
+  await view.showPage('room');
+  check(document.documentElement.style.getPropertyValue('--cms-page-image').includes(first), 'shared image');
+  config.settings.sharedBackground = false;
+  await view.showPage('start');
+  await view.showPage('room');
+  check(document.documentElement.style.getPropertyValue('--cms-page-image').includes(second), 'individual image restored');
+  view.stop();
+  check(document.documentElement.style.getPropertyValue('--cms-page-image') === 'none', 'image cleared on stop');
+  result.dataset.result = 'pass';
+  result.textContent = JSON.stringify({ checks });
+  if (location.search === '?preview') {
+    result.hidden = true;
+    await view.start();
+  }
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = error.stack || String(error);
+}
+</script>

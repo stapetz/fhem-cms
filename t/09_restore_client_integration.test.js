@@ -261,7 +261,7 @@ test('real versioned state reaches schema 5 view for live and draft without writ
       return new Response(result.stdout);
     };
     globalThis.window = { location: { href: 'https://example.test/fhem/' }, clearTimeout };
-    globalThis.document = { createElement: (tag) => new Element(tag) };
+    globalThis.document = { createElement: (tag) => new Element(tag), documentElement: new Element('html') };
     globalThis.HTMLElement = class {};
     const registry = new Map();
     globalThis.customElements = {

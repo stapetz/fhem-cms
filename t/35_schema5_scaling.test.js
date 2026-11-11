@@ -113,13 +113,14 @@ async function testServer() {
 
 for (const [name, fixtures] of [
   ['widget titles inherit alignment and compact contents fill their available area',
-    [['36_widget_titles.html', 100], ['37_widget_content.html', 600],
+    [['36_widget_titles.html', 180], ['37_widget_content.html', 600],
       ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],
       ['42_richtext_selection.html', 85], ['43_auto_arrange.html', 84],
       ['44_placeholder_units.html', 384], ['45_solarflow_sizing.html', 868], ['46_unit_inputs.html', 998]]],
   ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 850]]],
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
   ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 204]]],
+  ['liquid glass uses and restores page backgrounds', [['55_liquid_glass.html', 7]]],
 ]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,

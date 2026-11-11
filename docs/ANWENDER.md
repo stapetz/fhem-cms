@@ -133,6 +133,18 @@ Geräte lassen sich später im Editor hinzufügen.
   sowie Widget hinzufügen (mit Suche) und Widgets automatisch anordnen.
 - **Ansicht:** Vorschau (zeigt die Seite ohne Bearbeitungselemente) und Raster anzeigen.
 
+**Entwicklungsstand (`dev`):** Unter **Bearbeiten → Seiteneinstellungen**
+kann für das gesamte CMS-Device das Theme **Liquid Glass** gewählt werden.
+Für jede Seite kann dort über den Assetmanager ein eigenes Hintergrundbild
+ausgewählt oder entfernt werden. Auf der Startseite aktiviert der Schalter
+**Hintergrundbild dieser Startseite auf allen Seiten verwenden** das gemeinsame
+Bild. Die individuellen Bilder der anderen Seiten bleiben gespeichert und
+werden nach dem Ausschalten wieder verwendet. Wird die Seitenreihenfolge
+geändert, liefert die neue erste Seite das gemeinsame Bild. Hat sie keines,
+erscheint auf allen Seiten der Theme-Hintergrund. Die Einstellungen werden als Entwurf gespeichert und
+erst beim Veröffentlichen auf der Homepage sichtbar. Verwendete Hintergrundbilder
+sind im Assetmanager gegen Löschen geschützt.
+
 Die Geräteauswahl oben rechts im Editiermodus bietet Smartphone- und
 Tabletprofile sowie verschiedene Desktopauflösungen. Die Drehfunktion wechselt
 zwischen Hoch- und Querformat. Die Vorschau zeigt den responsiven Entwurf,
