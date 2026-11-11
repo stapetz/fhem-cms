@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-11",
+  "version": "1.7.0",
+  "title": "Einrichtungsassistent und Navigation",
+  "changes": [
+    "Einrichtungsassistent: Raeume und Geraete manuell mit Vorschau auswaehlen oder mit Magic einen Entwurf erstellen (Refs #129).",
+    "Thermostate, Schalter und Messwerttabellen werden passend vorgeschlagen; Solax-SolarFlow nutzt eindeutig zugeordnete Readings.",
+    "Magic ist auf acht Raeume und acht Widgets je Raum begrenzt und veroeffentlicht nicht automatisch.",
+    "Aktive Navigationspunkte behalten ihren Schriftstil und ihre Breite (Refs #133).",
+    "FHEM-Update zeigt die aktuelle Aenderungszusammenfassung an (Refs #135).",
+    "Automatische Temperaturverlaeufe sind nicht enthalten."
+  ]
+}

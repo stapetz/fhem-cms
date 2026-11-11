@@ -2,7 +2,20 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
-**Aktuelle stabile Version: 1.6.1**
+**Aktuelle stabile Version: 1.7.0**
+
+## Neu in 1.7.0
+
+- Einrichtungsassistent für neue, leere CMS-Konfigurationen: leer beginnen,
+  Räume und Geräte mit Vorschau auswählen oder mit Magic einen Entwurf erstellen.
+- Magic berücksichtigt höchstens acht Räume mit je acht Widgets und erkennt
+  ausgewählte Geräte, Thermostate, Schalter und Messwerttabellen.
+- SolaxModbus kann mit vorhandener PV-Gesamtleistung und optionalen
+  Batterie-Readings als SolarFlow vorgeschlagen werden, ohne unbekannte
+  Energieflüsse oder den Hausverbrauch zu erraten.
+- Aktive Navigationspunkte ändern nur ihren Hintergrund und nicht ihre Breite.
+
+Automatische Temperaturverläufe sind nicht Teil dieses Releases.
 
 ## Neu in 1.6.1
 
@@ -57,7 +70,7 @@ ausgeben kann. `CHANGED` wird nicht als installierbare Datei geführt und
 
 ## Version
 
-Die aktuelle stabile Version ist **1.6.1**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
+Die aktuelle stabile Version ist **1.7.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
 
 ## Installation und Update in FHEM
 

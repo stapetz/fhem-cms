@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-11",
+  "version": "1.7.1-dev",
+  "title": "Entwicklung nach Release 1.7.0",
+  "changes": [
+    "Der freigegebene Stand 1.7.0 wurde nach dev synchronisiert.",
+    "Einrichtungsassistent, Navigation und FHEM-Update-Historie sind in 1.7.0 enthalten."
+  ]
+}
