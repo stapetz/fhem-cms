@@ -917,7 +917,7 @@ sub FHEMCMS_ValidateConfig {
                 # 'device' mit Reading-Namen als Text ist das aeltere Format (ein gemeinsames Device);
                 # invertGrid/invertBattery sind veraltet und wirkungslos, bleiben aber fuer gespeicherte Entwuerfe gueltig.
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'grid'],
-                    ['title', 'showTitle', 'device', 'unit', 'invertGrid', 'invertBattery', 'threshold']);
+                    ['title', 'showTitle', 'device', 'unit', 'invertGrid', 'invertBattery', 'threshold', 'deriveHome']);
             } elsif ($widget->{type} eq 'fhem-slider') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title', 'showTitle']);
             } else {
@@ -1054,6 +1054,8 @@ sub FHEMCMS_ValidateConfig {
                 for my $field ('invertGrid', 'invertBattery') {
                     return "Ungueltiger Wert fuer $field" if (exists($widget->{$field}) && !$isBool->($widget->{$field}));
                 }
+                return 'Ungueltiger Wert fuer deriveHome'
+                    if (exists($widget->{deriveHome}) && !$isBool->($widget->{deriveHome}));
                 return 'Ungueltiger Schwellwert'
                     if (exists($widget->{threshold}) && !$isInt->($widget->{threshold}, 0, 1000));
             } elsif ($widget->{type} eq 'fhem-icon') {

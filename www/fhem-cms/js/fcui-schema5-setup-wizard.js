@@ -9,7 +9,7 @@ const READING_PRESETS = [
   { names: ['batteryPercent', 'batteryLevel'], label: 'Batterie', unit: '%' },
   { names: ['state'], label: 'Status', unit: '' },
 ];
-const MAGIC_DEVICE_TYPES = new Set(['CUL_HM', 'MAX', 'LaCrosse', 'Shelly', 'IT', 'MQTT2_DEVICE', 'MQTT_DEVICE']);
+const MAGIC_DEVICE_TYPES = new Set(['CUL_HM', 'MAX', 'LaCrosse', 'Shelly', 'IT', 'MQTT2_DEVICE', 'MQTT_DEVICE', 'SolaxModbus']);
 const MAGIC_MAX_ROOMS = 8;
 const MAGIC_MAX_WIDGETS = 8;
 const MAGIC_TECHNICAL_ROOMS = new Set([
@@ -89,6 +89,16 @@ export function schema5WidgetSuggestions(device) {
   if (!device || !isValidName(device.name) || !device.readings
     || typeof device.readings !== 'object' || Array.isArray(device.readings)) return [];
   const readings = device.readings;
+  if (device.type === 'SolaxModbus' && Object.hasOwn(readings, 'pv_total_power')) {
+    const alias = typeof device.alias === 'string' && device.alias.trim()
+      && !/[\x00-\x1f\x7f]/.test(device.alias) ? device.alias.trim() : device.name;
+    const fields = { pv: { device: device.name, reading: 'pv_total_power' } };
+    for (const [field, reading] of [['battery', 'batteryPower'], ['soc', 'batterySOC']]) {
+      if (Object.hasOwn(readings, reading)) fields[field] = { device: device.name, reading };
+    }
+    return [{ type: 'fhem-solarflow', device: device.name, title: alias.slice(0, 64),
+      label: 'SolarFlow', readings: fields, deriveHome: false }];
+  }
   const commands = typeof device.sets === 'string' ? device.sets.split(/\s+/) : [];
   const hasTemperatureCommand = (name) => commands.some((entry) =>
     entry.startsWith(`${name}:`) && entry.slice(name.length + 1).split(',')
@@ -171,8 +181,8 @@ export function createSchema5MagicPlan(devices) {
     }
     const widgets = suggestions
       .sort((a, b) => {
-        const rank = (widget) => widget.type === 'thermostat' ? 0
-          : widget.type === 'fhem-switch' ? 1 : widget.type === 'fhem-table' ? 2 : 3;
+        const rank = (widget) => widget.type === 'fhem-solarflow' ? 0 : widget.type === 'thermostat' ? 1
+          : widget.type === 'fhem-switch' ? 2 : widget.type === 'fhem-table' ? 3 : 4;
         return rank(a) - rank(b) || a.device.localeCompare(b.device, 'de');
       }).slice(0, MAGIC_MAX_WIDGETS).map((widget) => ({ ...widget, included: true }));
     return { room, title: room, included: true, widgets, unsupported: [] };
@@ -295,7 +305,8 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
         rowHeight = widgetHeight;
       }
       const height = suggestion.type === 'fhem-table'
-        ? Math.max(2, Math.ceil((suggestion.rows.length + 2) / 2)) * scale : widgetHeight;
+        ? Math.max(2, Math.ceil((suggestion.rows.length + 2) / 2)) * scale
+        : suggestion.type === 'fhem-solarflow' ? 4 * scale : widgetHeight;
       rowHeight = Math.max(rowHeight, height);
       const widget = {
         id: uniqueId(`setup-${pageIndex + 1}-${index + 1}`, widgetIds),
@@ -309,6 +320,10 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
         },
       };
       if (widget.type === 'fhem-table') widget.rows = structuredClone(suggestion.rows);
+      else if (widget.type === 'fhem-solarflow') {
+        widget.readings = structuredClone(suggestion.readings);
+        widget.deriveHome = false;
+      }
       else {
         widget.device = suggestion.device;
         if (widget.type === 'thermostat') widget.readings = { ...suggestion.readings };
@@ -662,7 +677,8 @@ export class Schema5SetupWizard {
       for (const widget of page.widgets) {
         const detail = widget.type === 'thermostat' ? 'Thermostat'
           : widget.type === 'fhem-switch' ? 'Schalter'
-            : widget.type === 'fhem-table' ? 'Messwerte' : `Wert: ${widget.reading}`;
+            : widget.type === 'fhem-table' ? 'Messwerte'
+              : widget.type === 'fhem-solarflow' ? 'SolarFlow' : `Wert: ${widget.reading}`;
         suggestions.append(checkbox(`${widget.title} (${widget.device} · ${detail})`, widget.included, (checked) => {
           widget.included = checked;
         }));

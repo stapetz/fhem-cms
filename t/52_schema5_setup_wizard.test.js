@@ -126,6 +126,35 @@ test('magic excludes technical rooms and resolves thermostat commands on Homemat
   assert.equal(pages[0].widgets[0].readings.battery, undefined);
 });
 
+test('wizard maps SolaxModbus total PV and battery without guessing unknown grid direction', () => {
+  const solar = { name: 'Solar', type: 'SolaxModbus', rooms: ['Garten'],
+    readings: { pv_total_power: '1200 W', pv1Power: '600', pv2Power: '600',
+      batteryPower: '200', batterySOC: '60', gridMeterPower: '-100' } };
+  const plan = createSchema5MagicPlan([solar]);
+  const config = buildSchema5SetupConfig(initialConfig(), plan.pages, plan.startRoom);
+  const widget = config.pages[0].widgets[0];
+  assert.equal(widget.type, 'fhem-solarflow');
+  assert.deepEqual(widget.readings, {
+    pv: { device: 'Solar', reading: 'pv_total_power' },
+    battery: { device: 'Solar', reading: 'batteryPower' },
+    soc: { device: 'Solar', reading: 'batterySOC' },
+  });
+  assert.equal(widget.deriveHome, false);
+  assert.equal(widget.grid.h, 4);
+  assert.deepEqual(schema5WidgetSuggestions({ ...solar, readings: { pv1Power: '600' } }), []);
+  const validation = spawnSync('perl', ['-e', `
+    use strict; use warnings; use JSON::PP ();
+    sub Log3 {}
+    require './FHEM/01_FHEMCMS.pm';
+    local $/;
+    my $config = JSON::PP->new->utf8->decode(<STDIN>);
+    my $error = FHEMCMS_ValidateConfig($config, 5);
+    if (defined $error) { print STDERR $error; exit 1; }
+  `], { input: JSON.stringify(config), encoding: 'utf8' });
+  assert.equal(validation.status, 0, validation.stderr);
+  assert.doesNotThrow(() => arrangeSchema5SetupPages(config));
+});
+
 test('wizard ignores invalid humidity rather than interpreting battery-coded sensor values as humidity', () => {
   for (const humidity of ['106', '-1', 'battery low', '']) {
     const readings = schema5ReadingSuggestions({ name: 'Sensor', readings: {

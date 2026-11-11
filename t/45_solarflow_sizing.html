@@ -10,6 +10,7 @@
 import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
 import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
 import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+import { computeModel } from '../www/fhem-cms/components/cms-solarflow.js';
 const fixture = document.querySelector('#fixture');
 const output = document.querySelector('#result');
 let checks = 0;
@@ -17,6 +18,14 @@ const check = (condition, message) => { if (!condition) throw new Error(message)
 const settle = () => new Promise((resolve) => setTimeout(resolve, 40));
 const data = new Map([['Test', [{ name: 'Test', readings: { pv: '1250', home: '800', grid: '200', battery: '250', soc: '65' } }]]]);
 try {
+  const unverified = { readings: { pv: { device: 'Test', reading: 'pv' },
+    battery: { device: 'Test', reading: 'battery' } }, deriveHome: false };
+  const conservative = computeModel(unverified, data);
+  check(conservative.values.pv === 1250 && conservative.values.bat === 250, 'known readings are shown');
+  check(conservative.values.home === null, 'unknown home consumption is not inferred');
+  check(conservative.edges.every((edge) => edge.power === 0), 'unknown flows are not guessed');
+  check(computeModel({ ...unverified, deriveHome: true }, data).values.home === 1000,
+    'existing home calculation remains available');
   for (const viewOnly of [false, true]) {
     const config = { id: 'solar', type: 'fhem-solarflow', title: 'SolarFlow Leistung und Ladestand', showTitle: true,
       readings: Object.fromEntries(['pv', 'home', 'grid', 'battery', 'soc'].map((reading) => [reading, { device: 'Test', reading }])) };
@@ -72,12 +81,15 @@ try {
       const mounted = mountSchema5Widgets(GridStack, grid, config, 'one', document.createElement('nav'), {}, data,
         editing ? { onEdit() {}, onChange() { throw new Error('No layout writes expected'); } } : undefined);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 300));
         const host = grid.querySelector('cms-solarflow');
+        for (let attempt = 0; attempt < 30 && (!host.clientWidth || !host.clientHeight); attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
         const header = host.shadowRoot.querySelector('[data-header]').getBoundingClientRect();
         const svg = host.shadowRoot.querySelector('[data-svg]').getBoundingClientRect();
         const tile = host.shadowRoot.querySelector('.tile').getBoundingClientRect();
-        check(host.clientWidth > 0 && host.clientHeight > 0, 'widget mounted in real grid');
+        check(host.clientWidth > 0 && host.clientHeight > 0,
+          `widget mounted in real grid: ${columns} ${editing} ${host.clientWidth}x${host.clientHeight}`);
         check(svg.top >= header.bottom, `real grid ${columns} / editing=${editing}: no title overlap`);
         check(svg.height > 0 && svg.bottom <= tile.bottom, 'real grid diagram fits available height');
         check(grid.classList.contains('cms-grid-editable') === editing, 'actual edit and responsive modes exercised');
@@ -87,6 +99,20 @@ try {
       }
     }
   }
+  let saved;
+  const editorConfig = { id: 'solar-config', type: 'fhem-solarflow',
+    readings: unverified.readings, deriveHome: false, grid: { col: 1, row: 1, w: 4, h: 4 } };
+  const editorHost = createWidgetElement(editorConfig, {
+    listAllDevices: async () => [{ name: 'Test', readings: { pv: '1250', battery: '250' } }],
+    saveWidget: async (config) => { saved = config; },
+  }, data, false);
+  fixture.append(editorHost);
+  await editorHost.openConfig();
+  const derive = editorHost.shadowRoot.querySelector('[name="deriveHome"]');
+  check(!derive.checked, 'conservative mode is visible in the editor');
+  await editorHost.saveConfig();
+  check(saved.deriveHome === false, 'editing preserves conservative mode');
+  editorHost.remove();
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });
 } catch (error) {
