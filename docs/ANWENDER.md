@@ -109,13 +109,18 @@ Titel steht diese Fläche wieder dem Diagramm zur Verfügung.
 ## Schema-5-Editor bedienen
 
 **Entwicklungsstand (`dev`):** Der Einrichtungsassistent wird bei einer neuen,
-leeren CMS-Konfiguration angeboten und kann später über **Datei →
-Einrichtungsassistent** erneut geöffnet werden. Er erstellt erst nach Bestätigung
-einen Entwurf. Nach dem Anpassen der Navigation werden die Widgets auf allen
-Seiten automatisch angeordnet; bei erneutem Aufruf können sich auch Positionen
-bereits vorhandener Widgets ändern. Nach `purge` und Neuanlage wird der
-Assistent auch bei gleichem Device-Namen erneut angeboten. Schalter- und
-Thermostatvorschläge können in der Ansicht Geräte steuern.
+leeren CMS-Konfiguration einmal angeboten. Nach `purge` und Neuanlage erscheint
+er erneut. Die manuelle Auswahl zeigt vor dem Speichern eine Vorschau; **Magic -
+auf gut Glück** erstellt direkt einen Entwurf, veröffentlicht ihn aber nicht.
+Magic berücksichtigt höchstens acht Räume mit je acht Widgets und nur
+die Gerätetypen `CUL_HM`, `MAX`, `LaCrosse`, `Shelly`, `IT`, `MQTT2_DEVICE`
+und `MQTT_DEVICE`. Technische Typen wie `notify` und `at` sowie andere Typen
+werden ausgelassen. Innerhalb eines Raums werden Thermostate, Schalter und
+Messwerttabellen bevorzugt; Wohnzimmer und Küche werden bei der Raumauswahl
+bevorzugt. Mehrere Messwerte eines Geräts werden zu einer Tabelle
+zusammengefasst. Schalter und Thermostate können in der Ansicht Geräte steuern.
+Nach dem Einrichten werden die Widgets automatisch angeordnet; ausgelassene
+Geräte lassen sich später im Editor hinzufügen.
 
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
 - **Bearbeiten:** Seiteneinstellungen (Theme, Widget-Rahmen, Titelausrichtung und Rastergröße)
