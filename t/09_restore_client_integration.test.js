@@ -214,7 +214,13 @@ test('real versioned state reaches schema 5 view for live and draft without writ
       navigationDom(this);
       this.children = [];
       this.attributes = {};
-      this.style = { setProperty(name, value) { this[name] = value; } };
+      this.style = {
+        *[Symbol.iterator]() {},
+        getPropertyValue(name) { return this[name] || ''; },
+        getPropertyPriority() { return ''; },
+        setProperty(name, value) { this[name] = value; },
+        removeProperty(name) { delete this[name]; },
+      };
       this.classList = { toggle() {} };
     }
     append(child) { this.children.push(child); }
