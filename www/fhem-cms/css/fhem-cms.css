@@ -31,6 +31,10 @@
   font-family: system-ui, sans-serif;
   color: var(--cms-text);
   background: var(--cms-bg);
+  background-image: var(--cms-page-image, none);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
 :root[data-cms-theme="light"] {
@@ -122,6 +126,10 @@
   display: grid;
   gap: .5rem;
   margin-block: 1rem;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-liquid-controls[hidden] {
+  display: none;
 }
 
 .cms-editor-dialog[data-panel="page"] .cms-liquid-controls label {

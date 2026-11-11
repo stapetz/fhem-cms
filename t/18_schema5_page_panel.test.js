@@ -92,6 +92,8 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
     assert.equal(settings.children[3].children[0].value, 'left');
     assert.deepEqual(settings.children[3].children[0].children.map((option) => option.value), ['left', 'center', 'right']);
     assert.equal(settings.children[0].children[0].value, 'dark');
+    assert.notEqual(settings.children[4].hidden, true, 'background settings are available in dark theme');
+    assert.equal(settings.children[4].children[6].hidden, true, 'liquid controls are hidden for dark theme');
     assert.equal(settings.children[1].children[0].checked, true);
     assert.deepEqual(settings.children[2].children[0].children.map((option) => option.value), ['12', '24', '48', '96', '192']);
     assert.notEqual(settings.children[2].children[0].disabled, true);
@@ -160,7 +162,8 @@ test('liquid glass uses a reversible start-page background without changing indi
     settings.children[0].children[0].value = 'liquid-glass';
     settings.children[0].children[0].fire('change');
     const background = settings.children[4];
-    assert.equal(background.hidden, false);
+    assert.notEqual(background.hidden, true);
+    assert.equal(background.children[6].hidden, false, 'liquid controls appear for liquid glass');
     assert.equal(background.children[0].textContent, 'Hintergrundbild für aktuelle Seite „A“');
     assert.equal(background.children[4].textContent, 'Bild auf allen Seiten verwenden ');
     assert.match(background.children[5].textContent, /auf jeder Seite einzeln über die Seiteneinstellungen/);
@@ -192,6 +195,36 @@ test('liquid glass uses a reversible start-page background without changing indi
     preview = root.children[3].children[4].children[4].children[3];
     assert.match(preview.style['--cms-liquid-preview-image'], new RegExp(second),
       'preview returns to the individual image when sharing is disabled');
+  } finally {
+    globalThis.document = original;
+  }
+});
+
+test('background selection and shared setting work in light and dark themes', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    for (const theme of ['dark', 'light']) {
+      const f = fixture();
+      const image = `media/${'a'.repeat(32)}.png`;
+      const root = new Element('section');
+      await f.controller.reload();
+      new Schema5PagePanel({ root, controller: f.controller, pageId: 'a', token: f.controller.snapshot().token,
+        services: { pickAsset: async () => ({ href: image }) },
+        browser: { confirm: () => true }, onClose: () => {} });
+      const form = root.children[3];
+      form.children[0].children[0].value = theme;
+      form.children[0].children[0].fire('change');
+      const background = form.children[4];
+      assert.notEqual(background.hidden, true);
+      assert.equal(background.children[6].hidden, true);
+      await background.children[2].fire('click');
+      background.children[4].children[0].checked = true;
+      await root.children[4].children[1].fire('click');
+      assert.equal(f.controller.snapshot().draft.theme || 'dark', theme);
+      assert.equal(f.controller.snapshot().draft.pages[0].background, image);
+      assert.equal(f.controller.snapshot().draft.settings.sharedBackground, true);
+    }
   } finally {
     globalThis.document = original;
   }

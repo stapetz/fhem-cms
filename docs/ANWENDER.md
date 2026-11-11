@@ -137,7 +137,7 @@ Geräte lassen sich später im Editor hinzufügen.
 
 **Entwicklungsstand (`dev`):** Unter **Bearbeiten → Seiteneinstellungen**
 kann für das gesamte CMS-Device das Theme **Liquid Glass** gewählt werden.
-Für jede Seite kann dort über den Assetmanager ein eigenes Hintergrundbild
+Unabhängig vom Theme kann für jede Seite über den Assetmanager ein eigenes Hintergrundbild
 ausgewählt oder entfernt werden. Auf der Startseite aktiviert der Schalter
 **Bild auf allen Seiten verwenden** das gemeinsame
 Bild. Die individuellen Bilder der anderen Seiten bleiben gespeichert und
@@ -146,7 +146,7 @@ geändert, liefert die neue erste Seite das gemeinsame Bild. Hat sie keines,
 erscheint auf allen Seiten der Theme-Hintergrund. Die Einstellungen werden als Entwurf gespeichert und
 erst beim Veröffentlichen auf der Homepage sichtbar. Verwendete Hintergrundbilder
 sind im Assetmanager gegen Löschen geschützt.
-Die Regler **Liquid-Effekt** (Unschärfe und Glanz) und **Transparenz** gelten
+Bei Liquid Glass gelten die Regler **Liquid-Effekt** (Unschärfe und Glanz) und **Transparenz**
 für alle Seiten. Die Vorschau im Dialog aktualisiert sich beim Verschieben;
 sie verwendet das wirksame Seitenbild oder einen Beispielhintergrund. Erst
 **Speichern** übernimmt die Werte in den Entwurf; **Abbrechen** verwirft sie.

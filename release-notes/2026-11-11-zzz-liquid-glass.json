@@ -3,7 +3,7 @@
   "version": "1.8.0-dev",
   "title": "Liquid Glass (Refs #136)",
   "changes": [
-    "Neues Liquid-Glass-Theme mit Bildauswahl je Seite im Seitendialog.",
+    "Neues Liquid-Glass-Theme; Hintergrundbilder je Seite fuer alle Themes.",
     "Das Startseitenbild kann fuer alle Seiten verwendet werden; eigene Bilder bleiben erhalten.",
     "Bilder werden im Assetmanager gegen Loeschen geschuetzt.",
     "Globale Regler fuer Liquid-Effekt und Transparenz mit direkter Vorschau."

@@ -99,7 +99,6 @@ export class Schema5PagePanel {
     titleLabel.append(this.#titleAlign);
     this.#form.append(themeLabel, framesLabel, layoutLabel, titleLabel);
     this.#backgroundControls = element('div');
-    this.#backgroundControls.hidden = this.#theme.value !== 'liquid-glass';
     const headingBackground = element('p', `Hintergrundbild für aktuelle Seite „${page.title}“`);
     this.#backgroundLabel = element('p', this.#background || 'Kein Bild ausgewählt');
     const choose = element('button', 'Hintergrundbild auswählen');
@@ -122,6 +121,7 @@ export class Schema5PagePanel {
     }
     const controls = element('div');
     controls.className = 'cms-liquid-controls';
+    controls.hidden = this.#theme.value !== 'liquid-glass';
     const intensityLabel = element('label', 'Liquid-Effekt (Unschärfe und Glanz, alle Seiten) ');
     this.#intensity = element('input');
     this.#intensity.type = 'range';
@@ -168,7 +168,7 @@ export class Schema5PagePanel {
     updatePreview();
     this.#form.append(this.#backgroundControls);
     this.#theme.addEventListener('change', () => {
-      this.#backgroundControls.hidden = this.#theme.value !== 'liquid-glass';
+      controls.hidden = this.#theme.value !== 'liquid-glass';
     });
     choose.addEventListener('click', async () => {
       if (this.#busy || this.#closed || this.#requiresReload) return;

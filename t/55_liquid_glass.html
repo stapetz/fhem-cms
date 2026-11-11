@@ -101,6 +101,40 @@ try {
     'preview does not mutate saved settings');
   dialog.close();
   dialog.remove();
+  for (const theme of ['dark', 'light']) {
+    config.theme = theme;
+    config.settings.sharedBackground = false;
+    document.documentElement.dataset.cmsTheme = theme;
+    await view.start();
+    check(getComputedStyle(document.documentElement).backgroundImage.includes(first), `${theme}: start image rendered`);
+    await view.showPage('room');
+    check(getComputedStyle(document.documentElement).backgroundImage.includes(second), `${theme}: individual image rendered`);
+    config.settings.sharedBackground = true;
+    await view.showPage('start');
+    await view.showPage('room');
+    check(getComputedStyle(document.documentElement).backgroundImage.includes(first), `${theme}: shared image rendered`);
+    delete config.pages[0].background;
+    await view.showPage('start');
+    check(getComputedStyle(document.documentElement).backgroundImage === 'none', `${theme}: no image uses theme color`);
+    config.pages[0].background = first;
+    view.stop();
+    const panel = document.createElement('dialog');
+    panel.className = 'cms-editor-panel cms-editor-dialog';
+    panel.dataset.panel = 'page';
+    document.body.append(panel);
+    new Schema5PagePanel({ root: panel, controller, pageId: 'start', token: 'test', onClose() {} });
+    panel.showModal();
+    check(panel.querySelector('.cms-liquid-controls').getBoundingClientRect().height === 0,
+      `${theme}: liquid controls hidden`);
+    check([...panel.querySelectorAll('button')].some(button =>
+      button.textContent === 'Hintergrundbild auswählen' && button.getBoundingClientRect().width > 0),
+    `${theme}: background selection visible`);
+    panel.close();
+    panel.remove();
+  }
+  config.theme = 'liquid-glass';
+  document.documentElement.dataset.cmsTheme = config.theme;
+  config.settings.sharedBackground = false;
   result.dataset.result = 'pass';
   result.textContent = JSON.stringify({ checks });
   if (location.search === '?preview') {
