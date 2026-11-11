@@ -271,6 +271,23 @@ Die mobile Ansicht funktioniert auch beim Start über ein iPhone-Homescreen-Icon
 Nach dem Drehen bleiben die Kachelabstände erhalten; das Navigationsmenü wird
 anhand des tatsächlich verfügbaren Platzes erneut geprüft.
 
+### Anrufliste für FB_CALLLIST (Entwicklungsstand `dev`)
+
+Im Schema-5-Editor unter **Widget hinzufügen → Anrufliste** ein
+`FB_CALLLIST`-Device auswählen. Standardmäßig erscheinen fünf Anrufe mit Status,
+Name oder Nummer, Datum/Uhrzeit und Dauer. Die Anzahl ist von 1 bis 20
+einstellbar; die sichtbaren Spalten können im Widgetdialog gewählt werden.
+Die Reihenfolge der Anrufe übernimmt das Widget vom Device.
+
+Am `FB_CALLLIST`-Device muss `create-readings` auf `1` stehen. Das Attribut
+`visible-columns` muss die benötigten Felder enthalten, und `number-of-calls`
+begrenzt die vom Device bereitgestellte Anzahl. Das Widget erzeugt keine
+zusätzlichen Readings und ändert keine Device-Attribute. Fehlende Spalten
+werden kenntlich gemacht; eine leere Anrufliste wird von fehlenden Readings unterschieden.
+Unbekannte Status erscheinen neutral. Ein fehlgeschlagener ausgehender Anruf
+ist anhand dieser Readings nicht zuverlässig als „besetzt“ unterscheidbar.
+Anrufdaten sind persönlich: Zugriff auf CMS und FHEMWEB entsprechend schützen.
+
 ### LinkWidget: Seiten- und Bildlinks
 
 Im Schema-5-Editor unter **Widget hinzufügen → LinkWidget** anlegen.

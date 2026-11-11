@@ -124,6 +124,7 @@ for (const [name, fixtures] of [
   ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 204]]],
   ['themes use and restore page backgrounds', [['55_liquid_glass.html', 63]]],
   ['page settings preview shows the real phone page without saving', [['57_settings_preview.html', 25]]],
+  ['call list displays and configures device readings', [['58_calllist.html', 47]]],
   ['mobile device preview fits the raster without horizontal overflow', [['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200]]],
   ['touch devices fit the raster without horizontal overflow', [['56_mobile_viewport.html?mode=touch-test', 200]]],
 ]) test(name, {

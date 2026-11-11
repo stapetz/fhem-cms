@@ -13,6 +13,7 @@ const WIDGET_TYPES = [
   ['fhem-table', 'Tabelle', 'r', 6, 8, { rows: [] }],
   ['fhem-slider', 'Schieberegler', 'l', 4, 6, { device: '', command: '', reading: '' }],
   ['fhem-chart', 'Diagramm', 'g', 6, 10, { device: '', reading: '' }],
+  ['fhem-calllist', 'Anrufliste', 'a', 8, 8, { device: '', limit: 5, columns: ['state', 'party', 'timestamp', 'duration'] }],
   ['fhem-solarflow', 'SolarFlow', 'f', 5, 14, { readings: {} }],
   ['text', 'Textbaustein', 'x', 6, 2, { html: '' }],
   ['fhem-link', 'LinkWidget', 'k', 6, 4, { links: [] }],
