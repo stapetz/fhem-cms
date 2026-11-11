@@ -139,7 +139,7 @@ Geräte lassen sich später im Editor hinzufügen.
 kann für das gesamte CMS-Device das Theme **Liquid Glass** gewählt werden.
 Für jede Seite kann dort über den Assetmanager ein eigenes Hintergrundbild
 ausgewählt oder entfernt werden. Auf der Startseite aktiviert der Schalter
-**Hintergrundbild dieser Startseite auf allen Seiten verwenden** das gemeinsame
+**Bild auf allen Seiten verwenden** das gemeinsame
 Bild. Die individuellen Bilder der anderen Seiten bleiben gespeichert und
 werden nach dem Ausschalten wieder verwendet. Wird die Seitenreihenfolge
 geändert, liefert die neue erste Seite das gemeinsame Bild. Hat sie keines,

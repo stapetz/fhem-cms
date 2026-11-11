@@ -160,6 +160,9 @@ test('liquid glass uses a reversible start-page background without changing indi
     settings.children[0].children[0].fire('change');
     const background = settings.children[4];
     assert.equal(background.hidden, false);
+    assert.equal(background.children[0].textContent, 'Hintergrundbild für aktuelle Seite „A“');
+    assert.equal(background.children[4].textContent, 'Bild auf allen Seiten verwenden ');
+    assert.match(background.children[5].textContent, /auf jeder Seite einzeln über die Seiteneinstellungen/);
     await background.children[2].fire('click');
     background.children[4].children[0].checked = true;
     await root.children[4].children[1].fire('click');
@@ -168,6 +171,7 @@ test('liquid glass uses a reversible start-page background without changing indi
 
     selected = second;
     open('b');
+    assert.equal(root.children[3].children[4].children[0].textContent, 'Hintergrundbild für aktuelle Seite „B“');
     await root.children[3].children[4].children[2].fire('click');
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[1].background, second);

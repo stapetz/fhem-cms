@@ -9,6 +9,7 @@
 <script type="module">
 import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
 import { Schema5View } from '../www/fhem-cms/js/fcui-schema5-view.js';
+import { Schema5PagePanel } from '../www/fhem-cms/js/fcui-schema5-page-panel.js';
 
 const first = `media/${'a'.repeat(32)}.png`;
 const second = `media/${'b'.repeat(32)}.jpg`;
@@ -47,6 +48,26 @@ try {
   check(document.documentElement.style.getPropertyValue('--cms-page-image').includes(second), 'individual image restored');
   view.stop();
   check(document.documentElement.style.getPropertyValue('--cms-page-image') === 'none', 'image cleared on stop');
+  const dialog = document.createElement('dialog');
+  dialog.className = 'cms-editor-panel cms-editor-dialog';
+  dialog.dataset.panel = 'page';
+  document.body.append(dialog);
+  const controller = { snapshot: () => ({ live: config, token: 'test' }), saveDraft: async () => {} };
+  new Schema5PagePanel({ root: dialog, controller, pageId: 'start', token: 'test', onClose() {} });
+  dialog.showModal();
+  const checkbox = [...dialog.querySelectorAll('label')].find(label =>
+    label.textContent.trim() === 'Bild auf allen Seiten verwenden')?.querySelector('input[type="checkbox"]');
+  check(Boolean(checkbox), 'shared background checkbox exists on the start page');
+  check(checkbox.getBoundingClientRect().width > 0 && checkbox.getBoundingClientRect().height > 0,
+    'shared background checkbox is visible');
+  dialog.style.width = '300px';
+  const bounds = dialog.getBoundingClientRect();
+  const control = checkbox.getBoundingClientRect();
+  check(control.left >= bounds.left && control.right <= bounds.right, 'checkbox fits a narrow dialog');
+  check(dialog.textContent.includes('Hintergrundbild für aktuelle Seite „Start“'), 'current page title in dialog');
+  check(dialog.textContent.includes('auf jeder Seite einzeln über die Seiteneinstellungen'), 'individual background hint');
+  dialog.close();
+  dialog.remove();
   result.dataset.result = 'pass';
   result.textContent = JSON.stringify({ checks });
   if (location.search === '?preview') {
