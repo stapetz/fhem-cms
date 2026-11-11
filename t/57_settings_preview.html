@@ -70,6 +70,8 @@ if (child) {
       onClose: value => { outcome = value; } });
     dialog.showModal();
     const frame = dialog.querySelector('.cms-settings-preview iframe');
+    check(dialog.querySelector('.cms-settings-preview > p').textContent === 'Vorschau', 'preview heading is concise');
+    check(!dialog.querySelector('.cms-liquid-preview, .cms-liquid-preview-card'), 'no redundant example widget');
     const frameDocument = () => frame.contentDocument;
     await until(() => frameDocument()?.querySelector('cms-text'),
       `actual page did not load: ${frameDocument()?.querySelector('.cms-status')?.textContent}`);
@@ -92,6 +94,13 @@ if (child) {
       'scaled phone preview is visible and fits the dialog');
     check(frame.inert && frame.tabIndex === -1, 'preview does not allow device actions');
     const theme = dialog.querySelector('select');
+    for (const select of dialog.querySelectorAll('select')) {
+      const option = select.querySelector('option');
+      check(getComputedStyle(option).color === getComputedStyle(document.documentElement).getPropertyValue('--cms-text').trim()
+        || getComputedStyle(option).color === getComputedStyle(select).color, 'option inherits theme text color');
+      check(getComputedStyle(option).backgroundColor === getComputedStyle(select).backgroundColor,
+        'option matches themed select background');
+    }
     check([...theme.options].find(option => option.value === 'dark').textContent === 'Forest Green',
       'existing dark value has new label');
     theme.value = 'liquid-glass';
@@ -104,6 +113,14 @@ if (child) {
     await new Promise(resolve => setTimeout(resolve, 100));
     check(frameDocument().documentElement.dataset.cmsTheme === 'liquid-glass',
       'messages not sent by the owning window are ignored');
+    const intensity = dialog.querySelector('[data-liquid-intensity]');
+    intensity.value = '100';
+    intensity.dispatchEvent(new Event('input'));
+    await until(() => frameDocument().documentElement.style.getPropertyValue('--cms-liquid-blur') === '30px',
+      'liquid intensity did not update');
+    const tile = frameDocument().querySelector('cms-text').closest('.grid-stack-item-content');
+    check(getComputedStyle(tile).backdropFilter === 'blur(30px)', 'actual widget blur follows the slider');
+    check(getComputedStyle(tile, '::after').backgroundImage.includes('0.2'), 'actual widget gloss follows the slider');
     const transparency = dialog.querySelector('[data-liquid-transparency]');
     transparency.value = '60';
     transparency.dispatchEvent(new Event('input'));

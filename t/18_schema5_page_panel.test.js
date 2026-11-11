@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
 import { Schema5PagePanel } from '../www/fhem-cms/js/fcui-schema5-page-panel.js';
+import { schema5PageBackground } from '../www/fhem-cms/js/fcui-schema5-appearance.js';
 
 class Element {
   constructor(tag) {
@@ -119,7 +120,7 @@ test('background label follows the asset catalog and reports missing entries or 
     response = async () => { throw new Error('Verbindung fehlgeschlagen'); };
     await background.children[2].fire('click');
     assert.match(background.children[1].textContent, /Bildname nicht verfügbar: Verbindung fehlgeschlagen/);
-    background.children[3].fire('click');
+    background.children[4].fire('click');
     assert.equal(background.children[1].textContent, 'Kein Bild ausgewählt');
     panel.close();
   } finally {
@@ -140,7 +141,7 @@ test('late catalog responses cannot overwrite a removed background', async () =>
       services: { assetAction: () => new Promise(done => { resolve = done; }) },
       browser: { confirm: () => true }, onClose: () => {} });
     const background = root.children[3].children[4];
-    background.children[3].fire('click');
+    background.children[4].fire('click');
     resolve({ invalid: true });
     await new Promise(done => setImmediate(done));
     assert.equal(background.children[1].textContent, 'Kein Bild ausgewählt');
@@ -302,10 +303,19 @@ test('liquid glass uses a reversible start-page background without changing indi
     const second = `media/${'b'.repeat(32)}.jpg`;
     const root = new Element('section');
     let selected = first;
-    const services = { pickAsset: async ({ mode }) => {
-      assert.equal(mode, 'image');
-      return { href: selected, name: 'Beispiel' };
-    } };
+    let preview;
+    const services = {
+      pickAsset: async ({ mode }) => {
+        assert.equal(mode, 'image');
+        return { href: selected, name: 'Beispiel' };
+      },
+      createSettingsPreview: ({ pageId }) => {
+        preview = { element: new Element('section'), update(config) {
+          this.background = schema5PageBackground(config, pageId);
+        }, close() {} };
+        return preview;
+      },
+    };
     await f.controller.reload();
     const open = (pageId) => new Schema5PagePanel({
       root, controller: f.controller, pageId, token: f.controller.snapshot().token,
@@ -319,10 +329,11 @@ test('liquid glass uses a reversible start-page background without changing indi
     assert.notEqual(background.hidden, true);
     assert.equal(background.children[6].hidden, false, 'liquid controls appear for liquid glass');
     assert.equal(background.children[0].textContent, 'Hintergrundbild für aktuelle Seite „A“');
-    assert.equal(background.children[4].textContent, 'Bild auf allen Seiten verwenden ');
+    assert.equal(background.children[3].textContent, 'Bild auf allen Seiten verwenden ');
+    assert.equal(background.children[4].textContent, 'Hintergrundbild entfernen');
     assert.match(background.children[5].textContent, /auf jeder Seite einzeln über die Seiteneinstellungen/);
     await background.children[2].fire('click');
-    background.children[4].children[0].checked = true;
+    background.children[3].children[0].checked = true;
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[0].background, first);
     assert.equal(f.controller.snapshot().draft.settings.sharedBackground, true);
@@ -330,24 +341,22 @@ test('liquid glass uses a reversible start-page background without changing indi
     selected = second;
     open('b');
     assert.equal(root.children[3].children[4].children[0].textContent, 'Hintergrundbild für aktuelle Seite „B“');
-    let preview = root.children[3].children[4].children[5].children[3];
-    assert.match(preview.style['--cms-liquid-preview-image'], new RegExp(first));
+    assert.equal(preview.background, first);
     await root.children[3].children[4].children[2].fire('click');
-    assert.match(preview.style['--cms-liquid-preview-image'], new RegExp(first),
+    assert.equal(preview.background, first,
       'individual image does not replace the active shared preview');
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[1].background, second);
 
     open('a');
-    root.children[3].children[4].children[4].children[0].checked = false;
+    root.children[3].children[4].children[3].children[0].checked = false;
     await root.children[4].children[1].fire('click');
     const result = f.controller.snapshot().draft;
     assert.equal(result.settings.sharedBackground, false);
     assert.equal(result.pages[0].background, first);
     assert.equal(result.pages[1].background, second);
     open('b');
-    preview = root.children[3].children[4].children[4].children[3];
-    assert.match(preview.style['--cms-liquid-preview-image'], new RegExp(second),
+    assert.equal(preview.background, second,
       'preview returns to the individual image when sharing is disabled');
   } finally {
     globalThis.document = original;
@@ -373,7 +382,7 @@ test('background selection and shared setting work in light and dark themes', as
       assert.notEqual(background.hidden, true);
       assert.equal(background.children[6].hidden, true);
       await background.children[2].fire('click');
-      background.children[4].children[0].checked = true;
+      background.children[3].children[0].checked = true;
       await root.children[4].children[1].fire('click');
       assert.equal(f.controller.snapshot().draft.theme || 'dark', theme);
       assert.equal(f.controller.snapshot().draft.pages[0].background, image);
@@ -413,7 +422,7 @@ test('background picker reports errors, tolerates cancellation and removes an im
     pick = async () => { throw new Error('Katalog nicht erreichbar'); };
     await background.children[2].fire('click');
     assert.match(root.children[2].textContent, /Katalog nicht erreichbar/);
-    background.children[3].fire('click');
+    background.children[4].fire('click');
     await root.children[4].children[1].fire('click');
     assert.equal('background' in f.controller.snapshot().draft.pages[0], false);
   } finally {
@@ -437,16 +446,15 @@ test('liquid sliders preview immediately, cancel safely and save global settings
     const controls = root.children[3].children[4].children[6];
     const intensity = controls.children[0].children[0];
     const transparency = controls.children[1].children[0];
-    const preview = controls.children[3];
+    assert.equal(controls.children.length, 2, 'only the two sliders remain');
     assert.equal(intensity.value, '47');
     assert.equal(transparency.value, '12');
     intensity.value = '100';
     intensity.fire('input');
     transparency.value = '60';
     transparency.fire('input');
-    assert.equal(preview.style['--cms-liquid-blur'], '30px');
-    assert.equal(preview.style['--cms-liquid-opacity'], '0.4');
     assert.equal(controls.children[0].children[1].textContent, '100 %');
+    assert.equal(controls.children[1].children[1].textContent, '60 %');
     assert.equal(f.writes, 0, 'preview does not save');
     confirmed = false;
     root.children[4].children[0].fire('click');
@@ -706,7 +714,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     theme.value = 'liquid-glass';
     theme.fire('change');
     await root.children[3].children[4].children[2].fire('click');
-    root.children[3].children[4].children[4].children[0].checked = true;
+    root.children[3].children[4].children[3].children[0].checked = true;
     root.children[3].children[4].children[6].children[0].children[0].value = '80';
     root.children[3].children[4].children[6].children[1].children[0].value = '35';
     const columns = root.children[3].children[2].children[0];

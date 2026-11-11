@@ -167,16 +167,14 @@
   --cms-surface: rgb(19 34 52 / var(--cms-liquid-opacity, 0.88));
 }
 
-:root[data-cms-theme="liquid-glass"] .cms-schema5-grid > .grid-stack-item > .grid-stack-item-content,
-.cms-liquid-preview-card {
+:root[data-cms-theme="liquid-glass"] .cms-schema5-grid > .grid-stack-item > .grid-stack-item-content {
   -webkit-backdrop-filter: blur(var(--cms-liquid-blur, 14.1px));
   backdrop-filter: blur(var(--cms-liquid-blur, 14.1px));
   box-shadow: inset 0 1px 3px rgb(255 255 255 / var(--cms-liquid-gloss, 0.094));
   border-radius: 1.4rem;
 }
 
-:root[data-cms-theme="liquid-glass"] .cms-schema5-grid > .grid-stack-item > .grid-stack-item-content::after,
-.cms-liquid-preview-card::after {
+:root[data-cms-theme="liquid-glass"] .cms-schema5-grid > .grid-stack-item > .grid-stack-item-content::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -204,26 +202,6 @@
 .cms-editor-dialog[data-panel="page"] .cms-liquid-controls input[type="range"] {
   padding: 0;
   accent-color: var(--cms-accent);
-}
-
-.cms-liquid-preview {
-  min-height: 8rem;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  border-radius: .6rem;
-  background: linear-gradient(125deg, #446a80, #aa805d 50%, #294b68);
-  background-image: linear-gradient(rgb(7 15 24 / .42), rgb(7 15 24 / .42)), var(--cms-liquid-preview-image, linear-gradient(125deg, #446a80, #aa805d 50%, #294b68));
-  background-size: cover;
-  background-position: center;
-}
-
-.cms-editor-panel .cms-liquid-preview-card {
-  position: relative;
-  width: min(100%, 16rem);
-  padding: .8rem 1rem;
-  background: rgb(19 34 52 / var(--cms-liquid-opacity, .88));
-  color: #f5f9ff;
 }
 
 * {
@@ -579,6 +557,11 @@ body:has(.cms-schema5-grid) {
 
 .cms-editor-dialog[data-panel="page"] select {
   padding-right: 1.5rem;
+}
+
+.cms-editor-dialog[data-panel="page"] select option {
+  color: var(--cms-text);
+  background-color: var(--cms-bg);
 }
 
 .cms-editor-dialog[data-panel="page"] form button {

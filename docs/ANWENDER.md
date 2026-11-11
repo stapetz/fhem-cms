@@ -150,8 +150,8 @@ erscheint auf allen Seiten der Theme-Hintergrund. Die Einstellungen werden als E
 erst beim Veröffentlichen auf der Homepage sichtbar. Verwendete Hintergrundbilder
 sind im Assetmanager gegen Löschen geschützt.
 Bei Liquid Glass gelten die Regler **Liquid-Effekt** (Unschärfe und Glanz) und **Transparenz**
-für alle Seiten. Die Vorschau im Dialog aktualisiert sich beim Verschieben;
-sie verwendet das wirksame Seitenbild oder einen Beispielhintergrund. Erst
+für alle Seiten. Die Seitenvorschau im Dialog aktualisiert sich beim Verschieben
+und verwendet das wirksame Seitenbild. Erst
 **Speichern** übernimmt die Werte in den Entwurf; **Abbrechen** verwirft sie.
 Hohe Transparenz kann die Lesbarkeit je nach Hintergrundbild verringern.
 Die zusätzliche Smartphone-Quervorschau zeigt die aktuelle Seite und das wirksame
