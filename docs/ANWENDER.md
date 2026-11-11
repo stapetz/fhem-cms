@@ -115,10 +115,14 @@ auf gut Glück** erstellt direkt einen Entwurf, veröffentlicht ihn aber nicht.
 Magic berücksichtigt höchstens acht Räume mit je acht Widgets und nur
 die Gerätetypen `CUL_HM`, `MAX`, `LaCrosse`, `Shelly`, `IT`, `MQTT2_DEVICE`
 und `MQTT_DEVICE`. Technische Typen wie `notify` und `at` sowie andere Typen
-werden ausgelassen. Innerhalb eines Raums werden Thermostate, Schalter und
+werden ausgelassen; Räume mit bekannten technischen Namen wie `CUL_HM` ebenfalls.
+Homematic-Thermostate werden anhand des zugehörigen steuerbaren Kanals erkannt.
+Innerhalb eines Raums werden Thermostate, Schalter und
 Messwerttabellen bevorzugt; Wohnzimmer und Küche werden bei der Raumauswahl
 bevorzugt. Mehrere Messwerte eines Geräts werden zu einer Tabelle
-zusammengefasst. Schalter und Thermostate können in der Ansicht Geräte steuern.
+zusammengefasst; gleichartige einzelne Temperaturanzeigen können ebenfalls
+in einer Tabelle stehen. Schalter können zusätzlich Messwerte anzeigen.
+Schalter und Thermostate können in der Ansicht Geräte steuern.
 Nach dem Einrichten werden die Widgets automatisch angeordnet; ausgelassene
 Geräte lassen sich später im Editor hinzufügen.
 

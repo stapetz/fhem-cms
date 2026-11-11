@@ -43,6 +43,10 @@ try {
   }));
   devices.push({ name: 'RoomSensor', type: 'LaCrosse', rooms: ['Raum 01'],
     readings: { temperature: '21', humidity: '40' }, sets: '' });
+  devices.push(...Array.from({ length: 8 }, (_, i) => ({
+    name: `Thermometer${i}`, type: 'LaCrosse', rooms: ['Raum 01'],
+    readings: { temperature: '21' }, sets: '',
+  })));
   let state = { live, draft: null, token: 'a'.repeat(64), setupIdentity: 'a'.repeat(64) };
   let writes = 0;
   const controller = new Schema5DraftController({
@@ -119,6 +123,14 @@ try {
   check(state.draft.pages[0].widgets.some((widget) => widget.type === 'fhem-table' && widget.rows.length === 2),
     'magic groups sensor readings in a table');
   check(!!root.querySelector('cms-table'), 'grouped table is rendered');
+  check(state.draft.pages[0].widgets.some((widget) => widget.type === 'fhem-table' && widget.rows.length === 8),
+    'individual thermometers are grouped');
+  for (const host of root.querySelectorAll('cms-table')) {
+    const table = host.shadowRoot.querySelector('table');
+    const tile = host.shadowRoot.querySelector('[data-tile]');
+    check(table.getBoundingClientRect().bottom <= tile.getBoundingClientRect().bottom + 1,
+      'sensor table fits its automatically sized widget');
+  }
   check(live.pages[0].widgets.length === 0, 'magic does not modify live');
   check(![...root.querySelectorAll('button')].some((entry) => entry.textContent === 'Einrichtungsassistent'),
     'wizard cannot be reopened from the file menu');
