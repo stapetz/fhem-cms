@@ -28,6 +28,16 @@ function parity(config, valid, name) {
 
 test('LinkWidget frontend and backend agree on content, targets, images and nested raster', () => {
   parity(source(), true, 'internal default');
+  for (const modalSize of ['sm', 'md', 'lg']) {
+    const config = source();
+    Object.assign(config.pages[0].widgets[0].links[0], { targetMode: 'modal', modalSize });
+    parity(config, true, `internal modal ${modalSize}`);
+  }
+  for (const extra of [{ targetMode: 'page' }, { targetMode: 'modal' }]) {
+    const config = source();
+    Object.assign(config.pages[0].widgets[0].links[0], extra);
+    parity(config, true, `internal ${extra.targetMode} without size`);
+  }
   for (const textPosition of ['above', 'overlay', 'below']) for (const showText of [true, false]) {
     const config = source();
     Object.assign(config.pages[0].widgets[0].links[0], { textPosition, showText,
@@ -92,6 +102,14 @@ test('LinkWidget frontend and backend agree on content, targets, images and nest
     ['unknown page', widget => { widget.links[0].page = 'deleted'; }],
     ['internal tab', widget => { widget.links[0].target = 'tab'; }],
     ['internal window', widget => { widget.links[0].target = 'window'; }],
+    ['unknown targetMode', widget => { widget.links[0].targetMode = 'popup'; }],
+    ['numeric targetMode', widget => { widget.links[0].targetMode = 5; }],
+    ['invalid modalSize', widget => { Object.assign(widget.links[0], { targetMode: 'modal', modalSize: 'xl' }); }],
+    ['modalSize without modal', widget => { widget.links[0].modalSize = 'sm'; }],
+    ['external modal', widget => {
+      Object.assign(widget.links[0], { kind: 'external', url: 'https://example.test', targetMode: 'modal' });
+      delete widget.links[0].page;
+    }],
     ['internal URL', widget => { widget.links[0].url = 'https://example.test'; }],
     ['remote image', widget => { widget.links[0].image = 'https://example.test/a.png'; }],
     ['image traversal', widget => { widget.links[0].image = `media/../${'a'.repeat(32)}.png`; }],

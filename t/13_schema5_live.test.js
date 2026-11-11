@@ -110,6 +110,34 @@ test('schema 5 live page refreshes, reconnects and ignores results after stop', 
     assert.throws(() => live.refresh(), /nicht aktiv/);
     assert.throws(() => live.start(), /bereits gestartet/);
 
+    const modalRequests = [];
+    const modalSubscriptions = [];
+    const modalUpdates = [];
+    const modalClient = {
+      jsonlist(spec) { return new Promise(resolve => modalRequests.push({ spec, resolve })); },
+      subscribe(names) { modalSubscriptions.push(names); },
+      unsubscribe() {},
+    };
+    const shared = new Schema5LivePage(modalClient, widgets, data => modalUpdates.push(data), () => {}, timers);
+    const mainLoad = shared.start();
+    const expansion = shared.setWidgets([...widgets, { type: 'fhem-value', device: 'Door' }]);
+    modalRequests[0].resolve([{ name: 'Temp', readings: { state: 'old' } }]);
+    await Promise.all([mainLoad, expansion]);
+    assert.equal(modalUpdates.length, 0, 'old in-flight result cannot replace expanded snapshots');
+    fireTimeout(0);
+    assert.equal(modalRequests[1].spec, 'Door,device=Door,Temp,device=Temp');
+    modalRequests[1].resolve([{ name: 'Door', readings: { state: 'open' } },
+      { name: 'Temp', readings: { state: 'current' } }]);
+    await shared.inFlight;
+    assert.equal(modalUpdates.at(-1).get('Door')[0].readings.state, 'open');
+    const contraction = shared.setWidgets(widgets);
+    assert.deepEqual(modalSubscriptions.at(-1), ['Temp'], 'closing modal removes its devices');
+    modalRequests[2].resolve([{ name: 'Temp', readings: { state: 'current' } }]);
+    await contraction;
+    assert.equal(modalUpdates.at(-1).has('Door'), false);
+    shared.stop();
+    assert.throws(() => shared.setWidgets(widgets), /nicht aktiv/);
+
     class Element {
       constructor(tag) {
         this.tag = tag; this.children = []; this.attributes = {};

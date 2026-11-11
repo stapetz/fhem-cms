@@ -150,6 +150,19 @@ try {
   equal(writes, 1, 'cancel does not write');
   widget.config = structuredClone(initial);
   await widget.openConfig();
+  equal($('[data-field=targetMode]').value, 'page', 'existing internal links default to page navigation');
+  field('targetMode', 'modal');
+  field('modalSize', 'lg');
+  equal(widget.links[0].targetMode, 'modal', 'modal mode set on internal link');
+  equal(widget.links[0].modalSize, 'lg', 'modal size set on internal link');
+  field('kind', 'external');
+  check(!Object.hasOwn(widget.links[0], 'targetMode') && !Object.hasOwn(widget.links[0], 'modalSize'),
+    'switching link kind removes modal fields');
+  await click('[data-cancel]');
+  widget.config = structuredClone(initial);
+  await widget.openConfig();
+  field('targetMode', 'modal');
+  field('modalSize', 'sm');
   window.linkRegression = {
     points(kind) {
       const wrappers = [...$('[data-grid]').children];
@@ -178,8 +191,12 @@ try {
         equal(writes, 2, 'drag and resize saved once together');
         equal(saved.links.map(link => link.grid), geometry, 'all dragged/resized positions saved');
         equal(saved.grid, initial.grid, 'outer raster unchanged after actual drag');
+        equal(saved.links[0].targetMode, 'modal', 'modal setting saved');
+        equal(saved.links[0].modalSize, 'sm', 'modal size saved');
         widget.config = structuredClone(saved);
         await widget.openConfig();
+        equal($('[data-field=targetMode]').value, 'modal', 'modal setting survives reopening');
+        equal($('[data-field=modalSize]').value, 'sm', 'modal size survives reopening');
         widget.syncGrid();
         equal(widget.links.map(link => link.grid), geometry, 'drag and resize survive reopening');
         await widget.removeWidget();

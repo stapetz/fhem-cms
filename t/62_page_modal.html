@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<title>Seiten-Popup</title>
+<div class="cms-shell"><div class="cms-schema5-workspace"><div id="grid" class="grid-stack cms-schema5-grid"></div></div></div>
+<p id="status"></p><pre id="result"></pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5View } from '../www/fhem-cms/js/fcui-schema5-view.js';
+const result = document.querySelector('#result');
+let checks = 0;
+const check = (condition, name) => { checks++; if (!condition) throw new Error(name); };
+const wait = async predicate => {
+  for (let i = 0; i < 100; i++) { if (predicate()) return; await new Promise(resolve => setTimeout(resolve, 30)); }
+  throw new Error('Zeitüberschreitung: Seiten-Popup');
+};
+const modalLink = (page, id = 'one') => ({ id, kind: 'internal', page, text: 'Details',
+  showText: true, textPosition: 'overlay', target: 'self', targetMode: 'modal', modalSize: 'sm',
+  grid: { col: 1, row: 1, w: 12, h: 2 } });
+const config = { schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
+  navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+  pages: [
+    { id: 'home', title: 'Start', widgets: [
+      { id: 'links', type: 'fhem-link', grid: { col: 1, row: 2, w: 6, h: 3 }, links: [modalLink('detail')] },
+      { id: 'mainvalue', type: 'fhem-value', device: 'Main', reading: 'state', grid: { col: 7, row: 2, w: 6, h: 3 } },
+    ] },
+    { id: 'detail', title: 'Detailseite', widgets: [
+      { id: 'nested', type: 'fhem-link', grid: { col: 1, row: 2, w: 6, h: 3 }, links: [modalLink('home')] },
+      { id: 'detailvalue', type: 'fhem-value', device: 'Detail', reading: 'state', grid: { col: 7, row: 2, w: 6, h: 3 } },
+    ] },
+  ] };
+const subscriptions = [];
+let unsubscribes = 0;
+const client = {
+  async jsonlist(spec) {
+    return ['Main', 'Detail'].filter(name => spec.split(',').includes(name))
+      .map(name => ({ name, readings: { state: name === 'Main' ? 'main-value' : 'detail-value' } }));
+  },
+  subscribe(names, event, status) { subscriptions.push([...names]); status('live'); },
+  unsubscribe() { unsubscribes++; },
+};
+const root = document.querySelector('#grid');
+const view = new Schema5View({ GridStack, root, status: document.querySelector('#status'),
+  config, client, services: {} });
+const fail = error => { result.dataset.result = 'fail'; result.textContent = error.stack || String(error); };
+try {
+  location.hash = '#/home';
+  await view.start();
+  const mainLink = root.querySelector('cms-link');
+  const mainValue = root.querySelector('cms-value');
+  const mainGrid = root.gridstack;
+  const link = () => mainLink.shadowRoot.querySelector('[data-links] a');
+  window.modalRegression = {
+    async open(size = 'sm') {
+      const updated = structuredClone(mainLink.config);
+      updated.links[0].modalSize = size;
+      mainLink.config = updated;
+      link().focus(); link().click();
+      try {
+        await wait(() => view.modal?.dialog.open
+          && view.modal.dialog.querySelector('cms-value')?.snapshot?.[0]?.readings.state === 'detail-value');
+      } catch (error) {
+        throw new Error(`${error.message}: ${mainLink.shadowRoot.querySelector('[data-view-error]').textContent}; `
+          + `modal=${Boolean(view.modal)} subscriptions=${JSON.stringify(subscriptions)}`);
+      }
+      const dialog = view.modal.dialog;
+      check(dialog.getAttribute('aria-labelledby') === 'cms-modal-title', 'Titel zugänglich');
+      check(dialog.querySelector('h2').textContent === 'Detailseite', 'Zielseitentitel');
+      check(dialog.getBoundingClientRect().width <= Math.min({ sm: 480, md: 720, lg: 960 }[size], innerWidth * .96) + 1,
+        'Popupgröße begrenzt auf Auswahl und Viewport');
+      check(document.activeElement === dialog.querySelector('header button'), 'Fokus auf Schließen');
+      check(dialog.querySelector('cms-value').snapshot[0].readings.state === 'detail-value', 'Popup erhält eigene Live-Daten');
+      check(mainValue.snapshot[0].readings.state === 'main-value', 'Hauptseite behält Live-Daten');
+      check(root.gridstack === mainGrid && root.querySelector('cms-value') === mainValue, 'Hauptseite bleibt montiert');
+      check(location.hash === '#/home', 'URL bleibt unverändert');
+      const nested = dialog.querySelector('cms-link');
+      nested.shadowRoot.querySelector('[data-links] a').click();
+      await wait(() => nested.shadowRoot.querySelector('[data-view-error]').textContent.includes('zuerst schließen'));
+      check(document.querySelectorAll('.cms-page-modal').length === 1, 'Rekursion wird sichtbar begrenzt');
+      check(subscriptions.at(-1).join(',') === 'Detail,Main', 'ein gemeinsames Abonnement');
+    },
+    async afterClose() {
+      await wait(() => !view.modal && subscriptions.at(-1)?.join(',') === 'Main');
+      check(!document.querySelector('.cms-page-modal'), 'Popup und Raster entfernt');
+      check(root.gridstack === mainGrid && root.querySelector('cms-value') === mainValue, 'Hauptseite bleibt unverändert');
+      check(location.hash === '#/home', 'Schließen ändert das Routing nicht');
+      check(document.activeElement === mainLink, 'Fokus kehrt zum öffnenden Widget zurück');
+    },
+    async navigateAway() {
+      const dialog = view.modal.dialog;
+      location.hash = '#/detail';
+      await wait(() => view.current === 'detail' && !view.modal);
+      check(!dialog.isConnected, 'Seitenwechsel räumt Popup auf');
+      check(root.gridstack !== mainGrid, 'Seitenwechsel erstellt nur das neue Hauptraster');
+      check(subscriptions.at(-1).join(',') === 'Detail', 'Seitenwechsel entfernt alte Abonnements');
+    },
+    finish() {
+      view.stop();
+      check(unsubscribes === 2, 'ein Client wird bei Seitenwechsel und Verlassen abgemeldet');
+      result.dataset.result = 'pass'; result.textContent = JSON.stringify({ checks });
+    },
+    fail,
+  };
+  await window.modalRegression.open();
+  result.dataset.ready = 'true';
+} catch (error) { fail(error); }
+</script>

@@ -375,6 +375,19 @@ ohne Zugangsdaten) und `target: "self" | "tab" | "window"`. Dokumentlinks besitz
 `kind: "asset"` und `asset` mit dem stabilen Dokument-Downloadpfad anstelle
 von `page`/`url`; die gleichen externen Zielmodi sind möglich.
 
+Entwicklungsstand #146: Interne Links können optional `targetMode: "modal"`
+und `modalSize: "sm" | "md" | "lg"` tragen; ohne Feld gilt Seitenwechsel,
+ohne Popupgröße `md`. Das optionale Feld ist nur für interne Links zulässig.
+Es erweitert den strikt validierten Schema-5-Vertrag, ohne eine Schema-6-
+Migration vorwegzunehmen. Backend und Frontend müssen zusammen aktualisiert
+werden; ältere Validatoren weisen die neuen Felder ab. Ein Rollback erfordert
+die zum Code passende Konfigurationssicherung. Das native modale `dialog`
+rendert ein zweites Raster ohne die Hauptseite zu zerstören; beide teilen einen
+Live-Client mit vereinigten Device-Abos. Beim Schließen werden Raster und
+Popup-Abos entfernt. Verschachtelte Popups werden ausdrücklich abgewiesen.
+Escape, X, Hintergrundklick und Fokus folgen dem Dialogvertrag. Der
+Entwicklungsstand ist noch nicht veröffentlicht.
+
 Das innere `grid` enthält exakt numerische, positive Ganzzahlen `col,row,w,h`,
 1-basiert, 12 Spalten, höchstens 1000 Zeilen und keine Überlappungen.
 Die Seitendichte skaliert nur das äußere Raster. Gridstack wird erst beim Öffnen

@@ -26,6 +26,7 @@ export class Schema5LivePage {
     this.connection = 'polling';
     this.subscriptionKey = null;
     this.subscriptionGeneration = 0;
+    this.deviceRevision = 0;
     this.generation = 0;
     this.started = false;
     this.stopped = false;
@@ -51,6 +52,17 @@ export class Schema5LivePage {
     this.timers.clearTimeout(this.refreshTimer);
     this.timers.clearInterval(this.pollTimer);
     this.client.unsubscribe();
+  }
+
+  setWidgets(widgets) {
+    if (!Array.isArray(widgets) || !this.started || this.stopped) {
+      throw new Error('Live-Seite ist nicht aktiv oder Widget-Liste ungültig');
+    }
+    this.devices = [...new Set(widgets.flatMap(devicesOf).filter(isValidName))].sort();
+    this.deviceRevision += 1;
+    this.snapshots = new Map([...this.snapshots].filter(([device]) => this.devices.includes(device)));
+    this.resubscribe();
+    return this.refresh();
   }
 
   status() {
@@ -101,6 +113,7 @@ export class Schema5LivePage {
       return this.inFlight;
     }
     const generation = this.generation;
+    const deviceRevision = this.deviceRevision;
     let request;
     try {
       request = this.devices.length
@@ -110,7 +123,7 @@ export class Schema5LivePage {
       request = Promise.reject(error);
     }
     const operation = Promise.resolve(request).then((results) => {
-      if (this.stopped || generation !== this.generation) return;
+      if (this.stopped || generation !== this.generation || deviceRevision !== this.deviceRevision) return;
       this.snapshots = groupSnapshots(this.devices, results);
       this.lastSuccess = this.now();
       this.error = null;
@@ -118,7 +131,7 @@ export class Schema5LivePage {
       this.resubscribe();
       this.status();
     }, (error) => {
-      if (this.stopped || generation !== this.generation) return;
+      if (this.stopped || generation !== this.generation || deviceRevision !== this.deviceRevision) return;
       this.error = (error instanceof Error ? error.message : String(error)) || 'Unbekannter Fehler';
       this.onUpdate(this.snapshots, this.lastSuccess);
       this.status();

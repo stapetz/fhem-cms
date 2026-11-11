@@ -171,6 +171,41 @@ if ($operation eq 'read') {
 print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error});
 `;
 
+test('modal link survives real draft and publish without changing existing live data early', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-modal-'));
+  const live = config();
+  live.pages[0].widgets.push({ id: 'links', type: 'fhem-link', grid: { col: 9, row: 2, w: 4, h: 2 },
+    links: [{ id: 'one', kind: 'internal', page: 'start', text: 'Start', showText: true,
+      textPosition: 'overlay', target: 'self', grid: { col: 1, row: 1, w: 12, h: 2 } }] });
+  const original = JSON.stringify(live);
+  const invoke = (operation, ...args) => {
+    const process = spawnSync('perl', ['-e', perl, dir, operation, ...args], { encoding: 'utf8' });
+    assert.equal(process.status, 0, process.stderr);
+    const { result, error } = JSON.parse(process.stdout);
+    if (error) throw new Error(error);
+    return result;
+  };
+  const controller = new Schema5DraftController({
+    read: async () => invoke('read'),
+    save: async (value, token) => invoke('save', Buffer.from(JSON.stringify(value)).toString('base64'), token),
+    publish: async token => invoke('publish', token),
+    discard: async token => invoke('discard', token),
+  });
+  try {
+    await writeFile(join(dir, 'config.json'), original);
+    const before = await controller.reload();
+    const draft = structuredClone(live);
+    Object.assign(draft.pages[0].widgets[2].links[0], { targetMode: 'modal', modalSize: 'lg' });
+    const saved = await controller.saveDraft(draft, before.token);
+    assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
+    assert.deepEqual((await controller.reload()).draft, draft);
+    const published = await controller.publishDraft(saved.token);
+    assert.deepEqual(published.live, draft);
+    assert.equal(published.draft, null);
+    assert.ok((await readdir(dir)).some(name => /^config\.json\..*\.bak$/.test(name)));
+  } finally { await rm(dir, { recursive: true }); }
+});
+
 test('navigation reflow survives real Perl persistence and rejects overflow before any write', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cms-v5-navigation-reflow-'));
   const live = config();

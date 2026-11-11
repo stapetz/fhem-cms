@@ -255,6 +255,30 @@ body:has(.cms-schema5-grid) {
   max-width: 100%;
 }
 
+.cms-page-modal {
+  width: min(96vw, 720px);
+  max-width: 96vw;
+  max-height: 92vh;
+  overflow: auto;
+  padding: 1rem;
+  color: var(--cms-text, #edf4ef);
+  background: var(--cms-surface, #202e27);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--cms-border, #43564a);
+  border-radius: 1rem;
+}
+
+.cms-page-modal[data-size="sm"] { width: min(96vw, 480px); }
+.cms-page-modal[data-size="lg"] { width: min(96vw, 960px); }
+.cms-page-modal::backdrop { background: rgb(0 0 0 / .6); }
+.cms-page-modal > header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.cms-page-modal > header h2 { margin: 0 0 .5rem; }
+.cms-page-modal > header button { min-width: 48px; min-height: 48px; font: inherit; font-size: 1.5rem;
+  color: inherit; background: transparent; border: 1px solid var(--cms-border, #43564a); border-radius: .4rem; cursor: pointer; }
+.cms-page-modal > header button:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); }
+.cms-page-modal .cms-schema5-grid { --cms-view-width: 99.0099cqi; }
+
 .cms-schema5-grid[data-responsive][data-mobile-preview] {
   --cms-view-width: min(calc(25rem + 66.666667cqi), 99.0099cqi);
 }
