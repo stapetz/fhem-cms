@@ -50,7 +50,8 @@ export class Schema5PagePanel {
     this.#config = config;
     this.#onClose = onClose;
     this.#pageId = pageId;
-    this.#background = config.pages.find((page) => page.id === pageId).background || '';
+    const page = config.pages.find((entry) => entry.id === pageId);
+    this.#background = page.background || '';
 
     const heading = element('h2', 'Seiteneinstellungen');
     const hint = element('p',
@@ -96,7 +97,7 @@ export class Schema5PagePanel {
     this.#form.append(themeLabel, framesLabel, layoutLabel, titleLabel);
     this.#backgroundControls = element('div');
     this.#backgroundControls.hidden = this.#theme.value !== 'liquid-glass';
-    const headingBackground = element('p', 'Hintergrundbild dieser Seite');
+    const headingBackground = element('p', `Hintergrundbild für aktuelle Seite „${page.title}“`);
     this.#backgroundLabel = element('p', this.#background || 'Kein Bild ausgewählt');
     const choose = element('button', 'Hintergrundbild auswählen');
     choose.type = 'button';
@@ -106,13 +107,13 @@ export class Schema5PagePanel {
     remove.className = 'cms-button';
     this.#backgroundControls.append(headingBackground, this.#backgroundLabel, choose, remove);
     if (pageId === config.pages[0].id) {
-      const sharedLabel = element('label', 'Hintergrundbild dieser Startseite auf allen Seiten verwenden ');
+      const sharedLabel = element('label', 'Bild auf allen Seiten verwenden ');
       this.#sharedBackground = element('input');
       this.#sharedBackground.type = 'checkbox';
       this.#sharedBackground.checked = config.settings.sharedBackground === true;
       sharedLabel.append(this.#sharedBackground);
       this.#backgroundControls.append(sharedLabel,
-        element('p', 'Eigene Bilder anderer Seiten bleiben erhalten und gelten wieder nach dem Ausschalten.'));
+        element('p', 'Ist die Checkbox deaktiviert, kann das Hintergrundbild auf jeder Seite einzeln über die Seiteneinstellungen gewählt werden. Eigene Bilder anderer Seiten bleiben erhalten.'));
     } else if (config.settings.sharedBackground === true) {
       this.#backgroundControls.append(element('p', 'Das Bild der Startseite wird aktuell auf allen Seiten verwendet.'));
     }
