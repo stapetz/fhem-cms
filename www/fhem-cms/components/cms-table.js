@@ -338,7 +338,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     remove.type = 'button';
     remove.textContent = 'Entfernen';
     remove.addEventListener('click', () => row.remove());
-    pick.addEventListener('click', async () => {
+    const pickRowDevice = async () => {
       try {
         const device = await openDevicePicker({ services: this.services });
         if (device) {
@@ -350,7 +350,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
       } catch (error) {
         this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
       }
-    });
+    };
+    pick.addEventListener('click', pickRowDevice);
+    deviceInput.addEventListener('click', pickRowDevice);
     row.append(deviceLabel, nameLabel, readingLabel, unitFields, remove);
     container.append(row);
     this.setRowUnit(row, initial.unit || '');

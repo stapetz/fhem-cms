@@ -54,6 +54,7 @@ class FHEMCMSCallList extends HTMLElement {
     this.snapshot = null;
     this.services = null;
     this.isNew = false;
+    this.deviceLookupRevision = 0;
   }
 
   connectedCallback() {
@@ -68,7 +69,7 @@ class FHEMCMSCallList extends HTMLElement {
         header { padding:0 2rem .4rem .2rem; }
         h3 { margin:0; color:var(--cms-muted,#a5c9b2); font-weight:400; }
         [data-title] { text-align:var(--cms-widget-title-align,left); font-size:max(6px,min(8cqh,4cqw)); }
-        table { width:100%; border-collapse:collapse; font-size:clamp(.65rem,3cqh,.9rem); }
+        table { width:100%; border-collapse:collapse; font-size:clamp(.875rem,3cqh,1rem); }
         th,td { text-align:left; padding:.3rem .4rem; border-bottom:1px solid var(--cms-border-subtle,#3a4d42); overflow-wrap:anywhere; }
         th { color:var(--cms-muted-strong,#c4d0c8); font-weight:500; }
         .status { font-size:1.15em; font-weight:bold; }
@@ -90,6 +91,7 @@ class FHEMCMSCallList extends HTMLElement {
         .actions { display:flex; flex-wrap:wrap; gap:.5rem; justify-content:flex-end; }
         .error { color:var(--cms-danger,#ffb4a8); }
         .hint { color:var(--cms-muted,#a5c9b2); font-size:.8rem; }
+        [data-message]:empty { display:none; }
         [hidden] { display:none !important; }
       </style>
       <article class="tile" data-tile>
@@ -105,6 +107,7 @@ class FHEMCMSCallList extends HTMLElement {
           <label class="check"><input name="showTitle" type="checkbox"> Titel anzeigen</label>
           <label>FB_CALLLIST-Device<span class="device"><input name="device" type="text" readonly>
             <button type="button" data-pick>Wählen …</button></span></label>
+          <p class="hint" data-detection role="status"></p>
           <label>Anzahl Anrufe (1–20)<input name="limit" type="number" min="1" max="20" step="1" required></label>
           <fieldset><legend>Sichtbare Spalten</legend><div data-columns></div></fieldset>
           <p class="hint">Das Device benötigt create-readings 1 und passende visible-columns.
@@ -126,6 +129,7 @@ class FHEMCMSCallList extends HTMLElement {
     }
     this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
     this.shadowRoot.querySelector('[data-pick]').addEventListener('click', () => this.pickDevice());
+    this.shadowRoot.querySelector('[name="device"]').addEventListener('click', () => this.pickDevice());
     this.shadowRoot.querySelector('[data-cancel]').addEventListener('click', () => this.closeConfig(false));
     this.shadowRoot.querySelector('[data-delete]').addEventListener('click', () => this.deleteWidget());
     this.shadowRoot.querySelector('[data-form]').addEventListener('submit', event => { event.preventDefault(); this.saveConfig(); });
@@ -139,6 +143,7 @@ class FHEMCMSCallList extends HTMLElement {
   set stale(value) { this.shadowRoot.querySelector('[data-tile]')?.toggleAttribute('data-stale', value !== null); }
 
   async openConfig({ isNew = false } = {}) {
+    const revision = ++this.deviceLookupRevision;
     this.isNew = isNew;
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
@@ -150,10 +155,35 @@ class FHEMCMSCallList extends HTMLElement {
     }
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
+    const detection = this.shadowRoot.querySelector('[data-detection]');
+    detection.textContent = isNew && !form.elements.device.value ? 'Suche nach FB_CALLLIST-Devices …' : '';
     this.shadowRoot.querySelector('[data-dialog]').showModal();
+    if (isNew && !form.elements.device.value) {
+      try {
+        const devices = await this.services.listAllDevices();
+        const matches = devices.filter(device => device.type === 'FB_CALLLIST' && isValidName(device.name));
+        if (revision === this.deviceLookupRevision && this.shadowRoot.querySelector('[data-dialog]').open
+          && !form.elements.device.value) {
+          if (matches.length === 1) {
+            form.elements.device.value = matches[0].name;
+            detection.textContent = 'FB_CALLLIST-Device automatisch ausgewählt.';
+          } else {
+            detection.textContent = matches.length ? 'Mehrere FB_CALLLIST-Devices gefunden. Bitte eines auswählen.'
+              : 'Kein FB_CALLLIST-Device gefunden.';
+          }
+        }
+      } catch (error) {
+        if (revision === this.deviceLookupRevision && this.shadowRoot.querySelector('[data-dialog]').open) {
+          detection.textContent = '';
+          this.shadowRoot.querySelector('[data-error]').textContent = `Device-Erkennung fehlgeschlagen: ${error.message}`;
+        }
+      }
+    }
   }
 
   async pickDevice() {
+    this.deviceLookupRevision++;
+    this.shadowRoot.querySelector('[data-detection]').textContent = '';
     try {
       const selected = await openDevicePicker({ services: this.services, title: 'FB_CALLLIST auswählen',
         accept: item => item.type === 'FB_CALLLIST' });
@@ -189,6 +219,7 @@ class FHEMCMSCallList extends HTMLElement {
   }
 
   closeConfig(saved) {
+    this.deviceLookupRevision++;
     const dialog = this.shadowRoot.querySelector('[data-dialog]');
     if (dialog.open) dialog.close();
     if (!saved && this.isNew) this.dispatchEvent(new CustomEvent('cms-widget-cancel', { bubbles: true }));

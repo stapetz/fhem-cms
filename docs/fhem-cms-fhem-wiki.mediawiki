@@ -246,6 +246,10 @@ Im Schema-5-Editor ein <code>FB_CALLLIST</code>-Device auswählen. Standardmäß
 werden fünf Anrufe mit Status, Name oder Nummer, Datum/Uhrzeit und Dauer angezeigt.
 Die Anzahl ist von 1 bis 20 und die sichtbaren Spalten sind einstellbar. Das
 Device bestimmt Reihenfolge und verfügbare Anzahl.
+Ist genau ein <code>FB_CALLLIST</code>-Device vorhanden, wird es beim Anlegen
+vorausgewählt. Bei mehreren Devices erfolgt die Auswahl im Dialog. Die
+Anfangshöhe richtet sich nach der gewählten Anzahl; spätere Änderungen der
+Anzahl ändern die Widgetgröße nicht automatisch.
 
 Am Device muss <code>create-readings 1</code> gesetzt sein; <code>visible-columns</code>
 muss die benötigten Spalten enthalten, <code>number-of-calls</code> begrenzt die

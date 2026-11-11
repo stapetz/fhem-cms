@@ -278,6 +278,10 @@ Im Schema-5-Editor unter **Widget hinzufügen → Anrufliste** ein
 Name oder Nummer, Datum/Uhrzeit und Dauer. Die Anzahl ist von 1 bis 20
 einstellbar; die sichtbaren Spalten können im Widgetdialog gewählt werden.
 Die Reihenfolge der Anrufe übernimmt das Widget vom Device.
+Gibt es genau ein `FB_CALLLIST`-Device, ist es beim Anlegen vorausgewählt;
+bei mehreren wählen Sie das gewünschte Device. Die Anfangshöhe richtet sich nach
+der gewählten Anzahl. Spätere Änderungen der Anzahl verändern die Widgetgröße
+nicht automatisch; diese können Sie im Rastereditor anpassen.
 
 Am `FB_CALLLIST`-Device muss `create-readings` auf `1` stehen. Das Attribut
 `visible-columns` muss die benötigten Felder enthalten, und `number-of-calls`
