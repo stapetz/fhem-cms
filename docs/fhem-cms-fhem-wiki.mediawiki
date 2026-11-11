@@ -386,6 +386,18 @@ Wähle eine Datei, um ihre Eigenschaften rechts zu öffnen:
 * '''Löschen''' erfordert eine Bestätigung und ist bei vorhandenen Verwendungen gesperrt.
 * Ordner lassen sich nur löschen, wenn sie leer sind.
 
+'''Entwicklungsstand auf dev, noch nicht veröffentlicht:''' Bilder lassen sich per
+'''Bild bearbeiten''' zuschneiden und verkleinern. Die neue Variante wird sofort
+gespeichert; das Original bleibt unverändert. Rechts stehen Original und Varianten
+mit Dateigröße zur Auswahl. Varianten können einzeln gelöscht werden und folgen
+beim Verschieben dem Original. Nach Löschen des Originals bleiben sie als
+eigenständige Bilder erhalten. Der Verwendungsschutz gilt für jede Datei einzeln.
+Animierte GIFs und APNGs werden nicht bearbeitet; einzelne GIF-Bilder werden als
+PNG gespeichert. Bildmetadaten werden nicht in Varianten übernommen. Grenzen:
+8192 Pixel je Seite und 16 Megapixel sowie die konfigurierten Uploadlimits.
+Für einen Rollback gehören Programmstand, Assetkatalog und Dateien derselben
+Sicherung zusammen.
+
 '''Assetaktionen gelten sofort.''' Abbrechen eines Widgetdialogs oder Verwerfen des Seitenentwurfs macht Uploads, Umbenennungen oder Löschungen nicht rückgängig. „Bild entfernen“ im Widget entfernt dagegen nur den Verweis, nicht die Datei.
 
 Die Verwendungsprüfung umfasst nicht beliebige externe Links, ungespeicherte Dialoge oder ältere Konfigurationsbackups.

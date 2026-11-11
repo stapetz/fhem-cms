@@ -392,6 +392,21 @@ Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
   kein i; Lesefehler werden ausdrücklich angezeigt. Herstellerspezifische
   Binärfelder erscheinen als Rohwerte, lange Werte gekürzt und unbekannte Tags
   mit ihrer Nummer. Die Originaldatei wird nicht verändert oder bereinigt.
+- **Entwicklungsstand auf `dev` – noch nicht veröffentlicht:** Bei einem Bild
+  stehen rechts das Original und seine Varianten mit Dateigröße zur Auswahl.
+  **Bild bearbeiten** schneidet per Ziehen oder Pixelangaben zu und verkleinert
+  auf die angegebenen Ausgabemaße. Das Ergebnis wird als neue Variante sofort
+  hochgeladen; das Original bleibt unverändert. PNG und JPEG bleiben in ihrem
+  Format, ein einzelnes GIF-Bild wird als PNG gespeichert; Bildmetadaten werden
+  nicht in die Variante übernommen. Animierte GIFs und APNGs werden abgewiesen.
+  Bearbeitung ist auf 8192 Pixel je Seite und 16 Megapixel begrenzt; die
+  konfigurierten Uploadlimits und erlaubten Dateitypen gelten auch für Varianten.
+  Varianten lassen sich einzeln auswählen und löschen. Beim Verschieben folgt
+  die Gruppe dem Original. Wird das Original gelöscht, bleiben seine Varianten
+  als eigenständige Bilder erhalten. Für jede Datei gilt der Verwendungs- und
+  Löschschutz einzeln. Für einen Rollback ältere Programmstände nur gemeinsam
+  mit einer passenden gesicherten Version des Assetkatalogs und der Dateien
+  verwenden.
 - **Löschen** öffnet einen Bestätigungsdialog mit dem Dateinamen; der bisherige
   dauerhafte Bestätigungshaken entfällt. Verwendete
   Assets sind unabhängig davon gesperrt: Die Warnung nennt **Live/Entwurf,
