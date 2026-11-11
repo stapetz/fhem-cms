@@ -24,13 +24,13 @@
 | Projekt
 | [https://github.com/stapetz/fhem-cms GitHub-Repository]
 |- style="background-color:#7FFFD4"
-| colspan="2" | '''Wichtig:''' Beachte die zum installierten Modul gehörende englische Beschreibung in der lokalen ''commandref''.
+| colspan="2" | '''Wichtig:''' Zugriffsschutz wird in FHEM/FHEMWEB eingerichtet.
 |}
 [[Kategorie:Modul (Inoffiziell)]]
 
 '''fhem-cms''' ergänzt FHEM um eine frei gestaltbare Bedienoberfläche im Browser. Du kombinierst Gerätewerte, Bedienelemente, Texte, Bilder und Links auf eigenen Seiten. Das Layout erstellst du grafisch, ohne dafür eine komplette HTML-Oberfläche programmieren zu müssen.
 
-Dieser Artikel beschreibt den stabilen Funktionsstand '''1.7.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Screenshots aller Widgettypen und ihrer Einstellungsdialoge.
+Dieser Artikel beschreibt den stabilen Funktionsstand '''1.8.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
 
 __TOC__
 
@@ -180,7 +180,7 @@ Widgettitel lassen sich global links, zentriert oder rechts ausrichten. Ob ein T
 
 '''Bearbeiten → Widgets automatisch anordnen''' rückt die Widgets der aktuellen Seite nach oben und links. Größen und Inhalte bleiben erhalten; die Änderung landet im Entwurf.
 
-=== Theme-Manager und Hintergrundbilder (Entwicklungsstand <code>dev</code>) ===
+=== Theme-Manager und Hintergrundbilder ===
 
 Unter '''Bearbeiten → Seiteneinstellungen''' stehen '''Forest Green''', '''Hell''',
 '''Liquid Glass''', '''OLED Black''' und '''Catppuccin Mocha''' zur Auswahl.
@@ -235,7 +235,7 @@ Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Brows
 |-
 | SolarFlow || Leistungen zwischen PV, Haus, Netz und Batterie sowie optional den Batterieladestand visualisieren.
 |-
-| Anrufliste (nur Entwicklungsstand <code>dev</code>) || Anrufe eines <code>FB_CALLLIST</code>-Devices mit wählbaren Spalten anzeigen.
+| Anrufliste || Anrufe eines <code>FB_CALLLIST</code>-Devices mit wählbaren Spalten anzeigen.
 |-
 | Text || Formatierten Text, Bilder, Links, Tabellen und Live-Platzhalter kombinieren.
 |-
@@ -262,7 +262,7 @@ Das bedeutet Minimum 0, Schrittweite 1 und Maximum 100. Eine reine Werteliste ge
 
 '''Einheiten sind meist Beschriftungen, keine Umrechnung.''' Die Auswahl „kWh“ wandelt einen Readingwert in Wh nicht automatisch um.
 
-=== Anrufliste (nur Entwicklungsstand <code>dev</code>) ===
+=== Anrufliste ===
 
 Im Schema-5-Editor ein <code>FB_CALLLIST</code>-Device auswählen. Standardmäßig
 werden fünf Anrufe mit Status, Name oder Nummer, Datum/Uhrzeit und Dauer angezeigt.
@@ -370,7 +370,7 @@ Erlaubtes HTML wird geprüft und bereinigt. Skripte, Iframes, Ereignisattribute 
 * Mehrfachauswahl und Drag-and-drop laden Dateien direkt in den geöffneten Ordner.
 * Ganze Ordner werden nicht per Drop importiert.
 * Identische Dateien können wiederverwendet werden und bleiben dann gegebenenfalls in ihrem bisherigen Ordner.
-* Eine Assetsuche ist in Version 1.7.0 noch nicht enthalten.
+* Eine Assetsuche ist in Version 1.8.0 noch nicht enthalten.
 
 === Dateidetails und Aktionen ===
 

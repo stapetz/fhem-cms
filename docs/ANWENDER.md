@@ -135,7 +135,7 @@ Geräte lassen sich später im Editor hinzufügen.
 
 ### Theme-Manager und Hintergrundbilder
 
-**Entwicklungsstand (`dev`):** Unter **Bearbeiten → Seiteneinstellungen**
+Unter **Bearbeiten → Seiteneinstellungen**
 stehen für das gesamte CMS-Device die Themes **Forest Green**, **Hell**,
 **Liquid Glass**, **OLED Black** und **Catppuccin Mocha** zur Auswahl.
 OLED Black verwendet ohne eigenes Bild einen schwarzen Hintergrund.
@@ -272,7 +272,7 @@ Die mobile Ansicht funktioniert auch beim Start über ein iPhone-Homescreen-Icon
 Nach dem Drehen bleiben die Kachelabstände erhalten; das Navigationsmenü wird
 anhand des tatsächlich verfügbaren Platzes erneut geprüft.
 
-### Anrufliste für FB_CALLLIST (Entwicklungsstand `dev`)
+### Anrufliste für FB_CALLLIST
 
 Im Schema-5-Editor unter **Widget hinzufügen → Anrufliste** ein
 `FB_CALLLIST`-Device auswählen. Standardmäßig erscheinen fünf Anrufe mit Status,
