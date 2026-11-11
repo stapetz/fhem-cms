@@ -215,7 +215,8 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const setupDialog = content.children[0];
     assert.equal(setupDialog.attributes['data-panel'], 'setup');
     assert.equal(setupDialog.children[0].textContent, 'Einrichtungsassistent');
-    await setupDialog.children[4].children.find(item => item.textContent === 'Abbrechen').fire('click');
+    assert.equal(setupDialog.children[4].children.some(item => item.textContent === 'Abbrechen'), false);
+    await setupDialog.children[4].children.find(item => item.textContent === 'Ohne Änderungen fortfahren').fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(writes, 0, 'opening and cancelling the setup wizard never writes a draft');
     fileMenu.open = true;

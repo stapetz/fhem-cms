@@ -1,0 +1,100 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup wizard regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<main class="cms-shell"><section id="editor"></section></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { measureSchema5Navigation } from '../www/fhem-cms/js/fcui-schema5-navigation-fit.js';
+
+const root = document.querySelector('#editor');
+const output = document.querySelector('#result');
+const storageKey = 'fhem-cms:setup-wizard:/wizard-test:WizardTest';
+let editor;
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+const waitFor = async (predicate) => {
+  for (let i = 0; i < 80; i++) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error(`Timeout: ${root.textContent}`);
+};
+const button = (label) => {
+  const found = [...root.querySelectorAll('[data-panel="setup"] button')].find((entry) => entry.textContent === label);
+  if (!found) throw new Error(`Button fehlt: ${label}`);
+  found.click();
+};
+
+try {
+  const live = { schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'start', title: 'Start', widgets: [] }] };
+  const devices = Array.from({ length: 18 }, (_, i) => ({
+    name: `Device${i}`, rooms: [`Raum ${String(i + 1).padStart(2, '0')}`],
+    readings: i === 17 ? { temperature: '21', desiredTemperature: '22' } : { state: 'off' },
+    sets: i === 17 ? 'desiredTemperature:slider,5,0.5,30' : 'on:noArg off:noArg',
+  }));
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let writes = 0;
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async (draft, token) => {
+      check(token === state.token, 'current token is used');
+      writes += 1;
+      state = { live, draft: structuredClone(draft), token: 'b'.repeat(64) };
+    },
+    publish: async () => { throw new Error('Unexpected publication'); },
+    discard: async () => { throw new Error('Unexpected discard'); },
+  });
+  localStorage.removeItem(storageKey);
+  editor = new Schema5Editor({ GridStack, root, controller, browser: window,
+    services: { iconUrl: () => '', setCommand: async () => { throw new Error('No device commands'); } },
+    client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
+      jsonlist: async () => devices, subscribe() {}, unsubscribe() {} } });
+  await editor.start();
+  check(!!root.querySelector('[data-panel="setup"]'), 'first-run wizard opens');
+  check(![...root.querySelectorAll('button')].some((entry) => entry.textContent === 'Abbrechen'),
+    'welcome has no cancel button');
+  button('Räume und Geräte auswählen');
+  await waitFor(() => root.textContent.includes('Räume auswählen'));
+  button('Weiter');
+  for (let i = 0; i < 17; i++) button('Nächster Raum');
+  button('Vorschau');
+  const select = root.querySelector('.cms-setup-wizard-preview select');
+  select.value = 'Raum 18';
+  select.dispatchEvent(new Event('change'));
+  check(root.textContent.includes('Thermostat') && root.textContent.includes('Schalter'),
+    'preview displays actual widget types');
+  check(writes === 0, 'preview does not save');
+  button('Als Entwurf übernehmen');
+  await waitFor(() => writes === 1 && root.querySelector('.cms-nav'));
+  const nav = root.querySelector('.cms-nav');
+  await waitFor(() => nav.hasAttribute('data-adaptive'));
+  const required = measureSchema5Navigation(nav);
+  check(state.draft.navigation.orientation === 'vertical', 'vertical direction saved');
+  check(state.draft.pages.length === 18, 'one page per room, no duplicate empty start');
+  check(state.draft.pages[0].id === 'start', 'chosen room is start');
+  check(state.draft.pages[0].widgets[0].type === 'thermostat', 'thermostat on start page');
+  check(state.draft.pages[1].widgets[0].type === 'fhem-switch', 'switch on another page');
+  check(location.hash === '#/start', 'chosen start page displayed');
+  check(nav.clientWidth + 0.5 >= required.width && nav.clientHeight + 0.5 >= required.height,
+    `navigation has enough space: ${nav.clientWidth}x${nav.clientHeight} vs ${required.width}x${required.height}`);
+  check(!nav.hasAttribute('data-compact'), 'all navigation links are visible without a burger');
+  check(nav.querySelectorAll('.cms-nav-link').length === 18, 'all room links rendered');
+  check(live.pages[0].widgets.length === 0, 'live configuration remains unchanged');
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+} finally {
+  editor?.stop();
+  localStorage.removeItem(storageKey);
+}
+</script>
