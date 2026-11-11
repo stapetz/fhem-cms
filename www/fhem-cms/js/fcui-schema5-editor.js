@@ -348,7 +348,7 @@ export class Schema5Editor {
       this.#reloadButton.hidden = true;
       if (!this.#setupPrompted && !state.draft && isSchema5InitialSetup(state.live)) {
         this.#setupPrompted = true;
-        if (!this.#hasSeenSetupWizard()) this.#openSetupWizard(true);
+        if (!this.#hasSeenSetupWizard(state)) this.#openSetupWizard(true);
       }
     }
   }
@@ -518,8 +518,8 @@ export class Schema5Editor {
         controller: this.#controller,
         client: this.#client,
         fitNavigation: (config) => this.#fitNavigation(config, view),
-        onComplete: () => this.#markSetupWizardSeen(),
-        onDismiss: () => { if (automatic) this.#markSetupWizardSeen(); },
+        onComplete: () => this.#markSetupWizardSeen(this.#controller.snapshot()),
+        onDismiss: () => { if (automatic) this.#markSetupWizardSeen(this.#controller.snapshot()); },
         onClose: ({ requiresReload, saved, state }) => {
           this.#panel = null;
           if (saved && state?.draft?.pages?.[0]) {
@@ -536,22 +536,22 @@ export class Schema5Editor {
     }
   }
 
-  #hasSeenSetupWizard() {
+  #hasSeenSetupWizard(state) {
     try {
       const storage = this.#browser.localStorage;
       if (!storage) throw new Error('localStorage nicht verfügbar');
-      return storage.getItem(this.#setupWizardStorageKey) === '1';
+      return storage.getItem(this.#setupWizardStorageKey) === (state.setupIdentity || '1');
     } catch {
       this.#status.textContent = 'Der Einrichtungsstatus kann nicht im Browser gelesen werden. Der Assistent bleibt manuell erreichbar.';
       return false;
     }
   }
 
-  #markSetupWizardSeen() {
+  #markSetupWizardSeen(state) {
     try {
       const storage = this.#browser.localStorage;
       if (!storage) throw new Error('localStorage nicht verfügbar');
-      storage.setItem(this.#setupWizardStorageKey, '1');
+      storage.setItem(this.#setupWizardStorageKey, state.setupIdentity || '1');
     } catch {
       this.#status.textContent = 'Der Einrichtungsstatus konnte nicht im Browser gespeichert werden. Der Assistent bleibt manuell erreichbar.';
     }

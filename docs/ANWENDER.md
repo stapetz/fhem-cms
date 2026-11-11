@@ -106,6 +106,15 @@ Titel steht diese Fläche wieder dem Diagramm zur Verfügung.
 
 ## Schema-5-Editor bedienen
 
+**Entwicklungsstand (`dev`):** Der Einrichtungsassistent wird bei einer neuen,
+leeren CMS-Konfiguration angeboten und kann später über **Datei →
+Einrichtungsassistent** erneut geöffnet werden. Er erstellt erst nach Bestätigung
+einen Entwurf. Nach dem Anpassen der Navigation werden die Widgets auf allen
+Seiten automatisch angeordnet; bei erneutem Aufruf können sich auch Positionen
+bereits vorhandener Widgets ändern. Nach `purge` und Neuanlage wird der
+Assistent auch bei gleichem Device-Namen erneut angeboten. Schalter- und
+Thermostatvorschläge können in der Ansicht Geräte steuern.
+
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
 - **Bearbeiten:** Seiteneinstellungen (Theme, Widget-Rahmen, Titelausrichtung und Rastergröße)
   sowie Widget hinzufügen (mit Suche) und Widgets automatisch anordnen.

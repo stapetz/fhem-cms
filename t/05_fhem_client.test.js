@@ -193,11 +193,14 @@ test('versioned state uses a read-only command and checks the response shape', a
   assert.equal(calls[1].body.get('fwcsrf'), 'token');
   answer = { live: { schemaVersion: '05' }, draft: { schemaVersion: 5 }, token: 'b'.repeat(64) };
   assert.deepEqual(await client.getVersion5State(), answer);
+  answer = { live: { schemaVersion: 5 }, draft: null, token: 'a'.repeat(64), setupIdentity: 'c'.repeat(64) };
+  assert.deepEqual(await client.getVersion5State(), answer);
   for (const invalid of [
     { live: { schemaVersion: 4 }, draft: null, token: 'a'.repeat(64) },
     { live: { schemaVersion: 5 }, draft: { schemaVersion: 4 }, token: 'a'.repeat(64) },
     { live: { schemaVersion: 5 }, token: 'a'.repeat(64) },
     { live: { schemaVersion: 5 }, draft: null, token: 'invalid' },
+    { live: { schemaVersion: 5 }, draft: null, token: 'a'.repeat(64), setupIdentity: 'invalid' },
   ]) {
     answer = invalid;
     await assert.rejects(client.getVersion5State(), /Unerwartete Antwort/);

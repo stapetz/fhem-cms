@@ -169,7 +169,9 @@ export class FhemClient {
       && /^[0-9]{1,6}$/.test(String(config.schemaVersion)) && Number(config.schemaVersion) === 5;
     if (!state || typeof state !== 'object' || Array.isArray(state)
       || !isVersion5(state.live) || (state.draft !== null && !isVersion5(state.draft))
-      || typeof state.token !== 'string' || !STATE_TOKEN.test(state.token)) {
+      || typeof state.token !== 'string' || !STATE_TOKEN.test(state.token)
+      || (state.setupIdentity !== undefined
+        && (typeof state.setupIdentity !== 'string' || !STATE_TOKEN.test(state.setupIdentity)))) {
       throw new Error('Unerwartete Antwort für den versionierten Zustand');
     }
     return state;

@@ -11,6 +11,7 @@ import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
 import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
 import { measureSchema5Navigation } from '../www/fhem-cms/js/fcui-schema5-navigation-fit.js';
+import { arrangeSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-layout.js';
 
 const root = document.querySelector('#editor');
 const output = document.querySelector('#result');
@@ -40,14 +41,14 @@ try {
     readings: i === 17 ? { temperature: '21', desiredTemperature: '22' } : { state: 'off' },
     sets: i === 17 ? 'desiredTemperature:slider,5,0.5,30' : 'on:noArg off:noArg',
   }));
-  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let state = { live, draft: null, token: 'a'.repeat(64), setupIdentity: 'a'.repeat(64) };
   let writes = 0;
   const controller = new Schema5DraftController({
     read: async () => structuredClone(state),
     save: async (draft, token) => {
       check(token === state.token, 'current token is used');
       writes += 1;
-      state = { live, draft: structuredClone(draft), token: 'b'.repeat(64) };
+      state = { ...state, live, draft: structuredClone(draft), token: 'b'.repeat(64) };
     },
     publish: async () => { throw new Error('Unexpected publication'); },
     discard: async () => { throw new Error('Unexpected discard'); },
@@ -88,6 +89,27 @@ try {
   check(!nav.hasAttribute('data-compact'), 'all navigation links are visible without a burger');
   check(nav.querySelectorAll('.cms-nav-link').length === 18, 'all room links rendered');
   check(live.pages[0].widgets.length === 0, 'live configuration remains unchanged');
+  for (const page of state.draft.pages) {
+    const rearranged = arrangeSchema5Widgets(state.draft, page.id);
+    check(JSON.stringify(rearranged.pages.find((entry) => entry.id === page.id).widgets)
+      === JSON.stringify(page.widgets), `page ${page.id} already automatically arranged`);
+  }
+  check(state.draft.pages[0].widgets[0].grid.row === state.draft.navigation.grid.row,
+    'start widget uses available space beside navigation');
+  editor.stop();
+  state = { live, draft: null, token: 'a'.repeat(64), setupIdentity: 'a'.repeat(64) };
+  editor = new Schema5Editor({ GridStack, root, controller, browser: window, services: {},
+    client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
+      jsonlist: async () => devices, subscribe() {}, unsubscribe() {} } });
+  await editor.start();
+  check(!root.querySelector('[data-panel="setup"]'), 'same instance does not prompt again');
+  editor.stop();
+  state = { ...state, setupIdentity: 'b'.repeat(64) };
+  editor = new Schema5Editor({ GridStack, root, controller, browser: window, services: {},
+    client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
+      jsonlist: async () => devices, subscribe() {}, unsubscribe() {} } });
+  await editor.start();
+  check(!!root.querySelector('[data-panel="setup"]'), 'recreated instance prompts despite same device name');
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });
 } catch (error) {

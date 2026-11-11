@@ -1,4 +1,5 @@
 import { isValidName } from './fhem-client.js';
+import { arrangeSchema5Widgets } from './fcui-schema5-layout.js';
 
 const READING_PRESETS = [
   { names: ['temperature', 'measured-temp', 'measuredTemperature', 'temp'], label: 'Temperatur', unit: '°C' },
@@ -146,6 +147,12 @@ function firstFreeRow(config, page) {
     Number(config.navigation.grid.row) + Number(config.navigation.grid.h),
     ...page.widgets.map(({ grid }) => Number(grid.row) + Number(grid.h)),
   );
+}
+
+export function arrangeSchema5SetupPages(config) {
+  let result = config;
+  for (const page of config.pages) result = arrangeSchema5Widgets(result, page.id);
+  return result;
 }
 
 export function buildSchema5SetupConfig(source, plans, startRoom = '') {
@@ -482,7 +489,7 @@ export class Schema5SetupWizard {
       updateConflicts.forEach((update) => update());
     });
     startLabel.append(startSelect);
-    content.append(startLabel, element('p', 'Die Navigation wird vertikal angeordnet. Bei bestehenden Inhalten können Widgets dafür verschoben werden.'));
+    content.append(startLabel, element('p', 'Die Navigation wird vertikal angeordnet. Widgets auf allen Seiten werden automatisch angeordnet; dabei können sich auch vorhandene Widgetpositionen ändern.'));
     for (const page of this.#pages) {
       const section = element('section');
       section.className = 'cms-setup-wizard-page';
@@ -559,6 +566,7 @@ export class Schema5SetupWizard {
       const source = state.draft || state.live;
       let config = buildSchema5SetupConfig(source, this.#pages, this.#startRoom);
       if (typeof this.#fitNavigation === 'function') config = this.#fitNavigation(config);
+      config = arrangeSchema5SetupPages(config);
       this.#busy = true;
       this.#saving = true;
       saveStarted = true;

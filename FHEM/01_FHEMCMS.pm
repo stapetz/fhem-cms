@@ -14,6 +14,7 @@ use IO::Handle ();
 use JSON::PP ();
 use MIME::Base64 qw(decode_base64 encode_base64);
 use POSIX qw(strftime);
+use Time::HiRes ();
 use Time::Local ();
 
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
@@ -652,6 +653,17 @@ sub FHEMCMS_EnsureConfig {
     return undef if (-e $file || -l $file);
     return 'Live-Konfiguration fehlt im bestehenden CMS-Datenverzeichnis; Sicherung pruefen'
         if (!$created);
+    # This identifier separates browser preferences, not authentication or authorization.
+    my $identity = sha256_hex(join(':', $dataDir, $$, Time::HiRes::time(),
+        map { int(rand(4294967296)) } 1 .. 4));
+    my $identityPath = File::Spec->catfile($dataDir, 'setup-identity');
+    my $identityFile;
+    return "Einrichtungskennung konnte nicht angelegt werden: $!"
+        if (!sysopen($identityFile, $identityPath, O_WRONLY | O_CREAT | O_EXCL, 0640));
+    binmode($identityFile, ':raw');
+    my $identityWritten = print($identityFile $identity);
+    my $identityClosed = close($identityFile);
+    return "Einrichtungskennung konnte nicht geschrieben werden: $!" if (!$identityWritten || !$identityClosed);
     my $config = {
         schemaVersion => 5,
         theme => 'dark',
@@ -1869,7 +1881,21 @@ sub FHEMCMS_ReadVersion5State {
     my ($live, $draft) = @entries;
     my $token = sha256_hex(length($live->{bytes}) . ':' . $live->{bytes}
         . (defined($draft) ? '1:' . length($draft->{bytes}) . ':' . $draft->{bytes} : '0:'));
-    return ({live => $live->{config}, draft => defined($draft) ? $draft->{config} : undef, token => $token}, undef);
+    my $identityPath = File::Spec->catfile($dataDir, 'setup-identity');
+    return (undef, 'Symlink fuer setup-identity ist nicht erlaubt') if (-l $identityPath);
+    my $setupIdentity;
+    if (-e $identityPath) {
+        my ($identity, $identityError) = FHEMCMS_ReadFile($identityPath);
+        return (undef, "setup-identity: $identityError") if (defined($identityError));
+        return (undef, 'Ungueltige Einrichtungskennung') if ($identity !~ /\A[0-9a-f]{64}\z/);
+        $setupIdentity = $identity;
+    } else {
+        my @liveStat = stat(File::Spec->catfile($dataDir, 'config.json'));
+        return (undef, "Live-Konfiguration konnte nicht identifiziert werden: $!") if (!@liveStat);
+        $setupIdentity = sha256_hex(join(':', @liveStat[0, 1, 10]));
+    }
+    return ({live => $live->{config}, draft => defined($draft) ? $draft->{config} : undef,
+        token => $token, setupIdentity => $setupIdentity}, undef);
 }
 
 sub FHEMCMS_WriteVersion5Draft {
