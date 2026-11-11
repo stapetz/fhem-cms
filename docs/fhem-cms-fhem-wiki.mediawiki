@@ -1,0 +1,533 @@
+{| class="float-right infobox toccolours" style="margin:0 0 1em 1em; float:right; border-style:solid; border-width:1px;" width="300"
+! colspan="2" style="background-color:#EFEFFF" | FHEMCMS – fhem-cms
+|- style="background-color:#EFEFFF"
+! colspan="2" | Zweck / Funktion
+|- style="background-color:#FFFFFF"
+| colspan="2" | Browserbasierte Bedienoberfläche mit grafischem Seiteneditor, Widgets, Live-Werten und Assetmanager.
+|- style="background-color:#EFEFFF"
+! colspan="2" | Allgemein
+|- style="background-color:#FFFFFF"
+| Typ
+| Inoffizielles Modul; Installation aus externer Updatequelle.
+|- style="background-color:#EFEFFF"
+! colspan="2" | Details
+|- style="background-color:#FFFFFF"
+| Dokumentation
+| [https://github.com/stapetz/fhem-cms/wiki GitHub-Wiki / Anwenderhandbuch]
+|- style="background-color:#FFFFFF"
+| Modulname
+| <code>01_FHEMCMS.pm</code>
+|- style="background-color:#FFFFFF"
+| Ersteller / Betreuung
+| [https://github.com/stapetz stapetz]
+|- style="background-color:#FFFFFF"
+| Projekt
+| [https://github.com/stapetz/fhem-cms GitHub-Repository]
+|- style="background-color:#7FFFD4"
+| colspan="2" | '''Wichtig:''' Beachte die zum installierten Modul gehörende englische Beschreibung in der lokalen ''commandref''.
+|}
+[[Kategorie:Modul (Inoffiziell)]]
+
+'''fhem-cms''' ergänzt FHEM um eine frei gestaltbare Bedienoberfläche im Browser. Du kombinierst Gerätewerte, Bedienelemente, Texte, Bilder und Links auf eigenen Seiten. Das Layout erstellst du grafisch, ohne dafür eine komplette HTML-Oberfläche programmieren zu müssen.
+
+Dieser Artikel beschreibt den stabilen Funktionsstand '''1.7.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Screenshots aller Widgettypen und ihrer Einstellungsdialoge.
+
+__TOC__
+
+== Idee und Funktionsumfang ==
+
+Statt technische Geräteseiten einzeln aufzurufen, ordnest du Informationen nach Räumen oder Themen:
+
+* Eine Startseite zeigt wichtige Zustände und Schnellzugriffe.
+* Raumseiten bündeln Temperatur, Heizung, Beleuchtung und Fensterkontakte.
+* Energieübersichten verbinden Tabellen, historische Diagramme und SolarFlow.
+* Informationsseiten enthalten Anleitungen, Bilder und aktuelle FHEM-Werte im Fließtext.
+* Linkkacheln führen zu anderen CMS-Seiten, Webseiten oder Dokumenten.
+
+Das FHEM-Modul übernimmt Datenzugriff und Speicherung; der Browser stellt die Oberfläche dar. Das CMS verwendet FHEMWEB und dessen Sitzung. Ein zusätzlicher Cloud-Dienst ist nicht erforderlich.
+
+FHEM bleibt für Geräte, Automatisierungen, Berechtigungen und die Aufzeichnung historischer Daten zuständig. Das CMS ersetzt diese Funktionen nicht.
+
+== Voraussetzungen und Sicherheit ==
+
+* FHEM 6.5 oder neuer und ein laufendes FHEMWEB.
+* Ein aktueller Browser mit ES-Modulen, Web Components und HTML-Dialogen.
+* Schreibrechte des FHEM-Betriebssystemkontos in den CMS-Daten- und Medienverzeichnissen.
+* Für historische Diagramme: bereits vorhandene Aufzeichnungen in DbLog oder FileLog.
+
+Die Projektanleitung nennt Perl 5.40 als getestete Umgebung, nicht als einzig mögliche Laufzeit. Für die normale Installation brauchst du weder Node.js noch einen eigenen Frontend-Build.
+
+'''Wichtig: FHEMWEB ist die Sicherheitsgrenze.''' Es gibt keine separate CMS-Anmeldung. Richte Anmeldung, geschützten Transport und passende FHEM-Rechte ein, bevor du die Oberfläche außerhalb eines vertrauenswürdigen Netzes verwendest.
+
+* Eine ausgeblendete Navigation oder eine Seite ohne Editor ist '''keine Zugriffssperre'''.
+* <code>?mode=edit</code> schaltet die Ansicht um, ist aber keine Berechtigungsprüfung.
+* Eine eigenständige CMS-Rollenverwaltung für Leser und Bearbeiter ist nicht vorauszusetzen.
+* Bedienelemente können reale Geräte schalten. Auch die Vorschau ist nicht automatisch ein Simulationsmodus.
+* Zugangsdaten, Tokens und sensible Metadaten gehören nicht in öffentliche Widgets, Screenshots oder Fehlerberichte.
+
+== Installation ==
+
+Erstelle zunächst eine vollständige Sicherung deiner FHEM-Installation.
+
+Die folgenden Befehle gibst du in die '''FHEM-Befehlszeile''' ein, nicht in ein Betriebssystemterminal:
+
+<pre>
+update add https://raw.githubusercontent.com/stapetz/fhem-cms/main/controls_fhem-cms.txt
+update all https://raw.githubusercontent.com/stapetz/fhem-cms/main/controls_fhem-cms.txt
+shutdown restart
+</pre>
+
+Die Adresse zeigt auf eine '''Controls-Datei''', nicht direkt auf die Moduldatei. Dadurch werden Modul, Perl-Helfer und Frontend zusammen installiert. Der Neustart unterbricht FHEM kurz.
+
+Nach dem Neustart legst du ein CMS-Device an:
+
+<pre>
+define CMS fhemcms
+</pre>
+
+<code>CMS</code> ist ein Beispielname. Ersetze ihn bei Bedarf in allen Befehlen durch deinen eigenen Device-Namen. Speichere anschließend die FHEM-Konfiguration.
+
+Das Device erscheint standardmäßig im Raum '''FHEM CMS''':
+
+{| class="wikitable"
+! Einstieg am Device !! Funktion
+|-
+| '''CMS starten''' || Öffnet den Bearbeitungsmodus.
+|-
+| '''Zeige Homepage''' || Öffnet den veröffentlichten Stand.
+|-
+| <code>get CMS url</code> || Zeigt den relativen Homepagepfad.
+|}
+
+Bei FHEMWEB-Webname <code>fhem</code> und Device <code>CMS</code> lauten typische Pfade:
+
+<pre>
+/fhem/fhem-cms/CMS/index.html
+/fhem/fhem-cms/CMS/index.html?mode=edit
+</pre>
+
+Verwende bevorzugt die erzeugten Device-Links, da Host, Port und Webname von deiner Installation abhängen. Die Modulversion findest du im Internal '''VERSION'''.
+
+== Erste Seite erstellen ==
+
+Bei einer neuen, leeren Konfiguration erscheint der '''Einrichtungsassistent'''. Du kannst leer beginnen, Räume und Geräte mit Vorschau auswählen oder mit '''Magic - auf gut Glück''' einen Entwurf erzeugen. Magic berücksichtigt höchstens acht Räume mit je acht Widgets und nur unterstützte Geräte. Nicht erkannte Geräte lassen sich später im Editor ergänzen. Der Assistent veröffentlicht nichts; Bedienelemente können reale Geräte steuern. Automatische Temperaturverläufe werden nicht angelegt.
+
+Die folgenden Schritte beschreiben den manuellen Ausbau mit leerer Startseite oder bei einer bestehenden Einrichtung:
+
+# Öffne am CMS-Device '''CMS starten'''.
+# Wähle '''Bearbeiten → Widget hinzufügen → Wert'''.
+# Suche ein vorhandenes FHEM-Device und wähle dessen gewünschtes Reading.
+# Trage einen Titel und gegebenenfalls eine Einheit ein, beispielsweise „Außentemperatur“ und „°C“.
+# Bestätige mit '''Speichern'''.
+# Verschiebe das Widget am Punktgriff und ändere seine Größe am Griff unten rechts.
+# Ergänze bei Bedarf ein '''Textwidget''' als Überschrift oder Einleitung.
+# Kontrolliere den Entwurf unter '''Ansicht → Vorschau''' und in der Geräte-Vorschau.
+# Wähle '''Datei → Entwurf veröffentlichen'''.
+# Öffne die Homepage neu.
+
+Device- und Reading-Namen werden nicht automatisch angelegt. Wähle die tatsächlich vorhandenen Quellen deiner FHEM-Installation.
+
+== Editor, Entwurf und Veröffentlichung ==
+
+{| class="wikitable"
+! Ansicht !! Angezeigter Stand !! Zweck
+|-
+| Homepage ohne Modusparameter || Live || Veröffentlichte Oberfläche bedienen.
+|-
+| <code>?mode=edit</code> || Entwurf bzw. Ausgangsstand || Seiten und Widgets bearbeiten.
+|-
+| <code>?mode=preview</code> || Entwurf || Entwurf ohne Editorwerkzeuge prüfen.
+|}
+
+'''Speichern ist nicht Veröffentlichen:'''
+
+* '''Speichern''' im Widgetdialog übernimmt Änderungen in den Entwurf.
+* Verschieben und Skalieren werden automatisch als Entwurf gespeichert.
+* '''Abbrechen''' verwirft noch nicht gespeicherte Dialogeingaben.
+* '''Entwurf veröffentlichen''' ersetzt den Live-Stand; der bisherige Live-Stand wird gesichert.
+* '''Entwurf verwerfen''' entfernt den Entwurf, nicht die Live-Konfiguration.
+
+Ein CMS-Device hat '''einen gemeinsamen Entwurf''', nicht einen eigenen je Browser. Bei Konflikten oder einer unklaren Speicherbestätigung lädst du den aktuellen Zustand neu, statt mehrfach zu speichern.
+
+{| class="wikitable"
+! Menü !! Typische Aufgaben
+|-
+| Datei || Veröffentlichen, Verwerfen, Assetmanager, Sicherungen und Wiederherstellung.
+|-
+| Bearbeiten || Seiteneinstellungen, Widget hinzufügen, Widgets automatisch anordnen.
+|-
+| Ansicht || Vorschau und Rasteranzeige.
+|}
+
+Die Widgetwerkzeuge erscheinen auf Mausgeräten beim Überfahren oder Tastaturfokus; auf Touchgeräten ohne Hover bleiben sie sichtbar. Über den Stift öffnest du die Einstellungen, über den Seitenwechselknopf verschiebst du ein Widget auf eine andere Seite.
+
+'''Ausnahme Assetmanager:''' Uploads, Umbenennen, Verschieben und Löschen gelten sofort, unabhängig vom Seitenentwurf.
+
+== Seiten, Navigation und Layout ==
+
+Die Navigation ist ein gemeinsames Widget für alle Seiten des CMS-Devices. Öffne dessen Stiftsymbol, um Seiten zu erstellen, umzubenennen, umzusortieren oder in der Navigation auszublenden.
+
+* Ausgeblendete Seiten bleiben über ihren Link erreichbar und sind nicht geschützt.
+* Zum Löschen einer Seite entfernst oder verschiebst du zunächst ihre Widgets und änderst referenzierende LinkWidget-Kacheln.
+* Die letzte verbleibende Seite kann nicht einfach entfernt werden.
+* Die Navigation lässt sich horizontal oder vertikal ausrichten, verschieben und skalieren.
+* Bei Platzmangel erscheint ein aufklappbares Burger-Menü.
+* Eine vergrößerte gemeinsame Navigation kann kollidierende Widgets auf allen Seiten nach unten verschieben.
+
+Unter '''Bearbeiten → Seiteneinstellungen''' legst du Theme, Widgetrahmen, globale Titelausrichtung und Rasterdichte fest. Möglich sind '''12, 24, 48, 96 oder 192 Spalten'''. Die gemeinsamen Einstellungen gelten für alle Seiten des CMS-Devices.
+
+Widgettitel lassen sich global links, zentriert oder rechts ausrichten. Ob ein Titel sichtbar ist, bestimmst du weiterhin am einzelnen Widget. Frei formatierte Überschriften im Textinhalt sind davon unabhängig.
+
+'''Bearbeiten → Widgets automatisch anordnen''' rückt die Widgets der aktuellen Seite nach oben und links. Größen und Inhalte bleiben erhalten; die Änderung landet im Entwurf.
+
+=== Fenstergröße, Zoom und mobile Ansicht ===
+
+Navigation und Widgets skalieren gemeinsam mit der verfügbaren Breite. Browserzoom vergrößert oder verkleinert die Darstellung; bei Platzmangel kann der Rasterbereich seitlich scrollen.
+
+Bis einschließlich '''600 Pixel Inhaltsbreite''' ordnen Homepage und Vorschau die Widgets in Leserichtung mit Zeilenumbruch an. Der Editor bleibt zum präzisen Positionieren beim exakten Raster. Das Drehen des Geräts verändert keine gespeicherten Rasterpositionen.
+
+Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Browserzoom. Die Geräte-Vorschau hilft dabei, ersetzt aber nicht jeden Test auf dem Zielgerät.
+
+== Widgetübersicht ==
+
+{| class="wikitable"
+! Widget !! Aufgabe und wichtige Hinweise
+|-
+| Wert || Ein einzelnes Reading mit optionalem Icon und Einheit groß anzeigen; keine Gerätebedienung.
+|-
+| Uhr / Datum || Browserzeit digital oder analog darstellen; Datum, Sekunden und Wochentag optional.
+|-
+| Status-Symbol || Exakte Readingwerte passenden Icons und Farben zuordnen; reine Anzeige.
+|-
+| Thermostat || Ist-/Solltemperatur, Sollwertregler, Betriebsart, Ventil und Batterie je nach verfügbaren Geräteinformationen.
+|-
+| Schalter || Mit den angebotenen An-/Aus-Befehlen schalten; Standarddarstellung „Nur Symbol“, Beschriftung optional.
+|-
+| Taster || Einen angebotenen Befehl ohne Parameter auslösen, etwa <code>toggle</code>; Standardsymbol passend zum Befehl.
+|-
+| Schieberegler || Einen Set-Befehl mit Sliderdeklaration bedienen; Bereich und Schrittweite vom Device.
+|-
+| Tabelle || Mehrere Readings mit eigenen Bezeichnern, Einheiten, Überschriften und optionaler Summe.
+|-
+| Diagramm || Geloggte numerische Messwerte aus DbLog oder FileLog darstellen.
+|-
+| SolarFlow || Leistungen zwischen PV, Haus, Netz und Batterie sowie optional den Batterieladestand visualisieren.
+|-
+| Anrufliste (nur Entwicklungsstand <code>dev</code>) || Anrufe eines <code>FB_CALLLIST</code>-Devices mit wählbaren Spalten anzeigen.
+|-
+| Text || Formatierten Text, Bilder, Links, Tabellen und Live-Platzhalter kombinieren.
+|-
+| Freies HTML || Bereinigtes HTML mit Live-Werten und zustandsabhängigen Farben; keine freie Skriptausführung.
+|-
+| LinkWidget || Interne Seiten, externe Webseiten oder Dokumente als Text-/Bildkacheln anbieten.
+|}
+
+Alle Widgetaufnahmen und Einstellungsdialoge findest du in der [https://github.com/stapetz/fhem-cms/wiki/Widgets bebilderten Widgetübersicht].
+
+=== Geräte und Befehle richtig zuordnen ===
+
+Nach einem Gerätewechsel prüfst du die neu angebotenen Readings und Set-Befehle. Beim Thermostat richten sich Solltemperaturbereich und Betriebsarten nach dem ausgewählten Gerät; gegebenenfalls werden dessen Kanäle berücksichtigt.
+
+Schalter und Taster sind im Editor nicht zum Schalten vorgesehen. In der normalen Ansicht können sie reale Geräte bedienen.
+
+Ein Slider benötigt eine passende Deklaration in der Set-Liste, beispielsweise:
+
+<pre>
+pct:slider,0,1,100
+</pre>
+
+Das bedeutet Minimum 0, Schrittweite 1 und Maximum 100. Eine reine Werteliste genügt dafür derzeit nicht. Slideränderungen werden 1,5 Sekunden nach der letzten Bewegung gesendet.
+
+'''Einheiten sind meist Beschriftungen, keine Umrechnung.''' Die Auswahl „kWh“ wandelt einen Readingwert in Wh nicht automatisch um.
+
+=== Anrufliste (nur Entwicklungsstand <code>dev</code>) ===
+
+Im Schema-5-Editor ein <code>FB_CALLLIST</code>-Device auswählen. Standardmäßig
+werden fünf Anrufe mit Status, Name oder Nummer, Datum/Uhrzeit und Dauer angezeigt.
+Die Anzahl ist von 1 bis 20 und die sichtbaren Spalten sind einstellbar. Das
+Device bestimmt Reihenfolge und verfügbare Anzahl.
+
+Am Device muss <code>create-readings 1</code> gesetzt sein; <code>visible-columns</code>
+muss die benötigten Spalten enthalten, <code>number-of-calls</code> begrenzt die
+bereitgestellten Einträge. Das Widget ändert keine Device-Attribute. Fehlende
+Readings und Spalten werden angezeigt. Unbekannte Status werden neutral
+dargestellt; ein fehlgeschlagener ausgehender Anruf ist nicht zuverlässig als
+„besetzt“ unterscheidbar. Anrufdaten sind persönlich: Zugriff auf CMS und FHEMWEB
+entsprechend schützen.
+
+=== SolarFlow ===
+
+Die PV-Leistung ist Pflicht; andere Quellen sind optional. Du kannst Werte aus einem Device oder aus mehreren Devices zuordnen. Ohne Hausverbrauchsreading kann der Hausverbrauch berechnet werden.
+
+Bei einem von Magic vorgeschlagenen SolaxModbus-Gerät ist die Berechnung zunächst ausgeschaltet, wenn sich der Hausverbrauch nicht eindeutig zuordnen lässt. Sie kann in der Widget-Konfiguration bewusst aktiviert werden.
+
+* Netzleistung: negativ bedeutet Bezug, positiv Einspeisung.
+* Batterieleistung: positiv bedeutet Laden, negativ Entladen.
+* Die W-/kW-Einstellung muss zu den Quellreadings passen.
+* Fehlende Netz-/Batteriequellen blenden die betreffende Station aus.
+
+Prüfe die Richtung an einem bekannten Betriebszustand; Hersteller verwenden nicht immer dieselbe Vorzeichenkonvention.
+
+=== LinkWidget ===
+
+Ein LinkWidget enthält 1 bis 200 Kacheln. Jede Kachel braucht einen Linktext, auch wenn dieser ausgeblendet ist. Ziele sind interne CMS-Seiten, externe HTTP-/HTTPS-Adressen und Dokumente aus dem Assetmanager.
+
+Im Einstellungsdialog ordnest du die Kacheln in einem eigenen '''12-Spalten-Raster''' an. Verschieben erfolgt am Griff, Skalieren an der Ecke. Überlappungen sind nicht speicherbar.
+
+Das innere Linkraster ist unabhängig vom äußeren Seitenraster. Ein „neues Fenster“ kann aufgrund von Browserregeln auch als Tab erscheinen.
+
+== Text, Bilder und Live-Platzhalter ==
+
+Das Textwidget bietet einen WYSIWYG-Editor mit Textformatierung, Überschriften, Listen, Farben, Links, Bildern und Tabellen.
+
+* Über '''Bild''' öffnest du den gemeinsamen Assetmanager.
+* Ein eingefügtes Bild kannst du anklicken, links/mittig/rechts ausrichten und proportional skalieren.
+* Über '''<nowiki>{{ }}</nowiki>''' fügst du einen Live-Platzhalter ein.
+* Im Editor erscheint dieser als grüner Baustein; ein Klick darauf öffnet seine Einstellungen.
+* In der normalen Ansicht wird der Baustein durch den aktuellen Wert ersetzt.
+
+=== Platzhalterbeispiele ===
+
+<pre>
+<nowiki>{{Garten:temperature|round(1)|suffix( °C)}}</nowiki>
+<nowiki>{{Fenster:state|map(open=Offen,closed=Geschlossen)|default(unbekannt)}}</nowiki>
+</pre>
+
+Für eine Energieinformationsseite beispielsweise:
+
+<pre>
+<nowiki>{{virtualSolar:pv_total_power|suffix( W)}}</nowiki>
+<nowiki>{{virtualSolar:EnergyTotal|round(2)|suffix( kWh)}}</nowiki>
+</pre>
+
+Die Device- und Readingnamen sind Beispiele. Wähle deine tatsächlichen Quellen. Filter werden von links nach rechts angewendet:
+
+{| class="wikitable"
+! Filter !! Wirkung
+|-
+| <code>round(n)</code> || Auf 0 bis 6 Nachkommastellen runden.
+|-
+| <code>int</code> || Nachkommastellen abschneiden.
+|-
+| <code>upper</code>, <code>lower</code> || Groß-/Kleinschreibung.
+|-
+| <code>default(Text)</code> || Ersatztext bei leerem Wert.
+|-
+| <code>prefix(Text)</code>, <code>suffix(Text)</code> || Text oder Einheit ergänzen.
+|-
+| <code>map(on=An,off=Aus)</code> || Readingwerte auf eigene Texte abbilden.
+|}
+
+Die Sonderwerte <code>@alias</code>, <code>@name</code> und <code>@type</code> liefern Geräteinformationen. Je Inhaltswidget sind höchstens 20 verschiedene Devices vorgesehen.
+
+=== Freies HTML ===
+
+Freies HTML unterstützt Platzhalter und alternativ Elemente mit <code>device</code>- und <code>reading</code>-Attributen:
+
+<pre>
+<nowiki><h3>Garten</h3>
+<p>Temperatur: {{Garten:temperature|round(1)|suffix( °C)}}</p>
+<span device="Garten" reading="humidity" filter="int|suffix( %)"></span></nowiki>
+</pre>
+
+Erlaubtes HTML wird geprüft und bereinigt. Skripte, Iframes, Ereignisattribute und beliebige externe Inhalte sind nicht vorgesehen. Für Bilder und Links verwendest du das Textwidget oder LinkWidget.
+
+== Assetmanager: gemeinsame Bilder und Dokumente ==
+
+Über '''Datei → Assetmanager''' verwaltest du Dateien unabhängig vom gerade bearbeiteten Widget. Textwidget und LinkWidget verwenden denselben Katalog des CMS-Devices.
+
+=== Ordner und Upload ===
+
+* Die große Übersicht zeigt direkte Unterordner und Dateien des geöffneten Ordners.
+* Ein Klick auf eine Ordnerkachel öffnet den Ordner; über den Pfad navigierst du zurück.
+* '''Ordner erstellen''' legt einen Unterordner am aktuellen Ort an.
+* Mehrfachauswahl und Drag-and-drop laden Dateien direkt in den geöffneten Ordner.
+* Ganze Ordner werden nicht per Drop importiert.
+* Identische Dateien können wiederverwendet werden und bleiben dann gegebenenfalls in ihrem bisherigen Ordner.
+* Eine Assetsuche ist in Version 1.7.0 noch nicht enthalten.
+
+=== Dateidetails und Aktionen ===
+
+Wähle eine Datei, um ihre Eigenschaften rechts zu öffnen:
+
+* '''Umbenennen''' ändert den Anzeigenamen; die Dateiendung bleibt geschützt.
+* Die physischen Dateien behalten ihre Hash-Dateinamen; bestehende Verweise bleiben erhalten.
+* '''Verschieben''' öffnet die grafische Zielordnerauswahl. '''Diesen Ordner verwenden''' führt die Aktion sofort aus.
+* Ein Klick auf die Bildvorschau öffnet das Original in voller Größe.
+* Bei vorhandenen EXIF-Daten öffnet das '''i''' ein Informationsfenster.
+* '''Verwendungen anzeigen''' nennt Fundstellen in gespeicherten Live- und Entwurfsseiten.
+* '''Löschen''' erfordert eine Bestätigung und ist bei vorhandenen Verwendungen gesperrt.
+* Ordner lassen sich nur löschen, wenn sie leer sind.
+
+'''Assetaktionen gelten sofort.''' Abbrechen eines Widgetdialogs oder Verwerfen des Seitenentwurfs macht Uploads, Umbenennungen oder Löschungen nicht rückgängig. „Bild entfernen“ im Widget entfernt dagegen nur den Verweis, nicht die Datei.
+
+Die Verwendungsprüfung umfasst nicht beliebige externe Links, ungespeicherte Dialoge oder ältere Konfigurationsbackups.
+
+=== Formate, Grenzen und Datenschutz ===
+
+{| class="wikitable"
+! Bereich !! Standard
+|-
+| Bilder || PNG, JPEG, GIF; bis 3 MiB je Datei.
+|-
+| Dokumente || Unter anderem PDF, Office-Dateien, ODT/ODS/ODP, TXT und CSV; bis 20 MiB je Datei.
+|-
+| Gesamtspeicher || 500 MiB je CMS-Device.
+|}
+
+Die Administration erlaubt Anpassungen. Technische Obergrenzen sind 50 MiB je Datei, 2048 MiB Gesamtspeicher, 2000 Assets, 200 Ordner und 10 Ordnerebenen. Aktive Web-/Skriptformate bleiben gesperrt.
+
+Dokumente werden als Download angeboten; es gibt keine Office-Vorschau und keinen Virenscanner. EXIF-Daten werden lokal im Browser gelesen, aber nicht aus dem Original entfernt. Entferne sensible Kamera-/GPS-Daten vor dem Upload selbst.
+
+Siehe [https://github.com/stapetz/fhem-cms/wiki/Assetmanager Assetmanager-Anleitung mit Screenshots].
+
+== Historische Diagramme ==
+
+Das Diagrammwidget zeichnet nicht selbst auf. Das Reading muss numerisch sein und bereits in DbLog oder FileLog aufgezeichnet werden.
+
+Bei automatischer Quellenauswahl hat eine passende DbLog-Quelle Vorrang vor FileLog. Bei mehreren Quellen kannst du am CMS-Device gezielt zuordnen:
+
+<pre>
+attr CMS historySource dblog
+attr CMS dbLog MeinDbLog
+</pre>
+
+Alternativ:
+
+<pre>
+attr CMS historySource filelog
+attr CMS fileLog MeinFileLog
+</pre>
+
+Die genannten Logdevices müssen existieren und korrekt eingerichtet sein. Die Befehle legen keine Datenbank oder Logdatei an.
+
+* Zeiträume: 24 Stunden, 7 Tage, 30 Tage oder 365 Tage.
+* Granularität: automatisch, Rohdaten, 15 Minuten, 1 Stunde oder 1 Tag.
+* Höchstens 400 dargestellte Punkte; größere Mengen werden mit Mittelwert und Min-/Max-Band zusammengefasst.
+* Aktualisierung alle fünf Minuten; Abfragecache 30 Sekunden.
+
+'''DbLog-Abfragen sind synchron und können FHEM blockieren.''' Beginne mit kurzen Zeiträumen und öffne nicht unnötig viele große Jahresdiagramme gleichzeitig.
+
+== Updates ==
+
+Für den produktiven Einsatz verwendest du die stabile Quelle '''main''':
+
+<pre>
+update all https://raw.githubusercontent.com/stapetz/fhem-cms/main/controls_fhem-cms.txt
+shutdown restart
+</pre>
+
+Prüfe anschließend Updateprotokoll und Internal '''VERSION''' und lade den Browser vollständig neu.
+
+Bei ausschließlich geänderten Frontenddateien genügt nach entsprechender Releaseanweisung:
+
+<pre>
+set CMS rebuild
+</pre>
+
+Das erneuert die generierte Startseite und die Frontend-Versionsparameter. Es löscht keine Seiten oder Entwürfe. Nach Änderungen des Perl-Moduls oder seiner Helfer ist ein FHEM-Neustart erforderlich.
+
+'''dev''' ist für bewusst durchgeführte Tests vorgesehen. Ein Wechsel zwischen Entwicklungs- und stabilem Stand ist kein garantierter Daten-Rollback. Installiere nicht versehentlich beide Updatequellen parallel für dieselben Dateien.
+
+== Sicherungen und ältere Installationen ==
+
+Eine vollständige Sicherung umfasst FHEM-Konfiguration, CMS-Live-Stand, Entwurf, Konfigurationsbackups, Bilder, Dokumente sowie zusammenpassende Modul- und Frontenddateien.
+
+Automatische CMS-Konfigurationsbackups enthalten '''keine Assetdateien'''. Die Wiederherstellung eines älteren Seitenstands holt gelöschte Bilder nicht zurück.
+
+Unter '''Datei → Sicherungen / Wiederherstellung''' prüfst du ein Backup und kannst es nach Bestätigung der externen Sicherung wiederherstellen. Ein vorhandener Entwurf muss vorher bewusst veröffentlicht oder verworfen werden. Die Wiederherstellung ersetzt den '''Live-Stand'''.
+
+=== Alte Layouts auf Schema 5 umstellen ===
+
+Neue Devices beginnen bereits mit Schema 5 und 12 Spalten. Bei älteren Installationen kann '''Jetzt umstellen''' erscheinen.
+
+'''Vorher vollständig sichern: Die Umstellung schreibt Daten und vergibt Positionen und Größen neu.''' Widgets und Einstellungen bleiben erhalten; Live und ein vorhandener Entwurf werden getrennt umgestellt. Der Entwurf wird nicht automatisch veröffentlicht.
+
+Alternativ zum Editorbutton:
+
+<pre>
+set CMS layoutupgrade
+</pre>
+
+Es gibt dabei keine zusätzliche Bestätigung. Nach der Umstellung arbeitest du Positionen und Größen im Editor nach. Bei einem Fehler prüfst du Log, Sicherungen und Umstellungsjournal; überschreibe die Daten nicht durch manuelle JSON-Schreibversuche.
+
+== Wichtige Dateien und Diagnose ==
+
+Die Pfade beziehen sich auf das FHEM-Modulverzeichnis; <code>&lt;Device&gt;</code> steht für deinen CMS-Device-Namen.
+
+{| class="wikitable"
+! Pfad !! Inhalt
+|-
+| <code>FHEM/01_FHEMCMS.pm</code> || Modul.
+|-
+| <code>FHEM/lib/FHEMCMS/Assets.pm</code> || Serverseitige Assetverwaltung.
+|-
+| <code>www/fhem-cms/</code> || Gemeinsames Frontend.
+|-
+| <code>www/fhem-cms/&lt;Device&gt;/index.html</code> || Generierte Startseite; nicht manuell bearbeiten.
+|-
+| <code>www/fhem-cms/&lt;Device&gt;/media/</code> || Bilder.
+|-
+| <code>fhem-cms-data/&lt;Device&gt;/config.json</code> || Live-Konfiguration.
+|-
+| <code>fhem-cms-data/&lt;Device&gt;/draft.json</code> || Vorhandener Entwurf.
+|-
+| <code>fhem-cms-data/&lt;Device&gt;/assets.json</code> || Assetkatalog.
+|-
+| <code>fhem-cms-data/&lt;Device&gt;/assets/</code> || Private Dokumentdateien.
+|}
+
+Nützliche lesende FHEM-Befehle:
+
+<pre>
+get CMS url
+get CMS status
+get CMS backups
+get CMS layoutformat
+</pre>
+
+Konfiguration, Katalog, generierte Startseite und Hash-Dateien nicht unabhängig voneinander bearbeiten. Fehlende Daten in einer bestehenden Installation nicht durch Löschen und erneutes Definieren „reparieren“; zuerst Sicherung und Rechte prüfen.
+
+== Häufige Fragen ==
+
+{| class="wikitable"
+! Problem !! Prüfung / Abhilfe
+|-
+| Homepage zeigt alte Inhalte || Entwurf veröffentlichen und Homepage neu laden.
+|-
+| Nach Update erscheint altes Verhalten || Vollständige Controls-Quelle, Neustart bzw. rebuild und Browsercache prüfen.
+|-
+| Gedankenstrich statt Readingwert || Exakte Device-/Readingnamen, Kanalzuordnung und vorhandenen Wert prüfen.
+|-
+| „Veraltet seit …“ || Verbindung, FHEMWEB-Anmeldung und Rechte prüfen; ein alter Wert ist keine aktuelle Bestätigung.
+|-
+| Schalter reagiert im Editor nicht || Gewollt; zur Bedienung die normale Ansicht verwenden.
+|-
+| Gerät fehlt beim Schieberegler || Set-Liste muss einen Slider anbieten.
+|-
+| Diagrammreading fehlt || Aufzeichnung in DbLog/FileLog und bei FileLog die Regexp prüfen.
+|-
+| Einheit stimmt, Zahlenwert nicht || Reading-Skalierung prüfen; Einheitenbeschriftung rechnet nicht um.
+|-
+| Datei bleibt nach Abbrechen bestehen || Upload ist sofort wirksam und nicht Teil des Seitenentwurfs.
+|-
+| Datei lässt sich nicht löschen || Verwendungen in Live und Entwurf prüfen und zunächst entfernen.
+|-
+| Speicherzustand unklar oder Konflikt || Aktuellen Stand neu laden, nicht mehrfach blind speichern.
+|}
+
+== Weiterführende Dokumentation und Support ==
+
+* [https://github.com/stapetz/fhem-cms Projekt und Quellcode]
+* [https://github.com/stapetz/fhem-cms/wiki Vollständiges Anwenderhandbuch]
+* [https://github.com/stapetz/fhem-cms/wiki/Widgets Widgetübersicht mit Screenshots und Einstellungsdialogen]
+* [https://github.com/stapetz/fhem-cms/wiki/Text-und-Bilder Textwidget am Solax-Beispiel]
+* [https://github.com/stapetz/fhem-cms/wiki/Assetmanager Assetmanager]
+* [https://github.com/stapetz/fhem-cms/wiki/Platzhalter-und-HTML Platzhalter und freies HTML]
+* [https://github.com/stapetz/fhem-cms/wiki/Sicherungen-und-Umstellung Sicherungen und Umstellung]
+* [https://github.com/stapetz/fhem-cms/releases Veröffentlichungen]
+* [https://github.com/stapetz/fhem-cms/issues Fehlerberichte und Weiterentwicklungen]
+
+Nenne bei Fehlerberichten Version, Browser, Ansichtsmodus, erwartetes und tatsächliches Verhalten sowie reproduzierbare Schritte. Bei Layoutproblemen helfen Fensterbreite und Zoomfaktor. Entferne Zugangsdaten und private Informationen aus Logs und Screenshots.
+
+[[Kategorie:FHEM Frontends]]

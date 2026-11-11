@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<title>Anrufliste regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<style>cms-calllist { display:block; width:720px; height:360px; }</style>
+<pre id="result"></pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-calllist.js';
+import { Schema5WidgetPanel } from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+const result = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const equal = (actual, expected, message) => check(JSON.stringify(actual) === JSON.stringify(expected),
+  `${message}: ${JSON.stringify(actual)} !== ${JSON.stringify(expected)}`);
+const pause = () => new Promise(resolve => setTimeout(resolve, 50));
+try {
+  const widget = document.createElement('cms-calllist');
+  const config = { id: 'a1', type: 'fhem-calllist', device: 'Calls', title: 'Anrufe', limit: 5,
+    columns: ['state', 'party', 'timestamp', 'duration'], grid: { col: 1, row: 2, w: 8, h: 8 } };
+  let saved;
+  let writes = 0;
+  let fail = false;
+  widget.services = { listAllDevices: async () => [
+    { name: 'Calls', type: 'FB_CALLLIST' }, { name: 'Other', type: 'OTHER' },
+  ], saveWidget: async value => {
+    if (fail) throw new Error('Testfehler');
+    saved = structuredClone(value);
+    writes++;
+  }, deleteWidget: async () => {} };
+  widget.config = structuredClone(config);
+  widget.setAttribute('view-only', '');
+  document.body.append(widget);
+  const $ = selector => widget.shadowRoot.querySelector(selector);
+  check($('[data-title]').textContent === 'Anrufe', 'title rendered');
+  check(getComputedStyle($('[data-open-config]')).display === 'none', 'configuration hidden in view');
+  check($('[data-message]').textContent.includes('create-readings'), 'missing readings are explained');
+  widget.data = [{ name: 'Calls', readings: { 'count-all': '0' } }];
+  check($('[data-message]').textContent === 'Keine Anrufe vorhanden.', 'empty list differs from missing readings');
+  const states = ['=>', '<=', '=> X', '<= X', '=> O_O', '=> [=]', '<= [=]', '=> ((o))', '<= ((o))', 'unbekannt'];
+  const readings = { 'count-all': '10' };
+  for (let n = 1; n <= 10; n++) {
+    readings[`${n}-state`] = states[n - 1];
+    readings[`${n}-name`] = n === 1 ? '<img src=x onerror=alert(1)>' : '-';
+    readings[`${n}-number`] = `000${n}`;
+    readings[`${n}-timestamp`] = `Datum ${n}`;
+    readings[`${n}-duration`] = '00:01:00';
+    readings[`${n}-internal`] = `Intern ${n}`;
+  }
+  widget.data = [{ name: 'Calls', readings }];
+  check($('[data-rows]').children.length === 5, 'default limit');
+  check($('[data-rows]').children[0].children[1].textContent === readings['1-name'], 'name rendered as text');
+  check(!$('[data-rows] img'), 'device data cannot create HTML');
+  check($('[data-rows]').children[1].children[1].textContent === '0002', 'number used if name missing');
+  check($('[data-rows]').children[0].children[0].getAttribute('aria-label') === 'Eingehend: angenommen', 'incoming state');
+  check($('[data-rows]').children[2].children[0].getAttribute('aria-label') === 'Eingehend: verpasst', 'missed state');
+  check($('[data-rows]').children[3].children[0].getAttribute('aria-label') === 'Ausgehend: nicht zustande gekommen',
+    'unsuccessful outgoing call is not guessed as busy');
+  check($('[data-rows]').children[4].children[0].getAttribute('aria-label') === 'Anrufbeantworter', 'answering machine state');
+  widget.config = { ...config, limit: 20 };
+  check($('[data-rows]').children.length === 10, 'limit respects available entries');
+  check($('[data-rows]').children[9].children[1].textContent === '00010', 'indices sorted numerically');
+  check($('[data-rows]').children[9].children[0].textContent === '?', 'unknown state neutral');
+  check($('[data-rows]').children[9].children[0].title.includes('unbekannt'), 'unknown raw state available');
+  widget.data = [{ name: 'Calls', readings: { '1-state': 'constructor' } }];
+  check($('[data-rows]').children[0].children[0].textContent === '?', 'prototype keys are unknown statuses');
+  check($('[data-message]').textContent.includes('visible-columns'), 'missing columns reported');
+  widget.data = [{ name: 'Calls', readings }];
+  widget.stale = '2024-01-01';
+  check($('[data-tile]').hasAttribute('data-stale'), 'stale state marked');
+  widget.stale = null;
+  check(!$('[data-tile]').hasAttribute('data-stale'), 'fresh state restored');
+  widget.removeAttribute('view-only');
+  await widget.openConfig();
+  check($('[data-dialog]').open, 'configuration opens');
+  const form = $('[data-form]');
+  equal(form.elements.limit.value, '20', 'saved limit restored');
+  check(form.querySelector('[data-column=state]').checked && form.querySelector('[data-column=party]').checked,
+    'saved columns restored');
+  form.elements.limit.value = '21';
+  await widget.saveConfig();
+  check(writes === 0 && $('[data-error]').textContent.includes('zwischen 1 und 20'), 'limit 21 rejected');
+  form.elements.limit.value = '0';
+  await widget.saveConfig();
+  check(writes === 0 && $('[data-error]').textContent.includes('zwischen 1 und 20'), 'limit 0 rejected');
+  form.elements.limit.value = '2';
+  for (const field of form.querySelectorAll('[data-column]')) field.checked = false;
+  await widget.saveConfig();
+  check(writes === 0 && $('[data-error]').textContent.includes('mindestens eine Spalte'), 'empty columns rejected');
+  form.querySelector('[data-column=number]').checked = true;
+  form.querySelector('[data-column=internal]').checked = true;
+  form.elements.device.value = '';
+  await widget.saveConfig();
+  check(writes === 0 && $('[data-error]').textContent.includes('Device'), 'device required');
+  $('[data-pick]').click();
+  await pause();
+  const picker = document.querySelector('.cms-dp-dialog');
+  check(picker.open, 'device picker opened');
+  check(picker.querySelectorAll('[data-list] button').length === 1, 'picker filters FB_CALLLIST');
+  picker.querySelector('[data-list] button').click();
+  await pause();
+  equal(form.elements.device.value, 'Calls', 'device chosen');
+  fail = true;
+  await widget.saveConfig();
+  check($('[data-dialog]').open && $('[data-error]').textContent.includes('Testfehler'), 'save failure remains visible');
+  fail = false;
+  await widget.saveConfig();
+  check(!$('[data-dialog]').open && writes === 1, 'successful save closes dialog');
+  equal(saved.columns, ['number', 'internal'], 'chosen columns saved');
+  equal(saved.limit, 2, 'chosen count saved');
+  widget.config = saved;
+  equal([...$('[data-head]').children].map(node => node.textContent), ['Nummer', 'Intern'], 'chosen columns rendered');
+  equal([...$('[data-rows]').children[0].children].map(node => node.textContent), ['0001', 'Intern 1'], 'chosen values rendered');
+  check($('[data-rows]').children.length === 2, 'chosen limit rendered');
+  widget.style.width = '280px';
+  check(widget.getBoundingClientRect().width === 280 && $('[data-tile]').getBoundingClientRect().width <= 280,
+    'widget fits narrow viewport');
+  await widget.openConfig();
+  form.elements.limit.value = '3';
+  widget.closeConfig(false);
+  equal(writes, 1, 'cancel does not save');
+  const live = { schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'home', title: 'Start', widgets: [] }] };
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async (draft, token) => {
+      if (token !== state.token) throw new Error('Zustand veraltet');
+      state = { live, draft, token: 'b'.repeat(64) };
+    },
+    publish: async () => {}, discard: async () => {},
+  });
+  await controller.reload();
+  const panel = document.createElement('dialog');
+  panel.className = 'cms-editor-panel cms-editor-dialog';
+  document.body.append(panel);
+  let outcome;
+  new Schema5WidgetPanel({ root: panel, controller, services: widget.services, pageId: 'home',
+    token: state.token, onClose: value => { outcome = value; } });
+  panel.showModal();
+  const choice = [...panel.querySelectorAll('button')].find(button => button.textContent === 'Anrufliste');
+  check(Boolean(choice), 'call list offered in real editor');
+  choice.click();
+  await pause();
+  const editorWidget = panel.querySelector('cms-calllist');
+  check(editorWidget?.shadowRoot.querySelector('[data-dialog]').open, 'editor opens real call list dialog');
+  const editorForm = editorWidget.shadowRoot.querySelector('[data-form]');
+  equal(editorForm.elements.limit.value, '5', 'new editor widget defaults to five calls');
+  equal([...editorForm.querySelectorAll('[data-column]:checked')].map(input => input.value),
+    ['state', 'party', 'timestamp', 'duration'], 'new widget uses compact default columns');
+  editorWidget.shadowRoot.querySelector('[data-pick]').click();
+  await pause();
+  document.querySelector('.cms-dp-dialog [data-list] button').click();
+  await pause();
+  await editorWidget.saveConfig();
+  await pause();
+  check(outcome?.requiresReload === false, 'editor session completes after saving');
+  const savedWidget = controller.snapshot().draft.pages[0].widgets[0];
+  equal(savedWidget.type, 'fhem-calllist', 'draft contains the new widget');
+  equal(savedWidget.device, 'Calls', 'draft retains selected device');
+  equal(savedWidget.limit, 5, 'draft retains default limit');
+  panel.remove();
+  result.dataset.result = 'pass';
+  result.textContent = JSON.stringify({ checks });
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = error.stack || String(error);
+}
+</script>

@@ -10,6 +10,7 @@ import '../components/cms-table.js';
 import '../components/cms-slider.js';
 import '../components/cms-link.js';
 import '../components/cms-chart.js';
+import '../components/cms-calllist.js';
 import { devicesOfSolarFlow } from '../components/cms-solarflow.js';
 import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
 import { isValidName } from './fhem-client.js';
@@ -24,6 +25,7 @@ const tags = new Map([
   ['fhem-table', 'cms-table'],
   ['fhem-solarflow', 'cms-solarflow'],
   ['fhem-chart', 'cms-chart'],
+  ['fhem-calllist', 'cms-calllist'],
   ['fhem-slider', 'cms-slider'],
   ['fhem-html', 'cms-html'],
   ['text', 'cms-text'],
@@ -63,7 +65,7 @@ export function groupSnapshots(mains, results) {
 }
 
 export function isLiveWidget(widget) {
-  return ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-solarflow'].includes(widget.type)
+  return ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-solarflow', 'fhem-calllist'].includes(widget.type)
     || (widget.type === 'text' && devicesOf(widget).length > 0);
 }
 

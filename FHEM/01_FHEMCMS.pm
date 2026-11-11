@@ -898,7 +898,7 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-icon'
                         && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-slider'
                         && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'
-                        && !($targetSchema == 5 && $widget->{type} eq 'fhem-link')));
+                        && !($targetSchema == 5 && ($widget->{type} eq 'fhem-link' || $widget->{type} eq 'fhem-calllist'))));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -925,6 +925,8 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-chart') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
                     ['title', 'showTitle', 'unit', 'range', 'granularity', 'source']);
+            } elsif ($widget->{type} eq 'fhem-calllist') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-solarflow') {
                 # 'device' mit Reading-Namen als Text ist das aeltere Format (ein gemeinsames Device);
                 # invertGrid/invertBattery sind veraltet und wirkungslos, bleiben aber fuer gespeicherte Entwuerfe gueltig.
@@ -1031,6 +1033,17 @@ sub FHEMCMS_ValidateConfig {
                     return "Ungueltiger Wert fuer $field"
                         if (exists($widget->{$field})
                             && (ref($widget->{$field}) || !defined($widget->{$field}) || $widget->{$field} !~ $pattern));
+                }
+            } elsif ($widget->{type} eq 'fhem-calllist') {
+                return 'Ungueltige Anzahl Anrufe' if (!$isInt->($widget->{limit}, 1, 20));
+                return 'columns muss eine nichtleere Liste sein'
+                    if (ref($widget->{columns}) ne 'ARRAY' || @{$widget->{columns}} < 1 || @{$widget->{columns}} > 9);
+                my %seenColumn;
+                for my $column (@{$widget->{columns}}) {
+                    return 'Ungueltige Anruflisten-Spalte'
+                        if (ref($column) || !defined($column)
+                            || $column !~ /\A(?:state|party|timestamp|duration|name|number|internal|external|connection)\z/);
+                    return 'Doppelte Anruflisten-Spalte' if ($seenColumn{$column}++);
                 }
             } elsif ($widget->{type} eq 'fhem-slider') {
                 for my $field ('command', 'reading') {
