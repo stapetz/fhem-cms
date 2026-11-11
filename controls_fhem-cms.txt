@@ -1,4 +1,4 @@
-UPD 2026-11-11_12:17:01 131359 FHEM/01_FHEMCMS.pm
+UPD 2026-11-11_12:49:36 131359 FHEM/01_FHEMCMS.pm
 UPD 2026-11-10_14:35:39 27465 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-08_10:43:57 7458 www/fhem-cms/FCUI-LICENSES.txt
 UPD 2026-11-10_09:09:16 17108 www/fhem-cms/components/cms-button.js
@@ -25,7 +25,7 @@ UPD 2026-11-10_16:02:12 33938 www/fhem-cms/js/asset-manager.js
 UPD 2026-11-04_21:52:16 5087 www/fhem-cms/js/device-picker.js
 UPD 2026-11-09_07:17:44 6725 www/fhem-cms/js/device-preview.js
 UPD 2026-11-08_15:33:41 3422 www/fhem-cms/js/fcui-migration-controller.js
-UPD 2026-11-10_14:35:39 21436 www/fhem-cms/js/fcui-migration-preview.js
+UPD 2026-11-11_12:35:41 21628 www/fhem-cms/js/fcui-migration-preview.js
 UPD 2026-11-08_15:33:41 2186 www/fhem-cms/js/fcui-migration-transport.js
 UPD 2026-11-08_10:43:57 111967 www/fhem-cms/js/fcui-runtime.js
 UPD 2026-11-08_20:31:10 8243 www/fhem-cms/js/fcui-schema5-backup-panel.js
