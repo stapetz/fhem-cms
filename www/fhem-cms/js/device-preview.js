@@ -154,7 +154,9 @@ export class DevicePreview {
       this.iframe = document.createElement('iframe');
       this.iframe.className = 'cms-device-screen';
       this.iframe.title = 'Vorschau';
-      this.iframe.src = this.getUrl();
+      const url = new URL(this.getUrl());
+      if (!DEVICES.get(this.deviceId).landscape) url.searchParams.set('cms-device', 'mobile');
+      this.iframe.src = url.href;
       this.frame.append(this.iframe);
       this.stage.append(this.frame);
       this.label = document.createElement('p');

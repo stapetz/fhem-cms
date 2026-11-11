@@ -177,7 +177,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     await deviceSelect.fire('change');
     const preview = document.body.children.find((node) => node.className === 'cms-device-overlay');
     let iframe = preview.children[0].children[0].children[0];
-    assert.equal(iframe.src, 'https://example.test/?mode=preview#/a');
+    assert.equal(iframe.src, 'https://example.test/?mode=preview&cms-device=mobile#/a');
     assert.equal(iframe.style.width, '375px');
     rotate.fire('click');
     assert.equal(iframe.style.width, '667px', 'rotation swaps the phone dimensions');
@@ -186,6 +186,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     await deviceSelect.fire('change');
     iframe = document.body.children.find((node) => node.className === 'cms-device-overlay')
       .children[0].children[0].children[0];
+    assert.equal(iframe.src, 'https://example.test/?mode=preview#/a', 'desktop preview retains desktop zoom behavior');
     assert.equal(iframe.style.width, '1280px');
     assert.equal(iframe.style.height, '720px');
     rotate.fire('click');

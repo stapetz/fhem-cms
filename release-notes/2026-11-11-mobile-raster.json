@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-11",
+  "version": "1.8.0-dev",
+  "title": "Mobiles Raster (Refs #137)",
+  "changes": [
+    "Ansicht auf Smartphones und Tablets sowie deren Vorschau ohne horizontalen Raster-Scrollbar.",
+    "Desktop-Editor und Desktop-Zoom behalten ihr bisheriges Verhalten."
+  ]
+}
