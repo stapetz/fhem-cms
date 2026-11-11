@@ -1,0 +1,88 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direct widget deletion regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<main class="cms-shell"><section id="editor"></section></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+
+const root = document.querySelector('#editor');
+const output = document.querySelector('#result');
+let editor;
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const settle = () => new Promise(resolve => setTimeout(resolve, 50));
+const waitFor = async (condition, message) => {
+  for (let i = 0; i < 80 && !condition(); i++) await settle();
+  check(condition(), message);
+};
+try {
+  const live = { schemaVersion: 5, theme: 'light', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'one', title: 'Start', widgets: [
+      { id: 'a', type: 'text', title: 'Erstes', html: 'Erstes', grid: { col: 1, row: 2, w: 4, h: 2 } },
+      { id: 'b', type: 'text', title: 'Zweites', html: 'Zweites', grid: { col: 5, row: 2, w: 4, h: 2 } },
+    ] }, { id: 'two', title: 'Andere', widgets: [] }] };
+  const original = JSON.stringify(live);
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let writes = 0;
+  let confirmed = false;
+  let release;
+  let fail = false;
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async (draft, token) => {
+      check(token === state.token, 'delete uses current token');
+      writes++;
+      if (fail) throw new Error('Simulated delete failure');
+      await new Promise(resolve => { release = resolve; });
+      state = { live, draft: structuredClone(draft), token: 'b'.repeat(64) };
+    },
+    publish: async () => {}, discard: async () => {},
+  });
+  const browser = { location: window.location, localStorage: window.localStorage,
+    addEventListener: window.addEventListener.bind(window),
+    removeEventListener: window.removeEventListener.bind(window), confirm: () => confirmed };
+  editor = new Schema5Editor({ GridStack, root, controller, browser,
+    services: {}, client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} } });
+  await editor.start();
+  await waitFor(() => root.querySelector('[gs-id="a"] .cms-widget-delete'), 'delete control present');
+  check(!root.querySelector('[gs-id="__nav"] .cms-widget-delete'), 'navigation cannot be deleted');
+  check(root.querySelectorAll('.cms-widget-delete').length === 2, 'each widget has a delete control');
+  const button = root.querySelector('[gs-id="a"] .cms-widget-delete');
+  check(button.tagName === 'BUTTON' && button.getAttribute('aria-label').includes('Erstes'),
+    'delete control is keyboard accessible and labelled');
+  button.click();
+  check(writes === 0 && state.draft === null, 'cancel leaves state unchanged');
+  confirmed = true;
+  button.click();
+  await waitFor(() => writes === 1 && release, 'confirmed deletion starts one write');
+  check(root.querySelector('.cms-grid-editable').inert, 'grid locked while saving');
+  button.click();
+  check(writes === 1, 'repeated click does not start a second write');
+  release();
+  await waitFor(() => !root.querySelector('[gs-id="a"]') && root.querySelector('[gs-id="b"]'),
+    'deleted widget removed from displayed draft');
+  check(state.draft.pages[0].widgets.length === 1 && state.draft.pages[0].widgets[0].id === 'b',
+    'other widget retained');
+  check(JSON.stringify(live) === original, 'live unchanged');
+  fail = true;
+  root.querySelector('[gs-id="b"] .cms-widget-delete').click();
+  await waitFor(() => root.querySelector('.cms-status[data-error]'), 'failure shown');
+  check(root.querySelector('.cms-status').textContent.includes('Simulated delete failure'), 'error explains failure');
+  check(!root.querySelector('.cms-grid-editable'), 'failed write requires reload');
+  check(state.draft.pages[0].widgets[0].id === 'b', 'failed delete does not mutate draft');
+  editor.stop();
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  editor?.stop();
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>

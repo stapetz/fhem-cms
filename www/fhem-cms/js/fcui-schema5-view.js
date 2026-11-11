@@ -139,6 +139,8 @@ export class Schema5View {
           onEdit: (id) => this.editing.onEdit(pageId, id),
           onMove: typeof this.editing.onMove === 'function'
             ? (id) => this.editing.onMove(pageId, id) : undefined,
+          onDelete: typeof this.editing.onDelete === 'function'
+            ? (id) => this.editing.onDelete(pageId, id) : undefined,
         });
       this.stopNavigation = observeSchema5Navigation(navigation,
         () => Boolean(this.editing) || getComputedStyle(this.root).display !== 'flex');
