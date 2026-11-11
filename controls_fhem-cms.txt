@@ -15,7 +15,7 @@ UPD 2026-11-10_13:27:41 10010 www/fhem-cms/components/cms-text.js
 UPD 2026-11-10_08:07:09 37318 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-10_11:28:51 24483 www/fhem-cms/components/cms-value.js
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
-UPD 2026-11-11_10:09:57 33002 www/fhem-cms/css/fhem-cms.css
+UPD 2026-11-11_11:56:40 32947 www/fhem-cms/css/fhem-cms.css
 UPD 2026-11-10_07:50:19 26290 www/fhem-cms/examples/fcui-check.html
 UPD 2026-11-08_21:07:16 4844 www/fhem-cms/examples/migration-preview.html
 UPD 2026-11-10_09:09:16 1331 www/fhem-cms/js/action-presentation.js
