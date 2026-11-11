@@ -10,6 +10,7 @@
 <script type="module">
 import { Schema5PagePanel } from '../www/fhem-cms/js/fcui-schema5-page-panel.js';
 import { Schema5SettingsPreview } from '../www/fhem-cms/js/fcui-schema5-settings-preview.js';
+import '../www/fhem-cms/components/cms-button.js';
 
 const first = `media/${'a'.repeat(32)}.png`;
 const second = `media/${'b'.repeat(32)}.png`;
@@ -94,13 +95,23 @@ if (child) {
       'scaled phone preview is visible and fits the dialog');
     check(frame.inert && frame.tabIndex === -1, 'preview does not allow device actions');
     const theme = dialog.querySelector('select');
+    const widget = document.createElement('cms-button');
+    document.body.append(widget);
+    const widgetSelect = widget.shadowRoot.querySelector('select');
+    const widgetOption = document.createElement('option');
+    widgetOption.textContent = 'Beispiel';
+    widgetSelect.append(widgetOption);
+    const widgetStyle = getComputedStyle(widgetSelect);
     for (const select of dialog.querySelectorAll('select')) {
       const option = select.querySelector('option');
-      check(getComputedStyle(option).color === getComputedStyle(document.documentElement).getPropertyValue('--cms-text').trim()
-        || getComputedStyle(option).color === getComputedStyle(select).color, 'option inherits theme text color');
-      check(getComputedStyle(option).backgroundColor === getComputedStyle(select).backgroundColor,
-        'option matches themed select background');
+      const style = getComputedStyle(select);
+      check(['appearance', 'backgroundImage', 'backgroundColor', 'color', 'borderRadius']
+        .every(property => style[property] === widgetStyle[property]), 'select uses the same native widget styling');
+      check(getComputedStyle(option).backgroundColor === getComputedStyle(widgetOption).backgroundColor
+        && getComputedStyle(option).color === getComputedStyle(widgetOption).color,
+      'option uses the same native widget styling');
     }
+    widget.remove();
     check([...theme.options].find(option => option.value === 'dark').textContent === 'Forest Green',
       'existing dark value has new label');
     theme.value = 'liquid-glass';

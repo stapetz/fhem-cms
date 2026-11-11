@@ -91,7 +91,7 @@ export class Schema5PagePanel {
     }
     this.#columns.value = String(config.settings.gridColumns);
     layoutLabel.append(this.#columns);
-    const titleLabel = element('label', 'Widgettitel ausrichten (alle Seiten) ');
+    const titleLabel = element('label', 'Widgettitel ausrichten ');
     this.#titleAlign = element('select');
     for (const [value, title] of [['left', 'Links'], ['center', 'Zentriert'], ['right', 'Rechts']]) {
       const option = element('option', title);
@@ -102,6 +102,7 @@ export class Schema5PagePanel {
     titleLabel.append(this.#titleAlign);
     this.#form.append(themeLabel, framesLabel, layoutLabel, titleLabel);
     this.#backgroundControls = element('div');
+    this.#backgroundControls.className = 'cms-page-background-controls';
     const headingBackground = element('p', `Hintergrundbild für aktuelle Seite „${page.title}“`);
     this.#backgroundLabel = element('p', this.#background ? 'Bildname wird geladen …' : 'Kein Bild ausgewählt');
     const choose = element('button', 'Hintergrundbild auswählen');
@@ -128,7 +129,7 @@ export class Schema5PagePanel {
     const controls = element('div');
     controls.className = 'cms-liquid-controls';
     controls.hidden = this.#theme.value !== 'liquid-glass';
-    const intensityLabel = element('label', 'Liquid-Effekt (Unschärfe und Glanz, alle Seiten) ');
+    const intensityLabel = element('label', 'Liquid-Effekt (Unschärfe und Glanz) ');
     this.#intensity = element('input');
     this.#intensity.type = 'range';
     this.#intensity.min = '0';
@@ -138,7 +139,7 @@ export class Schema5PagePanel {
     this.#intensity.setAttribute('data-liquid-intensity', '');
     const intensityValue = element('output');
     intensityLabel.append(this.#intensity, intensityValue);
-    const transparencyLabel = element('label', 'Transparenz (alle Seiten) ');
+    const transparencyLabel = element('label', 'Transparenz ');
     this.#transparency = element('input');
     this.#transparency.type = 'range';
     this.#transparency.min = '0';
