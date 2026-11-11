@@ -43,6 +43,8 @@ try {
   }));
   devices.push({ name: 'RoomSensor', type: 'LaCrosse', rooms: ['Raum 01'],
     readings: { temperature: '21', humidity: '40' }, sets: '' });
+  devices.push({ name: 'Solar', type: 'SolaxModbus', rooms: ['Raum 01'],
+    readings: { pv_total_power: '1200 W', batteryPower: '200', batterySOC: '60' }, sets: '' });
   devices.push(...Array.from({ length: 8 }, (_, i) => ({
     name: `Thermometer${i}`, type: 'LaCrosse', rooms: ['Raum 01'],
     readings: { temperature: '21' }, sets: '',
@@ -120,6 +122,10 @@ try {
   await waitFor(() => writes === 2 && root.querySelector('.cms-nav'));
   check(state.draft.pages.length === 8, 'magic limits the number of pages');
   check(state.draft.pages.every((page) => page.widgets.length <= 8), 'magic limits widgets per page');
+  check(state.draft.pages[0].widgets.some((widget) => widget.type === 'fhem-solarflow'
+    && widget.readings.pv.reading === 'pv_total_power' && widget.deriveHome === false),
+  'magic adds conservative SolaxModbus solar mapping');
+  check(!!root.querySelector('cms-solarflow'), 'generated solar widget is rendered');
   check(state.draft.pages[0].widgets.some((widget) => widget.type === 'fhem-table' && widget.rows.length === 2),
     'magic groups sensor readings in a table');
   check(!!root.querySelector('cms-table'), 'grouped table is rendered');

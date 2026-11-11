@@ -108,12 +108,12 @@ export const computeModel = (config, snapshots) => {
   const bat = read('battery', scale);
   const soc = read('soc');
   let home = read('home', scale);
-  if (home === null && pv !== null) {
+  if (home === null && pv !== null && config.deriveHome !== false) {
     home = Math.max(0, pv - (grid || 0) - (bat || 0));
   }
   const values = { pv: pv === null ? null : Math.max(0, pv), home: home === null ? null : Math.max(0, home), grid, bat };
   const threshold = Number.isFinite(config.threshold) ? config.threshold : DEFAULT_THRESHOLD;
-  const flows = computeFlows(values);
+  const flows = config.deriveHome === false && home === null ? {} : computeFlows(values);
   const visible = { pv: true, home: true, grid: Boolean(sourceOf(config, 'grid')), bat: Boolean(sourceOf(config, 'battery')) };
   const edges = EDGES.filter((edge) => visible[edge.a] && visible[edge.b]).map((edge) => {
     const forward = flows[`${edge.a}>${edge.b}`] || 0;
@@ -218,7 +218,8 @@ class FHEMCMSSolarFlow extends HTMLElement {
           <label>Einheit der Leistungs-Readings
             <select name="unit"><option value="W">Watt (W)</option><option value="kW">Kilowatt (kW)</option></select></label>
           <label>Schwellwert „inaktiv“ in Watt<input name="threshold" type="number" min="0" max="1000" step="1"></label>
-          <p class="hint">Netz: Bezug negativ, Einspeisung positiv. Batterie: Laden positiv, Entladen negativ. Fehlt das Reading für Hausverbrauch, wird er aus den übrigen Werten berechnet. Ohne Netz- oder Batterie-Reading entfällt die jeweilige Station. Das Widget liest nur und sendet keine FHEM-Befehle.</p>
+          <label class="check"><input type="checkbox" name="deriveHome"> Fehlenden Hausverbrauch aus den übrigen Werten berechnen</label>
+          <p class="hint">Netz: Bezug negativ, Einspeisung positiv. Batterie: Laden positiv, Entladen negativ. Ohne Netz- oder Batterie-Reading entfällt die jeweilige Station. Das Widget liest nur und sendet keine FHEM-Befehle.</p>
           <p class="error" data-error role="alert"></p>
           <div class="actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>
@@ -275,6 +276,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
     const config = this.widgetConfig;
     form.elements.title.value = config.title || '';
     form.elements.showTitle.checked = config.showTitle !== false;
+    form.elements.deriveHome.checked = config.deriveHome !== false;
     form.elements.unit.value = config.unit === 'kW' ? 'kW' : 'W';
     form.elements.threshold.value = Number.isFinite(config.threshold) ? config.threshold : DEFAULT_THRESHOLD;
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
@@ -404,6 +406,9 @@ class FHEMCMSSolarFlow extends HTMLElement {
     }
     if (!form.elements.showTitle.checked) {
       next.showTitle = false;
+    }
+    if (!form.elements.deriveHome.checked) {
+      next.deriveHome = false;
     }
     try {
       await this.services.saveWidget(next);

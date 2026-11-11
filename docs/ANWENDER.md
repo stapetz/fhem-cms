@@ -111,8 +111,8 @@ leeren CMS-Konfiguration einmal angeboten. Nach `purge` und Neuanlage erscheint
 er erneut. Die manuelle Auswahl zeigt vor dem Speichern eine Vorschau; **Magic -
 auf gut Glück** erstellt direkt einen Entwurf, veröffentlicht ihn aber nicht.
 Magic berücksichtigt höchstens acht Räume mit je acht Widgets und nur
-die Gerätetypen `CUL_HM`, `MAX`, `LaCrosse`, `Shelly`, `IT`, `MQTT2_DEVICE`
-und `MQTT_DEVICE`. Technische Typen wie `notify` und `at` sowie andere Typen
+die Gerätetypen `CUL_HM`, `MAX`, `LaCrosse`, `Shelly`, `IT`, `MQTT2_DEVICE`,
+`MQTT_DEVICE` und `SolaxModbus`. Technische Typen wie `notify` und `at` sowie andere Typen
 werden ausgelassen; Räume mit bekannten technischen Namen wie `CUL_HM` ebenfalls.
 Homematic-Thermostate werden anhand des zugehörigen steuerbaren Kanals erkannt.
 Innerhalb eines Raums werden Thermostate, Schalter und
@@ -121,6 +121,10 @@ bevorzugt. Mehrere Messwerte eines Geräts werden zu einer Tabelle
 zusammengefasst; gleichartige einzelne Temperaturanzeigen können ebenfalls
 in einer Tabelle stehen. Schalter können zusätzlich Messwerte anzeigen.
 Schalter und Thermostate können in der Ansicht Geräte steuern.
+Für SolaxModbus nutzt SolarFlow die PV-Gesamtleistung und gegebenenfalls Batterie-
+Readings; ein nicht eindeutig zuordenbarer Hausverbrauch und Energiefluss werden
+nicht geraten. Die Berechnung des Hausverbrauchs kann in der Widget-Konfiguration
+bei Bedarf aktiviert werden.
 Nach dem Einrichten werden die Widgets automatisch angeordnet; ausgelassene
 Geräte lassen sich später im Editor hinzufügen.
 
