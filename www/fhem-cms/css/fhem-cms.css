@@ -205,6 +205,16 @@ body:has(.cms-schema5-grid) {
   max-width: 100%;
 }
 
+.cms-schema5-grid[data-responsive][data-mobile-preview] {
+  --cms-view-width: min(calc(25rem + 66.666667cqi), 99.0099cqi);
+}
+
+@media (pointer: coarse) {
+  .cms-schema5-grid[data-responsive] {
+    --cms-view-width: min(calc(25rem + 66.666667cqi), 99.0099cqi);
+  }
+}
+
 .cms-schema5-grid > .grid-stack-item > .grid-stack-item-content {
   inset: 0 var(--cms-view-gap) var(--cms-view-gap) 0 !important;
 }

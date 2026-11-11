@@ -20,7 +20,7 @@ for (const path of candidates) {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 
-async function browserResult(profile, url, child, interact) {
+async function browserResult(profile, url, child, interact, beforeNavigate) {
   let port;
   for (let attempt = 0; attempt < 600; attempt++) {
     if (child.exitCode !== null) throw new Error(`Chrome exited before debugging was ready (${child.exitCode})`);
@@ -64,6 +64,7 @@ async function browserResult(profile, url, child, interact) {
       onLoad?.reject(error);
     });
     await command('Page.enable');
+    if (beforeNavigate) await beforeNavigate(command);
     const loaded = new Promise((resolve, reject) => { onLoad = { resolve, reject }; });
     await command('Page.navigate', { url });
     await loaded;
@@ -121,6 +122,8 @@ for (const [name, fixtures] of [
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
   ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 204]]],
   ['liquid glass uses and restores page backgrounds', [['55_liquid_glass.html', 37]]],
+  ['mobile device preview fits the raster without horizontal overflow', [['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200]]],
+  ['touch devices fit the raster without horizontal overflow', [['56_mobile_viewport.html?mode=touch-test', 200]]],
 ]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,
@@ -198,7 +201,9 @@ for (const [name, fixtures] of [
         await evaluate('window.linkRegression.finish()');
       };
       const data = await browserResult(profile,
-        `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact);
+        `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
+        fixture.endsWith('?mode=touch-test')
+          ? command => command('Emulation.setTouchEmulationEnabled', { enabled: true }) : undefined);
       assert.ok(data.checks >= minimum, `${fixture}: complete regression coverage (${data.checks})`);
       console.log(`${fixture}: ${data.checks} browser checks`);
     }

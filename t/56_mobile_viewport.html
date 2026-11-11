@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile raster overflow regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<style>.grid-stack-animate, .grid-stack-animate .grid-stack-item { transition: none !important; }</style>
+<main class="cms-shell"><div class="cms-schema5-workspace"><div id="grid" class="grid-stack cms-schema5-grid"></div></div></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5View } from '../www/fhem-cms/js/fcui-schema5-view.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const settle = () => new Promise(resolve => setTimeout(resolve, 150));
+const root = document.querySelector('#grid');
+const shell = root.closest('.cms-shell');
+const workspace = root.parentElement;
+const config = {
+  schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+  navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+  pages: [{ id: 'start', title: 'Start', widgets: [0, 1, 2, 3].map(index => ({
+    id: `w${index}`, type: 'text', title: `Widget ${index}`, html: '<p>Beispiel</p>',
+    grid: { col: 1 + index * 3, row: 2, w: 3, h: 3 },
+  })) }],
+};
+try {
+  const before = JSON.stringify(config);
+  const view = new Schema5View({ GridStack, root, config, status: document.createElement('p'),
+    client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} }, services: {} });
+  await view.start();
+  if (new URLSearchParams(location.search).get('cms-device') === 'mobile') {
+    check(root.hasAttribute('data-mobile-preview'), 'mobile preview marker is active');
+  } else {
+    check(matchMedia('(pointer: coarse)').matches, 'touch device has coarse primary pointer');
+    check(!root.hasAttribute('data-mobile-preview'), 'touch device does not rely on preview marker');
+  }
+  for (const width of [343, 358, 398, 635, 712, 768, 778, 992, 1048, 1101, 1162, 1250, 1334]) {
+    shell.style.width = `${width}px`;
+    await settle();
+    check(workspace.scrollWidth <= workspace.clientWidth + 1,
+      `${width}: horizontal overflow ${workspace.scrollWidth}/${workspace.clientWidth}`);
+    const edge = workspace.getBoundingClientRect();
+    const boxes = [...root.querySelectorAll('.grid-stack-item-content')].map(item => item.getBoundingClientRect());
+    for (const box of boxes) {
+      check(box.left >= edge.left - 1 && box.right <= edge.right + 1, `${width}: widget clipped`);
+    }
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i], b = boxes[j];
+      check(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1,
+        `${width}: widgets overlap`);
+    }
+    check(JSON.stringify(config) === before, `${width}: configuration changed`);
+  }
+  view.stop();
+  check(!root.hasAttribute('data-mobile-preview'), 'marker removed on stop');
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>

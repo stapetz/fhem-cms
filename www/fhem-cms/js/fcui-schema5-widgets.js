@@ -36,7 +36,13 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     elements.set(id, element);
     return element;
   }, Boolean(editing));
-  if (!editing) root.setAttribute('data-responsive', '');
+  if (!editing) {
+    root.setAttribute('data-responsive', '');
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'preview' && params.get('cms-device') === 'mobile') {
+      root.setAttribute('data-mobile-preview', '');
+    }
+  }
   let destroyed = false;
   if (editing) {
     root.classList.toggle('cms-grid-editable', true);
@@ -102,7 +108,10 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       if (destroyed) return;
       destroyed = true;
       grid.destroy(false);
-      if (!editing) root.removeAttribute('data-responsive');
+      if (!editing) {
+        root.removeAttribute('data-responsive');
+        root.removeAttribute('data-mobile-preview');
+      }
       root.replaceChildren();
       if (editing) {
         root.classList.toggle('cms-grid-editable', false);

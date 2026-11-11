@@ -239,6 +239,11 @@ ein Viertel der Bezugsbreite und 6 rem Höhe (bei Standardschrift 96 Pixel).
 Breite und Höhe folgen dem gespeicherten Seitenverhältnis. Zwei kleine Widgets
 passen weiterhin auf übliche Smartphonebreiten. Gespeicherte Rasterpositionen
 werden dabei nicht verändert; der Editor bleibt immer beim exakten Raster.
+Auf Geräten mit primär grober Zeigereingabe und in der Smartphone-/Tablet-Vorschau
+wird das Ansichts-Raster bei Bedarf an die Breite angepasst, damit es auch im
+Querformat nicht horizontal scrollt. Auf breiteren Ansichten bleibt dabei die
+gespeicherte Anordnung erhalten. Desktop-Vorschau und Bearbeitungsraster behalten
+ihr bisheriges Scroll- und Zoomverhalten.
 
 Die Navigation bleibt auf dem Desktop an ihrer Rasterposition und steht nur
 in der schmalen Ansicht vor den Widgets. Auch ihre konfigurierten Buttonbreiten
