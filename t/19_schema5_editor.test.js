@@ -15,7 +15,13 @@ class Element {
     this.attributes = {};
     this.listeners = {};
     this.classList = { toggle() {} };
-    this.style = { setProperty(name, value) { this[name] = value; } };
+    this.style = {
+      *[Symbol.iterator]() {},
+      getPropertyValue(name) { return this[name] || ''; },
+      getPropertyPriority() { return ''; },
+      setProperty(name, value) { this[name] = value; },
+      removeProperty(name) { delete this[name]; },
+    };
     this.value = '';
   }
   append(...children) {
