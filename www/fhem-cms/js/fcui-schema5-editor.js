@@ -39,7 +39,6 @@ export class Schema5Editor {
   #arrange;
   #backup;
   #assets;
-  #setup;
   #gridToggle;
   #previewToggle;
   #publish;
@@ -121,10 +120,6 @@ export class Schema5Editor {
     this.#assets.type = 'button';
     this.#assets.textContent = 'Assetmanager';
     this.#assets.className = 'cms-button';
-    this.#setup = document.createElement('button');
-    this.#setup.type = 'button';
-    this.#setup.textContent = 'Einrichtungsassistent';
-    this.#setup.className = 'cms-button';
     this.#gridToggle = document.createElement('button');
     this.#gridToggle.type = 'button';
     this.#gridToggle.textContent = 'Raster anzeigen';
@@ -135,7 +130,7 @@ export class Schema5Editor {
     this.#previewToggle.textContent = 'Vorschau';
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
-    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets, this.#setup]);
+    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets]);
     this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#arrange]);
     this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
@@ -149,7 +144,6 @@ export class Schema5Editor {
     this.#widgets.addEventListener('click', () => this.#openWidgets());
     this.#arrange.addEventListener('click', () => this.#arrangeWidgets());
     this.#backup.addEventListener('click', () => this.#openBackup());
-    this.#setup.addEventListener('click', () => this.#openSetupWizard());
     this.#assets.addEventListener('click', async () => {
       if (!this.#active || this.#suspended || this.#assets.disabled) return;
       this.#setActions(false, false);
@@ -247,7 +241,6 @@ export class Schema5Editor {
     this.#arrange.disabled = !enabled;
     this.#backup.disabled = !enabled;
     this.#assets.disabled = !enabled;
-    this.#setup.disabled = !enabled;
     this.#gridToggle.disabled = !enabled;
     this.#previewToggle.disabled = !enabled;
     this.#publish.disabled = !enabled || !hasDraft;
@@ -348,7 +341,7 @@ export class Schema5Editor {
       this.#reloadButton.hidden = true;
       if (!this.#setupPrompted && !state.draft && isSchema5InitialSetup(state.live)) {
         this.#setupPrompted = true;
-        if (!this.#hasSeenSetupWizard(state)) this.#openSetupWizard(true);
+        if (!this.#hasSeenSetupWizard(state)) this.#openSetupWizard();
       }
     }
   }
@@ -503,8 +496,8 @@ export class Schema5Editor {
     }
   }
 
-  #openSetupWizard(automatic = false) {
-    if (!this.#active || this.#suspended || !this.#view || this.#setup.disabled) return;
+  #openSetupWizard() {
+    if (!this.#active || this.#suspended || !this.#view) return;
     try {
       const view = this.#view;
       this.#generation += 1;
@@ -519,7 +512,7 @@ export class Schema5Editor {
         client: this.#client,
         fitNavigation: (config) => this.#fitNavigation(config, view),
         onComplete: () => this.#markSetupWizardSeen(this.#controller.snapshot()),
-        onDismiss: () => { if (automatic) this.#markSetupWizardSeen(this.#controller.snapshot()); },
+        onDismiss: () => this.#markSetupWizardSeen(this.#controller.snapshot()),
         onClose: ({ requiresReload, saved, state }) => {
           this.#panel = null;
           if (saved && state?.draft?.pages?.[0]) {
@@ -542,7 +535,7 @@ export class Schema5Editor {
       if (!storage) throw new Error('localStorage nicht verfügbar');
       return storage.getItem(this.#setupWizardStorageKey) === (state.setupIdentity || '1');
     } catch {
-      this.#status.textContent = 'Der Einrichtungsstatus kann nicht im Browser gelesen werden. Der Assistent bleibt manuell erreichbar.';
+      this.#status.textContent = 'Der Einrichtungsstatus kann nicht im Browser gelesen werden. Der Assistent wird möglicherweise erneut angeboten.';
       return false;
     }
   }
@@ -553,7 +546,7 @@ export class Schema5Editor {
       if (!storage) throw new Error('localStorage nicht verfügbar');
       storage.setItem(this.#setupWizardStorageKey, state.setupIdentity || '1');
     } catch {
-      this.#status.textContent = 'Der Einrichtungsstatus konnte nicht im Browser gespeichert werden. Der Assistent bleibt manuell erreichbar.';
+      this.#status.textContent = 'Der Einrichtungsstatus konnte nicht im Browser gespeichert werden. Der Assistent wird möglicherweise erneut angeboten.';
     }
   }
 

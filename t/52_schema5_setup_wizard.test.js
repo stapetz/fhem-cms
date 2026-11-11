@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
   arrangeSchema5SetupPages,
   buildSchema5SetupConfig,
+  createSchema5MagicPlan,
   createSchema5RoomPlan,
   groupSchema5DevicesByRoom,
   isSchema5InitialSetup,
@@ -80,6 +81,60 @@ test('setup wizard detects thermostats and switches only with corresponding avai
   assert.ok(schema5WidgetSuggestions({ name: 'Light', readings: { state: 'off' },
     sets: 'on:slider,0,1,100 off:noArg' }).every(({ type }) => type === 'fhem-value'));
   assert.deepEqual(schema5WidgetSuggestions({ name: 'Unknown', readings: { custom: 'x' } }), []);
+});
+
+test('wizard groups multiple sensor readings into a valid table with enough space', () => {
+  const device = { name: 'Sensor', readings: { temperature: '21', humidity: '40', state: 'ok' } };
+  const plan = createSchema5RoomPlan('Wohnzimmer', [device], new Set(['Sensor']));
+  assert.equal(plan.widgets.length, 1);
+  assert.equal(plan.widgets[0].type, 'fhem-table');
+  assert.deepEqual(plan.widgets[0].rows.map(({ reading }) => reading), ['temperature', 'humidity']);
+  const config = buildSchema5SetupConfig(initialConfig(), [plan], 'Wohnzimmer');
+  const widget = config.pages[0].widgets[0];
+  assert.equal(widget.grid.h, 6);
+  assert.equal(widget.device, undefined);
+  const validation = spawnSync('perl', ['-e', `
+    use strict; use warnings; use JSON::PP ();
+    sub Log3 {}
+    require './FHEM/01_FHEMCMS.pm';
+    local $/;
+    my $config = JSON::PP->new->utf8->decode(<STDIN>);
+    my $error = FHEMCMS_ValidateConfig($config, 5);
+    if (defined $error) { print STDERR $error; exit 1; }
+  `], { input: JSON.stringify(config), encoding: 'utf8' });
+  assert.equal(validation.status, 0, validation.stderr);
+  assert.doesNotThrow(() => arrangeSchema5SetupPages(config));
+});
+
+test('magic limits rooms and widgets, prioritizes living room and excludes technical and unknown types', () => {
+  const devices = Array.from({ length: 10 }, (_, room) =>
+    Array.from({ length: 12 }, (_, index) => ({
+      name: `D${room}_${String(index).padStart(2, '0')}`,
+      type: 'Shelly', rooms: [room === 9 ? 'Wohnzimmer' : `Raum ${room}`],
+      readings: { temperature: '21', humidity: '40' },
+    }))).flat();
+  devices.push(
+    { name: 'Notify', type: 'notify', rooms: ['Wohnzimmer'], readings: { state: 'on' }, sets: 'on:noArg off:noArg' },
+    { name: 'At', type: 'at', rooms: ['Wohnzimmer'], readings: { state: 'on' }, sets: 'on:noArg off:noArg' },
+    { name: 'Unknown', type: 'Unknown', rooms: ['Wohnzimmer'], readings: { state: 'on' }, sets: 'on:noArg off:noArg' },
+  );
+  const { pages, startRoom } = createSchema5MagicPlan(devices);
+  assert.equal(startRoom, 'Wohnzimmer');
+  assert.equal(pages.length, 8);
+  assert.ok(pages.every((page) => page.widgets.length === 8));
+  assert.ok(pages.flatMap((page) => page.widgets).every(({ type }) => type === 'fhem-table'));
+  const config = buildSchema5SetupConfig(initialConfig(), pages, startRoom);
+  assert.equal(config.pages.length, 8);
+  assert.doesNotThrow(() => arrangeSchema5SetupPages(config));
+  assert.throws(() => createSchema5MagicPlan(devices.slice(-3)), /Keine geeigneten/);
+});
+
+test('magic avoids conflicts between Start and case-insensitive room titles', () => {
+  const devices = ['Wohnzimmer', 'Start', 'start', 'START (2)'].map((room, index) => ({
+    name: `D${index}`, type: 'Shelly', rooms: [room], readings: { temperature: '20' },
+  }));
+  const { pages, startRoom } = createSchema5MagicPlan(devices);
+  assert.doesNotThrow(() => buildSchema5SetupConfig(initialConfig(), pages, startRoom));
 });
 
 test('setup wizard makes the selected room the existing empty start page and generates widget schemas', () => {
@@ -235,6 +290,81 @@ test('wizard preview selects a start room, shows widget types and saves only aft
     assert.equal(saved.pages[0].widgets[0].type, 'thermostat');
     assert.equal(saved.pages[1].widgets[0].type, 'fhem-switch');
     assert.equal(outcome.saved, true);
+  } finally {
+    globalThis.document = previous;
+  }
+});
+
+test('magic saves exactly one draft without preview or publication and handles failure explicitly', async () => {
+  class Element {
+    constructor() { this.children = []; this.listeners = {}; this.attributes = {}; }
+    append(...children) { this.children.push(...children); }
+    replaceChildren(...children) { this.children = children; }
+    remove() {}
+    setAttribute(name, value) { this.attributes[name] = value; }
+    removeAttribute(name) { delete this.attributes[name]; }
+    addEventListener(name, fn) { this.listeners[name] = fn; }
+    fire(name) { return this.listeners[name]?.(); }
+  }
+  const previous = globalThis.document;
+  globalThis.document = { createElement: () => new Element() };
+  try {
+    const config = initialConfig();
+    const devices = [{ name: 'Lamp', type: 'Shelly', rooms: ['Wohnzimmer'],
+      readings: { state: 'off' }, sets: 'on:noArg off:noArg' }];
+    let saves = 0;
+    let outcome;
+    let fail = false;
+    let snapshot = { live: config, draft: null, token: 'token' };
+    const controller = {
+      snapshot: () => snapshot,
+      saveDraft: async (draft, token) => {
+        assert.equal(token, 'token');
+        saves += 1;
+        if (fail) throw new Error('Antwort verloren');
+        return { draft };
+      },
+    };
+    const launch = (client = { jsonlist: async () => devices }) => {
+      const root = new Element();
+      new Schema5SetupWizard({ root, controller, client, onClose: (value) => { outcome = value; } });
+      return root;
+    };
+    const action = (root, label) => root.children[4].children.find((node) => node.textContent === label).fire('click');
+    let root = launch();
+    await action(root, 'Magic - auf gut Glück');
+    assert.equal(saves, 1);
+    assert.equal(outcome.saved, true);
+    assert.equal(outcome.state.draft.pages[0].widgets[0].type, 'fhem-switch');
+    assert.deepEqual(config, initialConfig());
+
+    root = launch({ jsonlist: async () => [] });
+    await action(root, 'Magic - auf gut Glück');
+    assert.match(root.children[2].textContent, /Keine geeigneten/);
+    assert.equal(saves, 1);
+
+    root = launch({ jsonlist: async () => { throw new Error('Zugriff verweigert'); } });
+    await action(root, 'Magic - auf gut Glück');
+    assert.match(root.children[2].textContent, /Zugriff verweigert/);
+    assert.equal(saves, 1);
+
+    fail = true;
+    root = launch();
+    await action(root, 'Magic - auf gut Glück');
+    assert.match(root.children[2].textContent, /Speichern nicht bestätigt/);
+    assert.deepEqual(root.children[4].children.map((node) => node.textContent), ['Abbrechen und Zustand erneut laden']);
+    action(root, 'Abbrechen und Zustand erneut laden');
+    assert.equal(outcome.requiresReload, true);
+    assert.equal(saves, 2);
+
+    fail = false;
+    root = launch({ jsonlist: async () => {
+      snapshot = { ...snapshot, token: 'changed' };
+      return devices;
+    } });
+    await action(root, 'Magic - auf gut Glück');
+    assert.match(root.children[2].textContent, /Konfigurationsstand hat sich geändert/);
+    assert.equal(saves, 2);
   } finally {
     globalThis.document = previous;
   }

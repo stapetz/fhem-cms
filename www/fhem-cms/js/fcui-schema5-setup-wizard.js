@@ -9,6 +9,9 @@ const READING_PRESETS = [
   { names: ['batteryPercent', 'batteryLevel'], label: 'Batterie', unit: '%' },
   { names: ['state'], label: 'Status', unit: '' },
 ];
+const MAGIC_DEVICE_TYPES = new Set(['CUL_HM', 'MAX', 'LaCrosse', 'Shelly', 'IT', 'MQTT2_DEVICE', 'MQTT_DEVICE']);
+const MAGIC_MAX_ROOMS = 8;
+const MAGIC_MAX_WIDGETS = 8;
 
 function element(tag, text) {
   const result = document.createElement(tag);
@@ -104,7 +107,46 @@ export function schema5WidgetSuggestions(device) {
     return [{ type: 'fhem-switch', device: device.name, title, reading: 'state',
       on: 'on', off: 'off', label: 'Schalter' }];
   }
-  return schema5ReadingSuggestions(device).map((suggestion) => ({ ...suggestion, type: 'fhem-value' }));
+  const values = schema5ReadingSuggestions(device).filter(({ reading }) => reading !== 'state');
+  if (values.length > 1) {
+    return [{ type: 'fhem-table', device: device.name, title, label: 'Messwerte',
+      rows: values.map(({ device: name, reading, label, unit }) => ({
+        device: name, reading, label, ...(unit ? { unit } : {}),
+      })) }];
+  }
+  const selected = values.length ? values : schema5ReadingSuggestions(device).slice(0, 1);
+  return selected.map((suggestion) => ({ ...suggestion, type: 'fhem-value' }));
+}
+
+export function createSchema5MagicPlan(devices) {
+  const grouped = groupSchema5DevicesByRoom(devices);
+  const roomPriority = (room) => /^(wohnzimmer|living(?:room)?)$/i.test(room) ? 0
+    : /^(küche|kueche|kitchen)$/i.test(room) ? 1 : 2;
+  const candidates = [...grouped].map(([room, entries]) => {
+    const widgets = entries.filter((device) => MAGIC_DEVICE_TYPES.has(device.type))
+      .flatMap(schema5WidgetSuggestions)
+      .sort((a, b) => {
+        const rank = (widget) => widget.type === 'thermostat' ? 0
+          : widget.type === 'fhem-switch' ? 1 : widget.type === 'fhem-table' ? 2 : 3;
+        return rank(a) - rank(b) || a.device.localeCompare(b.device, 'de');
+      }).slice(0, MAGIC_MAX_WIDGETS).map((widget) => ({ ...widget, included: true }));
+    return { room, title: room, included: true, widgets, unsupported: [] };
+  }).filter((page) => page.widgets.length)
+    .sort((a, b) => roomPriority(a.room) - roomPriority(b.room) || a.room.localeCompare(b.room, 'de'))
+    .slice(0, MAGIC_MAX_ROOMS);
+  if (!candidates.length) throw new Error('Keine geeigneten Räume und unterstützten Geräte für Magic gefunden.');
+  const titles = new Set(['start']);
+  for (const page of candidates.slice(1)) {
+    let title = page.title;
+    let suffix = 2;
+    while (titles.has(title.toLocaleLowerCase())) {
+      const ending = ` (${suffix++})`;
+      title = `${page.room.slice(0, 128 - ending.length)}${ending}`;
+    }
+    page.title = title;
+    titles.add(title.toLocaleLowerCase());
+  }
+  return { pages: candidates, startRoom: candidates[0].room };
 }
 
 export function createSchema5RoomPlan(room, devices, selectedNames) {
@@ -199,26 +241,31 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
       ? config.pages.find(({ id }) => id === 'start')
       : { id: uniqueId(`setup-${Date.now().toString(36)}-${pageIndex + 1}`, pageIds),
         title: plan.title.trim(), widgets: [] };
-    plan.widgets.filter(({ included }) => included).forEach((suggestion, index) => {
+    const included = plan.widgets.filter(({ included }) => included);
+    const rowHeight = included.some(({ type }) => type === 'fhem-table') ? 6 * scale : widgetHeight;
+    included.forEach((suggestion, index) => {
       const widget = {
         id: uniqueId(`setup-${pageIndex + 1}-${index + 1}`, widgetIds),
         type: suggestion.type || 'fhem-value',
-        device: suggestion.device,
         title: suggestion.title,
         grid: {
           col: (index % widgetsPerRow) * widgetWidth + 1,
-          row: firstRow + Math.floor(index / widgetsPerRow) * widgetHeight,
+          row: firstRow + Math.floor(index / widgetsPerRow) * rowHeight,
           w: widgetWidth,
-          h: widgetHeight,
+          h: suggestion.type === 'fhem-table' ? rowHeight : widgetHeight,
         },
       };
-      if (widget.type === 'thermostat') widget.readings = { ...suggestion.readings };
+      if (widget.type === 'fhem-table') widget.rows = structuredClone(suggestion.rows);
       else {
-        widget.reading = suggestion.reading;
-        if (widget.type === 'fhem-switch') {
-          widget.on = suggestion.on;
-          widget.off = suggestion.off;
-        } else if (suggestion.unit) widget.unit = suggestion.unit;
+        widget.device = suggestion.device;
+        if (widget.type === 'thermostat') widget.readings = { ...suggestion.readings };
+        else {
+          widget.reading = suggestion.reading;
+          if (widget.type === 'fhem-switch') {
+            widget.on = suggestion.on;
+            widget.off = suggestion.off;
+          } else if (suggestion.unit) widget.unit = suggestion.unit;
+        }
       }
       page.widgets.push(widget);
     });
@@ -274,7 +321,6 @@ export class Schema5SetupWizard {
   #closed = false;
   #suspended = false;
   #requiresReload = false;
-  #applyButton = null;
 
   constructor({ root, controller, client, onClose, onComplete, onDismiss, fitNavigation }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
@@ -313,7 +359,8 @@ export class Schema5SetupWizard {
     const config = this.#state.draft || this.#state.live;
     content.append(
       element('p', 'Der Assistent erstellt eine erste Oberfläche aus FHEM-Räumen und ausgewählten Geräten. Vorhandene Seiten und Widgets bleiben erhalten.'),
-      element('p', 'Für unterstützte Geräte werden passende Widgets vorgeschlagen. Schalter und Thermostate können Geräte steuern. Die Änderungen werden erst nach deiner Bestätigung als Entwurf gespeichert.'),
+      element('p', 'Für unterstützte Geräte werden passende Widgets vorgeschlagen. Schalter und Thermostate können Geräte steuern. Magic erstellt nach einem Klick automatisch einen Entwurf; eine Veröffentlichung erfolgt nicht.'),
+      element('p', 'Magic berücksichtigt höchstens acht Räume mit je acht Widgets und nur ausgewählte Gerätetypen. Weitere Räume und Geräte können später manuell hinzugefügt werden.'),
     );
     this.#render('Einrichtungsassistent', 'FHEM-Räume und Geräte auswählen', content, [
       button(isSchema5InitialSetup(config) ? 'Mit leerer Startseite fortfahren' : 'Ohne Änderungen fortfahren', () => {
@@ -321,7 +368,31 @@ export class Schema5SetupWizard {
         this.#finish({ saved: false });
       }),
       button('Räume und Geräte auswählen', () => this.#loadDevices()),
+      button('Magic - auf gut Glück', () => this.#magic()),
     ]);
+  }
+
+  async #magic() {
+    if (this.#busy || this.#closed) return;
+    this.#busy = true;
+    this.#status.removeAttribute('data-error');
+    this.#status.textContent = 'FHEM-Geräte werden für Magic analysiert …';
+    try {
+      const devices = await this.#client.jsonlist('.*');
+      if (this.#suspended || this.#closed) return;
+      const plan = createSchema5MagicPlan(devices);
+      this.#pages = plan.pages;
+      this.#startRoom = plan.startRoom;
+    } catch (error) {
+      if (!this.#suspended && !this.#closed) {
+        this.#status.setAttribute('data-error', '');
+        this.#status.textContent = `Magic konnte nicht vorbereitet werden: ${error.message || String(error)}`;
+      }
+      return;
+    } finally {
+      this.#busy = false;
+    }
+    if (!this.#suspended && !this.#closed) await this.#apply();
   }
 
   async #loadDevices() {
@@ -537,7 +608,8 @@ export class Schema5SetupWizard {
       }
       for (const widget of page.widgets) {
         const detail = widget.type === 'thermostat' ? 'Thermostat'
-          : widget.type === 'fhem-switch' ? 'Schalter' : `Wert: ${widget.reading}`;
+          : widget.type === 'fhem-switch' ? 'Schalter'
+            : widget.type === 'fhem-table' ? 'Messwerte' : `Wert: ${widget.reading}`;
         suggestions.append(checkbox(`${widget.title} (${widget.device} · ${detail})`, widget.included, (checked) => {
           widget.included = checked;
         }));
@@ -552,7 +624,7 @@ export class Schema5SetupWizard {
         this.#roomIndex = this.#roomNames.length - 1;
         this.#renderDevices();
       }),
-      this.#applyButton = button('Als Entwurf übernehmen', () => this.#apply(), 'cms-button cms-panel-save'),
+      button('Als Entwurf übernehmen', () => this.#apply(), 'cms-button cms-panel-save'),
       button('Abbrechen', () => this.#cancel(), 'cms-button cms-panel-close'),
     ]);
   }
@@ -562,7 +634,7 @@ export class Schema5SetupWizard {
     let saveStarted = false;
     try {
       const state = this.#controller.snapshot();
-      if (state.token !== this.#state.token) throw new Error('Der Konfigurationsstand hat sich geändert. Bitte Assistent erneut öffnen.');
+      if (state.token !== this.#state.token) throw new Error('Der Konfigurationsstand hat sich geändert. Bitte die Seite neu laden.');
       const source = state.draft || state.live;
       let config = buildSchema5SetupConfig(source, this.#pages, this.#startRoom);
       if (typeof this.#fitNavigation === 'function') config = this.#fitNavigation(config);
@@ -581,7 +653,7 @@ export class Schema5SetupWizard {
       this.#status.setAttribute('data-error', '');
       if (saveStarted) {
         this.#requiresReload = true;
-        if (this.#applyButton) this.#applyButton.disabled = true;
+        this.#root.children[4].replaceChildren(button('Abbrechen und Zustand erneut laden', () => this.#cancel()));
         this.#status.textContent = `Speichern nicht bestätigt: ${error.message || String(error)}. Bitte abbrechen und den Zustand erneut laden.`;
       } else {
         this.#status.textContent = `Entwurf konnte nicht vorbereitet werden: ${error.message || String(error)}`;

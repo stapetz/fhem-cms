@@ -37,10 +37,12 @@ try {
     navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
     pages: [{ id: 'start', title: 'Start', widgets: [] }] };
   const devices = Array.from({ length: 18 }, (_, i) => ({
-    name: `Device${i}`, rooms: [`Raum ${String(i + 1).padStart(2, '0')}`],
+    name: `Device${i}`, type: 'Shelly', rooms: [`Raum ${String(i + 1).padStart(2, '0')}`],
     readings: i === 17 ? { temperature: '21', desiredTemperature: '22' } : { state: 'off' },
     sets: i === 17 ? 'desiredTemperature:slider,5,0.5,30' : 'on:noArg off:noArg',
   }));
+  devices.push({ name: 'RoomSensor', type: 'LaCrosse', rooms: ['Raum 01'],
+    readings: { temperature: '21', humidity: '40' }, sets: '' });
   let state = { live, draft: null, token: 'a'.repeat(64), setupIdentity: 'a'.repeat(64) };
   let writes = 0;
   const controller = new Schema5DraftController({
@@ -110,6 +112,16 @@ try {
       jsonlist: async () => devices, subscribe() {}, unsubscribe() {} } });
   await editor.start();
   check(!!root.querySelector('[data-panel="setup"]'), 'recreated instance prompts despite same device name');
+  button('Magic - auf gut Glück');
+  await waitFor(() => writes === 2 && root.querySelector('.cms-nav'));
+  check(state.draft.pages.length === 8, 'magic limits the number of pages');
+  check(state.draft.pages.every((page) => page.widgets.length <= 8), 'magic limits widgets per page');
+  check(state.draft.pages[0].widgets.some((widget) => widget.type === 'fhem-table' && widget.rows.length === 2),
+    'magic groups sensor readings in a table');
+  check(!!root.querySelector('cms-table'), 'grouped table is rendered');
+  check(live.pages[0].widgets.length === 0, 'magic does not modify live');
+  check(![...root.querySelectorAll('button')].some((entry) => entry.textContent === 'Einrichtungsassistent'),
+    'wizard cannot be reopened from the file menu');
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });
 } catch (error) {
