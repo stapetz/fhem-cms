@@ -196,12 +196,20 @@
 
 .cms-editor-dialog[data-panel="page"] .cms-liquid-controls label {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
   gap: .2rem;
 }
 
 .cms-editor-dialog[data-panel="page"] .cms-liquid-controls input[type="range"] {
+  grid-column: 1;
   padding: 0;
   accent-color: var(--cms-accent);
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-liquid-controls output {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
 }
 
 * {
@@ -550,18 +558,33 @@ body:has(.cms-schema5-grid) {
   flex: 0 1 4.5rem;
 }
 
-.cms-editor-dialog[data-panel="page"] input,
-.cms-editor-dialog[data-panel="page"] select {
+.cms-editor-dialog[data-panel="page"] input {
   padding: .35rem .5rem;
 }
 
 .cms-editor-dialog[data-panel="page"] select {
-  padding-right: 1.5rem;
+  font: inherit;
+  color: var(--cms-text);
+  padding: .4rem .5rem;
+  padding-right: 1.6em;
 }
 
-.cms-editor-dialog[data-panel="page"] select option {
-  color: var(--cms-text);
-  background-color: var(--cms-bg);
+.cms-page-background-controls {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .4rem .5rem;
+  min-width: 0;
+}
+
+.cms-page-background-controls > p,
+.cms-page-background-controls > .cms-liquid-controls {
+  flex: 1 1 100%;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-page-background-controls > label {
+  flex: 0 1 auto;
 }
 
 .cms-editor-dialog[data-panel="page"] form button {

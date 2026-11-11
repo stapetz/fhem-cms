@@ -80,16 +80,34 @@ try {
   check(sharedLabel.previousElementSibling.textContent === 'Hintergrundbild auswählen'
     && sharedLabel.nextElementSibling.textContent === 'Hintergrundbild entfernen',
   'shared background checkbox is between select and remove buttons');
+  const row = [sharedLabel.previousElementSibling, sharedLabel, sharedLabel.nextElementSibling]
+    .map(element => element.getBoundingClientRect());
+  check(row.every(box => Math.abs((box.top + box.bottom) / 2 - (row[0].top + row[0].bottom) / 2) < 2)
+    && row[0].right <= row[1].left && row[1].right <= row[2].left, 'background actions share one row in the standard dialog');
   dialog.style.width = '300px';
   const bounds = dialog.getBoundingClientRect();
   const control = checkbox.getBoundingClientRect();
   check(control.left >= bounds.left && control.right <= bounds.right, 'checkbox fits a narrow dialog');
+  check([sharedLabel.previousElementSibling, sharedLabel, sharedLabel.nextElementSibling].every(element => {
+    const box = element.getBoundingClientRect();
+    return box.left >= bounds.left && box.right <= bounds.right;
+  }), 'background controls wrap without overflowing a narrow dialog');
   check(dialog.textContent.includes('Hintergrundbild für aktuelle Seite „Start“'), 'current page title in dialog');
   check(dialog.textContent.includes('auf jeder Seite einzeln über die Seiteneinstellungen'), 'individual background hint');
   const intensity = dialog.querySelector('[data-liquid-intensity]');
   const transparency = dialog.querySelector('[data-liquid-transparency]');
   check(!dialog.querySelector('.cms-liquid-preview, .cms-liquid-preview-card'), 'no redundant example preview');
   check(dialog.querySelector('.cms-liquid-controls').children.length === 2, 'only liquid sliders remain');
+  check([...dialog.querySelectorAll('label')].some(label => label.firstChild.textContent.trim() === 'Widgettitel ausrichten'),
+    'widget title label has no all-pages suffix');
+  for (const slider of [intensity, transparency]) {
+    const label = slider.parentElement;
+    const track = slider.getBoundingClientRect();
+    const value = label.querySelector('output').getBoundingClientRect();
+    check(!label.textContent.includes('alle Seiten') && Math.abs((track.top + track.bottom) / 2
+      - (value.top + value.bottom) / 2) < 2 && value.left >= track.right,
+    'slider percentage is beside the track without an all-pages suffix');
+  }
   intensity.value = '0';
   intensity.dispatchEvent(new Event('input'));
   transparency.value = '0';
