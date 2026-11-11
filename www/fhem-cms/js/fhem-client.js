@@ -97,10 +97,13 @@ export class FhemClient {
         const type = item.Internals && typeof item.Internals.TYPE === 'string' ? item.Internals.TYPE : '';
         const attributes = item.Attributes || {};
         const room = typeof attributes.room === 'string' ? attributes.room.split(',')[0].trim() : '';
+        const rooms = typeof attributes.room === 'string'
+          ? [...new Set(attributes.room.split(',').map((value) => value.trim()).filter(Boolean))]
+          : [];
         const owner = item.Internals && typeof item.Internals.device === 'string' ? item.Internals.device : '';
         const parent = isValidName(owner) && owner !== item.Name ? owner : '';
         const sets = typeof item.PossibleSets === 'string' ? item.PossibleSets : '';
-        return { name: item.Name, alias, type, room, parent, readings, sets };
+        return { name: item.Name, alias, type, room, rooms, parent, readings, sets };
       });
   }
 

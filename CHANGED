@@ -1,3 +1,9 @@
+2026-11-11 - 1.6.2-dev: Setup-Assistent (Refs #129)
+
+Schema-5-Ersteinrichtung aus FHEM-Raeumen und ausgewaehlten Geraeten mit Vorschau,
+Namenskonfliktpruefung und expliziter Speicherung als Entwurf. Bestehende Inhalte
+bleiben unangetastet; nur erkannte Readings werden als Wertanzeigen vorgeschlagen.
+
 2026-11-10 - 1.6.2-dev: Entwicklung nach Release 1.6.1 (Refs #127)
 
 Freigegebenen main-Stand 1.6.1 nach dev synchronisiert. Die noch offene
