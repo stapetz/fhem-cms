@@ -49,6 +49,25 @@ try {
     readings[`${n}-internal`] = `Intern ${n}`;
   }
   widget.data = [{ name: 'Calls', readings }];
+  check(parseFloat(getComputedStyle($('[data-table]')).fontSize) >= 14, 'entry text is at least 14px');
+  const regularReadings = { 'count-all': '20' };
+  for (let n = 1; n <= 20; n++) Object.assign(regularReadings, {
+    [`${n}-state`]: '=>', [`${n}-name`]: 'Beispiel', [`${n}-number`]: '0123456789',
+    [`${n}-timestamp`]: '01.01.2026 12:00', [`${n}-duration`]: '00:01:00',
+  });
+  widget.data = [{ name: 'Calls', readings: regularReadings }];
+  for (const limit of [1, 5, 20]) {
+    widget.config = { ...config, limit };
+    widget.style.width = '360px';
+    widget.style.height = `${(2 + Math.ceil(limit * 0.8)) * 60}px`;
+    const tile = $('[data-tile]');
+    check(tile.scrollHeight <= tile.clientHeight,
+      `${limit} calls fit the initial grid height at 720px grid width: ${tile.scrollHeight}/${tile.clientHeight}`);
+  }
+  widget.style.width = '';
+  widget.style.height = '';
+  widget.data = [{ name: 'Calls', readings }];
+  widget.config = config;
   check($('[data-rows]').children.length === 5, 'default limit');
   check($('[data-rows]').children[0].children[1].textContent === readings['1-name'], 'name rendered as text');
   check(!$('[data-rows] img'), 'device data cannot create HTML');
@@ -93,7 +112,7 @@ try {
   form.elements.device.value = '';
   await widget.saveConfig();
   check(writes === 0 && $('[data-error]').textContent.includes('Device'), 'device required');
-  $('[data-pick]').click();
+  form.elements.device.click();
   await pause();
   const picker = document.querySelector('.cms-dp-dialog');
   check(picker.open, 'device picker opened');
@@ -148,12 +167,9 @@ try {
   check(editorWidget?.shadowRoot.querySelector('[data-dialog]').open, 'editor opens real call list dialog');
   const editorForm = editorWidget.shadowRoot.querySelector('[data-form]');
   equal(editorForm.elements.limit.value, '5', 'new editor widget defaults to five calls');
+  equal(editorForm.elements.device.value, 'Calls', 'single matching device automatically selected');
   equal([...editorForm.querySelectorAll('[data-column]:checked')].map(input => input.value),
     ['state', 'party', 'timestamp', 'duration'], 'new widget uses compact default columns');
-  editorWidget.shadowRoot.querySelector('[data-pick]').click();
-  await pause();
-  document.querySelector('.cms-dp-dialog [data-list] button').click();
-  await pause();
   await editorWidget.saveConfig();
   await pause();
   check(outcome?.requiresReload === false, 'editor session completes after saving');
@@ -161,7 +177,51 @@ try {
   equal(savedWidget.type, 'fhem-calllist', 'draft contains the new widget');
   equal(savedWidget.device, 'Calls', 'draft retains selected device');
   equal(savedWidget.limit, 5, 'draft retains default limit');
+  equal(savedWidget.grid, { col: 1, row: 2, w: 6, h: 6 }, 'five calls use compact initial geometry');
   panel.remove();
+  const detect = document.createElement('cms-calllist');
+  detect.config = { ...config, device: '' };
+  document.body.append(detect);
+  const dform = detect.shadowRoot.querySelector('[data-form]');
+  detect.services = { listAllDevices: async () => [] };
+  await detect.openConfig({ isNew: true });
+  equal(dform.elements.device.value, '', 'no device remains unselected');
+  check(detect.shadowRoot.querySelector('[data-detection]').textContent.includes('Kein'), 'no matching device reported');
+  detect.closeConfig(false);
+  detect.services = { listAllDevices: async () => [{ name: 'One', type: 'FB_CALLLIST' },
+    { name: 'Two', type: 'FB_CALLLIST' }] };
+  await detect.openConfig({ isNew: true });
+  equal(dform.elements.device.value, '', 'multiple devices require selection');
+  check(detect.shadowRoot.querySelector('[data-detection]').textContent.includes('Mehrere'), 'multiple devices reported');
+  detect.closeConfig(false);
+  detect.services = { listAllDevices: async () => { throw new Error('offline'); } };
+  await detect.openConfig({ isNew: true });
+  check(detect.shadowRoot.querySelector('[data-error]').textContent.includes('offline'), 'device lookup failure shown');
+  detect.closeConfig(false);
+  let release;
+  detect.services = { listAllDevices: () => new Promise(resolve => { release = resolve; }) };
+  const opening = detect.openConfig({ isNew: true });
+  detect.closeConfig(false);
+  release([{ name: 'Late', type: 'FB_CALLLIST' }]);
+  await opening;
+  equal(dform.elements.device.value, '', 'late device lookup ignored after close');
+  detect.remove();
+  const table = document.createElement('cms-table');
+  table.config = { id: 'table', type: 'fhem-table', rows: [],
+    grid: { col: 1, row: 2, w: 6, h: 4 } };
+  table.services = { listAllDevices: async () => [{ name: 'Test', type: 'dummy', readings: { state: 'on' } }] };
+  document.body.append(table);
+  await table.openConfig();
+  table.shadowRoot.querySelector('[name="mode"][value="multi"]').click();
+  table.shadowRoot.querySelector('[data-config-rows] .device input').click();
+  await pause();
+  const tablePicker = document.querySelector('.cms-dp-dialog');
+  check(tablePicker?.open, 'multi-device table field opens picker');
+  tablePicker.querySelector('[data-list] button').click();
+  await pause();
+  equal(table.shadowRoot.querySelector('[data-config-rows] .device input').value, 'Test', 'table field chooses device');
+  table.closeConfig(false);
+  table.remove();
   result.dataset.result = 'pass';
   result.textContent = JSON.stringify({ checks });
 } catch (error) {

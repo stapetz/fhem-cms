@@ -89,7 +89,14 @@ export class Schema5WidgetSession {
         || !sameGrid(widget.grid, this.#widget.grid)) {
         throw new Error('Widget-Identität oder Raster wurde verändert');
       }
-      return this.#controller.saveWidget(this.#pageId, widget, this.#token, this.#action);
+      const candidate = structuredClone(widget);
+      if (this.#action === 'create' && candidate.type === 'fhem-calllist'
+        && Number.isInteger(candidate.limit) && candidate.limit >= 1 && candidate.limit <= 20) {
+        const state = this.#controller.snapshot();
+        const scale = Number((state.draft || state.live).settings.gridColumns) / 12;
+        candidate.grid.h = (2 + Math.ceil(candidate.limit * 0.8)) * scale;
+      }
+      return this.#controller.saveWidget(this.#pageId, candidate, this.#token, this.#action);
     });
   }
 

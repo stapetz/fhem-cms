@@ -64,6 +64,36 @@ test('dialog services bind identity, page, geometry and a single action', async 
   assert.equal(writes, 1);
 });
 
+test('new call list height follows count and density without changing existing widget geometry', async () => {
+  for (const columns of [12, 24, 48, 96, 192]) {
+    for (const limit of [1, 5, 10, 20]) {
+      const live = config();
+      const scale = columns / 12;
+      live.settings.gridColumns = columns;
+      live.navigation.grid = { col: 1, row: 1, w: columns, h: scale };
+      live.pages[0].widgets = [];
+      live.pages[1].widgets = [];
+      let state = { live, draft: null, token: 'a'.repeat(64) };
+      const controller = new Schema5DraftController({
+        read: async () => structuredClone(state),
+        save: async draft => { state = { live, draft, token: 'b'.repeat(64) }; },
+        publish: async () => {}, discard: async () => {},
+      });
+      await controller.reload();
+      const widget = { id: 'calls', type: 'fhem-calllist', device: 'Calls', limit, columns: ['state'],
+        grid: { col: 1, row: scale + 1, w: 6 * scale, h: 6 * scale } };
+      const session = open(controller, 'one', state.token, widget, 'create');
+      await session.services({}).saveWidget(session.widget);
+      const saved = controller.snapshot().draft.pages[0].widgets[0];
+      assert.equal(saved.grid.h, (2 + Math.ceil(limit * 0.8)) * scale);
+      assert.equal(saved.grid.w, 6 * scale);
+      const existing = open(controller, 'one', state.token, saved);
+      await existing.services({}).saveWidget({ ...saved, limit: 20 });
+      assert.deepEqual(controller.snapshot().draft.pages[0].widgets[0].grid, saved.grid);
+    }
+  }
+});
+
 test('closing a pending dialog suppresses completion while the confirmed write finishes', async () => {
   let state = { live: config(), draft: null, token: 'a'.repeat(64) };
   let release;
