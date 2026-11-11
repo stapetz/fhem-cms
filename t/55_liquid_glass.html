@@ -36,10 +36,26 @@ try {
   check(getComputedStyle(document.documentElement).backgroundImage.includes(first), 'start image rendered');
   const tile = document.querySelector('.grid-stack-item-content');
   check(getComputedStyle(tile).backdropFilter.includes('blur'), 'glass blur applied');
+  config.settings.liquidIntensity = 100;
+  config.settings.liquidTransparency = 60;
   await view.showPage('room');
   check(document.documentElement.style.getPropertyValue('--cms-page-image').includes(second), 'individual image');
+  check(getComputedStyle(document.querySelector('.grid-stack-item-content')).backdropFilter === 'blur(30px)',
+    'saved intensity changes live blur');
+  check(getComputedStyle(document.documentElement).getPropertyValue('--cms-liquid-opacity') === '0.4',
+    'saved transparency changes live opacity');
+  check(getComputedStyle(document.querySelector('.grid-stack-item-content')).getPropertyValue('--cms-surface').trim()
+    === 'rgb(19 34 52 / 0.4)', 'widget surface uses saved transparency');
+  check(getComputedStyle(document.documentElement).getPropertyValue('--cms-surface').trim()
+    === 'rgb(19 34 52 / 0.88)', 'editor surfaces remain readable');
   config.settings.sharedBackground = true;
   await view.showPage('start');
+  const widget = document.querySelector('cms-text');
+  const widgetTile = widget.closest('.grid-stack-item-content');
+  check(getComputedStyle(widget.shadowRoot.querySelector('.tile')).backgroundColor === 'rgba(19, 34, 52, 0.4)',
+    'actual widget transparency matches preview');
+  check(getComputedStyle(widgetTile, '::after').backgroundImage.includes('0.2'),
+    'actual widget receives the configured gloss');
   await view.showPage('room');
   check(document.documentElement.style.getPropertyValue('--cms-page-image').includes(first), 'shared image');
   config.settings.sharedBackground = false;
@@ -66,6 +82,23 @@ try {
   check(control.left >= bounds.left && control.right <= bounds.right, 'checkbox fits a narrow dialog');
   check(dialog.textContent.includes('Hintergrundbild für aktuelle Seite „Start“'), 'current page title in dialog');
   check(dialog.textContent.includes('auf jeder Seite einzeln über die Seiteneinstellungen'), 'individual background hint');
+  const intensity = dialog.querySelector('[data-liquid-intensity]');
+  const transparency = dialog.querySelector('[data-liquid-transparency]');
+  const preview = dialog.querySelector('.cms-liquid-preview');
+  const card = dialog.querySelector('.cms-liquid-preview-card');
+  check(getComputedStyle(preview).backgroundImage.includes(first), 'preview uses current background image');
+  check(getComputedStyle(card).backdropFilter === 'blur(30px)', 'preview starts with saved blur');
+  check(getComputedStyle(card).backgroundColor === 'rgba(19, 34, 52, 0.4)', 'preview starts with saved transparency');
+  const gloss = getComputedStyle(card, '::after').backgroundImage;
+  intensity.value = '0';
+  intensity.dispatchEvent(new Event('input'));
+  transparency.value = '0';
+  transparency.dispatchEvent(new Event('input'));
+  check(getComputedStyle(card).backdropFilter === 'blur(0px)', 'slider updates preview blur');
+  check(getComputedStyle(card).backgroundColor === 'rgb(19, 34, 52)', 'slider updates preview transparency');
+  check(getComputedStyle(card, '::after').backgroundImage !== gloss, 'slider updates preview gloss');
+  check(config.settings.liquidIntensity === 100 && config.settings.liquidTransparency === 60,
+    'preview does not mutate saved settings');
   dialog.close();
   dialog.remove();
   result.dataset.result = 'pass';

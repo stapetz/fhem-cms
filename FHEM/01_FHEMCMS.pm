@@ -789,7 +789,7 @@ sub FHEMCMS_ValidateConfig {
         if (!$isInt->($config->{schemaVersion}, $targetSchema, $targetSchema));
     if (exists($config->{settings})) {
         my @settings = ('showFrames', 'layoutMode', 'gridColumns', 'titleAlign');
-        push(@settings, 'sharedBackground') if ($targetSchema == 5);
+        push(@settings, 'sharedBackground', 'liquidIntensity', 'liquidTransparency') if ($targetSchema == 5);
         $err = $exact->($config->{settings}, 'settings', [], \@settings);
         return $err if ($err);
         return 'Ungueltiger Wert fuer layoutMode'
@@ -806,6 +806,10 @@ sub FHEMCMS_ValidateConfig {
             if (exists($config->{settings}{showFrames}) && !$isBool->($config->{settings}{showFrames}));
         return 'Ungueltiger Wert fuer sharedBackground'
             if (exists($config->{settings}{sharedBackground}) && !$isBool->($config->{settings}{sharedBackground}));
+        for my $key ('liquidIntensity', 'liquidTransparency') {
+            return "Ungueltiger Wert fuer $key"
+                if (exists($config->{settings}{$key}) && !$isInt->($config->{settings}{$key}, 0, 100));
+        }
         return 'Ungueltiger Wert fuer titleAlign'
             if (exists($config->{settings}{titleAlign}) && (ref($config->{settings}{titleAlign})
                 || !defined($config->{settings}{titleAlign})

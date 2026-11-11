@@ -1,5 +1,6 @@
 import { resizeSchema5Grid, schema5GridItems, SCHEMA5_GRID_COLUMNS } from './fcui-schema5-layout.js';
 import { ASSET_IMAGE } from './asset-contract.js';
+import { LIQUID_DEFAULTS, setLiquidAppearance } from './fcui-schema5-appearance.js';
 
 function element(tag, text) {
   const result = document.createElement(tag);
@@ -32,6 +33,8 @@ export class Schema5PagePanel {
   #backgroundLabel;
   #sharedBackground;
   #backgroundControls;
+  #intensity;
+  #transparency;
 
   constructor({ root, controller, pageId, token, services = {}, browser = window, onClose }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
@@ -117,6 +120,52 @@ export class Schema5PagePanel {
     } else if (config.settings.sharedBackground === true) {
       this.#backgroundControls.append(element('p', 'Das Bild der Startseite wird aktuell auf allen Seiten verwendet.'));
     }
+    const controls = element('div');
+    controls.className = 'cms-liquid-controls';
+    const intensityLabel = element('label', 'Liquid-Effekt (Unschärfe und Glanz, alle Seiten) ');
+    this.#intensity = element('input');
+    this.#intensity.type = 'range';
+    this.#intensity.min = '0';
+    this.#intensity.max = '100';
+    this.#intensity.step = '1';
+    this.#intensity.value = String(config.settings.liquidIntensity ?? LIQUID_DEFAULTS.liquidIntensity);
+    this.#intensity.setAttribute('data-liquid-intensity', '');
+    const intensityValue = element('output');
+    intensityLabel.append(this.#intensity, intensityValue);
+    const transparencyLabel = element('label', 'Transparenz (alle Seiten) ');
+    this.#transparency = element('input');
+    this.#transparency.type = 'range';
+    this.#transparency.min = '0';
+    this.#transparency.max = '100';
+    this.#transparency.step = '1';
+    this.#transparency.value = String(config.settings.liquidTransparency ?? LIQUID_DEFAULTS.liquidTransparency);
+    this.#transparency.setAttribute('data-liquid-transparency', '');
+    const transparencyValue = element('output');
+    transparencyLabel.append(this.#transparency, transparencyValue);
+    const preview = element('div');
+    preview.className = 'cms-liquid-preview';
+    preview.setAttribute('aria-label', 'Vorschau der Widgetdarstellung');
+    const card = element('div', 'Beispiel-Widget · 21 °C');
+    card.className = 'cms-liquid-preview-card';
+    preview.append(card);
+    const updatePreview = () => {
+      const intensity = Number(this.#intensity.value);
+      const transparency = Number(this.#transparency.value);
+      setLiquidAppearance(preview, { liquidIntensity: intensity, liquidTransparency: transparency });
+      intensityValue.textContent = `${intensity} %`;
+      transparencyValue.textContent = `${transparency} %`;
+      const shared = this.#sharedBackground ? this.#sharedBackground.checked : config.settings.sharedBackground === true;
+      const background = shared && pageId !== config.pages[0].id ? config.pages[0].background : this.#background;
+      if (background && !ASSET_IMAGE.test(background)) throw new Error('Ungültiges Hintergrundbild');
+      preview.style.setProperty('--cms-liquid-preview-image',
+        background ? `url("${background}")` : 'linear-gradient(125deg, #446a80, #aa805d 50%, #294b68)');
+    };
+    this.#intensity.addEventListener('input', updatePreview);
+    this.#transparency.addEventListener('input', updatePreview);
+    this.#sharedBackground?.addEventListener('change', updatePreview);
+    controls.append(intensityLabel, transparencyLabel, element('p', 'Vorschau'), preview);
+    this.#backgroundControls.append(controls);
+    updatePreview();
     this.#form.append(this.#backgroundControls);
     this.#theme.addEventListener('change', () => {
       this.#backgroundControls.hidden = this.#theme.value !== 'liquid-glass';
@@ -138,6 +187,7 @@ export class Schema5PagePanel {
         }
         this.#background = asset.href;
         this.#backgroundLabel.textContent = asset.name || asset.href;
+        updatePreview();
         this.#message('Bild ausgewählt; noch nicht gespeichert.');
       } catch (error) {
         this.#message(`Bildauswahl fehlgeschlagen: ${error.message || String(error)}`, true);
@@ -152,6 +202,7 @@ export class Schema5PagePanel {
       if (this.#busy || this.#closed || this.#requiresReload) return;
       this.#background = '';
       this.#backgroundLabel.textContent = 'Kein Bild ausgewählt';
+      updatePreview();
     });
     this.#form.addEventListener('submit', (event) => event.preventDefault());
 
@@ -191,7 +242,8 @@ export class Schema5PagePanel {
 
   #settings() {
     return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value,
-      this.#titleAlign.value, this.#background, this.#sharedBackground?.checked ?? null]);
+      this.#titleAlign.value, this.#background, this.#sharedBackground?.checked ?? null,
+      this.#intensity.value, this.#transparency.value]);
   }
 
   #changeColumns() {
@@ -218,7 +270,11 @@ export class Schema5PagePanel {
     let pending;
     try {
       const candidate = resizeSchema5Grid(this.#config, Number(this.#columns.value));
-      const [originalTheme, originalFrames, , originalTitleAlign, originalBackground, originalShared] = JSON.parse(this.#settingsBaseline);
+      const [originalTheme, originalFrames, , originalTitleAlign, originalBackground, originalShared,
+        originalIntensity, originalTransparency] = JSON.parse(this.#settingsBaseline);
+      for (const value of [this.#intensity.value, this.#transparency.value]) {
+        if (!/^(?:100|[1-9]?\d)$/.test(value)) throw new Error('Ungültiger Liquid-Glass-Wert');
+      }
       if (this.#theme.value !== originalTheme) candidate.theme = this.#theme.value;
       if (this.#frames.checked !== originalFrames) candidate.settings.showFrames = this.#frames.checked;
       if (this.#titleAlign.value !== originalTitleAlign) candidate.settings.titleAlign = this.#titleAlign.value;
@@ -230,6 +286,8 @@ export class Schema5PagePanel {
       if (this.#sharedBackground && this.#sharedBackground.checked !== originalShared) {
         candidate.settings.sharedBackground = this.#sharedBackground.checked;
       }
+      if (this.#intensity.value !== originalIntensity) candidate.settings.liquidIntensity = Number(this.#intensity.value);
+      if (this.#transparency.value !== originalTransparency) candidate.settings.liquidTransparency = Number(this.#transparency.value);
       pending = this.#controller.saveDraft(candidate, this.#token);
     } catch (error) {
       this.#message(`Änderung ungültig: ${error.message || String(error)}`, true);

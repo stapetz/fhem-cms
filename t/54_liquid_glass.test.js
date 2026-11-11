@@ -1,6 +1,23 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { schema5PageBackground } from '../www/fhem-cms/js/fcui-schema5-appearance.js';
+import { schema5PageBackground, setLiquidAppearance } from '../www/fhem-cms/js/fcui-schema5-appearance.js';
+
+test('liquid appearance maps bounded settings to CSS variables', () => {
+  const values = {};
+  const element = { style: { setProperty: (name, value) => { values[name] = value; } } };
+  setLiquidAppearance(element);
+  assert.equal(values['--cms-liquid-opacity'], '0.88');
+  setLiquidAppearance(element, { liquidIntensity: 100, liquidTransparency: 100 });
+  assert.equal(values['--cms-liquid-blur'], '30px');
+  assert.equal(values['--cms-liquid-gloss'], '0.2');
+  assert.equal(values['--cms-liquid-opacity'], '0');
+  setLiquidAppearance(element, { liquidIntensity: 0, liquidTransparency: 0 });
+  assert.equal(values['--cms-liquid-blur'], '0px');
+  assert.equal(values['--cms-liquid-opacity'], '1');
+  for (const invalid of [-1, 101, 2.5, '50', null]) {
+    assert.throws(() => setLiquidAppearance(element, { liquidIntensity: invalid }), /Ungültige/);
+  }
+});
 
 test('liquid glass resolves local and shared backgrounds without modifying pages', () => {
   const first = `media/${'a'.repeat(32)}.png`;

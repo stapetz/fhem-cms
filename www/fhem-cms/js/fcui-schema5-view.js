@@ -2,7 +2,7 @@ import { schema5GridItems } from './fcui-schema5-layout.js';
 import { Schema5LivePage } from './fcui-schema5-live.js';
 import { mountSchema5Widgets } from './fcui-schema5-widgets.js';
 import { observeSchema5Navigation } from './fcui-schema5-navigation-fit.js';
-import { schema5PageBackground } from './fcui-schema5-appearance.js';
+import { schema5PageBackground, setLiquidAppearance } from './fcui-schema5-appearance.js';
 
 export class Schema5View {
   constructor({ GridStack, root, status, config, client, services, browser = window, editing }) {
@@ -128,6 +128,7 @@ export class Schema5View {
       const image = background
         ? `url("${new URL(background, this.browser.location.href).href}")` : 'none';
       document.documentElement.style.setProperty('--cms-page-image', image);
+      setLiquidAppearance(document.documentElement, this.config.settings);
       const navigation = this.navigation(pageId);
       this.view = mountSchema5Widgets(this.GridStack, this.root, this.config, pageId,
         navigation, this.services, new Map(), this.editing && {

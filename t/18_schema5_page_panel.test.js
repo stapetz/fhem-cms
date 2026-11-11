@@ -15,6 +15,7 @@ class Element {
     this.listeners = {};
     this.value = '';
     this.checked = false;
+    this.style = { setProperty(name, value) { this[name] = value; } };
   }
   append(...children) {
     this.children.push(...children);
@@ -172,7 +173,11 @@ test('liquid glass uses a reversible start-page background without changing indi
     selected = second;
     open('b');
     assert.equal(root.children[3].children[4].children[0].textContent, 'Hintergrundbild für aktuelle Seite „B“');
+    let preview = root.children[3].children[4].children[5].children[3];
+    assert.match(preview.style['--cms-liquid-preview-image'], new RegExp(first));
     await root.children[3].children[4].children[2].fire('click');
+    assert.match(preview.style['--cms-liquid-preview-image'], new RegExp(first),
+      'individual image does not replace the active shared preview');
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[1].background, second);
 
@@ -183,6 +188,10 @@ test('liquid glass uses a reversible start-page background without changing indi
     assert.equal(result.settings.sharedBackground, false);
     assert.equal(result.pages[0].background, first);
     assert.equal(result.pages[1].background, second);
+    open('b');
+    preview = root.children[3].children[4].children[4].children[3];
+    assert.match(preview.style['--cms-liquid-preview-image'], new RegExp(second),
+      'preview returns to the individual image when sharing is disabled');
   } finally {
     globalThis.document = original;
   }
@@ -220,6 +229,59 @@ test('background picker reports errors, tolerates cancellation and removes an im
     background.children[3].fire('click');
     await root.children[4].children[1].fire('click');
     assert.equal('background' in f.controller.snapshot().draft.pages[0], false);
+  } finally {
+    globalThis.document = original;
+  }
+});
+
+test('liquid sliders preview immediately, cancel safely and save global settings', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const f = fixture();
+    const root = new Element('section');
+    let confirmed = true;
+    await f.controller.reload();
+    const open = (pageId) => new Schema5PagePanel({
+      root, controller: f.controller, pageId, token: f.controller.snapshot().token,
+      browser: { confirm: () => confirmed }, onClose: () => {},
+    });
+    open('a');
+    const controls = root.children[3].children[4].children[6];
+    const intensity = controls.children[0].children[0];
+    const transparency = controls.children[1].children[0];
+    const preview = controls.children[3];
+    assert.equal(intensity.value, '47');
+    assert.equal(transparency.value, '12');
+    intensity.value = '100';
+    intensity.fire('input');
+    transparency.value = '60';
+    transparency.fire('input');
+    assert.equal(preview.style['--cms-liquid-blur'], '30px');
+    assert.equal(preview.style['--cms-liquid-opacity'], '0.4');
+    assert.equal(controls.children[0].children[1].textContent, '100 %');
+    assert.equal(f.writes, 0, 'preview does not save');
+    confirmed = false;
+    root.children[4].children[0].fire('click');
+    assert.notEqual(root.children.length, 0, 'unsaved slider changes require confirmation');
+    confirmed = true;
+    root.children[4].children[0].fire('click');
+    assert.equal(f.controller.snapshot().draft, null);
+    open('b');
+    const otherControls = root.children[3].children[4].children[4];
+    otherControls.children[0].children[0].value = '0';
+    otherControls.children[1].children[0].value = '100';
+    await root.children[4].children[1].fire('click');
+    assert.equal(f.controller.snapshot().draft.settings.liquidIntensity, 0);
+    assert.equal(f.controller.snapshot().draft.settings.liquidTransparency, 100);
+    open('a');
+    const savedControls = root.children[3].children[4].children[6];
+    assert.equal(savedControls.children[0].children[0].value, '0');
+    assert.equal(savedControls.children[1].children[0].value, '100');
+    savedControls.children[0].children[0].value = '101';
+    await root.children[4].children[1].fire('click');
+    assert.match(root.children[2].textContent, /Ungültiger Liquid-Glass-Wert/);
+    assert.equal(f.writes, 1, 'invalid value is not saved');
   } finally {
     globalThis.document = original;
   }
@@ -458,6 +520,8 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     theme.fire('change');
     await root.children[3].children[4].children[2].fire('click');
     root.children[3].children[4].children[4].children[0].checked = true;
+    root.children[3].children[4].children[6].children[0].children[0].value = '80';
+    root.children[3].children[4].children[6].children[1].children[0].value = '35';
     const columns = root.children[3].children[2].children[0];
     columns.value = '192';
     columns.fire('change');
@@ -473,6 +537,8 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     assert.equal(draft.theme, 'liquid-glass');
     assert.equal(draft.pages[0].background, background);
     assert.equal(draft.settings.sharedBackground, true);
+    assert.equal(draft.settings.liquidIntensity, 80);
+    assert.equal(draft.settings.liquidTransparency, 35);
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
     assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages[0].widgets[0].grid.row, 17);
   } finally {

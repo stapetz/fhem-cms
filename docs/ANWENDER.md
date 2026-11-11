@@ -144,6 +144,11 @@ geändert, liefert die neue erste Seite das gemeinsame Bild. Hat sie keines,
 erscheint auf allen Seiten der Theme-Hintergrund. Die Einstellungen werden als Entwurf gespeichert und
 erst beim Veröffentlichen auf der Homepage sichtbar. Verwendete Hintergrundbilder
 sind im Assetmanager gegen Löschen geschützt.
+Die Regler **Liquid-Effekt** (Unschärfe und Glanz) und **Transparenz** gelten
+für alle Seiten. Die Vorschau im Dialog aktualisiert sich beim Verschieben;
+sie verwendet das wirksame Seitenbild oder einen Beispielhintergrund. Erst
+**Speichern** übernimmt die Werte in den Entwurf; **Abbrechen** verwirft sie.
+Hohe Transparenz kann die Lesbarkeit je nach Hintergrundbild verringern.
 
 Die Geräteauswahl oben rechts im Editiermodus bietet Smartphone- und
 Tabletprofile sowie verschiedene Desktopauflösungen. Die Drehfunktion wechselt
