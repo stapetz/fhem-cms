@@ -76,6 +76,10 @@ try {
   check(Boolean(checkbox), 'shared background checkbox exists on the start page');
   check(checkbox.getBoundingClientRect().width > 0 && checkbox.getBoundingClientRect().height > 0,
     'shared background checkbox is visible');
+  const sharedLabel = checkbox.closest('label');
+  check(sharedLabel.previousElementSibling.textContent === 'Hintergrundbild auswählen'
+    && sharedLabel.nextElementSibling.textContent === 'Hintergrundbild entfernen',
+  'shared background checkbox is between select and remove buttons');
   dialog.style.width = '300px';
   const bounds = dialog.getBoundingClientRect();
   const control = checkbox.getBoundingClientRect();
@@ -84,19 +88,14 @@ try {
   check(dialog.textContent.includes('auf jeder Seite einzeln über die Seiteneinstellungen'), 'individual background hint');
   const intensity = dialog.querySelector('[data-liquid-intensity]');
   const transparency = dialog.querySelector('[data-liquid-transparency]');
-  const preview = dialog.querySelector('.cms-liquid-preview');
-  const card = dialog.querySelector('.cms-liquid-preview-card');
-  check(getComputedStyle(preview).backgroundImage.includes(first), 'preview uses current background image');
-  check(getComputedStyle(card).backdropFilter === 'blur(30px)', 'preview starts with saved blur');
-  check(getComputedStyle(card).backgroundColor === 'rgba(19, 34, 52, 0.4)', 'preview starts with saved transparency');
-  const gloss = getComputedStyle(card, '::after').backgroundImage;
+  check(!dialog.querySelector('.cms-liquid-preview, .cms-liquid-preview-card'), 'no redundant example preview');
+  check(dialog.querySelector('.cms-liquid-controls').children.length === 2, 'only liquid sliders remain');
   intensity.value = '0';
   intensity.dispatchEvent(new Event('input'));
   transparency.value = '0';
   transparency.dispatchEvent(new Event('input'));
-  check(getComputedStyle(card).backdropFilter === 'blur(0px)', 'slider updates preview blur');
-  check(getComputedStyle(card).backgroundColor === 'rgb(19, 34, 52)', 'slider updates preview transparency');
-  check(getComputedStyle(card, '::after').backgroundImage !== gloss, 'slider updates preview gloss');
+  check(intensity.parentElement.querySelector('output').textContent === '0 %', 'slider updates intensity label');
+  check(transparency.parentElement.querySelector('output').textContent === '0 %', 'slider updates transparency label');
   check(config.settings.liquidIntensity === 100 && config.settings.liquidTransparency === 60,
     'preview does not mutate saved settings');
   dialog.close();

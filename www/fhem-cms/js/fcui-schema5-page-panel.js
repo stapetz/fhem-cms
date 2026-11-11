@@ -1,6 +1,6 @@
 import { resizeSchema5Grid, schema5GridItems, SCHEMA5_GRID_COLUMNS } from './fcui-schema5-layout.js';
 import { ASSET_IMAGE, assetPathText, validateAssetState } from './asset-contract.js';
-import { LIQUID_DEFAULTS, setLiquidAppearance } from './fcui-schema5-appearance.js';
+import { LIQUID_DEFAULTS } from './fcui-schema5-appearance.js';
 
 function element(tag, text) {
   const result = document.createElement(tag);
@@ -110,15 +110,18 @@ export class Schema5PagePanel {
     const remove = element('button', 'Hintergrundbild entfernen');
     remove.type = 'button';
     remove.className = 'cms-button';
-    this.#backgroundControls.append(headingBackground, this.#backgroundLabel, choose, remove);
+    this.#backgroundControls.append(headingBackground, this.#backgroundLabel, choose);
     if (pageId === config.pages[0].id) {
       const sharedLabel = element('label', 'Bild auf allen Seiten verwenden ');
       this.#sharedBackground = element('input');
       this.#sharedBackground.type = 'checkbox';
       this.#sharedBackground.checked = config.settings.sharedBackground === true;
       sharedLabel.append(this.#sharedBackground);
-      this.#backgroundControls.append(sharedLabel,
-        element('p', 'Ist die Checkbox deaktiviert, kann das Hintergrundbild auf jeder Seite einzeln über die Seiteneinstellungen gewählt werden. Eigene Bilder anderer Seiten bleiben erhalten.'));
+      this.#backgroundControls.append(sharedLabel);
+    }
+    this.#backgroundControls.append(remove);
+    if (this.#sharedBackground) {
+      this.#backgroundControls.append(element('p', 'Ist die Checkbox deaktiviert, kann das Hintergrundbild auf jeder Seite einzeln über die Seiteneinstellungen gewählt werden. Eigene Bilder anderer Seiten bleiben erhalten.'));
     } else if (config.settings.sharedBackground === true) {
       this.#backgroundControls.append(element('p', 'Das Bild der Startseite wird aktuell auf allen Seiten verwendet.'));
     }
@@ -145,34 +148,20 @@ export class Schema5PagePanel {
     this.#transparency.setAttribute('data-liquid-transparency', '');
     const transparencyValue = element('output');
     transparencyLabel.append(this.#transparency, transparencyValue);
-    const preview = element('div');
-    preview.className = 'cms-liquid-preview';
-    preview.setAttribute('aria-label', 'Vorschau der Widgetdarstellung');
-    const card = element('div', 'Beispiel-Widget · 21 °C');
-    card.className = 'cms-liquid-preview-card';
-    preview.append(card);
-    const updatePreview = () => {
-      const intensity = Number(this.#intensity.value);
-      const transparency = Number(this.#transparency.value);
-      setLiquidAppearance(preview, { liquidIntensity: intensity, liquidTransparency: transparency });
-      intensityValue.textContent = `${intensity} %`;
-      transparencyValue.textContent = `${transparency} %`;
-      const shared = this.#sharedBackground ? this.#sharedBackground.checked : config.settings.sharedBackground === true;
-      const background = shared && pageId !== config.pages[0].id ? config.pages[0].background : this.#background;
-      if (background && !ASSET_IMAGE.test(background)) throw new Error('Ungültiges Hintergrundbild');
-      preview.style.setProperty('--cms-liquid-preview-image',
-        background ? `url("${background}")` : 'linear-gradient(125deg, #446a80, #aa805d 50%, #294b68)');
+    const updateValues = () => {
+      intensityValue.textContent = `${this.#intensity.value} %`;
+      transparencyValue.textContent = `${this.#transparency.value} %`;
     };
     const updateLiquidPreview = () => {
-      updatePreview();
+      updateValues();
       this.#updateSettingsPreview();
     };
     this.#intensity.addEventListener('input', updateLiquidPreview);
     this.#transparency.addEventListener('input', updateLiquidPreview);
     this.#sharedBackground?.addEventListener('change', updateLiquidPreview);
-    controls.append(intensityLabel, transparencyLabel, element('p', 'Vorschau'), preview);
+    controls.append(intensityLabel, transparencyLabel);
     this.#backgroundControls.append(controls);
-    updatePreview();
+    updateValues();
     this.#form.append(this.#backgroundControls);
     this.#theme.addEventListener('change', () => {
       controls.hidden = this.#theme.value !== 'liquid-glass';
@@ -200,7 +189,6 @@ export class Schema5PagePanel {
           throw new Error('Ungültiger Bildpfad');
         }
         this.#background = asset.href;
-        updatePreview();
         this.#updateSettingsPreview();
         await this.#updateBackgroundLabel(services);
         this.#message('Bild ausgewählt; noch nicht gespeichert.');
@@ -218,7 +206,6 @@ export class Schema5PagePanel {
       this.#background = '';
       this.#backgroundLabelRevision += 1;
       this.#backgroundLabel.textContent = 'Kein Bild ausgewählt';
-      updatePreview();
       this.#updateSettingsPreview();
     });
     this.#form.addEventListener('submit', (event) => event.preventDefault());

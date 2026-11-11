@@ -18,7 +18,7 @@ export class Schema5SettingsPreview {
     this.element = document.createElement('section');
     this.element.className = 'cms-settings-preview';
     const heading = document.createElement('p');
-    heading.textContent = 'Seitenvorschau · Smartphone quer';
+    heading.textContent = 'Vorschau';
     this.status = document.createElement('p');
     this.status.setAttribute('role', 'status');
     this.status.textContent = 'Seitenvorschau wird geladen …';
