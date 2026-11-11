@@ -1200,7 +1200,8 @@ sub FHEMCMS_ValidateLinks {
             || $link->{kind} !~ /\A(?:internal|external|asset)\z/);
         my @required = (qw(id kind text showText textPosition target grid),
             $link->{kind} eq 'internal' ? 'page' : $link->{kind} eq 'asset' ? 'asset' : 'url');
-        my %allowed = map { $_ => 1 } (@required, 'image');
+        my %allowed = map { $_ => 1 } (@required, 'image',
+            $link->{kind} eq 'internal' ? ('targetMode', 'modalSize') : ());
         return 'Fehlendes oder unbekanntes Linkfeld'
             if (grep { !exists($link->{$_}) } @required);
         return 'Fehlendes oder unbekanntes Linkfeld'
@@ -1217,6 +1218,11 @@ sub FHEMCMS_ValidateLinks {
             return 'Link verweist auf eine unbekannte CMS-Seite'
                 if (!defined($link->{page}) || ref($link->{page}) || !$pages{$link->{page}});
             return 'Interne Links oeffnen immer im selben Fenster' if ($link->{target} ne 'self');
+            return 'Ungueltiger Oeffnungsmodus' if (exists($link->{targetMode})
+                && (!$isString->($link->{targetMode}) || $link->{targetMode} !~ /\A(?:page|modal)\z/));
+            return 'Ungueltige Popupgroesse' if (exists($link->{modalSize})
+                && (!$isString->($link->{modalSize}) || $link->{modalSize} !~ /\A(?:sm|md|lg)\z/
+                    || ($link->{targetMode} // '') ne 'modal'));
         } elsif ($link->{kind} eq 'asset') {
             return 'Ungueltiger Dokumentlink' if (!defined($link->{asset}) || ref($link->{asset})
                 || $link->{asset} !~ m{\A\.\./\.\./fhemcms-assets/[A-Za-z0-9_.-]{1,128}/[0-9a-f]{32}\z}

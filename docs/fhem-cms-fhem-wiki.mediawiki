@@ -305,6 +305,14 @@ Im Einstellungsdialog ordnest du die Kacheln in einem eigenen '''12-Spalten-Rast
 
 Das innere Linkraster ist unabhängig vom äußeren Seitenraster. Ein „neues Fenster“ kann aufgrund von Browserregeln auch als Tab erscheinen.
 
+'''Entwicklungsstand auf dev, noch nicht veröffentlicht:''' Interne Linkkacheln
+können statt eines Seitenwechsels ein Popup in kleiner, mittlerer oder großer
+Breite öffnen. Es zeigt die Zielseite mit Live-Daten über der aktuellen Seite.
+Schließen ist mit '''×''', Escape oder Klick außerhalb möglich. Ein weiteres Popup
+innerhalb des geöffneten Popups wird abgewiesen. Die Änderung gehört zum
+Seitenentwurf; bestehende Links wechseln weiterhin die Seite. Beim Rollback
+passende Code- und Konfigurationssicherungen gemeinsam wiederherstellen.
+
 == Text, Bilder und Live-Platzhalter ==
 
 Das Textwidget bietet einen WYSIWYG-Editor mit Textformatierung, Überschriften, Listen, Farben, Links, Bildern und Tabellen.

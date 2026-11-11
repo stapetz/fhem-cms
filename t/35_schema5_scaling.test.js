@@ -123,6 +123,7 @@ for (const [name, fixtures] of [
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
   ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 204]]],
   ['image variants crop, resize and select without changing original', [['61_asset_image.html', 10]]],
+  ['modal page preserves the main page and closes by keyboard and backdrop', [['62_page_modal.html', 35]]],
   ['themes use and restore page backgrounds', [['55_liquid_glass.html', 63]]],
   ['page settings preview shows the real phone page without saving', [['57_settings_preview.html', 25]]],
   ['page duplication preserves the draft and live page', [['59_page_duplicate.html', 12]]],
@@ -146,7 +147,7 @@ for (const [name, fixtures] of [
   const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
     for (const [fixture, minimum] of fixtures) {
-      const interact = !['49_link_widget.html', '51_asset_manager.html'].includes(fixture) ? undefined : async command => {
+      const interact = !['49_link_widget.html', '51_asset_manager.html', '62_page_modal.html'].includes(fixture) ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
           assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
@@ -160,7 +161,24 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
-        if (fixture === '51_asset_manager.html') {
+        if (fixture === '62_page_modal.html') {
+          await command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+          await command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+          await evaluate('window.modalRegression.afterClose()');
+          await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+          await evaluate('window.modalRegression.open("lg")');
+          await command('Input.dispatchMouseEvent', { type: 'mousePressed', x: 1, y: 1, button: 'left', clickCount: 1 });
+          await command('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 1, y: 1, button: 'left', clickCount: 1 });
+          await evaluate('window.modalRegression.afterClose()');
+          await command('Emulation.clearDeviceMetricsOverride');
+          await evaluate('window.modalRegression.open("md")');
+          await evaluate('document.querySelector(".cms-page-modal > header button").click()');
+          await evaluate('window.modalRegression.afterClose()');
+          await evaluate('window.modalRegression.open()');
+          await evaluate('window.modalRegression.navigateAway()');
+          await evaluate('window.modalRegression.finish()');
+          return;
+        } else if (fixture === '51_asset_manager.html') {
           const click = async selector => {
             const point = await evaluate(`window.assetRegression.point(${JSON.stringify(selector)})`);
             await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });

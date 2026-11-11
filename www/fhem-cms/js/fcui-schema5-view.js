@@ -23,6 +23,7 @@ export class Schema5View {
     this.live = null;
     this.view = null;
     this.stopNavigation = null;
+    this.modal = null;
     this.generation = 0;
     this.active = false;
     this.suspended = false;
@@ -114,6 +115,7 @@ export class Schema5View {
     schema5GridItems(this.config, pageId);
     if (pageId === this.current) return;
     const generation = ++this.generation;
+    this.closeModal(false);
     if (this.live) this.live.stop();
     this.stopNavigation?.();
     this.stopNavigation = null;
@@ -130,8 +132,9 @@ export class Schema5View {
       document.documentElement.style.setProperty('--cms-page-image', image);
       setLiquidAppearance(document.documentElement, this.config.settings);
       const navigation = this.navigation(pageId);
+      const services = { ...this.services, openPageModal: (id, size) => this.openModal(id, size) };
       this.view = mountSchema5Widgets(this.GridStack, this.root, this.config, pageId,
-        navigation, this.services, new Map(), this.editing && {
+        navigation, services, new Map(), this.editing && {
           onChange: (items) => this.editing.onChange(pageId, items),
           onEdit: (id) => this.editing.onEdit(pageId, id),
           onMove: typeof this.editing.onMove === 'function'
@@ -143,7 +146,10 @@ export class Schema5View {
         () => Boolean(this.editing) || getComputedStyle(this.root).display !== 'flex');
       const view = this.view;
       this.live = new Schema5LivePage(this.client, page.widgets,
-        (snapshots, stale) => view.update(snapshots, stale),
+        (snapshots, stale) => {
+          view.update(snapshots, stale);
+          this.modal?.view.update(snapshots, stale);
+        },
         ({ connection, error, lastSuccess }) => {
           if (!this.active || generation !== this.generation) return;
           if (error) {
@@ -168,6 +174,75 @@ export class Schema5View {
     }
   }
 
+  async openModal(pageId, size = 'md') {
+    if (!this.active || this.suspended || !this.live || !this.current) throw new Error('Seitenansicht ist nicht aktiv');
+    if (this.modal) throw new Error('Bitte das geöffnete Popup zuerst schließen.');
+    if (!['sm', 'md', 'lg'].includes(size)) throw new Error('Ungültige Popupgröße');
+    schema5GridItems(this.config, pageId);
+    const page = this.config.pages.find(entry => entry.id === pageId);
+    const originalFocus = document.activeElement;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'cms-page-modal';
+    dialog.dataset.size = size;
+    dialog.setAttribute('aria-labelledby', 'cms-modal-title');
+    const background = schema5PageBackground(this.config, pageId);
+    if (background) dialog.style.backgroundImage = `url("${new URL(background, this.browser.location.href).href}")`;
+    const header = document.createElement('header');
+    const title = document.createElement('h2');
+    title.id = 'cms-modal-title'; title.textContent = page.title;
+    const close = document.createElement('button');
+    close.type = 'button'; close.textContent = '×';
+    close.setAttribute('aria-label', 'Popup schließen');
+    close.addEventListener('click', () => dialog.close());
+    header.append(title, close);
+    const shell = document.createElement('div'); shell.className = 'cms-shell';
+    const workspace = document.createElement('div'); workspace.className = 'cms-schema5-workspace';
+    const grid = document.createElement('div'); grid.className = 'grid-stack cms-schema5-grid';
+    workspace.append(grid); shell.append(workspace); dialog.append(header, shell);
+    dialog.addEventListener('click', event => {
+      if (event.target !== dialog) return;
+      const bounds = dialog.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right
+        || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+    });
+    dialog.addEventListener('close', () => {
+      if (this.modal?.dialog === dialog) this.closeModal(true);
+    });
+    document.body.append(dialog);
+    let view;
+    try {
+      const navigation = this.navigation(pageId, this.config, false);
+      view = mountSchema5Widgets(this.GridStack, grid, this.config, pageId, navigation,
+        { ...this.services, openPageModal: (id, nextSize) => this.openModal(id, nextSize) },
+        this.live.snapshots);
+      const stopNavigation = observeSchema5Navigation(navigation, () => getComputedStyle(grid).display !== 'flex');
+      this.modal = { dialog, view, stopNavigation, originalFocus };
+      dialog.showModal();
+      close.focus();
+      const current = this.config.pages.find(entry => entry.id === this.current);
+      await this.live.setWidgets([...current.widgets, ...page.widgets]);
+    } catch (error) {
+      if (this.modal?.dialog === dialog) this.closeModal(true);
+      else { view?.destroy(); dialog.remove(); }
+      throw error;
+    }
+  }
+
+  closeModal(restoreLive = true) {
+    const modal = this.modal;
+    if (!modal) return;
+    this.modal = null;
+    modal.stopNavigation();
+    modal.view.destroy();
+    if (modal.dialog.open) modal.dialog.close();
+    modal.dialog.remove();
+    modal.originalFocus?.focus?.();
+    if (restoreLive && this.live && this.current && this.active && !this.suspended) {
+      const page = this.config.pages.find(entry => entry.id === this.current);
+      this.live.setWidgets(page.widgets).catch(error => this.showError(error));
+    }
+  }
+
   stop() {
     if (!this.active) return;
     this.active = false;
@@ -185,6 +260,7 @@ export class Schema5View {
 
   clearPage() {
     this.generation += 1;
+    this.closeModal(false);
     if (this.live) this.live.stop();
     this.stopNavigation?.();
     this.stopNavigation = null;

@@ -313,6 +313,17 @@ auf eine vorhandene CMS-Seite; im Dialog wählen Sie das gewünschte Ziel:
 - **Dokument aus Assetmanager:** Ein abgelegtes Dokument auswählen.
   Es wird über einen Download-Link angeboten.
 
+**Entwicklungsstand auf `dev` – noch nicht veröffentlicht:** Für interne
+Linkkacheln lässt sich unter **Öffnen als** statt Seitenwechsel **Popup (Modal)**
+mit kleiner, mittlerer oder großer Breite wählen. Die Zielseite erscheint über
+der unveränderten aktuellen Seite und wird mit Live-Daten versorgt. Schließen
+über **×**, Escape oder einen Klick außerhalb. Ein weiteres Popup innerhalb
+eines geöffneten Popups ist nicht möglich und wird mit einer Meldung abgewiesen.
+Die Einstellung wird wie andere Widgetänderungen erst als Entwurf gespeichert.
+Bestehende Links behalten den Seitenwechsel. Für ein Zurücksetzen auf einen
+älteren Programmstand müssen dazu passende Code- und Konfigurationssicherungen
+gemeinsam wiederhergestellt werden.
+
 Jede Kachel benötigt einen **Linktext**, der auch bei ausgeblendetem Text als
 zugängliche Linkbeschriftung erhalten bleibt. Mit **Linktext anzeigen** lässt er
 sich ein-/ausblenden. Bei sichtbarem Text sind **Oberhalb des Bildes**, **Im Bild**

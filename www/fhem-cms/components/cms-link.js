@@ -184,6 +184,15 @@ class FHEMCMSLink extends HTMLElement {
           event.preventDefault();
           this.ownerDocument.defaultView.open(linkHref(link), '_blank', 'noopener,noreferrer,popup,width=1000,height=800');
         });
+        if (link.kind === 'internal' && link.targetMode === 'modal') anchor.addEventListener('click', event => {
+          if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          if (typeof this.services?.openPageModal !== 'function') {
+            this.message('Popup-Ansicht ist hier nicht verfügbar.'); return;
+          }
+          Promise.resolve().then(() => this.services.openPageModal(link.page, link.modalSize || 'md'))
+            .catch(error => this.message(error.message || 'Popup konnte nicht geöffnet werden.'));
+        });
         box.append(anchor);
       }
       this.message('');
@@ -314,12 +323,25 @@ class FHEMCMSLink extends HTMLElement {
     field('Linktext (auch bei ausgeblendetem Text erforderlich)', 'text');
     field('Linkziel', 'kind', [['internal', 'Interne CMS-Seite'], ['external', 'Externe Webseite'], ['asset', 'Dokument aus Assetmanager']], () => {
       delete link.page; delete link.url; delete link.asset;
+      delete link.targetMode; delete link.modalSize;
       if (link.kind === 'internal') { link.page = this.pages[0].id; link.target = 'self'; }
       else if (link.kind === 'external') { link.url = ''; link.target = 'tab'; }
       else { link.asset = ''; link.target = 'self'; }
       this.editSelected();
     });
-    if (link.kind === 'internal') field('CMS-Seite', 'page', this.pages.map(page => [page.id, page.title]));
+    if (link.kind === 'internal') {
+      field('CMS-Seite', 'page', this.pages.map(page => [page.id, page.title]));
+      const targetMode = field('Öffnen als', 'targetMode', [['page', 'Seitenwechsel'], ['modal', 'Popup (Modal)']], () => {
+        if (link.targetMode === 'modal') link.modalSize = 'md';
+        else { delete link.targetMode; delete link.modalSize; }
+        this.editSelected();
+      });
+      targetMode.value = link.targetMode || 'page';
+      if (link.targetMode === 'modal') {
+        const modalSize = field('Popupgröße', 'modalSize', [['sm', 'Klein'], ['md', 'Mittel'], ['lg', 'Groß']]);
+        modalSize.value = link.modalSize || 'md';
+      }
+    }
     else {
       if (link.kind === 'external') field('URL (http:// oder https://)', 'url');
       else {

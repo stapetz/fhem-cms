@@ -20,7 +20,7 @@ export function validateLinkItems(links, pages) {
     if (!link || typeof link !== 'object' || Array.isArray(link)) throw new Error('Ungültiger Link');
     const required = ['id', 'kind', 'text', 'showText', 'textPosition', 'target', 'grid',
       link.kind === 'internal' ? 'page' : link.kind === 'asset' ? 'asset' : 'url'];
-    const keys = new Set([...required, 'image']);
+    const keys = new Set([...required, 'image', ...(link.kind === 'internal' ? ['targetMode', 'modalSize'] : [])]);
     if (required.some(key => !Object.hasOwn(link, key)) || Object.keys(link).some(key => !keys.has(key))) {
       throw new Error('Fehlendes oder unbekanntes Linkfeld');
     }
@@ -37,6 +37,11 @@ export function validateLinkItems(links, pages) {
         throw new Error('Link verweist auf eine unbekannte CMS-Seite');
       }
       if (link.target !== 'self') throw new Error('Interne Links öffnen immer im selben Fenster');
+      if (Object.hasOwn(link, 'targetMode') && !['page', 'modal'].includes(link.targetMode)) {
+        throw new Error('Ungültiger Öffnungsmodus');
+      }
+      if (Object.hasOwn(link, 'modalSize') && (!['sm', 'md', 'lg'].includes(link.modalSize)
+        || link.targetMode !== 'modal')) throw new Error('Ungültige Popupgröße');
     } else if (link.kind === 'asset') {
       if (typeof link.asset !== 'string' || !ASSET_DOCUMENT.test(link.asset)
         || !['self', 'tab', 'window'].includes(link.target)) throw new Error('Ungültiger Dokumentlink');
