@@ -38,8 +38,13 @@ test('liquid glass resolves local and shared backgrounds without modifying pages
   assert.equal(schema5PageBackground(config, 'other'), second);
   delete config.settings;
   assert.equal(schema5PageBackground(config, 'other'), second, 'optional settings default to individual backgrounds');
-  config.theme = 'dark';
-  assert.equal(schema5PageBackground(config, 'other'), '');
+  for (const theme of ['dark', 'light', 'liquid-glass']) {
+    config.theme = theme;
+    assert.equal(schema5PageBackground(config, 'other'), second, `${theme} uses the individual image`);
+    config.settings = { sharedBackground: true };
+    assert.equal(schema5PageBackground(config, 'other'), first, `${theme} uses the shared image`);
+    config.settings.sharedBackground = false;
+  }
   config.pages[1].background = 'https://example.test/a.png';
   assert.throws(() => schema5PageBackground(config, 'other'), /Ungültiges Hintergrundbild/);
   assert.throws(() => schema5PageBackground(config, 'unknown'), /Unbekannte Seite/);

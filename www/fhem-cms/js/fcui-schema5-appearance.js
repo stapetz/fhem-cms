@@ -20,5 +20,5 @@ export function schema5PageBackground(config, pageId) {
   if (background !== undefined && (typeof background !== 'string' || !ASSET_IMAGE.test(background))) {
     throw new Error('Ungültiges Hintergrundbild');
   }
-  return config.theme === 'liquid-glass' ? background || '' : '';
+  return background || '';
 }

@@ -120,7 +120,7 @@ for (const [name, fixtures] of [
   ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 850]]],
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
   ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 204]]],
-  ['liquid glass uses and restores page backgrounds', [['55_liquid_glass.html', 25]]],
+  ['liquid glass uses and restores page backgrounds', [['55_liquid_glass.html', 37]]],
 ]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,
