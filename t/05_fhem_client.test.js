@@ -155,6 +155,30 @@ test('jsonlist reports malformed responses instead of treating them as empty dev
   await assert.rejects(client.jsonlist('Temp'), /keine gültigen Gerätedaten/);
 });
 
+test('jsonlist exposes every room while keeping the legacy first room field', async () => {
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    return new Response(JSON.stringify({
+      Results: [{
+        Name: 'LivingSensor',
+        Attributes: { room: 'Living, Kitchen, Living' },
+        Readings: {},
+      }],
+    }));
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.deepEqual(await client.jsonlist('.*'), [{
+    name: 'LivingSensor',
+    alias: '',
+    type: '',
+    room: 'Living',
+    rooms: ['Living', 'Kitchen'],
+    parent: '',
+    readings: {},
+    sets: '',
+  }]);
+});
+
 test('versioned state uses a read-only command and checks the response shape', async () => {
   const calls = [];
   let answer = { live: { schemaVersion: 5 }, draft: null, token: 'a'.repeat(64) };

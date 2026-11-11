@@ -206,9 +206,18 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     assert.deepEqual(viewMenu.children[1].children.map((item) => item.textContent), ['Vorschau', 'Raster anzeigen']);
     const assetButton = fileMenu.children[1].children.find(item => item.textContent === 'Assetmanager');
     assert.ok(assetButton, 'File menu exposes shared Assetmanager');
+    const setupButton = fileMenu.children[1].children.find(item => item.textContent === 'Einrichtungsassistent');
+    assert.ok(setupButton, 'File menu keeps the setup wizard available after initial setup');
     await assetButton.fire('click');
     assert.equal(assetCalls, 1);
     assert.equal(writes, 0, 'opening Assetmanager never saves or publishes a page draft');
+    await setupButton.fire('click');
+    const setupDialog = content.children[0];
+    assert.equal(setupDialog.attributes['data-panel'], 'setup');
+    assert.equal(setupDialog.children[0].textContent, 'Einrichtungsassistent');
+    await setupDialog.children[4].children.find(item => item.textContent === 'Abbrechen').fire('click');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(writes, 0, 'opening and cancelling the setup wizard never writes a draft');
     fileMenu.open = true;
     editMenu.open = true;
     editMenu.fire('toggle');
@@ -226,7 +235,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     await assert.rejects(widgetServices.setTarget({}, 20), /Bearbeitungsmodus deaktiviert/);
     edit.fire('click');
     assert.equal(grids[0].destroyed, true);
-    assert.equal(unsubscribed, 1);
+    assert.equal(unsubscribed, 2, 'opening the setup wizard stops and restores the current view');
     const panel = content.children[0];
     assert.equal(panel.children[0].textContent, 'Seiteneinstellungen');
     assert.equal(panel.children.length, 5, 'settings contain no separate widget grid or position form');

@@ -10,6 +10,7 @@ import { createSchema5WidgetServices } from './widget-services.js';
 import { applySchema5GridItems, arrangeSchema5Widgets, schema5GridItems } from './fcui-schema5-layout.js';
 import { DevicePreview } from './device-preview.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
+import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-wizard.js';
 
 export function createSchema5Editor({ GridStack, root, draftClient, liveClient, services, browser = window }) {
   if (!draftClient || !liveClient || draftClient === liveClient) {
@@ -38,6 +39,7 @@ export class Schema5Editor {
   #arrange;
   #backup;
   #assets;
+  #setup;
   #gridToggle;
   #previewToggle;
   #publish;
@@ -55,6 +57,8 @@ export class Schema5Editor {
   #menus = [];
   #showGrid = false;
   #previewMode = false;
+  #setupPrompted = false;
+  #setupWizardStorageKey;
   #gridElement = null;
   #layoutSaving = false;
   #layoutSavePromise = Promise.resolve();
@@ -78,6 +82,7 @@ export class Schema5Editor {
       setTarget: async () => { throw new Error('Geräteaktionen sind im Bearbeitungsmodus deaktiviert'); },
     };
     this.#browser = browser;
+    this.#setupWizardStorageKey = `fhem-cms:setup-wizard:${client.endpoint?.pathname || ''}:${client.cmsDevice || ''}`;
     this.#toolbar = document.createElement('div');
     this.#toolbar.className = 'cms-toolbar';
     this.#toolbar.setAttribute('role', 'toolbar');
@@ -116,6 +121,10 @@ export class Schema5Editor {
     this.#assets.type = 'button';
     this.#assets.textContent = 'Assetmanager';
     this.#assets.className = 'cms-button';
+    this.#setup = document.createElement('button');
+    this.#setup.type = 'button';
+    this.#setup.textContent = 'Einrichtungsassistent';
+    this.#setup.className = 'cms-button';
     this.#gridToggle = document.createElement('button');
     this.#gridToggle.type = 'button';
     this.#gridToggle.textContent = 'Raster anzeigen';
@@ -126,7 +135,7 @@ export class Schema5Editor {
     this.#previewToggle.textContent = 'Vorschau';
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
-    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets]);
+    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets, this.#setup]);
     this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#arrange]);
     this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
@@ -140,6 +149,7 @@ export class Schema5Editor {
     this.#widgets.addEventListener('click', () => this.#openWidgets());
     this.#arrange.addEventListener('click', () => this.#arrangeWidgets());
     this.#backup.addEventListener('click', () => this.#openBackup());
+    this.#setup.addEventListener('click', () => this.#openSetupWizard());
     this.#assets.addEventListener('click', async () => {
       if (!this.#active || this.#suspended || this.#assets.disabled) return;
       this.#setActions(false, false);
@@ -237,6 +247,7 @@ export class Schema5Editor {
     this.#arrange.disabled = !enabled;
     this.#backup.disabled = !enabled;
     this.#assets.disabled = !enabled;
+    this.#setup.disabled = !enabled;
     this.#gridToggle.disabled = !enabled;
     this.#previewToggle.disabled = !enabled;
     this.#publish.disabled = !enabled || !hasDraft;
@@ -335,6 +346,10 @@ export class Schema5Editor {
       this.#content.scrollTop = scrollTop;
       this.#setActions(true, state.draft !== null);
       this.#reloadButton.hidden = true;
+      if (!this.#setupPrompted && !state.draft && isSchema5InitialSetup(state.live)) {
+        this.#setupPrompted = true;
+        if (!this.#hasSeenSetupWizard()) this.#openSetupWizard(true);
+      }
     }
   }
 
@@ -485,6 +500,55 @@ export class Schema5Editor {
     } catch (error) {
       this.#content.replaceChildren();
       this.#error(error);
+    }
+  }
+
+  #openSetupWizard(automatic = false) {
+    if (!this.#active || this.#suspended || !this.#view || this.#setup.disabled) return;
+    try {
+      this.#generation += 1;
+      this.#setActions(false, false);
+      this.#view.stop();
+      this.#view = null;
+      this.#content.replaceChildren();
+      const container = this.#panelContainer('setup');
+      this.#panel = new Schema5SetupWizard({
+        root: container,
+        controller: this.#controller,
+        client: this.#client,
+        onComplete: () => this.#markSetupWizardSeen(),
+        onDismiss: () => { if (automatic) this.#markSetupWizardSeen(); },
+        onClose: ({ requiresReload }) => {
+          this.#panel = null;
+          Promise.resolve().then(() => requiresReload
+            ? this.#reload() : this.#display(this.#controller.snapshot(), this.#generation))
+            .catch((error) => this.#error(error));
+        },
+      });
+    } catch (error) {
+      this.#content.replaceChildren();
+      this.#error(error);
+    }
+  }
+
+  #hasSeenSetupWizard() {
+    try {
+      const storage = this.#browser.localStorage;
+      if (!storage) throw new Error('localStorage nicht verfügbar');
+      return storage.getItem(this.#setupWizardStorageKey) === '1';
+    } catch {
+      this.#status.textContent = 'Der Einrichtungsstatus kann nicht im Browser gelesen werden. Der Assistent bleibt manuell erreichbar.';
+      return false;
+    }
+  }
+
+  #markSetupWizardSeen() {
+    try {
+      const storage = this.#browser.localStorage;
+      if (!storage) throw new Error('localStorage nicht verfügbar');
+      storage.setItem(this.#setupWizardStorageKey, '1');
+    } catch {
+      this.#status.textContent = 'Der Einrichtungsstatus konnte nicht im Browser gespeichert werden. Der Assistent bleibt manuell erreichbar.';
     }
   }
 
