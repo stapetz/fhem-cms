@@ -106,7 +106,7 @@ Titel steht diese Fläche wieder dem Diagramm zur Verfügung.
 
 ## Schema-5-Editor bedienen
 
-**Entwicklungsstand (`dev`):** Der Einrichtungsassistent wird bei einer neuen,
+Der Einrichtungsassistent wird bei einer neuen,
 leeren CMS-Konfiguration einmal angeboten. Nach `purge` und Neuanlage erscheint
 er erneut. Die manuelle Auswahl zeigt vor dem Speichern eine Vorschau; **Magic -
 auf gut Glück** erstellt direkt einen Entwurf, veröffentlicht ihn aber nicht.
