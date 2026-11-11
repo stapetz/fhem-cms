@@ -106,6 +106,7 @@ try {
 
   const host = document.createElement('div');
   host.className = 'cms-schema5-grid cms-grid-editable';
+  host.style.setProperty('--cms-view-width', '1200px');
   const nav = document.createElement('nav');
   nav.className = 'cms-nav is-vertical';
   nav.innerHTML = '<button class="cms-nav-burger" aria-expanded="false">☰</button>'
@@ -172,6 +173,42 @@ try {
   await settle();
   check(nav.hasAttribute('data-compact'), 'same width does not fit horizontal row');
   stop();
+
+  nav.style.width = '800px';
+  nav.style.height = '100px';
+  const normal = measureSchema5Navigation(nav);
+  nav.style.height = `${normal.height - 2}px`;
+  const stopHeightFit = observeSchema5Navigation(nav, true);
+  await settle();
+  check(!nav.hasAttribute('data-compact'), 'horizontal links shrink for a small height shortage');
+  const scale = Number(nav.style.getPropertyValue('--cms-nav-fit-scale'));
+  check(scale >= 0.8 && scale < 1, 'height adjustment uses a bounded reduction');
+  const navBox = nav.getBoundingClientRect();
+  for (const link of nav.querySelectorAll('.cms-nav-link')) {
+    const box = link.getBoundingClientRect();
+    check(box.bottom <= navBox.bottom + 0.5, 'height-adjusted link is not clipped');
+  }
+  let styleChanges = 0;
+  const styleObserver = new MutationObserver(records => { styleChanges += records.length; });
+  styleObserver.observe(nav, { attributes: true, attributeFilter: ['style'] });
+  await new Promise(resolve => setTimeout(resolve, 300));
+  check(styleChanges === 0, 'height adjustment settles without repeated style writes');
+  styleObserver.disconnect();
+  const fixedLink = nav.querySelector('.cms-nav-link');
+  fixedLink.style.height = '100px';
+  await settle();
+  check(nav.hasAttribute('data-compact'), 'fixed link height that cannot fit uses burger');
+  check(!nav.style.getPropertyValue('--cms-nav-fit-scale'), 'burger keeps normal size');
+  fixedLink.style.removeProperty('height');
+  await settle();
+  check(!nav.hasAttribute('data-compact'), 'removing fixed height restores fitted links');
+  nav.style.height = `${Math.ceil(normal.height) + 2}px`;
+  await settle();
+  check(!nav.style.getPropertyValue('--cms-nav-fit-scale'), 'full size returns when height grows');
+  nav.style.height = `${normal.height / 2}px`;
+  await settle();
+  check(nav.hasAttribute('data-compact'), 'severe height shortage retains burger menu');
+  stopHeightFit();
   host.remove();
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });

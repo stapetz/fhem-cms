@@ -172,6 +172,7 @@ Die Navigation ist ein gemeinsames Widget für alle Seiten des CMS-Devices. Öff
 * Die letzte verbleibende Seite kann nicht einfach entfernt werden.
 * Die Navigation lässt sich horizontal oder vertikal ausrichten, verschieben und skalieren.
 * Bei Platzmangel erscheint ein aufklappbares Burger-Menü.
+* Entwicklungsstand <code>dev</code>: Bei horizontaler Navigation werden Einträge bei knappem Platz in der Höhe um höchstens 20 Prozent verkleinert; reicht der Platz auch dann nicht, erscheint das Burger-Menü.
 * Eine vergrößerte gemeinsame Navigation kann kollidierende Widgets auf allen Seiten nach unten verschieben.
 
 Unter '''Bearbeiten → Seiteneinstellungen''' legst du Theme, Widgetrahmen, globale Titelausrichtung und Rasterdichte fest. Möglich sind '''12, 24, 48, 96 oder 192 Spalten'''. Die gemeinsamen Einstellungen gelten für alle Seiten des CMS-Devices.

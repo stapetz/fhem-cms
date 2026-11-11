@@ -26,13 +26,46 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
   const burger = nav.querySelector('.cms-nav-burger');
   if (!burger) throw new Error('Navigationsschalter fehlt');
   let stopped = false;
+  const originalScale = nav.style.getPropertyValue('--cms-nav-fit-scale');
+  const originalPriority = nav.style.getPropertyPriority('--cms-nav-fit-scale');
+  const otherStyles = () => [...nav.style].filter((name) => name !== '--cms-nav-fit-scale')
+    .map((name) => [name, nav.style.getPropertyValue(name), nav.style.getPropertyPriority(name)]);
+  let observedStyles = JSON.stringify(otherStyles());
+  const setScale = (scale) => {
+    if (scale === 1 && !originalScale) nav.style.removeProperty('--cms-nav-fit-scale');
+    else nav.style.setProperty('--cms-nav-fit-scale', String(scale));
+  };
   nav.setAttribute('data-adaptive', '');
   const measure = () => {
     if (stopped || nav.clientWidth <= 0) return;
-    const required = measureSchema5Navigation(nav);
     const fixedHeight = typeof constrainHeight === 'function' ? constrainHeight() : constrainHeight;
+    setScale(1);
+    let required = measureSchema5Navigation(nav);
+    if (fixedHeight && !nav.classList.contains('is-vertical')
+      && required.height > nav.clientHeight + 0.5) {
+      let lower = 0.8;
+      let upper = 1;
+      setScale(lower);
+      let reduced = measureSchema5Navigation(nav);
+      if (reduced.height <= nav.clientHeight - 0.5) {
+        for (let i = 0; i < 10; i++) {
+          const middle = (lower + upper) / 2;
+          setScale(middle);
+          const candidate = measureSchema5Navigation(nav);
+          if (candidate.height <= nav.clientHeight - 0.5) {
+            lower = middle;
+            reduced = candidate;
+          } else upper = middle;
+        }
+        setScale(lower);
+        required = reduced;
+      } else {
+        setScale(1);
+      }
+    }
     const compact = required.width > nav.clientWidth + 0.5
       || (fixedHeight && required.height > nav.clientHeight + 0.5);
+    if (compact) setScale(1);
     nav.toggleAttribute('data-compact', compact);
     if (!compact) {
       const focused = nav.ownerDocument.activeElement === burger;
@@ -40,9 +73,13 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
       burger.setAttribute('aria-expanded', 'false');
       if (focused) nav.querySelector('.cms-nav-link')?.focus();
     }
+    observedStyles = JSON.stringify(otherStyles());
   };
   const resize = new browser.ResizeObserver(measure);
-  const changes = new browser.MutationObserver(measure);
+  const changes = new browser.MutationObserver((records) => {
+    if (!records || records.some((record) => record.target !== nav || record.attributeName !== 'style'
+      || JSON.stringify(otherStyles()) !== observedStyles)) measure();
+  });
   resize.observe(nav);
   changes.observe(nav, { subtree: true, childList: true, characterData: true,
     attributes: true, attributeFilter: ['class', 'style', 'hidden', 'aria-current'] });
@@ -57,5 +94,7 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
     fonts?.removeEventListener('loadingdone', measure);
     nav.removeAttribute('data-adaptive');
     nav.removeAttribute('data-compact');
+    if (originalScale) nav.style.setProperty('--cms-nav-fit-scale', originalScale, originalPriority);
+    else nav.style.removeProperty('--cms-nav-fit-scale');
   };
 }

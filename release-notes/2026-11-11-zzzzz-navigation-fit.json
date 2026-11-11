@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-11",
+  "version": "1.8.1-dev",
+  "title": "Mobile Navigation (Refs #141)",
+  "changes": [
+    "Horizontale Navigation verkleinert Eintraege bei knapper Hoehe begrenzt, bevor das Burger-Menue erscheint.",
+    "Mobile Vorschau und Touch-Ansicht pruefen den verfuegbaren Platz weiterhin ohne Aenderung des gespeicherten Rasters."
+  ]
+}

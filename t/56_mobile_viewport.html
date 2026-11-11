@@ -24,7 +24,8 @@ const config = {
   pages: [{ id: 'start', title: 'Start', widgets: [0, 1, 2, 3].map(index => ({
     id: `w${index}`, type: 'text', title: `Widget ${index}`, html: '<p>Beispiel</p>',
     grid: { col: 1 + index * 3, row: 2, w: 3, h: 3 },
-  })) }],
+  })) }, ...['Thermometer', 'Diverse neue Widgets', 'Solaranlage']
+    .map((title, index) => ({ id: `page${index}`, title, widgets: [] }))],
 };
 try {
   const before = JSON.stringify(config);
@@ -44,6 +45,15 @@ try {
       `${width}: horizontal overflow ${workspace.scrollWidth}/${workspace.clientWidth}`);
     const edge = workspace.getBoundingClientRect();
     const boxes = [...root.querySelectorAll('.grid-stack-item-content')].map(item => item.getBoundingClientRect());
+    const nav = root.querySelector('.cms-nav');
+    if (!nav.hasAttribute('data-compact')) {
+      const bounds = nav.getBoundingClientRect();
+      for (const link of nav.querySelectorAll('.cms-nav-link')) {
+        const box = link.getBoundingClientRect();
+        check(box.left >= bounds.left - 0.5 && box.right <= bounds.right + 0.5
+          && box.bottom <= bounds.bottom + 0.5, `${width}: navigation link clipped`);
+      }
+    }
     for (const box of boxes) {
       check(box.left >= edge.left - 1 && box.right <= edge.right + 1, `${width}: widget clipped`);
     }

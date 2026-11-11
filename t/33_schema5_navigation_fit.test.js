@@ -2,6 +2,17 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { observeSchema5Navigation } from '../www/fhem-cms/js/fcui-schema5-navigation-fit.js';
 
+function style() {
+  const values = new Map();
+  return {
+    [Symbol.iterator]: () => values.keys(),
+    getPropertyValue: name => values.get(name) || '',
+    getPropertyPriority: () => '',
+    setProperty: (name, value) => values.set(name, value),
+    removeProperty: name => values.delete(name),
+  };
+}
+
 test('navigation measures links and gaps, reacts to content/fonts/resize and disconnects', async () => {
   const callbacks = [];
   let disconnected = 0;
@@ -27,6 +38,7 @@ test('navigation measures links and gaps, reacts to content/fonts/resize and dis
     removeEventListener(name, callback) { assert.equal(callback, fontCallback); fontCallback = null; },
   };
   const nav = {
+    style: style(), getAttribute: () => '',
     clientWidth: 336,
     clientHeight: 120,
     classList: { contains() { return false; } },
@@ -86,6 +98,7 @@ test('vertical navigation needs only the widest link but reserves full stacked h
     disconnect() {}
   }
   const nav = {
+    style: style(), getAttribute: () => '',
     clientWidth: 166, clientHeight: 120,
     classList: { contains() { return vertical; } },
     hasAttribute(name) { return attributes.has(name); },
@@ -130,4 +143,85 @@ test('vertical navigation needs only the widest link but reserves full stacked h
   callbacks.at(-2)();
   assert.ok(attributes.has('data-compact'), 'returning to desktop restores height constraint');
   stopResponsive();
+});
+
+test('horizontal links shrink only for a small height shortage and restore when space grows', () => {
+  const attributes = new Set();
+  const callbacks = [];
+  const navStyle = style();
+  class Observer {
+    constructor(callback) { callbacks.push(callback); }
+    observe() {}
+    disconnect() {}
+  }
+  const link = { getBoundingClientRect() {
+    const scale = Number(navStyle.getPropertyValue('--cms-nav-fit-scale') || 1);
+    return { width: 100 * scale, height: 30 * scale + 2 };
+  } };
+  const nav = {
+    style: navStyle, getAttribute: () => navStyle.getPropertyValue('--cms-nav-fit-scale'),
+    clientWidth: 150, clientHeight: 30,
+    classList: { contains: () => false },
+    hasAttribute: name => attributes.has(name),
+    setAttribute: name => attributes.add(name),
+    removeAttribute: name => attributes.delete(name),
+    toggleAttribute: (name, value) => value ? attributes.add(name) : attributes.delete(name),
+    querySelector: () => ({ setAttribute() {} }),
+    querySelectorAll: () => [link],
+    ownerDocument: { defaultView: { ResizeObserver: Observer, MutationObserver: Observer,
+      getComputedStyle: () => ({}) } },
+  };
+  const stop = observeSchema5Navigation(nav, true);
+  const scale = Number(navStyle.getPropertyValue('--cms-nav-fit-scale'));
+  assert.ok(scale >= 0.8 && scale < 1, `small reduction applied: ${scale}`);
+  assert.ok(!attributes.has('data-compact'), 'reduced link fits');
+  nav.clientHeight = 32;
+  callbacks[0]();
+  assert.equal(navStyle.getPropertyValue('--cms-nav-fit-scale'), '');
+  assert.ok(!attributes.has('data-compact'));
+  nav.clientHeight = 20;
+  callbacks[0]();
+  assert.ok(attributes.has('data-compact'), 'large height shortage still collapses');
+  nav.clientHeight = 30;
+  nav.clientWidth = 50;
+  callbacks[0]();
+  assert.ok(attributes.has('data-compact'), 'insufficient width still collapses');
+  assert.equal(navStyle.getPropertyValue('--cms-nav-fit-scale'), '', 'burger keeps normal size');
+  stop();
+  assert.equal(navStyle.getPropertyValue('--cms-nav-fit-scale'), '');
+});
+
+test('style observer ignores its own scaling but reacts to external style changes', () => {
+  const callbacks = [];
+  let measurements = 0;
+  const attributes = new Set();
+  const navStyle = style();
+  class Observer {
+    constructor(callback) { callbacks.push(callback); }
+    observe() {}
+    disconnect() {}
+  }
+  const nav = {
+    style: navStyle, clientWidth: 150, clientHeight: 30,
+    classList: { contains: () => false },
+    hasAttribute: name => attributes.has(name),
+    setAttribute: name => attributes.add(name),
+    removeAttribute: name => attributes.delete(name),
+    toggleAttribute: (name, value) => value ? attributes.add(name) : attributes.delete(name),
+    querySelector: () => ({ setAttribute() {} }),
+    querySelectorAll: () => [{ getBoundingClientRect() {
+      measurements++;
+      return { width: 100, height: 30 * Number(navStyle.getPropertyValue('--cms-nav-fit-scale') || 1) + 2 };
+    } }],
+    ownerDocument: { defaultView: { ResizeObserver: Observer, MutationObserver: Observer,
+      getComputedStyle: () => ({}) } },
+  };
+  const stop = observeSchema5Navigation(nav, true);
+  const afterInitial = measurements;
+  callbacks[1]([{ target: nav, attributeName: 'style' }]);
+  assert.equal(measurements, afterInitial, 'scale writes do not retrigger measurement');
+  navStyle.setProperty('height', '40px');
+  callbacks[1]([{ target: nav, attributeName: 'style' }]);
+  assert.ok(measurements > afterInitial, 'external inline style change is measured');
+  stop();
 });

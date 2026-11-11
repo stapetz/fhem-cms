@@ -319,7 +319,7 @@ body:has(.cms-schema5-grid) {
 
 .cms-schema5-grid .cms-nav {
   container-type: normal;
-  font-size: max(.75rem, calc(var(--cms-view-width) / 75));
+  font-size: calc(max(.75rem, calc(var(--cms-view-width) / 75)) * var(--cms-nav-fit-scale, 1));
   gap: .5em;
 }
 
