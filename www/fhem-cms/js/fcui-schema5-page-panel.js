@@ -113,7 +113,7 @@ export class Schema5PagePanel {
     const remove = element('button', 'Hintergrundbild entfernen');
     remove.type = 'button';
     remove.className = 'cms-button';
-    this.#backgroundControls.append(headingBackground, choose);
+    this.#backgroundControls.append(choose);
     if (pageId === config.pages[0].id) {
       const sharedLabel = element('label', 'Bild auf allen Seiten verwenden ');
       this.#sharedBackground = element('input');
@@ -122,7 +122,7 @@ export class Schema5PagePanel {
       sharedLabel.append(this.#sharedBackground);
       this.#backgroundControls.append(sharedLabel);
     }
-    this.#backgroundControls.append(remove);
+    this.#backgroundControls.append(remove, headingBackground);
     if (this.#sharedBackground) {
       this.#backgroundControls.append(element('p', 'Ist die Checkbox deaktiviert, kann das Hintergrundbild auf jeder Seite einzeln über die Seiteneinstellungen gewählt werden. Eigene Bilder anderer Seiten bleiben erhalten.'));
     } else if (config.settings.sharedBackground === true) {
