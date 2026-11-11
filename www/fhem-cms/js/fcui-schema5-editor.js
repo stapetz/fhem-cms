@@ -506,6 +506,7 @@ export class Schema5Editor {
   #openSetupWizard(automatic = false) {
     if (!this.#active || this.#suspended || !this.#view || this.#setup.disabled) return;
     try {
+      const view = this.#view;
       this.#generation += 1;
       this.#setActions(false, false);
       this.#view.stop();
@@ -516,10 +517,14 @@ export class Schema5Editor {
         root: container,
         controller: this.#controller,
         client: this.#client,
+        fitNavigation: (config) => this.#fitNavigation(config, view),
         onComplete: () => this.#markSetupWizardSeen(),
         onDismiss: () => { if (automatic) this.#markSetupWizardSeen(); },
-        onClose: ({ requiresReload }) => {
+        onClose: ({ requiresReload, saved, state }) => {
           this.#panel = null;
+          if (saved && state?.draft?.pages?.[0]) {
+            this.#browser.location.hash = `#/${state.draft.pages[0].id}`;
+          }
           Promise.resolve().then(() => requiresReload
             ? this.#reload() : this.#display(this.#controller.snapshot(), this.#generation))
             .catch((error) => this.#error(error));

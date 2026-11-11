@@ -73,9 +73,42 @@ export function schema5ReadingSuggestions(device) {
   });
 }
 
+export function schema5WidgetSuggestions(device) {
+  if (!device || !isValidName(device.name) || !device.readings
+    || typeof device.readings !== 'object' || Array.isArray(device.readings)) return [];
+  const readings = device.readings;
+  const commands = typeof device.sets === 'string' ? device.sets.split(/\s+/) : [];
+  const hasTemperatureCommand = (name) => commands.some((entry) =>
+    entry.startsWith(`${name}:`) && entry.slice(name.length + 1).split(',')
+      .some((value) => /^-?\d+(?:\.\d+)?$/.test(value)));
+  const hasNoArg = (name) => commands.some((entry) => entry === name || entry === `${name}:noArg`);
+  const alias = typeof device.alias === 'string' && device.alias.trim()
+    && !/[\x00-\x1f\x7f]/.test(device.alias) ? device.alias.trim() : device.name;
+  const title = alias.slice(0, 64);
+  const actual = ['temperature', 'measured-temp'].find((name) => Object.hasOwn(readings, name));
+  const target = ['desiredTemperature', 'desired-temp'].find((name) => Object.hasOwn(readings, name));
+  if (actual && target && hasTemperatureCommand(target)) {
+    const fields = { actual, target };
+    for (const [field, names] of Object.entries({
+      valve: ['valveposition', 'ValvePosition'],
+      mode: ['mode', 'R-controlMode', 'controlMode'],
+      battery: ['batteryPercent', 'battery', 'batteryState', 'batteryLevel'],
+    })) {
+      const name = names.find((entry) => Object.hasOwn(readings, entry));
+      if (name) fields[field] = name;
+    }
+    return [{ type: 'thermostat', device: device.name, title, readings: fields, label: 'Thermostat' }];
+  }
+  if (Object.hasOwn(readings, 'state') && hasNoArg('on') && hasNoArg('off')) {
+    return [{ type: 'fhem-switch', device: device.name, title, reading: 'state',
+      on: 'on', off: 'off', label: 'Schalter' }];
+  }
+  return schema5ReadingSuggestions(device).map((suggestion) => ({ ...suggestion, type: 'fhem-value' }));
+}
+
 export function createSchema5RoomPlan(room, devices, selectedNames) {
   const selected = devices.filter(({ name }) => selectedNames.has(name));
-  const widgets = selected.flatMap(schema5ReadingSuggestions)
+  const widgets = selected.flatMap(schema5WidgetSuggestions)
     .map((suggestion) => ({ ...suggestion, included: true }));
   const supportedDevices = new Set(widgets.map(({ device }) => device));
   return {
@@ -115,20 +148,27 @@ function firstFreeRow(config, page) {
   );
 }
 
-export function buildSchema5SetupConfig(source, plans) {
+export function buildSchema5SetupConfig(source, plans, startRoom = '') {
   const pages = Array.isArray(plans) ? plans.filter(({ included }) => included) : [];
   if (!source || !Array.isArray(source.pages) || !Array.isArray(pages) || !pages.length) {
     throw new Error('Bitte mindestens eine Seite für die Vorschau aktivieren.');
   }
-  if (source.pages.length + pages.length > 50) throw new Error('Die Konfiguration darf höchstens 50 Seiten enthalten.');
+  const startPlan = startRoom ? pages.find(({ room }) => room === startRoom) : null;
+  if (startRoom && !startPlan) throw new Error('Bitte einen ausgewählten Raum als Startseite wählen.');
+  const initialPage = source.pages.find(({ id }) => id === 'start');
+  const reuseStart = Boolean(startPlan && initialPage && initialPage.title === 'Start'
+    && initialPage.widgets.length === 0);
+  if (source.pages.length + pages.length - (reuseStart ? 1 : 0) > 50) {
+    throw new Error('Die Konfiguration darf höchstens 50 Seiten enthalten.');
+  }
   const titles = new Set(source.pages.map(({ title }) => title.trim().toLocaleLowerCase()));
   for (const page of pages) {
     if (typeof page.title !== 'string' || !page.title.trim() || page.title.length > 128
       || /[\x00-\x1f\x7f]/.test(page.title)) {
       throw new Error(`Ungültiger Seitentitel für „${page.room}“.`);
     }
-    const normalized = page.title.trim().toLocaleLowerCase();
-    if (titles.has(normalized)) {
+    const normalized = (reuseStart && page === startPlan ? 'Start' : page.title.trim()).toLocaleLowerCase();
+    if (!(reuseStart && page === startPlan) && titles.has(normalized)) {
       throw new Error(`Der Seitentitel „${page.title}“ ist bereits vergeben. Bitte umbenennen oder Seite abwählen.`);
     }
     titles.add(normalized);
@@ -138,34 +178,69 @@ export function buildSchema5SetupConfig(source, plans) {
   }
 
   const config = structuredClone(source);
+  config.navigation.orientation = 'vertical';
   const pageIds = new Set(config.pages.map(({ id }) => id));
   const widgetIds = new Set(config.pages.flatMap(({ widgets }) => widgets.map(({ id }) => id)));
   const columns = Number(config.settings.gridColumns);
-  const widgetsPerRow = columns / 4;
-  const widgetWidth = columns / widgetsPerRow;
+  const scale = columns / 12;
+  const widgetsPerRow = 3;
+  const widgetWidth = 4 * scale;
+  const widgetHeight = 2 * scale;
   const firstRow = firstFreeRow(config, { widgets: [] });
   pages.forEach((plan, pageIndex) => {
-    const pageId = uniqueId(`setup-${Date.now().toString(36)}-${pageIndex + 1}`, pageIds);
-    const page = { id: pageId, title: plan.title.trim(), widgets: [] };
+    const page = reuseStart && plan === startPlan
+      ? config.pages.find(({ id }) => id === 'start')
+      : { id: uniqueId(`setup-${Date.now().toString(36)}-${pageIndex + 1}`, pageIds),
+        title: plan.title.trim(), widgets: [] };
     plan.widgets.filter(({ included }) => included).forEach((suggestion, index) => {
       const widget = {
         id: uniqueId(`setup-${pageIndex + 1}-${index + 1}`, widgetIds),
-        type: 'fhem-value',
+        type: suggestion.type || 'fhem-value',
         device: suggestion.device,
-        reading: suggestion.reading,
         title: suggestion.title,
         grid: {
           col: (index % widgetsPerRow) * widgetWidth + 1,
-          row: firstRow + Math.floor(index / widgetsPerRow) * 2,
+          row: firstRow + Math.floor(index / widgetsPerRow) * widgetHeight,
           w: widgetWidth,
-          h: 2,
+          h: widgetHeight,
         },
       };
-      if (suggestion.unit) widget.unit = suggestion.unit;
+      if (widget.type === 'thermostat') widget.readings = { ...suggestion.readings };
+      else {
+        widget.reading = suggestion.reading;
+        if (widget.type === 'fhem-switch') {
+          widget.on = suggestion.on;
+          widget.off = suggestion.off;
+        } else if (suggestion.unit) widget.unit = suggestion.unit;
+      }
       page.widgets.push(widget);
     });
-    config.pages.push(page);
-    if (Array.isArray(config.navigation.items)) config.navigation.items.push({ page: pageId });
+    if (!(reuseStart && plan === startPlan)) {
+      config.pages.push(page);
+      if (Array.isArray(config.navigation.items)) config.navigation.items.push({ page: page.id });
+    }
+    if (plan === startPlan) {
+      config.pages.splice(config.pages.indexOf(page), 1);
+      config.pages.unshift(page);
+      if (!reuseStart) {
+        config.navigation.items ||= [];
+        const oldStart = config.pages.find((entry) => entry !== page && entry.title === 'Start');
+        if (oldStart) {
+          let oldItem = config.navigation.items.find((item) => item.page === oldStart.id);
+          if (!oldItem) {
+            oldItem = { page: oldStart.id };
+            config.navigation.items.push(oldItem);
+          }
+          if (!oldItem.label || oldItem.label === 'Start') oldItem.label = 'Start (bisher)';
+        }
+        let item = config.navigation.items.find((entry) => entry.page === page.id);
+        if (!item) {
+          item = { page: page.id };
+          config.navigation.items.push(item);
+        }
+        item.label = 'Start';
+      }
+    }
   });
   return config;
 }
@@ -178,6 +253,7 @@ export class Schema5SetupWizard {
   #onClose;
   #onComplete;
   #onDismiss;
+  #fitNavigation;
   #status;
   #rooms = new Map();
   #selectedRooms = new Set();
@@ -185,6 +261,7 @@ export class Schema5SetupWizard {
   #roomNames = [];
   #roomIndex = 0;
   #pages = [];
+  #startRoom = '';
   #busy = false;
   #saving = false;
   #closed = false;
@@ -192,7 +269,7 @@ export class Schema5SetupWizard {
   #requiresReload = false;
   #applyButton = null;
 
-  constructor({ root, controller, client, onClose, onComplete, onDismiss }) {
+  constructor({ root, controller, client, onClose, onComplete, onDismiss, fitNavigation }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
       || !client || typeof client.jsonlist !== 'function' || typeof onClose !== 'function') {
       throw new Error('Dienste und leerer Container für den Einrichtungsassistenten erforderlich');
@@ -204,6 +281,7 @@ export class Schema5SetupWizard {
     this.#onClose = onClose;
     this.#onComplete = onComplete;
     this.#onDismiss = onDismiss;
+    this.#fitNavigation = fitNavigation;
     this.#status = element('p');
     this.#status.className = 'cms-status';
     this.#status.setAttribute('role', 'status');
@@ -225,17 +303,17 @@ export class Schema5SetupWizard {
   #renderWelcome() {
     const content = element('div');
     content.className = 'cms-setup-wizard-content';
+    const config = this.#state.draft || this.#state.live;
     content.append(
       element('p', 'Der Assistent erstellt eine erste Oberfläche aus FHEM-Räumen und ausgewählten Geräten. Vorhandene Seiten und Widgets bleiben erhalten.'),
-      element('p', 'Es werden nur bekannte Readings als nicht schreibende Wertanzeigen vorgeschlagen. Die Änderungen werden erst nach deiner Bestätigung als Entwurf gespeichert.'),
+      element('p', 'Für unterstützte Geräte werden passende Widgets vorgeschlagen. Schalter und Thermostate können Geräte steuern. Die Änderungen werden erst nach deiner Bestätigung als Entwurf gespeichert.'),
     );
     this.#render('Einrichtungsassistent', 'FHEM-Räume und Geräte auswählen', content, [
-      button('Mit leerer Startseite fortfahren', () => {
+      button(isSchema5InitialSetup(config) ? 'Mit leerer Startseite fortfahren' : 'Ohne Änderungen fortfahren', () => {
         this.#onComplete?.();
         this.#finish({ saved: false });
       }),
       button('Räume und Geräte auswählen', () => this.#loadDevices()),
-      button('Abbrechen', () => this.#cancel(), 'cms-button cms-panel-close'),
     ]);
   }
 
@@ -356,19 +434,25 @@ export class Schema5SetupWizard {
   #createPreview() {
     this.#pages = this.#roomNames.map((room) =>
       createSchema5RoomPlan(room, this.#rooms.get(room) || [], this.#selectedDevices.get(room)));
+    this.#startRoom = this.#pages[0]?.room || '';
     this.#renderPreview();
   }
 
   #titleConflict(page) {
     if (!page.title.trim()) return 'Bitte einen Seitentitel eingeben.';
     if (page.title.length > 128 || /[\x00-\x1f\x7f]/.test(page.title)) return 'Ungültiger Seitentitel.';
-    const normalized = page.title.trim().toLocaleLowerCase();
     const config = this.#state.draft || this.#state.live;
-    if (config.pages.some(({ title }) => title.trim().toLocaleLowerCase() === normalized)) {
+    const reusableStart = config.pages.some((entry) => entry.id === 'start'
+      && entry.title === 'Start' && !entry.widgets.length);
+    const effectiveTitle = (entry) => reusableStart && entry.room === this.#startRoom
+      ? 'start' : entry.title.trim().toLocaleLowerCase();
+    const normalized = effectiveTitle(page);
+    if (config.pages.some((entry) => !(reusableStart && page.room === this.#startRoom && entry.id === 'start')
+      && entry.title.trim().toLocaleLowerCase() === normalized)) {
       return 'Dieser Seitentitel ist bereits vergeben.';
     }
     if (this.#pages.some((other) => other !== page && other.included
-      && other.title.trim().toLocaleLowerCase() === normalized)) {
+      && effectiveTitle(other) === normalized)) {
       return 'Dieser Seitentitel wird bereits für eine andere ausgewählte Seite verwendet.';
     }
     return '';
@@ -378,11 +462,33 @@ export class Schema5SetupWizard {
     const content = element('div');
     content.className = 'cms-setup-wizard-preview';
     const updateConflicts = [];
+    const startLabel = element('label', 'Raum für die Startseite ');
+    const startSelect = element('select');
+    const updateStartOptions = () => {
+      const selected = this.#pages.filter((page) => page.included);
+      if (!selected.some((page) => page.room === this.#startRoom)) {
+        this.#startRoom = selected[0]?.room || '';
+      }
+      startSelect.replaceChildren();
+      for (const page of selected) {
+        const option = element('option', page.title || page.room);
+        option.value = page.room;
+        startSelect.append(option);
+      }
+      startSelect.value = this.#startRoom;
+    };
+    startSelect.addEventListener('change', () => {
+      this.#startRoom = startSelect.value;
+      updateConflicts.forEach((update) => update());
+    });
+    startLabel.append(startSelect);
+    content.append(startLabel, element('p', 'Die Navigation wird vertikal angeordnet. Bei bestehenden Inhalten können Widgets dafür verschoben werden.'));
     for (const page of this.#pages) {
       const section = element('section');
       section.className = 'cms-setup-wizard-page';
       section.append(checkbox(`Seite für „${page.room}“ anlegen`, page.included, (checked) => {
         page.included = checked;
+        updateStartOptions();
         updateConflicts.forEach((update) => update());
       }));
       const titleLabel = element('label', 'Seitentitel');
@@ -392,12 +498,19 @@ export class Schema5SetupWizard {
       title.value = page.title;
       title.addEventListener('input', () => {
         page.title = title.value;
+        updateStartOptions();
         updateConflicts.forEach((update) => update());
       });
       titleLabel.append(title);
       const conflict = element('p');
       conflict.className = 'cms-status';
       const updateConflict = () => {
+        const config = this.#state.draft || this.#state.live;
+        const usesStart = page.room === this.#startRoom
+          && config.pages.some((entry) => entry.id === 'start' && entry.title === 'Start' && !entry.widgets.length);
+        title.disabled = usesStart;
+        if (usesStart) title.value = 'Start';
+        else if (title.value === 'Start' && page.title !== 'Start') title.value = page.title;
         const message = page.included ? this.#titleConflict(page) : '';
         conflict.textContent = message;
         if (message) conflict.setAttribute('data-error', '');
@@ -416,15 +529,18 @@ export class Schema5SetupWizard {
           : 'Keine Geräte ausgewählt; die Seite bleibt leer.'));
       }
       for (const widget of page.widgets) {
-        suggestions.append(checkbox(`${widget.title} (${widget.device}:${widget.reading})`, widget.included, (checked) => {
+        const detail = widget.type === 'thermostat' ? 'Thermostat'
+          : widget.type === 'fhem-switch' ? 'Schalter' : `Wert: ${widget.reading}`;
+        suggestions.append(checkbox(`${widget.title} (${widget.device} · ${detail})`, widget.included, (checked) => {
           widget.included = checked;
         }));
       }
       section.append(suggestions);
       content.append(section);
     }
+    updateStartOptions();
     updateConflicts.forEach((update) => update());
-    this.#render('Vorschau', 'Seiten und Wertanzeigen prüfen. Bestehende Seiten werden nicht verändert.', content, [
+    this.#render('Vorschau', 'Seiten und Widget-Vorschläge prüfen. Bestehende Inhalte bleiben erhalten.', content, [
       button('Zurück', () => {
         this.#roomIndex = this.#roomNames.length - 1;
         this.#renderDevices();
@@ -441,7 +557,8 @@ export class Schema5SetupWizard {
       const state = this.#controller.snapshot();
       if (state.token !== this.#state.token) throw new Error('Der Konfigurationsstand hat sich geändert. Bitte Assistent erneut öffnen.');
       const source = state.draft || state.live;
-      const config = buildSchema5SetupConfig(source, this.#pages);
+      let config = buildSchema5SetupConfig(source, this.#pages, this.#startRoom);
+      if (typeof this.#fitNavigation === 'function') config = this.#fitNavigation(config);
       this.#busy = true;
       this.#saving = true;
       saveStarted = true;

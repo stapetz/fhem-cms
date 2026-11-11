@@ -2,7 +2,9 @@
 
 Schema-5-Ersteinrichtung aus FHEM-Raeumen und ausgewaehlten Geraeten mit Vorschau,
 Namenskonfliktpruefung und expliziter Speicherung als Entwurf. Bestehende Inhalte
-bleiben unangetastet; nur erkannte Readings werden als Wertanzeigen vorgeschlagen.
+bleiben erhalten. Die Startseite ist auswaehlbar; die Navigation wird vertikal
+ausgerichtet. Thermostate und Schalter werden anhand ihrer Readings und Set-Befehle
+erkannt, weitere bekannte Readings als Wertanzeigen vorgeschlagen.
 
 2026-11-10 - 1.6.2-dev: Entwicklung nach Release 1.6.1 (Refs #127)
 
