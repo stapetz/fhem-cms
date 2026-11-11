@@ -14,10 +14,10 @@ const wait = async predicate => {
   throw new Error('Zeitüberschreitung beim Warten auf Bilddialog');
 };
 const canvas = document.createElement('canvas');
-canvas.width = 20; canvas.height = 10;
+canvas.width = 200; canvas.height = 100;
 const ctx = canvas.getContext('2d');
-ctx.fillStyle = 'red'; ctx.fillRect(0, 0, 10, 10);
-ctx.fillStyle = 'blue'; ctx.fillRect(10, 0, 10, 10);
+ctx.fillStyle = 'red'; ctx.fillRect(0, 0, 100, 100);
+ctx.fillStyle = 'blue'; ctx.fillRect(100, 0, 100, 100);
 const originalBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 const originalId = 'a'.repeat(32), variantId = 'b'.repeat(32);
 const original = { id: originalId, name: 'Test.png', file: `${originalId}.png`,
@@ -63,7 +63,32 @@ try {
   root.querySelector('[data-edit-image]').click();
   await wait(() => root.querySelector('[data-image-editor]')?.open);
   const editor = root.querySelector('[data-image-editor]');
-  for (const [key, value] of Object.entries({ x: 10, y: 0, w: 10, h: 10 })) {
+  const invalid = editor.querySelector('[data-crop="w"]');
+  invalid.value = '0'; invalid.dispatchEvent(new Event('input'));
+  editor.querySelector('[data-image-save]').click();
+  check(editor.open && editor.querySelector('[data-image-error]').textContent.includes('gültigen'),
+    'Ungültige Ausschnittgröße bleibt sichtbar und wird nicht gespeichert');
+  result.dataset.ready = 'true';
+  await new Promise(resolve => {
+    window.imageRegression = {
+      points() {
+        const rect = editor.querySelector('img').getBoundingClientRect();
+        return { from: { x: rect.left + rect.width * .5, y: rect.top + .1 },
+          to: { x: rect.right - .1, y: rect.bottom - .1 } };
+      },
+      finish() {
+        const x = Number(editor.querySelector('[data-crop="x"]').value);
+        const width = Number(editor.querySelector('[data-crop="w"]').value);
+        const imageRect = editor.querySelector('img').getBoundingClientRect();
+        const cropRect = editor.querySelector('.image-editor-selection').getBoundingClientRect();
+        check(x === 100 && width === 100, 'Pointer zieht den rechten Bildbereich auf');
+        check(Math.abs(cropRect.left - (imageRect.left + imageRect.width / 2)) < 2,
+          'Schnittrahmen liegt über dem gezogenen Bildbereich');
+        resolve();
+      },
+    };
+  });
+  for (const [key, value] of Object.entries({ x: 100, y: 0, w: 100, h: 100 })) {
     const input = editor.querySelector(`[data-crop="${key}"]`);
     input.value = value; input.dispatchEvent(new Event('input'));
   }
@@ -87,6 +112,25 @@ try {
   root.querySelector(`[data-variant-id="${variantId}"]`).click();
   root.querySelector('[data-select]').click();
   check((await pending).id === variantId, 'Picker liefert die gewählte Variante');
+  const second = openAssetManager(services, { mode: 'image' });
+  await wait(() => document.querySelector('[data-asset-manager]')?.shadowRoot.querySelector('[data-asset-id]'));
+  const nextRoot = document.querySelector('[data-asset-manager]').shadowRoot;
+  nextRoot.querySelector(`[data-asset-id="${originalId}"]`).click();
+  nextRoot.querySelector('[data-delete-asset]').click();
+  await wait(() => nextRoot.querySelector('[data-delete-asset-accept]'));
+  nextRoot.querySelector('[data-delete-asset-accept]').click();
+  await wait(() => !state.assets.some(item => item.id === originalId));
+  check(state.assets.length === 1 && !Object.hasOwn(state.assets[0], 'variantOf'),
+    'Löschen des Originals erhält die Variante als eigenständiges Bild');
+  await wait(() => nextRoot.querySelector(`[data-asset-id="${variantId}"]`));
+  nextRoot.querySelector(`[data-asset-id="${variantId}"]`).click();
+  nextRoot.querySelector('[data-delete-asset]').click();
+  await wait(() => nextRoot.querySelector('[data-delete-asset-accept]'));
+  nextRoot.querySelector('[data-delete-asset-accept]').click();
+  await wait(() => state.assets.length === 0);
+  check(state.assets.length === 0, 'Einzelnes Bild lässt sich nach Bestätigung löschen');
+  nextRoot.querySelector('[data-close]').click();
+  check(await second === null, 'Manager schließt ohne Auswahl');
   result.dataset.result = 'pass'; result.textContent = JSON.stringify({ checks });
 } catch (error) {
   result.dataset.result = 'fail'; result.textContent = `${error.stack || error}`;

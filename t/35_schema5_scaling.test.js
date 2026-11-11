@@ -145,7 +145,7 @@ for (const [name, fixtures] of [
   const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
     for (const [fixture, minimum] of fixtures) {
-      const interact = !['49_link_widget.html', '51_asset_manager.html', '62_page_modal.html'].includes(fixture) ? undefined : async command => {
+      const interact = !['49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html'].includes(fixture) ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
           assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
@@ -159,7 +159,15 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
-        if (fixture === '62_page_modal.html') {
+        if (fixture === '61_asset_image.html') {
+          const points = await evaluate('window.imageRegression.points()');
+          await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...points.from });
+          await command('Input.dispatchMouseEvent', { type: 'mousePressed', ...points.from, button: 'left', clickCount: 1 });
+          await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...points.to, button: 'left', buttons: 1 });
+          await command('Input.dispatchMouseEvent', { type: 'mouseReleased', ...points.to, button: 'left', clickCount: 1 });
+          await evaluate('window.imageRegression.finish()');
+          return;
+        } else if (fixture === '62_page_modal.html') {
           await command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
           await command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
           await evaluate('window.modalRegression.afterClose()');
