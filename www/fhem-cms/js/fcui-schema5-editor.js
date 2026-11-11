@@ -334,6 +334,7 @@ export class Schema5Editor {
         },
         onEdit: (pageId, id) => id === '__nav' ? this.#openNavigation() : this.#openWidgets(id),
         onMove: (pageId, id) => this.#openMove(id),
+        onDelete: (pageId, id) => this.#deleteWidget(pageId, id),
       } });
     this.#view = view;
     await view.start();
@@ -447,6 +448,30 @@ export class Schema5Editor {
       const state = this.#controller.snapshot();
       this.#gridElement.style.setProperty('--cms-grid-columns', String((state.draft || state.live).settings.gridColumns));
       this.#gridElement.classList.toggle('cms-grid-guides', this.#showGrid);
+    }
+  }
+
+  async #deleteWidget(pageId, widgetId) {
+    if (!this.#active || this.#suspended || !this.#view || this.#widgets.disabled
+      || this.#view.current !== pageId) return;
+    let generation = this.#generation;
+    try {
+      const state = this.#controller.snapshot();
+      const widget = (state.draft || state.live).pages.find((page) => page.id === pageId)
+        ?.widgets.find((entry) => entry.id === widgetId);
+      if (!widget) throw new Error('Unbekanntes Widget');
+      if (!this.#browser.confirm(`Widget „${widget.title || widget.id}“ wirklich löschen?`)) return;
+      if (!this.#active || this.#suspended || generation !== this.#generation
+        || this.#view?.current !== pageId) return;
+      generation = ++this.#generation;
+      this.#view.lock();
+      this.#setActions(false, false);
+      this.#status.removeAttribute('data-error');
+      this.#status.textContent = 'Widget wird aus dem Entwurf entfernt …';
+      const result = await this.#controller.deleteWidget(pageId, widgetId, state.token);
+      await this.#display(result, generation);
+    } catch (error) {
+      if (generation === this.#generation) this.#error(error);
     }
   }
 

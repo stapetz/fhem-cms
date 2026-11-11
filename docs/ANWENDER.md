@@ -466,6 +466,10 @@ Entwicklungsstand `dev`: Mit **Seite duplizieren** in der Seitenverwaltung
 entsteht eine Kopie mit eigener Seiten-ID, Widgets und Layout. Sie wird erst
 mit **Speichern** im Entwurf angelegt; die Live-Seite bleibt unverändert.
 
+Entwicklungsstand `dev`: Das X am Widget entfernt es nach einer Bestätigung
+direkt aus dem Entwurf. Die veröffentlichte Seite bleibt bis zur Veröffentlichung
+des Entwurfs unverändert.
+
 Alle Dialoge haben unten die Knöpfe **Speichern** und **Abbrechen**: Speichern
 übernimmt die Änderungen als Entwurf und schließt den Dialog, Abbrechen verwirft
 die Eingaben.

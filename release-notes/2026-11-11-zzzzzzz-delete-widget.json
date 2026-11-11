@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-11",
+  "version": "1.8.1-dev",
+  "title": "Widgets direkt loeschen (Refs #131)",
+  "changes": [
+    "Widgets lassen sich nach Bestaetigung direkt am Widget aus dem Entwurf entfernen."
+  ]
+}

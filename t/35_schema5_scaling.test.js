@@ -125,6 +125,7 @@ for (const [name, fixtures] of [
   ['themes use and restore page backgrounds', [['55_liquid_glass.html', 63]]],
   ['page settings preview shows the real phone page without saving', [['57_settings_preview.html', 25]]],
   ['page duplication preserves the draft and live page', [['59_page_duplicate.html', 12]]],
+  ['direct widget deletion preserves the draft and handles errors', [['60_direct_widget_delete.html', 15]]],
   ['call list displays and configures device readings', [['58_calllist.html', 61]]],
   ['mobile device preview fits the raster without horizontal overflow', [['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200]]],
   ['touch devices fit the raster without horizontal overflow', [['56_mobile_viewport.html?mode=touch-test', 200]]],

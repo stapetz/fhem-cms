@@ -76,6 +76,16 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
         move.addEventListener('click', () => editing.onMove(id));
         controls.append(move);
       }
+      if (widget && typeof editing.onDelete === 'function') {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'cms-widget-delete';
+        remove.textContent = '×';
+        remove.title = `Widget „${widget.title || widget.id}“ löschen`;
+        remove.setAttribute('aria-label', remove.title);
+        remove.addEventListener('click', () => editing.onDelete(id));
+        controls.append(remove);
+      }
       wrapper.append(controls);
     }
     grid.setStatic(false);
