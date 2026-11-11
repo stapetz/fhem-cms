@@ -4,6 +4,7 @@
 - Das Startseitenbild kann fuer alle Seiten verwendet werden; eigene Bilder
   bleiben erhalten.
 - Bilder werden im Assetmanager gegen Loeschen geschuetzt.
+- Globale Regler fuer Liquid-Effekt und Transparenz mit direkter Vorschau.
 
 2026-11-11 - 1.7.1-dev: Entwicklung nach Release 1.7.0
 - Der freigegebene Stand 1.7.0 wurde nach dev synchronisiert.
