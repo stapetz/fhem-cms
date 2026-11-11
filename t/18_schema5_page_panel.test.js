@@ -173,6 +173,54 @@ test('new themes are selectable and saved without modifying widget layout', asyn
   }
 });
 
+test('settings preview receives isolated candidates and closes without saving on cancel', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const f = fixture();
+    const state = await f.controller.reload();
+    const root = new Element('section');
+    let preview;
+    const services = { createSettingsPreview: ({ pageId }) => {
+      assert.equal(pageId, 'a');
+      preview = { element: new Element('section'), updates: [], closed: false,
+        update(value) { this.updates.push(value); },
+        close() { this.closed = true; } };
+      return preview;
+    } };
+    new Schema5PagePanel({ root, controller: f.controller, pageId: 'a', token: state.token,
+      services, browser: { confirm: () => true }, onClose: () => {} });
+    const form = root.children[3];
+    const theme = form.children[0].children[0];
+    assert.equal(theme.children[0].textContent, 'Forest Green');
+    assert.equal(theme.children[0].value, 'dark');
+    theme.value = 'liquid-glass';
+    theme.fire('change');
+    form.children[1].children[0].checked = false;
+    form.children[1].children[0].fire('change');
+    form.children[3].children[0].value = 'right';
+    form.children[3].children[0].fire('change');
+    const controls = form.children[4].children[6];
+    controls.children[1].children[0].value = '65';
+    controls.children[1].children[0].fire('input');
+    form.children[2].children[0].value = '24';
+    form.children[2].children[0].fire('change');
+    const candidate = preview.updates.at(-1);
+    assert.equal(candidate.theme, 'liquid-glass');
+    assert.equal(candidate.settings.showFrames, false);
+    assert.equal(candidate.settings.titleAlign, 'right');
+    assert.equal(candidate.settings.liquidTransparency, 65);
+    assert.equal(candidate.settings.gridColumns, 24);
+    assert.equal(f.controller.snapshot().draft, null);
+    assert.equal(f.live.settings.gridColumns, 12);
+    root.children[4].children[0].fire('click');
+    assert.equal(preview.closed, true);
+    assert.equal(f.writes, 0);
+  } finally {
+    globalThis.document = original;
+  }
+});
+
 test('page panel only exposes look and feel, protects cancel and preserves widget positions', async () => {
   const original = globalThis.document;
   globalThis.document = { createElement: (tag) => new Element(tag) };

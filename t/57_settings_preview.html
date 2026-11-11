@@ -1,0 +1,150 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="fhem-cms-device" content="CMS">
+<title>Page settings preview regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<main class="cms-shell"><div class="cms-schema5-workspace"><div id="grid" class="grid-stack cms-schema5-grid"></div></div></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { Schema5PagePanel } from '../www/fhem-cms/js/fcui-schema5-page-panel.js';
+import { Schema5SettingsPreview } from '../www/fhem-cms/js/fcui-schema5-settings-preview.js';
+
+const first = `media/${'a'.repeat(32)}.png`;
+const second = `media/${'b'.repeat(32)}.png`;
+const config = {
+  schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12, showFrames: true },
+  navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+  pages: [
+    { id: 'start', title: 'Start', background: first, widgets: [] },
+    { id: 'room', title: 'Küche', background: second, widgets: [
+      { id: 'text', type: 'text', title: 'Küche', html: '<p>Aktuelle Seite</p>',
+        grid: { col: 1, row: 2, w: 6, h: 3 } },
+    ] },
+  ],
+};
+const result = document.querySelector('#result');
+const child = new URLSearchParams(location.search).get('cms-page-settings-preview') === '1';
+if (child) {
+  document.querySelector('.cms-schema5-workspace').remove();
+  result.className = 'cms-status';
+  window.fetch = async (url, options = {}) => {
+    if (!options.method) return new Response('');
+    const command = options.body.get('cmd');
+    if (command === 'get CMS layoutformat') return new Response('{"schemaVersion":5}');
+    if (command === 'get CMS version5state') {
+      return new Response(JSON.stringify({ live: config, draft: null, token: 'a'.repeat(64) }));
+    }
+    if (command.startsWith('jsonlist2 ')) return new Response('{"Results":[]}');
+    throw new Error(`Unexpected preview command: ${command}`);
+  };
+  await import('../www/fhem-cms/js/fhem-cms.js');
+  if (document.readyState !== 'loading') document.dispatchEvent(new Event('DOMContentLoaded'));
+} else {
+  let checks = 0;
+  const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+  const until = async (condition, message) => {
+    for (let i = 0; i < 100; i++) {
+      if (condition()) return;
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    throw new Error(message);
+  };
+  try {
+    location.hash = '#/room';
+    const original = JSON.stringify(config);
+    let writes = 0;
+    let outcome;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'cms-editor-panel cms-editor-dialog';
+    dialog.dataset.panel = 'page';
+    document.body.append(dialog);
+    const controller = { snapshot: () => ({ live: config, token: 'test' }), saveDraft: async () => { writes++; } };
+    new Schema5PagePanel({ root: dialog, controller, pageId: 'room', token: 'test',
+      browser: { ...window, confirm: () => true },
+      services: {
+        createSettingsPreview: ({ pageId }) => new Schema5SettingsPreview({ browser: window, pageId }),
+        pickAsset: async () => ({ href: first, name: 'Startbild' }),
+      },
+      onClose: value => { outcome = value; } });
+    dialog.showModal();
+    const frame = dialog.querySelector('.cms-settings-preview iframe');
+    const frameDocument = () => frame.contentDocument;
+    await until(() => frameDocument()?.querySelector('cms-text'),
+      `actual page did not load: ${frameDocument()?.querySelector('.cms-status')?.textContent}`);
+    await until(() => frameDocument().documentElement.style.getPropertyValue('--cms-page-image').includes(second),
+      'current page image did not load');
+    const image = new frame.contentWindow.Image();
+    image.src = new URL(second, frame.contentWindow.location.href).href;
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error('current page background image did not load'));
+    });
+    check(image.naturalWidth > 0, 'current page background is a loadable image');
+    check(frameDocument().querySelector('cms-text').textContent === '', 'actual custom widget is mounted');
+    check(frameDocument().querySelector('cms-text').shadowRoot.textContent.includes('Aktuelle Seite'),
+      'actual page content rendered');
+    check(frame.contentWindow.innerWidth === 667 && frame.contentWindow.innerHeight === 375,
+      'phone viewport uses landscape dimensions');
+    const stage = dialog.querySelector('.cms-settings-preview-stage').getBoundingClientRect();
+    check(stage.width > 250 && stage.height > 100 && stage.right <= dialog.getBoundingClientRect().right,
+      'scaled phone preview is visible and fits the dialog');
+    check(frame.inert && frame.tabIndex === -1, 'preview does not allow device actions');
+    const theme = dialog.querySelector('select');
+    check([...theme.options].find(option => option.value === 'dark').textContent === 'Forest Green',
+      'existing dark value has new label');
+    theme.value = 'liquid-glass';
+    theme.dispatchEvent(new Event('change'));
+    await until(() => frameDocument().documentElement.dataset.cmsTheme === 'liquid-glass', 'theme did not update');
+    check(getComputedStyle(frameDocument().querySelector('.grid-stack-item-content')).backdropFilter.includes('blur'),
+      'liquid effect is visible on the real widget');
+    frame.contentWindow.eval(`window.postMessage({type:'fhem-cms-settings-preview-update',
+      pageId:'room',config:{theme:'oled-black'}}, location.origin)`);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    check(frameDocument().documentElement.dataset.cmsTheme === 'liquid-glass',
+      'messages not sent by the owning window are ignored');
+    const transparency = dialog.querySelector('[data-liquid-transparency]');
+    transparency.value = '60';
+    transparency.dispatchEvent(new Event('input'));
+    await until(() => frameDocument().documentElement.style.getPropertyValue('--cms-liquid-opacity') === '0.4',
+      'transparency did not update');
+    check(getComputedStyle(frameDocument().querySelector('cms-text').shadowRoot.querySelector('.tile')).backgroundColor
+      === 'rgba(19, 34, 52, 0.4)', 'actual widget transparency changes');
+    const form = dialog.querySelector('form');
+    const selects = form.querySelectorAll('select');
+    selects[1].value = '24';
+    selects[1].dispatchEvent(new Event('change'));
+    await until(() => frameDocument().querySelector('.cms-schema5-grid').gridstack?.getColumn() === 24, 'grid did not update');
+    check(frameDocument().querySelector('cms-text').shadowRoot.textContent.includes('Aktuelle Seite'),
+      'actual widget survives raster preview');
+    selects[2].value = 'right';
+    selects[2].dispatchEvent(new Event('change'));
+    await until(() => frameDocument().querySelector('.cms-schema5-grid').style.getPropertyValue('--cms-widget-title-align') === 'right',
+      'title alignment did not update');
+    const frames = form.querySelector('input[type="checkbox"]');
+    frames.checked = false;
+    frames.dispatchEvent(new Event('change'));
+    await until(() => frameDocument().documentElement.dataset.cmsFrames === 'off', 'frames did not update');
+    const remove = [...form.querySelectorAll('button')].find(button => button.textContent === 'Hintergrundbild entfernen');
+    remove.click();
+    await until(() => frameDocument().documentElement.style.getPropertyValue('--cms-page-image') === 'none',
+      'removed image remained in preview');
+    const choose = [...form.querySelectorAll('button')].find(button => button.textContent === 'Hintergrundbild auswählen');
+    choose.click();
+    await until(() => frameDocument().documentElement.style.getPropertyValue('--cms-page-image').includes(first),
+      'selected image was not applied to preview');
+    check(frameDocument().documentElement.style.getPropertyValue('--cms-page-image').includes(first),
+      'choosing another background updates the actual page preview');
+    check(JSON.stringify(config) === original && writes === 0, 'preview never mutates or saves the original');
+    dialog.querySelector('.cms-panel-close').click();
+    check(outcome.requiresReload === false && writes === 0, 'cancel leaves the draft unchanged');
+    check(!dialog.querySelector('iframe'), 'preview is disposed on close');
+    result.dataset.result = 'pass';
+    result.textContent = JSON.stringify({ checks });
+  } catch (error) {
+    result.dataset.result = 'fail';
+    result.textContent = error.stack || String(error);
+  }
+}
+</script>

@@ -2,6 +2,7 @@ import { createWidgetElement, dataFor, devicesOf, groupSnapshots, isLiveWidget }
 import { FhemClient, isValidName } from './fhem-client.js';
 import { DevicePreview } from './device-preview.js';
 import { createSchema5WidgetServices, createWidgetServices } from './widget-services.js';
+import { listenForSettingsPreview } from './fcui-schema5-settings-preview.js';
 import {
   GRID_COLUMNS, GRID_COLUMN_CHOICES, LAYOUT_MODES, cellFromPoint, configureLayout, effectiveLayout, flowLayout,
   layoutMode, layoutStep, moveWidget, normalizeLayout, resizeWidget
@@ -71,7 +72,7 @@ function layoutPreview(mode, columns) {
   return preview;
 }
 
-const THEMES = [['dark', 'Dunkel'], ['light', 'Hell']];
+const THEMES = [['dark', 'Forest Green'], ['light', 'Hell']];
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
 const GUIDE_KEY = 'fhem-cms-show-grid';
 const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 48, h: 1 };
@@ -82,6 +83,8 @@ const MODE = new URLSearchParams(window.location.search).get('mode');
 const VIEW_MODE = MODE !== 'edit';
 // ?mode=preview zeigt den Entwurf wie die fertige Seite (nur Ansicht).
 const PREVIEW_MODE = MODE === 'preview';
+const SETTINGS_PREVIEW = PREVIEW_MODE && window.parent !== window
+  && new URLSearchParams(window.location.search).get('cms-page-settings-preview') === '1';
 
 export class CmsPage {
   constructor(cmsDevice, shell, statusLine) {
@@ -2066,11 +2069,16 @@ async function startSchema5Device(client, shell, card, isSuspended) {
   workspace.className = 'cms-schema5-workspace';
   workspace.append(grid);
   shell.append(workspace);
+  const services = createSchema5WidgetServices(client);
+  if (SETTINGS_PREVIEW) {
+    services.setCommand = services.setTarget = async () => { throw new Error('Geräteaktionen sind in der Vorschau deaktiviert'); };
+  }
   const view = new viewModule.Schema5View({
     GridStack: runtime.GridStack, root: grid, status: card, config, client: liveClient,
-    services: createSchema5WidgetServices(client),
+    services,
   });
   await view.start();
+  if (SETTINGS_PREVIEW && !isSuspended()) listenForSettingsPreview({ view });
 }
 
 document.addEventListener('DOMContentLoaded', async function () {

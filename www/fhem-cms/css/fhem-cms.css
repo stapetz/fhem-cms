@@ -588,6 +588,29 @@ body:has(.cms-schema5-grid) {
   white-space: nowrap;
 }
 
+.cms-settings-preview {
+  display: grid;
+  flex: 1 1 100%;
+  min-width: 0;
+  gap: .3rem;
+  margin-block: .6rem;
+}
+
+.cms-settings-preview-stage {
+  width: min(100%, 667px);
+  overflow: hidden;
+  border: 2px solid var(--cms-border);
+  border-radius: .7rem;
+  background: var(--cms-bg);
+}
+
+.cms-settings-preview-stage iframe {
+  display: block;
+  border: 0;
+  transform-origin: top left;
+  pointer-events: none;
+}
+
 .cms-editor-dialog[data-widget-open] {
   background: transparent;
   border-color: transparent;
