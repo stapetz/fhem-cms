@@ -5,6 +5,8 @@ Namenskonfliktpruefung und expliziter Speicherung als Entwurf. Bestehende Inhalt
 bleiben erhalten. Die Startseite ist auswaehlbar; die Navigation wird vertikal
 ausgerichtet. Thermostate und Schalter werden anhand ihrer Readings und Set-Befehle
 erkannt, weitere bekannte Readings als Wertanzeigen vorgeschlagen.
+Nach dem Einrichten werden Widgets auf allen Seiten automatisch angeordnet.
+Nach Purge und Neuanlage wird der Assistent auch bei gleichem Device-Namen erneut angeboten.
 
 2026-11-10 - 1.6.2-dev: Entwicklung nach Release 1.6.1 (Refs #127)
 

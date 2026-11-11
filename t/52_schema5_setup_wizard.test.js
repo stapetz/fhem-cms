@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import {
+  arrangeSchema5SetupPages,
   buildSchema5SetupConfig,
   createSchema5RoomPlan,
   groupSchema5DevicesByRoom,
@@ -147,6 +148,23 @@ test('generated widget geometry scales with the configured grid resolution', () 
   const result = buildSchema5SetupConfig(config, [plan], 'Raum');
   assert.deepEqual(result.pages[0].widgets[0].grid, { col: 1, row: 5, w: 16, h: 8 });
   assert.doesNotThrow(() => schema5GridItems(result, 'start'));
+});
+
+test('wizard auto-arranges every page using the editor algorithm and keeps live content intact', () => {
+  const config = initialConfig();
+  config.navigation.grid = { col: 1, row: 1, w: 3, h: 6 };
+  const widget = (id, row) => ({ id, type: 'fhem-value', device: 'Lamp', reading: 'state',
+    grid: { col: 5, row, w: 4, h: 2 } });
+  config.pages[0].widgets = [widget('first', 10)];
+  config.pages.push({ id: 'existing', title: 'Bestehend', widgets: [widget('other', 20)] });
+  const original = structuredClone(config);
+  const arranged = arrangeSchema5SetupPages(config);
+  assert.deepEqual(config, original);
+  assert.deepEqual(arranged.pages.map((page) => page.widgets[0].grid), [
+    { col: 4, row: 1, w: 4, h: 2 }, { col: 4, row: 1, w: 4, h: 2 },
+  ]);
+  assert.deepEqual(arranged.pages.map((page) => page.widgets[0].device), ['Lamp', 'Lamp']);
+  assert.deepEqual(arranged.navigation, config.navigation);
 });
 
 test('wizard preview selects a start room, shows widget types and saves only after confirmation', async () => {
