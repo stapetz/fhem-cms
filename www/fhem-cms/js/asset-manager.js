@@ -59,9 +59,10 @@ export async function openAssetManager(services, { mode = null, owner = document
       .preview img { width:100%; max-height:15rem; object-fit:contain; display:block; }
       .preview .info { position:absolute; right:.3rem; top:.3rem; border-radius:50%; font-weight:bold; }
       .variants { display:grid; gap:.4rem; }
-      .variant { display:flex; align-items:center; gap:.4rem; padding:.3rem;
+      .variant { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:.4rem; padding:.3rem;
         border:1px solid var(--cms-border,#43564a); border-radius:.4rem; overflow-wrap:anywhere; }
-      .variant img { width:3rem; height:3rem; object-fit:contain; }
+      .variant img { grid-column:1 / -1; width:100%; height:4rem; object-fit:contain; }
+      .variant small { grid-column:1 / -1; text-align:center; }
       .variant input { flex:none; }
       .filename { display:flex; align-items:center; gap:.3rem; }
       .filename input { flex:1; }
@@ -404,8 +405,8 @@ export async function openAssetManager(services, { mode = null, owner = document
         radio.checked = item.id === asset.id; radio.dataset.variantId = item.id;
         radio.addEventListener('change', () => { selected = item.id; render(); });
         const preview = element('img'); preview.src = item.href; preview.alt = '';
-        const description = element('span', `${item.id === original.id ? 'Original · ' : 'Variante · '}${item.name} · ${sizeText(item.bytes)}`);
-        label.append(radio, preview, description); group.append(label);
+        const description = element('span', `${item.id === original.id ? 'Original · ' : 'Variante · '}${item.name}`);
+        label.append(radio, description, preview, element('small', sizeText(item.bytes))); group.append(label);
       }
       box.append(group);
       imagePreview(asset, box, revision);

@@ -98,6 +98,10 @@ try {
   await wait(() => savedFile && root.querySelectorAll('[data-variant-id]').length === 2);
   check(root.querySelectorAll('[data-asset-id]').length === 1, 'Variante erscheint nur beim Original');
   check(root.querySelector(`[data-variant-id="${variantId}"]`).checked, 'Neue Variante ausgewählt');
+  for (const card of root.querySelectorAll('.variant')) {
+    check(card.querySelector('small').getBoundingClientRect().top >= card.querySelector('img').getBoundingClientRect().bottom,
+      'Dateigröße steht unter dem jeweiligen Bild');
+  }
   check(savedFile.name === 'Test-variante.png', 'Variante bekommt PNG-Namen');
   const bitmap = await createImageBitmap(savedFile);
   check(bitmap.width === 5 && bitmap.height === 5, 'Ausgabe entspricht Verkleinerung');
