@@ -94,6 +94,9 @@ try {
     .map(element => element.getBoundingClientRect());
   check(row.every(box => Math.abs((box.top + box.bottom) / 2 - (row[0].top + row[0].bottom) / 2) < 2)
     && row[0].right <= row[1].left && row[1].right <= row[2].left, 'background actions share one row in the standard dialog');
+  check(sharedLabel.nextElementSibling.nextElementSibling === description
+    && description.getBoundingClientRect().top >= Math.max(...row.map(box => box.bottom)),
+  'background description follows the action row');
   dialog.style.width = '300px';
   const bounds = dialog.getBoundingClientRect();
   const control = checkbox.getBoundingClientRect();
@@ -106,6 +109,9 @@ try {
     const box = element.getBoundingClientRect();
     return box.left >= bounds.left && box.right <= bounds.right;
   }), 'background controls wrap without overflowing a narrow dialog');
+  check(description.getBoundingClientRect().top >= Math.max(...[sharedLabel.previousElementSibling, sharedLabel,
+    sharedLabel.nextElementSibling].map(element => element.getBoundingClientRect().bottom)),
+  'background description follows all wrapped actions in a narrow dialog');
   check(dialog.textContent.includes('Hintergrundbild für aktuelle Seite „Start“:'), 'current page title in dialog');
   check(dialog.textContent.includes('auf jeder Seite einzeln über die Seiteneinstellungen'), 'individual background hint');
   const intensity = dialog.querySelector('[data-liquid-intensity]');
@@ -132,6 +138,20 @@ try {
     'preview does not mutate saved settings');
   dialog.close();
   dialog.remove();
+  const roomDialog = document.createElement('dialog');
+  roomDialog.className = 'cms-editor-panel cms-editor-dialog';
+  roomDialog.dataset.panel = 'page';
+  document.body.append(roomDialog);
+  new Schema5PagePanel({ root: roomDialog, controller, pageId: 'room', token: 'test', onClose() {} });
+  roomDialog.showModal();
+  const roomControls = roomDialog.querySelector('.cms-page-background-controls');
+  const roomDescription = roomControls.querySelector('.cms-page-background-description');
+  const roomButtons = [...roomControls.querySelectorAll(':scope > button')];
+  check(roomButtons.length === 2 && roomDescription.previousElementSibling === roomButtons[1]
+    && roomDescription.getBoundingClientRect().top >= Math.max(...roomButtons.map(button => button.getBoundingClientRect().bottom)),
+  'background description follows both actions on a non-start page');
+  roomDialog.close();
+  roomDialog.remove();
   for (const theme of ['dark', 'light', 'oled-black', 'catppuccin-mocha']) {
     config.theme = theme;
     config.settings.sharedBackground = false;
