@@ -938,8 +938,6 @@ body:has(.cms-schema5-grid) {
 
 .cms-nav-link[aria-current="page"] {
   background: var(--cms-surface-active);
-  border-color: var(--cms-accent);
-  font-weight: 700;
 }
 
 .cms-nav-link:focus-visible,

@@ -120,6 +120,42 @@ try {
   const stop = observeSchema5Navigation(nav, true);
   await settle();
   check(!nav.hasAttribute('data-compact'), 'stacked links fit without summed horizontal widths');
+  for (const orientation of ['vertical', 'horizontal']) {
+    nav.classList.toggle('is-vertical', orientation === 'vertical');
+    const dimensions = measureSchema5Navigation(nav);
+    nav.style.width = `${Math.ceil(dimensions.width) + 2}px`;
+    nav.style.height = `${Math.ceil(dimensions.height) + 2}px`;
+    await settle();
+    check(!nav.hasAttribute('data-compact'), `${orientation}: navigation fits before switching pages`);
+    const links = [...nav.querySelectorAll('.cms-nav-link')];
+    for (const link of links) {
+      link.removeAttribute('aria-current');
+      const beforeStyle = getComputedStyle(link);
+      const before = {
+        font: beforeStyle.font, color: beforeStyle.color, border: beforeStyle.borderColor,
+        background: beforeStyle.backgroundColor, width: link.getBoundingClientRect().width,
+      };
+      link.setAttribute('aria-current', 'page');
+      const afterStyle = getComputedStyle(link);
+      check(afterStyle.font === before.font, `${orientation}: active link keeps the font`);
+      check(afterStyle.color === before.color && afterStyle.borderColor === before.border,
+        `${orientation}: active link keeps text and border colors`);
+      check(afterStyle.backgroundColor !== before.background, `${orientation}: active link has a different background`);
+      check(Math.abs(link.getBoundingClientRect().width - before.width) < 0.1,
+        `${orientation}: active link keeps its width`);
+      const activeDimensions = measureSchema5Navigation(nav);
+      check(Math.abs(activeDimensions.width - dimensions.width) < 0.1
+        && Math.abs(activeDimensions.height - dimensions.height) < 0.1,
+      `${orientation}: required navigation dimensions stay unchanged`);
+      await settle();
+      check(!nav.hasAttribute('data-compact'), `${orientation}: switching pages does not open the burger menu`);
+      link.removeAttribute('aria-current');
+    }
+  }
+  nav.classList.add('is-vertical');
+  nav.style.width = `${Math.ceil(required.width) + 2}px`;
+  nav.style.height = `${Math.ceil(required.height) + 2}px`;
+  await settle();
   nav.style.height = `${Math.floor(required.height) - 2}px`;
   await settle();
   check(nav.hasAttribute('data-compact'), 'insufficient vertical height triggers burger');
