@@ -1,0 +1,64 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page duplication regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<main class="cms-shell"><section id="panel"></section></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { Schema5NavigationPanel } from '../www/fhem-cms/js/fcui-schema5-navigation.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+try {
+  const live = {
+    schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'start', title: 'Start', widgets: [
+      { id: 'text', type: 'text', html: '{{Temp:state}}', grid: { col: 1, row: 2, w: 4, h: 2 } },
+    ] }],
+  };
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let writes = 0;
+  const controller = {
+    snapshot: () => structuredClone(state),
+    async saveDraft(draft) { writes++; state = { ...state, draft: structuredClone(draft) }; },
+  };
+  const root = document.querySelector('#panel');
+  let closed = false;
+  new Schema5NavigationPanel({ root, controller, token: state.token,
+    browser: window, onClose: () => { closed = true; } });
+  const copy = root.querySelector('.cms-navedit-duplicate');
+  check(copy.title === 'Seite duplizieren', 'copy button has a title');
+  check(copy.getAttribute('aria-label').includes('Start'), 'copy button identifies the page');
+  copy.click();
+  check(writes === 0, 'copy stays local until save');
+  check(root.querySelectorAll('.cms-navedit-row:not(.cms-navedit-head)').length === 2, 'copy appears');
+  check(root.querySelectorAll('.cms-navedit-duplicate').length === 2, 'copy itself can be duplicated');
+  root.querySelector('.cms-panel-save').click();
+  await new Promise(resolve => setTimeout(resolve, 50));
+  check(writes === 1 && closed, 'save creates draft and closes');
+  check(state.draft.pages[1].id !== 'start', 'copy has an independent page id');
+  check(state.draft.pages[1].title === 'Start (Kopie)', 'copy has a recognizable title');
+  check(JSON.stringify(state.draft.pages[1].widgets) === JSON.stringify(live.pages[0].widgets),
+    'copy retains widgets and geometry');
+  check(live.pages.length === 1, 'live page remains unchanged');
+  const many = structuredClone(live);
+  many.pages = Array.from({ length: 50 }, (_, index) => ({
+    id: `page${index}`, title: `Seite ${index}`, widgets: [],
+  }));
+  state = { live: many, draft: null, token: state.token };
+  new Schema5NavigationPanel({ root, controller, token: state.token,
+    browser: window, onClose: () => {} });
+  check([...root.querySelectorAll('.cms-navedit-duplicate')].every(button => button.disabled),
+    'copy is disabled at the 50-page limit');
+  root.querySelector('.cms-panel-close').click();
+  check(writes === 1 && state.draft === null, 'closing without changes does not save');
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>

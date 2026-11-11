@@ -462,6 +462,10 @@ Fenstern schrumpfen die Punkte mit. Im Schema-5-Renderer entscheidet die
 tatsächlich benötigte Menübreite statt eines festen Bildschirm-Breakpoints
 über das ☰-Menü.
 
+Entwicklungsstand `dev`: Mit **Seite duplizieren** in der Seitenverwaltung
+entsteht eine Kopie mit eigener Seiten-ID, Widgets und Layout. Sie wird erst
+mit **Speichern** im Entwurf angelegt; die Live-Seite bleibt unverändert.
+
 Alle Dialoge haben unten die Knöpfe **Speichern** und **Abbrechen**: Speichern
 übernimmt die Änderungen als Entwurf und schließt den Dialog, Abbrechen verwirft
 die Eingaben.

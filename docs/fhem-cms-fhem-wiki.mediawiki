@@ -170,6 +170,7 @@ Die Navigation ist ein gemeinsames Widget für alle Seiten des CMS-Devices. Öff
 * Ausgeblendete Seiten bleiben über ihren Link erreichbar und sind nicht geschützt.
 * Zum Löschen einer Seite entfernst oder verschiebst du zunächst ihre Widgets und änderst referenzierende LinkWidget-Kacheln.
 * Die letzte verbleibende Seite kann nicht einfach entfernt werden.
+* Entwicklungsstand <code>dev</code>: Eine Seite kann mit Widgets und Layout dupliziert und als Entwurf gespeichert werden; die Live-Seite bleibt unverändert.
 * Die Navigation lässt sich horizontal oder vertikal ausrichten, verschieben und skalieren.
 * Bei Platzmangel erscheint ein aufklappbares Burger-Menü.
 * Entwicklungsstand <code>dev</code>: Bei horizontaler Navigation werden Einträge bei knappem Platz in der Höhe um höchstens 20 Prozent verkleinert; reicht der Platz auch dann nicht, erscheint das Burger-Menü.
