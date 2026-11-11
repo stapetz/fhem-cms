@@ -98,30 +98,30 @@ test('background label follows the asset catalog and reports missing entries or 
     let panel = open();
     let background = root.children[3].children[4];
     await settle();
-    assert.equal(background.children[1].textContent, 'Stammordner / Haus / Zimmer / Wand.png');
+    assert.equal(background.children[0].children[0].textContent, 'Stammordner / Haus / Zimmer / Wand.png');
     catalog.folders[1].name = 'Büro';
     catalog.assets[0].name = 'Umbenannt.png';
-    await background.children[2].fire('click');
-    assert.equal(background.children[1].textContent, 'Stammordner / Haus / Büro / Umbenannt.png');
+    await background.children[1].fire('click');
+    assert.equal(background.children[0].children[0].textContent, 'Stammordner / Haus / Büro / Umbenannt.png');
     catalog.assets[0].folder = 'root';
     panel.close();
     panel = open();
     background = root.children[3].children[4];
     await settle();
-    assert.equal(background.children[1].textContent, 'Stammordner / Umbenannt.png');
+    assert.equal(background.children[0].children[0].textContent, 'Stammordner / Umbenannt.png');
     selected = { href: second, name: 'veralteter Name' };
-    await background.children[2].fire('click');
-    assert.equal(background.children[1].textContent, 'Stammordner / Neu.jpg');
+    await background.children[1].fire('click');
+    assert.equal(background.children[0].children[0].textContent, 'Stammordner / Neu.jpg');
     selected = null;
     catalog.assets.pop();
     catalog.totalBytes = 1;
-    await background.children[2].fire('click');
-    assert.match(background.children[1].textContent, /nicht im Assetmanager gefunden/);
+    await background.children[1].fire('click');
+    assert.match(background.children[0].children[0].textContent, /nicht im Assetmanager gefunden/);
     response = async () => { throw new Error('Verbindung fehlgeschlagen'); };
-    await background.children[2].fire('click');
-    assert.match(background.children[1].textContent, /Bildname nicht verfügbar: Verbindung fehlgeschlagen/);
-    background.children[4].fire('click');
-    assert.equal(background.children[1].textContent, 'Kein Bild ausgewählt');
+    await background.children[1].fire('click');
+    assert.match(background.children[0].children[0].textContent, /Bildname nicht verfügbar: Verbindung fehlgeschlagen/);
+    background.children[3].fire('click');
+    assert.equal(background.children[0].children[0].textContent, 'Kein Bild ausgewählt');
     panel.close();
   } finally {
     globalThis.document = original;
@@ -141,10 +141,10 @@ test('late catalog responses cannot overwrite a removed background', async () =>
       services: { assetAction: () => new Promise(done => { resolve = done; }) },
       browser: { confirm: () => true }, onClose: () => {} });
     const background = root.children[3].children[4];
-    background.children[4].fire('click');
+    background.children[3].fire('click');
     resolve({ invalid: true });
     await new Promise(done => setImmediate(done));
-    assert.equal(background.children[1].textContent, 'Kein Bild ausgewählt');
+    assert.equal(background.children[0].children[0].textContent, 'Kein Bild ausgewählt');
   } finally {
     globalThis.document = original;
   }
@@ -164,7 +164,7 @@ test('new themes are selectable and saved without modifying widget layout', asyn
       assert.ok(theme.children.some(option => option.value === value));
       theme.value = value;
       theme.fire('change');
-      assert.equal(root.children[3].children[4].children[6].hidden, true);
+      assert.equal(root.children[3].children[4].children[5].hidden, true);
       await root.children[4].children[1].fire('click');
       assert.equal(f.controller.snapshot().draft.theme, value);
       assert.deepEqual(f.controller.snapshot().draft.pages, f.live.pages);
@@ -201,7 +201,7 @@ test('settings preview receives isolated candidates and closes without saving on
     form.children[1].children[0].fire('change');
     form.children[3].children[0].value = 'right';
     form.children[3].children[0].fire('change');
-    const controls = form.children[4].children[6];
+    const controls = form.children[4].children[5];
     controls.children[1].children[0].value = '65';
     controls.children[1].children[0].fire('input');
     form.children[2].children[0].value = '24';
@@ -248,7 +248,7 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
     assert.deepEqual(settings.children[3].children[0].children.map((option) => option.value), ['left', 'center', 'right']);
     assert.equal(settings.children[0].children[0].value, 'dark');
     assert.notEqual(settings.children[4].hidden, true, 'background settings are available in dark theme');
-    assert.equal(settings.children[4].children[6].hidden, true, 'liquid controls are hidden for dark theme');
+    assert.equal(settings.children[4].children[5].hidden, true, 'liquid controls are hidden for dark theme');
     assert.equal(settings.children[1].children[0].checked, true);
     assert.deepEqual(settings.children[2].children[0].children.map((option) => option.value), ['12', '24', '48', '96', '192']);
     assert.notEqual(settings.children[2].children[0].disabled, true);
@@ -327,29 +327,29 @@ test('liquid glass uses a reversible start-page background without changing indi
     settings.children[0].children[0].fire('change');
     const background = settings.children[4];
     assert.notEqual(background.hidden, true);
-    assert.equal(background.children[6].hidden, false, 'liquid controls appear for liquid glass');
-    assert.equal(background.children[0].textContent, 'Hintergrundbild für aktuelle Seite „A“');
-    assert.equal(background.children[3].textContent, 'Bild auf allen Seiten verwenden ');
-    assert.equal(background.children[4].textContent, 'Hintergrundbild entfernen');
-    assert.match(background.children[5].textContent, /auf jeder Seite einzeln über die Seiteneinstellungen/);
-    await background.children[2].fire('click');
-    background.children[3].children[0].checked = true;
+    assert.equal(background.children[5].hidden, false, 'liquid controls appear for liquid glass');
+    assert.equal(background.children[0].textContent, 'Hintergrundbild für aktuelle Seite „A“: ');
+    assert.equal(background.children[2].textContent, 'Bild auf allen Seiten verwenden ');
+    assert.equal(background.children[3].textContent, 'Hintergrundbild entfernen');
+    assert.match(background.children[4].textContent, /auf jeder Seite einzeln über die Seiteneinstellungen/);
+    await background.children[1].fire('click');
+    background.children[2].children[0].checked = true;
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[0].background, first);
     assert.equal(f.controller.snapshot().draft.settings.sharedBackground, true);
 
     selected = second;
     open('b');
-    assert.equal(root.children[3].children[4].children[0].textContent, 'Hintergrundbild für aktuelle Seite „B“');
+    assert.equal(root.children[3].children[4].children[0].textContent, 'Hintergrundbild für aktuelle Seite „B“: ');
     assert.equal(preview.background, first);
-    await root.children[3].children[4].children[2].fire('click');
+    await root.children[3].children[4].children[1].fire('click');
     assert.equal(preview.background, first,
       'individual image does not replace the active shared preview');
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[1].background, second);
 
     open('a');
-    root.children[3].children[4].children[3].children[0].checked = false;
+    root.children[3].children[4].children[2].children[0].checked = false;
     await root.children[4].children[1].fire('click');
     const result = f.controller.snapshot().draft;
     assert.equal(result.settings.sharedBackground, false);
@@ -380,9 +380,9 @@ test('background selection and shared setting work in light and dark themes', as
       form.children[0].children[0].fire('change');
       const background = form.children[4];
       assert.notEqual(background.hidden, true);
-      assert.equal(background.children[6].hidden, true);
-      await background.children[2].fire('click');
-      background.children[3].children[0].checked = true;
+      assert.equal(background.children[5].hidden, true);
+      await background.children[1].fire('click');
+      background.children[2].children[0].checked = true;
       await root.children[4].children[1].fire('click');
       assert.equal(f.controller.snapshot().draft.theme || 'dark', theme);
       assert.equal(f.controller.snapshot().draft.pages[0].background, image);
@@ -408,21 +408,21 @@ test('background picker reports errors, tolerates cancellation and removes an im
     });
     open();
     let background = root.children[3].children[4];
-    await background.children[2].fire('click');
+    await background.children[1].fire('click');
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[0].background, first);
     open();
     background = root.children[3].children[4];
     pick = async () => null;
-    await background.children[2].fire('click');
-    assert.match(background.children[1].textContent, /Bildname nicht verfügbar: Assetkatalog nicht verfügbar/);
+    await background.children[1].fire('click');
+    assert.match(background.children[0].children[0].textContent, /Bildname nicht verfügbar: Assetkatalog nicht verfügbar/);
     pick = async () => ({ href: 'https://example.test/image.png' });
-    await background.children[2].fire('click');
+    await background.children[1].fire('click');
     assert.match(root.children[2].textContent, /Ungültiger Bildpfad/);
     pick = async () => { throw new Error('Katalog nicht erreichbar'); };
-    await background.children[2].fire('click');
+    await background.children[1].fire('click');
     assert.match(root.children[2].textContent, /Katalog nicht erreichbar/);
-    background.children[4].fire('click');
+    background.children[3].fire('click');
     await root.children[4].children[1].fire('click');
     assert.equal('background' in f.controller.snapshot().draft.pages[0], false);
   } finally {
@@ -443,7 +443,7 @@ test('liquid sliders preview immediately, cancel safely and save global settings
       browser: { confirm: () => confirmed }, onClose: () => {},
     });
     open('a');
-    const controls = root.children[3].children[4].children[6];
+    const controls = root.children[3].children[4].children[5];
     const intensity = controls.children[0].children[0];
     const transparency = controls.children[1].children[0];
     assert.equal(controls.children.length, 2, 'only the two sliders remain');
@@ -463,14 +463,14 @@ test('liquid sliders preview immediately, cancel safely and save global settings
     root.children[4].children[0].fire('click');
     assert.equal(f.controller.snapshot().draft, null);
     open('b');
-    const otherControls = root.children[3].children[4].children[4];
+    const otherControls = root.children[3].children[4].children[3];
     otherControls.children[0].children[0].value = '0';
     otherControls.children[1].children[0].value = '100';
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.settings.liquidIntensity, 0);
     assert.equal(f.controller.snapshot().draft.settings.liquidTransparency, 100);
     open('a');
-    const savedControls = root.children[3].children[4].children[6];
+    const savedControls = root.children[3].children[4].children[5];
     assert.equal(savedControls.children[0].children[0].value, '0');
     assert.equal(savedControls.children[1].children[0].value, '100');
     savedControls.children[0].children[0].value = '101';
@@ -713,10 +713,10 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     const theme = root.children[3].children[0].children[0];
     theme.value = 'liquid-glass';
     theme.fire('change');
-    await root.children[3].children[4].children[2].fire('click');
-    root.children[3].children[4].children[3].children[0].checked = true;
-    root.children[3].children[4].children[6].children[0].children[0].value = '80';
-    root.children[3].children[4].children[6].children[1].children[0].value = '35';
+    await root.children[3].children[4].children[1].fire('click');
+    root.children[3].children[4].children[2].children[0].checked = true;
+    root.children[3].children[4].children[5].children[0].children[0].value = '80';
+    root.children[3].children[4].children[5].children[1].children[0].value = '35';
     const columns = root.children[3].children[2].children[0];
     columns.value = '192';
     columns.fire('change');
