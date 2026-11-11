@@ -45,8 +45,9 @@ my $change = sub {
     return $reply;
 };
 my $upload = sub {
-    my ($name, $bytes, $folder) = @_;
-    my $begin = $change->(op => 'begin', name => $name, size => length($bytes), folder => $folder // 'root');
+    my ($name, $bytes, $folder, $variantOf) = @_;
+    my $begin = $change->(op => 'begin', name => $name, size => length($bytes), folder => $folder // 'root',
+        (defined($variantOf) ? (variantOf => $variantOf) : ()));
     return $begin if ($begin->{error});
     for (my $offset = 0; $offset < length($bytes); $offset += 65536) {
         my $reply = $call->({ op => 'chunk', upload => $begin->{upload}, offset => $offset,
@@ -85,6 +86,24 @@ $reply = $change->(op => 'move', id => $image->{id}, name => 'Umbenannt.png', fo
 ok(!$reply->{error}, 'rename and move asset');
 is($state->{assets}[0]{href}, $href, 'move and rename keep widget URL unchanged');
 like($change->(op => 'move', id => $image->{id}, name => 'Wrong.svg', folder => 'root')->{error}, qr/Dateiendung/, 'rename cannot change type');
+my $variant = $upload->('Variante.png', $png . 'variant', 'root', $image->{id});
+ok(!$variant->{error}, 'upload image variant');
+my $variant_id = $variant->{selected};
+my ($variant_entry) = grep { $_->{id} eq $variant_id } @{$state->{assets}};
+is($variant_entry->{variantOf}, $image->{id}, 'variant refers to original');
+like($upload->('Kopie.png', $png, 'root', $image->{id})->{error}, qr/identisch/, 'duplicate variant rejected');
+like($change->(op => 'move', id => $variant_id, name => 'Variante.png', folder => $folder)->{error},
+    qr/getrennt/, 'variant cannot move away from original');
+ok(!$change->(op => 'move', id => $image->{id}, name => 'Umbenannt.png', folder => $folder)->{error},
+    'moving original moves its variants');
+($variant_entry) = grep { $_->{id} eq $variant_id } @{$state->{assets}};
+is($variant_entry->{folder}, $folder, 'variant follows original folder');
+ok(!$change->(op => 'delete', id => $image->{id})->{error}, 'original can be deleted');
+($variant_entry) = grep { $_->{id} eq $variant_id } @{$state->{assets}};
+ok(!exists($variant_entry->{variantOf}), 'variant becomes independent on original deletion');
+ok(!$change->(op => 'delete', id => $variant_id)->{error}, 'independent variant can be deleted');
+$reply = $upload->('Umbenannt.png', $png, 'root');
+$image = (grep { $_->{id} eq $reply->{selected} } @{$state->{assets}})[0];
 like($upload->('x.png', 'not an actual image at all')->{error}, qr/Bildformat/, 'image signatures checked');
 like($upload->('x.pdf', 'not an actual PDF')->{error}, qr/PDF/, 'PDF signatures checked');
 like($upload->('x.docx', 'not an actual ZIP document')->{error}, qr/Archiv/, 'Office archive signature checked');

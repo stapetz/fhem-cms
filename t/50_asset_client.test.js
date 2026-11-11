@@ -79,6 +79,11 @@ test('asset client roundtrips chunked files, administration and deletion through
     state = result.state;
     const image = state.assets.find(asset => asset.image);
     assert.match(image.href, /^media\//);
+    result = await client.uploadAsset(new File([imageBytes, 'variant'], 'Variant.png'), folder, state.token,
+      { variantOf: image.id });
+    state = result.state;
+    const variant = state.assets.find(asset => asset.id === result.selected);
+    assert.equal(variant.variantOf, image.id, 'variant association survives client and backend roundtrip');
     state = (await act({ op: 'mkdir', token: state.token, name: 'Bilder', parent: folder })).state;
     const imageFolder = state.folders.find(item => item.name === 'Bilder').id;
     state = (await act({ op: 'move', token: state.token, id: image.id, name: 'Verschoben.png', folder: imageFolder })).state;
@@ -87,6 +92,8 @@ test('asset client roundtrips chunked files, administration and deletion through
     assert.equal(movedImage.folder, imageFolder, 'image move persists across independent backend read');
     assert.equal(movedImage.name, 'Verschoben.png');
     assert.equal(movedImage.href, image.href, 'image move preserves existing widget URL');
+    assert.equal(state.assets.find(asset => asset.id === variant.id).folder, imageFolder,
+      'variant moves with original');
     await assert.rejects(() => act({ op: 'rmdir', token: state.token, id: imageFolder }), /leere/);
     state = await act({ op: 'list' });
     assert.ok(state.assets.some(asset => asset.id === image.id), 'nonempty folder refusal keeps image');

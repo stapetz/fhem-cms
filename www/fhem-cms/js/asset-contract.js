@@ -60,6 +60,15 @@ export function validateAssetState(state) {
     }
     ids.add(asset.id);
   }
+  const assets = new Map(state.assets.map(asset => [asset.id, asset]));
+  for (const asset of state.assets) {
+    if (!Object.hasOwn(asset, 'variantOf')) continue;
+    const original = assets.get(asset.variantOf);
+    if (!ID.test(asset.variantOf) || !asset.image || !original || !original.image
+      || original.id === asset.id || Object.hasOwn(original, 'variantOf') || original.folder !== asset.folder) {
+      throw new Error('Ungültige Bildvariante im Assetkatalog');
+    }
+  }
   if (!Number.isSafeInteger(state.totalBytes) || state.totalBytes !== state.assets.reduce((sum, asset) => sum + asset.bytes, 0)) {
     throw new Error('Ungültige Asset-Speichersumme');
   }

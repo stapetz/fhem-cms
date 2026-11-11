@@ -108,7 +108,8 @@ sub FHEMCMS_AssetLoad {
     my %ids;
     my %files;
     for my $asset (@{$catalog->{assets}}) {
-        FHEMCMS_AssetExact($asset, qw(id name folder file bytes image));
+        FHEMCMS_AssetExact($asset, exists($asset->{variantOf})
+            ? qw(id name folder file bytes image variantOf) : qw(id name folder file bytes image));
         die "Ungueltiges Asset\n" if (!defined($asset->{id}) || ref($asset->{id}) || $asset->{id} !~ $ASSET_ID
             || $ids{$asset->{id}}++ || !FHEMCMS_AssetString($asset->{name}, 180)
             || !defined($asset->{folder}) || ref($asset->{folder}) || !$folders{$asset->{folder}}
@@ -118,6 +119,15 @@ sub FHEMCMS_AssetLoad {
         die "Ungueltiger Assetpfad\n" if (!defined($asset->{file}) || ref($asset->{file}) || $asset->{file} !~ $valid || $files{$asset->{file}}++);
         my $file = File::Spec->catfile($asset->{image} ? $media : $store, $asset->{file});
         die "Assetdatei fehlt oder wurde extern veraendert\n" if (-l $file || !-f $file || (-s $file) != $asset->{bytes});
+    }
+    my %assetsById = map { $_->{id} => $_ } @{$catalog->{assets}};
+    for my $asset (@{$catalog->{assets}}) {
+        next if (!exists($asset->{variantOf}));
+        my $parent = $asset->{variantOf};
+        die "Ungueltige Bildvariante\n" if (!defined($parent) || ref($parent) || $parent !~ $ASSET_ID
+            || !$asset->{image} || $parent eq $asset->{id} || !$assetsById{$parent}
+            || !$assetsById{$parent}{image} || exists($assetsById{$parent}{variantOf})
+            || $assetsById{$parent}{folder} ne $asset->{folder});
     }
     if (-d $media) {
         opendir(my $dh, $media) or die "Bilder konnten nicht gelesen werden: $!\n";
@@ -260,12 +270,19 @@ sub FHEMCMS_AssetRequest {
     my %folders = (root => 1, map { $_->{id} => 1 } @{$catalog->{folders}});
     my $folderCheck = sub { die "Ordner nicht gefunden\n" if (!defined($_[0]) || ref($_[0]) || !$folders{$_[0]}); };
     if ($op eq 'begin') {
-        FHEMCMS_AssetExact($request, qw(op token folder name size));
+        FHEMCMS_AssetExact($request, exists($request->{variantOf})
+            ? qw(op token folder name size variantOf) : qw(op token folder name size));
         $folderCheck->($request->{folder});
         die "Ungueltiger Dateiname\n" if (!FHEMCMS_AssetString($request->{name}, 180) || $request->{name} !~ /\.([a-zA-Z0-9]{1,10})\z/);
         my $ext = lc($1);
         die "Dateityp ist gesperrt\n" if (!$catalog->{policy}{types}{$ext} || $ext =~ $ASSET_BLOCKED);
         my $image = $ext =~ /\A(?:png|jpe?g|gif)\z/;
+        if (exists($request->{variantOf})) {
+            my $original = $asset->($request->{variantOf});
+            die "Bildvariante benoetigt ein Originalbild im selben Ordner\n"
+                if (!$image || !$original->{image} || exists($original->{variantOf})
+                    || $original->{folder} ne $request->{folder});
+        }
         die "Ungueltige Dateigroesse\n" if (!defined($request->{size}) || ref($request->{size})
             || $ASSET_JSON->encode($request->{size}) !~ /\A[0-9]+\z/ || $request->{size} < 1
             || $request->{size} > $catalog->{policy}{$image ? 'imageBytes' : 'documentBytes'});
@@ -290,6 +307,7 @@ sub FHEMCMS_AssetRequest {
         $FHEMCMS_ASSET_UPLOADS{$id} = { name => $name, path => $path, fh => $fh, ext => $ext, image => $image,
             token => $token, filename => $request->{name}, folder => $request->{folder}, size => $request->{size},
             received => 0, head => '', md5 => Digest::MD5->new, sha => Digest::SHA->new(256) };
+        $FHEMCMS_ASSET_UPLOADS{$id}{variantOf} = $request->{variantOf} if (exists($request->{variantOf}));
         InternalTimer(time() + 900, 'FHEMCMS_AssetUploadExpired', $id, 0);
         return { upload => $id, chunkBytes => 65536 };
     } elsif ($op eq 'finish') {
@@ -317,6 +335,7 @@ sub FHEMCMS_AssetRequest {
         my $file = $upload->{image} ? "$id.$ext" : "$id.bin";
         my ($existing) = grep { $_->{id} eq $id } @{$catalog->{assets}};
         if ($existing) {
+            die "Bildvariante ist mit einem vorhandenen Asset identisch\n" if (exists($upload->{variantOf}));
             RemoveInternalTimer($request->{upload}, 'FHEMCMS_AssetUploadExpired');
             FHEMCMS_AssetUploadExpired($request->{upload});
             return { state => FHEMCMS_AssetPublic($name, $catalog, $token), selected => $id, duplicate => JSON::PP::true };
@@ -328,8 +347,10 @@ sub FHEMCMS_AssetRequest {
         my $target = File::Spec->catfile($upload->{image} ? $media : $store, $file);
         die "Zieldatei existiert bereits\n" if (-e $target || -l $target);
         rename($upload->{path}, $target) or die "Upload konnte nicht uebernommen werden: $!\n";
-        push(@{$catalog->{assets}}, { id => $id, file => $file, name => $upload->{filename}, folder => $upload->{folder},
-            bytes => $upload->{size}, image => $upload->{image} ? JSON::PP::true : JSON::PP::false });
+        my $newAsset = { id => $id, file => $file, name => $upload->{filename}, folder => $upload->{folder},
+            bytes => $upload->{size}, image => $upload->{image} ? JSON::PP::true : JSON::PP::false };
+        $newAsset->{variantOf} = $upload->{variantOf} if (exists($upload->{variantOf}));
+        push(@{$catalog->{assets}}, $newAsset);
         my $saved = eval { FHEMCMS_AssetSave($dir, $catalog); 1 };
         my $error = $@;
         if (!$saved) {
@@ -376,6 +397,12 @@ sub FHEMCMS_AssetRequest {
         my ($newExt) = $request->{name} =~ /\.([^.]+)\z/;
         die "Dateiendung darf nicht veraendert werden\n" if (!defined($oldExt) || !defined($newExt) || lc($oldExt) ne lc($newExt));
         @{$item}{qw(name folder)} = @{$request}{qw(name folder)};
+        if (!exists($item->{variantOf})) {
+            $_->{folder} = $item->{folder} for grep { ($_->{variantOf} // '') eq $item->{id} } @{$catalog->{assets}};
+        } else {
+            my $original = $asset->($item->{variantOf});
+            die "Bildvariante kann nicht getrennt vom Original verschoben werden\n" if ($item->{folder} ne $original->{folder});
+        }
     } elsif ($op eq 'delete') {
         FHEMCMS_AssetExact($request, qw(op token id));
         my $item = $asset->($request->{id});
@@ -387,6 +414,9 @@ sub FHEMCMS_AssetRequest {
         die "Loeschrest vorhanden; bitte pruefen\n" if (-e $quarantine || -l $quarantine);
         rename($path, $quarantine) or die "Asset konnte nicht entfernt werden: $!\n";
         $catalog->{assets} = [grep { $_->{id} ne $item->{id} } @{$catalog->{assets}}];
+        for my $variant (@{$catalog->{assets}}) {
+            delete($variant->{variantOf}) if (($variant->{variantOf} // '') eq $item->{id});
+        }
         my $saved = eval { FHEMCMS_AssetSave($dir, $catalog); 1 };
         my $error = $@;
         if (!$saved) {
