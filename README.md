@@ -2,7 +2,17 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
-**Aktuelle stabile Version: 1.7.0**
+**Aktuelle stabile Version: 1.8.0**
+
+## Neu in 1.8.0
+
+- Theme-Manager mit Forest Green, Hell, Liquid Glass, OLED Black und Catppuccin
+  Mocha; Hintergrundbilder pro Seite oder gemeinsam für alle Seiten.
+- Liquid-Effekt und Transparenz einstellen und Änderungen direkt in einer
+  Smartphone-Vorschau prüfen.
+- Anruflisten-Widget für FB_CALLLIST mit konfigurierbaren Spalten und 1 bis 20
+  Anrufen; ein einzelnes passendes Device wird automatisch ausgewählt.
+- Smartphone- und Tabletansichten ohne horizontalen Raster-Scrollbar.
 
 ## Neu in 1.7.0
 
@@ -34,7 +44,7 @@ Automatische Temperaturverläufe sind nicht Teil dieses Releases.
 Die Assetsuche und die vollständige deutsche/englische Gerätehilfe bleiben
 separaten Weiterentwicklungen vorbehalten.
 
-**Entwicklungsstand auf `dev`: 1.6.2-dev** – basiert auf Release 1.6.1;
+**Entwicklungsstand auf `dev`: 1.8.1-dev** – basiert auf Release 1.8.0;
 die vollständige DE/EN-Gerätehilfe bleibt als offene Arbeit auf `dev`.
 
 ## Neu in 1.2.0
@@ -70,7 +80,7 @@ ausgeben kann. `CHANGED` wird nicht als installierbare Datei geführt und
 
 ## Version
 
-Die aktuelle stabile Version ist **1.7.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
+Die aktuelle stabile Version ist **1.8.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
 
 ## Installation und Update in FHEM
 

@@ -1,5 +1,28 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Freigegebener Release 1.8.0 (#136, #137, #139)
+
+Am 11.11.2026 bestätigte der Entwickler die Geräteabnahme und gab den
+Release nach `main` frei. Der Release-Branch wurde vom stabilen Stand 1.7.0
+erstellt; übernommen wurden ausschließlich die folgenden Issue-Commits:
+
+| Issue | ursprüngliche dev-Commits |
+|---|---|
+| #136 Theme-Manager | 381739e, 294b74c, dc4ee4f, 39fc208, aa9c839, db53034, 6c15a34, d3288ba, 18e2f4a, 9646c7d, c1ea0b8 |
+| #137 Mobiles Raster | e846f2e |
+| #139 Anrufliste | 028e434, 8124f9a |
+
+Der Theme-Umfang umfasst Forest Green, Hell, Liquid Glass, OLED Black und
+Catppuccin Mocha, Seitenbilder und direkte Vorschau. Weitere Theme-Ideen
+sind als #140 im Backlog und nicht Teil dieses Releases. Die noch offene Gerätehilfe (#122) und die
+Assetsuche (#126) wurden nicht übernommen.
+
+Die Release-Metadaten enthalten die stabile Version 1.8.0; generierte Controls
+und `CHANGED` werden vom Workflow erstellt. Die Wiki-Screenshots verwenden
+lokal erzeugte Beispieldaten, keine produktiven Gerätedaten.
+Releaseprüfung: Perl-Syntax, 686 Perl-Assertions, 150 Node-Tests einschließlich
+Chrome-Regressionen, Build-Check und Changelog-Generator erfolgreich.
+
 ## Freigegebener Release 1.6.1 (#127)
 
 Am 10.11.2026 hat der Entwickler LinkWidget und Assetmanager als abgenommen

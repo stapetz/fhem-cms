@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-11",
+  "version": "1.8.0",
+  "title": "Theme-Manager und Anrufliste",
+  "changes": [
+    "Theme-Manager mit Forest Green, Hell, Liquid Glass, OLED Black und Catppuccin Mocha (Refs #136).",
+    "Hintergrundbilder pro Seite oder gemeinsam; Liquid-Effekt, Transparenz und direkte Smartphone-Vorschau.",
+    "Anruflisten-Widget fuer FB_CALLLIST mit waehlbaren Spalten und 1 bis 20 Anrufen (Refs #139).",
+    "Automatische Device-Auswahl bei genau einem Treffer und angepasste Anfangshoehe.",
+    "Smartphone- und Tabletansicht ohne horizontalen Raster-Scrollbar (Refs #137)."
+  ]
+}

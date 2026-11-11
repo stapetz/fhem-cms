@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-11",
+  "version": "1.8.1-dev",
+  "title": "Entwicklung nach Release 1.8.0",
+  "changes": [
+    "Der freigegebene Stand 1.8.0 wurde nach dev synchronisiert.",
+    "Theme-Manager, mobiles Raster und Anrufliste sind in 1.8.0 enthalten.",
+    "Die vollstaendige DE/EN-Geraetehilfe bleibt weiterhin offen."
+  ]
+}
