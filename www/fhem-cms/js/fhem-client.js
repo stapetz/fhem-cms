@@ -347,8 +347,9 @@ export class FhemClient {
     return result;
   }
 
-  async uploadAsset(file, folder, token, { signal, onProgress = () => {} } = {}) {
-    const started = await this.assetAction({ op: 'begin', token, folder, name: file.name, size: file.size });
+  async uploadAsset(file, folder, token, { signal, onProgress = () => {}, variantOf } = {}) {
+    const started = await this.assetAction({ op: 'begin', token, folder, name: file.name, size: file.size,
+      ...(variantOf === undefined ? {} : { variantOf }) });
     if (!/^[0-9a-f]{32}$/.test(started.upload) || started.chunkBytes !== 65536) throw new Error('Ungültige Uploadantwort');
     let finished = false;
     try {
