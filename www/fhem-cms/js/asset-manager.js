@@ -1,5 +1,6 @@
 import { ASSET_BLOCKED, assetFolderPath, validateAssetState } from './asset-contract.js';
 import { loadAssetExif } from './asset-exif.js';
+import { editAssetImage } from './asset-image-editor.js';
 
 const MiB = 1048576;
 const element = (tag, text) => {
@@ -57,6 +58,11 @@ export async function openAssetManager(services, { mode = null, owner = document
       .preview { position:relative; }
       .preview img { width:100%; max-height:15rem; object-fit:contain; display:block; }
       .preview .info { position:absolute; right:.3rem; top:.3rem; border-radius:50%; font-weight:bold; }
+      .variants { display:grid; gap:.4rem; }
+      .variant { display:flex; align-items:center; gap:.4rem; padding:.3rem;
+        border:1px solid var(--cms-border,#43564a); border-radius:.4rem; overflow-wrap:anywhere; }
+      .variant img { width:3rem; height:3rem; object-fit:contain; }
+      .variant input { flex:none; }
       .filename { display:flex; align-items:center; gap:.3rem; }
       .filename input { flex:1; }
       .exif { width:min(90vw,48rem); }
@@ -386,7 +392,43 @@ export async function openAssetManager(services, { mode = null, owner = document
     }
     if (!asset) return;
     box.append(element('strong', asset.name), element('p', `${asset.image ? 'Bild' : 'Dokument'} · ${sizeText(asset.bytes)}`));
-    if (asset.image) imagePreview(asset, box, revision);
+    if (asset.image) {
+      const original = state.assets.find(item => item.id === (asset.variantOf || asset.id));
+      const variants = [original, ...state.assets.filter(item => item.variantOf === original.id)
+        .sort((a, b) => a.name.localeCompare(b.name, 'de'))];
+      const group = element('div'); group.className = 'variants'; group.setAttribute('role', 'group');
+      group.setAttribute('aria-label', 'Original und Bildvarianten');
+      for (const item of variants) {
+        const label = element('label'); label.className = 'variant';
+        const radio = element('input'); radio.type = 'radio'; radio.name = 'asset-variant';
+        radio.checked = item.id === asset.id; radio.dataset.variantId = item.id;
+        radio.addEventListener('change', () => { selected = item.id; render(); });
+        const preview = element('img'); preview.src = item.href; preview.alt = '';
+        const description = element('span', `${item.id === original.id ? 'Original · ' : 'Variante · '}${item.name} · ${sizeText(item.bytes)}`);
+        label.append(radio, preview, description); group.append(label);
+      }
+      box.append(group);
+      imagePreview(asset, box, revision);
+      box.append(button('Bild bearbeiten …', async () => {
+        uploadController = new AbortController();
+        $('[data-abort]').hidden = false;
+        try {
+          const file = await editAssetImage(root, asset, uploadController.signal);
+          if (!file || closed) return;
+          const result = await services.uploadAsset(file, original.folder, state.token, {
+            variantOf: original.id, signal: uploadController.signal,
+            onProgress: (done, total) => status(`Bildvariante hochladen: ${Math.round(done / total * 100)} %`),
+          });
+          if (closed) return;
+          state = validateAssetState(result.state);
+          const saved = state.assets.find(item => item.id === result.selected);
+          if (!saved || saved.variantOf !== original.id || saved.folder !== original.folder) {
+            throw new Error('Bildvariante wurde nicht bestätigt. Bitte den Assetkatalog neu laden.');
+          }
+          selected = saved.id; render(); status('Bildvariante gespeichert; das Original bleibt unverändert.');
+        } finally { $('[data-abort]').hidden = true; uploadController = null; }
+      }, 'data-edit-image'));
+    }
     const label = element('label', 'Dateiname');
     const dot = asset.name.lastIndexOf('.');
     const suffix = asset.name.slice(dot);
@@ -407,7 +449,8 @@ export async function openAssetManager(services, { mode = null, owner = document
       if (!name.value.trim()) throw new Error('Bitte einen Dateinamen eingeben.');
       await saveAsset(name.value.trim() + suffix, asset.folder);
     }, 'data-rename'));
-    box.append(element('p', `Ordner: ${pathText(asset.folder)}`), button('Verschieben', async () => {
+    box.append(element('p', `Ordner: ${pathText(asset.folder)}`));
+    if (!asset.variantOf) box.append(button('Verschieben', async () => {
       const destination = await chooseFolder(asset.folder);
       if (destination === null || closed) return;
       await saveAsset(asset.name, destination);
@@ -433,12 +476,13 @@ export async function openAssetManager(services, { mode = null, owner = document
     breadcrumbs($('[data-path]'), folder, navigate);
     const box = $('[data-assets]'); box.replaceChildren();
     folderTiles(box, folder, navigate, new Set(), true);
-    const assets = state.assets.filter(asset => asset.folder === folder && allowed(asset))
+    const assets = state.assets.filter(asset => asset.folder === folder && allowed(asset) && !asset.variantOf)
       .sort((a, b) => a.name.localeCompare(b.name, 'de'));
     for (const asset of assets) {
       const choose = element('button');
       choose.type = 'button'; choose.className = 'asset'; choose.dataset.assetId = asset.id;
-      choose.setAttribute('aria-pressed', String(asset.id === selected));
+      choose.setAttribute('aria-pressed', String(asset.id === selected
+        || state.assets.some(item => item.id === selected && item.variantOf === asset.id)));
       if (asset.image) {
         const image = element('img'); image.src = asset.href; image.alt = ''; choose.append(image);
       } else {

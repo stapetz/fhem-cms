@@ -113,6 +113,14 @@ test('asset client roundtrips chunked files, administration and deletion through
     await assert.rejects(() => act({ op: 'delete', token: state.token, id: document.id }), error => {
       assert.equal(error.usage[0].widget, 'text'); return /verwendet/.test(error.message);
     });
+    await assert.rejects(() => act({ op: 'delete', token: state.token, id: image.id }), /verwendet/);
+    const variantDraft = stored.replace(image.href, variant.href);
+    await writeFile(join(dir, 'fhem-cms-data/CMS/draft.json'), variantDraft);
+    await assert.rejects(() => act({ op: 'delete', token: state.token, id: variant.id }), /verwendet/);
+    state = (await act({ op: 'delete', token: state.token, id: image.id })).state;
+    assert.ok(!Object.hasOwn(state.assets.find(asset => asset.id === variant.id), 'variantOf'),
+      'deleting unreferenced original detaches a referenced variant without deleting it');
+    await assert.rejects(() => act({ op: 'delete', token: state.token, id: variant.id }), /verwendet/);
     await writeFile(join(dir, 'fhem-cms-data/CMS/draft.json'), JSON.stringify(config));
     state = (await act({ op: 'delete', token: state.token, id: document.id })).state;
     assert.equal(state.assets.some(asset => asset.id === document.id), false);

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<title>Bildvarianten</title>
+<pre id="result"></pre>
+<script type="module">
+import { openAssetManager } from '../www/fhem-cms/js/asset-manager.js';
+const result = document.querySelector('#result');
+let checks = 0;
+const check = (condition, name) => { checks++; if (!condition) throw new Error(name); };
+const pause = () => new Promise(resolve => setTimeout(resolve, 30));
+const wait = async predicate => {
+  for (let i = 0; i < 100; i++) { if (predicate()) return; await pause(); }
+  throw new Error('Zeitüberschreitung beim Warten auf Bilddialog');
+};
+const canvas = document.createElement('canvas');
+canvas.width = 20; canvas.height = 10;
+const ctx = canvas.getContext('2d');
+ctx.fillStyle = 'red'; ctx.fillRect(0, 0, 10, 10);
+ctx.fillStyle = 'blue'; ctx.fillRect(10, 0, 10, 10);
+const originalBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+const originalId = 'a'.repeat(32), variantId = 'b'.repeat(32);
+const original = { id: originalId, name: 'Test.png', file: `${originalId}.png`,
+  href: `media/${originalId}.png`, image: true, bytes: originalBlob.size, folder: 'root' };
+let revision = 1;
+const state = { token: String(revision).padStart(64, '0'), folders: [], assets: [original],
+  totalBytes: original.bytes, policy: { imageBytes: 3145728, documentBytes: 20971520,
+    totalBytes: 524288000, types: { png: true, jpg: true, gif: true, pdf: true } } };
+const nativeFetch = window.fetch;
+window.fetch = async (url, options) => String(url) === original.href
+  ? new Response(originalBlob, { status: 200 }) : nativeFetch(url, options);
+let savedFile;
+const services = {
+  async assetAction(request) {
+    if (request.op === 'list') return structuredClone(state);
+    if (request.op === 'usage') return { usage: [] };
+    if (request.op === 'delete') {
+      state.assets = state.assets.filter(item => item.id !== request.id);
+      for (const asset of state.assets) if (asset.variantOf === request.id) delete asset.variantOf;
+      state.token = String(++revision).padStart(64, '0');
+      state.totalBytes = state.assets.reduce((sum, item) => sum + item.bytes, 0);
+      return { state: structuredClone(state) };
+    }
+    throw new Error(`Unerwartete Aktion: ${request.op}`);
+  },
+  async uploadAsset(file, folder, token, options) {
+    check(token === state.token && folder === 'root' && options.variantOf === originalId, 'Upload bindet Original und Katalogtoken');
+    savedFile = file;
+    state.assets.push({ id: variantId, name: file.name, file: `${variantId}.png`,
+      href: `media/${variantId}.png`, bytes: file.size, image: true, folder, variantOf: originalId });
+    state.totalBytes += file.size;
+    state.token = String(++revision).padStart(64, '0');
+    return { selected: variantId, state: structuredClone(state) };
+  },
+};
+try {
+  const pending = openAssetManager(services, { mode: 'image' });
+  await wait(() => document.querySelector('[data-asset-manager]')?.shadowRoot.querySelector('[data-asset-id]'));
+  const root = document.querySelector('[data-asset-manager]').shadowRoot;
+  root.querySelector(`[data-asset-id="${originalId}"]`).click();
+  check(root.querySelectorAll('[data-variant-id]').length === 1, 'Original in Variantenliste');
+  check(root.querySelector('.variant').textContent.includes('Original'), 'Original gekennzeichnet');
+  root.querySelector('[data-edit-image]').click();
+  await wait(() => root.querySelector('[data-image-editor]')?.open);
+  const editor = root.querySelector('[data-image-editor]');
+  for (const [key, value] of Object.entries({ x: 10, y: 0, w: 10, h: 10 })) {
+    const input = editor.querySelector(`[data-crop="${key}"]`);
+    input.value = value; input.dispatchEvent(new Event('input'));
+  }
+  editor.querySelector('[data-output="w"]').value = 5;
+  editor.querySelector('[data-output="h"]').value = 5;
+  editor.querySelector('[data-image-save]').click();
+  await wait(() => savedFile && root.querySelectorAll('[data-variant-id]').length === 2);
+  check(root.querySelectorAll('[data-asset-id]').length === 1, 'Variante erscheint nur beim Original');
+  check(root.querySelector(`[data-variant-id="${variantId}"]`).checked, 'Neue Variante ausgewählt');
+  check(savedFile.name === 'Test-variante.png', 'Variante bekommt PNG-Namen');
+  const bitmap = await createImageBitmap(savedFile);
+  check(bitmap.width === 5 && bitmap.height === 5, 'Ausgabe entspricht Verkleinerung');
+  const verify = document.createElement('canvas'); verify.width = 5; verify.height = 5;
+  const out = verify.getContext('2d'); out.drawImage(bitmap, 0, 0);
+  const pixel = out.getImageData(2, 2, 1, 1).data;
+  check(pixel[2] > 240 && pixel[0] < 15, 'Ausschnitt enthält den rechten blauen Bildbereich');
+  bitmap.close();
+  check(state.assets[0].bytes === originalBlob.size, 'Original bleibt unverändert');
+  root.querySelector(`[data-variant-id="${originalId}"]`).click();
+  check(root.querySelector(`[data-variant-id="${originalId}"]`).checked, 'Original wieder auswählbar');
+  root.querySelector(`[data-variant-id="${variantId}"]`).click();
+  root.querySelector('[data-select]').click();
+  check((await pending).id === variantId, 'Picker liefert die gewählte Variante');
+  result.dataset.result = 'pass'; result.textContent = JSON.stringify({ checks });
+} catch (error) {
+  result.dataset.result = 'fail'; result.textContent = `${error.stack || error}`;
+}
+</script>

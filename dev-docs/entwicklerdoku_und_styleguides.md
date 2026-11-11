@@ -298,6 +298,15 @@ Upload wählt keine Datei automatisch aus: Detailspalte und EXIF-Anfragen bleibe
 geschlossen. Drop-Standardverhalten verhindern, Ablagefläche hervorheben und
 Ordner-Drops explizit ablehnen. Nach Abbruch/erstem Fehler keine weiteren Dateien
 starten; erfolgreiche Dateien erhalten und Anzahl sichtbar melden.
+Der Entwicklungsstand zu #138 gruppiert Bildvarianten über `variantOf` beim
+Original. Zuschneiden und Verkleinern erfolgen lokal im Browser, Ergebnisse
+laufen über den tokengebundenen Upload; Originale bleiben unverändert.
+GIF-Animation und APNG werden nicht als Einzelbild gespeichert. Maße werden vor
+dem Dekodieren und danach auf 8192 Pixel pro Seite und 16 Megapixel begrenzt.
+Löschen prüft jede Datei separat; bei Originallöschung werden Varianten zu
+eigenständigen Bildern. Beim Rollback sind Code, Assetkatalog und Dateien einer
+zusammengehörigen Sicherung erforderlich, da alte Validatoren `variantOf` nicht
+akzeptieren. Dieser Entwicklungsstand ist noch nicht veröffentlicht.
 Die bisherige Suche ist entfernt; Weiterentwicklung ausschließlich in #126
 (later/Backlog), nicht Bestandteil des aktuellen Assetmanager-Abnahmeumfangs.
 Zielordner für Assets und Ordner werden über denselben grafischen Ordnerpicker
