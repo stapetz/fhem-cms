@@ -1,4 +1,5 @@
 import { resizeSchema5Grid, schema5GridItems, SCHEMA5_GRID_COLUMNS } from './fcui-schema5-layout.js';
+import { ASSET_IMAGE } from './asset-contract.js';
 
 function element(tag, text) {
   const result = document.createElement(tag);
@@ -26,8 +27,13 @@ export class Schema5PagePanel {
   #suspended = false;
   #requiresReload = false;
   #onClose;
+  #pageId;
+  #background;
+  #backgroundLabel;
+  #sharedBackground;
+  #backgroundControls;
 
-  constructor({ root, controller, pageId, token, browser = window, onClose }) {
+  constructor({ root, controller, pageId, token, services = {}, browser = window, onClose }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
       || typeof controller.saveDraft !== 'function'
       || !browser || typeof browser.confirm !== 'function' || typeof onClose !== 'function') {
@@ -43,6 +49,8 @@ export class Schema5PagePanel {
     this.#token = token;
     this.#config = config;
     this.#onClose = onClose;
+    this.#pageId = pageId;
+    this.#background = config.pages.find((page) => page.id === pageId).background || '';
 
     const heading = element('h2', 'Seiteneinstellungen');
     const hint = element('p',
@@ -55,7 +63,7 @@ export class Schema5PagePanel {
     this.#form = element('form');
     const themeLabel = element('label', 'Darstellung ');
     this.#theme = element('select');
-    for (const [value, title] of [['dark', 'Dunkel'], ['light', 'Hell']]) {
+    for (const [value, title] of [['dark', 'Dunkel'], ['light', 'Hell'], ['liquid-glass', 'Liquid Glass']]) {
       const option = element('option', title);
       option.value = value;
       this.#theme.append(option);
@@ -86,6 +94,64 @@ export class Schema5PagePanel {
     this.#titleAlign.value = config.settings.titleAlign || 'left';
     titleLabel.append(this.#titleAlign);
     this.#form.append(themeLabel, framesLabel, layoutLabel, titleLabel);
+    this.#backgroundControls = element('div');
+    this.#backgroundControls.hidden = this.#theme.value !== 'liquid-glass';
+    const headingBackground = element('p', 'Hintergrundbild dieser Seite');
+    this.#backgroundLabel = element('p', this.#background || 'Kein Bild ausgewählt');
+    const choose = element('button', 'Hintergrundbild auswählen');
+    choose.type = 'button';
+    choose.className = 'cms-button';
+    const remove = element('button', 'Hintergrundbild entfernen');
+    remove.type = 'button';
+    remove.className = 'cms-button';
+    this.#backgroundControls.append(headingBackground, this.#backgroundLabel, choose, remove);
+    if (pageId === config.pages[0].id) {
+      const sharedLabel = element('label', 'Hintergrundbild dieser Startseite auf allen Seiten verwenden ');
+      this.#sharedBackground = element('input');
+      this.#sharedBackground.type = 'checkbox';
+      this.#sharedBackground.checked = config.settings.sharedBackground === true;
+      sharedLabel.append(this.#sharedBackground);
+      this.#backgroundControls.append(sharedLabel,
+        element('p', 'Eigene Bilder anderer Seiten bleiben erhalten und gelten wieder nach dem Ausschalten.'));
+    } else if (config.settings.sharedBackground === true) {
+      this.#backgroundControls.append(element('p', 'Das Bild der Startseite wird aktuell auf allen Seiten verwendet.'));
+    }
+    this.#form.append(this.#backgroundControls);
+    this.#theme.addEventListener('change', () => {
+      this.#backgroundControls.hidden = this.#theme.value !== 'liquid-glass';
+    });
+    choose.addEventListener('click', async () => {
+      if (this.#busy || this.#closed || this.#requiresReload) return;
+      if (typeof services.pickAsset !== 'function') {
+        this.#message('Bildauswahl ist nicht verfügbar', true);
+        return;
+      }
+      this.#busy = true;
+      this.#save.disabled = true;
+      this.#close.disabled = true;
+      try {
+        const asset = await services.pickAsset({ mode: 'image', owner: this.#root });
+        if (this.#closed || this.#suspended || !asset) return;
+        if (typeof asset.href !== 'string' || !ASSET_IMAGE.test(asset.href)) {
+          throw new Error('Ungültiger Bildpfad');
+        }
+        this.#background = asset.href;
+        this.#backgroundLabel.textContent = asset.name || asset.href;
+        this.#message('Bild ausgewählt; noch nicht gespeichert.');
+      } catch (error) {
+        this.#message(`Bildauswahl fehlgeschlagen: ${error.message || String(error)}`, true);
+      } finally {
+        this.#busy = false;
+        this.#save.disabled = false;
+        this.#close.disabled = false;
+        if (this.#suspended) this.close();
+      }
+    });
+    remove.addEventListener('click', () => {
+      if (this.#busy || this.#closed || this.#requiresReload) return;
+      this.#background = '';
+      this.#backgroundLabel.textContent = 'Kein Bild ausgewählt';
+    });
     this.#form.addEventListener('submit', (event) => event.preventDefault());
 
     this.#save = element('button', 'Speichern');
@@ -123,7 +189,8 @@ export class Schema5PagePanel {
   }
 
   #settings() {
-    return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value, this.#titleAlign.value]);
+    return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value,
+      this.#titleAlign.value, this.#background, this.#sharedBackground?.checked ?? null]);
   }
 
   #changeColumns() {
@@ -139,7 +206,7 @@ export class Schema5PagePanel {
 
   async #saveDraft() {
     if (this.#busy || this.#closed || this.#requiresReload) return;
-    if (!['dark', 'light'].includes(this.#theme.value)) {
+    if (!['dark', 'light', 'liquid-glass'].includes(this.#theme.value)) {
       this.#message('Ungültige Darstellung', true);
       return;
     }
@@ -150,10 +217,18 @@ export class Schema5PagePanel {
     let pending;
     try {
       const candidate = resizeSchema5Grid(this.#config, Number(this.#columns.value));
-      const [originalTheme, originalFrames, , originalTitleAlign] = JSON.parse(this.#settingsBaseline);
+      const [originalTheme, originalFrames, , originalTitleAlign, originalBackground, originalShared] = JSON.parse(this.#settingsBaseline);
       if (this.#theme.value !== originalTheme) candidate.theme = this.#theme.value;
       if (this.#frames.checked !== originalFrames) candidate.settings.showFrames = this.#frames.checked;
       if (this.#titleAlign.value !== originalTitleAlign) candidate.settings.titleAlign = this.#titleAlign.value;
+      if (this.#background !== originalBackground) {
+        const page = candidate.pages.find((entry) => entry.id === this.#pageId);
+        if (this.#background) page.background = this.#background;
+        else delete page.background;
+      }
+      if (this.#sharedBackground && this.#sharedBackground.checked !== originalShared) {
+        candidate.settings.sharedBackground = this.#sharedBackground.checked;
+      }
       pending = this.#controller.saveDraft(candidate, this.#token);
     } catch (error) {
       this.#message(`Änderung ungültig: ${error.message || String(error)}`, true);

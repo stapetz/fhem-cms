@@ -65,6 +65,42 @@
   --cms-alert-border: #b42318;
 }
 
+:root[data-cms-theme="liquid-glass"] {
+  color-scheme: dark;
+  --cms-bg: #101d2c;
+  --cms-surface: rgb(19 34 52 / 0.88);
+  --cms-surface-raised: rgb(38 57 77 / 0.94);
+  --cms-surface-hover: rgb(55 78 100 / 0.96);
+  --cms-surface-active: rgb(61 90 116 / 0.98);
+  --cms-border: #91aabc;
+  --cms-border-subtle: #718b9e;
+  --cms-frame: #a7bed0;
+  --cms-text: #f5f9ff;
+  --cms-muted: #c3d5e5;
+  --cms-muted-strong: #dce8f3;
+  --cms-accent: #a5d9ff;
+  --cms-accent-strong: #265a7a;
+  --cms-accent-hover: #31729c;
+  --cms-on-accent: #ffffff;
+  --cms-track: #667e90;
+  --cms-tile-inset: rgb(17 33 49 / 0.94);
+  --cms-toolbar: rgb(19 34 52 / 0.97);
+  --cms-toolbar-border: #91aabc;
+  --cms-toolbar-hover: #37546d;
+  --cms-toolbar-outline: #a5d9ff;
+  --cms-guide: rgb(165 217 255 / 0.3);
+  background-image: linear-gradient(rgb(7 15 24 / 0.42), rgb(7 15 24 / 0.42)), var(--cms-page-image, none);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+:root[data-cms-theme="liquid-glass"] .cms-schema5-grid > .grid-stack-item > .grid-stack-item-content {
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-radius: 1.4rem;
+}
+
 * {
   box-sizing: border-box;
 }

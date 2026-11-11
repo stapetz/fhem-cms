@@ -181,6 +181,14 @@ sub FHEMCMS_AssetUsage {
         die "Verwendungen koennen nicht sicher geprueft werden\n" if (ref($config) ne 'HASH' || ref($config->{pages}) ne 'ARRAY');
         for my $page (@{$config->{pages}}) {
             die "Ungueltige Seite bei Verwendungspruefung\n" if (ref($page) ne 'HASH' || ref($page->{widgets}) ne 'ARRAY');
+            die "Ungueltiges Hintergrundbild bei Verwendungspruefung\n"
+                if (exists($page->{background}) && (!defined($page->{background}) || ref($page->{background})
+                    || $page->{background} !~ m{\Amedia/[0-9a-f]{32}\.(?:png|jpg|gif)\z}));
+            if ($asset->{image} && defined($page->{background})
+                && $page->{background} eq $href) {
+                push(@usage, { source => $entry->[1], page => $page->{id},
+                    pageTitle => $page->{title}, widget => 'background', title => 'Seitenhintergrund' });
+            }
             for my $widget (@{$page->{widgets}}) {
                 if (index($ASSET_JSON->encode($widget), $href) >= 0
                     || (!$asset->{image} && index($ASSET_JSON->encode($widget), "/$asset->{id}") >= 0)) {

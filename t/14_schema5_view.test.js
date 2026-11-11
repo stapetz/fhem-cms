@@ -27,7 +27,7 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
     addEventListener(name, callback) { (this.listeners ||= {})[name] = callback; }
   }
   globalThis.window = { location: { href: 'https://example.test/' } };
-  globalThis.document = { createElement: (tag) => new Element(tag) };
+  globalThis.document = { createElement: (tag) => new Element(tag), documentElement: new Element('html') };
   globalThis.HTMLElement = class {};
   const registry = new Map();
   globalThis.customElements = {

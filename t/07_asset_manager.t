@@ -160,6 +160,28 @@ $reply = $change->(op => 'delete', id => $pdf->{id});
 like($reply->{error}, qr/verwendet/, 'used document cannot be deleted even without frontend usage check');
 is(scalar(@{$reply->{usage}}), 4, 'blocked deletion returns all locations');
 ok(-f "$dir/assets/$pdf->{file}", 'blocked deletion leaves file untouched');
+my $background_config = $json->decode($initial);
+$background_config->{theme} = 'liquid-glass';
+$background_config->{pages}[0]{background} = $href;
+$background_config->{settings}{sharedBackground} = JSON::PP::true;
+is(FHEMCMS_ValidateConfig($background_config, 5), undef, 'backend accepts liquid glass background');
+write_bytes("$dir/config.json", $json->encode($background_config));
+write_bytes("$dir/draft.json", $json->encode($background_config));
+$reply = $call->({op => 'usage', id => $image->{id}});
+is(scalar(@{$reply->{usage}}), 2, 'background usage found in live and draft');
+is($reply->{usage}[0]{title}, 'Seitenhintergrund', 'background usage is identified');
+like($change->(op => 'delete', id => $image->{id})->{error}, qr/verwendet/, 'background image cannot be deleted');
+for my $invalid ('../outside.png', 'https://example.test/x', "media/$legacy?x", 'media/a.svg', '') {
+    $background_config->{pages}[0]{background} = $invalid;
+    like(FHEMCMS_ValidateConfig($background_config, 5), qr/Hintergrundbild/, 'unsafe background is rejected');
+}
+$background_config->{pages}[0]{background} = $href;
+$background_config->{settings}{sharedBackground} = 1;
+like(FHEMCMS_ValidateConfig($background_config, 5), qr/sharedBackground/, 'shared background must be boolean');
+$background_config->{pages}[0]{background} = { href => $href };
+write_bytes("$dir/draft.json", $json->encode($background_config));
+like($change->(op => 'delete', id => $image->{id})->{error}, qr/Hintergrundbild/,
+    'malformed background fails closed during usage check');
 write_bytes("$dir/config.json", $initial);
 write_bytes("$dir/draft.json", $initial);
 $reply = $change->(op => 'delete', id => $image->{id});

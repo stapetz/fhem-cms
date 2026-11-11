@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-11",
+  "version": "1.8.0-dev",
+  "title": "Liquid Glass (Refs #136)",
+  "changes": [
+    "Neues Liquid-Glass-Theme mit Bildauswahl je Seite im Seitendialog.",
+    "Das Startseitenbild kann fuer alle Seiten verwendet werden; eigene Bilder bleiben erhalten.",
+    "Bilder werden im Assetmanager gegen Loeschen geschuetzt."
+  ]
+}

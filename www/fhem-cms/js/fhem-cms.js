@@ -2057,7 +2057,7 @@ async function startSchema5Device(client, shell, card, isSuspended) {
   const state = await client.getVersion5State();
   if (isSuspended()) return;
   const config = PREVIEW_MODE && state.draft ? state.draft : state.live;
-  document.documentElement.setAttribute('data-cms-theme', config.theme === 'light' ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-cms-theme', config.theme || 'dark');
   document.documentElement.setAttribute('data-cms-frames', config.settings?.showFrames === false ? 'off' : 'on');
   document.documentElement.style.setProperty('--cms-widget-title-align', config.settings?.titleAlign || 'left');
   const grid = document.createElement('div');

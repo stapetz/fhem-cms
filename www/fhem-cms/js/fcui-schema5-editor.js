@@ -312,7 +312,7 @@ export class Schema5Editor {
     const scrollTop = this.#content.scrollTop;
     if (this.#view) this.#view.stop();
     const config = state.draft || state.live;
-    document.documentElement.setAttribute('data-cms-theme', config.theme === 'light' ? 'light' : 'dark');
+    document.documentElement.setAttribute('data-cms-theme', config.theme || 'dark');
     document.documentElement.setAttribute('data-cms-frames', config.settings?.showFrames === false ? 'off' : 'on');
     document.documentElement.style.setProperty('--cms-widget-title-align', config.settings?.titleAlign || 'left');
     this.#mode.textContent = state.draft ? 'Entwurf' : 'Live';
@@ -562,7 +562,7 @@ export class Schema5Editor {
       this.#content.replaceChildren();
       const container = this.#panelContainer('page');
       this.#panel = new Schema5PagePanel({
-        root: container, controller: this.#controller, pageId,
+        root: container, controller: this.#controller, pageId, services: this.#services,
         token: state.token, browser: this.#browser,
         onClose: ({ requiresReload }) => {
           this.#panel = null;

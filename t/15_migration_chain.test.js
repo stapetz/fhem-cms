@@ -158,7 +158,7 @@ test('isolated migration, restart, versioned draft and restore form one protecte
     assert.match(state.live.pages[0].widgets[1].html, /device="Temp" reading="state"/);
     for (const page of state.live.pages) assert.equal(schema5GridItems(state.live, page.id).length, page.widgets.length + 1);
     globalThis.window = { location: { href: 'https://example.test/fhem/' }, clearTimeout };
-    globalThis.document = { createElement: (tag) => new Element(tag) };
+    globalThis.document = { createElement: (tag) => new Element(tag), documentElement: new Element('html') };
     globalThis.HTMLElement = class {};
     const registry = new Map();
     globalThis.customElements = {

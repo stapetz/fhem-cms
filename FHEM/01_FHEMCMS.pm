@@ -19,7 +19,7 @@ use Time::Local ();
 
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 
-our $FHEMCMS_VERSION = '1.7.1-dev';
+our $FHEMCMS_VERSION = '1.8.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -788,7 +788,9 @@ sub FHEMCMS_ValidateConfig {
     return 'Nicht unterstuetzte schemaVersion'
         if (!$isInt->($config->{schemaVersion}, $targetSchema, $targetSchema));
     if (exists($config->{settings})) {
-        $err = $exact->($config->{settings}, 'settings', [], ['showFrames', 'layoutMode', 'gridColumns', 'titleAlign']);
+        my @settings = ('showFrames', 'layoutMode', 'gridColumns', 'titleAlign');
+        push(@settings, 'sharedBackground') if ($targetSchema == 5);
+        $err = $exact->($config->{settings}, 'settings', [], \@settings);
         return $err if ($err);
         return 'Ungueltiger Wert fuer layoutMode'
             if (exists($config->{settings}{layoutMode}) && (ref($config->{settings}{layoutMode})
@@ -802,6 +804,8 @@ sub FHEMCMS_ValidateConfig {
                     : $config->{settings}{gridColumns} !~ /\A(?:12|24|48)\z/)));
         return 'Ungueltiger Wert fuer showFrames'
             if (exists($config->{settings}{showFrames}) && !$isBool->($config->{settings}{showFrames}));
+        return 'Ungueltiger Wert fuer sharedBackground'
+            if (exists($config->{settings}{sharedBackground}) && !$isBool->($config->{settings}{sharedBackground}));
         return 'Ungueltiger Wert fuer titleAlign'
             if (exists($config->{settings}{titleAlign}) && (ref($config->{settings}{titleAlign})
                 || !defined($config->{settings}{titleAlign})
@@ -817,7 +821,7 @@ sub FHEMCMS_ValidateConfig {
     }
     return 'Ungueltiges Theme'
         if (exists($config->{theme}) && (ref($config->{theme}) || !defined($config->{theme})
-            || $config->{theme} !~ /\A(?:dark|light)\z/));
+            || $config->{theme} !~ ($targetSchema == 5 ? qr/\A(?:dark|light|liquid-glass)\z/ : qr/\A(?:dark|light)\z/)));
     if (exists($config->{navigation})) {
         $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid'], ['items', 'itemWidth', 'itemHeight']);
         return $err if ($err);
@@ -862,8 +866,12 @@ sub FHEMCMS_ValidateConfig {
 
     my %pageIds;
     for my $page (@{$config->{pages}}) {
-        $err = $exact->($page, 'Seite', ['id', 'title', 'widgets']);
+        $err = $exact->($page, 'Seite', ['id', 'title', 'widgets'],
+            $targetSchema == 5 ? ['background'] : []);
         return $err if ($err);
+        return 'Ungueltiges Hintergrundbild'
+            if (exists($page->{background}) && (ref($page->{background}) || !defined($page->{background})
+                || $page->{background} !~ m{\Amedia/[0-9a-f]{32}\.(?:png|jpg|gif)\z}));
         return 'Ungueltige Seiten-ID'
             if (ref($page->{id}) || !defined($page->{id}) || $page->{id} !~ $id);
         return "Doppelte Seiten-ID '$page->{id}'" if ($pageIds{$page->{id}}++);

@@ -87,7 +87,7 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
     assert.ok(descendants(root).every((node) => node.type !== 'number'
       && !node.className?.includes('grid-stack') && node.textContent !== 'Position übernehmen'));
     const settings = root.children[3];
-    assert.equal(settings.children.length, 4, 'theme, frames, raster density and global title alignment');
+    assert.equal(settings.children.length, 5, 'theme, frames, raster, title alignment and background');
     assert.equal(settings.children[3].children[0].value, 'left');
     assert.deepEqual(settings.children[3].children[0].children.map((option) => option.value), ['left', 'center', 'right']);
     assert.equal(settings.children[0].children[0].value, 'dark');
@@ -131,6 +131,91 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
     assert.equal(draft.settings.titleAlign, 'center');
     assert.equal(closed, 2);
     assert.equal(root.children.length, 0);
+  } finally {
+    globalThis.document = original;
+  }
+});
+
+test('liquid glass uses a reversible start-page background without changing individual images', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const f = fixture();
+    const first = `media/${'a'.repeat(32)}.png`;
+    const second = `media/${'b'.repeat(32)}.jpg`;
+    const root = new Element('section');
+    let selected = first;
+    const services = { pickAsset: async ({ mode }) => {
+      assert.equal(mode, 'image');
+      return { href: selected, name: 'Beispiel' };
+    } };
+    await f.controller.reload();
+    const open = (pageId) => new Schema5PagePanel({
+      root, controller: f.controller, pageId, token: f.controller.snapshot().token,
+      services, browser: { confirm: () => true }, onClose: () => {},
+    });
+    open('a');
+    const settings = root.children[3];
+    settings.children[0].children[0].value = 'liquid-glass';
+    settings.children[0].children[0].fire('change');
+    const background = settings.children[4];
+    assert.equal(background.hidden, false);
+    await background.children[2].fire('click');
+    background.children[4].children[0].checked = true;
+    await root.children[4].children[1].fire('click');
+    assert.equal(f.controller.snapshot().draft.pages[0].background, first);
+    assert.equal(f.controller.snapshot().draft.settings.sharedBackground, true);
+
+    selected = second;
+    open('b');
+    await root.children[3].children[4].children[2].fire('click');
+    await root.children[4].children[1].fire('click');
+    assert.equal(f.controller.snapshot().draft.pages[1].background, second);
+
+    open('a');
+    root.children[3].children[4].children[4].children[0].checked = false;
+    await root.children[4].children[1].fire('click');
+    const result = f.controller.snapshot().draft;
+    assert.equal(result.settings.sharedBackground, false);
+    assert.equal(result.pages[0].background, first);
+    assert.equal(result.pages[1].background, second);
+  } finally {
+    globalThis.document = original;
+  }
+});
+
+test('background picker reports errors, tolerates cancellation and removes an image on save', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const f = fixture();
+    const first = `media/${'a'.repeat(32)}.png`;
+    let pick = async () => ({ href: first, name: 'Beispiel' });
+    const root = new Element('section');
+    await f.controller.reload();
+    const open = () => new Schema5PagePanel({
+      root, controller: f.controller, pageId: 'a', token: f.controller.snapshot().token,
+      services: { pickAsset: () => pick() }, browser: { confirm: () => true }, onClose: () => {},
+    });
+    open();
+    let background = root.children[3].children[4];
+    await background.children[2].fire('click');
+    await root.children[4].children[1].fire('click');
+    assert.equal(f.controller.snapshot().draft.pages[0].background, first);
+    open();
+    background = root.children[3].children[4];
+    pick = async () => null;
+    await background.children[2].fire('click');
+    assert.equal(background.children[1].textContent, first);
+    pick = async () => ({ href: 'https://example.test/image.png' });
+    await background.children[2].fire('click');
+    assert.match(root.children[2].textContent, /Ungültiger Bildpfad/);
+    pick = async () => { throw new Error('Katalog nicht erreichbar'); };
+    await background.children[2].fire('click');
+    assert.match(root.children[2].textContent, /Katalog nicht erreichbar/);
+    background.children[3].fire('click');
+    await root.children[4].children[1].fire('click');
+    assert.equal('background' in f.controller.snapshot().draft.pages[0], false);
   } finally {
     globalThis.document = original;
   }
@@ -353,7 +438,9 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     const state = await controller.reload();
     const root = new Element('section');
     let closed;
+    const background = `media/${'a'.repeat(32)}.png`;
     new Schema5PagePanel({ root, controller, pageId: 'a', token: state.token,
+      services: { pickAsset: async () => ({ href: background, name: 'Beispiel' }) },
       browser: { confirm: () => true }, onClose: (outcome) => { closed = outcome; } });
     root.children[3].children[1].children[0].checked = false;
     const align = root.children[3].children[3].children[0];
@@ -362,6 +449,11 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     assert.match(root.children[2].textContent, /Ungültige Titelausrichtung/);
     assert.equal(controller.snapshot().draft, null);
     align.value = 'right';
+    const theme = root.children[3].children[0].children[0];
+    theme.value = 'liquid-glass';
+    theme.fire('change');
+    await root.children[3].children[4].children[2].fire('click');
+    root.children[3].children[4].children[4].children[0].checked = true;
     const columns = root.children[3].children[2].children[0];
     columns.value = '192';
     columns.fire('change');
@@ -374,6 +466,9 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     assert.equal(draft.settings.showFrames, false);
     assert.equal(draft.settings.gridColumns, 192);
     assert.equal(draft.settings.titleAlign, 'right');
+    assert.equal(draft.theme, 'liquid-glass');
+    assert.equal(draft.pages[0].background, background);
+    assert.equal(draft.settings.sharedBackground, true);
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
     assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages[0].widgets[0].grid.row, 17);
   } finally {
