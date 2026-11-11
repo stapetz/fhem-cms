@@ -64,7 +64,13 @@ test('isolated migration, restart, versioned draft and restore form one protecte
       navigationDom(this);
       this.children = [];
       this.attributes = {};
-      this.style = { setProperty(name, value) { this[name] = value; } };
+      this.style = {
+        *[Symbol.iterator]() {},
+        getPropertyValue(name) { return this[name] || ''; },
+        getPropertyPriority() { return ''; },
+        setProperty(name, value) { this[name] = value; },
+        removeProperty(name) { delete this[name]; },
+      };
       this.classList = { toggle() {} };
     }
     append(child) { this.children.push(child); }
