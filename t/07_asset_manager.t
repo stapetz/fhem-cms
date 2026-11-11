@@ -165,6 +165,17 @@ $background_config->{theme} = 'liquid-glass';
 $background_config->{pages}[0]{background} = $href;
 $background_config->{settings}{sharedBackground} = JSON::PP::true;
 is(FHEMCMS_ValidateConfig($background_config, 5), undef, 'backend accepts liquid glass background');
+for my $key ('liquidIntensity', 'liquidTransparency') {
+    for my $value (0, 47, 100) {
+        $background_config->{settings}{$key} = $value;
+        is(FHEMCMS_ValidateConfig($background_config, 5), undef, "$key accepts $value");
+    }
+    for my $value (-1, 101, 1.5, 'invalid', JSON::PP::true, undef) {
+        $background_config->{settings}{$key} = $value;
+        like(FHEMCMS_ValidateConfig($background_config, 5), qr/$key/, "$key rejects invalid value");
+    }
+    delete($background_config->{settings}{$key});
+}
 write_bytes("$dir/config.json", $json->encode($background_config));
 write_bytes("$dir/draft.json", $json->encode($background_config));
 $reply = $call->({op => 'usage', id => $image->{id}});
