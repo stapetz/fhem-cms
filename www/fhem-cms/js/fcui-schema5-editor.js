@@ -11,6 +11,7 @@ import { applySchema5GridItems, arrangeSchema5Widgets, schema5GridItems } from '
 import { DevicePreview } from './device-preview.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-wizard.js';
+import { Schema5SettingsPreview } from './fcui-schema5-settings-preview.js';
 
 export function createSchema5Editor({ GridStack, root, draftClient, liveClient, services, browser = window }) {
   if (!draftClient || !liveClient || draftClient === liveClient) {
@@ -21,7 +22,10 @@ export function createSchema5Editor({ GridStack, root, draftClient, liveClient, 
     throw new Error('Entwurf und Live-Abonnements müssen dasselbe CMS-Device verwenden');
   }
   const controller = new Schema5DraftController(createSchema5Transport(draftClient));
-  const widgetServices = services === undefined ? createSchema5WidgetServices(draftClient) : services;
+  const widgetServices = {
+    ...(services === undefined ? createSchema5WidgetServices(draftClient) : services),
+    createSettingsPreview: ({ pageId }) => new Schema5SettingsPreview({ browser, pageId }),
+  };
   return new Schema5Editor({ GridStack, root, controller, client: liveClient, services: widgetServices, browser });
 }
 

@@ -36,6 +36,7 @@ export class Schema5PagePanel {
   #intensity;
   #transparency;
   #backgroundLabelRevision = 0;
+  #preview;
 
   constructor({ root, controller, pageId, token, services = {}, browser = window, onClose }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
@@ -68,7 +69,7 @@ export class Schema5PagePanel {
     this.#form = element('form');
     const themeLabel = element('label', 'Darstellung ');
     this.#theme = element('select');
-    for (const [value, title] of [['dark', 'Dunkel'], ['light', 'Hell'], ['liquid-glass', 'Liquid Glass'],
+    for (const [value, title] of [['dark', 'Forest Green'], ['light', 'Hell'], ['liquid-glass', 'Liquid Glass'],
       ['oled-black', 'OLED Black'], ['catppuccin-mocha', 'Catppuccin Mocha']]) {
       const option = element('option', title);
       option.value = value;
@@ -162,16 +163,23 @@ export class Schema5PagePanel {
       preview.style.setProperty('--cms-liquid-preview-image',
         background ? `url("${background}")` : 'linear-gradient(125deg, #446a80, #aa805d 50%, #294b68)');
     };
-    this.#intensity.addEventListener('input', updatePreview);
-    this.#transparency.addEventListener('input', updatePreview);
-    this.#sharedBackground?.addEventListener('change', updatePreview);
+    const updateLiquidPreview = () => {
+      updatePreview();
+      this.#updateSettingsPreview();
+    };
+    this.#intensity.addEventListener('input', updateLiquidPreview);
+    this.#transparency.addEventListener('input', updateLiquidPreview);
+    this.#sharedBackground?.addEventListener('change', updateLiquidPreview);
     controls.append(intensityLabel, transparencyLabel, element('p', 'Vorschau'), preview);
     this.#backgroundControls.append(controls);
     updatePreview();
     this.#form.append(this.#backgroundControls);
     this.#theme.addEventListener('change', () => {
       controls.hidden = this.#theme.value !== 'liquid-glass';
+      this.#updateSettingsPreview();
     });
+    this.#frames.addEventListener('change', () => this.#updateSettingsPreview());
+    this.#titleAlign.addEventListener('change', () => this.#updateSettingsPreview());
     choose.addEventListener('click', async () => {
       if (this.#busy || this.#closed || this.#requiresReload) return;
       if (typeof services.pickAsset !== 'function') {
@@ -192,8 +200,9 @@ export class Schema5PagePanel {
           throw new Error('Ungültiger Bildpfad');
         }
         this.#background = asset.href;
-        await this.#updateBackgroundLabel(services);
         updatePreview();
+        this.#updateSettingsPreview();
+        await this.#updateBackgroundLabel(services);
         this.#message('Bild ausgewählt; noch nicht gespeichert.');
       } catch (error) {
         this.#message(`Bildauswahl fehlgeschlagen: ${error.message || String(error)}`, true);
@@ -210,6 +219,7 @@ export class Schema5PagePanel {
       this.#backgroundLabelRevision += 1;
       this.#backgroundLabel.textContent = 'Kein Bild ausgewählt';
       updatePreview();
+      this.#updateSettingsPreview();
     });
     this.#form.addEventListener('submit', (event) => event.preventDefault());
 
@@ -225,6 +235,11 @@ export class Schema5PagePanel {
     root.append(heading, hint, this.#status, this.#form, footer);
 
     this.#settingsBaseline = this.#settings();
+    if (typeof services.createSettingsPreview === 'function') {
+      this.#preview = services.createSettingsPreview({ pageId });
+      this.#form.append(this.#preview.element);
+      this.#updateSettingsPreview();
+    }
     this.#columns.addEventListener('change', () => this.#changeColumns());
     this.#save.addEventListener('click', () => this.#saveDraft());
     this.#close.addEventListener('click', () => {
@@ -280,11 +295,51 @@ export class Schema5PagePanel {
     if (this.#busy || this.#closed || this.#requiresReload) return;
     try {
       resizeSchema5Grid(this.#config, Number(this.#columns.value));
+      this.#updateSettingsPreview();
       this.#message('Raster aller Seiten wird beim Speichern umgerechnet; noch nicht gespeichert.');
     } catch (error) {
       this.#columns.value = String(this.#config.settings.gridColumns);
+      this.#updateSettingsPreview();
       this.#message(`Raster nicht übernommen: ${error.message}`, true);
     }
+  }
+
+  #updateSettingsPreview() {
+    if (!this.#preview || this.#closed || this.#suspended) return;
+    try {
+      this.#preview.update(this.#candidate());
+    } catch (error) {
+      this.#message(`Seitenvorschau nicht aktualisiert: ${error.message || String(error)}`, true);
+    }
+  }
+
+  #candidate() {
+    if (!['dark', 'light', 'liquid-glass', 'oled-black', 'catppuccin-mocha'].includes(this.#theme.value)) {
+      throw new Error('Ungültige Darstellung');
+    }
+    if (!['left', 'center', 'right'].includes(this.#titleAlign.value)) {
+      throw new Error('Ungültige Titelausrichtung');
+    }
+    const candidate = resizeSchema5Grid(this.#config, Number(this.#columns.value));
+    const [originalTheme, originalFrames, , originalTitleAlign, originalBackground, originalShared,
+      originalIntensity, originalTransparency] = JSON.parse(this.#settingsBaseline);
+    for (const value of [this.#intensity.value, this.#transparency.value]) {
+      if (!/^(?:100|[1-9]?\d)$/.test(value)) throw new Error('Ungültiger Liquid-Glass-Wert');
+    }
+    if (this.#theme.value !== originalTheme) candidate.theme = this.#theme.value;
+    if (this.#frames.checked !== originalFrames) candidate.settings.showFrames = this.#frames.checked;
+    if (this.#titleAlign.value !== originalTitleAlign) candidate.settings.titleAlign = this.#titleAlign.value;
+    if (this.#background !== originalBackground) {
+      const page = candidate.pages.find((entry) => entry.id === this.#pageId);
+      if (this.#background) page.background = this.#background;
+      else delete page.background;
+    }
+    if (this.#sharedBackground && this.#sharedBackground.checked !== originalShared) {
+      candidate.settings.sharedBackground = this.#sharedBackground.checked;
+    }
+    if (this.#intensity.value !== originalIntensity) candidate.settings.liquidIntensity = Number(this.#intensity.value);
+    if (this.#transparency.value !== originalTransparency) candidate.settings.liquidTransparency = Number(this.#transparency.value);
+    return candidate;
   }
 
   async #saveDraft() {
@@ -299,26 +354,7 @@ export class Schema5PagePanel {
     }
     let pending;
     try {
-      const candidate = resizeSchema5Grid(this.#config, Number(this.#columns.value));
-      const [originalTheme, originalFrames, , originalTitleAlign, originalBackground, originalShared,
-        originalIntensity, originalTransparency] = JSON.parse(this.#settingsBaseline);
-      for (const value of [this.#intensity.value, this.#transparency.value]) {
-        if (!/^(?:100|[1-9]?\d)$/.test(value)) throw new Error('Ungültiger Liquid-Glass-Wert');
-      }
-      if (this.#theme.value !== originalTheme) candidate.theme = this.#theme.value;
-      if (this.#frames.checked !== originalFrames) candidate.settings.showFrames = this.#frames.checked;
-      if (this.#titleAlign.value !== originalTitleAlign) candidate.settings.titleAlign = this.#titleAlign.value;
-      if (this.#background !== originalBackground) {
-        const page = candidate.pages.find((entry) => entry.id === this.#pageId);
-        if (this.#background) page.background = this.#background;
-        else delete page.background;
-      }
-      if (this.#sharedBackground && this.#sharedBackground.checked !== originalShared) {
-        candidate.settings.sharedBackground = this.#sharedBackground.checked;
-      }
-      if (this.#intensity.value !== originalIntensity) candidate.settings.liquidIntensity = Number(this.#intensity.value);
-      if (this.#transparency.value !== originalTransparency) candidate.settings.liquidTransparency = Number(this.#transparency.value);
-      pending = this.#controller.saveDraft(candidate, this.#token);
+      pending = this.#controller.saveDraft(this.#candidate(), this.#token);
     } catch (error) {
       this.#message(`Änderung ungültig: ${error.message || String(error)}`, true);
       return;
@@ -360,6 +396,7 @@ export class Schema5PagePanel {
     if (this.#closed) return;
     if (this.#busy) throw new Error('Speichern läuft noch');
     this.#closed = true;
+    this.#preview?.close();
     this.#root.replaceChildren();
   }
 }

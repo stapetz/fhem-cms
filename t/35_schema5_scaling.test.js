@@ -89,7 +89,8 @@ async function browserResult(profile, url, child, interact, beforeNavigate) {
 
 async function testServer() {
   const server = createServer(async (request, response) => {
-    if (new URL(request.url, 'http://localhost').pathname === `/t/media/${'a'.repeat(32)}.png`) {
+    if ([`/t/media/${'a'.repeat(32)}.png`, `/t/media/${'b'.repeat(32)}.png`]
+      .includes(new URL(request.url, 'http://localhost').pathname)) {
       response.setHeader('Content-Type', 'image/png');
       response.end(pngFixture());
       return;
@@ -122,6 +123,7 @@ for (const [name, fixtures] of [
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
   ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 204]]],
   ['themes use and restore page backgrounds', [['55_liquid_glass.html', 53]]],
+  ['page settings preview shows the real phone page without saving', [['57_settings_preview.html', 15]]],
   ['mobile device preview fits the raster without horizontal overflow', [['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200]]],
   ['touch devices fit the raster without horizontal overflow', [['56_mobile_viewport.html?mode=touch-test', 200]]],
 ]) test(name, {

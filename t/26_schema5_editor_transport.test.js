@@ -70,6 +70,7 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
   const previous = {
     fetch: globalThis.fetch, window: globalThis.window, document: globalThis.document,
     HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
+    ResizeObserver: globalThis.ResizeObserver,
   };
   const rootDir = await mkdtemp(join(tmpdir(), 'cms-v5-editor-transport-'));
   const dataDir = join(rootDir, 'fhem-cms-data', 'CMS');
@@ -102,6 +103,7 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
       addEventListener() {}, removeEventListener() {},
     };
     globalThis.HTMLElement = class {};
+    globalThis.ResizeObserver = class { observe() {} disconnect() {} };
     const registry = new Map();
     globalThis.customElements = { define: (name, value) => registry.set(name, value), get: (name) => registry.get(name) };
     const commands = [];
@@ -130,7 +132,8 @@ test('editor and prepared FHEM transport preserve data, reject stale tabs and ve
     const listeners = new Map();
     let confirm = false;
     const browser = {
-      location: { hash: '#/one', reload() {} },
+      location: { href: 'https://example.test/fhem/?mode=edit#/one', hash: '#/one', reload() {} },
+      setTimeout, clearTimeout,
       confirm: () => confirm,
       addEventListener(name, handler) {
         if (!listeners.has(name)) listeners.set(name, new Set());
