@@ -165,6 +165,14 @@ $background_config->{theme} = 'liquid-glass';
 $background_config->{pages}[0]{background} = $href;
 $background_config->{settings}{sharedBackground} = JSON::PP::true;
 is(FHEMCMS_ValidateConfig($background_config, 5), undef, 'backend accepts liquid glass background');
+for my $theme ('oled-black', 'catppuccin-mocha') {
+    $background_config->{theme} = $theme;
+    is(FHEMCMS_ValidateConfig($background_config, 5), undef, "backend accepts $theme with background");
+    my $legacy_config = FHEMCMS_DefaultConfig();
+    $legacy_config->{theme} = $theme;
+    like(FHEMCMS_ValidateConfig($legacy_config, 4), qr/Ungueltiges Theme/, "schema 4 rejects $theme");
+}
+$background_config->{theme} = 'liquid-glass';
 for my $key ('liquidIntensity', 'liquidTransparency') {
     for my $value (0, 47, 100) {
         $background_config->{settings}{$key} = $value;

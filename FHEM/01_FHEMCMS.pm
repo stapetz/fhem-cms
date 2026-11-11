@@ -825,7 +825,7 @@ sub FHEMCMS_ValidateConfig {
     }
     return 'Ungueltiges Theme'
         if (exists($config->{theme}) && (ref($config->{theme}) || !defined($config->{theme})
-            || $config->{theme} !~ ($targetSchema == 5 ? qr/\A(?:dark|light|liquid-glass)\z/ : qr/\A(?:dark|light)\z/)));
+            || $config->{theme} !~ ($targetSchema == 5 ? qr/\A(?:dark|light|liquid-glass|oled-black|catppuccin-mocha)\z/ : qr/\A(?:dark|light)\z/)));
     if (exists($config->{navigation})) {
         $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid'], ['items', 'itemWidth', 'itemHeight']);
         return $err if ($err);

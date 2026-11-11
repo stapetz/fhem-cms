@@ -136,9 +136,12 @@ Geräte lassen sich später im Editor hinzufügen.
 - **Ansicht:** Vorschau (zeigt die Seite ohne Bearbeitungselemente) und Raster anzeigen.
 
 **Entwicklungsstand (`dev`):** Unter **Bearbeiten → Seiteneinstellungen**
-kann für das gesamte CMS-Device das Theme **Liquid Glass** gewählt werden.
+können für das gesamte CMS-Device die Themes **Liquid Glass**, **OLED Black**
+(schwarzer Hintergrund ohne Bild) und **Catppuccin Mocha** gewählt werden.
 Unabhängig vom Theme kann für jede Seite über den Assetmanager ein eigenes Hintergrundbild
-ausgewählt oder entfernt werden. Auf der Startseite aktiviert der Schalter
+ausgewählt oder entfernt werden. Der Dialog zeigt den aktuellen Namen und Ordnerpfad
+aus dem Assetmanager; fehlende Bilder oder Katalogfehler werden dort angezeigt.
+Auf der Startseite aktiviert der Schalter
 **Bild auf allen Seiten verwenden** das gemeinsame
 Bild. Die individuellen Bilder der anderen Seiten bleiben gespeichert und
 werden nach dem Ausschalten wieder verwendet. Wird die Seitenreihenfolge

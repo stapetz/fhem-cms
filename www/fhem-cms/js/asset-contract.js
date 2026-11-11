@@ -3,6 +3,23 @@ export const ASSET_DOCUMENT = /^\.\.\/\.\.\/fhemcms-assets\/[A-Za-z0-9_.-]{1,128
 export const ASSET_BLOCKED = /^(?:html?|xhtml|svgz?|xml|js|mjs|cjs|jsx|ts|tsx|css|php\d*|phtml|pl|pm|py|rb|sh|bash|zsh|bat|cmd|ps1|exe|dll|com|msi|jar|wasm|vbs|vbe|wsf|hta|lnk|url|swf|shtml|cgi|asp|aspx|jsp|docm|xlsm|pptm)$/;
 const ID = /^[0-9a-f]{32}$/;
 
+export function assetFolderPath(state, id) {
+  const path = [];
+  while (id !== 'root') {
+    const folder = state.folders.find(item => item.id === id);
+    if (!folder || path.length >= 10) throw new Error('Ungültiger Assetordnerbaum');
+    path.unshift(id);
+    id = folder.parent;
+  }
+  return ['root', ...path];
+}
+
+export function assetPathText(state, asset) {
+  const names = assetFolderPath(state, asset.folder).map(id =>
+    id === 'root' ? 'Stammordner' : state.folders.find(folder => folder.id === id).name);
+  return [...names, asset.name].join(' / ');
+}
+
 export function validateAssetState(state) {
   if (!state || typeof state !== 'object' || !/^[0-9a-f]{64}$/.test(state.token)
     || !Array.isArray(state.folders) || state.folders.length > 200

@@ -38,7 +38,7 @@ test('liquid glass resolves local and shared backgrounds without modifying pages
   assert.equal(schema5PageBackground(config, 'other'), second);
   delete config.settings;
   assert.equal(schema5PageBackground(config, 'other'), second, 'optional settings default to individual backgrounds');
-  for (const theme of ['dark', 'light', 'liquid-glass']) {
+  for (const theme of ['dark', 'light', 'liquid-glass', 'oled-black', 'catppuccin-mocha']) {
     config.theme = theme;
     assert.equal(schema5PageBackground(config, 'other'), second, `${theme} uses the individual image`);
     config.settings = { sharedBackground: true };

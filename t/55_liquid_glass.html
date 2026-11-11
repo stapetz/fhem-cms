@@ -101,7 +101,7 @@ try {
     'preview does not mutate saved settings');
   dialog.close();
   dialog.remove();
-  for (const theme of ['dark', 'light']) {
+  for (const theme of ['dark', 'light', 'oled-black', 'catppuccin-mocha']) {
     config.theme = theme;
     config.settings.sharedBackground = false;
     document.documentElement.dataset.cmsTheme = theme;
@@ -116,6 +116,13 @@ try {
     delete config.pages[0].background;
     await view.showPage('start');
     check(getComputedStyle(document.documentElement).backgroundImage === 'none', `${theme}: no image uses theme color`);
+    if (theme === 'oled-black' || theme === 'catppuccin-mocha') {
+      const expected = theme === 'oled-black' ? 'rgb(0, 0, 0)' : 'rgb(30, 30, 46)';
+      check(getComputedStyle(document.documentElement).backgroundColor === expected, `${theme}: exact theme background`);
+      const expectedTile = theme === 'oled-black' ? 'rgb(8, 8, 8)' : 'rgb(49, 50, 68)';
+      check(getComputedStyle(document.querySelector('cms-text').shadowRoot.querySelector('.tile')).backgroundColor
+        === expectedTile, `${theme}: actual widget inherits theme surface`);
+    }
     config.pages[0].background = first;
     view.stop();
     const panel = document.createElement('dialog');

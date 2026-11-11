@@ -1,4 +1,4 @@
-import { ASSET_BLOCKED, validateAssetState } from './asset-contract.js';
+import { ASSET_BLOCKED, assetFolderPath, validateAssetState } from './asset-contract.js';
 import { loadAssetExif } from './asset-exif.js';
 
 const MiB = 1048576;
@@ -140,14 +140,7 @@ export async function openAssetManager(services, { mode = null, owner = document
   const folderName = id => id === 'root' ? 'Stammordner' : state.folders.find(item => item.id === id)?.name;
   const children = parent => state.folders.filter(item => item.parent === parent)
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));
-  const folderPath = id => {
-    const path = [];
-    while (id !== 'root') {
-      path.unshift(id);
-      id = state.folders.find(item => item.id === id).parent;
-    }
-    return ['root', ...path];
-  };
+  const folderPath = id => assetFolderPath(state, id);
   const pathText = id => folderPath(id).map(folderName).join(' / ');
   const breadcrumbs = (container, current, navigate) => {
     container.replaceChildren();

@@ -67,6 +67,112 @@ function fixture() {
   };
 }
 
+test('background label follows the asset catalog and reports missing entries or errors', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const f = fixture();
+    const first = `media/${'a'.repeat(32)}.png`;
+    const second = `media/${'b'.repeat(32)}.jpg`;
+    f.live.pages[0].background = first;
+    const parent = 'c'.repeat(32);
+    const child = 'd'.repeat(32);
+    const catalog = {
+      token: 'e'.repeat(64), totalBytes: 2,
+      policy: { types: { png: true }, imageBytes: 10, documentBytes: 10, totalBytes: 10 },
+      folders: [{ id: parent, parent: 'root', name: 'Haus' }, { id: child, parent, name: 'Zimmer' }],
+      assets: [
+        { id: 'a'.repeat(32), folder: child, name: 'Wand.png', href: first, image: true, bytes: 1 },
+        { id: 'b'.repeat(32), folder: 'root', name: 'Neu.jpg', href: second, image: true, bytes: 1 },
+      ],
+    };
+    let response = async () => structuredClone(catalog);
+    let selected = null;
+    const services = { assetAction: () => response(), pickAsset: async () => selected };
+    await f.controller.reload();
+    const root = new Element('section');
+    const open = () => new Schema5PagePanel({ root, controller: f.controller, pageId: 'a',
+      token: f.controller.snapshot().token, services, browser: { confirm: () => true }, onClose: () => {} });
+    const settle = () => new Promise(resolve => setImmediate(resolve));
+    let panel = open();
+    let background = root.children[3].children[4];
+    await settle();
+    assert.equal(background.children[1].textContent, 'Stammordner / Haus / Zimmer / Wand.png');
+    catalog.folders[1].name = 'Büro';
+    catalog.assets[0].name = 'Umbenannt.png';
+    await background.children[2].fire('click');
+    assert.equal(background.children[1].textContent, 'Stammordner / Haus / Büro / Umbenannt.png');
+    catalog.assets[0].folder = 'root';
+    panel.close();
+    panel = open();
+    background = root.children[3].children[4];
+    await settle();
+    assert.equal(background.children[1].textContent, 'Stammordner / Umbenannt.png');
+    selected = { href: second, name: 'veralteter Name' };
+    await background.children[2].fire('click');
+    assert.equal(background.children[1].textContent, 'Stammordner / Neu.jpg');
+    selected = null;
+    catalog.assets.pop();
+    catalog.totalBytes = 1;
+    await background.children[2].fire('click');
+    assert.match(background.children[1].textContent, /nicht im Assetmanager gefunden/);
+    response = async () => { throw new Error('Verbindung fehlgeschlagen'); };
+    await background.children[2].fire('click');
+    assert.match(background.children[1].textContent, /Bildname nicht verfügbar: Verbindung fehlgeschlagen/);
+    background.children[3].fire('click');
+    assert.equal(background.children[1].textContent, 'Kein Bild ausgewählt');
+    panel.close();
+  } finally {
+    globalThis.document = original;
+  }
+});
+
+test('late catalog responses cannot overwrite a removed background', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const f = fixture();
+    f.live.pages[0].background = `media/${'a'.repeat(32)}.png`;
+    await f.controller.reload();
+    let resolve;
+    const root = new Element('section');
+    new Schema5PagePanel({ root, controller: f.controller, pageId: 'a', token: f.controller.snapshot().token,
+      services: { assetAction: () => new Promise(done => { resolve = done; }) },
+      browser: { confirm: () => true }, onClose: () => {} });
+    const background = root.children[3].children[4];
+    background.children[3].fire('click');
+    resolve({ invalid: true });
+    await new Promise(done => setImmediate(done));
+    assert.equal(background.children[1].textContent, 'Kein Bild ausgewählt');
+  } finally {
+    globalThis.document = original;
+  }
+});
+
+test('new themes are selectable and saved without modifying widget layout', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    for (const value of ['oled-black', 'catppuccin-mocha']) {
+      const f = fixture();
+      const state = await f.controller.reload();
+      const root = new Element('section');
+      new Schema5PagePanel({ root, controller: f.controller, pageId: 'a', token: state.token,
+        browser: { confirm: () => true }, onClose: () => {} });
+      const theme = root.children[3].children[0].children[0];
+      assert.ok(theme.children.some(option => option.value === value));
+      theme.value = value;
+      theme.fire('change');
+      assert.equal(root.children[3].children[4].children[6].hidden, true);
+      await root.children[4].children[1].fire('click');
+      assert.equal(f.controller.snapshot().draft.theme, value);
+      assert.deepEqual(f.controller.snapshot().draft.pages, f.live.pages);
+    }
+  } finally {
+    globalThis.document = original;
+  }
+});
+
 test('page panel only exposes look and feel, protects cancel and preserves widget positions', async () => {
   const original = globalThis.document;
   globalThis.document = { createElement: (tag) => new Element(tag) };
@@ -252,7 +358,7 @@ test('background picker reports errors, tolerates cancellation and removes an im
     background = root.children[3].children[4];
     pick = async () => null;
     await background.children[2].fire('click');
-    assert.equal(background.children[1].textContent, first);
+    assert.match(background.children[1].textContent, /Bildname nicht verfügbar: Assetkatalog nicht verfügbar/);
     pick = async () => ({ href: 'https://example.test/image.png' });
     await background.children[2].fire('click');
     assert.match(root.children[2].textContent, /Ungültiger Bildpfad/);
