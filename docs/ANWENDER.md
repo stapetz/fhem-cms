@@ -133,9 +133,12 @@ Geräte lassen sich später im Editor hinzufügen.
   sowie Widget hinzufügen (mit Suche) und Widgets automatisch anordnen.
 - **Ansicht:** Vorschau (zeigt die Seite ohne Bearbeitungselemente) und Raster anzeigen.
 
+### Theme-Manager und Hintergrundbilder
+
 **Entwicklungsstand (`dev`):** Unter **Bearbeiten → Seiteneinstellungen**
-können für das gesamte CMS-Device die Themes **Liquid Glass**, **OLED Black**
-(schwarzer Hintergrund ohne Bild) und **Catppuccin Mocha** gewählt werden.
+stehen für das gesamte CMS-Device die Themes **Forest Green**, **Hell**,
+**Liquid Glass**, **OLED Black** und **Catppuccin Mocha** zur Auswahl.
+OLED Black verwendet ohne eigenes Bild einen schwarzen Hintergrund.
 Das bisherige Theme **Dunkel** heißt **Forest Green**; bestehende Einstellungen
 bleiben erhalten.
 Unabhängig vom Theme kann für jede Seite über den Assetmanager ein eigenes Hintergrundbild

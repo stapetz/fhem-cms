@@ -180,6 +180,28 @@ Widgettitel lassen sich global links, zentriert oder rechts ausrichten. Ob ein T
 
 '''Bearbeiten → Widgets automatisch anordnen''' rückt die Widgets der aktuellen Seite nach oben und links. Größen und Inhalte bleiben erhalten; die Änderung landet im Entwurf.
 
+=== Theme-Manager und Hintergrundbilder (Entwicklungsstand <code>dev</code>) ===
+
+Unter '''Bearbeiten → Seiteneinstellungen''' stehen '''Forest Green''', '''Hell''',
+'''Liquid Glass''', '''OLED Black''' und '''Catppuccin Mocha''' zur Auswahl.
+Das frühere Theme „Dunkel“ heißt jetzt „Forest Green“; bestehende Einstellungen
+bleiben erhalten. Das Theme gilt für alle Seiten des CMS-Devices.
+
+Für jedes Theme lässt sich über den Assetmanager ein Hintergrundbild für die
+aktuelle Seite auswählen oder entfernen. Auf der Startseite kann
+'''Bild auf allen Seiten verwenden''' aktiviert werden: Das Bild der ersten Seite
+gilt dann gemeinsam; individuelle Bilder der anderen Seiten bleiben gespeichert.
+Nach dem Ausschalten werden diese wieder verwendet. Hat die erste Seite kein
+Bild, erscheint der jeweilige Theme-Hintergrund. Verwendete Bilder sind im
+Assetmanager gegen Löschen geschützt.
+
+Für '''Liquid Glass''' regeln '''Liquid-Effekt''' und '''Transparenz''' die
+Darstellung auf allen Seiten. Die Smartphone-Vorschau zeigt Änderungen an der
+aktuellen Seite und dem wirksamen Hintergrund unmittelbar. '''Speichern'''
+übernimmt die Einstellungen in den Entwurf, '''Abbrechen''' verwirft sie;
+erst '''Veröffentlichen''' macht den Entwurf live. Hohe Transparenz kann die
+Lesbarkeit abhängig vom Bild verringern.
+
 === Fenstergröße, Zoom und mobile Ansicht ===
 
 Navigation und Widgets skalieren gemeinsam mit der verfügbaren Breite. Browserzoom vergrößert oder verkleinert die Darstellung; bei Platzmangel kann der Rasterbereich seitlich scrollen.
