@@ -77,6 +77,16 @@ try {
   check(checkbox.getBoundingClientRect().width > 0 && checkbox.getBoundingClientRect().height > 0,
     'shared background checkbox is visible');
   const sharedLabel = checkbox.closest('label');
+  const description = dialog.querySelector('.cms-page-background-description');
+  description.querySelector('span').textContent = 'Stammordner / G0105508.JPG';
+  const descriptionText = document.createRange();
+  descriptionText.selectNodeContents(description.firstChild);
+  const labelBounds = descriptionText.getBoundingClientRect();
+  const pathBounds = description.querySelector('span').getBoundingClientRect();
+  check(description.textContent.includes('Hintergrundbild für aktuelle Seite „Start“: '),
+    'background description separates page title and path with a colon');
+  check(Math.abs(labelBounds.top - pathBounds.top) < 2 && pathBounds.left >= labelBounds.right,
+    'background description and image path share a line in the standard dialog');
   check(sharedLabel.previousElementSibling.textContent === 'Hintergrundbild auswählen'
     && sharedLabel.nextElementSibling.textContent === 'Hintergrundbild entfernen',
   'shared background checkbox is between select and remove buttons');
@@ -87,12 +97,16 @@ try {
   dialog.style.width = '300px';
   const bounds = dialog.getBoundingClientRect();
   const control = checkbox.getBoundingClientRect();
+  description.querySelector('span').textContent = `Stammordner / ${'x'.repeat(150)}.jpg`;
+  const descriptionBounds = description.getBoundingClientRect();
+  check(descriptionBounds.left >= bounds.left && descriptionBounds.right <= bounds.right
+    && description.scrollWidth <= description.clientWidth, 'long image path wraps within a narrow dialog');
   check(control.left >= bounds.left && control.right <= bounds.right, 'checkbox fits a narrow dialog');
   check([sharedLabel.previousElementSibling, sharedLabel, sharedLabel.nextElementSibling].every(element => {
     const box = element.getBoundingClientRect();
     return box.left >= bounds.left && box.right <= bounds.right;
   }), 'background controls wrap without overflowing a narrow dialog');
-  check(dialog.textContent.includes('Hintergrundbild für aktuelle Seite „Start“'), 'current page title in dialog');
+  check(dialog.textContent.includes('Hintergrundbild für aktuelle Seite „Start“:'), 'current page title in dialog');
   check(dialog.textContent.includes('auf jeder Seite einzeln über die Seiteneinstellungen'), 'individual background hint');
   const intensity = dialog.querySelector('[data-liquid-intensity]');
   const transparency = dialog.querySelector('[data-liquid-transparency]');

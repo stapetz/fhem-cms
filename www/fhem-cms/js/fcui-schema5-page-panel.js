@@ -103,15 +103,17 @@ export class Schema5PagePanel {
     this.#form.append(themeLabel, framesLabel, layoutLabel, titleLabel);
     this.#backgroundControls = element('div');
     this.#backgroundControls.className = 'cms-page-background-controls';
-    const headingBackground = element('p', `Hintergrundbild für aktuelle Seite „${page.title}“`);
-    this.#backgroundLabel = element('p', this.#background ? 'Bildname wird geladen …' : 'Kein Bild ausgewählt');
+    const headingBackground = element('p', `Hintergrundbild für aktuelle Seite „${page.title}“: `);
+    headingBackground.className = 'cms-page-background-description';
+    this.#backgroundLabel = element('span', this.#background ? 'Bildname wird geladen …' : 'Kein Bild ausgewählt');
+    headingBackground.append(this.#backgroundLabel);
     const choose = element('button', 'Hintergrundbild auswählen');
     choose.type = 'button';
     choose.className = 'cms-button';
     const remove = element('button', 'Hintergrundbild entfernen');
     remove.type = 'button';
     remove.className = 'cms-button';
-    this.#backgroundControls.append(headingBackground, this.#backgroundLabel, choose);
+    this.#backgroundControls.append(headingBackground, choose);
     if (pageId === config.pages[0].id) {
       const sharedLabel = element('label', 'Bild auf allen Seiten verwenden ');
       this.#sharedBackground = element('input');

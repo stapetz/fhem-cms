@@ -583,6 +583,12 @@ body:has(.cms-schema5-grid) {
   flex: 1 1 100%;
 }
 
+.cms-editor-panel .cms-page-background-description {
+  min-width: 0;
+  margin-block: .2rem;
+  overflow-wrap: anywhere;
+}
+
 .cms-editor-dialog[data-panel="page"] .cms-page-background-controls > label {
   flex: 0 1 auto;
 }
