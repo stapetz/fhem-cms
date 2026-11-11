@@ -1,5 +1,5 @@
 import { resizeSchema5Grid, schema5GridItems, SCHEMA5_GRID_COLUMNS } from './fcui-schema5-layout.js';
-import { ASSET_IMAGE } from './asset-contract.js';
+import { ASSET_IMAGE, assetPathText, validateAssetState } from './asset-contract.js';
 import { LIQUID_DEFAULTS, setLiquidAppearance } from './fcui-schema5-appearance.js';
 
 function element(tag, text) {
@@ -35,6 +35,7 @@ export class Schema5PagePanel {
   #backgroundControls;
   #intensity;
   #transparency;
+  #backgroundLabelRevision = 0;
 
   constructor({ root, controller, pageId, token, services = {}, browser = window, onClose }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
@@ -67,7 +68,8 @@ export class Schema5PagePanel {
     this.#form = element('form');
     const themeLabel = element('label', 'Darstellung ');
     this.#theme = element('select');
-    for (const [value, title] of [['dark', 'Dunkel'], ['light', 'Hell'], ['liquid-glass', 'Liquid Glass']]) {
+    for (const [value, title] of [['dark', 'Dunkel'], ['light', 'Hell'], ['liquid-glass', 'Liquid Glass'],
+      ['oled-black', 'OLED Black'], ['catppuccin-mocha', 'Catppuccin Mocha']]) {
       const option = element('option', title);
       option.value = value;
       this.#theme.append(option);
@@ -100,7 +102,7 @@ export class Schema5PagePanel {
     this.#form.append(themeLabel, framesLabel, layoutLabel, titleLabel);
     this.#backgroundControls = element('div');
     const headingBackground = element('p', `Hintergrundbild für aktuelle Seite „${page.title}“`);
-    this.#backgroundLabel = element('p', this.#background || 'Kein Bild ausgewählt');
+    this.#backgroundLabel = element('p', this.#background ? 'Bildname wird geladen …' : 'Kein Bild ausgewählt');
     const choose = element('button', 'Hintergrundbild auswählen');
     choose.type = 'button';
     choose.className = 'cms-button';
@@ -181,12 +183,16 @@ export class Schema5PagePanel {
       this.#close.disabled = true;
       try {
         const asset = await services.pickAsset({ mode: 'image', owner: this.#root });
-        if (this.#closed || this.#suspended || !asset) return;
+        if (this.#closed || this.#suspended) return;
+        if (!asset) {
+          await this.#updateBackgroundLabel(services);
+          return;
+        }
         if (typeof asset.href !== 'string' || !ASSET_IMAGE.test(asset.href)) {
           throw new Error('Ungültiger Bildpfad');
         }
         this.#background = asset.href;
-        this.#backgroundLabel.textContent = asset.name || asset.href;
+        await this.#updateBackgroundLabel(services);
         updatePreview();
         this.#message('Bild ausgewählt; noch nicht gespeichert.');
       } catch (error) {
@@ -201,6 +207,7 @@ export class Schema5PagePanel {
     remove.addEventListener('click', () => {
       if (this.#busy || this.#closed || this.#requiresReload) return;
       this.#background = '';
+      this.#backgroundLabelRevision += 1;
       this.#backgroundLabel.textContent = 'Kein Bild ausgewählt';
       updatePreview();
     });
@@ -228,6 +235,29 @@ export class Schema5PagePanel {
       this.close();
       this.#onClose(outcome);
     });
+    if (this.#background) void this.#updateBackgroundLabel(services);
+  }
+
+  async #updateBackgroundLabel(services) {
+    const revision = ++this.#backgroundLabelRevision;
+    const background = this.#background;
+    if (!background) {
+      this.#backgroundLabel.textContent = 'Kein Bild ausgewählt';
+      return;
+    }
+    this.#backgroundLabel.textContent = 'Bildname wird geladen …';
+    try {
+      if (typeof services.assetAction !== 'function') throw new Error('Assetkatalog nicht verfügbar');
+      const state = validateAssetState(await services.assetAction({ op: 'list' }));
+      if (revision !== this.#backgroundLabelRevision || this.#closed || this.#suspended) return;
+      const asset = state.assets.find(entry => entry.image && entry.href === background);
+      this.#backgroundLabel.textContent = asset
+        ? assetPathText(state, asset)
+        : 'Hintergrundbild nicht im Assetmanager gefunden';
+    } catch (error) {
+      if (revision !== this.#backgroundLabelRevision || this.#closed || this.#suspended) return;
+      this.#backgroundLabel.textContent = `Bildname nicht verfügbar: ${error.message || String(error)}`;
+    }
   }
 
   #message(text, error = false) {
@@ -259,7 +289,7 @@ export class Schema5PagePanel {
 
   async #saveDraft() {
     if (this.#busy || this.#closed || this.#requiresReload) return;
-    if (!['dark', 'light', 'liquid-glass'].includes(this.#theme.value)) {
+    if (!['dark', 'light', 'liquid-glass', 'oled-black', 'catppuccin-mocha'].includes(this.#theme.value)) {
       this.#message('Ungültige Darstellung', true);
       return;
     }

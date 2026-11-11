@@ -121,7 +121,7 @@ for (const [name, fixtures] of [
   ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 850]]],
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
   ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 204]]],
-  ['liquid glass uses and restores page backgrounds', [['55_liquid_glass.html', 37]]],
+  ['themes use and restore page backgrounds', [['55_liquid_glass.html', 53]]],
   ['mobile device preview fits the raster without horizontal overflow', [['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200]]],
   ['touch devices fit the raster without horizontal overflow', [['56_mobile_viewport.html?mode=touch-test', 200]]],
 ]) test(name, {
