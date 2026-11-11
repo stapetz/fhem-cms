@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-11",
+  "version": "1.8.1-dev",
+  "title": "Seiten duplizieren (Refs #143)",
+  "changes": [
+    "Seiten koennen mit Widgets und Rasterlayout als Entwurf dupliziert werden."
+  ]
+}

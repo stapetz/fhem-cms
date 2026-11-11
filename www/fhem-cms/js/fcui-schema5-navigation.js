@@ -216,7 +216,9 @@ export class Schema5NavigationPanel {
     }
     const removeSpace = element('span');
     removeSpace.className = 'cms-navedit-removespace';
-    head.append(removeSpace);
+    const duplicateSpace = element('span');
+    duplicateSpace.className = 'cms-navedit-duplicatespace';
+    head.append(removeSpace, duplicateSpace);
     this.#rowsBox.append(head);
     this.#rows.forEach((row, index) => {
       const box = element('div');
@@ -298,7 +300,32 @@ export class Schema5NavigationPanel {
         this.#renderRows();
         this.#message('Noch nicht gespeicherte Änderungen.');
       });
-      box.append(grip, ...fields, showLabel, remove);
+      const duplicate = element('button', '⧉');
+      duplicate.type = 'button';
+      duplicate.className = 'cms-navedit-duplicate';
+      duplicate.title = 'Seite duplizieren';
+      duplicate.setAttribute('aria-label', `Seite „${row.title}“ duplizieren`);
+      duplicate.disabled = this.#rows.length >= 50;
+      duplicate.addEventListener('click', () => {
+        const state = this.#controller.snapshot();
+        const used = new Set([
+          ...this.#rows.flatMap((entry) => [entry.file, entry.page.id]),
+          ...(state.draft || state.live).pages.map((page) => page.id),
+        ]);
+        let number = 1;
+        while (used.has(`page${number}`)) number += 1;
+        const file = `page${number}`;
+        const title = `${row.title.slice(0, 120)} (Kopie)`;
+        const page = structuredClone(row.page);
+        page.id = file;
+        page.title = title;
+        this.#rows.splice(index + 1, 0, {
+          page, file, title, label: '', width: row.width, height: row.height, show: row.show,
+        });
+        this.#renderRows();
+        this.#message('Noch nicht gespeicherte Änderungen.');
+      });
+      box.append(grip, ...fields, showLabel, remove, duplicate);
       this.#rowsBox.append(box);
     });
   }
@@ -375,7 +402,7 @@ export class Schema5NavigationPanel {
     const byId = new Map(config.pages.map((page) => [page.id, page]));
     const renamed = new Map(this.#rows.map(row => [row.page.id, row.file]));
     config.pages = this.#rows.map((row) => {
-      const page = byId.get(row.page.id) || { id: row.file, title: row.title, widgets: [] };
+      const page = byId.get(row.page.id) || structuredClone(row.page);
       page.id = row.file;
       page.title = row.title;
       return page;

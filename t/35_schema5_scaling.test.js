@@ -127,6 +127,7 @@ for (const [name, fixtures] of [
   ['modal page preserves the main page and closes by keyboard and backdrop', [['62_page_modal.html', 35]]],
   ['themes use and restore page backgrounds', [['55_liquid_glass.html', 63]]],
   ['page settings preview shows the real phone page without saving', [['57_settings_preview.html', 25]]],
+  ['page duplication preserves the draft and live page', [['59_page_duplicate.html', 12]]],
   ['call list displays and configures device readings', [['58_calllist.html', 61]]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],

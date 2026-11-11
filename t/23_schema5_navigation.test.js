@@ -222,3 +222,55 @@ test('navigation panel manages pages, order, shared sizes and files against real
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('page duplication preserves widgets and layout in the draft without changing live', async () => {
+  const previous = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-duplicate-'));
+  try {
+    const config = {
+      schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
+      navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+      pages: [{ id: 'page1', title: 'Wohnzimmer', widgets: [
+        { id: 'text', type: 'text', html: '{{Temp:state}}', grid: { col: 1, row: 2, w: 4, h: 2 } },
+      ] }],
+    };
+    const original = JSON.stringify(config);
+    await writeFile(join(dir, 'config.json'), original);
+    const invoke = (operation, ...args) => {
+      const child = spawnSync('perl', ['-e', perl, dir, operation, ...args], { encoding: 'utf8' });
+      if (child.status !== 0) throw new Error(child.stderr);
+      const reply = JSON.parse(child.stdout);
+      if (reply.error) throw new Error(reply.error);
+      return reply.result;
+    };
+    const controller = new Schema5DraftController({
+      read: async () => invoke('read'),
+      save: async (draft, token) => invoke('save', Buffer.from(JSON.stringify(draft)).toString('base64'), token),
+      publish: async () => {}, discard: async () => {},
+    });
+    const state = await controller.reload();
+    const root = new Element('section');
+    let closed;
+    new Schema5NavigationPanel({ root, controller, token: state.token,
+      browser: { confirm: () => true }, onClose: (outcome) => { closed = outcome; } });
+    const rows = root.children[3].children[2];
+    const file = rows.children[1].children[1].children[0];
+    file.value = 'wohnzimmer';
+    file.fire('input');
+    rows.children[1].children[8].fire('click');
+    assert.equal(rows.children.length, 3);
+    assert.equal(rows.children[2].children[1].children[0].value, 'page2',
+      'copy does not reuse an original page ID renamed in the same edit');
+    await root.children[4].children[1].fire('click');
+    assert.deepEqual(closed, { requiresReload: false });
+    const draft = controller.snapshot().draft;
+    assert.deepEqual(draft.pages.map(({ id, title }) => [id, title]),
+      [['wohnzimmer', 'Wohnzimmer'], ['page2', 'Wohnzimmer (Kopie)']]);
+    assert.deepEqual(draft.pages[1].widgets, config.pages[0].widgets);
+    assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
+  } finally {
+    globalThis.document = previous;
+    await rm(dir, { recursive: true, force: true });
+  }
+});

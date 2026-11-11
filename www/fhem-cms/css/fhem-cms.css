@@ -991,7 +991,8 @@ body:has(.cms-schema5-grid) {
 }
 
 .cms-navedit-head .cms-navedit-gripspace,
-.cms-navedit-head .cms-navedit-removespace {
+.cms-navedit-head .cms-navedit-removespace,
+.cms-navedit-head .cms-navedit-duplicatespace {
   flex: 0 0 2.1rem;
 }
 
@@ -1011,6 +1012,11 @@ body:has(.cms-schema5-grid) {
 .cms-navedit-remove {
   flex: 0 0 2.1rem;
   color: var(--cms-danger);
+  padding-inline: 0;
+}
+
+.cms-navedit-duplicate {
+  flex: 0 0 2.1rem;
   padding-inline: 0;
 }
 
