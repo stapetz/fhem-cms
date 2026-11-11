@@ -260,7 +260,9 @@ in der schmalen Ansicht vor den Widgets. Auch ihre konfigurierten Buttonbreiten
 und -höhen skalieren mit; Pixelangaben beziehen sich auf 1200 Pixel Inhaltsbreite
 bei Standardschrift. Passen alle sichtbaren
 Menüeinträge einschließlich Abständen in ihre verfügbare Breite, bleiben sie
-direkt sichtbar; andernfalls erscheint das aufklappbare ☰-Menü. Die Platzprüfung
+direkt sichtbar. Entwicklungsstand `dev`: Ist bei horizontaler Navigation nur die Höhe knapp, werden die
+Einträge um höchstens 20 Prozent verkleinert. Reicht Breite oder Höhe auch dann
+nicht, erscheint das aufklappbare ☰-Menü. Die Platzprüfung
 reagiert auf Drehen, Größenänderungen, Beschriftungen und geladene Schriften.
 Widgets folgen ihrer ursprünglichen Zeilen-/Spaltenreihenfolge.
 Die Anordnung ist unabhängig von der gewählten Rasterdichte.
