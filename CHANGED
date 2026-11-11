@@ -11,6 +11,11 @@
 - Einrichtungsassistent, Navigation und FHEM-Update-Historie sind in 1.7.0
   enthalten.
 
+2026-11-11 - 1.8.0-dev: Mobiles Raster (Refs #137)
+- Ansicht auf Smartphones und Tablets sowie deren Vorschau ohne horizontalen
+  Raster-Scrollbar.
+- Desktop-Editor und Desktop-Zoom behalten ihr bisheriges Verhalten.
+
 2026-11-11 - 1.6.2-dev: Einrichtungsassistent (Refs #129)
 - Manuelle Raum- und Geraeteauswahl mit Vorschau oder Magic-Entwurf.
 - Erkennung von Thermostaten, Schaltern, Messwerttabellen und Solax-SolarFlow.
