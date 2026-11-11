@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-11",
+  "version": "1.6.2-dev",
+  "title": "Einrichtungsassistent (Refs #129)",
+  "changes": [
+    "Manuelle Raum- und Geraeteauswahl mit Vorschau oder Magic-Entwurf.",
+    "Erkennung von Thermostaten, Schaltern, Messwerttabellen und Solax-SolarFlow.",
+    "Automatische Anordnung; Veroeffentlichung bleibt eine eigene Aktion.",
+    "Aktive Navigationspunkte behalten ihren Schriftstil und ihre Breite (Refs #133)."
+  ]
+}

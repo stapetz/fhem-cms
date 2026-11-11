@@ -1,0 +1,641 @@
+2026-11-10 - 1.6.1: LinkWidget und gemeinsamer Assetmanager
+
+Freigegebener Umfang: #123, #124, #125 und Titelkorrektur #121.
+Releaseabgleich: #127. LinkWidget zeigt mehrere interne/externe Links mit
+optionalem Bild und Text als grafisch platzierbare Kacheln im feinen Raster.
+Der gemeinsame Assetmanager fuer Text- und Linkwidget verwaltet Bilder und
+Dokumente, Ordner und Unterordner, Umbenennen und Verschieben.
+Mehrfachupload und Drag-and-drop laden direkt in den geoeffneten Ordner.
+Bildvorschau, EXIF-Popup, Verwendungsschutz mit Live-/Entwurfsfundstellen
+und einheitliche Informations-/Loeschdialoge ergaenzen die Verwaltung.
+Dateitypen und Speicherlimits sind konfigurierbar; bestehende Bildadressen
+und Hash-Dateinamen bleiben erhalten. Textwidget-Titel ist vereinheitlicht.
+Nicht enthalten: offene DE/EN-Geraetehilfe #122 und spaetere Assetsuche #126.
+
+2026-11-10 - 1.6.1-dev: Einheitliche Asset-Popups (Refs #125)
+
+Verwendungen anzeigen oeffnet ein eigenes Popup statt einer Liste unterhalb
+des Managers, auch bei wegen Verwendung gesperrter Loeschung. EXIF und
+Verwendungen haben den Schliessen-Knopf rechts. Loeschbestaetigungen zeigen
+Abbrechen und Loeschen rechts in gleicher Standarddarstellung.
+Hash-Dateinamen und vorhandene Bildadressen bleiben unveraendert.
+
+2026-11-10 - 1.6.0-dev: Mehrfachupload und Drag-and-drop im Assetordner (Refs #125)
+
+Mehrere Dateien per Dateiauswahl oder Drag-and-drop in die Inhaltsansicht
+hochladen. Alle Dateien eines Auftrags gehen direkt in den aktuell geoeffneten
+Ordner; die Ansicht bleibt dort ohne automatisch geoeffnete Dateidetails.
+Fortschritt und Fehler zeigen den Bearbeitungsstand des Auftrags. Die Suche
+wurde vorerst entfernt und ist als spaetere Erweiterung separat geplant.
+
+2026-11-10 - 1.5.0-dev: Getrennte Dateiaktionen, Bildvorschau und EXIF (Refs #125)
+
+Umbenennen steht direkt unter Dateiname; die Endung wird getrennt und nicht
+editierbar angezeigt. Verschieben oeffnet die Zielauswahl und fuehrt mit deren
+Bestaetigung sofort die Bewegung aus, ohne ungespeicherte Namensaenderungen.
+Ausgewaehlte Bilder erscheinen rechts nochmals als anklickbare Vorschau mit
+Tooltip fuer volle Groesse. EXIF aus JPEG/PNG wird lokal im Browser gelesen und
+bei vorhandenen Eintraegen ueber i und Popup angezeigt; auch GPS-Felder.
+Fehler und fehlende Metadaten werden unterschieden. Loeschen oeffnet einen
+Bestaetigungsdialog statt dauerhaftem Haken. Verwendungsschutz bleibt bestehen.
+
+2026-11-10 - 1.4.2-dev: Assetordner direkt in der Inhaltsansicht bedienen (Refs #125)
+
+Linke Baumstruktur und Bereich Ordner verwalten entfernt. Navigation erfolgt
+in Hauptansicht und Zielauswahl ausschliesslich per Ordnerkachel und Pfad.
+Ordner erstellen oberhalb der Uebersicht legt im aktuell geoeffneten Ordner
+einen Unterordner an; die Ansicht bleibt dort und zeigt die neue Kachel.
+Umbenennen/Verschieben/Loeschen sind kontextbezogen ueber das Kachelmenue
+erreichbar. Ohne Auswahl nutzt die Uebersicht die volle Breite.
+
+2026-11-10 - 1.4.1-dev: Assetordner grafisch durchsuchen und Verschieben bestaetigen (Refs #125)
+
+Finder-artige Ordnerleiste, Ordnerkacheln und klickbarer Pfad ersetzen die
+Ordner-Dropdowns. Jeder Ordner zeigt nur seinen eigenen Inhalt.
+Bild-/Dokumentverschieben und Ordnerwechsel verwenden einen eigenen grafischen
+Zielordnerdialog. Nach dem Speichern wird das verschobene Asset im Zielordner
+angezeigt; nicht uebernommene Aenderungen melden einen Fehler.
+Ordnerklicks navigieren ausschliesslich, ohne Schreibbefehle.
+Leere Ordner lassen sich nur nach separater Bestaetigung loeschen.
+
+2026-11-10 - Textwidget-Titel vereinheitlicht (Refs #121)
+
+Der Titel des Textwidgets verwendet dieselbe dezente Farbe und normale
+Schriftstaerke wie andere Widgettitel. Globale Ausrichtung und formatierte
+Ueberschriften im Textinhalt bleiben unveraendert.
+
+2026-11-10 - 1.2.0: Editor, Widgets, Navigation und Einheiten
+
+Freigegebener Umfang: #105-#119; Releaseabgleich und Dokumentation: #120.
+Thermostat-Gerätewechsel übernimmt die neue Auswahl samt Readings.
+Widgets und Navigation skalieren mit Fenstergröße und Browserzoom; Editor,
+Vorschau und Homepage verwenden auf dem Desktop dasselbe präzise Raster.
+Widget-Inhalte nutzen die Innenfläche besser, Titel lassen sich global ausrichten.
+Schalter und Taster erhalten Standardsymbole mit optionaler Beschriftung.
+Navigation lässt sich zuverlässig skalieren und beim Ausrichtungswechsel einpassen;
+Editorwerkzeuge erscheinen auf Mausgeräten bei Hover oder Tastaturfokus.
+Safari behält die Textauswahl beim Formatieren. Widgets lassen sich automatisch
+in Leserichtung anordnen. Text-Readings erhalten frei wählbare Einheiten;
+Wert, Diagramm, Tabelle und Texteditor verwenden gemeinsame Einheitenvorschläge.
+Energie wird als kWh beschriftet (Hinweis #104); keine numerische Umrechnung.
+SolarFlow reserviert Platz für seinen Titel. Bestehende Konfigurationen bleiben
+erhalten. Ältere offene MVP-/Refactoringthemen sind nicht Teil dieses Releases.
+
+2026-11-10 - 1.5.1-dev: Ansicht und Editor verwenden dasselbe Raster (Refs #119)
+
+Homepage, Vorschau und Editor behalten auf Desktopbreiten dieselben gespeicherten
+Positionen, Zeilen und Größenverhältnisse einschließlich der Navigation.
+Kleine Widgets werden dort nicht mehr auf mindestens 25 Prozent verbreitert.
+Nur bis 600 Pixel Inhaltsbreite bricht die Ansicht weiterhin automatisch um.
+Browserzoom bleibt wirksam; bei Platzmangel scrollt nur der Rasterbereich.
+Der Editor behält die Scrollposition nach dem Speichern einer Rasteränderung.
+
+2026-11-10 - 1.5.0-dev: Einheitliche Einheitenfelder mit Vorschlägen (Refs #118)
+
+Texteditor/Platzhalterdialog, Wert, Diagramm und Tabelle verwenden ein freies
+Einheitenfeld mit gemeinsamen anklickbaren Vorschlägen wie beim Wert-Widget.
+Eigene Einheiten sind ohne „Andere …“-Auswahl möglich. Tabellen behalten
+automatische Summeneinheiten und ausdrücklich leere Einheiten unverändert.
+Der Texteditor erkennt auch eigene Einheiten beim Wiederöffnen und prüft
+unzulässige Eingaben sichtbar. Das Muster ist für bestehende und zukünftige
+Widgets im führenden Entwicklerstyleguide verbindlich dokumentiert.
+SolarFlows W/kW-Umrechnungswahl bleibt fachlich begrenzt.
+
+2026-11-10 - SolarFlow-Diagramm hält den Titelbereich frei (Refs #117)
+
+Der Titel erhält einen eigenen Bereich über dem Diagramm. Die SVG-Darstellung
+skaliert im verbleibenden Platz, statt unter den absolut positionierten Titel
+zu rutschen. Ohne Titel nutzt das Diagramm weiter die verfügbare Fläche.
+Globale Titelausrichtung, Leistungswerte und Flussdarstellung bleiben erhalten.
+
+2026-11-10 - 1.4.0-dev: Einheit für Text-Readings auswählen (Refs #116)
+
+Der gemeinsame Platzhalterdialog bietet eine Einheiten-Auswahl mit °C, W,
+kWh, % und weiteren üblichen Einheiten. Die Einheit erscheint mit Leerzeichen
+hinter dem Wert und bleibt beim Bearbeiten erhalten. Gespeichert wird der
+bestehende suffix-Filter; Textbausteine, freies HTML und Element-Schreibweise
+bleiben kompatibel. Ein Einheitenwechsel ersetzt die vorherige Auswahl, ohne
+andere Filter zu verlieren.
+
+2026-11-10 - Leserichtung leicht versetzter Widgets erhalten (Refs #115)
+
+Automatisches Anordnen erkennt nebeneinander liegende Widgets auch bei
+unterschiedlichen Oberkanten als gemeinsame Lesezeile. Innerhalb dieser
+Zeile gilt links nach rechts; danach folgt die nächste Zeile. Hohe Widgets
+verbinden keine getrennten Zeilen. Beim Umbruch beginnt die nächste
+Ergebniszeile unter allen bisherigen Widgets, damit die Leserichtung auch
+nach erneutem Anordnen stabil bleibt.
+
+2026-11-10 - 1.3.0-dev: Widgets automatisch kompakt anordnen (Refs #115)
+
+Unter Bearbeiten ordnet „Widgets automatisch anordnen“ die Widgets der
+aktuellen Seite nach oben und links. Die bisherige Leserichtung von oben nach
+unten und links nach rechts bleibt erhalten; Größen, Inhalte, Navigation und
+andere Seiten ändern sich nicht. Das Ergebnis wird als Entwurf gespeichert,
+Live bleibt bis zum Veröffentlichen unverändert. Erneutes Anordnen eines
+bereits kompakten Rasters benötigt keinen Schreibzugriff.
+
+2026-11-10 - Safari-Auswahl bei Richtextformatierung erhalten (Refs #114)
+
+Fett, Kursiv, Unterstreichen, Farben und weitere Formatierungen stellen die
+markierte Textstelle im Shadow-DOM jetzt über explizite Auswahlgrenzen wieder
+her. WebKit verlor sie zuvor beim Entfernen und erneuten Hinzufügen des Range,
+sodass Formatierungen nicht griffen. Auch der Cursor nach Einfügungen bleibt
+erhalten. Auswahlgrenzen, Texte außerhalb der Markierung und Chromium-Verhalten
+werden durch Browserregressionen geprüft.
+
+2026-11-10 - Editorwerkzeuge bei Hover und Fokus einblenden (Refs #113)
+
+Auf Geräten mit Maus erscheinen die Bearbeitungsknöpfe erst beim Überfahren
+des jeweiligen Widgets oder bei Tastaturfokus darin. Eine dezente Umrandung
+und Hintergrundtönung heben das aktive Widget hervor, ohne sein Layout zu ändern.
+Dies gilt auch für die Navigation. Beim Ziehen bleiben die Knöpfe sichtbar;
+auf Touchgeräten ohne Hover bleiben sie dauerhaft erreichbar. Ansicht und
+Vorschau bleiben unverändert.
+
+2026-11-10 - Vertikale Navigation passend darstellen und ausrichten (Refs #112)
+
+Die Burger-Prüfung berücksichtigt jetzt die Ausrichtung: Vertikal zählen die
+breiteste Schaltfläche und die Gesamthöhe statt aller Breiten nebeneinander.
+Im Editor wird auch die verfügbare Höhe geprüft; die Vorschau behält ihre
+automatische Höhe. Beim Wechsel horizontal/vertikal wird das Navigationswidget
+anhand der aktuellen Punkte auf passende Rastermaße gesetzt. Kollisionen auf
+allen Seiten weichen nach unten aus; gespeichert wird nur als Entwurf.
+
+2026-11-10 - Globale Navigation mit seitenübergreifenden Kollisionen skalieren (Refs #111)
+
+Beim Vergrößern oder Verschieben der Navigation werden kollidierende Widgets
+auf allen Seiten kontrolliert nach unten verschoben. Navigation und betroffene
+Seiten werden gemeinsam als Entwurf gespeichert, statt die gezogene Größe beim
+Loslassen wegen einer anderen Seite zurückzusetzen. Inhalte, Widgetgrößen und
+nicht betroffene Positionen bleiben erhalten; Live wird nicht verändert.
+Rastergrenzen und unabhängige Widgetüberschneidungen werden weiterhin abgewiesen.
+
+2026-11-10 - Größenänderungsgriff flacher Widgets freihalten (Refs #111)
+
+Editorwerkzeuge stehen seitlich neben der Größenänderungszone statt darüber.
+Dadurch bleibt insbesondere die flache Navigation im feinen Raster per Maus
+skalierbar. Auch die äußerste Resize-Ecke nimmt Treffer vollständig an.
+Feste Navigationspunktgrößen sind dafür nicht erforderlich.
+
+2026-11-10 - Aktionswidgets mit Standardsymbolen (1.2.0-dev, Refs #110)
+
+Schalter und Taster zeigen standardmäßig nur ein passendes Symbol, auch bei
+bestehenden Widgets. Toggle-Taster erhalten Umschaltpfeile; Schalter zeigen
+An/Aus über das bedienbare Zustandssymbol statt einen zusätzlichen Schieber.
+Je Widget ist Symbol + Beschriftung wählbar. Eigene Icons aus der Auswahlliste
+überschreiben den Standard und lassen sich zurücksetzen. Widgettitel bleiben
+unabhängig, zugängliche Namen und Fehlermeldungen bleiben erhalten.
+
+2026-11-10 - Editorraster zoomfähig an die Ansicht angleichen (Refs #109)
+
+Der reine Bearbeitungsmodus verwendet dieselbe zoomfähige Bezugsbreite und
+dieselben Widgetabstände wie die Ansicht. Bei Platzmangel scrollt nur der
+Arbeitsbereich, statt die Widgets vollständig klein einzupassen. Exakte
+Rasterpositionen, Verschieben und Größenändern bleiben erhalten; Zoom und
+Fensteränderungen schreiben keine Layoutdaten. Die Vorschau bricht weiterhin um.
+
+2026-11-10 - Widget-Inhalte bis nahe an die Innenränder skalieren (Refs #108)
+
+Wert, Schalter, Taster und Statussymbol passen ihre Inhalte an den tatsächlich
+verfügbaren Innenraum an. Titel und Fehlermeldungen behalten eigene Bereiche;
+auch lange Werte, Einheiten und Beschriftungen werden passend eingepasst.
+Icons und Schalter behalten ihre Proportionen. Schieberegler nutzen fast die
+gesamte Innenbreite. Größenwechsel, Live-Updates und Browser-Zoom werden
+berücksichtigt, ohne Konfiguration oder Gerätebefehle zu verändern.
+
+2026-11-10 - Globale Ausrichtung der Widgettitel (Refs #107)
+
+In den Seiteneinstellungen lassen sich Widgettitel deviceweit links, zentriert
+oder rechts ausrichten. Alle zwölf Widgettypen übernehmen die Einstellung in
+Homepage, Vorschau und Editor. Vorhandene Konfigurationen bleiben linksbündig;
+Dialogüberschriften und frei formatierte Inhalte bleiben unverändert.
+
+2026-11-10 - Navigation und Widgets zoomfähig skalieren (Refs #106)
+
+Navigationsbuttons samt Text und eingestellten Abmessungen skalieren mit der
+Fenstergröße. Homepage und Vorschau berücksichtigen Browser-Zoom sichtbar,
+statt ihn durch vollständiges Einpassen auszugleichen. Widgets brechen bei
+Platzmangel auch auf dem Desktop um; Navigation klappt bei Bedarf zum Burger.
+Gespeicherte Rasterpositionen und das präzise Editorraster bleiben unverändert.
+
+2026-11-10 - Thermostat-Gerätewechsel übernehmen (Refs #105)
+
+Die Thermostat-Kachel übernimmt beim Bearbeiten genau das ausgewählte Device
+statt einen gewählten Kanal durch sein Hauptdevice zu ersetzen. Die Readings
+werden passend zur neuen Auswahl angeboten und gespeichert; Solltemperatur-
+und Betriebsartsteuerung verwenden danach das neu zugeordnete Gerät.
+
+2026-11-09 - Version 1.1.0
+
+Geräte-Vorschau mit Hoch-/Querformat und Desktopauflösungen wiederhergestellt.
+Seiteneinstellungen unter Bearbeiten enthalten nur Look & Feel und Rasterdichten
+von 12 bis 192 Spalten. Smartphone und Tablet brechen Widgets automatisch um;
+die Navigation erscheint nur bei tatsächlichem Platzmangel als Burger.
+Pumpende Größenänderungen und Widgetüberlappungen nach Rotation im
+iPhone-Homescreen-Modus sind behoben. Der Entwickler hat den Stand abgenommen.
+
+S97 - Schema-5-Editor: Geräte-Vorschau mit Desktopauflösungen und Drehfunktion wiederherstellen
+S98 - Seiteneinstellungen unter Bearbeiten mit wählbarem Schema-5-Raster 12/24/48
+S99 - Pumpende Schema-5-Ansicht durch Scrollbar-/Gridstack-Resize-Schleife beheben
+S100 - Schema-5-Raster um feinere Stufen 96 und 192 erweitern
+S101 - Responsive Schema-5-Widgetumbrüche für Smartphone und Tablet
+S102 - Seiteneinstellungen auf Look & Feel ohne Widgetpositionierung beschränken
+S103 - Schema-5-Navigation nur bei tatsächlichem Platzmangel als Burger anzeigen
+
+2026-11-09 - Mobile Rasterhöhe nach Rotation stabilisieren (Refs #101)
+
+Responsive Widgetkacheln reservieren ihr Seitenverhältnis über prozentuales
+Padding statt aspect-ratio am Grid-Item. Dies adressiert den gemessenen
+Homescreen-Fehler mit zu kurzen Rasterzeilen und überlappenden Kacheln.
+Die Prüfseite kontrolliert zusätzlich nichtquadratische Kacheln und Zeilenabstände.
+Gespeicherte Positionen und der Desktopeditor bleiben unverändert.
+
+2026-11-09 - Homescreen-Rotation gezielt diagnostizieren (Refs #101)
+
+Die rein lesende FCUI-Prüfseite erfasst den Standalone-Modus, die adaptive
+Navigation und die getrennten Rahmen von Widgets und Inhalten nach Rotation.
+Eine kurze Messhistorie und ein festhaltbarer Messstand helfen, die bislang
+nicht reproduzierte Homescreen-Überlappung ohne Layoutänderung einzugrenzen.
+
+2026-11-09 - Navigation nur bei Platzmangel einklappen (Refs #103)
+
+Schema-5-Menüeinträge bleiben auch auf Smartphones sichtbar, solange sie samt
+Abständen in die Navigationsbreite passen. Erst bei Platzmangel erscheint der
+Burger. Drehen, Größenänderungen und geänderte Beschriftungen werden neu geprüft.
+
+2026-11-09 - Messbare mobile Browserdiagnose (Refs #101)
+
+Die rein lesende FCUI-Prüfseite zeigt Viewport- und Inhaltsbreite sowie den
+tatsächlichen Umbruch zweier Beispielwidgets. Die Anzeige aktualisiert sich
+beim Drehen und dient der Eingrenzung abweichenden Safari-Verhaltens.
+
+2026-11-09 - Späterer Widgetumbruch im Smartphone-Querformat (Refs #101)
+
+Normale Widgets passen ab 640 statt erst ab 768 Pixeln verfügbarer Inhaltsbreite
+nebeneinander. Das lässt mehr Platz für seitliche Browser-/Sicherheitsabstände
+auf dem echten iPhone. Die kompakte Navigation bleibt unverändert.
+
+2026-11-09 - Seiteneinstellungen auf Look & Feel beschränkt (Refs #102)
+
+Der Dialog enthält nur noch Rasterdichte, Theme und Widget-Rahmen. Die separate
+Rastervorschau und Positions-/Größeneingaben entfallen; Widgets werden direkt
+im Editiermodus verschoben und skaliert. Rasterumrechnung und Entwurfsspeicherung
+bleiben erhalten, Abbrechen verändert keine Konfiguration.
+
+2026-11-09 - Responsive Schema-5-Ansicht für Smartphone und Tablet (Refs #101)
+
+Homepage und Vorschau brechen Widgets bei weniger als 768 Pixeln Inhaltsbreite
+auf ein normales oder zwei kleine Widgets um; bis unter 1200 Pixeln gilt eine
+Tablet-Anordnung. Drehen und Größenänderungen passen nur die Darstellung an.
+Desktoppositionen, Inhalte und Live-Daten bleiben erhalten; der Editor behält
+das gespeicherte Raster. Die Geräte-Vorschau zeigt die mobilen Umbrüche.
+
+2026-11-09 - Feinere Schema-5-Rasterstufen (Refs #100)
+
+Die Seiteneinstellungen bieten zusätzlich 96 und 192 Spalten an. Umrechnung,
+Positionsmasken und serverseitige Prüfung unterstützen alle fünf Rasterstufen.
+Die bisherige Grenze von 1000 Rasterzeilen bleibt bestehen; zu hohe Layouts
+werden beim Umrechnen sichtbar abgewiesen.
+
+2026-11-09 - Pumpende Schema-5-Ansicht stabilisiert (Refs #99)
+
+Stabiler Scrollbalkenplatz verhindert das wiederholte Vergrößern und Verkleinern
+der Ansicht an der Scrollgrenze.
+
+2026-11-09 - Seiteneinstellungen und Rastergröße im Schema-5-Editor (Refs #98)
+
+Unter Bearbeiten > Seiteneinstellungen ist die Rastergröße mit 12, 24 oder
+48 Spalten wählbar. Alle Seiten und die Navigation werden proportional
+umgerechnet; Rundungskollisionen weichen nach unten aus. Die Auswahl wird
+als Entwurf gespeichert.
+
+2026-11-09 - Geräte-Vorschau im Schema-5-Editor (Refs #97)
+
+Die Auswahl von iPhone-, iPad-, Android- und Desktop-Auflösungen steht jetzt
+auch im refaktorierten Bearbeitungsmodus bereit. Das simulierte Drehen wechselt
+zwischen Hoch- und Querformat.
+
+2026-11-08 - Neuer Schema-5-Editor: 12-Spalten-Raster, Menüleiste, Entwürfe und Sicherungen (1.0.0)
+
+Kompletter Umstieg auf das Schema-5-Layout mit Ein-Klick-Umstellung inklusive
+getrennter Live- und Entwurfssicherung. Neuer Editor mit Menüleiste: Datei
+(Entwurf veröffentlichen/verwerfen, Sicherungen/Wiederherstellung als Dialog),
+Bearbeiten (Widget hinzufügen mit Suche), Ansicht (Seite bearbeiten mit Theme,
+Rasterart und Positionseingabe, Vorschau ohne Bearbeitungselemente, Raster
+anzeigen). Widgets werden direkt auf der Seite bearbeitet: Ziehen am Punktgriff,
+Größe an der Ecke, Stift für die Einstellungen, Pfeilsymbol zum Verschieben auf
+eine andere Seite. Der Navigationsdialog ist die zentrale Seitenverwaltung mit
+Reihenfolge per Griff, Dateinamen, Anzeigen-Haken für versteckte Seiten,
+gemeinsamen Größen und Neuanlage. Alle Dialoge einheitlich mit Speichern und
+Abbrechen unten rechts. Widget-Titel skalieren mit, sind per Haken ausblendbar
+und dienen als interner Name. Größere Uhr, abgesetzte Summenzeile der Tabelle,
+responsive Navigation mit Burger-Menü bei schmalen Fenstern sowie zahlreiche
+Safari-Korrekturen (Menüs, Auswahllisten, Texteditor-Einfügeposition,
+Schriftgrößen).
+
+2026-11-05 - SolarFlow, Tabelle, Seite einrichten, Positionierung und Geräte-Vorschau (0.5.0)
+
+Neues Widget SolarFlow mit animiertem Energiefluss (ein oder mehrere Devices, segmentierte Batterieanzeige). Die Tabelle liest Werte aus einem oder mehreren Devices und hat eine optionale Summenzeile sowie konfigurierbare Kopfzeile. Widgets lassen sich auf andere Seiten verschieben, beim Löschen einer Seite können sie umziehen. Neuer Dialog Datei › Seite einrichten mit Theme, Widget-Rahmen, Positionierung (Raster, Fluss, Spalten, Frei) und Rastergröße. Im Bearbeitungsmodus zeigt eine Geräte-Vorschau die Seite in der Größe von iPhone, iPad, Android und Desktop. Kachel-Symbole liegen einheitlich oben rechts mit Tooltips, das Verschieben ist flüssiger.
+S47 - SolarFlow-Widget: animierter Energiefluss (PV, Haus, Netz, Batterie)
+S48 - Tabelle: Werte aus einem oder mehreren Devices
+S49 - Tabelle: optionale Summenzeile
+S50 - Widgets auf andere Seite verschieben und beim Seitenloeschen umziehen
+S51 - Seite einrichten: Theme und allgemeine Widget-Einstellungen
+
+2026-11-05 - Diagramm-Widget, Tabelle mit Alias und Bezeichnern, Schreibfehler-Protokoll (0.4.0)
+
+Neues Widget Diagramm: Verlauf eines geloggten Readings aus DbLog oder FileLog mit Einheit, wählbarem Zeitraum und Granularität. Die Tabelle zeigt den FHEM-Alias und erlaubt eigene Zeilenbezeichner. Abgewiesene Schreibbefehle werden protokolliert, die Schieberegler-Kachel ist in kleiner Größe lesbar.
+S40 - Diagramm
+S41 - Readingsgroup / Tabelle
+S34 - Schieberegler
+S06 - FHEM-Backend-Grundlage implementieren
+
+2026-11-05 - Slider, Uhr, Status-Symbol, Tabelle, Themes und Layout-Verbesserungen (0.3.0)
+
+Neue Widgets: Schieberegler, Uhr/Datum, Status-Symbol und Readings-Tabelle. Hell/Dunkel-Theme pro Gerät, Bildgröße per Ziehpunkt, einheitliches Skalierverhalten der Kacheln und Dialog zum bestätigten Löschen der CMS-Daten. Konfigurationen werden automatisch auf Schema 4 migriert.
+S34 - Schieberegler
+S36 - Status-Symbol
+S38 - Uhr / Datum
+S41 - Readingsgroup / Tabelle
+
+2026-11-04 - 48-Spalten-Raster (0.2.0)
+
+Das Layout-Raster wurde auf 48 Spalten verfeinert. Bestehende Konfigurationen werden automatisch migriert; Position und Größe von Kacheln und Navigation bleiben erhalten.
+S46 - Freieres, feineres Layout
+
+2026-10-31 - First release 0.1.0
+
+First public version of fhem-cms: pages with navigation, text blocks with placeholders, thermostat, value, free HTML, switch and button widgets, draft and publish workflow.
+S01 - MVP-Umfang und Referenzumgebung festlegen
+S08 - Redaktionellen Textbaustein umsetzen
+S09 - Lesendes FHEM-Widget und Live-Zustände umsetzen
+S17 - Schlanke Seite ohne Kopfbereich
+S20 - Navigationspunkte: Größe und Beschriftung
+S21 - Texteditor: Farben
+S22 - Aufgeräumte Werkzeugleiste und Meldungen
+S23 - Gitternetz im Bearbeitungsmodus
+S24 - Werkzeugleiste links, Meldungsbox
+S25 - Wert-Anzeige (Device, Reading, Einheit, Icon)
+S27 - Menüs öffnen beim Überfahren
+S30 - Thermostat schreibt wie das ThermostatDashboard und skaliert
+S33 - Taster / Befehlsknopf
+
+2026-10-31 - Text placeholders accept formatting
+
+Bold, italic, underline, strikethrough, colour and highlight now apply to placeholders in the text editor; placeholders always stay inside a paragraph.
+
+2026-10-31 - Thermostat writes mode, scales down
+
+Tiles use smaller text and icons; thermostat looks like the ThermostatDashboard.
+New widget 'Button' (S33): sends one fixed set command (chosen from the device's commands without arguments), optional label and icon.
+New widget 'Switch' (S32): toggles a device with set <Device> on|off, state from a reading, optional icons; placeholder dialog uses filter chips instead of a select.
+New widget 'Free HTML' (S31): own HTML with live placeholders {{Device:reading}}, filters and state classes; see docs/PLATZHALTER.md.
+Placeholders: search dialog for device and reading in free HTML and in the text block; text blocks show live values ({{Device:reading|filter}}), placeholders are editable chips in the editor.
+Free HTML: values can also be written as attributes (device, reading, filter) like in FTUI.
+Fix: tiles added in the editor can be moved and resized right after saving, without a reload.
+Thermostat: smaller mode select and valve bar, larger side padding.
+Thermostat: font size computed in JS from tile size plus fit check (Safari zoom).
+Thermostat: own slider styling (green thumb and track in all browsers, fixed height).
+Grid scales with window width and browser zoom (cell height follows column width).
+Value widget: content centered, title label stays top left.
+Thermostat switches to one column in tall tiles and fills the height.
+Tiles in FTUI style: thin rounded frame, small title label, gear only in edit mode.
+Content is top-aligned and more compact.
+Mode select looks like the dashboard button.
+Value widget gets an optional title; device dialogs show the alias.
+Thermostat tile can set the operating mode (like ThermostatDashboard), uses the device's setpoint range and scales its content with the tile size.
+Reload the browser (hard), then: set CMS rebuild.
+
+S30 - Thermostat schreibt wie das Dashboard und skaliert
+
+2026-10-31 - Menus open on hover
+
+Edit menus open when hovering with a mouse; touch still uses tap.
+Reload the browser (hard).
+
+S27 - Menüs öffnen beim Überfahren
+
+2026-10-31 - Menu bar above the grid
+
+The edit menu bar no longer covers the page; the navigation row fits its content.
+Reload the browser (hard).
+
+2026-10-31 - Value display widget
+
+New widget (Insert > Value display): shows a reading with optional unit and FHEM icon.
+Restart FHEM (module changed: new get icons), set <CMS> rebuild, hard browser reload.
+
+S25 - Wert-Anzeige (Device, Reading, Einheit, Icon)
+
+2026-10-31 - Toolbar on the left, message box
+
+The edit toolbar is a menu bar (File, Edit, Insert, View), left-aligned and blue; the red exclamation mark opens a message box.
+Reload the browser (hard).
+
+S24 - Werkzeugleiste links, Meldungsbox
+
+2026-10-31 - Grid lines in edit mode
+
+A toolbar button shows or hides the layout grid as grid lines while editing.
+Reload the browser (hard).
+
+S23 - Gitternetz im Bearbeitungsmodus
+
+2026-10-31 - Cleaner toolbar, no layout mode, message icon
+
+Fixed toolbar order (Navigation, + Widget, Preview, Publish, Discard), styled
+like a classic menu bar that floats above the page (not part of the content grid). Tiles
+are always movable in edit mode. Messages show as a red exclamation mark with
+a tooltip. Reload the browser (hard).
+
+S22 - Aufgeräumte Werkzeugleiste und Meldungen
+
+2026-10-31 - Navigation dialog: drag to reorder, save/cancel
+
+Pages in the navigation dialog are reordered by dragging the handle; the
+dialog now has Save and Cancel. Reload the browser (hard).
+
+2026-10-31 - Navigation entries, text colors, page starts at top
+
+Navigation entries get a custom label and size (default: all as large as the
+largest). The text editor can set text color and highlight colors. The page
+now starts at the top of the browser window. Restart FHEM, then
+set <CMS> rebuild.
+
+S20 - Navigationspunkte: Größe und Beschriftung
+S21 - Texteditor: Farben
+
+2026-10-31 - Navigation widget, no header
+
+The page header and device card are gone. The navigation is now a movable
+widget (horizontal or vertical) shared by all pages; creating, renaming,
+deleting and reordering pages moved into its dialog. Restart FHEM, then
+set <CMS> rebuild.
+
+S17 - Schlanke Seite ohne Kopfbereich
+S18 - Navigations-Widget (Umsortieren per Ziehen und Ausblenden pro Seite folgen)
+
+2026-10-31 - Resize images and tiles by dragging
+
+Images get a drag handle (5 percent steps, ratio kept) instead of percent
+buttons. In layout mode tiles can be resized with a corner handle or
+Shift+arrow keys, and the grid fields are removed from the tile dialogs.
+
+2026-10-31 - Add a preview button for the draft
+
+The edit mode has a Vorschau button that opens the current draft as the
+finished page (mode=preview) in a new window.
+
+2026-10-31 - Open CMS links in a new browser window
+
+CMS starten and Zeige Homepage now open in a new window or tab.
+
+2026-10-31 - Make the view mode the default
+
+index.html without parameters now shows only the finished homepage. The edit
+mode needs ?mode=edit, which the CMS starten link sets.
+
+2026-10-31 - Add draft and publish workflow
+
+Editing now changes a draft (draft.json) instead of the live page. Zeige
+Homepage keeps showing the live version until Veroeffentlichen publishes the
+draft, which backs up the previous live version. New commands get draft,
+get status, set draft, set publish and set discard.
+
+2026-10-31 - Add a view mode link for the finished homepage
+
+The device now shows CMS starten (edit mode) and Zeige Homepage, which opens
+index.html?mode=view without header, toolbar and edit buttons.
+
+2026-10-31 - Add WYSIWYG text editor and image upload
+
+Text blocks are edited in a rich text editor (formatting, links, tables, images
+with positioning). HTML is validated against a strict allowlist in the browser
+and in the module. set <CMS> media uploads PNG, JPEG and GIF images (max 3 MiB),
+get <CMS> media lists them.
+
+2026-10-31 - Move tiles freely in the 12 column grid
+
+The new Layout button lets tiles be dragged by mouse or touch, or moved with
+the arrow keys. Overlapping tiles are pushed down and the layout is saved.
+
+2026-10-31 - Offer backups as a dropdown for set restore
+
+FHEMWEB now lists the 20 newest backups as choices for "restore".
+
+2026-10-31 - Add user documentation and acceptance protocol
+
+docs/ANWENDER.md covers installation, usage, securing FHEMWEB with allowed
+and troubleshooting. dev-docs/ABNAHME.md records what was and was not tested.
+
+2026-10-31 - Add backup restore dialog
+
+A Backups button lists the saved configurations and restores the selected one
+after confirmation. The current state is backed up before it is replaced.
+
+2026-10-31 - Add purge command to delete a device's data
+
+set <name> purge <name> removes the data folder (with backups) and the start
+page of a device after an explicit name confirmation. Symlinks, foreign files
+and pages without the module marker are refused.
+
+2026-10-31 - Show stale and offline states and clean up on page hide
+
+Keep the last values visible when a refresh fails and mark tiles as stale,
+reload immediately after a reconnect, pause polling in hidden tabs and stop
+timers and subscriptions when the page is hidden.
+
+2026-10-31 - Add text widget, multiple pages and navigation
+
+Add the markdown text widget with a safe built-in renderer, pages with hash
+navigation (add, rename, delete) and a general "+ Widget" menu. Subscriptions
+only cover the current page.
+
+2026-10-31 - Add rebuild command and text widget schema
+
+Add set rebuild and throttled start page refresh from the FHEMWEB link so new
+frontend assets get a fresh cache token without a restart. Accept text widgets
+with a markdown field in the config schema.
+
+2026-10-31 - Fix device picker layout
+
+Use fixed column widths so all picker columns fit and show the hit count in a
+neutral color.
+
+2026-10-31 - Add channel lookup and column filters to the device picker
+
+Resolve thermostat readings across the main device and its channels, show the
+room and parent device in the picker, and add a filter field per column.
+
+2026-10-31 - Add cache busting to the generated CMS page
+
+Version the stylesheet, entry script and all modules with a content hash and
+regenerate module-owned index.html files when frontend assets change.
+
+2026-10-31 - Add device picker popup to thermostat dialog
+
+Replace the device input list with a modal popup showing name, alias and type
+with search over all columns.
+
+2026-10-31 - Add thermostat test widget and config commands
+
+Add schema version 2 with widget ids and a thermostat widget, get/set commands
+for config, backups and restore, and a thermostat tile with configuration dialog.
+
+2026-10-31 - Add per-device config storage
+
+Create fhem-cms-data/<device>/ with a validated config.json, timestamped
+backups and restore support. Existing devices are upgraded on the next start.
+
+2026-10-31 - Remove temporary FHEMWEB Inform probe
+
+Remove the one-off transport test page after verifying WebSocket status updates.
+
+2026-10-31 - Simplify FHEMWEB inform probe output
+
+Show only device names and states in the read-only inform probe instead of
+including the large rendered SVG markup in the event list.
+
+2026-10-31 - Add FHEM room and direct CMS link
+
+Assign new CMS devices to the FHEM CMS room and show a room-view link to the
+device entry page.
+
+2026-10-31 - Use device names in CMS URLs
+
+Use the FHEM device name in the generated device directory and returned URL.
+Also accept the FHEMCMS module type regardless of capitalization.
+Keep device files when the FHEM device definition is deleted.
+Place the device entry point directly at <device>/index.html; CMS pages belong
+to the device's content structure, not to separate surface directories.
+
+2026-10-31 - Initial fhem-cms test device and frontend
+
+Add the FHEMCMS device module, generated test page, and shared frontend component.
+Add repository-wide FHEM update controls and installation instructions.
+2026-11-10 - 1.3.0-dev: LinkWidget mit frei angeordneten Bildkacheln (Refs #123)
+
+Ein LinkWidget enthaelt interne Seitenlinks oder externe HTTP(S)-Links mit
+wahlweise gleichem Fenster, neuem Tab oder angefordertem Browserfenster.
+Linktexte lassen sich ausblenden oder oberhalb, im Bild oder darunter anzeigen.
+Je Kachel ist ein Bild aus Upload oder Medienverwaltung moeglich.
+Im Widgetdialog lassen sich bis zu 200 Linkkacheln in einem eigenen Raster
+verschieben und skalieren. Interne Links folgen Seitenumbenennungen;
+verlinkte Seiten koennen erst nach Anpassung ihrer Links geloescht werden.
+2026-11-10 - Linkkacheln grafisch auf feinem Raster anordnen (Refs #124)
+
+Numerische Positions-/Groessenfelder im Linkdialog entfallen.
+Das feine innere Raster ist beim Bearbeiten dauerhaft sichtbar.
+2026-11-10 - 1.4.0-dev: Gemeinsamer Assetmanager (Refs #125)
+
+Datei > Assetmanager und die Bild-/Dokumentauswahl in Text- und Linkwidget
+verwenden denselben Manager mit Ordnern, Unterordnern, Upload, Umbenennen,
+Verschieben, Downloads und Loeschen. Bestehende Bildadressen bleiben erhalten.
+Bild entfernen loescht nur den Widgetverweis. Verwendete Assets sind vor
+Loeschung geschuetzt; die Warnung nennt Live/Entwurf, Seite und Widget.
+PDF, Office alt/neu, OpenDocument und TXT/CSV sind standardmaessig erlaubt.
+Administration fuer Dateitypen und Limits ist vorerst fuer alle Bearbeiter offen.
+Vorgaben: Bilder3MiB, Dokumente20MiB, gesamt500MiB. Dokumente liegen ausserhalb
+des Webverzeichnisses und werden als Download angeboten. Upload und Download
+erfolgen in begrenzten Bloecken. Assetaenderungen gelten unabhaengig vom Entwurf.

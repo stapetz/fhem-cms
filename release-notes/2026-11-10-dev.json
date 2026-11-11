@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-10",
+  "version": "1.6.2-dev",
+  "title": "Entwicklung nach Release 1.6.1 (Refs #127)",
+  "changes": [
+    "Freigegebenen main-Stand 1.6.1 nach dev synchronisiert.",
+    "Die noch offene DE/EN-Geraetehilfe bleibt ausschliesslich auf dev; Assetsuche bleibt geplant."
+  ]
+}

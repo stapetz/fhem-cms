@@ -19,11 +19,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Test FHEM changelog generator
+        run: python3 -m unittest discover -s t -p 'test_generate_changed.py'
+
+      - name: Generate FHEM changelog
+        run: python3 scripts/generate_changed.py
+
       - name: Generate repository-wide controls file
         run: python3 scripts/generate_controls.py
 
       - name: Commit generated controls file
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: update FHEM controls file [skip ci]"
-          file_pattern: controls_fhem-cms.txt
+          commit_message: |
+            chore: update FHEM controls and changelog [skip ci]
+
+            Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+          file_pattern: "controls_fhem-cms.txt CHANGED"
