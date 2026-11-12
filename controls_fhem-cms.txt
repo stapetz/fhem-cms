@@ -7,7 +7,7 @@ UPD 2026-11-10_11:28:51 20548 www/fhem-cms/components/cms-chart.js
 UPD 2026-11-10_08:07:09 13971 www/fhem-cms/components/cms-clock.js
 UPD 2026-11-10_08:07:09 13971 www/fhem-cms/components/cms-html.js
 UPD 2026-11-10_08:13:56 15888 www/fhem-cms/components/cms-icon.js
-UPD 2026-11-12_16:23:39 22309 www/fhem-cms/components/cms-link.js
+UPD 2026-11-12_17:22:24 28163 www/fhem-cms/components/cms-link.js
 UPD 2026-11-10_08:13:56 18624 www/fhem-cms/components/cms-slider.js
 UPD 2026-11-11_12:17:01 28053 www/fhem-cms/components/cms-solarflow.js
 UPD 2026-11-10_09:09:16 21497 www/fhem-cms/components/cms-switch.js
@@ -33,10 +33,10 @@ UPD 2026-11-08_15:33:41 2186 www/fhem-cms/js/fcui-migration-transport.js
 UPD 2026-11-08_10:43:57 111967 www/fhem-cms/js/fcui-runtime.js
 UPD 2026-11-11_13:57:46 1335 www/fhem-cms/js/fcui-schema5-appearance.js
 UPD 2026-11-08_20:31:10 8243 www/fhem-cms/js/fcui-schema5-backup-panel.js
-UPD 2026-11-12_17:07:27 10047 www/fhem-cms/js/fcui-schema5-draft.js
+UPD 2026-11-12_17:22:24 11732 www/fhem-cms/js/fcui-schema5-draft.js
 UPD 2026-11-12_10:29:43 29907 www/fhem-cms/js/fcui-schema5-editor.js
 UPD 2026-11-09_07:18:21 4934 www/fhem-cms/js/fcui-schema5-grid-edit.js
-UPD 2026-11-10_13:40:57 11711 www/fhem-cms/js/fcui-schema5-layout.js
+UPD 2026-11-12_17:22:24 12933 www/fhem-cms/js/fcui-schema5-layout.js
 UPD 2026-11-12_10:29:43 5548 www/fhem-cms/js/fcui-schema5-live.js
 UPD 2026-11-08_22:00:37 5107 www/fhem-cms/js/fcui-schema5-move-panel.js
 UPD 2026-11-12_16:23:45 5762 www/fhem-cms/js/fcui-schema5-navigation-fit.js
@@ -46,8 +46,8 @@ UPD 2026-11-11_15:37:10 6062 www/fhem-cms/js/fcui-schema5-settings-preview.js
 UPD 2026-11-11_12:17:01 33511 www/fhem-cms/js/fcui-schema5-setup-wizard.js
 UPD 2026-11-08_15:33:41 1766 www/fhem-cms/js/fcui-schema5-transport.js
 UPD 2026-11-12_10:29:43 11639 www/fhem-cms/js/fcui-schema5-view.js
-UPD 2026-11-12_16:23:23 11147 www/fhem-cms/js/fcui-schema5-widget-panel.js
-UPD 2026-11-12_17:07:27 4295 www/fhem-cms/js/fcui-schema5-widget-session.js
+UPD 2026-11-12_17:22:24 11195 www/fhem-cms/js/fcui-schema5-widget-panel.js
+UPD 2026-11-12_17:22:24 4819 www/fhem-cms/js/fcui-schema5-widget-session.js
 UPD 2026-11-12_11:17:55 5702 www/fhem-cms/js/fcui-schema5-widgets.js
 UPD 2026-11-12_10:29:43 19226 www/fhem-cms/js/fhem-client.js
 UPD 2026-11-11_14:44:05 80573 www/fhem-cms/js/fhem-cms.js
