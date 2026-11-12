@@ -6,6 +6,17 @@
   klare Fallbacks; Einheiten, Zusatzinfos und Rasterdaten bleiben erhalten
   (Refs #166).
 
+2026-11-12 - 1.9.1-dev: Semantische Smart-Home-Statusdarstellung
+- Refs #167
+- Generische Schalter und nicht klassifizierte Batteriewerte erhalten keine
+  irrefuehrende Gruenmarkierung.
+- An, Aus und unbekannt werden mit sichtbaren Symbolen unterschieden; unbekannt
+  wird nicht als Aus exponiert.
+- Nicht zugeordnete Status-Icon-Werte werden ausdruecklich als unbekannt
+  angezeigt.
+- Neue Status-Icon-Farben uebernehmen den Theme-Akzent als Vorschlag;
+  gespeicherte Benutzerfarben bleiben erhalten.
+
 2026-11-12 - 1.9.0: Seiten-Popups, Bildbearbeitung und volle Rasterbreite
 - S70 - Refactoring 11 - Universelles Navigations-Widget umsetzen
 - S138 - Bilder im Assetmanager bearbeitbare machen

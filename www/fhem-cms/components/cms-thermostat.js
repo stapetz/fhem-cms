@@ -172,7 +172,7 @@ class FHEMCMSThermostat extends HTMLElement {
           background: linear-gradient(90deg, #2b7bc0, #2f9b8a 50%, #7a2b3b); display: grid; place-items: center; }
         .valve span.pct { font-weight: 700; font-size: 0.7em; z-index: 1; }
         .marker { position: absolute; top: 0; bottom: 0; width: 0.2em; background: #fff; }
-        .batt { display: inline-flex; align-items: center; gap: 0.3em; color: var(--cms-success, #5fd08f); white-space: nowrap; }
+        .batt { display: inline-flex; align-items: center; gap: 0.3em; white-space: nowrap; }
         .batt svg { width: 1.6em; height: 1em; }
         .status { margin: 0; padding: 0 0.8em 0.3em; min-height: 0; font-size: 0.8em; color: var(--cms-muted, #a5c9b2); flex: none; }
         .status:empty { display: none; }

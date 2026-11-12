@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-12",
+  "version": "1.9.1-dev",
+  "title": "Semantische Smart-Home-Statusdarstellung",
+  "changes": [
+    "Refs #167",
+    "Generische Schalter und nicht klassifizierte Batteriewerte erhalten keine irrefuehrende Gruenmarkierung.",
+    "An, Aus und unbekannt werden mit sichtbaren Symbolen unterschieden; unbekannt wird nicht als Aus exponiert.",
+    "Nicht zugeordnete Status-Icon-Werte werden ausdruecklich als unbekannt angezeigt.",
+    "Neue Status-Icon-Farben uebernehmen den Theme-Akzent als Vorschlag; gespeicherte Benutzerfarben bleiben erhalten."
+  ]
+}

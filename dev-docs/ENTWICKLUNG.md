@@ -1644,6 +1644,27 @@ Der Textbaustein nutzt einen eigenen, schlanken Editor auf `contenteditable` (`j
 
 **Bilder:** Upload per `set <CMS> media <base64>` (nur PNG, JPEG, GIF, höchstens 3 MiB, Prüfung der Magic-Bytes, kein SVG/WebP). Ablage unter `www/fhem-cms/<Device>/media/<md5>.<ext>` (Deduplizierung per MD5, atomares Schreiben, höchstens 200 Dateien). Der Rückgabewert ist der relative Pfad. `get <CMS> media` listet die Dateien. FHEMWEB liefert nur `png`, `jpg` und `gif` mit Bild-MIME-Typ aus, deshalb sind andere Formate ausgeschlossen. Bilder werden noch nicht automatisch gelöscht (Folge-Story); `purge` entfernt den Medienordner.
 
+## Semantische Smart-Home-Statusfarben (Refs #167)
+
+Die Farbzustands-Inventur umfasst folgende vorhandene Anzeigen:
+
+- `cms-switch` kennt nur generisches An/Aus und keine Geräte-Rolle; ein grüner
+  Aktivzustand wäre daher irreführend. An/Aus/Unbekannt werden farbunabhängig
+  symbolisiert; der unbekannte Zustand erhält keinen `aria-checked=false`-Wert.
+- `cms-icon` ordnet explizite Benutzerwerte Icons und frei gewählten Farben zu.
+  Diese Farben bleiben unverändert; nicht zugeordnete Rohwerte erscheinen
+  ausdrücklich als unbekannt und ohne Statusfarbe. Ein neuer Farbeintrag schlägt
+  den aktuellen Theme-Akzent vor.
+- `cms-thermostat` zeigte jeden Batteriewert grün, auch ohne Klassifikation.
+  Der Wert bleibt Text und verwendet nun die normale Textfarbe. Die
+  Ventil-Leiste bleibt eine Prozent-Grafik; Betriebsarten werden als Text
+  angezeigt und nicht automatisch als Heizen/Kühlen klassifiziert.
+- `cms-calllist` kennzeichnet Anrufzustände mit Symbolen und zugänglichen
+  Beschriftungen, nicht mit Farben.
+
+Die Regression liegt in `t/64_status_colors.test.js` und
+`t/64_status_colors.html`; letztere prüft den realen Widget-Renderer im Browser.
+
 ## Kacheln verschieben (Bearbeitungsmodus)
 
 Im Bearbeitungsmodus (`layoutMode = !VIEW_MODE`, kein Umschalter mehr) liegt über jeder Kachel eine durchklickbare Ebene `.cms-drag-layer` mit dem Zuggriff `.cms-drag-handle` (Kachelkopf, rechts 3 rem für das ⚙ frei; bei der Navigation am unteren Rand) und dem Größengriff. Die Werkzeugleiste (`.cms-toolbar`, `role=toolbar`) ist eine schwebende (`position: fixed`, nicht im Raster enthaltene) Menüleiste aus vier `details`-Dropdowns (`makeMenu`: Datei, Bearbeiten, Einfügen, Ansicht; `closeMenus()` hält immer nur eines offen und schließt bei Klick außerhalb). Gitternetz (S23): `syncGuides()` legt als erstes Kind des Rasters `.cms-guides` (Subgrid, `pointer-events: none`) mit einer leeren Zelle je Rasterfeld an; Zustand in `localStorage` (`fhem-cms-show-grid`). Meldungen: `setStatus`/`updateIndicator` schreiben Status und Entwurfshinweis in die Box `.cms-status-box` (im `body`, Klick auf die `.cms-status`-Zeile schaltet sie um); die Zeile erscheint im Bearbeitungsmodus per CSS als rotes „!“ oben rechts. Die Werkzeugleiste sitzt oben links in Blau. Der Griff wird für jede Kachel angelegt. Die Kachel lässt sich per Maus oder Touch ziehen oder mit dem fokussierten Griff per Pfeiltasten um eine Zelle verschieben. Die Zelle unter dem Zeiger wird aus der tatsächlichen Spurbreite und den berechneten Zeilenhöhen des CSS-Rasters ermittelt (`js/layout.js`). Überlappende Kacheln rutschen nach unten (`moveWidget`), das Ergebnis wird beim Loslassen (bei Pfeiltasten nach 700 ms Ruhe oder beim Verlassen des Griffs) über die normale Konfigurationsspeicherung geschrieben. Schlägt das Speichern fehl, springt das Layout auf den gespeicherten Stand zurück. Die Größe ändert ein Griff unten rechts (`attachResize`, `resizeWidget` in `js/layout.js`; ziehen per Zeiger oder Umschalt+Pfeiltasten am Kachel-Griff). `w` wird auf die freien Spalten rechts von `col` begrenzt, `h` auf höchstens 1000; überlappende Kacheln rutschen wie beim Verschieben nach unten. Die Konfigurationsdialoge enthalten keine Rasterfelder mehr: `collectWidget` übernimmt `grid` unverändert, neue Kacheln erhalten Spalte 1, die erste freie Zeile und eine Standardgröße (`addWidget`). Auf schmalen Bildschirmen (einspaltig) sind die Griffe ausgeblendet.

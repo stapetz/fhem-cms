@@ -131,6 +131,7 @@ for (const [name, fixtures] of [
   ['page duplication preserves the draft and live page', [['59_page_duplicate.html', 12]]],
   ['direct widget deletion preserves the draft and handles errors', [['60_direct_widget_delete.html', 15]]],
   ['call list displays and configures device readings', [['58_calllist.html', 61]]],
+  ['Smart-Home-Statusfarben bleiben semantisch und kontrastreich', [['64_status_colors.html', 13]]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],
