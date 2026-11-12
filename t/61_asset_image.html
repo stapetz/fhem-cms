@@ -62,10 +62,29 @@ try {
   check(root.querySelector('.variant').textContent.includes('Original'), 'Original gekennzeichnet');
   root.querySelector('[data-edit-image]').click();
   await wait(() => root.querySelector('[data-image-editor]')?.open);
-  const editor = root.querySelector('[data-image-editor]');
+  let editor = root.querySelector('[data-image-editor]');
+  check(editor.querySelector('[data-source-size]').textContent === '200 × 100',
+    'Dialog zeigt die tatsächliche Quellbildgröße');
+  check(editor.querySelector('[role="toolbar"][aria-label="Bildwerkzeuge"]'),
+    'Bildwerkzeuge liegen in einer zugänglichen Werkzeugleiste');
+  check(editor.querySelector('[data-image-size-summary]').textContent
+    .includes('Ausschnitt: 200 × 100 Quellpixel · Ausgabe: 200 × 100 px'),
+  'Ausschnitt- und Ausgabegröße sind klar unterschieden');
+  const cropTool = editor.querySelector('[data-image-tool="crop"]');
+  check(cropTool.getAttribute('aria-label') === 'Zuschneiden', 'Crop-Symbol ist zugänglich beschriftet');
+  cropTool.click();
+  check(cropTool.getAttribute('aria-pressed') === 'true' && !editor.querySelector('[data-crop-actions]').hidden,
+    'Crop-Symbol aktiviert das Zuschneidewerkzeug');
+  const left = editor.querySelector('[data-crop="x"]');
+  left.value = '10'; left.dispatchEvent(new Event('input'));
+  editor.querySelector('[data-crop-cancel]').click();
+  check(cropTool.getAttribute('aria-pressed') === 'false' && left.value === '0'
+    && getComputedStyle(editor.querySelector('[data-crop-actions]')).display === 'none',
+    'Abbrechen verwirft den unbestätigten Ausschnitt');
+  cropTool.click();
   const invalid = editor.querySelector('[data-crop="w"]');
   invalid.value = '0'; invalid.dispatchEvent(new Event('input'));
-  editor.querySelector('[data-image-save]').click();
+  editor.querySelector('[data-crop-confirm]').click();
   check(editor.open && editor.querySelector('[data-image-error]').textContent.includes('gültigen'),
     'Ungültige Ausschnittgröße bleibt sichtbar und wird nicht gespeichert');
   result.dataset.ready = 'true';
@@ -94,6 +113,12 @@ try {
   }
   editor.querySelector('[data-output="w"]').value = 5;
   editor.querySelector('[data-output="h"]').value = 5;
+  editor.querySelector('[data-output="w"]').dispatchEvent(new Event('input'));
+  editor.querySelector('[data-crop-confirm]').click();
+  check(editor.querySelector('[data-crop-actions]').hidden && cropTool.getAttribute('aria-pressed') === 'false'
+    && !editor.querySelector('[data-image-save]').disabled, 'OK bestätigt den gewählten Ausschnitt');
+  check(!editor.querySelector('.image-editor-selection').hidden,
+    'Bestätigter Ausschnitt bleibt im Bild als Vorschau markiert');
   editor.querySelector('[data-image-save]').click();
   await wait(() => savedFile && root.querySelectorAll('[data-variant-id]').length === 2);
   check(root.querySelectorAll('[data-asset-id]').length === 1, 'Variante erscheint nur beim Original');

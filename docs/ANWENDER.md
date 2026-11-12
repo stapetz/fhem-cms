@@ -411,9 +411,14 @@ Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
   mit ihrer Nummer. Die Originaldatei wird nicht verändert oder bereinigt.
 - **Entwicklungsstand auf `dev` – noch nicht veröffentlicht:** Bei einem Bild
   stehen rechts das Original und seine Varianten mit Dateigröße zur Auswahl.
-  **Bild bearbeiten** schneidet per Ziehen oder Pixelangaben zu und verkleinert
-  auf die angegebenen Ausgabemaße. Das Ergebnis wird als neue Variante sofort
-  hochgeladen; das Original bleibt unverändert. PNG und JPEG bleiben in ihrem
+  **Bild bearbeiten** zeigt die Auflösung des Quellbildes. Die Werte für den
+  Ausschnitt sind Position und Größe in Quellpixeln; die Ausgabegröße ist die
+  finale Auflösung der neuen Variante nach Zuschnitt und möglicher Verkleinerung.
+  Sie entspricht zunächst dem Ausschnitt und kann nicht größer als dieser sein.
+  Das Crop-Symbol über dem Bild aktiviert die Auswahl per Maus oder Touch;
+  **OK** bestätigt den Ausschnitt, **Abbrechen** verwirft ihn. Erst
+  **Variante erstellen** lädt das Ergebnis als neue Variante hoch; das Original
+  bleibt unverändert. PNG und JPEG bleiben in ihrem
   Format, ein einzelnes GIF-Bild wird als PNG gespeichert; Bildmetadaten werden
   nicht in die Variante übernommen. Animierte GIFs und APNGs werden abgewiesen.
   Bearbeitung ist auf 8192 Pixel je Seite und 16 Megapixel begrenzt; die
