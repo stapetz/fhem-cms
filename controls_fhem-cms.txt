@@ -39,7 +39,7 @@ UPD 2026-11-09_07:18:21 4934 www/fhem-cms/js/fcui-schema5-grid-edit.js
 UPD 2026-11-10_13:40:57 11711 www/fhem-cms/js/fcui-schema5-layout.js
 UPD 2026-11-12_10:29:43 5548 www/fhem-cms/js/fcui-schema5-live.js
 UPD 2026-11-08_22:00:37 5107 www/fhem-cms/js/fcui-schema5-move-panel.js
-UPD 2026-11-12_12:23:00 5719 www/fhem-cms/js/fcui-schema5-navigation-fit.js
+UPD 2026-11-12_13:10:23 5681 www/fhem-cms/js/fcui-schema5-navigation-fit.js
 UPD 2026-11-12_10:29:43 20356 www/fhem-cms/js/fcui-schema5-navigation.js
 UPD 2026-11-11_16:03:40 16862 www/fhem-cms/js/fcui-schema5-page-panel.js
 UPD 2026-11-11_15:37:10 6062 www/fhem-cms/js/fcui-schema5-settings-preview.js
