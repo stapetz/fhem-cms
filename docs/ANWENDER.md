@@ -413,11 +413,20 @@ Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
   mit ihrer Nummer. Die Originaldatei wird nicht verändert oder bereinigt.
 - **Entwicklungsstand auf `dev` – noch nicht veröffentlicht:** Bei einem Bild
   stehen rechts das Original und seine Varianten mit Dateigröße zur Auswahl.
-  **Bild bearbeiten** zeigt die Auflösung des Quellbildes. Die Werte für den
-  Ausschnitt sind Position und Größe in Quellpixeln; die Ausgabegröße ist die
+  **Bild bearbeiten** zeigt die Auflösung des Quellbildes. Die Ausschnittgröße
+  wird in Quellpixeln angezeigt; die Ausgabegröße ist die
   finale Auflösung der neuen Variante nach Zuschnitt und möglicher Verkleinerung.
   Sie entspricht zunächst dem Ausschnitt und kann nicht größer als dieser sein.
-  Das Crop-Symbol über dem Bild aktiviert die Auswahl per Maus oder Touch;
+  Das Crop-Symbol über dem Bild aktiviert die Auswahl per Maus oder Touch.
+  Den Rahmen innen ziehen, um ihn zu verschieben; die acht Rand- und Eckgriffe
+  verkleinern oder vergrößern ihn. Außerhalb des Rahmens lässt sich ein neuer
+  Ausschnitt aufziehen. Numerische Zuschnittsfelder gibt es nicht.
+  Rahmen und Griffe sind auch per Pfeiltasten bedienbar (mit Umschalt: 10 Pixel).
+  **Seitenverhältnis beibehalten** hält beim Zuschneiden das Verhältnis der
+  aktuellen Auswahl fest. Die getrennte, zunächst aktivierte Option bei der
+  Ausgabegröße führt beim Ändern von Breite oder Höhe die andere Dimension
+  passend zum Ausschnitt nach; ohne Haken sind beide Werte frei wählbar.
+  Zum reinen Verkleinern muss das Zuschneidewerkzeug nicht aktiviert werden.
   **OK** bestätigt den Ausschnitt, **Abbrechen** verwirft ihn. Erst
   **Variante erstellen** lädt das Ergebnis als neue Variante hoch; das Original
   bleibt unverändert. PNG und JPEG bleiben in ihrem
