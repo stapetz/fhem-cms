@@ -358,7 +358,7 @@ body:has(.cms-schema5-grid) {
   .cms-schema5-grid[data-responsive] > .grid-stack-item {
     position: relative !important;
     inset: auto !important;
-    flex: 0 0 min(100%, max(50%, calc((var(--cms-view-width) + var(--cms-view-gap)) * var(--cms-widget-fraction) - var(--cms-view-gap))));
+    flex: 0 0 min(100%, calc((var(--cms-view-width) + var(--cms-view-gap)) * var(--cms-widget-fraction) - var(--cms-view-gap)));
     width: auto !important;
     height: auto !important;
     min-width: 0;
