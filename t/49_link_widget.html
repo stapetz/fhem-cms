@@ -7,6 +7,8 @@
 <script type="module">
 import '../www/fhem-cms/components/cms-link.js';
 import { fitLinkWidget } from '../www/fhem-cms/js/link-widget.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { Schema5WidgetSession } from '../www/fhem-cms/js/fcui-schema5-widget-session.js';
 const result = document.querySelector('#result');
 let checks = 0;
 const check = (condition, name) => { checks++; if (!condition) throw new Error(name); };
@@ -170,6 +172,102 @@ try {
   await click('[data-cancel]');
   equal(widget.config, beforeCancel, 'cancel leaves saved configuration unchanged');
   equal(writes, 1, 'cancel does not write');
+  const live = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: pages.map(page => ({ ...page, widgets: page.id === 'home' ? [{ ...structuredClone(initial),
+      grid: { col: 3, row: 5, w: 4, h: 7 } },
+      { id: 'neighbor', type: 'text', html: 'Do not move', grid: { col: 3, row: 12, w: 6, h: 2 } }] : [] })) };
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let retryWrites = 0;
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async draft => { retryWrites++; state = { live, draft, token: 'b'.repeat(64) }; },
+    publish: async () => {}, discard: async () => {},
+  });
+  await controller.reload();
+  const session = new Schema5WidgetSession({ controller, pageId: 'home', token: state.token,
+    widget: live.pages[0].widgets[0], action: 'update' });
+  let completed = false;
+  session.completion.then(() => { completed = true; });
+  widget.services = session.services(services);
+  widget.config = session.widget;
+  await widget.openConfig();
+  await click('[data-add]');
+  field('text', 'Keep my new link');
+  await widget.save();
+  check($('[data-dialog]').open && widget.grid, 'real local collision retains dialog and GridStack');
+  check(!completed, 'local collision does not trigger panel completion');
+  equal(retryWrites, 0, 'local collision never invokes transport');
+  check($('[data-error]').textContent.includes('nichts gespeichert'), 'collision explains no write took place');
+  equal($('[data-field=text]').value, 'Keep my new link', 'new link text survives rejected save');
+  equal(widget.links.length, 3, 'new link remains editable after collision');
+  await click('[data-remove-link]');
+  await widget.save();
+  check(completed && !$('[data-dialog]').open, 'corrected layout saves in the same session and closes normally');
+  equal(retryWrites, 1, 'retry writes exactly once');
+  equal(state.draft.pages[0].widgets[0].grid, { col: 3, row: 5, w: 4, h: 7 }, 'retry persists fitted geometry');
+  equal(state.draft.pages[0].widgets[1], live.pages[0].widgets[1], 'retry leaves neighboring widget unchanged');
+  const existing = { ...structuredClone(initial), title: 'Existing links',
+    grid: { col: 1, row: 27, w: 40, h: 23 }, links: [1, 2, 3].map(number => ({
+      ...structuredClone(initial.links[0]), id: `link${number}`,
+      grid: { col: 1 + (number - 1) * 4, row: 1, w: 4, h: 4 },
+    })) };
+  const live96 = { ...structuredClone(live), settings: { layoutMode: 'grid', gridColumns: 96 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 92, h: 4 } } };
+  live96.pages[0].widgets = [existing,
+    { id: 'side', type: 'text', html: 'Keep side', grid: { col: 72, row: 23, w: 13, h: 12 } },
+    { id: 'below', type: 'text', html: 'Keep below', grid: { col: 27, row: 50, w: 45, h: 12 } }];
+  let state96 = { live: live96, draft: null, token: 'c'.repeat(64) };
+  let writes96 = 0;
+  const controller96 = new Schema5DraftController({
+    read: async () => structuredClone(state96),
+    save: async (draft, token) => {
+      equal(token, state96.token, '96-column writes remain state-bound');
+      writes96++;
+      state96 = { live: live96, draft, token: String(writes96).padStart(64, '0') };
+    },
+    publish: async () => {}, discard: async () => {},
+  });
+  await controller96.reload();
+  for (const add of [false, true]) {
+    const current = (state96.draft || state96.live).pages[0].widgets[0];
+    const session96 = new Schema5WidgetSession({ controller: controller96, pageId: 'home',
+      token: state96.token, widget: current, action: 'update' });
+    let completed96 = false;
+    session96.completion.then(() => { completed96 = true; });
+    widget.services = session96.services(services);
+    widget.config = session96.widget;
+    await widget.openConfig();
+    if (add) {
+      await click('[data-add]');
+      field('text', 'Keep fourth link');
+      await click('[data-media]');
+      await widget.save();
+      check($('[data-dialog]').open && widget.grid && !completed96,
+        '96-column fourth link collision preserves the actual dialog');
+      equal(writes96, 1, 'colliding fourth link never writes');
+      equal($('[data-field=text]').value, 'Keep fourth link', 'fourth link text survives');
+      equal(widget.links[3].image, image, 'fourth link image survives');
+      check($('[data-error]').textContent.includes('nichts gespeichert'),
+        'actual lack of vertical space remains explicit');
+      widget.links.forEach((item, index) => {
+        const wrapper = [...$('[data-grid]').children].find(entry => entry.gridstackNode.id === item.id);
+        widget.grid.update(wrapper, { x: index * 3, y: 0, w: 3, h: 4 });
+      });
+    }
+    await widget.save();
+    check(completed96 && !$('[data-dialog]').open, '96-column dialog saves and closes normally');
+    equal(state96.draft.pages[0].widgets[0].grid, existing.grid,
+      '96-column dialog preserves 40 by 23 outer geometry');
+    equal(state96.draft.pages[0].widgets.slice(1), live96.pages[0].widgets.slice(1),
+      '96-column save never moves neighbors');
+    equal(state96.live, live96, '96-column dialog does not publish');
+  }
+  equal(writes96, 2, 'existing save and corrected fourth link each write once');
+  equal(state96.draft.pages[0].widgets[0].links.length, 4, 'fourth link really persists');
+  equal(state96.draft.pages[0].widgets[0].links[3].text, 'Keep fourth link', 'saved fourth link retains its input');
+  equal(state96.draft.pages[0].widgets[0].links[3].image, image, 'saved fourth link retains its image');
+  widget.services = services;
   widget.config = structuredClone(initial);
   await widget.openConfig();
   equal($('[data-field=targetMode]').value, 'page', 'existing internal links default to page navigation');

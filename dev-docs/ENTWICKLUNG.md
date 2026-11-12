@@ -1079,22 +1079,41 @@ die korrigierte Variante besteht alle 85 Prüfungen.
 
 Entwicklungsstand auf `dev`, noch nicht veröffentlicht:
 Beim Speichern des LinkWidget-Dialogs bestimmt der Draft-Controller die Außenmaße
-aus dem belegten Rechteck aller inneren Linkkacheln. Innere Breite/Höhe werden
-mit `gridColumns / 12` skaliert; ein sichtbarer Widgettitel ergänzt eine innere
-Höheneinheit. Außenposition und innere Anordnung bleiben unverändert.
+aus dem belegten Rechteck aller inneren Linkkacheln. Neue Widgets verwenden
+`gridColumns / 12`; ein sichtbarer Widgettitel ergänzt eine innere Höheneinheit.
+Bei Updates liefert ausschließlich der aktuelle Controller-Snapshot das
+Referenzwidget. Breite und Höhe werden getrennt mit
+`alte Außenbreite / alte belegte Innenbreite` bzw.
+`alte Außenhöhe / (alte belegte Innenhöhe + alte Titelzeile)` skaliert.
+Die neuen Außenmaße werden auf ganze Rasterfelder gerundet (mindestens eins).
+Unveränderte belegte Flächen behalten dadurch manuell gewählte Außenmaße,
+auch bei 96 Seitenspalten und einem vollen inneren 12-Spalten-Raster.
+Eine Titeländerung berücksichtigt den alten und neuen Sichtbarkeitszustand.
+Außenposition und innere Anordnung bleiben unverändert.
 Leere Randspalten/-zeilen entfallen nur in der Darstellung. Bestehende
-Konfigurationen bleiben lesbar, ihre Außenmaße ändern sich erst beim nächsten
-Dialogspeichern. Layoutänderungen allein lösen keine Größenanpassung aus.
+Konfigurationen bleiben lesbar. Änderungen der belegten Linkfläche passen die
+Außenmaße erst beim Dialogspeichern an. Layoutänderungen allein lösen keine
+Größenanpassung aus und bilden danach den neuen Referenzmaßstab.
 Kollisionen und Seiten-/Höhengrenzen verhindern das Schreiben, ohne andere
-Widgets zu verschieben. Die Fehlermeldung bleibt im bestehenden Dialog-/Session-
-Fehlerpfad sichtbar. Abbrechen schreibt keine Änderungen.
+Widgets zu verschieben. Vor Schreibbeginn erkannte Link-Layoutfehler werden
+als `WidgetLayoutError` gemeldet. Die Session bleibt nur für diesen Fehlertyp
+aktiv; Linkdialog, Eingaben und GridStack bleiben zum Korrigieren, erneuten
+Speichern oder Abbrechen bestehen. Der Controller behält Zustand und Token,
+weil kein Transport gestartet wurde. Tatsächliche Schreibfehler, veraltete
+Tokens und Identitätsfehler beenden die Session weiterhin wie bisher.
+Abbrechen schreibt keine Änderungen.
 
 Das Bearbeitungsraster zeigt ausgewählte lokale Bilder unmittelbar als
 Kachelhintergrund. Entfernen und Wiederöffnen führen diese Vorschau nach;
 Griff und Kachelauswahl behalten einen kontrastierenden Hintergrund.
 
 Prüfungen: `t/48_link_widget.test.js` deckt Grenzen, Titel, alle fünf Dichten,
-Hinzufügen/Entfernen/Skalieren und abgewiesene Kollisionen ab.
+Hinzufügen/Entfernen/Skalieren und abgewiesene Kollisionen ab. Die Regression
+mit 96 Spalten, drei 4×4-Links, Außenmaß 40×23 und seitlichem/unterem Nachbarn
+prüft unverändertes Speichern und einen vierten Link: echte vertikale Kollision
+behält Eingaben, vier manuell auf 3×4 verkleinerte Links lassen sich in derselben
+Zeile und Session ohne Nachbaränderung speichern. Die echte Dialogbedienung
+dieses Falls wird zusätzlich in `t/49_link_widget.html` geprüft.
 `t/17_schema5_draft.test.js` prüft die tatsächliche Perl-Persistenz einschließlich
 Neuladen und Veröffentlichung in isolierten Dateien. Der Chrome-Runner
 `t/35_schema5_scaling.test.js` führt die Rasterbild-/Drag-/Resize-Prüfung

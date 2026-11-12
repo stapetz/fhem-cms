@@ -81,14 +81,22 @@ export function linkBounds(links) {
     h: Math.max(...links.map(link => link.grid.row + link.grid.h)) - row };
 }
 
-export function fitLinkWidget(widget, columns, pages) {
+export function fitLinkWidget(widget, columns, pages, previous = null) {
   validateLinkItems(widget.links, pages);
   if (![12, 24, 48, 96, 192].includes(columns)) throw new Error('Ungültige Rasterdichte');
   const bounds = linkBounds(widget.links);
-  const scale = columns / LINK_COLUMNS;
+  const height = bounds.h + (widget.title && widget.showTitle !== false ? 1 : 0);
+  let widthScale = columns / LINK_COLUMNS;
+  let heightScale = widthScale;
+  if (previous) {
+    validateLinkItems(previous.links, pages);
+    const before = linkBounds(previous.links);
+    widthScale = previous.grid.w / before.w;
+    heightScale = previous.grid.h / (before.h + (previous.title && previous.showTitle !== false ? 1 : 0));
+  }
   const result = structuredClone(widget);
-  result.grid.w = bounds.w * scale;
-  result.grid.h = (bounds.h + (widget.title && widget.showTitle !== false ? 1 : 0)) * scale;
+  result.grid.w = Math.max(1, Math.round(bounds.w * widthScale));
+  result.grid.h = Math.max(1, Math.round(height * heightScale));
   if (result.grid.col + result.grid.w > columns + 1 || result.grid.row + result.grid.h > 1001) {
     throw new Error('Die Linkkacheln benötigen mehr Platz als am Widgetstandort verfügbar. Widget zuerst verschieben oder Linkraster verkleinern.');
   }

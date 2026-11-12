@@ -425,16 +425,29 @@ des Dialogs geladen; `save(false)` erfasst **alle** inneren Knoten einschließli
 mitverschobener Kollisionspartner. Schließen/Entfernen zerstört die Instanz.
 Entwicklungsstand #148: `Schema5DraftController.saveWidget` berechnet für
 `fhem-link` vor dem validierten Entwurfsschreiben die Außenmaße mit
-`fitLinkWidget`: belegtes Rechteck aus `linkBounds`, multipliziert mit
-`gridColumns / 12`; ein sichtbarer nichtleerer Widgettitel ergänzt eine
-innere Höheneinheit. `col,row` und sämtliche inneren Koordinaten bleiben
+`fitLinkWidget`: belegtes Rechteck aus `linkBounds`; ein sichtbarer nichtleerer
+Widgettitel ergänzt eine innere Höheneinheit. Neue Widgets verwenden den Faktor
+`gridColumns / 12`. Bei Updates stammt das Referenzwidget ausschließlich aus
+dem aktuellen Controller-Snapshot, nicht aus Dialogdaten. Seine Außenbreite
+geteilt durch die bisher belegte Innenbreite und seine Außenhöhe geteilt durch
+die bisher belegte Innenhöhe inklusive Titelzeile bestimmen getrennte Maßstäbe.
+Die neuen Maße werden auf ganze Rasterfelder gerundet (mindestens eins).
+Das erhält bestehende, auch manuell skalierte Außenmaße bei unveränderter
+belegter Fläche; zwölf innere Spalten werden nicht zur vollen Seitenbreite.
+`col,row` und sämtliche inneren Koordinaten bleiben
 unverändert. Die Widget-Session akzeptiert weiterhin ausschließlich das
 ursprüngliche äußere Raster vom Dialog; nur der Controller passt `w,h` an.
 Normale Layoutvalidierung weist Überschneidungen und Grenzen ohne Schreibzugriff
-ab, es gibt kein implizites Reflow anderer Widgets. Die Darstellung verwendet
-dieselben belegten Grenzen und zieht deren linke/obere Leerränder ab.
-Alte Konfigurationen bleiben lesbar und erhalten erst beim Dialogspeichern
-die passenden Außenmaße; reine Layoutänderungen passen diese nicht an.
+ab, es gibt kein implizites Reflow anderer Widgets.
+Bei der Vorprüfung wirft ausschließlich der Controller vor Beginn des
+Schreibtransports `WidgetLayoutError`. Die Session behandelt nur diesen Typ
+als korrigierbar, ohne ihren Abschluss aufzulösen; alle anderen Fehler behalten
+die bestehende Behandlung unsicherer Schreibvorgänge.
+Die Darstellung verwendet dieselben belegten Grenzen und zieht deren
+linke/obere Leerränder ab.
+Alte Konfigurationen bleiben lesbar; nur Änderungen der belegten Fläche oder
+Titelzeile passen beim Dialogspeichern die Außenmaße an. Reine Layoutänderungen
+passen diese nicht an und bilden beim nächsten Dialog den neuen Referenzmaßstab.
 Entwicklungsstand #70: Das Dialograster zeigt ausschließlich gegen `LINK_MEDIA`
 validierte lokale Bildpfade als deckendes Hintergrundbild; Auswahl/Entfernen
 und Wiederöffnen aktualisieren die Vorschau. Griff und Auswahlschaltfläche

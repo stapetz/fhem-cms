@@ -212,7 +212,7 @@ test('compact link geometry survives real draft, reload and publication', async 
   const link = { id: 'one', kind: 'internal', page: 'start', text: 'Start', showText: true,
     textPosition: 'overlay', target: 'self', grid: { col: 1, row: 1, w: 4, h: 3 } };
   live.pages[0].widgets.push({ id: 'links', type: 'fhem-link', title: 'Links',
-    grid: { col: 9, row: 2, w: 4, h: 2 }, links: [link] });
+    grid: { col: 9, row: 2, w: 4, h: 4 }, links: [link] });
   const original = JSON.stringify(live);
   const invoke = (operation, ...args) => {
     const child = spawnSync('perl', ['-e', perl, dir, operation, ...args], { encoding: 'utf8' });
