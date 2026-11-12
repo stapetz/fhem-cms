@@ -6,15 +6,15 @@ UPD 2026-11-11_16:58:23 14813 www/fhem-cms/components/cms-calllist.js
 UPD 2026-11-10_11:28:51 20548 www/fhem-cms/components/cms-chart.js
 UPD 2026-11-10_08:07:09 13971 www/fhem-cms/components/cms-clock.js
 UPD 2026-11-10_08:07:09 13971 www/fhem-cms/components/cms-html.js
-UPD 2026-11-10_08:13:56 15888 www/fhem-cms/components/cms-icon.js
+UPD 2026-11-12_23:54:21 15948 www/fhem-cms/components/cms-icon.js
 UPD 2026-11-12_17:22:24 28163 www/fhem-cms/components/cms-link.js
-UPD 2026-11-10_08:13:56 18624 www/fhem-cms/components/cms-slider.js
+UPD 2026-11-12_23:54:21 18754 www/fhem-cms/components/cms-slider.js
 UPD 2026-11-11_12:17:01 28053 www/fhem-cms/components/cms-solarflow.js
-UPD 2026-11-10_09:09:16 21497 www/fhem-cms/components/cms-switch.js
+UPD 2026-11-12_23:54:21 21745 www/fhem-cms/components/cms-switch.js
 UPD 2026-11-11_16:58:23 26761 www/fhem-cms/components/cms-table.js
 UPD 2026-11-10_13:27:41 10010 www/fhem-cms/components/cms-text.js
 UPD 2026-11-10_08:07:09 37318 www/fhem-cms/components/cms-thermostat.js
-UPD 2026-11-10_11:28:51 24483 www/fhem-cms/components/cms-value.js
+UPD 2026-11-12_23:54:21 24513 www/fhem-cms/components/cms-value.js
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
 UPD 2026-11-12_17:38:33 43144 www/fhem-cms/css/fhem-cms.css
 UPD 2026-11-10_07:50:19 26290 www/fhem-cms/examples/fcui-check.html
@@ -59,6 +59,6 @@ UPD 2026-10-31_10:55:33 3145 www/fhem-cms/js/markdown.js
 UPD 2026-11-10_11:28:51 14610 www/fhem-cms/js/placeholder-picker.js
 UPD 2026-11-10_14:35:39 37387 www/fhem-cms/js/richtext.js
 UPD 2026-11-10_11:28:51 1177 www/fhem-cms/js/unit-input.js
-UPD 2026-11-10_08:13:56 2769 www/fhem-cms/js/widget-content-fit.js
+UPD 2026-11-12_23:54:21 2903 www/fhem-cms/js/widget-content-fit.js
 UPD 2026-11-11_16:40:13 3330 www/fhem-cms/js/widget-factory.js
 UPD 2026-11-10_14:35:39 2047 www/fhem-cms/js/widget-services.js
