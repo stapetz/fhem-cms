@@ -55,6 +55,8 @@ unlike($html, qr/<h1|cms-kicker|cms-device-card/, 'has no header area');
 like($html, qr{\.\./css/fhem-cms\.css}, 'loads shared CSS from the common asset tree');
 like($html, qr{\.\./js/fhem-cms\.js}, 'loads shared JavaScript from the common asset tree');
 like($html, qr{type="module"}, 'loads the frontend as an ES module');
+like($html, qr{<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">},
+    'uses the full phone viewport; CSS protects content with safe-area insets');
 
 $hash->{VERSION} = 'previous-version';
 is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'redefining a device accepts its generated page');

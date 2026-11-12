@@ -40,6 +40,9 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
   nav.setAttribute('data-adaptive', '');
   const measure = () => {
     if (stopped || nav.clientWidth <= 0) return;
+    const responsiveFlow = responsiveGrid && browser.getComputedStyle(responsiveGrid).display === 'flex';
+    const editableGrid = responsiveGrid?.classList.contains('cms-grid-editable');
+    if (!responsiveFlow) responsiveWrapper?.removeAttribute('data-nav-overlay');
     const fixedHeight = typeof constrainHeight === 'function' ? constrainHeight() : constrainHeight;
     setScale(1);
     let required = measureSchema5Navigation(nav);
@@ -65,7 +68,6 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
         setScale(1);
       }
     }
-    const responsiveFlow = responsiveGrid && browser.getComputedStyle(responsiveGrid).display === 'flex';
     const availableWidth = responsiveFlow ? responsiveGrid.clientWidth : nav.clientWidth;
     const narrowResponsiveFlow = responsiveFlow && responsiveGrid.clientWidth <= 600;
     const verticalResponsiveFlow = responsiveFlow && nav.classList.contains('is-vertical');
@@ -74,7 +76,6 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
       || narrowResponsiveFlow || verticalResponsiveFlow;
     if (compact) setScale(1);
     nav.toggleAttribute('data-compact', compact);
-    const editableGrid = responsiveGrid?.classList.contains('cms-grid-editable');
     responsiveWrapper?.toggleAttribute('data-nav-overlay', Boolean(compact && (responsiveFlow || editableGrid)));
     if (!compact) {
       const focused = nav.ownerDocument.activeElement === burger;

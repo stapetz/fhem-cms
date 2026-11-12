@@ -207,11 +207,22 @@ Lesbarkeit abhängig vom Bild verringern.
 
 === Fenstergröße, Zoom und mobile Ansicht ===
 
-Navigation und Widgets skalieren gemeinsam mit der verfügbaren Breite. Browserzoom vergrößert oder verkleinert die Darstellung; bei Platzmangel kann der Rasterbereich seitlich scrollen.
+Navigation und Widgets skalieren gemeinsam mit der verfügbaren Breite. Browserzoom vergrößert oder verkleinert die Darstellung; im Editor kann der Rasterbereich bei Platzmangel seitlich scrollen.
 
 Bis einschließlich '''600 Pixel Inhaltsbreite''' ordnen Homepage und Vorschau die Widgets in Leserichtung mit Zeilenumbruch an. Der Editor bleibt zum präzisen Positionieren beim exakten Raster. Das Drehen des Geräts verändert keine gespeicherten Rasterpositionen.
 
 '''Entwicklungsstand dev:''' Im schmalen Smartphone-Hochformat nutzen Widgets die gesamte verfügbare Breite; im kurzen Querformat erhalten sie mindestens 40 Prozent.
+
+'''Noch nicht veröffentlicht (stapetz/fhem-cms#141):''' Homepage und Vorschau
+brechen auch im schmalen Desktopbrowser bis 80 rem Inhaltsbreite (bei
+Standardschrift 1280 Pixel) um. Breite Desktopansichten und das exakte
+Bearbeitungsraster bleiben erhalten. Im kurzen Phone-Querformat füllen die
+Kacheln ihre Zeilen vollständig: zwei kleinere nebeneinander oder eine
+alleinstehende Diagrammkachel über die ganze Breite. Phone-Hochformat und
+Tablet-Regeln bleiben erhalten. Die Startseite fordert die volle
+Bildschirmfläche an und schützt Inhalte über die sicheren Bildschirmränder,
+ohne diese zum normalen Seitenabstand zu addieren. Die Vorschau simuliert
+keine Kamera-Aussparung; dafür bleibt die Prüfung auf dem echten Gerät nötig.
 
 Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Browserzoom. Die Geräte-Vorschau hilft dabei, ersetzt aber nicht jeden Test auf dem Zielgerät.
 

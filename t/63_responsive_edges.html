@@ -1,0 +1,95 @@
+<!doctype html>
+<html class="cms-view">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Responsive viewport edges regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<style>.grid-stack-animate, .grid-stack-animate .grid-stack-item { transition: none !important; }</style>
+<main class="cms-shell"><div class="cms-schema5-workspace"><div id="grid" class="grid-stack cms-schema5-grid"></div></div></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5View } from '../www/fhem-cms/js/fcui-schema5-view.js';
+
+const output = document.querySelector('#result');
+const root = document.querySelector('#grid');
+let checks = 0;
+const check = (condition, message) => { checks++; if (!condition) throw new Error(message); };
+const settle = () => new Promise(resolve => setTimeout(resolve, 200));
+const config = {
+  schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+  navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+  pages: [{ id: 'start', title: 'Start', widgets: [
+    ...[0, 1, 2, 3].map(index => ({ id: `w${index}`, type: 'text', html: '<p>Beispiel</p>',
+      grid: { col: index * 3 + 1, row: 2, w: 3, h: 3 } })),
+    { id: 'wide', type: 'text', html: '<p>Diagramm</p>', grid: { col: 1, row: 5, w: 8, h: 2 } },
+  ] }, ...['Thermometer', 'Diverse neue Widgets', 'Solaranlage'].map((title, index) =>
+    ({ id: `page${index}`, title, widgets: [] }))],
+};
+const before = JSON.stringify(config);
+let view;
+let currentMobile = false;
+const rects = () => [...root.querySelectorAll('.grid-stack-item:not(.cms-responsive-navigation)')]
+  .map(element => element.getBoundingClientRect());
+try {
+  view = new Schema5View({ GridStack, root, config, status: document.createElement('p'),
+    client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} }, services: {} });
+  await view.start();
+  window.viewportRegression = {
+    async measure({ width, insets, mobile }) {
+      if (mobile !== currentMobile) {
+        view.stop();
+        await view.start();
+        currentMobile = mobile;
+      }
+      await settle();
+      check(Math.abs(innerWidth - width) < 1, 'viewport remains device-width without automatic page shrink');
+      const style = getComputedStyle(document.body);
+      const padding = width >= 768 ? 32 : 16;
+      for (const [edge, inset] of Object.entries(insets)) {
+        const actual = parseFloat(style.getPropertyValue(`padding-${edge}`));
+        check(Math.abs(actual - Math.max(padding, inset)) < 1,
+          `${width}: ${edge} uses safe inset OR standard padding, not both (${actual}/${inset})`);
+      }
+      const area = root.getBoundingClientRect();
+      check(Math.abs(area.width - root.parentElement.clientWidth) <= 1 || !getComputedStyle(root).display.includes('flex'),
+        'flow fills the available workspace');
+      check(root.parentElement.scrollWidth <= root.parentElement.clientWidth + 1, 'no horizontal workspace scrollbar');
+      check(document.documentElement.scrollWidth <= innerWidth + 1, 'no horizontal document scrollbar');
+      const boxes = rects();
+      for (const box of boxes) check(box.left >= area.left - 1 && box.right <= area.right + 1,
+        'every widget stays within safe content edges');
+      for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i], b = boxes[j];
+        check(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1,
+          'widgets never overlap after rotation or resize');
+      }
+      if (!mobile && width < 1000) {
+        check(boxes.slice(0, 4).some(box => box.top > boxes[0].top + 1),
+          'narrow desktop browser wraps saved row instead of clipping it');
+      }
+      if (mobile && width > innerHeight && innerHeight <= 600) {
+        const firstRow = boxes.filter(box => Math.abs(box.top - boxes[0].top) < 1);
+        check(firstRow.length === 2, 'phone landscape retains two usable widgets per row');
+        check(Math.abs(firstRow[0].left - area.left) < 1
+          && Math.abs(firstRow.at(-1).right - area.right) < 1,
+          'landscape row fills the full safe width, with no unused outer strip');
+        check(boxes.at(-1).width >= area.width * .99, 'single landscape chart fills the last row');
+      }
+      if (mobile && width < 600 && width < innerHeight) {
+        check(boxes.every(box => box.width >= area.width * .99), 'phone portrait retains full-width widgets');
+      }
+      check(JSON.stringify(config) === before, 'rotation and resizing do not mutate saved coordinates');
+      return { checks, width: area.width, columns: boxes.filter(box => Math.abs(box.top - boxes[0].top) < 1).length };
+    },
+    finish() { view.stop(); output.textContent = JSON.stringify({ checks }); output.dataset.result = 'pass'; },
+  };
+  output.dataset.ready = 'true';
+} catch (error) {
+  view?.stop();
+  output.textContent = error.stack || String(error);
+  output.dataset.result = 'fail';
+}
+</script>
+</html>
