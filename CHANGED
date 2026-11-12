@@ -6,8 +6,8 @@
 2026-11-12 - 1.8.1-dev: Mobile Navigation Overlay (Refs #141)
 - Touch- und mobile Vorschau nutzen den responsiven Inhaltsfluss in Hoch- und
   Querformat.
-- Das kompakte Burger-Menue liegt ueber den Widgets und reserviert keinen
-  Platz, auch im Editor.
+- Bis 600 Pixel Rasterbreite wird die Navigation zum Burger-Menue und
+  ueberlagert Widgets, auch im Editor.
 
 2026-11-11 - 1.8.1-dev: Mobile Navigation (Refs #141)
 - Horizontale Navigation verkleinert Eintraege bei knapper Hoehe begrenzt,

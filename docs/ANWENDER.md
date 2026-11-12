@@ -215,9 +215,9 @@ Burger-Menü erst, wenn die breiteste Schaltfläche oder die gesamte Höhe der
 Punkte nicht in das Widget passt. Horizontal muss die ganze Zeile hineinpassen.
 Auf dem Desktop nutzt die Vorschau dieselbe Navigationsposition und -größe
 wie der Editor. Auf Touchgeräten und in der Geräte-Vorschau bleibt die mobile
-Anordnung auch im Querformat aktiv. Passt die Navigation nicht in die verfügbare
-Breite, liegt das Burger-Menü über den Widgets und belegt keinen Platz im
-Inhaltsfluss; beim Drehen wird die verfügbare Breite neu ausgewertet.
+Anordnung auch im Querformat aktiv. Bei höchstens 600 Pixel Inhaltsbreite wird
+die Navigation zum Burger-Menü, das über den Widgets liegt und keinen Platz im
+Inhaltsfluss belegt; beim Drehen wird die verfügbare Breite neu ausgewertet.
 Wird die Navigation auch im schmalen Bearbeitungsfenster zum Burger-Menü,
 liegt das Menü über dem Raster; die gespeicherten Widgetpositionen bleiben
 für die präzise Bearbeitung erhalten.

@@ -44,6 +44,7 @@ try {
   }
   for (const width of [343, 358, 398, 430, 635, 712, 768, 778, 834, 932, 992, 1048, 1101, 1162, 1194, 1250, 1334]) {
     shell.style.width = `${width}px`;
+    window.dispatchEvent(new Event('resize'));
     await settle();
     check(workspace.scrollWidth <= workspace.clientWidth + 1,
       `${width}: horizontal overflow ${workspace.scrollWidth}/${workspace.clientWidth}`);
@@ -102,6 +103,28 @@ try {
   view.stop();
   check(!root.hasAttribute('data-mobile-preview'), 'marker removed on stop');
   check(!root.hasAttribute('data-mobile-layout'), 'mobile layout marker removed on stop');
+  const verticalConfig = structuredClone(config);
+  verticalConfig.navigation.orientation = 'vertical';
+  shell.style.width = '393px';
+  const verticalView = new Schema5View({ GridStack, root, config: verticalConfig,
+    status: document.createElement('p'),
+    client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} }, services: {} });
+  await verticalView.start();
+  await settle();
+  const verticalNav = root.querySelector('.cms-nav');
+  const verticalWrapper = verticalNav.closest('.cms-responsive-navigation');
+  check(verticalNav.classList.contains('is-vertical'), 'vertical navigation configuration is retained');
+  check(verticalNav.hasAttribute('data-compact'), 'narrow vertical navigation collapses to a burger');
+  check(verticalWrapper.hasAttribute('data-nav-overlay'), 'vertical burger overlays the mobile widget flow');
+  const verticalFirstWidget = root.querySelector('.grid-stack-item:not(.cms-responsive-navigation)');
+  const verticalBefore = verticalFirstWidget.getBoundingClientRect();
+  verticalNav.querySelector('.cms-nav-burger').click();
+  await settle();
+  check(verticalNav.hasAttribute('data-open'), 'vertical burger opens the page list');
+  const verticalAfter = verticalFirstWidget.getBoundingClientRect();
+  check(verticalAfter.x === verticalBefore.x && verticalAfter.y === verticalBefore.y,
+    'opening vertical navigation does not move widgets');
+  verticalView.stop();
   shell.style.width = '343px';
   const editor = new Schema5View({ GridStack, root, config, status: document.createElement('p'),
     client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} }, services: {},

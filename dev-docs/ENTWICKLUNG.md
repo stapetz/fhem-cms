@@ -166,9 +166,10 @@ Die Geräte-Vorschau ist auch in diesem Editor verfügbar: Sie öffnet die aktue
 Seite mit `?mode=preview` in einem maßgerechten Iframe, bietet Geräte- und
 Desktopauflösungen an und vertauscht beim Drehen Breite und Höhe.
 Touchgeräte und die mobile Geräte-Vorschau verwenden unabhängig von der
-Ausrichtung den responsiven Inhaltsfluss. Ein kompaktes Burger-Menü liegt über
-den Widgets und reserviert keinen Platz im Fluss; bei Größenänderungen wird die
-verfügbare Breite des Inhaltsrasters erneut ausgewertet.
+Ausrichtung den responsiven Inhaltsfluss. Bei höchstens 600 Pixel Rasterbreite
+wird auch eine vertikale Navigation zum Burger-Menü; es liegt über den Widgets
+und reserviert keinen Platz im Fluss. Bei Größenänderungen wird die verfügbare
+Breite des Inhaltsrasters erneut ausgewertet.
 Auch im Bearbeitungsmodus liegt eine kompakte Navigation über dem Raster und
 bleibt bedienbar oberhalb der GridStack-Werkzeuge; die gespeicherten Positionen
 der Widgets ändern sich dadurch nicht.
