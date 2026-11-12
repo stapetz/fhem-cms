@@ -14,6 +14,18 @@ class Element {
     this.children = [];
     this.attributes = {};
     this.listeners = {};
+    if (tag === 'iframe') {
+      this.contentDocument = {
+        listeners: {},
+        addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); },
+        removeEventListener(name, callback) {
+          this.listeners[name] = (this.listeners[name] || []).filter((entry) => entry !== callback);
+        },
+        dispatch(name, event = {}) {
+          for (const callback of this.listeners[name] || []) callback({ preventDefault() {}, ...event });
+        },
+      };
+    }
     this.classList = { toggle() {} };
     this.style = {
       *[Symbol.iterator]() {},
@@ -41,6 +53,9 @@ class Element {
   getAttribute(name) { return Object.hasOwn(this.attributes, name) ? this.attributes[name] : null; }
   removeAttribute(name) { delete this.attributes[name]; }
   addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); }
+  removeEventListener(name, callback) {
+    this.listeners[name] = (this.listeners[name] || []).filter((entry) => entry !== callback);
+  }
   fire(name, event = {}) {
     let result;
     for (const callback of this.listeners[name] || []) result = callback({ preventDefault() {}, ...event });
@@ -75,8 +90,14 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     createElement: (tag) => new Element(tag),
     documentElement: new Element('html'),
     body: new Element('body'),
-    addEventListener() {},
-    removeEventListener() {},
+    listeners: {},
+    addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); },
+    removeEventListener(name, callback) {
+      this.listeners[name] = (this.listeners[name] || []).filter((entry) => entry !== callback);
+    },
+    dispatch(name, event = {}) {
+      for (const callback of this.listeners[name] || []) callback({ preventDefault() {}, ...event });
+    },
   };
   document.documentElement.setAttribute('data-cms-theme', 'light');
   document.documentElement.setAttribute('data-cms-frames', 'off');
@@ -185,6 +206,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     let iframe = preview.children[0].children[0].children[0];
     assert.equal(iframe.src, 'https://example.test/?mode=preview&cms-device=mobile#/a');
     assert.equal(iframe.style.width, '375px');
+    iframe.fire('load');
     rotate.fire('click');
     assert.equal(iframe.style.width, '667px', 'rotation swaps the phone dimensions');
     assert.equal(iframe.style.height, '375px');
@@ -194,12 +216,17 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
       .children[0].children[0].children[0];
     assert.equal(iframe.src, 'https://example.test/?mode=preview#/a', 'desktop preview retains desktop zoom behavior');
     assert.equal(iframe.style.width, '1280px');
+    iframe.fire('load');
     assert.equal(iframe.style.height, '720px');
     rotate.fire('click');
     assert.equal(iframe.style.width, '720px', 'desktop resolutions can also be rotated');
     assert.equal(iframe.style.height, '1280px');
-    deviceSelect.value = '';
-    await deviceSelect.fire('change');
+    let prevented = false;
+    iframe.contentDocument.dispatch('keydown', { key: 'Escape', preventDefault() { prevented = true; } });
+    assert.ok(prevented, 'Escape from inside the preview iframe is handled');
+    assert.equal(deviceSelect.value, '', 'Escape closes preview even while its iframe has focus');
+    assert.equal(iframe.contentDocument.listeners.keydown.length, 0, 'iframe key listener is removed on close');
+    assert.equal(iframe.listeners.load.length, 0, 'iframe load listener is removed on close');
     assert.equal(document.body.children.some((node) => node.className === 'cms-device-overlay'), false);
     assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'dark');
     assert.equal(document.documentElement.getAttribute('data-cms-frames'), 'on');

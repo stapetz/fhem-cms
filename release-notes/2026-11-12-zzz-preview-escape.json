@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-12",
+  "version": "1.8.1-dev",
+  "title": "Escape in der Geraete-Vorschau (Refs #149)",
+  "changes": [
+    "Escape schliesst die Vorschau auch dann, wenn der Fokus im Vorschau-Iframe liegt."
+  ]
+}

@@ -53,8 +53,12 @@ export class DevicePreview {
     this.onResize = () => this.fit();
     this.onKey = (event) => {
       if (event.key === 'Escape' && this.deviceId) {
+        event.preventDefault();
         this.select('');
       }
+    };
+    this.onFrameLoad = () => {
+      this.iframe?.contentDocument?.addEventListener('keydown', this.onKey);
     };
 
     this.bar = document.createElement('div');
@@ -122,6 +126,9 @@ export class DevicePreview {
   close() {
     this.overlay?.remove();
     this.overlay = null;
+    this.iframe?.contentDocument?.removeEventListener('keydown', this.onKey);
+    this.iframe?.removeEventListener('load', this.onFrameLoad);
+    this.iframe = null;
     this.frame = null;
     this.stage = null;
     this.label = null;
@@ -154,6 +161,7 @@ export class DevicePreview {
       this.iframe = document.createElement('iframe');
       this.iframe.className = 'cms-device-screen';
       this.iframe.title = 'Vorschau';
+      this.iframe.addEventListener('load', this.onFrameLoad);
       const url = new URL(this.getUrl());
       if (!DEVICES.get(this.deviceId).landscape) url.searchParams.set('cms-device', 'mobile');
       this.iframe.src = url.href;
