@@ -299,7 +299,12 @@ geschlossen. Drop-Standardverhalten verhindern, Ablagefläche hervorheben und
 Ordner-Drops explizit ablehnen. Nach Abbruch/erstem Fehler keine weiteren Dateien
 starten; erfolgreiche Dateien erhalten und Anzahl sichtbar melden.
 Der Entwicklungsstand zu #138 gruppiert Bildvarianten über `variantOf` beim
-Original. Der Bearbeitungsdialog zeigt Quellauflösung, Ausschnittgröße in
+Original. Detailkopf und
+Variantenliste ergänzen die Dateigröße nach Laden der Vorschau um deren
+`naturalWidth × naturalHeight` in Pixeln; verspätete Ergebnisse einer vorherigen
+Auswahl werden über die Detailrevision verworfen. Ladefehler zeigen ausdrücklich
+nicht verfügbare Bildmaße an.
+Der Bearbeitungsdialog zeigt Ausschnittgröße in
 Quellpixeln und die finale Ausgabeauflösung getrennt. Numerische Zuschnittsfelder
 entfallen: Das Crop-Symbol aktiviert den direkt verschiebbaren Auswahlrahmen mit
 acht Skaliergriffen (Pointer Capture für Maus/Touch, Pfeiltasten mit optionalen
@@ -307,6 +312,8 @@ acht Skaliergriffen (Pointer Capture für Maus/Touch, Pfeiltasten mit optionalen
 stellt die Auswahl vor der Geste wieder her. Eine Zuschnittssperre hält das beim
 Aktivieren gewählte Seitenverhältnis. Die getrennte, standardmäßig aktive
 Ausgabesperre führt Breite/Höhe anhand des Ausschnittverhältnisses nach.
+Die Zuschnittssperre steht als kompakte Checkbox neben OK/Abbrechen und wird
+zusammen mit diesen Aktionen nur im aktiven Zuschneidemodus angezeigt.
 `OK` bestätigt den Ausschnitt, `Abbrechen` stellt Auswahl, Ausgabemaße und Sperren
 wieder her; reines Verkleinern benötigt keinen Zuschnitt. Erst „Variante erstellen“
 startet den tokengebundenen Upload. Weitere Bildwerkzeuge werden über dieselbe
@@ -327,7 +334,9 @@ Verhältnissperren, Pointer-/Touch-Abbruch, alle acht Tastaturgriffe,
 OK/Abbrechen und Größenkopplung. Anschließend wird die 5×5-PNG-Variante
 pixelgenau geprüft; Original, Auswahl und Löschschutz bleiben abgedeckt.
 Erwartet: beide Durchläufe mit `data-result="pass"` und jeweils mindestens
-67 Prüfungen; keine FHEM-Schreibzugriffe.
+75 Prüfungen; keine FHEM-Schreibzugriffe. Der Assetmanager-Durchlauf derselben
+Testdatei prüft zusätzlich die Anordnung der Hauptaktionen über der Administration
+und die dort verfügbare manuelle Wiederholung des Ladens (207 Prüfungen).
 Die bisherige Suche ist entfernt; Weiterentwicklung ausschließlich in #126
 (later/Backlog), nicht Bestandteil des aktuellen Assetmanager-Abnahmeumfangs.
 Zielordner für Assets und Ordner werden über denselben grafischen Ordnerpicker

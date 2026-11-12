@@ -93,7 +93,16 @@ export async function openAssetManager(services, { mode = null, owner = document
           Uploads landen direkt im aktuell geöffneten Ordner.</p>
         <div class="layout"><div class="assets" data-assets role="group" aria-label="Ordnerinhalt"></div>
           <div class="detail" data-detail></div></div>
+      </form>
+      <p class="status" role="status" data-status></p>
+      <div class="footer">
+        <button type="button" data-abort hidden>Upload abbrechen</button>
+        <button type="button" data-close>Schließen</button>
+        <button type="button" data-select hidden>Auswählen</button></div>
         <details data-admin><summary>Administration: Dateitypen und Speichergrenzen</summary>
+          <p class="hint">Eigene Änderungen erscheinen automatisch. „Neu laden“ liest Änderungen
+            aus anderen Fenstern ein oder wiederholt das Laden nach einem Verbindungsfehler.</p>
+          <button type="button" data-reload>Neu laden</button>
           <p class="hint">Vorerst darf jeder CMS-Bearbeiter diese Einstellungen ändern.
           Gesperrte Typen verhindern neue Uploads; bestehende Assets bleiben erhalten.
           Web-/Skriptformate bleiben immer gesperrt. Dokumente werden nur als Download ausgeliefert.
@@ -106,15 +115,9 @@ export async function openAssetManager(services, { mode = null, owner = document
           <label>Gesamtspeicher (MiB, höchstens 2048)<input type="number" step="0.001" min="0.001" max="2048" data-limit="totalBytes"></label>
           <button type="button" data-policy>Administration speichern</button>
         </details>
-      </form>
-      <p class="status" role="status" data-status></p>
       <p class="hint">Löschen ist bei Verwendung in Live oder Entwurf gesperrt. Frühere Sicherungen enthalten
         keine Assetdateien: Nach dem Löschen können Bild-/Dokumentverweise aus alten Sicherungen fehlen.
         Nur leere Ordner lassen sich löschen. Grenzen: 200 Ordner, 10 Ebenen, 2000 Assets.</p>
-      <div class="footer"><button type="button" data-reload>Neu laden</button>
-        <button type="button" data-abort hidden>Upload abbrechen</button>
-        <button type="button" data-close>Schließen</button>
-        <button type="button" data-select hidden>Auswählen</button></div>
     </dialog>`;
   const $ = selector => root.querySelector(selector);
   let state;
@@ -332,6 +335,7 @@ export async function openAssetManager(services, { mode = null, owner = document
     if (busy || closed) return;
     busy = true;
     $('[data-form]').inert = true;
+    $('[data-admin]').inert = true;
     $('[data-close]').disabled = true;
     $('[data-reload]').disabled = true;
     $('[data-select]').disabled = true;
@@ -343,6 +347,7 @@ export async function openAssetManager(services, { mode = null, owner = document
     } finally {
       busy = false;
       $('[data-form]').inert = false;
+      $('[data-admin]').inert = false;
       $('[data-close]').disabled = false;
       $('[data-reload]').disabled = false;
       $('[data-select]').disabled = !state?.assets.some(asset => asset.id === selected && allowed(asset));
@@ -392,7 +397,9 @@ export async function openAssetManager(services, { mode = null, owner = document
       return;
     }
     if (!asset) return;
-    box.append(element('strong', asset.name), element('p', `${asset.image ? 'Bild' : 'Dokument'} · ${sizeText(asset.bytes)}`));
+    const details = element('p', `${asset.image ? 'Bild' : 'Dokument'} · ${sizeText(asset.bytes)}`);
+    details.dataset.assetSize = '';
+    box.append(element('strong', asset.name), details);
     if (asset.image) {
       const original = state.assets.find(item => item.id === (asset.variantOf || asset.id));
       const variants = [original, ...state.assets.filter(item => item.variantOf === original.id)
@@ -406,7 +413,24 @@ export async function openAssetManager(services, { mode = null, owner = document
         radio.addEventListener('change', () => { selected = item.id; render(); });
         const preview = element('img'); preview.src = item.href; preview.alt = '';
         const description = element('span', `${item.id === original.id ? 'Original · ' : 'Variante · '}${item.name}`);
-        label.append(radio, description, preview, element('small', sizeText(item.bytes))); group.append(label);
+        const dimensions = element('small', sizeText(item.bytes));
+        preview.addEventListener('load', () => {
+          if (closed || revision !== detailRevision) return;
+          const w = preview.naturalWidth, h = preview.naturalHeight;
+          if (!Number.isSafeInteger(w) || !Number.isSafeInteger(h) || w < 1 || h < 1) {
+            status('Bildmaße konnten nicht gelesen werden.', true);
+            return;
+          }
+          const text = `${sizeText(item.bytes)} · ${w} × ${h} px`;
+          dimensions.textContent = text;
+          if (item.id === asset.id) details.textContent = `Bild · ${text}`;
+        });
+        preview.addEventListener('error', () => {
+          if (closed || revision !== detailRevision) return;
+          dimensions.textContent = `${sizeText(item.bytes)} · Bildmaße nicht verfügbar`;
+          if (item.id === asset.id) details.textContent = `Bild · ${dimensions.textContent}`;
+        });
+        label.append(radio, description, preview, dimensions); group.append(label);
       }
       box.append(group);
       imagePreview(asset, box, revision);

@@ -45,8 +45,12 @@ export async function editAssetImage(root, asset, signal) {
       .image-editor-tool:focus-visible { outline:2px solid var(--cms-accent,#8fd0a8); outline-offset:2px; }
       .image-editor-tool svg { width:1.35rem; height:1.35rem; fill:none; stroke:currentColor; stroke-width:1.8;
         stroke-linecap:round; stroke-linejoin:round; }
-      .image-editor-crop-actions { display:flex; justify-content:center; gap:.5rem; margin:.5rem; }
+      .image-editor-crop-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
+        gap:.5rem; margin:.5rem; }
       .image-editor-crop-actions[hidden] { display:none; }
+      .image-editor-crop-actions label { display:flex; align-items:center; gap:.4rem; font-size:.875rem; }
+      .image-editor-crop-actions input[type="checkbox"] { flex:none; width:1rem; height:1rem;
+        min-width:0; min-height:0; padding:0; margin:0; }
       .image-editor-frame { overflow:hidden; }
       .image-editor-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr)); gap:.5rem; }
       .image-editor-fields fieldset { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));
@@ -75,15 +79,12 @@ export async function editAssetImage(root, asset, signal) {
       </div>
     </div></div>
     <div class="image-editor-crop-actions" data-crop-actions hidden>
+      <label><input type="checkbox" data-crop-ratio>Seitenverhältnis beibehalten</label>
       <button type="button" data-crop-cancel>Abbrechen</button>
       <button type="button" data-crop-confirm>OK</button>
     </div>
     <p id="image-editor-crop-help" data-crop-help aria-live="polite">Zum Zuschneiden das Crop-Symbol am Bild auswählen.</p>
     <div class="image-editor-fields">
-      <fieldset><legend>Zuschneiden am Bild</legend>
-        <label class="image-editor-ratio"><input type="checkbox" data-crop-ratio>
-          Seitenverhältnis beibehalten</label>
-      </fieldset>
       <fieldset><legend>Ausgabegröße der neuen Variante</legend>
         <p>Standardmäßig entspricht sie dem Ausschnitt. Kleinere Werte verkleinern das Bild.</p>
         <label>Breite (px)<input type="number" min="1" step="1" data-output="w"></label>

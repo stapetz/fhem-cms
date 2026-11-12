@@ -61,6 +61,23 @@ try {
   root.querySelector(`[data-asset-id="${originalId}"]`).click();
   check(root.querySelectorAll('[data-variant-id]').length === 1, 'Original in Variantenliste');
   check(root.querySelector('.variant').textContent.includes('Original'), 'Original gekennzeichnet');
+  const loadDimensions = async (id, blob) => {
+    const url = URL.createObjectURL(blob);
+    try {
+      const card = root.querySelector(`[data-variant-id="${id}"]`).closest('.variant');
+      const image = card.querySelector('img');
+      await new Promise((resolve, reject) => {
+        image.addEventListener('load', resolve, { once: true });
+        image.addEventListener('error', () => reject(new Error('Testbild konnte nicht geladen werden')), { once: true });
+        image.src = url;
+      });
+      return card.querySelector('small').textContent;
+    } finally { URL.revokeObjectURL(url); }
+  };
+  check((await loadDimensions(originalId, originalBlob)).includes('200 × 100 px'),
+    'Original zeigt Dateigröße und echte Pixelmaße');
+  check(root.querySelector('[data-asset-size]').textContent.includes('MiB · 200 × 100 px'),
+    'Detailkopf zeigt die Pixelmaße des ausgewählten Originals neben der Dateigröße');
   root.querySelector('[data-edit-image]').click();
   await wait(() => root.querySelector('[data-image-editor]')?.open);
   let editor = root.querySelector('[data-image-editor]');
@@ -78,6 +95,7 @@ try {
   const outputH = editor.querySelector('[data-output="h"]');
   const outputLock = editor.querySelector('[data-output-ratio]');
   const cropLock = editor.querySelector('[data-crop-ratio]');
+  check(cropLock.getClientRects().length === 0, 'Zuschnittsoption ist ohne aktives Werkzeug ausgeblendet');
   const input = (field, value) => { field.value = String(value); field.dispatchEvent(new Event('input')); };
   check(outputLock.checked && !cropLock.checked, 'Bildgröße ist proportional, Zuschnitt zunächst frei');
   check(!editor.querySelector('[data-image-save]').disabled, 'Reine Größenänderung braucht keinen Zuschnitt');
@@ -108,6 +126,8 @@ try {
     check(JSON.stringify(cropValues()) === JSON.stringify(expected), `${message}: ${JSON.stringify(cropValues())}`);
   };
   cropTool.click();
+  check(cropLock.getClientRects().length > 0 && cropLock.getBoundingClientRect().width <= 18
+    && cropLock.getBoundingClientRect().height <= 18, 'Aktives Werkzeug zeigt eine kompakte Checkbox');
   check(cropTool.getAttribute('aria-pressed') === 'true' && !editor.querySelector('[data-crop-actions]').hidden,
     'Crop-Symbol aktiviert das Zuschneidewerkzeug');
   check(selection.tabIndex === 0 && editor.querySelectorAll('[data-handle][tabindex="0"]').length === 8,
@@ -116,6 +136,7 @@ try {
   assertCrop({ x: 0, y: 0, w: 190, h: 100 }, 'Rechter Griff verkleinert die Auswahl per Tastatur');
   cropLock.click(); outputLock.click();
   editor.querySelector('[data-crop-cancel]').click();
+  check(cropLock.getClientRects().length === 0, 'Abbrechen blendet die Zuschnittsoption aus');
   assertCrop({ x: 0, y: 0, w: 200, h: 100 }, 'Abbrechen stellt den vorherigen Ausschnitt wieder her');
   check(cropTool.getAttribute('aria-pressed') === 'false' && outputW.value === '200' && outputH.value === '100'
     && getComputedStyle(editor.querySelector('[data-crop-actions]')).display === 'none',
@@ -169,6 +190,7 @@ try {
   input(outputW, 5);
   check(outputH.value === '5', 'Ausgabeverhältnis folgt dem neuen quadratischen Ausschnitt');
   editor.querySelector('[data-crop-confirm]').click();
+  check(cropLock.getClientRects().length === 0, 'OK blendet die Zuschnittsoption aus');
   check(editor.querySelector('[data-crop-actions]').hidden && cropTool.getAttribute('aria-pressed') === 'false'
     && !editor.querySelector('[data-image-save]').disabled, 'OK bestätigt den gewählten Ausschnitt');
   check(!editor.querySelector('.image-editor-selection').hidden,
@@ -183,6 +205,10 @@ try {
   await wait(() => savedFile && root.querySelectorAll('[data-variant-id]').length === 2);
   check(root.querySelectorAll('[data-asset-id]').length === 1, 'Variante erscheint nur beim Original');
   check(root.querySelector(`[data-variant-id="${variantId}"]`).checked, 'Neue Variante ausgewählt');
+  check((await loadDimensions(variantId, savedFile)).includes('5 × 5 px'),
+    'Variante zeigt ihre eigenen Pixelmaße');
+  check(root.querySelector('[data-asset-size]').textContent.includes('MiB · 5 × 5 px'),
+    'Detailkopf zeigt die Maße der ausgewählten Variante statt der Originalmaße');
   for (const card of root.querySelectorAll('.variant')) {
     check(card.querySelector('small').getBoundingClientRect().top >= card.querySelector('img').getBoundingClientRect().bottom,
       'Dateigröße steht unter dem jeweiligen Bild');
