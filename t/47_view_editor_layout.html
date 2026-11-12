@@ -68,7 +68,7 @@ try {
       await view.start();
       const states = [];
       try {
-        for (const width of [1000, 800, 700, 601, 600, 393, 1000]) {
+        for (const width of [1400, 1280, 1000, 800, 700, 601, 600, 393, 1400]) {
           shell.style.width = `${width}px`;
           await settle();
           const items = Object.fromEntries([...root.children].map(element => [
@@ -84,14 +84,18 @@ try {
               && box.right <= linkBox.right + 1 && box.top >= linkBox.top - 1
               && box.bottom <= linkBox.bottom + 1, 'fitted link tiles stay within the widget in every viewport');
           }
-          states.push({ width, items, tiles, compact: root.querySelector('.cms-nav').hasAttribute('data-compact') });
+          const flowing = getComputedStyle(root).display === 'flex';
+          states.push({ width, items, tiles, flowing, compact: root.querySelector('.cms-nav').hasAttribute('data-compact'),
+            navHeight:root.querySelector('.cms-nav').clientHeight });
           check(JSON.stringify(config) === original, `${columns}/${width}: no config mutation`);
           check(JSON.stringify(root.gridstack.save(false).map(({ id, x = 0, y = 0, w = 1, h = 1 }) => ({ id, x, y, w, h }))
             .sort((a, b) => a.id.localeCompare(b.id))) === JSON.stringify(
             [{ id: '__nav', ...config.navigation.grid }, ...widgets.map(widget => ({ id: widget.id, ...widget.grid }))]
               .map(({ id, col, row, w, h }) => ({ id, x: col - 1, y: row - 1, w, h }))
               .sort((a, b) => a.id.localeCompare(b.id))), `${columns}/${width}: saved raster retained`);
-          if (!editing && width <= 600) {
+          if (!editing && flowing) {
+            check(root.parentElement.scrollWidth <= root.parentElement.clientWidth + 1,
+              `${columns}/${width}: responsive desktop workspace has no horizontal overflow`);
             for (const box of Object.values(items)) {
               check(box.x >= -1 && box.x + box.width <= width + 1, 'mobile content stays within container');
             }
@@ -108,8 +112,12 @@ try {
     }
     for (let i = 0; i < measurements[0].length; i++) {
       const live = measurements[0][i]; const editor = measurements[1][i];
-      if (live.width <= 600) continue;
-      check(live.compact === editor.compact, `${columns}/${live.width}: same navigation mode`);
+      if (live.flowing) {
+        check(!editor.flowing, `${columns}/${live.width}: only view reflows; editor preserves coordinates`);
+        continue;
+      }
+      check(live.compact === editor.compact, `${columns}/${live.width}: same navigation mode ${JSON.stringify({
+        live: { compact:live.compact, height:live.navHeight }, editor:{ compact:editor.compact,height:editor.navHeight } })}`);
       for (const id of Object.keys(live.items)) {
         for (const key of ['x', 'y', 'width', 'height']) {
           check(Math.abs(live.items[id][key] - editor.items[id][key]) < 1,

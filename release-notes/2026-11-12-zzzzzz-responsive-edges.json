@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-12",
+  "version": "1.8.1-dev",
+  "title": "Phone-Querformat und schmale Browserfenster (Refs #141)",
+  "changes": [
+    "Homepage und Vorschau brechen im schmalen Desktopfenster um, ohne gespeicherte Editorpositionen zu veraendern.",
+    "Im kurzen Phone-Querformat fuellen Widgets die verbleibende Zeilenbreite; die Startseite nutzt die volle Bildschirmflaeche mit sicheren Notch-Abstaenden.",
+    "Navigation bleibt beim Oeffnen und beim Wechsel zwischen schmalem und breitem Raster bedienbar."
+  ]
+}

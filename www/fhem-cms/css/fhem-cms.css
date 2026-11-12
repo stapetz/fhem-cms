@@ -221,10 +221,13 @@ html {
 }
 
 body {
+  --cms-page-padding: 1rem;
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
   padding: 1rem;
+  padding: max(var(--cms-page-padding), env(safe-area-inset-top)) max(var(--cms-page-padding), env(safe-area-inset-right))
+    max(var(--cms-page-padding), env(safe-area-inset-bottom)) max(var(--cms-page-padding), env(safe-area-inset-left));
 }
 
 .cms-shell {
@@ -341,10 +344,11 @@ body:has(.cms-schema5-grid) {
 @media (max-height: 600px) and (orientation: landscape) {
   .cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item:not(.cms-responsive-navigation) {
     flex-basis: min(100%, max(40%, calc((var(--cms-view-width) + var(--cms-view-gap)) * var(--cms-widget-fraction) - var(--cms-view-gap))));
+    flex-grow: 1;
   }
 }
 
-@container cms-page (width <= 600px) {
+@container cms-page (width <= 80rem) {
   .cms-schema5-grid[data-responsive] {
     display: flex;
     flex-wrap: wrap;
@@ -364,10 +368,6 @@ body:has(.cms-schema5-grid) {
     min-width: 0;
     min-height: 6rem;
     max-width: 100%;
-  }
-
-  .cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item:not(.cms-responsive-navigation) {
-    flex-basis: 100%;
   }
 
   .cms-schema5-grid[data-responsive] > .grid-stack-item::before {
@@ -395,6 +395,12 @@ body:has(.cms-schema5-grid) {
     height: auto;
   }
 
+}
+
+@container cms-page (width <= 600px) {
+  .cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item:not(.cms-responsive-navigation) {
+    flex-basis: 100%;
+  }
 }
 
 .cms-schema5-grid .cms-nav {
@@ -1243,7 +1249,8 @@ body:has(.cms-schema5-grid) {
 }
 
 /* Verborgene Links im selben Container und mit derselben Schrift ausmessen. */
-.cms-nav[data-adaptive][data-measuring] {
+.cms-nav[data-adaptive][data-measuring],
+.cms-nav[data-adaptive][data-measuring][data-open] {
   flex-direction: row;
   flex-wrap: nowrap;
 }
@@ -1567,7 +1574,7 @@ body:has(.cms-schema5-grid) {
 
 @media (min-width: 48rem) {
   body {
-    padding: 2rem;
+    --cms-page-padding: 2rem;
   }
 }
 
@@ -1930,7 +1937,7 @@ html:not(.cms-view) .cms-status[data-error]::before {
 
 /* Bearbeitungsmodus: Menüleiste auf Höhe der Geräte-Auswahl am oberen Rand. */
 html:not(.cms-view) body {
-  padding-top: 0.5rem;
+  padding-top: max(.5rem, env(safe-area-inset-top));
 }
 
 .cms-device-bar select,

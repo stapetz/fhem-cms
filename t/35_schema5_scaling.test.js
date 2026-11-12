@@ -133,6 +133,7 @@ for (const [name, fixtures] of [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],
   ]],
   ['touch devices fit the raster without horizontal overflow', [['56_mobile_viewport.html?mode=touch-test', 200]]],
+  ['viewport safe edges and desktop resize preserve usable responsive rows', [['63_responsive_edges.html', 200]]],
 ]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,
@@ -149,7 +150,8 @@ for (const [name, fixtures] of [
   const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
     for (const [fixture, minimum] of fixtures) {
-      const interact = !['49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
+      const interact = !['49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
+        '63_responsive_edges.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
           assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
@@ -163,7 +165,25 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
-        if (fixture.startsWith('61_asset_image.html')) {
+        if (fixture === '63_responsive_edges.html') {
+          for (const [width, height, mobile, left, right, bottom] of [
+            [768, 900, false, 0, 0, 0], [1000, 900, false, 0, 0, 0],
+            [1280, 900, false, 0, 0, 0], [1440, 900, false, 0, 0, 0],
+            [768, 900, false, 0, 0, 0], [393, 852, true, 0, 0, 34],
+            [852, 393, true, 59, 59, 21], [852, 393, true, 59, 0, 21],
+            [393, 852, true, 0, 0, 34], [834, 1194, true, 0, 0, 20],
+            [1194, 834, true, 0, 0, 20],
+          ]) {
+            await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile });
+            await command('Emulation.setTouchEmulationEnabled', { enabled: mobile });
+            const insets = { top: mobile && width < 600 && width < height ? 59 : 0, left, right, bottom };
+            await command('Emulation.setSafeAreaInsetsOverride', { insets });
+            const measured = await evaluate(`window.viewportRegression.measure(${JSON.stringify({ width, insets, mobile })})`);
+            assert.ok(measured.width > 0);
+          }
+          await evaluate('window.viewportRegression.finish()');
+          return;
+        } else if (fixture.startsWith('61_asset_image.html')) {
           const touch = fixture.endsWith('?touch=1');
           const drag = async (from, to, cancel = false) => {
             const points = await evaluate(`window.imageRegression.points(${JSON.stringify(from)},${JSON.stringify(to)})`);
@@ -519,13 +539,13 @@ test('real browser zoom and resizing scale widgets and navigation without writes
       assert.ok(data.editorPreserved, 'editor retains precise saved grid coordinates and does not reflow');
       assert.equal(data.editorScroll.overflow, 'auto', 'only the editing workspace scrolls');
       assert.ok(!data.editorScroll.pageOverflow, 'editor canvas never overflows the document');
-      assert.ok(Math.abs(data.editorInitial.widget.width - data.initial.widget.width) < 2,
+      assert.ok(data.initial.flowing || Math.abs(data.editorInitial.widget.width - data.initial.widget.width) < 2,
         `editor uses the same widget width as the view: ${JSON.stringify({view:data.initial.widget, editor:data.editorInitial.widget})}`);
       const [editorWide, editorNarrow] = data.editorResize;
       assert.ok(editorWide.widget.width > editorNarrow.widget.width * 1.1, 'editor widgets follow window size');
       assert.ok(editorWide.widget.height > editorNarrow.widget.height * 1.1, 'editor height follows window size');
       if (zoom === 2) assert.ok(data.editorScroll.width > data.editorScroll.client, 'zoomed editing canvas scrolls at narrow widths');
-      assert.ok(data.longCompact && data.openLinks, 'long navigation switches to a usable burger');
+      assert.ok(data.longCompact && data.openLinks, `long navigation opens and stays usable at zoom ${zoom}`);
       assert.equal(data.restored.compact, data.initial.compact,
         `navigation recovers after label changes: ${JSON.stringify({ initial: data.initial, restored: data.restored })}`);
       const [wide, narrow, phone, landscape, again] = data.resize;
@@ -573,7 +593,7 @@ test('real browser zoom and resizing scale widgets and navigation without writes
     }
     const rowCount = (zoom) => results.get(zoom).initial.widgets.slice(0, 4)
       .filter((item) => Math.abs(item.y - results.get(zoom).initial.widgets[0].y) < 1).length;
-    assert.equal(rowCount(2), rowCount(1), 'desktop zoom preserves saved rows just like the editor');
+    assert.ok(rowCount(2) < rowCount(1), 'zoomed live view wraps without changing the saved editor raster');
     console.log(JSON.stringify([...results].map(([zoom, data]) => ({
       zoom, viewport: data.initial.viewport, widget: data.initial.widget.width,
       button: data.initial.link.width, rowCount: rowCount(zoom),

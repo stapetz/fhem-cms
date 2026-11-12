@@ -213,7 +213,7 @@ auf Rasterzellen aufgerundet und innerhalb der Seitenbreite platziert.
 Danach können Sie sie weiterhin manuell skalieren. Vertikal erscheint das
 Burger-Menü erst, wenn die breiteste Schaltfläche oder die gesamte Höhe der
 Punkte nicht in das Widget passt. Horizontal muss die ganze Zeile hineinpassen.
-Auf dem Desktop nutzt die Vorschau dieselbe Navigationsposition und -größe
+Auf breiten Desktopansichten nutzt die Vorschau dieselbe Navigationsposition und -größe
 wie der Editor. Auf Touchgeräten und in der Geräte-Vorschau bleibt die mobile
 Anordnung auch im Querformat aktiv. Bei höchstens 600 Pixel Inhaltsbreite wird
 die Navigation zum Burger-Menü, das über den Widgets liegt und keinen Platz im
@@ -237,7 +237,7 @@ und Textformatierungen innerhalb von Text-/HTML-Widgets bleiben unverändert.
 ### Fenstergröße, Browser-Zoom und Drehen
 
 Homepage, Vorschau und Editor zeigen bei gleicher verfügbarer Inhaltsbreite
-auf dem Desktop dieselben Positionen, Zeilen und Größenverhältnisse. Widgets und
+auf breiten Desktopansichten dieselben Positionen, Zeilen und Größenverhältnisse. Widgets und
 Navigationsschaltflächen wachsen bzw. schrumpfen gemeinsam mit der Fensterbreite.
 Wertanzeigen, Schalter, Taster und Statussymbole nutzen ihren Innenraum mit
 kleinem Sicherheitsabstand aus. Titel und eventuelle Fehlermeldungen bleiben
@@ -245,8 +245,8 @@ separat; lange Werte und Beschriftungen werden kleiner eingepasst statt
 abgeschnitten. Schieberegler reichen bis nahe an die seitlichen Ränder.
 Der Browser-Zoom wird dabei nicht mehr durch vollständiges Einpassen aufgehoben:
 Hineinzoomen vergrößert Kacheln und Beschriftungen sichtbar, Hinauszoomen verkleinert
-sie. Reicht der Platz auf dem Desktop nicht, lässt sich der Rasterbereich
-seitlich scrollen; Werkzeugleiste und Browserseite bleiben an ihrer Position.
+sie. Im Editor lässt sich der Rasterbereich bei Platzmangel seitlich scrollen;
+Werkzeugleiste und Browserseite bleiben an ihrer Position.
 
 Bis einschließlich 600 Pixel Inhaltsbreite ordnen Homepage und Vorschau die
 Widgets automatisch in Leserichtung mit Zeilenumbruch an, auch beim Drehen eines
@@ -258,8 +258,21 @@ dabei nicht verändert; der Editor bleibt immer beim exakten Raster.
 Auf Geräten mit primär grober Zeigereingabe und in der Smartphone-/Tablet-Vorschau
 wird das Ansichts-Raster bei Bedarf an die Breite angepasst, damit es auch im
 Querformat nicht horizontal scrollt. Auf breiteren Ansichten bleibt dabei die
-gespeicherte Anordnung erhalten. Desktop-Vorschau und Bearbeitungsraster behalten
-ihr bisheriges Scroll- und Zoomverhalten.
+gespeicherte Anordnung erhalten.
+
+**Entwicklungsstand auf `dev` – noch nicht veröffentlicht (stapetz/fhem-cms#141):**
+Homepage und Vorschau brechen auch im schmalen Desktopbrowser bis 80 rem
+Inhaltsbreite (bei Standardschrift 1280 Pixel) in Leserichtung um, statt Teile
+des Rasters horizontal abzuschneiden. Oberhalb dieser Grenze bleibt das exakte
+Desktop-Raster erhalten; das Bearbeitungsraster bleibt bei jeder Breite unverändert.
+Im kurzen mobilen Querformat füllen Kacheln den restlichen Platz ihrer Zeile:
+Zwei kleinere Kacheln nutzen gemeinsam die Breite, eine alleinstehende
+Diagrammkachel die ganze Zeile. Phone-Hochformat und Tablet-Hoch-/Querformat
+behalten ihre bisherigen Regeln.
+Auf Geräten mit Kamera-Aussparung wird die volle Bildschirmfläche angefordert;
+Inhalte bleiben innerhalb der sicheren Ränder. Sicherheitsabstand und normaler
+Seitenabstand werden nicht addiert. Die Geräte-Vorschau simuliert keine
+Hardware-Aussparung; diese Ränder müssen auf dem echten Gerät geprüft werden.
 
 Die Navigation bleibt auf dem Desktop an ihrer Rasterposition und steht nur
 in der schmalen Ansicht vor den Widgets. Auch ihre konfigurierten Buttonbreiten

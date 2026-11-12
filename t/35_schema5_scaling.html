@@ -55,6 +55,8 @@ try {
       navFont: parseFloat(getComputedStyle(link).fontSize),
       widgetFont: parseFloat(getComputedStyle(widget.shadowRoot.querySelector('.main')).fontSize),
       compact: nav.hasAttribute('data-compact'),
+      flowing: getComputedStyle(root).display === 'flex',
+      navOpen: nav.hasAttribute('data-open'),
       widgets: [...root.querySelectorAll('cms-value')].map(rect),
       overflow: document.documentElement.scrollWidth > innerWidth,
     };
