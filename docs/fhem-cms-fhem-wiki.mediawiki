@@ -30,7 +30,11 @@
 
 '''fhem-cms''' ergänzt FHEM um eine frei gestaltbare Bedienoberfläche im Browser. Du kombinierst Gerätewerte, Bedienelemente, Texte, Bilder und Links auf eigenen Seiten. Das Layout erstellst du grafisch, ohne dafür eine komplette HTML-Oberfläche programmieren zu müssen.
 
-Dieser Artikel beschreibt den stabilen Funktionsstand '''1.8.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+Dieser Artikel beschreibt den stabilen Funktionsstand '''1.9.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+
+Neu in 1.9.0: interne Seiten als Modal-Popup, Bildbearbeitung mit Varianten,
+automatische LinkWidget-Größe mit bestätigter Platzschaffen-Vorschau sowie
+volle Rasterbreite und verbesserte mobile Navigation.
 
 __TOC__
 
@@ -106,7 +110,7 @@ Bei FHEMWEB-Webname <code>fhem</code> und Device <code>CMS</code> lauten typisch
 /fhem/fhem-cms/CMS/index.html?mode=edit
 </pre>
 
-Verwende bevorzugt die erzeugten Device-Links, da Host, Port und Webname von deiner Installation abhängen. Die Modulversion findest du im Internal '''VERSION'''.
+Verwende bevorzugt die erzeugten Device-Links, da Host, Port und Webname von deiner Installation abhängen. Die Modulversion findest du im Internal '''VERSION''', auch bei fehlgeschlagener Initialisierung. Die Versionsangabe allein bestätigt keine erfolgreiche Initialisierung.
 
 == Erste Seite erstellen ==
 
@@ -172,7 +176,7 @@ Die Navigation ist ein gemeinsames Widget für alle Seiten des CMS-Devices. Öff
 * Die letzte verbleibende Seite kann nicht einfach entfernt werden.
 * Die Navigation lässt sich horizontal oder vertikal ausrichten, verschieben und skalieren.
 * Bei Platzmangel erscheint ein aufklappbares Burger-Menü. Bei vertikaler Navigation wird es auf Touchgeräten und in der Geräte-Vorschau unabhängig von der Ausrichtung verwendet; es liegt über den Widgets, ohne Platz im Inhaltsfluss zu belegen. Beim Drehen wird die verfügbare Breite neu ausgewertet.
-* Entwicklungsstand <code>dev</code>: Bei horizontaler Navigation werden Einträge bei knappem Platz in der Höhe um höchstens 20 Prozent verkleinert; reicht der Platz auch dann nicht, erscheint das Burger-Menü.
+* Bei horizontaler Navigation werden Einträge bei knappem Platz in der Höhe um höchstens 20 Prozent verkleinert; reicht der Platz auch dann nicht, erscheint das Burger-Menü.
 * Eine vergrößerte gemeinsame Navigation kann kollidierende Widgets auf allen Seiten nach unten verschieben.
 
 Unter '''Bearbeiten → Seiteneinstellungen''' legst du Theme, Widgetrahmen, globale Titelausrichtung und Rasterdichte fest. Möglich sind '''12, 24, 48, 96 oder 192 Spalten'''. Die gemeinsamen Einstellungen gelten für alle Seiten des CMS-Devices.
@@ -217,7 +221,7 @@ lesbare Inhalte bleiben erhalten. Zoom und Resize schreiben keine Layoutdaten.
 
 Bis einschließlich '''600 Pixel Inhaltsbreite''' ordnen Homepage und Vorschau die Widgets in Leserichtung mit Zeilenumbruch an. Der Editor bleibt zum präzisen Positionieren beim exakten Raster. Das Drehen des Geräts verändert keine gespeicherten Rasterpositionen.
 
-'''Entwicklungsstand dev:''' Im schmalen Smartphone-Hochformat nutzen Widgets die gesamte verfügbare Breite; im kurzen Querformat erhalten sie mindestens 40 Prozent.
+Im schmalen Smartphone-Hochformat nutzen Widgets die gesamte verfügbare Breite; im kurzen Querformat erhalten sie mindestens 40 Prozent.
 
 '''Noch nicht veröffentlicht (stapetz/fhem-cms#141):''' Homepage und Vorschau
 brechen auch im schmalen Desktopbrowser bis 80 rem Inhaltsbreite (bei
@@ -324,7 +328,7 @@ Im Einstellungsdialog ordnest du die Kacheln in einem eigenen '''12-Spalten-Rast
 
 Das innere Linkraster ist unabhängig vom äußeren Seitenraster. Ein „neues Fenster“ kann aufgrund von Browserregeln auch als Tab erscheinen.
 
-'''Entwicklungsstand auf dev, noch nicht veröffentlicht:''' Beim Speichern
+'''Seit Version 1.9.0:''' Beim Speichern
 passt sich die äußere Widgetgröße an das belegte Rechteck der Linkkacheln an.
 Bei einem neuen Widget belegt ein einzelner Link mit 4 × 3 inneren Feldern bei 12 Seitenspalten
 4 × 3 äußere Felder; ein sichtbarer Widgettitel ergänzt eine Zeile. Feinere
@@ -348,7 +352,7 @@ der Dialog mit einer Meldung offen: Kacheln verkleinern oder das äußere Widget
 Ausgewählte Bilder erscheinen sofort auf den Kacheln im Bearbeitungsraster;
 '''Bild entfernen''' entfernt dort auch die Vorschau.
 
-'''Entwicklungsstand auf dev, noch nicht veröffentlicht:''' Interne Linkkacheln
+'''Seit Version 1.9.0:''' Interne Linkkacheln
 können statt eines Seitenwechsels ein Popup in kleiner, mittlerer oder großer
 Breite öffnen. Es zeigt die Zielseite mit Live-Daten über der aktuellen Seite.
 Schließen ist mit '''×''', Escape oder Klick außerhalb möglich. Ein weiteres Popup
@@ -424,7 +428,7 @@ Erlaubtes HTML wird geprüft und bereinigt. Skripte, Iframes, Ereignisattribute 
 * Mehrfachauswahl und Drag-and-drop laden Dateien direkt in den geöffneten Ordner.
 * Ganze Ordner werden nicht per Drop importiert.
 * Identische Dateien können wiederverwendet werden und bleiben dann gegebenenfalls in ihrem bisherigen Ordner.
-* Eine Assetsuche ist in Version 1.8.0 noch nicht enthalten.
+* Eine Assetsuche ist in Version 1.9.0 noch nicht enthalten.
 
 === Dateidetails und Aktionen ===
 
@@ -439,7 +443,7 @@ Wähle eine Datei, um ihre Eigenschaften rechts zu öffnen:
 * '''Löschen''' erfordert eine Bestätigung und ist bei vorhandenen Verwendungen gesperrt.
 * Ordner lassen sich nur löschen, wenn sie leer sind.
 
-'''Entwicklungsstand auf dev, noch nicht veröffentlicht:''' Bilder lassen sich per
+'''Seit Version 1.9.0:''' Bilder lassen sich per
 '''Bild bearbeiten''' zuschneiden und verkleinern. Die Auflösung des Quellbildes
 wird angezeigt; die Ausschnittgröße bezieht sich auf Pixel im Quellbild, die
 Ausgabegröße auf die finale Auflösung der neuen Variante. Sie entspricht zunächst

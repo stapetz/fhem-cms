@@ -19,7 +19,7 @@ use Time::Local ();
 
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 
-our $FHEMCMS_VERSION = '1.8.0';
+our $FHEMCMS_VERSION = '1.9.0';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
