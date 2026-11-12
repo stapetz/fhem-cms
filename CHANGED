@@ -7,7 +7,7 @@
 - Touch- und mobile Vorschau nutzen den responsiven Inhaltsfluss in Hoch- und
   Querformat.
 - Das kompakte Burger-Menue liegt ueber den Widgets und reserviert keinen
-  Platz.
+  Platz, auch im Editor.
 
 2026-11-11 - 1.8.1-dev: Mobile Navigation (Refs #141)
 - Horizontale Navigation verkleinert Eintraege bei knapper Hoehe begrenzt,

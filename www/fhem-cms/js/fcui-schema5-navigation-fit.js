@@ -71,7 +71,8 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
       || (fixedHeight && required.height > nav.clientHeight + 0.5);
     if (compact) setScale(1);
     nav.toggleAttribute('data-compact', compact);
-    responsiveWrapper?.toggleAttribute('data-nav-overlay', Boolean(compact && responsiveFlow));
+    const editableGrid = responsiveGrid?.classList.contains('cms-grid-editable');
+    responsiveWrapper?.toggleAttribute('data-nav-overlay', Boolean(compact && (responsiveFlow || editableGrid)));
     if (!compact) {
       const focused = nav.ownerDocument.activeElement === burger;
       nav.removeAttribute('data-open');

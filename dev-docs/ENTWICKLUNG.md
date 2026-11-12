@@ -169,6 +169,9 @@ Touchgeräte und die mobile Geräte-Vorschau verwenden unabhängig von der
 Ausrichtung den responsiven Inhaltsfluss. Ein kompaktes Burger-Menü liegt über
 den Widgets und reserviert keinen Platz im Fluss; bei Größenänderungen wird die
 verfügbare Breite des Inhaltsrasters erneut ausgewertet.
+Auch im Bearbeitungsmodus liegt eine kompakte Navigation über dem Raster und
+bleibt bedienbar oberhalb der GridStack-Werkzeuge; die gespeicherten Positionen
+der Widgets ändern sich dadurch nicht.
 Homepage, Vorschau und Editor verwenden dasselbe zoomfähige Raster (Refs #119).
 Die gemeinsame Bezugsbreite `25rem + 66.666667cqi` entspricht bei 1200 Pixeln
 CMS-Inhaltsbreite und Standardschrift wieder 1200 Pixeln. Ein Drittel bleibt
