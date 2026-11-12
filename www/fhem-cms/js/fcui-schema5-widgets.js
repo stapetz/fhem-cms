@@ -18,15 +18,13 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     }),
   };
   const grid = createSchema5Grid(GridStack, root, viewConfig, pageId, (id, wrapper) => {
-    if (!editing) {
-      if (id === '__nav') {
-        wrapper.className += ' cms-responsive-navigation';
-      } else {
-        const { w, h } = widgets.get(id).grid;
-        const fraction = Number(w) / Number(config.settings.gridColumns);
-        wrapper.style.setProperty('--cms-widget-fraction', String(Math.max(0.25, fraction)));
-        wrapper.style.setProperty('--cms-widget-padding', `${100 * Number(h) / Number(w)}%`);
-      }
+    if (id === '__nav') {
+      wrapper.className += ' cms-responsive-navigation';
+    } else if (!editing) {
+      const { w, h } = widgets.get(id).grid;
+      const fraction = Number(w) / Number(config.settings.gridColumns);
+      wrapper.style.setProperty('--cms-widget-fraction', String(Math.max(0.25, fraction)));
+      wrapper.style.setProperty('--cms-widget-padding', `${100 * Number(h) / Number(w)}%`);
     }
     if (id === '__nav') return navigation;
     const widget = widgets.get(id);

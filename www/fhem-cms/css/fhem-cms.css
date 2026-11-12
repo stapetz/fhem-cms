@@ -403,7 +403,8 @@ body:has(.cms-schema5-grid) {
   border-radius: .5em;
 }
 
-.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] {
+.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay],
+.cms-schema5-grid.cms-grid-editable > .cms-responsive-navigation[data-nav-overlay] {
   position: absolute !important;
   inset: 0 auto auto 0 !important;
   z-index: 20;
@@ -414,7 +415,8 @@ body:has(.cms-schema5-grid) {
   max-width: min(calc(100cqi - 1rem), 24rem);
 }
 
-.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] > .grid-stack-item-content {
+.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] > .grid-stack-item-content,
+.cms-schema5-grid.cms-grid-editable > .cms-responsive-navigation[data-nav-overlay] > .grid-stack-item-content {
   position: relative !important;
   inset: auto !important;
   width: auto;
@@ -422,13 +424,19 @@ body:has(.cms-schema5-grid) {
   overflow: visible;
 }
 
-.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] .cms-nav {
+.cms-schema5-grid.cms-grid-editable > .cms-responsive-navigation[data-nav-overlay] > .grid-stack-item-content {
+  z-index: 6;
+}
+
+.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] .cms-nav,
+.cms-schema5-grid.cms-grid-editable > .cms-responsive-navigation[data-nav-overlay] .cms-nav {
   width: max-content;
   max-width: min(calc(100cqi - 1rem), 24rem);
   height: auto;
 }
 
-.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] .cms-nav[data-open] {
+.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] .cms-nav[data-open],
+.cms-schema5-grid.cms-grid-editable > .cms-responsive-navigation[data-nav-overlay] .cms-nav[data-open] {
   width: min(calc(100cqi - 1rem), 24rem);
   max-height: 80dvh;
   overflow-y: auto;

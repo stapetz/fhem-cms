@@ -4,6 +4,6 @@
   "title": "Mobile Navigation Overlay (Refs #141)",
   "changes": [
     "Touch- und mobile Vorschau nutzen den responsiven Inhaltsfluss in Hoch- und Querformat.",
-    "Das kompakte Burger-Menue liegt ueber den Widgets und reserviert keinen Platz."
+    "Das kompakte Burger-Menue liegt ueber den Widgets und reserviert keinen Platz, auch im Editor."
   ]
 }

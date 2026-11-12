@@ -102,6 +102,31 @@ try {
   view.stop();
   check(!root.hasAttribute('data-mobile-preview'), 'marker removed on stop');
   check(!root.hasAttribute('data-mobile-layout'), 'mobile layout marker removed on stop');
+  shell.style.width = '343px';
+  const editor = new Schema5View({ GridStack, root, config, status: document.createElement('p'),
+    client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} }, services: {},
+    editing: { onChange() {}, onEdit() {} } });
+  await editor.start();
+  await settle();
+  const editorNav = root.querySelector('.cms-nav');
+  const navWrapper = editorNav.closest('.cms-responsive-navigation');
+  const editorBurger = editorNav.querySelector('.cms-nav-burger');
+  check(root.classList.contains('cms-grid-editable'), 'editor retains GridStack controls');
+  check(editorNav.hasAttribute('data-compact'), 'narrow editor shows the burger');
+  check(navWrapper.hasAttribute('data-nav-overlay'), 'compact editor navigation overlays the grid');
+  check(getComputedStyle(navWrapper).position === 'absolute', 'editor navigation is removed from the grid flow');
+  const burgerBox = editorBurger.getBoundingClientRect();
+  check(document.elementFromPoint(burgerBox.left + burgerBox.width / 2,
+    burgerBox.top + burgerBox.height / 2) === editorBurger, 'editor tools do not block the burger');
+  const firstWidget = root.querySelector('.grid-stack-item:not(.cms-responsive-navigation)');
+  const beforeOpen = firstWidget.getBoundingClientRect();
+  editorBurger.click();
+  await settle();
+  check(editorNav.hasAttribute('data-open'), 'editor burger opens the navigation');
+  const afterOpen = firstWidget.getBoundingClientRect();
+  check(afterOpen.x === beforeOpen.x && afterOpen.y === beforeOpen.y,
+    'opening editor navigation does not move widgets');
+  editor.stop();
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });
 } catch (error) {
