@@ -173,7 +173,7 @@ Die Navigation ist ein gemeinsames Widget für alle Seiten des CMS-Devices. Öff
 * Entwicklungsstand <code>dev</code>: Eine Seite kann mit Widgets und Layout dupliziert und als Entwurf gespeichert werden; die Live-Seite bleibt unverändert.
 * Entwicklungsstand <code>dev</code>: Das X am Widget entfernt dieses nach Bestätigung direkt aus dem Entwurf; die veröffentlichte Seite bleibt zunächst unverändert.
 * Die Navigation lässt sich horizontal oder vertikal ausrichten, verschieben und skalieren.
-* Bei Platzmangel erscheint ein aufklappbares Burger-Menü. Auf Touchgeräten und in der Geräte-Vorschau bleibt die mobile Anordnung auch im Querformat aktiv; das Menü liegt über den Widgets, ohne Platz im Inhaltsfluss zu belegen. Beim Drehen wird die verfügbare Breite neu ausgewertet.
+* Bei Platzmangel erscheint ein aufklappbares Burger-Menü. Bei vertikaler Navigation wird es auf Touchgeräten und in der Geräte-Vorschau unabhängig von der Ausrichtung verwendet; es liegt über den Widgets, ohne Platz im Inhaltsfluss zu belegen. Beim Drehen wird die verfügbare Breite neu ausgewertet.
 * Entwicklungsstand <code>dev</code>: Bei horizontaler Navigation werden Einträge bei knappem Platz in der Höhe um höchstens 20 Prozent verkleinert; reicht der Platz auch dann nicht, erscheint das Burger-Menü.
 * Eine vergrößerte gemeinsame Navigation kann kollidierende Widgets auf allen Seiten nach unten verschieben.
 

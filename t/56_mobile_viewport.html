@@ -121,15 +121,35 @@ try {
   window.dispatchEvent(new Event('resize'));
   await settle();
   check(verticalNav.classList.contains('is-vertical'), 'vertical navigation configuration is retained');
-  check(verticalNav.hasAttribute('data-compact'), landscape
-    ? 'vertical navigation in short landscape collapses to a burger'
-    : 'narrow vertical navigation collapses to a burger');
-  check(verticalWrapper.hasAttribute('data-nav-overlay'), 'vertical burger overlays the mobile widget flow');
   if (landscape) {
     const landscapeWidgets = [...root.querySelectorAll('.grid-stack-item:not(.cms-responsive-navigation)')];
     check(landscapeWidgets.every(item => item.getBoundingClientRect().width >= root.clientWidth * 0.38),
       'short landscape widgets scale to at least 40 percent of the available width');
   }
+  for (const width of [375, 667, 390, 844, 393, 852, 430, 932, 744, 1133, 810, 1080,
+    820, 1180, 834, 1194, 1024, 1366, 412, 915, 800, 1280]) {
+    shell.style.width = `${width}px`;
+    window.dispatchEvent(new Event('resize'));
+    await settle();
+    check(verticalNav.hasAttribute('data-compact'),
+      `${width}px vertical touch navigation uses the burger`);
+    check(verticalWrapper.hasAttribute('data-nav-overlay'),
+      `${width}px vertical touch navigation overlays the widget flow`);
+    check(getComputedStyle(verticalWrapper).position === 'absolute',
+      `${width}px vertical touch navigation does not reserve flow space`);
+    const bounds = root.getBoundingClientRect();
+    const boxes = [...root.querySelectorAll('.grid-stack-item:not(.cms-responsive-navigation)')]
+      .map(item => item.getBoundingClientRect());
+    check(workspace.scrollWidth <= workspace.clientWidth + 1
+      && boxes.every(box => box.left >= bounds.left - 1 && box.right <= bounds.right + 1),
+    `${width}px vertical layout keeps widgets inside the raster`);
+    check(boxes.every((a, index) => boxes.slice(index + 1).every(b =>
+      a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1)),
+    `${width}px vertical layout keeps widgets from overlapping`);
+  }
+  shell.style.width = landscape ? '852px' : '393px';
+  window.dispatchEvent(new Event('resize'));
+  await settle();
   const verticalFirstWidget = root.querySelector('.grid-stack-item:not(.cms-responsive-navigation)');
   const verticalBefore = verticalFirstWidget.getBoundingClientRect();
   verticalNav.querySelector('.cms-nav-burger').click();

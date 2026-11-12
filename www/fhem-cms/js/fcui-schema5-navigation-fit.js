@@ -68,11 +68,10 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
     const responsiveFlow = responsiveGrid && browser.getComputedStyle(responsiveGrid).display === 'flex';
     const availableWidth = responsiveFlow ? responsiveGrid.clientWidth : nav.clientWidth;
     const narrowResponsiveFlow = responsiveFlow && responsiveGrid.clientWidth <= 600;
-    const shortResponsiveViewport = responsiveFlow && nav.classList.contains('is-vertical')
-      && browser.innerHeight <= 600;
+    const verticalResponsiveFlow = responsiveFlow && nav.classList.contains('is-vertical');
     const compact = required.width > availableWidth + 0.5
       || (fixedHeight && required.height > nav.clientHeight + 0.5)
-      || narrowResponsiveFlow || shortResponsiveViewport;
+      || narrowResponsiveFlow || verticalResponsiveFlow;
     if (compact) setScale(1);
     nav.toggleAttribute('data-compact', compact);
     const editableGrid = responsiveGrid?.classList.contains('cms-grid-editable');
