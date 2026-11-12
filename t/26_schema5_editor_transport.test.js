@@ -9,6 +9,17 @@ import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
 import { createSchema5Transport } from '../www/fhem-cms/js/fcui-schema5-transport.js';
 
+function style() {
+  const values = new Map();
+  return {
+    [Symbol.iterator]: () => values.keys(),
+    getPropertyValue: name => values.get(name) || '',
+    getPropertyPriority: () => '',
+    setProperty: (name, value) => values.set(name, value),
+    removeProperty: name => values.delete(name),
+  };
+}
+
 class Element {
   constructor(tag) {
     this.tag = tag;
@@ -17,7 +28,7 @@ class Element {
     this.attributes = {};
     this.listeners = {};
     this.classList = { toggle() {} };
-    this.style = { setProperty(name, value) { this[name] = value; } };
+    this.style = style();
     this.value = '';
   }
   append(...children) { this.children.push(...children); }
