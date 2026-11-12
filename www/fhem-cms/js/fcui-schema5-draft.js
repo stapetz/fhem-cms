@@ -1,6 +1,8 @@
 import { applySchema5GridItems, schema5GridItems } from './fcui-schema5-layout.js';
 import { fitLinkWidget } from './link-widget.js';
 
+export class WidgetLayoutError extends Error {}
+
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
@@ -109,14 +111,29 @@ export class Schema5DraftController {
     if (!widget || typeof widget !== 'object' || Array.isArray(widget)
       || typeof widget.id !== 'string') throw new Error('Ungültiges Widget');
     if (action !== 'create' && action !== 'update') throw new Error('Widget-Aktion erforderlich');
-    const copy = widget.type === 'fhem-link'
-      ? fitLinkWidget(widget, Number(candidate.settings.gridColumns), candidate.pages)
-      : structuredClone(widget);
-    const index = page.widgets.findIndex((entry) => entry.id === copy.id);
+    const index = page.widgets.findIndex((entry) => entry.id === widget.id);
     if (action === 'create' && index >= 0) throw new Error('Widget-ID ist bereits vorhanden');
     if (action === 'update' && index < 0) throw new Error('Unbekanntes Widget');
+    let copy = structuredClone(widget);
+    if (widget.type === 'fhem-link') {
+      try {
+        copy = fitLinkWidget(widget, Number(candidate.settings.gridColumns), candidate.pages,
+          action === 'update' ? page.widgets[index] : null);
+      } catch (error) {
+        throw new WidgetLayoutError(error.message, { cause: error });
+      }
+    }
     if (action === 'create') page.widgets.push(copy);
     else page.widgets[index] = copy;
+    if (copy.type === 'fhem-link') {
+      try {
+        validateConfig(candidate);
+      } catch (error) {
+        throw new WidgetLayoutError(`Das LinkWidget benötigt mehr Platz und überschneidet sich mit einer anderen Rasterfläche. `
+          + `Es wurde nichts gespeichert. Linkkacheln kleiner oder anders anordnen; alternativ abbrechen, `
+          + `auf der Seite Platz schaffen und erneut öffnen. (${error.message})`, { cause: error });
+      }
+    }
     return this.saveDraft(candidate, expectedToken);
   }
 

@@ -119,6 +119,84 @@ test('closing a pending dialog suppresses completion while the confirmed write f
   await assert.rejects(services.saveWidget(widget), /nicht mehr aktiv/);
 });
 
+test('local link layout rejection preserves session, inputs and token for retry or cancel', async () => {
+  for (const failure of ['collision', 'edge', 'height']) {
+    const live = config();
+    live.pages[0].widgets = [
+      { id: 'links', type: 'fhem-link', title: 'Links', showTitle: true,
+        grid: { col: failure === 'edge' ? 2 : 1, row: 2, w: 4, h: 3 }, links: [
+          { id: 'link1', kind: 'internal', page: 'two', text: 'Original', showText: true,
+            textPosition: 'overlay', target: 'self', grid: { col: 1, row: 1, w: 4, h: 2 } },
+        ] },
+      { id: 'neighbor', type: 'text', html: 'Do not move', grid: { col: 1, row: 6, w: 4, h: 2 } },
+    ];
+    let state = { live, draft: null, token: 'a'.repeat(64) };
+    let writes = 0;
+    const controller = new Schema5DraftController({
+      read: async () => structuredClone(state),
+      save: async draft => { writes++; state = { live, draft, token: 'b'.repeat(64) }; },
+      publish: async () => {}, discard: async () => {},
+    });
+    await controller.reload();
+    const widget = live.pages[0].widgets[0];
+    const session = open(controller, 'one', state.token, widget);
+    let completed = false;
+    session.completion.then(() => { completed = true; });
+    const services = session.services({});
+    const edited = structuredClone(widget);
+    edited.links[0].text = 'Keep my edited text';
+    edited.links[0].image = `media/${'a'.repeat(32)}.png`;
+    edited.links.push({ ...structuredClone(edited.links[0]), id: 'link2',
+      grid: failure === 'edge' ? { col: 5, row: 1, w: 8, h: 2 }
+        : { col: 1, row: 3, w: 4, h: failure === 'height' ? 998 : 2 } });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await assert.rejects(services.saveWidget(edited), failure === 'collision' ? /nichts gespeichert/ : /mehr Platz/);
+      assert.equal(completed, false, 'preflight error does not complete or remove the dialog');
+      assert.equal(writes, 0);
+      assert.equal(controller.snapshot().token, 'a'.repeat(64));
+      assert.deepEqual(controller.snapshot().live, live);
+      assert.equal(controller.snapshot().draft, null);
+      assert.equal(edited.links[0].text, 'Keep my edited text');
+    }
+    if (failure !== 'collision') {
+      session.close();
+      assert.deepEqual(await session.completion, { cancelled: true });
+      assert.equal(writes, 0);
+    } else {
+      edited.links.pop();
+      await services.saveWidget(edited);
+      assert.equal(writes, 1, 'same session and token save the corrected layout');
+      const saved = (await session.completion).state.draft.pages[0].widgets[0];
+      assert.equal(saved.links[0].text, edited.links[0].text);
+      assert.equal(saved.links[0].image, edited.links[0].image);
+      assert.deepEqual(controller.snapshot().draft.pages[0].widgets[1], live.pages[0].widgets[1]);
+    }
+  }
+});
+
+test('LinkWidget transport failures remain terminal and require a controller reload', async () => {
+  const live = config();
+  const widget = { id: 'links', type: 'fhem-link', grid: { col: 1, row: 2, w: 4, h: 3 },
+    links: [{ id: 'one', kind: 'internal', page: 'two', text: 'Original', showText: true,
+      textPosition: 'overlay', target: 'self', grid: { col: 1, row: 1, w: 4, h: 3 } }] };
+  live.pages[0].widgets = [widget];
+  let writes = 0;
+  const controller = new Schema5DraftController({
+    read: async () => ({ live: structuredClone(live), draft: null, token: 'a'.repeat(64) }),
+    save: async () => { writes++; throw new Error('Test: backend failure'); },
+    publish: async () => {}, discard: async () => {},
+  });
+  await controller.reload();
+  const session = open(controller, 'one', 'a'.repeat(64), widget);
+  const services = session.services({});
+  await assert.rejects(services.saveWidget(widget), /backend failure/);
+  assert.match((await session.completion).error.message, /backend failure/);
+  assert.throws(() => controller.snapshot(), /nicht geladen/);
+  await assert.rejects(services.saveWidget(widget), /nicht mehr aktiv/);
+  assert.equal(writes, 1);
+  assert.deepEqual((await controller.reload()).live, live);
+});
+
 test('create and delete enforce their original action and cannot reuse a stale token', async () => {
   let state = { live: config(), draft: null, token: 'a'.repeat(64) };
   let writes = 0;

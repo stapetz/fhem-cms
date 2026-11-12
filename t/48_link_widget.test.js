@@ -12,7 +12,7 @@ const source = () => ({
   schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
   navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
   pages: [{ id: 'home', title: 'Startseite', widgets: [
-    { id: 'links', type: 'fhem-link', links: [link()], grid: { col: 1, row: 2, w: 6, h: 4 } },
+    { id: 'links', type: 'fhem-link', links: [link()], grid: { col: 1, row: 2, w: 4, h: 3 } },
   ] }],
 });
 const script = 'use strict; use warnings; use JSON::PP (); require "./FHEM/01_FHEMCMS.pm";'
@@ -85,6 +85,103 @@ test('LinkWidget session persists fitted dimensions as draft and live without al
   await controller.reload();
   assert.deepEqual(controller.snapshot().live.pages[0].widgets[0], widget);
   parity(state.live, true, 'auto-sized published widget');
+});
+
+test('existing LinkWidgets retain their own scale across densities, titles and manual outer resizing', () => {
+  for (const columns of [12, 24, 48, 96, 192]) {
+    const scale = columns / 12;
+    const previous = { ...source().pages[0].widgets[0], title: 'Links',
+      grid: { col: 1, row: 2, w: 5 * scale, h: 4 * scale } };
+    const before = structuredClone(previous);
+    assert.deepEqual(fitLinkWidget(previous, columns, source().pages, previous), previous,
+      'saving unchanged links preserves manually chosen dimensions');
+    const untitled = { ...structuredClone(previous), title: '', grid: { ...previous.grid, h: 3 * scale } };
+    assert.equal(fitLinkWidget({ ...untitled, title: 'Visible title' }, columns, source().pages, untitled).grid.h,
+      4 * scale, 'adding a title uses the existing height scale');
+    const changed = structuredClone(previous);
+    changed.links[0].grid = { col: 3, row: 6, w: 2, h: 1 };
+    changed.showTitle = false;
+    const fitted = fitLinkWidget(changed, columns, source().pages, previous);
+    assert.deepEqual(fitted.grid, { col: 1, row: 2, w: Math.round(2.5 * scale), h: scale });
+    assert.deepEqual(fitted.links, changed.links, 'nested coordinates remain unchanged');
+    assert.deepEqual(fitLinkWidget(fitted, columns, source().pages, fitted), fitted,
+      'reopening and saving does not introduce rounding growth');
+    assert.deepEqual(previous, before);
+  }
+});
+
+test('new LinkWidgets use the page density instead of a placeholder outer scale', async () => {
+  for (const columns of [12, 24, 48, 96, 192]) {
+    const scale = columns / 12;
+    const live = source();
+    live.settings.gridColumns = columns;
+    live.navigation.grid.w = columns;
+    live.pages[0].widgets = [];
+    let state = { live, draft: null, token: 'a'.repeat(64) };
+    const controller = new Schema5DraftController({
+      read: async () => structuredClone(state),
+      save: async draft => { state = { live, draft, token: 'b'.repeat(64) }; },
+      publish: async () => {}, discard: async () => {},
+    });
+    await controller.reload();
+    const widget = source().pages[0].widgets[0];
+    widget.grid.w = 6 * scale;
+    widget.grid.h = 4 * scale;
+    const session = new Schema5WidgetSession({ controller, pageId: 'home', token: state.token,
+      widget, action: 'create' });
+    await session.services({}).saveWidget(session.widget);
+    assert.deepEqual(state.draft.pages[0].widgets[0].grid, { col: 1, row: 2, w: 4 * scale, h: 3 * scale });
+    assert.deepEqual(state.live, live);
+  }
+});
+
+test('96-column existing layout saves without full-page inflation and retries a fourth link safely', async () => {
+  const live = source();
+  live.settings.gridColumns = 96;
+  live.navigation.grid = { col: 1, row: 1, w: 92, h: 4 };
+  const original = live.pages[0].widgets[0];
+  original.title = 'Existing links';
+  original.grid = { col: 1, row: 27, w: 40, h: 23 };
+  original.links = [1, 2, 3].map((number) => ({ ...link(), id: `link${number}`,
+    grid: { col: 1 + (number - 1) * 4, row: 1, w: 4, h: 4 } }));
+  live.pages[0].widgets.push(
+    { id: 'side', type: 'text', html: 'Keep side', grid: { col: 72, row: 23, w: 13, h: 12 } },
+    { id: 'below', type: 'text', html: 'Keep below', grid: { col: 27, row: 50, w: 45, h: 12 } });
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let writes = 0;
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async (draft, token) => {
+      assert.equal(token, state.token);
+      writes++;
+      state = { live, draft, token: String(writes).padStart(64, '0') };
+    },
+    publish: async () => {}, discard: async () => {},
+  });
+  await controller.reload();
+  await controller.saveWidget('home', original, state.token, 'update');
+  assert.deepEqual(state.draft, live, 'even saving the original three links used to cause a collision');
+  const session = new Schema5WidgetSession({ controller, pageId: 'home', token: state.token,
+    widget: state.draft.pages[0].widgets[0], action: 'update' });
+  const edited = session.widget;
+  edited.links.push({ ...link(), id: 'link4', text: 'Keep new link',
+    image: `media/${'a'.repeat(32)}.png`, grid: { col: 1, row: 5, w: 4, h: 3 } });
+  const fitted = fitLinkWidget(edited, 96, live.pages, original);
+  assert.deepEqual(fitted.grid, { col: 1, row: 27, w: 40, h: 37 },
+    'a new row grows height at the existing scale, never width to 96');
+  const services = session.services({});
+  await assert.rejects(services.saveWidget(edited), /nichts gespeichert/);
+  assert.equal(writes, 1, 'real overlap with the widget below is still rejected before transport');
+  edited.links.forEach((item, index) => {
+    item.grid = { col: 1 + index * 3, row: 1, w: 3, h: 4 };
+  });
+  await services.saveWidget(edited);
+  assert.equal(writes, 2);
+  assert.deepEqual(state.draft.pages[0].widgets[0].grid, original.grid);
+  assert.deepEqual(state.draft.pages[0].widgets[0].links, edited.links);
+  assert.deepEqual(state.draft.pages[0].widgets.slice(1), live.pages[0].widgets.slice(1));
+  assert.deepEqual(state.live, live);
+  parity(state.draft, true, '96-column existing scale and four links');
 });
 
 test('LinkWidget growth rejects collisions without writes or moving other widgets', async () => {

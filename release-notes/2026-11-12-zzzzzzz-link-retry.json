@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-12",
+  "version": "1.8.1-dev",
+  "title": "LinkWidget: Bestandsmasse und Eingaben erhalten (Refs #148)",
+  "changes": [
+    "Bestehende LinkWidgets behalten ihren bisherigen Massstab statt beim Speichern auf Seitenbreite anzuwachsen. Geaenderte Linkflaechen passen die Aussenmasse proportional an.",
+    "Vorab erkannte Rasterkollisionen und Platzgrenzen lassen den Linkdialog samt Eingaben offen, statt zur gesperrten Widgetsuche zu wechseln.",
+    "Nach Korrektur kann im selben Dialog erneut gespeichert oder abgebrochen werden. Nachbarwidgets werden nicht verschoben; echte Schreibfehler bleiben abgesichert."
+  ]
+}

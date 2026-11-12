@@ -360,15 +360,24 @@ skalieren Sie weiterhin wie andere Widgets auf der CMS-Seite.
 
 **Entwicklungsstand auf `dev` – noch nicht veröffentlicht:** Beim Speichern
 passt sich die äußere Widgetgröße an die belegte Fläche der Linkkacheln an.
-Ein einzelner Link mit 4 × 3 inneren Rasterfeldern benötigt bei 12 Seitenspalten
+Bei einem neuen Widget benötigt ein einzelner Link mit 4 × 3 inneren Rasterfeldern bei 12 Seitenspalten
 4 × 3 äußere Felder; ein sichtbarer Widgettitel ergänzt eine Zeile.
 Feinere Seitendichten skalieren diese Außenmaße entsprechend.
+Bei bestehenden Widgets bleibt der bisherige Maßstab für Breite und Höhe
+erhalten, auch nach manueller Größenänderung auf der Seite. Unveränderte
+Linkflächen ändern daher die Außenmaße nicht. Größere oder kleinere belegte
+Linkflächen passen die Außenmaße proportional an, auf ganze Rasterfelder gerundet.
+Ein volles inneres 12-Spalten-Raster bedeutet nicht volle Seitenbreite.
 Leere Randzeilen und -spalten werden in der Anzeige nicht mitgezählt;
 Abstände zwischen den Kacheln bleiben erhalten. Die Außenposition bleibt
 unverändert. Bei Überschneidungen oder zu wenig Platz am Seitenrand wird
 Speichern mit einer Meldung abgewiesen. Dann zuerst Platz schaffen oder die
-Linkkacheln verkleinern. Bestehende Widgets erhalten die passende Außenfläche
-beim nächsten Speichern ihres Einstellungsdialogs.
+Linkkacheln verkleinern. Bei einer vorab erkannten Platzkollision bleibt der
+Linkdialog mit allen Eingaben offen: Kacheln ändern und erneut speichern oder
+abbrechen. Neuladen ist dafür nicht nötig. Zum Verschieben des äußeren Widgets
+zuerst abbrechen und auf der Seite Platz schaffen.
+Eine neue Linkzeile kann weiterhin mit einem Widget darunter kollidieren.
+Alternativ lassen sich mehr, entsprechend kleinere Links in derselben Zeile anordnen.
 Ausgewählte Bilder erscheinen sofort auch auf den Kacheln im Bearbeitungsraster.
 Das Entfernen eines Bildes löscht dort ebenfalls die Vorschau.
 

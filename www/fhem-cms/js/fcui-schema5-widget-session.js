@@ -1,3 +1,5 @@
+import { WidgetLayoutError } from './fcui-schema5-draft.js';
+
 function sameGrid(left, right) {
   const keys = ['col', 'row', 'w', 'h'];
   return left && right && typeof left === 'object' && typeof right === 'object'
@@ -75,6 +77,10 @@ export class Schema5WidgetSession {
       }
       return state;
     } catch (error) {
+      if (error instanceof WidgetLayoutError && this.#status !== 'closed') {
+        this.#status = 'ready';
+        throw error;
+      }
       if (this.#status !== 'closed') {
         this.#status = 'closed';
         this.#resolve({ error });

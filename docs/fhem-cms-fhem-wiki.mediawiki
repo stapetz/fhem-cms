@@ -318,14 +318,22 @@ Das innere Linkraster ist unabhängig vom äußeren Seitenraster. Ein „neues F
 
 '''Entwicklungsstand auf dev, noch nicht veröffentlicht:''' Beim Speichern
 passt sich die äußere Widgetgröße an das belegte Rechteck der Linkkacheln an.
-Ein einzelner Link mit 4 × 3 inneren Feldern belegt bei 12 Seitenspalten
+Bei einem neuen Widget belegt ein einzelner Link mit 4 × 3 inneren Feldern bei 12 Seitenspalten
 4 × 3 äußere Felder; ein sichtbarer Widgettitel ergänzt eine Zeile. Feinere
-Seitendichten skalieren die Außenmaße. Leere Randspalten und -zeilen werden
+Seitendichten skalieren die Außenmaße. Bestehende Widgets behalten ihren
+bisherigen Maßstab für Breite und Höhe, auch nach manueller Größenänderung.
+Unveränderte Linkflächen behalten ihre Außenmaße; veränderte belegte Flächen
+passen diese proportional und auf ganze Rasterfelder gerundet an.
+Ein volles inneres 12-Spalten-Raster bedeutet nicht volle Seitenbreite.
+Leere Randspalten und -zeilen werden
 nicht angezeigt, Abstände zwischen Kacheln bleiben erhalten. Die Außenposition
 ändert sich nicht. Bei Überschneidungen oder Platzmangel am Seitenrand wird
 Speichern mit einer Meldung abgewiesen: zuerst Platz schaffen oder Kacheln
-verkleinern. Bestehende Widgets passen ihre Außenfläche beim nächsten
-Speichern des Einstellungsdialogs an.
+verkleinern. Bei vorab erkannten Platzkollisionen bleiben Linkdialog und
+Eingaben zum Korrigieren und erneuten Speichern offen; Neuladen ist nicht nötig.
+Alternativ abbrechen und auf der Seite Platz schaffen.
+Eine neue Linkzeile kann weiterhin mit einem Widget darunter kollidieren.
+Alternativ mehr, entsprechend kleinere Links in derselben Zeile anordnen.
 Ausgewählte Bilder erscheinen sofort auf den Kacheln im Bearbeitungsraster;
 '''Bild entfernen''' entfernt dort auch die Vorschau.
 
