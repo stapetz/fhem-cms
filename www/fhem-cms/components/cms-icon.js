@@ -35,7 +35,7 @@ class FHEMCMSIcon extends HTMLElement {
         .glyph { display: block; width: 1em; height: 1em; background-color: var(--state-color, var(--cms-accent, #8fd0a8));
           -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
         .glyph[hidden] { display: none; }
-        .state { white-space: nowrap; text-align: center; line-height: 1.1; }
+        .state { color: var(--cms-muted, #a5c9b2); font-size: 0.75em; white-space: nowrap; text-align: center; line-height: 1.1; }
         .state:empty { display: none; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }
@@ -299,8 +299,8 @@ class FHEMCMSIcon extends HTMLElement {
       return;
     }
     const title = this.shadowRoot.querySelector('[data-title]');
-    title.textContent = this.widgetConfig.title || '';
-    title.parentElement.hidden = !this.widgetConfig.title || this.widgetConfig.showTitle === false;
+    title.textContent = this.widgetConfig.title || this.widgetConfig.device || 'Status';
+    title.parentElement.hidden = this.widgetConfig.showTitle === false;
     const current = (this.snapshot || []).find((item) => item.readings?.[this.widgetConfig.reading] !== undefined);
     const readingValue = current ? String(current.readings[this.widgetConfig.reading]) : '';
     const mapping = (this.widgetConfig.states || []).find((item) => item.value === readingValue);
@@ -310,10 +310,10 @@ class FHEMCMSIcon extends HTMLElement {
       icon.hidden = false;
       icon.style.setProperty('--icon-url', `url("${this.services.iconUrl(mapping.icon)}")`);
       icon.style.setProperty('--state-color', mapping.color);
-      state.textContent = '';
+      state.textContent = readingValue || '–';
       icon.setAttribute('aria-label', readingValue);
       icon.title = readingValue;
-      this.shadowRoot.querySelector('[data-accessible]').textContent = `${this.widgetConfig.title || 'Status'}, ${readingValue}`;
+      this.shadowRoot.querySelector('[data-accessible]').textContent = `${title.textContent}, ${readingValue}`;
     } else {
       icon.hidden = true;
       state.textContent = readingValue || '–';

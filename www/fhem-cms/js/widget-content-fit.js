@@ -1,10 +1,15 @@
+export const widgetHierarchyCss = `
+  header h3[data-title] { font-size: clamp(10px, min(13cqh, 5cqw), 15px);
+    font-weight: 600; color: var(--cms-muted, #a5c9b2); }
+`;
+
 export const fittedContentCss = `
+  ${widgetHierarchyCss}
   .main { position: absolute; inset: 3%; display: flex; align-items: center;
     justify-content: center; min-width: 0; min-height: 0; padding: 0; }
   [data-fit-content] { flex: none; width: max-content; max-width: none; }
   .fit-row { display: inline-flex; align-items: center; gap: 0.14em; }
   :host([view-only]) header { left: 0; right: 0; padding-inline: 3%; }
-  @container (max-height: 3rem) { header { display: none; } }
 `;
 
 export function fitWidgetContent(host) {

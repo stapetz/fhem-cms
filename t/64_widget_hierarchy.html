@@ -1,0 +1,103 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Compact widget information hierarchy regression</title>
+<div id="fixture"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+
+const output = document.querySelector('#result');
+const fixture = document.querySelector('#fixture');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks += 1; };
+const settle = () => new Promise((resolve) => setTimeout(resolve, 70));
+const icon = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"%3E%3Cpath d="M1 1h8v8H1z"/%3E%3C/svg%3E';
+const services = { iconUrl: () => icon };
+const snapshot = (readings) => new Map([['Test', [{ name: 'Test', readings, sets: 'on:noArg off:noArg pct:slider,0,1,100' }]]]);
+const readingsForWidget = (readings) => [{ name: 'Test', readings, sets: 'on:noArg off:noArg pct:slider,0,1,100' }];
+const configurations = [
+  { type: 'fhem-value', id: 'value', device: 'Test', reading: 'temperature', unit: '°C' },
+  { type: 'fhem-switch', id: 'switch', device: 'Test', reading: 'state', on: 'on', off: 'off',
+    label: 'Licht', showLabel: false },
+  { type: 'fhem-icon', id: 'icon', device: 'Test', reading: 'state',
+    states: [{ value: 'on', icon: 'light.svg', color: '#ffffff' }] },
+  { type: 'fhem-slider', id: 'slider', device: 'Test', reading: 'pct', command: 'pct' },
+];
+const data = snapshot({ temperature: '21.5', state: 'on', pct: '40' });
+
+try {
+  for (const config of configurations) {
+    const original = JSON.stringify(config);
+    const host = createWidgetElement(config, services, data, true);
+    fixture.append(host);
+    const root = host.shadowRoot;
+    const title = root.querySelector('[data-title]');
+    const header = title.parentElement;
+    for (const [width, height] of [[320, 180], [180, 320], [500, 90], [96, 96], [120, 40]]) {
+      host.style.cssText = `width:${width}px;height:${height}px`;
+      await settle();
+      const tile = root.querySelector('.tile');
+      const titleRect = title.getBoundingClientRect();
+      const tileRect = tile.getBoundingClientRect();
+      check(!header.hidden, `${config.type}/${width}x${height}: fallback title is shown`);
+      check(title.textContent === 'Test', `${config.type}: device name is the title fallback`);
+      check(Number.parseFloat(getComputedStyle(title).fontSize) >= 10,
+        `${config.type}/${width}x${height}: title remains legible`);
+      check(Number.parseInt(getComputedStyle(title).fontWeight, 10) >= 600,
+        `${config.type}: title has primary emphasis`);
+      check(titleRect.left >= tileRect.left && titleRect.right <= tileRect.right
+        && titleRect.top >= tileRect.top && titleRect.bottom <= tileRect.bottom,
+      `${config.type}/${width}x${height}: title stays inside the tile (${titleRect.x},${titleRect.y},${titleRect.width},${titleRect.height}; ${tileRect.x},${tileRect.y},${tileRect.width},${tileRect.height})`);
+      if (config.type !== 'fhem-slider') {
+        const content = root.querySelector('[data-fit-content]').getBoundingClientRect();
+        check(content.top >= titleRect.bottom - 0.5,
+          `${config.type}/${width}x${height}: title does not overlap content`);
+      }
+    }
+
+    if (config.type === 'fhem-value') {
+      check(root.querySelector('[data-value]').textContent === '21.5', 'measurement remains visible');
+      check(root.querySelector('[data-unit]').textContent === '°C', 'unit remains visible');
+      host.data = readingsForWidget({});
+      check(root.querySelector('[data-value]').textContent === '–', 'missing reading has a neutral fallback');
+    } else if (config.type === 'fhem-switch') {
+      check(root.querySelector('[data-label]').hidden, 'optional custom caption remains hidden');
+      check(root.querySelector('[data-state]').textContent === 'An', 'switch state remains visible');
+      host.data = readingsForWidget({ state: 'unbekannt' });
+      check(root.querySelector('[data-state]').textContent === 'Zustand unbekannt',
+        'unknown switch state has an explicit fallback');
+      host.config = { ...host.config, showLabel: true };
+      check(!root.querySelector('[data-label]').hidden
+        && root.querySelector('[data-label]').textContent === 'Licht', 'optional custom caption is preserved');
+      check(root.querySelector('[data-state]').textContent === 'Zustand unbekannt',
+        'unknown state remains visible with a custom caption');
+    } else if (config.type === 'fhem-icon') {
+      check(root.querySelector('[data-icon]').hidden === false, 'mapped state icon remains visible');
+      check(root.querySelector('[data-state]').textContent === 'on', 'mapped state value remains visible');
+      host.data = readingsForWidget({ state: 'unknown state' });
+      check(root.querySelector('[data-state]').textContent === 'unknown state', 'unmapped state remains visible');
+      check(root.querySelector('[data-icon]').hidden, 'unmapped state does not show a misleading icon');
+    } else {
+      check(root.querySelector('[data-value]').textContent === '40', 'slider reading remains visible');
+      check(root.querySelector('[data-reading]').textContent === 'pct', 'slider reading name remains visible');
+      check(root.querySelector('[data-min]').textContent === '0'
+        && root.querySelector('[data-max]').textContent === '100', 'slider range information remains visible');
+    }
+
+    host.config = { ...host.config, title: 'Ein sehr langer Gerätename für kleine Kacheln' };
+    await settle();
+    check(title.textContent === 'Ein sehr langer Gerätename für kleine Kacheln',
+      `${config.type}: configured title takes precedence over the device`);
+    check(getComputedStyle(title).textOverflow === 'ellipsis', `${config.type}: long title is ellipsized`);
+    check(JSON.stringify(config) === original, `${config.type}: rendering does not mutate saved configuration`);
+    host.remove();
+  }
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+} finally {
+  fixture.replaceChildren();
+}
+</script>
