@@ -211,6 +211,8 @@ Navigation und Widgets skalieren gemeinsam mit der verfügbaren Breite. Browserz
 
 Bis einschließlich '''600 Pixel Inhaltsbreite''' ordnen Homepage und Vorschau die Widgets in Leserichtung mit Zeilenumbruch an. Der Editor bleibt zum präzisen Positionieren beim exakten Raster. Das Drehen des Geräts verändert keine gespeicherten Rasterpositionen.
 
+'''Entwicklungsstand dev:''' Im schmalen Smartphone-Hochformat nutzen Widgets die gesamte verfügbare Breite; im kurzen Querformat erhalten sie mindestens 40 Prozent.
+
 Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Browserzoom. Die Geräte-Vorschau hilft dabei, ersetzt aber nicht jeden Test auf dem Zielgerät.
 
 == Widgetübersicht ==

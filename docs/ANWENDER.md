@@ -252,11 +252,11 @@ seitlich scrollen; Werkzeugleiste und Browserseite bleiben an ihrer Position.
 
 Bis einschließlich 600 Pixel Inhaltsbreite ordnen Homepage und Vorschau die
 Widgets automatisch in Leserichtung mit Zeilenumbruch an, auch beim Drehen eines
-Smartphones. Nur in dieser schmalen Ansicht erhalten kleine Widgets mindestens
-ein Viertel der Bezugsbreite und 6 rem Höhe (bei Standardschrift 96 Pixel).
-Breite und Höhe folgen dem gespeicherten Seitenverhältnis. Zwei kleine Widgets
-passen weiterhin auf übliche Smartphonebreiten. Gespeicherte Rasterpositionen
-werden dabei nicht verändert; der Editor bleibt immer beim exakten Raster.
+Smartphones. Im Hochformat nutzen Widgets dabei die gesamte verfügbare Breite;
+im kurzen Querformat erhalten sie mindestens 40 Prozent, damit Inhalte lesbar
+bleiben. Die Höhe folgt dem gespeicherten Seitenverhältnis, mindestens jedoch
+6 rem (bei Standardschrift 96 Pixel). Gespeicherte Rasterpositionen werden
+dabei nicht verändert; der Editor bleibt immer beim exakten Raster.
 Auf Geräten mit primär grober Zeigereingabe und in der Smartphone-/Tablet-Vorschau
 wird das Ansichts-Raster bei Bedarf an die Breite angepasst, damit es auch im
 Querformat nicht horizontal scrollt. Auf breiteren Ansichten bleibt dabei die

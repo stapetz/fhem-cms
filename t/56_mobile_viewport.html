@@ -54,8 +54,8 @@ try {
       .map(item => item.getBoundingClientRect());
     const nav = root.querySelector('.cms-nav');
     if (root.hasAttribute('data-mobile-layout') && width <= 600) {
-      check(boxes.every(box => box.width >= root.clientWidth * 0.45),
-        `${width}: narrow mobile widgets retain at least half-width tiles`);
+      check(boxes.every(box => box.width >= root.clientWidth * 0.95),
+        `${width}: narrow mobile widgets use the available portrait width`);
     }
     if (root.hasAttribute('data-mobile-layout')) {
       check(getComputedStyle(root).display === 'flex', `${width}: mobile layout stays responsive in portrait and landscape`);
