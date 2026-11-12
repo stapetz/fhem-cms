@@ -205,7 +205,15 @@ Lesbarkeit abhängig vom Bild verringern.
 
 === Fenstergröße, Zoom und mobile Ansicht ===
 
-Navigation und Widgets skalieren gemeinsam mit der verfügbaren Breite. Browserzoom vergrößert oder verkleinert die Darstellung; im Editor kann der Rasterbereich bei Platzmangel seitlich scrollen.
+Navigation und Widgets skalieren gemeinsam mit der verfügbaren Breite.
+'''Noch nicht veröffentlicht (stapetz/fhem-cms#155):''' Das Seitenraster nutzt
+die gesamte verfügbare Inhaltsbreite, auch auf breiten Monitoren und beim
+Browserzoom. Kleine Außenabstände und sichere Bildschirmränder bleiben erhalten.
+Der Editor passt die Spaltenbreite ein, statt rechts Fläche freizulassen oder
+seitliches Scrollen zu verlangen. Gespeicherte Rasteranteile bleiben gleich;
+Zoom vergrößert daher nicht mehr zwingend die gesamte Kachel. Homepage und
+Vorschau können bei kleinerer CSS-Breite früher umbrechen; Mindestgrößen für
+lesbare Inhalte bleiben erhalten. Zoom und Resize schreiben keine Layoutdaten.
 
 Bis einschließlich '''600 Pixel Inhaltsbreite''' ordnen Homepage und Vorschau die Widgets in Leserichtung mit Zeilenumbruch an. Der Editor bleibt zum präzisen Positionieren beim exakten Raster. Das Drehen des Geräts verändert keine gespeicherten Rasterpositionen.
 

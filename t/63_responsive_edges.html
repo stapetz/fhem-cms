@@ -53,8 +53,8 @@ try {
           `${width}: ${edge} uses safe inset OR standard padding, not both (${actual}/${inset})`);
       }
       const area = root.getBoundingClientRect();
-      check(Math.abs(area.width - root.parentElement.clientWidth) <= 1 || !getComputedStyle(root).display.includes('flex'),
-        'flow fills the available workspace');
+      check(Math.abs(area.width - root.parentElement.clientWidth) <= 1,
+        'fixed raster and flow both fill the entire available workspace');
       check(root.parentElement.scrollWidth <= root.parentElement.clientWidth + 1, 'no horizontal workspace scrollbar');
       check(document.documentElement.scrollWidth <= innerWidth + 1, 'no horizontal document scrollbar');
       const boxes = rects();

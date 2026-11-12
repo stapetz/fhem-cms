@@ -169,6 +169,7 @@ for (const [name, fixtures] of [
           for (const [width, height, mobile, left, right, bottom] of [
             [768, 900, false, 0, 0, 0], [1000, 900, false, 0, 0, 0],
             [1280, 900, false, 0, 0, 0], [1440, 900, false, 0, 0, 0],
+            [1920, 1080, false, 0, 0, 0], [2560, 1440, false, 0, 0, 0],
             [768, 900, false, 0, 0, 0], [393, 852, true, 0, 0, 34],
             [852, 393, true, 59, 59, 21], [852, 393, true, 59, 0, 21],
             [393, 852, true, 0, 0, 34], [834, 1194, true, 0, 0, 20],
@@ -395,7 +396,7 @@ test('editor tools follow real hover, keyboard focus and touch capability withou
   }
 });
 
-test('real editor pointer drag and resize preserve appearance on a scrollable canvas', {
+test('real editor pointer drag and resize preserve appearance on a full-width canvas', {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 45000,
 }, async () => {
@@ -544,7 +545,10 @@ test('real browser zoom and resizing scale widgets and navigation without writes
       const [editorWide, editorNarrow] = data.editorResize;
       assert.ok(editorWide.widget.width > editorNarrow.widget.width * 1.1, 'editor widgets follow window size');
       assert.ok(editorWide.widget.height > editorNarrow.widget.height * 1.1, 'editor height follows window size');
-      if (zoom === 2) assert.ok(data.editorScroll.width > data.editorScroll.client, 'zoomed editing canvas scrolls at narrow widths');
+      assert.ok(Math.abs(data.editorInitial.root.width - data.editorScroll.client) < 1,
+        'editor uses the full available content width at every zoom');
+      assert.ok(data.editorScroll.width <= data.editorScroll.client + 1,
+        'zoomed editing canvas fits without horizontal scrolling');
       assert.ok(data.longCompact && data.openLinks, `long navigation opens and stays usable at zoom ${zoom}`);
       assert.equal(data.restored.compact, data.initial.compact,
         `navigation recovers after label changes: ${JSON.stringify({ initial: data.initial, restored: data.restored })}`);
@@ -570,30 +574,20 @@ test('real browser zoom and resizing scale widgets and navigation without writes
       assert.ok(phone.widgets[0].y === phone.widgets[1].y, 'two small widgets still fit on a phone');
       assert.ok(landscape.widgets[0].y === landscape.widgets[1].y, 'landscape retains side-by-side widgets');
     }
-    const physical = (zoom, element, key) => results.get(zoom).initial[element][key] * zoom;
-    for (const zoom of [0.8, 1.25, 2]) {
-      for (const font of ['navFont', 'widgetFont']) {
-        const ratio = results.get(zoom).initial[font] * zoom / results.get(1).initial[font];
-        assert.ok(zoom < 1 ? ratio < 0.98 : ratio > 1.02,
-          `${font} visibly follows real zoom ${zoom}: ${ratio}`);
-      }
-      for (const element of ['widget', 'link']) {
-        for (const dimension of ['width', 'height']) {
-          const ratio = physical(zoom, element, dimension) / physical(1, element, dimension);
-          assert.ok(zoom < 1 ? ratio < 0.98 : ratio > 1.02,
-            `${element} ${dimension} visibly follows real zoom ${zoom}: ratio ${ratio}`);
-        }
-        for (const key of ['width', 'height']) {
-          const ratio = results.get(zoom).editorInitial.widget[key] * zoom / results.get(1).editorInitial.widget[key];
-          assert.ok(zoom < 1 ? ratio < 0.98 : ratio > 1.02, `editor ${key} visibly follows real zoom ${zoom}: ${ratio}`);
-        }
-        const fontRatio = results.get(zoom).editorInitial.widgetFont * zoom / results.get(1).editorInitial.widgetFont;
-        assert.ok(zoom < 1 ? fontRatio < 0.98 : fontRatio > 1.02, 'editor widget contents visibly follow real zoom');
+    for (const data of results.values()) {
+      assert.ok(Math.abs(data.initial.root.width - data.editorInitial.root.width) < 1,
+        'view and editor share the full-width canvas even when the view wraps');
+      assert.ok(data.editorInitial.widgetFont > 0 && data.initial.widgetFont > 0,
+        'widget text remains rendered with real browser zoom');
+      for (const dimension of ['width', 'height']) {
+        assert.ok(Math.abs(data.editorInitial.widget[dimension] / data.editorInitial.root.width
+          - results.get(1).editorInitial.widget[dimension] / results.get(1).editorInitial.root.width) < .001,
+          `saved widget ${dimension} proportion stays constant as zoom changes the available CSS width`);
       }
     }
     const rowCount = (zoom) => results.get(zoom).initial.widgets.slice(0, 4)
       .filter((item) => Math.abs(item.y - results.get(zoom).initial.widgets[0].y) < 1).length;
-    assert.ok(rowCount(2) < rowCount(1), 'zoomed live view wraps without changing the saved editor raster');
+    assert.ok(results.get(2).initial.flowing, 'zoomed live view uses responsive flow without changing the saved editor raster');
     console.log(JSON.stringify([...results].map(([zoom, data]) => ({
       zoom, viewport: data.initial.viewport, widget: data.initial.widget.width,
       button: data.initial.link.width, rowCount: rowCount(zoom),
