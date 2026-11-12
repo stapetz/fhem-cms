@@ -1,4 +1,4 @@
-import { LINK_COLUMNS, MAX_LINKS, linkHref, validateLinkItems } from '../js/link-widget.js';
+import { LINK_COLUMNS, MAX_LINKS, linkBounds, linkHref, validateLinkItems } from '../js/link-widget.js';
 
 function node(tag, text) {
   const result = document.createElement(tag);
@@ -96,7 +96,9 @@ class FHEMCMSLink extends HTMLElement {
           <label>Widgettitel (optional)<input name="title" maxlength="64"></label>
           <label class="check"><input name="showTitle" type="checkbox"> Widgettitel anzeigen</label>
           <p class="hint">Linkkacheln am Griff ziehen, an der Ecke skalieren. Eigenes Raster mit 12 Spalten.
-          Änderungen werden erst mit Speichern als Entwurf übernommen.</p>
+          Die Widgetgröße folgt beim Speichern der belegten Linkfläche; ein sichtbarer Widgettitel
+          benötigt eine zusätzliche Rasterzeile. Änderungen werden erst als Entwurf übernommen.
+          Bei Platzmangel zuerst das Widget verschieben oder Linkkacheln verkleinern.</p>
           <div class="editor"><div><div class="canvas"><div class="grid-stack" data-grid></div></div>
             <button type="button" data-add>Link hinzufügen</button></div>
             <div class="settings" data-settings></div></div>
@@ -156,8 +158,9 @@ class FHEMCMSLink extends HTMLElement {
     box.replaceChildren();
     try {
       validateLinkItems(this.config.links, this.pages);
-      const rows = Math.max(...this.config.links.map(link => link.grid.row + link.grid.h - 1));
-      box.style.gridTemplateRows = `repeat(${rows},minmax(0,1fr))`;
+      const bounds = linkBounds(this.config.links);
+      box.style.gridTemplateColumns = `repeat(${bounds.w},minmax(0,1fr))`;
+      box.style.gridTemplateRows = `repeat(${bounds.h},minmax(0,1fr))`;
       for (const link of this.config.links) {
         const anchor = node('a');
         anchor.className = 'link-tile';
@@ -166,8 +169,8 @@ class FHEMCMSLink extends HTMLElement {
         anchor.rel = 'noopener noreferrer';
         anchor.setAttribute('aria-label', link.text);
         anchor.dataset.position = link.textPosition;
-        anchor.style.gridColumn = `${link.grid.col} / span ${link.grid.w}`;
-        anchor.style.gridRow = `${link.grid.row} / span ${link.grid.h}`;
+        anchor.style.gridColumn = `${link.grid.col - bounds.col + 1} / span ${link.grid.w}`;
+        anchor.style.gridRow = `${link.grid.row - bounds.row + 1} / span ${link.grid.h}`;
         if (link.showText) {
           const text = node('span', link.text);
           text.className = 'link-text';

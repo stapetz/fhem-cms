@@ -423,6 +423,18 @@ Das innere `grid` enthält exakt numerische, positive Ganzzahlen `col,row,w,h`,
 Die Seitendichte skaliert nur das äußere Raster. Gridstack wird erst beim Öffnen
 des Dialogs geladen; `save(false)` erfasst **alle** inneren Knoten einschließlich
 mitverschobener Kollisionspartner. Schließen/Entfernen zerstört die Instanz.
+Entwicklungsstand #148: `Schema5DraftController.saveWidget` berechnet für
+`fhem-link` vor dem validierten Entwurfsschreiben die Außenmaße mit
+`fitLinkWidget`: belegtes Rechteck aus `linkBounds`, multipliziert mit
+`gridColumns / 12`; ein sichtbarer nichtleerer Widgettitel ergänzt eine
+innere Höheneinheit. `col,row` und sämtliche inneren Koordinaten bleiben
+unverändert. Die Widget-Session akzeptiert weiterhin ausschließlich das
+ursprüngliche äußere Raster vom Dialog; nur der Controller passt `w,h` an.
+Normale Layoutvalidierung weist Überschneidungen und Grenzen ohne Schreibzugriff
+ab, es gibt kein implizites Reflow anderer Widgets. Die Darstellung verwendet
+dieselben belegten Grenzen und zieht deren linke/obere Leerränder ab.
+Alte Konfigurationen bleiben lesbar und erhalten erst beim Dialogspeichern
+die passenden Außenmaße; reine Layoutänderungen passen diese nicht an.
 `services.pages` liefert nur `{id,title}` für die Zielauswahl. Seiten-ID-Änderungen
 müssen interne Referenzen atomar mitführen; Ziel-Löschungen scheitern sichtbar
 an der Konfigurationsvalidierung, ohne Links stillschweigend zu entfernen.

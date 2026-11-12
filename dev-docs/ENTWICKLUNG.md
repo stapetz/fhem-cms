@@ -1050,6 +1050,29 @@ echte FHEM-Instanz erforderlich. Lokaler Rot/Grün-Nachweis: Die alte
 Range-Wiederherstellung scheitert bereits an der ersten Fett-Prüfung,
 die korrigierte Variante besteht alle 85 Prüfungen.
 
+## LinkWidget: Gesamtfläche (Refs #148)
+
+Entwicklungsstand auf `dev`, noch nicht veröffentlicht:
+Beim Speichern des LinkWidget-Dialogs bestimmt der Draft-Controller die Außenmaße
+aus dem belegten Rechteck aller inneren Linkkacheln. Innere Breite/Höhe werden
+mit `gridColumns / 12` skaliert; ein sichtbarer Widgettitel ergänzt eine innere
+Höheneinheit. Außenposition und innere Anordnung bleiben unverändert.
+Leere Randspalten/-zeilen entfallen nur in der Darstellung. Bestehende
+Konfigurationen bleiben lesbar, ihre Außenmaße ändern sich erst beim nächsten
+Dialogspeichern. Layoutänderungen allein lösen keine Größenanpassung aus.
+Kollisionen und Seiten-/Höhengrenzen verhindern das Schreiben, ohne andere
+Widgets zu verschieben. Die Fehlermeldung bleibt im bestehenden Dialog-/Session-
+Fehlerpfad sichtbar. Abbrechen schreibt keine Änderungen.
+
+Prüfungen: `t/48_link_widget.test.js` deckt Grenzen, Titel, alle fünf Dichten,
+Hinzufügen/Entfernen/Skalieren und abgewiesene Kollisionen ab.
+`t/17_schema5_draft.test.js` prüft die tatsächliche Perl-Persistenz einschließlich
+Neuladen und Veröffentlichung in isolierten Dateien. Der Chrome-Runner
+`t/35_schema5_scaling.test.js` führt die Drag-/Resize-Prüfung
+`t/49_link_widget.html` und den Geometrievergleich `t/47_view_editor_layout.html`
+aus. Letzterer enthält kompakte Einzel- und Mehrfachlinks in allen Seitendichten
+und vergleicht Kachelpositionen/-maße zwischen Editor und Ansicht.
+
 ## Repositorystruktur
 
 | Pfad | Zweck |

@@ -6,6 +6,7 @@
 <pre id="result"></pre>
 <script type="module">
 import '../www/fhem-cms/components/cms-link.js';
+import { fitLinkWidget } from '../www/fhem-cms/js/link-widget.js';
 const result = document.querySelector('#result');
 let checks = 0;
 const check = (condition, name) => { checks++; if (!condition) throw new Error(name); };
@@ -91,6 +92,18 @@ try {
     if (showText && textPosition === 'below') equal(getComputedStyle(tile.querySelector('.link-text')).order, '1', 'text below image');
     if (showText && textPosition === 'overlay') equal(getComputedStyle(tile.querySelector('.link-text')).position, 'absolute', 'text integrated into image');
   }
+  for (const viewport of [320, 720]) {
+    widget.style.width = `${viewport}px`;
+    widget.config = { ...structuredClone(initial), links: [{ ...initial.links[0],
+      grid: { col: 7, row: 9, w: 4, h: 3 } }] };
+    const tile = $('[data-links] a').getBoundingClientRect();
+    const box = $('[data-links]').getBoundingClientRect();
+    check(tile.width >= box.width * .95 && tile.height >= box.height * .95,
+      'single offset link fills its occupied area without empty outer grid tracks');
+    equal($('[data-links] a').style.gridColumn, '1 / span 4', 'leading empty columns trimmed for display');
+    equal($('[data-links] a').style.gridRow, '1 / span 3', 'leading empty rows trimmed for display');
+  }
+  widget.style.width = '';
   widget.config = structuredClone(initial);
   await widget.openConfig();
   check($('[data-dialog]').open && widget.grid, 'nested Gridstack opened');
@@ -193,6 +206,19 @@ try {
         equal(saved.grid, initial.grid, 'outer raster unchanged after actual drag');
         equal(saved.links[0].targetMode, 'modal', 'modal setting saved');
         equal(saved.links[0].modalSize, 'sm', 'modal size saved');
+        const fitted = fitLinkWidget(saved, 12, pages);
+        equal(fitted.grid, { col: 3, row: 5, w: 8, h: 8 },
+          'outer size follows dragged/resized tiles and visible title');
+        const previousView = structuredClone(widget.config);
+        widget.config = fitted;
+        const view = $('[data-links]').getBoundingClientRect();
+        for (const tile of $('[data-links]').children) {
+          const rect = tile.getBoundingClientRect();
+          check(rect.left >= view.left - 1 && rect.right <= view.right + 1
+            && rect.top >= view.top - 1 && rect.bottom <= view.bottom + 1,
+          'all links fit the rendered occupied area');
+        }
+        widget.config = previousView;
         widget.config = structuredClone(saved);
         await widget.openConfig();
         equal($('[data-field=targetMode]').value, 'modal', 'modal setting survives reopening');

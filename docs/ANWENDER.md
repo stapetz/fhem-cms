@@ -347,6 +347,18 @@ Position und Größe werden ausschließlich grafisch geändert.
 Überlappungen sind nicht speicherbar. Das äußere LinkWidget verschieben und
 skalieren Sie weiterhin wie andere Widgets auf der CMS-Seite.
 
+**Entwicklungsstand auf `dev` – noch nicht veröffentlicht:** Beim Speichern
+passt sich die äußere Widgetgröße an die belegte Fläche der Linkkacheln an.
+Ein einzelner Link mit 4 × 3 inneren Rasterfeldern benötigt bei 12 Seitenspalten
+4 × 3 äußere Felder; ein sichtbarer Widgettitel ergänzt eine Zeile.
+Feinere Seitendichten skalieren diese Außenmaße entsprechend.
+Leere Randzeilen und -spalten werden in der Anzeige nicht mitgezählt;
+Abstände zwischen den Kacheln bleiben erhalten. Die Außenposition bleibt
+unverändert. Bei Überschneidungen oder zu wenig Platz am Seitenrand wird
+Speichern mit einer Meldung abgewiesen. Dann zuerst Platz schaffen oder die
+Linkkacheln verkleinern. Bestehende Widgets erhalten die passende Außenfläche
+beim nächsten Speichern ihres Einstellungsdialogs.
+
 **Speichern** übernimmt Links und innere Positionen gemeinsam in den Entwurf;
 **Abbrechen** verwirft diese Dialogänderungen. Die Homepage ändert sich erst mit
 **Veröffentlichen**. Interne Links werden beim Umbenennen einer Seitendatei
