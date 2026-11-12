@@ -60,6 +60,32 @@ test('icon URLs remain same-origin when FHEMWEB is at the web root', () => {
   assert.equal(root.iconUrl('../invalid'), '');
 });
 
+test('history waits for asynchronous DbLog results and surfaces worker errors', async () => {
+  const commands = [];
+  let replies = [
+    { status: 'pending' },
+    { status: 'pending' },
+    { source: 'dblog', points: [[1, 2, 2, 2]] },
+  ];
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    commands.push(options.body.get('cmd'));
+    return new Response(JSON.stringify(replies.shift()));
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.deepEqual(await client.history('Temp', 'temperature'), {
+    source: 'dblog', points: [[1, 2, 2, 2]],
+  });
+  assert.equal(commands.length, 3);
+  assert.ok(commands.every((command) => command === 'get cms history Temp temperature 24h auto auto'));
+
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    return new Response(JSON.stringify({ status: 'error', message: 'DbLog-Abfrage fehlgeschlagen' }));
+  };
+  await assert.rejects(client.history('Temp', 'temperature'), /DbLog-Abfrage fehlgeschlagen/);
+});
+
 test('preview services expose only reads and explicitly reject actions', async () => {
   const calls = [];
   const client = {

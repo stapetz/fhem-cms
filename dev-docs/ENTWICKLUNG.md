@@ -605,6 +605,13 @@ Widget-Vorschau und im Schema-5-Device-Einstieg verwendet.
 Beim Entfernen einer Diagrammkomponente werden laufende Verlaufsergebnisse
 verworfen; beim erneuten Verbinden wird der Verlauf neu angefordert. Das
 verhindert die Übernahme verspäteter Antworten nach einem Seitenwechsel.
+DbLog-Verläufe werden in begrenzten `BlockingCall`-Workern abgefragt. Identische
+laufende Anfragen werden zusammengefasst, erfolgreiche und fehlgeschlagene
+Ergebnisse 30 Sekunden zwischengespeichert, und höchstens vier Worker sowie 32
+offene Anfragen gleichzeitig zugelassen. Ein Worker hat ein Zeitlimit von
+20 Sekunden; das Frontend fragt ausstehende Ergebnisse alle 500 ms für maximal
+25 Sekunden ab. FileLog-Verläufe bleiben synchron. Worker erhalten nur die
+validierten Abfrageparameter und den DbLog-Gerätenamen, keine Zugangsdaten.
 Beim Verlassen der bestehenden Oberfläche werden ausstehende Snapshots und
 Ereignisse geschlossener WebSockets verworfen; sie dürfen keine Abonnements
 erneut starten. Eine vollständige Umstellung auf den zentralen FCUI-Controller

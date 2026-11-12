@@ -1490,7 +1490,12 @@ sub FHEMCMS_StoreMedia {
 
 # Verlauf aus DbLog oder FileLog (wie TemperatureCollector); Zeitraum, Punktezahl und gelesene Zeilen sind begrenzt.
 our %FHEMCMS_HISTORY_CACHE;
+our %FHEMCMS_HISTORY_JOBS;
+our $FHEMCMS_HISTORY_JOB_SEQUENCE = 0;
 our $FHEMCMS_HISTORY_CACHE_SECONDS = 30;
+our $FHEMCMS_HISTORY_JOB_TIMEOUT = 20;
+our $FHEMCMS_HISTORY_MAX_WORKERS = 4;
+our $FHEMCMS_HISTORY_MAX_PENDING = 32;
 our $FHEMCMS_HISTORY_MAX_POINTS = 400;
 our $FHEMCMS_HISTORY_MAX_LINES = 2000000;
 our $FHEMCMS_HISTORY_MAX_ROWS = 500000;
@@ -1654,33 +1659,13 @@ sub FHEMCMS_HistoryRows {
     return (\@rows, $truncated, undef);
 }
 
-# get <cms> history <device> <reading> <24h|7d|30d|365d> <auto|raw|15m|1h|1d> [auto|dblog|filelog]
-sub FHEMCMS_History {
-    my ($cmsName, $device, $reading, $range, $granularity, $source) = @_;
-    return 'Ungueltiges Device' if (!FHEMCMS_ValidName($device));
-    return 'Ungueltiges Reading' if (!defined($reading) || $reading !~ /\A[A-Za-z0-9_.-]{1,128}\z/);
-    $range //= '24h';
-    $granularity //= 'auto';
-    $source //= 'auto';
-    return 'Ungueltiger Zeitraum' if (!exists($FHEMCMS_HISTORY_HOURS{$range}));
-    return 'Ungueltige Granularitaet' if (!exists($FHEMCMS_HISTORY_STEPS{$granularity}));
-    return 'Ungueltige Quelle' if ($source !~ /\A(?:auto|dblog|filelog)\z/);
-
-    my $key = join("\0", $cmsName, $device, $reading, $range, $granularity, $source);
-    my $cached = $FHEMCMS_HISTORY_CACHE{$key};
-    return $cached->{json} if ($cached && time() - $cached->{time} < $FHEMCMS_HISTORY_CACHE_SECONDS);
-
-    my ($kind, $logHash) = FHEMCMS_HistorySource($cmsName, $source, $device, $reading);
-    return $logHash if (!$kind);
-
+sub FHEMCMS_HistoryData {
+    my ($cmsName, $kind, $logHash, $device, $reading, $range, $granularity) = @_;
     my $to = time();
     my $hours = $FHEMCMS_HISTORY_HOURS{$range};
     my $from = $to - $hours * 3600;
     my ($rows, $truncated, $error) = FHEMCMS_HistoryRows($cmsName, $kind, $logHash, $device, $reading, $from, $to);
-    if ($error) {
-        Log3($cmsName, 2, "FHEMCMS ($cmsName): Verlauf von $device:$reading nicht lesbar: $error");
-        return $error;
-    }
+    return (undef, $error) if ($error);
 
     my @rows = sort { $a->[0] <=> $b->[0] } @{$rows};
     my $minStep = 1;
@@ -1721,10 +1706,145 @@ sub FHEMCMS_History {
         $_ = sprintf('%.4f', $_) + 0 for (@{$point}[1 .. 3]);
     }
 
-    my $text = JSON::PP->new->utf8->canonical->encode({
+    return (JSON::PP->new->utf8->canonical->encode({
         source => $kind, from => $from, to => $to, step => $step, rows => scalar(@rows),
         truncated => ($truncated ? JSON::PP::true : JSON::PP::false), points => \@points,
-    });
+    }), undef);
+}
+
+sub FHEMCMS_HistoryPending {
+    return JSON::PP->new->utf8->canonical->encode({status => 'pending'});
+}
+
+sub FHEMCMS_StartQueuedHistoryJobs {
+    return if (!defined(&BlockingCall));
+
+    my $running = scalar grep { $_->{status} eq 'running' } values %FHEMCMS_HISTORY_JOBS;
+    for my $key (sort {
+        $FHEMCMS_HISTORY_JOBS{$a}{queuedAt} <=> $FHEMCMS_HISTORY_JOBS{$b}{queuedAt}
+            || $a cmp $b
+    } grep { $FHEMCMS_HISTORY_JOBS{$_}{status} eq 'queued' } keys %FHEMCMS_HISTORY_JOBS) {
+        last if ($running >= $FHEMCMS_HISTORY_MAX_WORKERS);
+        my $job = $FHEMCMS_HISTORY_JOBS{$key};
+        my $arg = encode_base64(JSON::PP->new->utf8->canonical->encode($job->{request}), '');
+        BlockingCall('FHEMCMS_HistoryWorker', $arg, 'FHEMCMS_HistoryDone',
+            $FHEMCMS_HISTORY_JOB_TIMEOUT, 'FHEMCMS_HistoryAbort', $arg);
+        $job->{status} = 'running';
+        $running++;
+    }
+}
+
+sub FHEMCMS_HistoryWorker {
+    my ($arg) = @_;
+    my $request = eval { JSON::PP->new->utf8->decode(decode_base64($arg // '')) };
+    return '' if ($@ || ref($request) ne 'HASH');
+    return '' if (!FHEMCMS_ValidName($request->{cmsName}) || !FHEMCMS_ValidName($request->{dblog})
+        || !FHEMCMS_ValidName($request->{device})
+        || !defined($request->{reading}) || $request->{reading} !~ /\A[A-Za-z0-9_.-]{1,128}\z/
+        || !exists($FHEMCMS_HISTORY_HOURS{$request->{range} // ''})
+        || !exists($FHEMCMS_HISTORY_STEPS{$request->{granularity} // ''})
+        || ($request->{source} // '') !~ /\A(?:auto|dblog)\z/
+        || !defined($request->{key}) || ref($request->{key})
+        || !defined($request->{token}) || ref($request->{token}));
+
+    my $logHash = $main::defs{$request->{dblog}};
+    my ($json, $error);
+    if (ref($logHash) ne 'HASH' || ($logHash->{TYPE} // '') ne 'DbLog') {
+        $error = 'Kein DbLog-Device gefunden';
+    } else {
+        my $ok = eval {
+            ($json, $error) = FHEMCMS_HistoryData($request->{cmsName}, 'dblog', $logHash,
+                $request->{device}, $request->{reading}, $request->{range}, $request->{granularity});
+            1;
+        };
+        $error = 'DbLog-Abfrage fehlgeschlagen' if (!$ok);
+    }
+
+    return encode_base64(JSON::PP->new->utf8->canonical->encode({
+        key => $request->{key}, token => $request->{token}, json => $json, error => $error,
+    }), '');
+}
+
+sub FHEMCMS_HistoryDone {
+    my ($result) = @_;
+    my $payload = eval { JSON::PP->new->utf8->decode(decode_base64($result // '')) };
+    return if ($@ || ref($payload) ne 'HASH' || !defined($payload->{key}) || ref($payload->{key})
+        || !defined($payload->{token}) || ref($payload->{token}));
+    my $job = $FHEMCMS_HISTORY_JOBS{$payload->{key}};
+    return if (!$job || $job->{request}{token} ne $payload->{token});
+
+    delete($FHEMCMS_HISTORY_JOBS{$payload->{key}});
+    my $response = defined($payload->{error}) && !ref($payload->{error})
+        ? $payload->{error}
+        : defined($payload->{json}) && !ref($payload->{json})
+            ? $payload->{json}
+            : 'DbLog-Abfrage fehlgeschlagen';
+    $FHEMCMS_HISTORY_CACHE{$payload->{key}} = {time => time(), json => $response};
+    Log3($job->{request}{cmsName}, 2, "FHEMCMS ($job->{request}{cmsName}): DbLog-Verlauf fehlgeschlagen")
+        if (defined($payload->{error}) && !ref($payload->{error}) && $payload->{error} ne '');
+    %FHEMCMS_HISTORY_CACHE = () if (keys(%FHEMCMS_HISTORY_CACHE) > 50);
+    FHEMCMS_StartQueuedHistoryJobs();
+}
+
+sub FHEMCMS_HistoryAbort {
+    my ($arg) = @_;
+    my $request = eval { JSON::PP->new->utf8->decode(decode_base64($arg // '')) };
+    return if ($@ || ref($request) ne 'HASH' || !defined($request->{key}) || ref($request->{key})
+        || !defined($request->{token}) || ref($request->{token}));
+    my $job = $FHEMCMS_HISTORY_JOBS{$request->{key}};
+    return if (!$job || $job->{request}{token} ne $request->{token});
+
+    delete($FHEMCMS_HISTORY_JOBS{$request->{key}});
+    $FHEMCMS_HISTORY_CACHE{$request->{key}} = {time => time(), json => 'DbLog-Abfrage hat das Zeitlimit ueberschritten'};
+    Log3($request->{cmsName}, 2, "FHEMCMS ($request->{cmsName}): DbLog-Verlauf hat das Zeitlimit ueberschritten");
+    FHEMCMS_StartQueuedHistoryJobs();
+}
+
+# get <cms> history <device> <reading> <24h|7d|30d|365d> <auto|raw|15m|1h|1d> [auto|dblog|filelog]
+sub FHEMCMS_History {
+    my ($cmsName, $device, $reading, $range, $granularity, $source) = @_;
+    return 'Ungueltiges Device' if (!FHEMCMS_ValidName($device));
+    return 'Ungueltiges Reading' if (!defined($reading) || $reading !~ /\A[A-Za-z0-9_.-]{1,128}\z/);
+    $range //= '24h';
+    $granularity //= 'auto';
+    $source //= 'auto';
+    return 'Ungueltiger Zeitraum' if (!exists($FHEMCMS_HISTORY_HOURS{$range}));
+    return 'Ungueltige Granularitaet' if (!exists($FHEMCMS_HISTORY_STEPS{$granularity}));
+    return 'Ungueltige Quelle' if ($source !~ /\A(?:auto|dblog|filelog)\z/);
+
+    my ($kind, $logHash) = FHEMCMS_HistorySource($cmsName, $source, $device, $reading);
+    return $logHash if (!$kind);
+    my $key = join("\0", $cmsName, $device, $reading, $range, $granularity, $source,
+        $kind, $logHash->{NAME} // '');
+    my $cached = $FHEMCMS_HISTORY_CACHE{$key};
+    return $cached->{json} if ($cached && time() - $cached->{time} < $FHEMCMS_HISTORY_CACHE_SECONDS);
+
+    if ($kind eq 'dblog') {
+        return FHEMCMS_HistoryPending() if (exists($FHEMCMS_HISTORY_JOBS{$key}));
+        return 'Zu viele Verlaufabfragen gleichzeitig; bitte erneut versuchen'
+            if (scalar(keys(%FHEMCMS_HISTORY_JOBS)) >= $FHEMCMS_HISTORY_MAX_PENDING);
+        return 'Asynchrone DbLog-Abfragen sind nicht verfuegbar' if (!defined(&BlockingCall));
+
+        my $token = sha256_hex(join("\0", $key, $$, ++$FHEMCMS_HISTORY_JOB_SEQUENCE, Time::HiRes::time()));
+        $FHEMCMS_HISTORY_JOBS{$key} = {
+            status => 'queued',
+            queuedAt => Time::HiRes::time(),
+            request => {
+                key => $key, token => $token, cmsName => $cmsName, dblog => $logHash->{NAME},
+                device => $device, reading => $reading, range => $range, granularity => $granularity,
+                source => $source,
+            },
+        };
+        FHEMCMS_StartQueuedHistoryJobs();
+        return $FHEMCMS_HISTORY_CACHE{$key}{json} if (exists($FHEMCMS_HISTORY_CACHE{$key}));
+        return FHEMCMS_HistoryPending();
+    }
+
+    my ($text, $error) = FHEMCMS_HistoryData($cmsName, $kind, $logHash, $device, $reading, $range, $granularity);
+    if ($error) {
+        Log3($cmsName, 2, "FHEMCMS ($cmsName): Verlauf von $device:$reading nicht lesbar: $error");
+        return $error;
+    }
     %FHEMCMS_HISTORY_CACHE = () if (keys(%FHEMCMS_HISTORY_CACHE) > 50);
     $FHEMCMS_HISTORY_CACHE{$key} = {time => time(), json => $text};
     return $text;

@@ -879,15 +879,55 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
         return ({tstamp => POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime(time() - 60)), value => '12.5 W'},
             {tstamp => 'broken', value => '1'});
     };
+    my @historyJobs;
+    local *main::BlockingCall = sub {
+        my ($worker, $arg, $finish, $timeout, $abort, $abortArg) = @_;
+        push(@historyJobs, {
+            worker => $worker, arg => $arg, finish => $finish, timeout => $timeout,
+            abort => $abort, abortArg => $abortArg,
+        });
+        return {pid => scalar(@historyJobs) + 1000};
+    };
     $main::defs{HistDb} = {NAME => 'HistDb', TYPE => 'DbLog'};
     %main::FHEMCMS_HISTORY_CACHE = ();
     my $dbReadings = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Meter'));
     is($dbReadings->{source}, 'dblog', 'logreadings prefers DbLog');
     is_deeply($dbReadings->{readings}, ['power'], 'logreadings drops invalid reading names from DbLog');
+    my $pending = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Meter', 'power', '24h'));
+    is($pending->{status}, 'pending', 'DbLog history starts in a background worker');
+    is($historyJobs[0]{timeout}, $main::FHEMCMS_HISTORY_JOB_TIMEOUT, 'DbLog worker has a bounded timeout');
+    is($historyJobs[0]{worker}, 'FHEMCMS_HistoryWorker', 'DbLog worker uses the registered history callback');
+    is(JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Meter', 'power', '24h'))->{status},
+        'pending', 'identical in-flight DbLog history requests are coalesced');
+    is(scalar(@historyJobs), 1, 'coalesced history request does not start another worker');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
     my $dbHistory = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Meter', 'power', '24h'));
     is($dbHistory->{source}, 'dblog', 'history prefers DbLog');
     is($dbHistory->{points}[0][1], 12.5, 'history parses numeric DbLog values');
     is(scalar(@{$dbHistory->{points}}), 1, 'history ignores unusable DbLog rows');
+
+    my $timeoutPending = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Meter', 'voltage', '24h'));
+    is($timeoutPending->{status}, 'pending', 'a second chart query can be scheduled independently');
+    FHEMCMS_HistoryAbort($historyJobs[1]{abortArg});
+    like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Meter', 'voltage', '24h'),
+        qr/Zeitlimit ueberschritten/, 'timed-out history reports an explicit error and clears its job');
+
+    %main::FHEMCMS_HISTORY_CACHE = ();
+    %main::FHEMCMS_HISTORY_JOBS = ();
+    @historyJobs = ();
+    for my $reading (qw(power voltage current energy temperature)) {
+        is(JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Meter', $reading, '24h'))->{status},
+            'pending', "DbLog history for $reading is scheduled");
+    }
+    is(scalar(@historyJobs), $main::FHEMCMS_HISTORY_MAX_WORKERS,
+        'parallel DbLog history workers are bounded');
+    is(scalar(grep { $_->{status} eq 'queued' } values %main::FHEMCMS_HISTORY_JOBS), 1,
+        'additional history work waits in the managed queue');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
+    is(scalar(@historyJobs), $main::FHEMCMS_HISTORY_MAX_WORKERS + 1,
+        'a completed worker starts the next queued history request');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($_->{arg})) for (@historyJobs[1 .. $#historyJobs]);
+    is(scalar(keys %main::FHEMCMS_HISTORY_JOBS), 0, 'completed jobs are removed from the queue');
     delete $main::defs{HistDb};
     delete $main::defs{HistLog};
 }
