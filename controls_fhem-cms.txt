@@ -16,7 +16,7 @@ UPD 2026-11-10_13:27:41 10010 www/fhem-cms/components/cms-text.js
 UPD 2026-11-10_08:07:09 37318 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-10_11:28:51 24483 www/fhem-cms/components/cms-value.js
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
-UPD 2026-11-12_11:17:55 42567 www/fhem-cms/css/fhem-cms.css
+UPD 2026-11-12_12:23:00 43149 www/fhem-cms/css/fhem-cms.css
 UPD 2026-11-10_07:50:19 26290 www/fhem-cms/examples/fcui-check.html
 UPD 2026-11-08_21:07:16 4844 www/fhem-cms/examples/migration-preview.html
 UPD 2026-11-10_09:09:16 1331 www/fhem-cms/js/action-presentation.js
@@ -39,7 +39,7 @@ UPD 2026-11-09_07:18:21 4934 www/fhem-cms/js/fcui-schema5-grid-edit.js
 UPD 2026-11-10_13:40:57 11711 www/fhem-cms/js/fcui-schema5-layout.js
 UPD 2026-11-12_10:29:43 5548 www/fhem-cms/js/fcui-schema5-live.js
 UPD 2026-11-08_22:00:37 5107 www/fhem-cms/js/fcui-schema5-move-panel.js
-UPD 2026-11-12_12:02:27 5563 www/fhem-cms/js/fcui-schema5-navigation-fit.js
+UPD 2026-11-12_12:23:00 5719 www/fhem-cms/js/fcui-schema5-navigation-fit.js
 UPD 2026-11-12_10:29:43 20356 www/fhem-cms/js/fcui-schema5-navigation.js
 UPD 2026-11-11_16:03:40 16862 www/fhem-cms/js/fcui-schema5-page-panel.js
 UPD 2026-11-11_15:37:10 6062 www/fhem-cms/js/fcui-schema5-settings-preview.js
