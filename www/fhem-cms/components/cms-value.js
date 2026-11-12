@@ -1,6 +1,7 @@
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
+import { dialogGroupStyles } from '../js/dialog-groups.js';
 const ICON_PAGE = 120;
 const PICKER_MAX_ROWS = 200;
 const PICKER_COLUMNS = [
@@ -83,6 +84,7 @@ class FHEMCMSValue extends HTMLElement {
         .picker-list tbody tr:hover, .picker-list tbody tr:focus { background: var(--cms-surface-hover, #34493e); outline: none; }
         select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
+        ${dialogGroupStyles}
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
         input { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
@@ -121,38 +123,46 @@ class FHEMCMSValue extends HTMLElement {
       <dialog data-dialog aria-labelledby="value-dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="value-dialog-title">Wert-Anzeige konfigurieren</h3>
-          <label>Titel (optional)
-            <input name="title" maxlength="64" autocomplete="off">
-          </label>
-          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
-          <label>FHEM-Device
-            <span class="device-row">
-              <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
-              <button type="button" data-pick-device>Auswählen …</button>
-            </span>
-          </label>
-          <span class="hint" data-device-alias></span>
-          <label>Reading
-            <select name="reading" required></select>
-          </label>
-          <label>Einheit (optional, Vorschlag wählen oder frei eintragen)
-            <input name="unit" autocomplete="off" maxlength="16">
-          </label>
-          <div data-unit-choices></div>
-          <div>
-            <span class="hint">Icon (optional)</span>
-            <div class="icon-row">
-              <span class="glyph icon" data-icon-preview aria-hidden="true" hidden></span>
-              <span data-icon-name>kein Icon</span>
-              <button type="button" data-icon-toggle>Icon wählen …</button>
-              <button type="button" data-icon-clear>Entfernen</button>
+          <details class="config-group" open><summary>Allgemein</summary>
+            <div class="config-group-fields">
+              <label>Titel (optional)<input name="title" maxlength="64" autocomplete="off"></label>
+              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
             </div>
-          </div>
-          <div class="icon-picker" data-icon-picker hidden>
-            <input type="search" data-icon-filter placeholder="Icons filtern (z. B. temp, light, door)" autocomplete="off">
-            <div class="icon-grid" data-icon-grid role="listbox" aria-label="Icons"></div>
-            <p class="hint" data-icon-hint></p>
-          </div>
+          </details>
+          <details class="config-group" open><summary>Datenquelle</summary>
+            <div class="config-group-fields">
+              <label>FHEM-Device
+                <span class="device-row">
+                  <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
+                  <button type="button" data-pick-device>Auswählen …</button>
+                </span>
+              </label>
+              <span class="hint" data-device-alias></span>
+              <label>Reading<select name="reading" required></select></label>
+            </div>
+          </details>
+          <details class="config-group"><summary>Darstellung</summary>
+            <div class="config-group-fields">
+              <label>Einheit (optional, Vorschlag wählen oder frei eintragen)
+                <input name="unit" autocomplete="off" maxlength="16">
+              </label>
+              <div data-unit-choices></div>
+              <div>
+                <span class="hint">Icon (optional)</span>
+                <div class="icon-row">
+                  <span class="glyph icon" data-icon-preview aria-hidden="true" hidden></span>
+                  <span data-icon-name>kein Icon</span>
+                  <button type="button" data-icon-toggle>Icon wählen …</button>
+                  <button type="button" data-icon-clear>Entfernen</button>
+                </div>
+              </div>
+              <div class="icon-picker" data-icon-picker hidden>
+                <input type="search" data-icon-filter placeholder="Icons filtern (z. B. temp, light, door)" autocomplete="off">
+                <div class="icon-grid" data-icon-grid role="listbox" aria-label="Icons"></div>
+                <p class="hint" data-icon-hint></p>
+              </div>
+            </div>
+          </details>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
             <button type="button" class="danger" data-delete>Widget löschen</button>

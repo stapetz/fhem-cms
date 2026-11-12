@@ -1,5 +1,6 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { isValidName } from '../js/fhem-client.js';
+import { dialogGroupStyles } from '../js/dialog-groups.js';
 
 const COLUMNS = [
   ['state', 'Status'], ['party', 'Name oder Nummer'], ['timestamp', 'Datum / Uhrzeit'],
@@ -80,6 +81,7 @@ class FHEMCMSCallList extends HTMLElement {
           background:var(--cms-surface,#202e27); color:var(--cms-text,#edf4ef); }
         dialog::backdrop { background:var(--cms-backdrop,rgb(0 0 0 / .6)); }
         form { display:grid; gap:.75rem; }
+        ${dialogGroupStyles}
         label { display:grid; gap:.25rem; }
         fieldset { display:flex; flex-wrap:wrap; gap:.6rem; }
         fieldset label, .check { display:flex; align-items:center; gap:.35rem; }
@@ -103,13 +105,25 @@ class FHEMCMSCallList extends HTMLElement {
       <dialog data-dialog aria-labelledby="calllist-title">
         <form data-form novalidate>
           <h3 id="calllist-title">Anrufliste konfigurieren</h3>
-          <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-          <label class="check"><input name="showTitle" type="checkbox"> Titel anzeigen</label>
-          <label>FB_CALLLIST-Device<span class="device"><input name="device" type="text" readonly>
-            <button type="button" data-pick>Wählen …</button></span></label>
-          <p class="hint" data-detection role="status"></p>
-          <label>Anzahl Anrufe (1–20)<input name="limit" type="number" min="1" max="20" step="1" required></label>
-          <fieldset><legend>Sichtbare Spalten</legend><div data-columns></div></fieldset>
+          <details class="config-group" open><summary>Allgemein</summary>
+            <div class="config-group-fields">
+              <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+              <label class="check"><input name="showTitle" type="checkbox"> Titel anzeigen</label>
+            </div>
+          </details>
+          <details class="config-group" open><summary>Datenquelle</summary>
+            <div class="config-group-fields">
+              <label>FB_CALLLIST-Device<span class="device"><input name="device" type="text" readonly>
+                <button type="button" data-pick>Wählen …</button></span></label>
+              <p class="hint" data-detection role="status"></p>
+            </div>
+          </details>
+          <details class="config-group"><summary>Tabellenanzeige</summary>
+            <div class="config-group-fields">
+              <label>Anzahl Anrufe (1–20)<input name="limit" type="number" min="1" max="20" step="1" required></label>
+              <fieldset><legend>Sichtbare Spalten</legend><div data-columns></div></fieldset>
+            </div>
+          </details>
           <p class="hint">Das Device benötigt create-readings 1 und passende visible-columns.
             Es werden höchstens die dort bereitgestellten Anrufe angezeigt.</p>
           <p class="error" data-error role="alert"></p>

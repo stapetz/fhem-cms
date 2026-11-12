@@ -1,5 +1,6 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
+import { dialogGroupStyles } from '../js/dialog-groups.js';
 
 const MAX_ROWS = 40;
 
@@ -49,6 +50,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
           border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef); }
         dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form { display: grid; gap: 0.75rem; }
+        ${dialogGroupStyles}
         label { display: grid; gap: 0.25rem; }
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
         input[type="text"], select { width: 100%; }
@@ -89,37 +91,49 @@ class FHEMCMSReadingsTable extends HTMLElement {
       <dialog data-dialog aria-labelledby="table-dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="table-dialog-title">Tabelle konfigurieren</h3>
-          <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
-          <fieldset class="mode"><legend>Tabellenüberschrift</legend>
-            <label class="check"><input name="header" type="checkbox" checked>Überschrift anzeigen</label>
-            <div data-header-fields>
-              <label>Bezeichnungsspalte<input name="deviceLabel" type="text" maxlength="32" placeholder="Device" autocomplete="off"></label>
-              <label>Wertespalte<input name="valueLabel" type="text" maxlength="32" placeholder="Wert" autocomplete="off"></label>
-              <label class="check"><input name="showValueLabel" type="checkbox" checked>Wertespalten-Überschrift anzeigen</label>
-            </div></fieldset>
-          <fieldset class="mode"><legend>Summenzeile</legend>
-            <label class="check"><input name="sum" type="checkbox">Summenzeile unter der Tabelle anzeigen</label>
-            <div data-sum-field hidden>
-              <label>Beschriftung<input name="sumLabel" type="text" maxlength="32" placeholder="Summe" autocomplete="off"></label>
-              <label class="check"><input name="showSumLabel" type="checkbox" checked>Beschriftung anzeigen</label>
-              <label class="check"><input name="sumUnitAuto" type="checkbox" checked>Einheit automatisch wie die Einzelwerte</label>
-              <div data-sum-unit-fields hidden>
-                <label>Einheit (optional, Vorschlag wählen oder frei eintragen)
-                  <input name="sumUnit" type="text" maxlength="16" autocomplete="off"></label>
-                <div data-sum-unit-choices></div>
+          <details class="config-group" open><summary>Allgemein</summary>
+            <div class="config-group-fields">
+              <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+            </div>
+          </details>
+          <details class="config-group" open><summary>Datenquelle und Readings</summary>
+            <div class="config-group-fields">
+              <fieldset class="mode"><legend>Herkunft der Werte</legend>
+                <label class="check"><input type="radio" name="mode" value="single" checked>Werte kommen aus einem Device</label>
+                <label class="check"><input type="radio" name="mode" value="multi">Werte kommen aus mehreren Devices</label></fieldset>
+              <div data-single>
+                <span class="single-device"><input name="deviceSingle" type="text" readonly placeholder="Device wählen" aria-label="Device für alle Werte">
+                  <button type="button" data-pick-single>Wählen …</button></span>
+                <span class="hint" data-alias></span>
               </div>
-            </div></fieldset>
-          <fieldset class="mode"><legend>Herkunft der Werte</legend>
-            <label class="check"><input type="radio" name="mode" value="single" checked>Werte kommen aus einem Device</label>
-            <label class="check"><input type="radio" name="mode" value="multi">Werte kommen aus mehreren Devices</label></fieldset>
-          <div data-single>
-            <span class="single-device"><input name="deviceSingle" type="text" readonly placeholder="Device wählen" aria-label="Device für alle Werte">
-              <button type="button" data-pick-single>Wählen …</button></span>
-            <span class="hint" data-alias></span>
-          </div>
-          <fieldset><legend>Readings</legend><div data-config-rows></div>
-            <button type="button" data-add>Reading hinzufügen</button></fieldset>
+              <fieldset><legend>Readings</legend><div data-config-rows></div>
+                <button type="button" data-add>Reading hinzufügen</button></fieldset>
+            </div>
+          </details>
+          <details class="config-group"><summary>Tabellenanzeige</summary>
+            <div class="config-group-fields">
+              <fieldset class="mode"><legend>Tabellenüberschrift</legend>
+                <label class="check"><input name="header" type="checkbox" checked>Überschrift anzeigen</label>
+                <div data-header-fields>
+                  <label>Bezeichnungsspalte<input name="deviceLabel" type="text" maxlength="32" placeholder="Device" autocomplete="off"></label>
+                  <label>Wertespalte<input name="valueLabel" type="text" maxlength="32" placeholder="Wert" autocomplete="off"></label>
+                  <label class="check"><input name="showValueLabel" type="checkbox" checked>Wertespalten-Überschrift anzeigen</label>
+                </div></fieldset>
+              <fieldset class="mode"><legend>Summenzeile</legend>
+                <label class="check"><input name="sum" type="checkbox">Summenzeile unter der Tabelle anzeigen</label>
+                <div data-sum-field hidden>
+                  <label>Beschriftung<input name="sumLabel" type="text" maxlength="32" placeholder="Summe" autocomplete="off"></label>
+                  <label class="check"><input name="showSumLabel" type="checkbox" checked>Beschriftung anzeigen</label>
+                  <label class="check"><input name="sumUnitAuto" type="checkbox" checked>Einheit automatisch wie die Einzelwerte</label>
+                  <div data-sum-unit-fields hidden>
+                    <label>Einheit (optional, Vorschlag wählen oder frei eintragen)
+                      <input name="sumUnit" type="text" maxlength="16" autocomplete="off"></label>
+                    <div data-sum-unit-choices></div>
+                  </div>
+                </div></fieldset>
+            </div>
+          </details>
           <p class="error" data-error role="alert"></p>
           <div class="actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>

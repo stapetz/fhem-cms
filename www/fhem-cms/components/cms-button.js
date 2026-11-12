@@ -3,6 +3,7 @@ import { openIconPicker } from '../js/icon-picker.js';
 import { switchCommands } from './cms-switch.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 import { actionIconUrl, actionPresentationFields, collectActionPresentation } from '../js/action-presentation.js';
+import { dialogGroupStyles } from '../js/dialog-groups.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const FEEDBACK_MS = 1500;
@@ -65,6 +66,7 @@ class FHEMCMSButton extends HTMLElement {
           padding: 1.25rem; width: min(94vw, 34rem); max-height: 94vh; overflow: auto; }
         dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form { display: grid; gap: 0.75rem; }
+        ${dialogGroupStyles}
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
@@ -95,32 +97,38 @@ class FHEMCMSButton extends HTMLElement {
       <dialog data-dialog aria-labelledby="button-dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="button-dialog-title">Taster konfigurieren</h3>
-          <label>Titel (optional)
-            <input name="title" maxlength="64" autocomplete="off">
-          </label>
-          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
-          <label>FHEM-Device
-            <span class="device-row">
-              <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
-              <button type="button" data-pick-device>Auswählen …</button>
-            </span>
-          </label>
-          <span class="hint" data-device-alias></span>
-          <label>Befehl (set &lt;Device&gt; …)
-            <select name="command" required></select>
-          </label>
-          <label>Beschriftung des Knopfs (leer = Befehl)
-            <input name="label" maxlength="32" autocomplete="off">
-          </label>
-          ${actionPresentationFields}
-          <div>
-            <span class="hint">Icon (leer = passendes Standardsymbol)</span>
-            <div class="icon-row">
-              <span class="glyph" data-icon-preview aria-hidden="true" hidden></span>
-              <span data-icon-name>kein Icon</span>
-              <button type="button" data-icon-choose>Icon wählen …</button>
+          <details class="config-group" open><summary>Allgemein</summary>
+            <div class="config-group-fields">
+              <label>Titel (optional)<input name="title" maxlength="64" autocomplete="off"></label>
+              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
             </div>
-          </div>
+          </details>
+          <details class="config-group" open><summary>Datenquelle und Aktion</summary>
+            <div class="config-group-fields">
+              <label>FHEM-Device
+                <span class="device-row">
+                  <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
+                  <button type="button" data-pick-device>Auswählen …</button>
+                </span>
+              </label>
+              <span class="hint" data-device-alias></span>
+              <label>Befehl (set &lt;Device&gt; …)<select name="command" required></select></label>
+            </div>
+          </details>
+          <details class="config-group"><summary>Beschriftung und Darstellung</summary>
+            <div class="config-group-fields">
+              <label>Beschriftung des Knopfs (leer = Befehl)<input name="label" maxlength="32" autocomplete="off"></label>
+              ${actionPresentationFields}
+              <div>
+                <span class="hint">Icon (leer = passendes Standardsymbol)</span>
+                <div class="icon-row">
+                  <span class="glyph" data-icon-preview aria-hidden="true" hidden></span>
+                  <span data-icon-name>kein Icon</span>
+                  <button type="button" data-icon-choose>Icon wählen …</button>
+                </div>
+              </div>
+            </div>
+          </details>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
             <button type="button" class="danger" data-delete>Widget löschen</button>

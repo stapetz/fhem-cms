@@ -1,6 +1,7 @@
 import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
+import { dialogGroupStyles } from '../js/dialog-groups.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const REFRESH_MS = 300000;
@@ -98,6 +99,7 @@ class FHEMCMSChart extends HTMLElement {
           background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef); }
         dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form { display: grid; gap: 0.75rem; }
+        ${dialogGroupStyles}
         label { display: grid; gap: 0.25rem; }
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
@@ -126,19 +128,31 @@ class FHEMCMSChart extends HTMLElement {
       <dialog data-dialog aria-labelledby="chart-dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="chart-dialog-title">Diagramm konfigurieren</h3>
-          <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
-          <label>FHEM-Device
-            <span class="device-row"><input name="device" readonly required placeholder="Noch kein Device gewählt">
-              <button type="button" data-pick-device>Auswählen …</button></span>
-          </label>
-          <label>Geloggtes Reading<select name="reading" required></select></label>
-          <p class="hint" data-source-hint></p>
-          <label>Einheit (optional, Vorschlag wählen oder frei eintragen)<input name="unit" type="text" maxlength="16" autocomplete="off"></label>
-          <div data-unit-choices></div>
-          <label>Standard-Zeitraum<select name="range"></select></label>
-          <label>Standard-Granularität<select name="granularity"></select></label>
-          <label>Datenquelle<select name="source"></select></label>
+          <details class="config-group" open><summary>Allgemein</summary>
+            <div class="config-group-fields">
+              <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+            </div>
+          </details>
+          <details class="config-group" open><summary>Datenquelle</summary>
+            <div class="config-group-fields">
+              <label>FHEM-Device
+                <span class="device-row"><input name="device" readonly required placeholder="Noch kein Device gewählt">
+                  <button type="button" data-pick-device>Auswählen …</button></span>
+              </label>
+              <label>Geloggtes Reading<select name="reading" required></select></label>
+              <label>Datenquelle<select name="source"></select></label>
+              <p class="hint" data-source-hint></p>
+            </div>
+          </details>
+          <details class="config-group"><summary>Verlaufsanzeige</summary>
+            <div class="config-group-fields">
+              <label>Einheit (optional, Vorschlag wählen oder frei eintragen)<input name="unit" type="text" maxlength="16" autocomplete="off"></label>
+              <div data-unit-choices></div>
+              <label>Standard-Zeitraum<select name="range"></select></label>
+              <label>Standard-Granularität<select name="granularity"></select></label>
+            </div>
+          </details>
           <p class="error" data-error role="alert"></p>
           <div class="actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit" data-save>Speichern</button></div>

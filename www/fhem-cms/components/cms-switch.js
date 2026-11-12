@@ -2,6 +2,7 @@ import { openDevicePicker } from '../js/device-picker.js';
 import { openIconPicker } from '../js/icon-picker.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 import { actionIconUrl, actionPresentationFields, collectActionPresentation } from '../js/action-presentation.js';
+import { dialogGroupStyles } from '../js/dialog-groups.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const PENDING_MS = 4000;
@@ -74,6 +75,7 @@ class FHEMCMSSwitch extends HTMLElement {
           padding: 1.25rem; width: min(94vw, 34rem); max-height: 94vh; overflow: auto; }
         dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form { display: grid; gap: 0.75rem; }
+        ${dialogGroupStyles}
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
@@ -106,47 +108,49 @@ class FHEMCMSSwitch extends HTMLElement {
       <dialog data-dialog aria-labelledby="switch-dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="switch-dialog-title">Schalter konfigurieren</h3>
-          <label>Titel (optional)
-            <input name="title" maxlength="64" autocomplete="off">
-          </label>
-          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
-          <label>FHEM-Device
-            <span class="device-row">
-              <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
-              <button type="button" data-pick-device>Auswählen …</button>
-            </span>
-          </label>
-          <span class="hint" data-device-alias></span>
-          <label>Reading für den Zustand
-            <select name="reading" required></select>
-          </label>
-          <label>Befehl für „An“ (set &lt;Device&gt; …)
-            <select name="on" required></select>
-          </label>
-          <label>Befehl für „Aus“
-            <select name="off" required></select>
-          </label>
-          <p class="hint">Der Schalter gilt als „an“, wenn das Reading den Wert des An-Befehls hat, und als „aus“, wenn es den Wert des Aus-Befehls hat.</p>
-          <label>Beschriftung (leer = An/Aus/Zustand unbekannt)
-            <input name="label" maxlength="32" autocomplete="off">
-          </label>
-          ${actionPresentationFields}
-          <div>
-            <span class="hint">Icon bei „An“ (leer = Standardsymbol)</span>
-            <div class="icon-row">
-              <span class="glyph" data-icon-preview="on" aria-hidden="true" hidden></span>
-              <span data-icon-name="on">kein Icon</span>
-              <button type="button" data-icon-choose="on">Icon wählen …</button>
+          <details class="config-group" open><summary>Allgemein</summary>
+            <div class="config-group-fields">
+              <label>Titel (optional)<input name="title" maxlength="64" autocomplete="off"></label>
+              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
             </div>
-          </div>
-          <div>
-            <span class="hint">Icon bei „Aus“ (leer = eigenes An-Icon oder Standardsymbol)</span>
-            <div class="icon-row">
-              <span class="glyph" data-icon-preview="off" aria-hidden="true" hidden></span>
-              <span data-icon-name="off">kein Icon</span>
-              <button type="button" data-icon-choose="off">Icon wählen …</button>
+          </details>
+          <details class="config-group" open><summary>Datenquelle und Schaltverhalten</summary>
+            <div class="config-group-fields">
+              <label>FHEM-Device
+                <span class="device-row">
+                  <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
+                  <button type="button" data-pick-device>Auswählen …</button>
+                </span>
+              </label>
+              <span class="hint" data-device-alias></span>
+              <label>Reading für den Zustand<select name="reading" required></select></label>
+              <label>Befehl für „An“ (set &lt;Device&gt; …)<select name="on" required></select></label>
+              <label>Befehl für „Aus“<select name="off" required></select></label>
+              <p class="hint">Der Schalter gilt als „an“, wenn das Reading den Wert des An-Befehls hat, und als „aus“, wenn es den Wert des Aus-Befehls hat.</p>
             </div>
-          </div>
+          </details>
+          <details class="config-group"><summary>Beschriftung und Darstellung</summary>
+            <div class="config-group-fields">
+              <label>Beschriftung (leer = An/Aus/Zustand unbekannt)<input name="label" maxlength="32" autocomplete="off"></label>
+              ${actionPresentationFields}
+              <div>
+                <span class="hint">Icon bei „An“ (leer = Standardsymbol)</span>
+                <div class="icon-row">
+                  <span class="glyph" data-icon-preview="on" aria-hidden="true" hidden></span>
+                  <span data-icon-name="on">kein Icon</span>
+                  <button type="button" data-icon-choose="on">Icon wählen …</button>
+                </div>
+              </div>
+              <div>
+                <span class="hint">Icon bei „Aus“ (leer = eigenes An-Icon oder Standardsymbol)</span>
+                <div class="icon-row">
+                  <span class="glyph" data-icon-preview="off" aria-hidden="true" hidden></span>
+                  <span data-icon-name="off">kein Icon</span>
+                  <button type="button" data-icon-choose="off">Icon wählen …</button>
+                </div>
+              </div>
+            </div>
+          </details>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
             <button type="button" class="danger" data-delete>Widget löschen</button>

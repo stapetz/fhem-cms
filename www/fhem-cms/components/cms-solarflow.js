@@ -1,4 +1,5 @@
 import { openDevicePicker } from '../js/device-picker.js';
+import { dialogGroupStyles } from '../js/dialog-groups.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MAX_POWER = 3000;
@@ -174,6 +175,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
           border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef); }
         dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form { display: grid; gap: 0.75rem; }
+        ${dialogGroupStyles}
         label { display: grid; gap: 0.25rem; }
         label.check { display: flex; align-items: center; gap: 0.5rem; }
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
@@ -200,26 +202,38 @@ class FHEMCMSSolarFlow extends HTMLElement {
       <dialog data-dialog aria-labelledby="solarflow-dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="solarflow-dialog-title">SolarFlow konfigurieren</h3>
-          <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
-          <fieldset class="mode"><legend>Herkunft der Werte</legend>
-            <label class="check"><input type="radio" name="mode" value="single" checked>Werte kommen aus einem Device</label>
-            <label class="check"><input type="radio" name="mode" value="multi">Werte kommen aus mehreren Devices</label></fieldset>
-          <div data-single>
-            <span class="device-row"><input name="device-single" readonly placeholder="Device wählen …" aria-label="Device für alle Werte">
-              <button type="button" data-pick="single">Device …</button></span>
-            <span class="hint" data-alias></span>
-          </div>
-          ${READING_FIELDS.map((field) => `<fieldset data-field="${field.key}"><legend>${field.label}${field.required ? '' : ' (optional)'}</legend>
-            <span class="device-row" data-multi><input name="device-${field.key}" readonly placeholder="Device wählen …" aria-label="Device für ${field.label}">
-              <button type="button" data-pick="${field.key}">Device …</button></span>
-            <select name="reading-${field.key}" aria-label="Reading für ${field.label}"></select>
-</fieldset>`).join('')}
-          <label>Einheit der Leistungs-Readings
-            <select name="unit"><option value="W">Watt (W)</option><option value="kW">Kilowatt (kW)</option></select></label>
-          <label>Schwellwert „inaktiv“ in Watt<input name="threshold" type="number" min="0" max="1000" step="1"></label>
-          <label class="check"><input type="checkbox" name="deriveHome"> Fehlenden Hausverbrauch aus den übrigen Werten berechnen</label>
-          <p class="hint">Netz: Bezug negativ, Einspeisung positiv. Batterie: Laden positiv, Entladen negativ. Ohne Netz- oder Batterie-Reading entfällt die jeweilige Station. Das Widget liest nur und sendet keine FHEM-Befehle.</p>
+          <details class="config-group" open><summary>Allgemein</summary>
+            <div class="config-group-fields">
+              <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+            </div>
+          </details>
+          <details class="config-group" open><summary>Datenquelle und Readings</summary>
+            <div class="config-group-fields">
+              <fieldset class="mode"><legend>Herkunft der Werte</legend>
+                <label class="check"><input type="radio" name="mode" value="single" checked>Werte kommen aus einem Device</label>
+                <label class="check"><input type="radio" name="mode" value="multi">Werte kommen aus mehreren Devices</label></fieldset>
+              <div data-single>
+                <span class="device-row"><input name="device-single" readonly placeholder="Device wählen …" aria-label="Device für alle Werte">
+                  <button type="button" data-pick="single">Device …</button></span>
+                <span class="hint" data-alias></span>
+              </div>
+              ${READING_FIELDS.map((field) => `<fieldset data-field="${field.key}"><legend>${field.label}${field.required ? '' : ' (optional)'}</legend>
+                <span class="device-row" data-multi><input name="device-${field.key}" readonly placeholder="Device wählen …" aria-label="Device für ${field.label}">
+                  <button type="button" data-pick="${field.key}">Device …</button></span>
+                <select name="reading-${field.key}" aria-label="Reading für ${field.label}"></select>
+              </fieldset>`).join('')}
+            </div>
+          </details>
+          <details class="config-group"><summary>Darstellung und Berechnung</summary>
+            <div class="config-group-fields">
+              <label>Einheit der Leistungs-Readings
+                <select name="unit"><option value="W">Watt (W)</option><option value="kW">Kilowatt (kW)</option></select></label>
+              <label>Schwellwert „inaktiv“ in Watt<input name="threshold" type="number" min="0" max="1000" step="1"></label>
+              <label class="check"><input type="checkbox" name="deriveHome"> Fehlenden Hausverbrauch aus den übrigen Werten berechnen</label>
+              <p class="hint">Netz: Bezug negativ, Einspeisung positiv. Batterie: Laden positiv, Entladen negativ. Ohne Netz- oder Batterie-Reading entfällt die jeweilige Station. Das Widget liest nur und sendet keine FHEM-Befehle.</p>
+            </div>
+          </details>
           <p class="error" data-error role="alert"></p>
           <div class="actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>
