@@ -646,7 +646,14 @@ prüfen. Bestehende Referenztests:
 [`46_unit_inputs.html`](../t/46_unit_inputs.html).
 
 ### 5.4 Semantische Farb-Zustände nach Gewerken
-Aktive Zustände verändern flächig die Hintergrundbeleuchtung oder die Farbintensität des zugehörigen Icons:
+Farbkodierung ist ein Zusatzsignal und nur für eindeutig bekannte fachliche Zustände zulässig. Aktive Zustände können flächig die Hintergrundbeleuchtung oder die Farbintensität des zugehörigen Icons verändern:
 *   💡 **Beleuchtungs-Gewerk:** Kräftiges, warmes Amber/Gelb (`#ffb300`) für aktive Leuchtmittel.
 *   🌡️ **Klima / Heizungs-Gewerk:** Signal-Orange/Rot (`#ff5722`) im aktiven Heizmodus, kühles Blau (`#2196f3`) im Kühlmodus.
 *   🔒 **Sicherheits-Gewerk (Fenster, Türen, Alarme):** Sattes Grün (`#4caf50`) für geschlossene/sichere Zustände, Warn-Rot (`#f44336`) für offene Kontakte oder anstehende Alarme.
+
+Generische Schalter kennen kein Gewerk und dürfen „An“ daher nicht pauschal als
+sicher/erfolgreich grün markieren. An, Aus und unbekannt erhalten zusätzlich
+sichtbare Symbole und zugängliche Namen; unbekannt ist weder Aus noch sicher.
+Beim konfigurierbaren Status-Icon-Widget bleiben explizite Benutzerfarben
+unverändert, nicht zugeordnete Werte erscheinen ausdrücklich als unbekannt,
+mit Rohwert und ohne Statusfarbe.

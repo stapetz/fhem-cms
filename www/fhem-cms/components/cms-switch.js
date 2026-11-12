@@ -54,9 +54,9 @@ class FHEMCMSSwitch extends HTMLElement {
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         ${fittedContentCss}
         .toggle { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 0.14em; padding: 0.15em; flex: none; border-radius: 0.3em;
-          background: var(--cms-bg, #17211d); border: 0.08em solid var(--cms-border, #43564a); position: relative; cursor: pointer; transition: background 0.2s; }
-        .toggle[aria-checked="true"] { background: var(--cms-accent-strong, #2f6b47); border-color: var(--cms-accent, #8fd0a8); }
+          background: var(--cms-bg, #17211d); border: 0.08em solid var(--cms-border, #43564a); position: relative; cursor: pointer; }
         .toggle[data-unknown] { border-style: dashed; }
+        .state-mark { display: inline-block; flex: none; text-align: center; font-size: 0.75em; font-weight: 700; line-height: 1; }
         .label { white-space: nowrap; line-height: 1.1; }
         .label[hidden] { display: none; }
         .toggle:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 3px; }
@@ -93,7 +93,8 @@ class FHEMCMSSwitch extends HTMLElement {
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Schalter konfigurieren">⚙</button>
         <div class="main">
-          <button type="button" class="toggle" role="switch" aria-checked="false" data-toggle data-fit-content aria-label="Schalter">
+          <button type="button" class="toggle" data-toggle data-fit-content aria-label="Schalter">
+            <span class="state-mark" data-state-mark aria-hidden="true">?</span>
             <span class="glyph" data-icon aria-hidden="true" hidden></span>
             <span class="label" data-label></span>
           </button>
@@ -239,8 +240,14 @@ class FHEMCMSSwitch extends HTMLElement {
       return;
     }
     const state = this.currentState();
-    toggle.setAttribute('aria-checked', String(state === 'on'));
+    toggle.setAttribute('role', state === null ? 'button' : 'switch');
+    if (state === null) {
+      toggle.removeAttribute('aria-checked');
+    } else {
+      toggle.setAttribute('aria-checked', String(state === 'on'));
+    }
     toggle.toggleAttribute('data-unknown', state === null);
+    this.shadowRoot.querySelector('[data-state-mark]').textContent = state === 'on' ? '●' : state === 'off' ? '○' : '?';
     const title = this.widgetConfig.showTitle === false ? '' : (this.widgetConfig.title || '');
     const stateLabel = state === 'on' ? 'An' : state === 'off' ? 'Aus' : 'Zustand unbekannt';
     const label = this.widgetConfig.label || stateLabel;

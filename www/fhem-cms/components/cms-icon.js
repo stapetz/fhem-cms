@@ -4,6 +4,14 @@ import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js'
 
 const MAX_STATES = 20;
 
+export function stateColorInputValue(color, host) {
+  if (/^#[0-9a-f]{6}$/i.test(color || '')) {
+    return color;
+  }
+  const accent = globalThis.getComputedStyle?.(host)?.getPropertyValue('--cms-accent').trim();
+  return /^#[0-9a-f]{6}$/i.test(accent || '') ? accent : '#8fd0a8';
+}
+
 class FHEMCMSIcon extends HTMLElement {
   constructor() {
     super();
@@ -219,7 +227,7 @@ class FHEMCMSIcon extends HTMLElement {
     const color = document.createElement('input');
     color.type = 'color';
     color.className = 'color';
-    color.value = /^#[0-9a-f]{6}$/i.test(mapping.color || '') ? mapping.color : '#8fd0a8';
+    color.value = stateColorInputValue(mapping.color, this);
     colorLabel.append(color);
     const remove = document.createElement('button');
     remove.type = 'button';
@@ -316,8 +324,10 @@ class FHEMCMSIcon extends HTMLElement {
       this.shadowRoot.querySelector('[data-accessible]').textContent = `${this.widgetConfig.title || 'Status'}, ${readingValue}`;
     } else {
       icon.hidden = true;
-      state.textContent = readingValue || '–';
-      this.shadowRoot.querySelector('[data-accessible]').textContent = '';
+      const unknown = readingValue ? `Unbekannt: ${readingValue}` : 'Zustand unbekannt';
+      state.textContent = unknown;
+      this.shadowRoot.querySelector('[data-accessible]').textContent =
+        `${this.widgetConfig.title || 'Status'}, ${unknown}`;
     }
   }
 }

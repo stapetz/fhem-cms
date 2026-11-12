@@ -128,6 +128,7 @@ for (const [name, fixtures] of [
   ['themes use and restore page backgrounds', [['55_liquid_glass.html', 63]]],
   ['page settings preview shows the real phone page without saving', [['57_settings_preview.html', 25]]],
   ['call list displays and configures device readings', [['58_calllist.html', 61]]],
+  ['Smart-Home-Statusfarben bleiben semantisch und kontrastreich', [['64_status_colors.html', 13]]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],
