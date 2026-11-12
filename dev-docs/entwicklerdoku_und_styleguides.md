@@ -594,6 +594,10 @@ customElements.define('fcui-nav-widget', FcuiNavWidget);
 ## 5. UI/UX Styleguide
 
 Ein kompromisslos stabiles und ergonomisches Dashboard basiert auf strikten Gestaltungsregeln.
+Die ergänzenden, anwendungsorientierten Regeln und die Abnahmecheckliste stehen im
+[Usability-Leitfaden](./USABILITY.md). Bei neuen oder geänderten Oberflächen sind
+beide Dokumente anzuwenden; offene Funktionsideen im Leitfaden sind dagegen keine
+automatisch freigegebenen Architektur- oder Implementierungsentscheidungen.
 
 ### 5.1 Informationsdichte (Die Zwei-Zeilen-Regel)
 Standard-Kacheln dürfen den Nutzer nicht mit Text überladen. Jede Karte ist strikt hierarchisch aufgebaut:
@@ -650,3 +654,41 @@ Aktive Zustände verändern flächig die Hintergrundbeleuchtung oder die Farbint
 *   💡 **Beleuchtungs-Gewerk:** Kräftiges, warmes Amber/Gelb (`#ffb300`) für aktive Leuchtmittel.
 *   🌡️ **Klima / Heizungs-Gewerk:** Signal-Orange/Rot (`#ff5722`) im aktiven Heizmodus, kühles Blau (`#2196f3`) im Kühlmodus.
 *   🔒 **Sicherheits-Gewerk (Fenster, Türen, Alarme):** Sattes Grün (`#4caf50`) für geschlossene/sichere Zustände, Warn-Rot (`#f44336`) für offene Kontakte oder anstehende Alarme.
+
+### 5.5 Rückmeldung, Barrierefreiheit und sichere Bedienung
+
+- **Interaktionsfläche:** Klick- und Touch-Ziele sind mindestens `48 × 48` CSS-Pixel
+  gross. Kernaktionen dürfen nicht nur bei Hover erreichbar sein; Tastaturfokus
+  bleibt sichtbar und Bedienelemente erhalten einen zugänglichen Namen.
+- **Responsive Bedienung:** Phone, Tablet und Desktop werden geprüft. Auf Phone-
+  Breite darf kein horizontales Seiten-Scrolling für die Bedienung nötig sein.
+  Touch-Gesten, insbesondere Ziehen und Slider, dürfen das vertikale Scrollen
+  nicht versehentlich verhindern oder Werte verändern.
+- **Kontrast und Zustände:** Text erreicht mindestens `4.5:1`, grosser Text mindestens
+  `3:1` Kontrast gemäss WCAG 2.2 AA. Zustände werden nicht ausschliesslich über
+  Farbe vermittelt. Für frei gewählte Hintergründe ist der tatsächliche Kontrast
+  der Textfarbe zu prüfen; Statusfarben und Theme-Farben allein garantieren keinen
+  lesbaren Text.
+- **Status und Draft/Live:** Speichern, Warten, Erfolg, Fehler, veraltete Werte,
+  Offline-Zustand und abweichender Entwurf sind sichtbar und verständlich.
+  Vorschau, Entwurf und veröffentlichter Stand dürfen nicht verwechselt werden.
+  Eine Aktion gilt erst nach bestätigter Rückmeldung als erfolgreich; bis dahin
+  wird ein ausstehender Zustand gezeigt und Fehler lassen sich nachvollziehen.
+- **Bauen und Bedienen:** Steuerungswidgets senden im Bearbeitungsmodus keine
+  realen FHEM-Befehle. Eine Vorschau muss klar als solche erkennbar sein. Der
+  Ansichtsmodus ist nur eine Darstellung und ersetzt keine Backend-Autorisierung.
+- **Dialoge:** Dialoge sind beschriftet, per Tastatur bedienbar und bieten klar
+  benannte Speichern-/Abbrechen-Aktionen. Progressive Offenlegung reduziert
+  unnötige Auswahl; höchstens drei Einstellungsgruppen oder Tabs sind ein
+  Orientierungswert, keine Pflicht, Informationen künstlich zu verteilen.
+  Destruktive Aktionen erläutern konkret, was geändert oder gelöscht wird und
+  verlangen die für den freigegebenen Ablauf festgelegte Bestätigung.
+- **Sichere Darstellung:** Gerätewerte und Nutzereingaben bleiben Text und werden
+  nicht ungeprüft als HTML in das DOM eingefügt. Live-Vorschauen verwenden
+  verfügbare, autorisierte Daten oder klar erkennbare Beispieldaten; für
+  Platzhalter und freies HTML gelten weiterhin die jeweiligen Sanitizer- und
+  Validierungsregeln.
+- **Unmittelbare Wirkung:** Funktionen ausserhalb des Draft-/Publish-Workflows,
+  insbesondere Asset-Uploads und -Löschungen, kennzeichnen ihre Wirkung vor der
+  Aktion eindeutig. Einstellungen zu Formatierung oder Darstellung zeigen,
+  soweit verfügbar, eine nachvollziehbare Vorschau des Ergebnisses.
