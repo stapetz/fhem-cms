@@ -6,8 +6,10 @@
 2026-11-12 - 1.8.1-dev: Mobile Navigation Overlay (Refs #141)
 - Touch- und mobile Vorschau nutzen den responsiven Inhaltsfluss in Hoch- und
   Querformat.
-- Bis 600 Pixel Rasterbreite wird die Navigation zum Burger-Menue und
-  ueberlagert Widgets, auch im Editor.
+- Vertikale Navigation wird auch bei hoechstens 600 Pixel Viewporthoehe zum
+  Burger-Menue und ueberlagert Widgets.
+- Mobile Widgets erhalten auf schmalen und kurzen Ansichten mehr Mindestbreite;
+  gespeicherte Rasterdaten bleiben unveraendert.
 
 2026-11-11 - 1.8.1-dev: Widgets direkt loeschen (Refs #131)
 - Widgets lassen sich nach Bestaetigung direkt am Widget aus dem Entwurf
