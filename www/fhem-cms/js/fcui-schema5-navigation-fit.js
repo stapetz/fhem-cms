@@ -25,6 +25,8 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
   const browser = nav.ownerDocument.defaultView;
   const burger = nav.querySelector('.cms-nav-burger');
   if (!burger) throw new Error('Navigationsschalter fehlt');
+  const responsiveWrapper = nav.closest?.('.cms-responsive-navigation');
+  const responsiveGrid = nav.closest?.('.cms-schema5-grid');
   let stopped = false;
   const originalScale = nav.style.getPropertyValue('--cms-nav-fit-scale');
   const originalPriority = nav.style.getPropertyPriority('--cms-nav-fit-scale');
@@ -63,10 +65,13 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
         setScale(1);
       }
     }
-    const compact = required.width > nav.clientWidth + 0.5
+    const responsiveFlow = responsiveGrid && browser.getComputedStyle(responsiveGrid).display === 'flex';
+    const availableWidth = responsiveFlow ? responsiveGrid.clientWidth : nav.clientWidth;
+    const compact = required.width > availableWidth + 0.5
       || (fixedHeight && required.height > nav.clientHeight + 0.5);
     if (compact) setScale(1);
     nav.toggleAttribute('data-compact', compact);
+    responsiveWrapper?.toggleAttribute('data-nav-overlay', Boolean(compact && responsiveFlow));
     if (!compact) {
       const focused = nav.ownerDocument.activeElement === burger;
       nav.removeAttribute('data-open');
@@ -81,6 +86,7 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
       || JSON.stringify(otherStyles()) !== observedStyles)) measure();
   });
   resize.observe(nav);
+  if (responsiveGrid && responsiveGrid !== nav) resize.observe(responsiveGrid);
   changes.observe(nav, { subtree: true, childList: true, characterData: true,
     attributes: true, attributeFilter: ['class', 'style', 'hidden', 'aria-current'] });
   const fonts = nav.ownerDocument.fonts;
@@ -94,6 +100,7 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
     fonts?.removeEventListener('loadingdone', measure);
     nav.removeAttribute('data-adaptive');
     nav.removeAttribute('data-compact');
+    responsiveWrapper?.removeAttribute('data-nav-overlay');
     if (originalScale) nav.style.setProperty('--cms-nav-fit-scale', originalScale, originalPriority);
     else nav.style.removeProperty('--cms-nav-fit-scale');
   };

@@ -216,8 +216,11 @@ Danach können Sie sie weiterhin manuell skalieren. Vertikal erscheint das
 Burger-Menü erst, wenn die breiteste Schaltfläche oder die gesamte Höhe der
 Punkte nicht in das Widget passt. Horizontal muss die ganze Zeile hineinpassen.
 Auf dem Desktop nutzt die Vorschau dieselbe Navigationsposition und -größe
-wie der Editor. Nur auf schmalen Ansichten erhält die Navigation automatische Höhe.
-Auch dort folgen Widgetgrößen und Inhalte der Fenstergröße und dem Browser-Zoom.
+wie der Editor. Auf Touchgeräten und in der Geräte-Vorschau bleibt die mobile
+Anordnung auch im Querformat aktiv. Passt die Navigation nicht in die verfügbare
+Breite, liegt das Burger-Menü über den Widgets und belegt keinen Platz im
+Inhaltsfluss; beim Drehen wird die verfügbare Breite neu ausgewertet.
+Widgetgrößen und Inhalte folgen dort der Fenstergröße und dem Browser-Zoom.
 Das exakte Bearbeitungsraster bricht nicht um: Reicht der Platz nicht, scrollen
 Sie innerhalb des Arbeitsbereichs seitlich zu den übrigen Widgets. Die
 Browserseite und Werkzeugleiste bleiben dabei an ihrer Position. Zoom und
