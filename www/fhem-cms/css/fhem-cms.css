@@ -367,7 +367,7 @@ body:has(.cms-schema5-grid) {
   }
 
   .cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item:not(.cms-responsive-navigation) {
-    flex-basis: min(100%, max(50%, calc((var(--cms-view-width) + var(--cms-view-gap)) * var(--cms-widget-fraction) - var(--cms-view-gap))));
+    flex-basis: 100%;
   }
 
   .cms-schema5-grid[data-responsive] > .grid-stack-item::before {

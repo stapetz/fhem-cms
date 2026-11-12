@@ -170,9 +170,9 @@ Ausrichtung den responsiven Inhaltsfluss. Bei höchstens 600 Pixel Rasterbreite
 wird auch eine vertikale Navigation zum Burger-Menü; bei höchstens 600 Pixel
 Viewporthöhe gilt das ebenso für vertikale Navigation im responsiven Fluss.
 Sie liegt über den Widgets und reserviert keinen Platz im Fluss. Widgets nutzen
-bei höchstens 600 Pixel Rasterbreite mindestens die halbe Rasterbreite; in
-kurzen mobilen Queransichten mindestens 40 Prozent. Bei Größenänderungen werden
-Viewport und verfügbare Rasterbreite erneut ausgewertet.
+bei höchstens 600 Pixel Rasterbreite die volle Rasterbreite; in kurzen mobilen
+Queransichten mindestens 40 Prozent. Bei Größenänderungen werden Viewport und
+verfügbare Rasterbreite erneut ausgewertet.
 Auch im Bearbeitungsmodus liegt eine kompakte Navigation über dem Raster und
 bleibt bedienbar oberhalb der GridStack-Werkzeuge; die gespeicherten Positionen
 der Widgets ändern sich dadurch nicht.

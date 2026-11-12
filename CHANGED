@@ -8,8 +8,8 @@
   Querformat.
 - Vertikale Navigation wird auch bei hoechstens 600 Pixel Viewporthoehe zum
   Burger-Menue und ueberlagert Widgets.
-- Mobile Widgets erhalten auf schmalen und kurzen Ansichten mehr Mindestbreite;
-  gespeicherte Rasterdaten bleiben unveraendert.
+- Mobile Widgets nutzen im Hochformat die volle Rasterbreite; Rasterdaten
+  bleiben unveraendert.
 
 2026-11-11 - 1.8.1-dev: Mobile Navigation (Refs #141)
 - Horizontale Navigation verkleinert Eintraege bei knapper Hoehe begrenzt,
