@@ -293,6 +293,51 @@ body:has(.cms-schema5-grid) {
   inset: 0 var(--cms-view-gap) var(--cms-view-gap) 0 !important;
 }
 
+.cms-schema5-grid[data-responsive][data-mobile-layout] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cms-view-gap);
+  width: 100%;
+  align-items: flex-start;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item {
+  position: relative !important;
+  inset: auto !important;
+  flex: 0 0 min(100%, calc((var(--cms-view-width) + var(--cms-view-gap)) * var(--cms-widget-fraction) - var(--cms-view-gap)));
+  width: auto !important;
+  height: auto !important;
+  min-width: 0;
+  min-height: 6rem;
+  max-width: 100%;
+}
+
+.cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item::before {
+  content: "";
+  display: block;
+  padding-top: var(--cms-widget-padding, 0px);
+}
+
+.cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item > .grid-stack-item-content {
+  inset: 0 !important;
+}
+
+.cms-schema5-grid[data-responsive][data-mobile-layout] > .cms-responsive-navigation {
+  flex-basis: 100%;
+  min-height: 0;
+}
+
+.cms-schema5-grid[data-responsive][data-mobile-layout] > .cms-responsive-navigation > .grid-stack-item-content {
+  position: relative !important;
+  overflow: visible;
+}
+
+.cms-schema5-grid[data-responsive][data-mobile-layout] .cms-nav {
+  height: auto;
+}
+
 @container cms-page (width <= 600px) {
   .cms-schema5-grid[data-responsive] {
     display: flex;
@@ -339,6 +384,7 @@ body:has(.cms-schema5-grid) {
   .cms-schema5-grid[data-responsive] .cms-nav {
     height: auto;
   }
+
 }
 
 .cms-schema5-grid .cms-nav {
@@ -355,6 +401,42 @@ body:has(.cms-schema5-grid) {
 .cms-schema5-grid .cms-nav-burger {
   padding: .3em .65em;
   border-radius: .5em;
+}
+
+.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] {
+  position: absolute !important;
+  inset: 0 auto auto 0 !important;
+  z-index: 20;
+  flex: 0 0 auto;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0;
+  max-width: min(calc(100cqi - 1rem), 24rem);
+}
+
+.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] > .grid-stack-item-content {
+  position: relative !important;
+  inset: auto !important;
+  width: auto;
+  height: auto;
+  overflow: visible;
+}
+
+.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] .cms-nav {
+  width: max-content;
+  max-width: min(calc(100cqi - 1rem), 24rem);
+  height: auto;
+}
+
+.cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] .cms-nav[data-open] {
+  width: min(calc(100cqi - 1rem), 24rem);
+  max-height: 80dvh;
+  overflow-y: auto;
+  padding: .5rem;
+  border: 1px solid var(--cms-border);
+  border-radius: .75rem;
+  background: var(--cms-surface-raised);
+  box-shadow: 0 .5rem 1.5rem rgb(0 0 0 / .35);
 }
 
 @container cms-page (width < 768px) {

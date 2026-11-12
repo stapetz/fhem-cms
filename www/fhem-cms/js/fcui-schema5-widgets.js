@@ -39,9 +39,12 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   if (!editing) {
     root.setAttribute('data-responsive', '');
     const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'preview' && params.get('cms-device') === 'mobile') {
+    const mobilePreview = params.get('mode') === 'preview' && params.get('cms-device') === 'mobile';
+    const touchDevice = window.matchMedia?.('(pointer: coarse)').matches;
+    if (mobilePreview) {
       root.setAttribute('data-mobile-preview', '');
     }
+    if (mobilePreview || touchDevice) root.setAttribute('data-mobile-layout', '');
   }
   let destroyed = false;
   if (editing) {
@@ -111,6 +114,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       if (!editing) {
         root.removeAttribute('data-responsive');
         root.removeAttribute('data-mobile-preview');
+        root.removeAttribute('data-mobile-layout');
       }
       root.replaceChildren();
       if (editing) {
