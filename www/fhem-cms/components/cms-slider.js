@@ -69,7 +69,7 @@ class FHEMCMSlider extends HTMLElement {
           container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
           background: var(--cms-surface, #202e27); padding: max(2px, 3cqh) 3%; }
         header { padding-right: 0; color: var(--cms-muted, #a5c9b2); font-size: max(5px, min(10cqh, 4cqw)); }
-        h3 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1em; font-weight: 400; }
+        h3 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1em; font-weight: 600; }
         .value { display: flex; align-items: baseline; justify-content: center; gap: 0.35em; min-width: 0;
           font-size: max(8px, min(22cqh, 9cqw)); line-height: 1.1; font-variant-numeric: tabular-nums; }
         output { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

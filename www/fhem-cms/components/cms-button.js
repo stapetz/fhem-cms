@@ -36,7 +36,7 @@ class FHEMCMSButton extends HTMLElement {
         header { position: absolute; top: 0; left: 0; right: 1.6rem; z-index: 1; padding: 0.4em 0 0 1.1em;
           font-size: max(5px, min(13cqh, 5cqw)); }
         header[hidden] { display: none; }
-        h3 { margin: 0; font-size: 1.1em; font-weight: 400; color: var(--cms-muted, #a5c9b2); font-family: inherit;
+        h3 { margin: 0; font-size: 1.1em; font-weight: 600; color: var(--cms-muted, #a5c9b2); font-family: inherit;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .gear { position: absolute; top: 0.2rem; right: 0.3rem; z-index: 2; font-size: 0.75rem; padding: 0 0.35em; line-height: 1.4; }
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
@@ -188,7 +188,7 @@ class FHEMCMSButton extends HTMLElement {
     caption.hidden = config.showLabel !== true;
     push.setAttribute('aria-label', label);
     push.title = label;
-    const title = config.showTitle === false ? '' : (config.title || '');
+    const title = config.showTitle === false ? '' : (config.title || config.device || '');
     this.shadowRoot.querySelector('[data-title]').textContent = title;
     this.shadowRoot.querySelector('[data-header]').hidden = !title;
     const tile = this.shadowRoot.querySelector('[data-tile]');

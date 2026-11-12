@@ -140,7 +140,7 @@ class FHEMCMSThermostat extends HTMLElement {
           font-size: max(4px, min(9.2cqh, 3.6cqw)); }
         header { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
           padding: 0.4em 1.6rem 0 1.3em; flex: none; }
-        h3 { margin: 0; font-size: 1.05em; font-weight: 400; color: var(--cms-muted, #a5c9b2);
+        h3 { margin: 0; font-size: 1.05em; font-weight: 600; color: var(--cms-muted, #a5c9b2);
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         button {
           font: inherit; color: inherit; cursor: pointer;

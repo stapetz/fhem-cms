@@ -40,7 +40,7 @@ class FHEMCMSValue extends HTMLElement {
         header { position: absolute; top: 0; left: 0; right: 1.6rem; z-index: 1; display: flex; align-items: center; gap: 0.4rem;
           padding: 0.4em 0 0 1.1em; font-size: max(5px, min(13cqh, 5cqw)); }
         header[hidden] { display: none; }
-        h3 { margin: 0; font-size: 1.1em; font-weight: 400; color: var(--cms-muted, #a5c9b2); font-family: inherit;
+        h3 { margin: 0; font-size: 1.1em; font-weight: 600; color: var(--cms-muted, #a5c9b2); font-family: inherit;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         ${fittedContentCss}
         .gear.solo { position: absolute; top: 0.2rem; right: 0.3rem; font-size: 0.75rem; }
@@ -256,7 +256,7 @@ class FHEMCMSValue extends HTMLElement {
     const tile = this.shadowRoot.querySelector('[data-tile]');
     tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''}`;
     const title = this.shadowRoot.querySelector('[data-title]');
-    title.textContent = this.widgetConfig.title || '';
+    title.textContent = this.widgetConfig.title || this.widgetConfig.device || '';
     const titleShown = Boolean(this.widgetConfig.title) && this.widgetConfig.showTitle !== false;
     this.shadowRoot.querySelector('[data-header]').hidden = !titleShown;
     tile.toggleAttribute('data-has-title', titleShown);

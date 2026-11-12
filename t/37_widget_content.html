@@ -58,6 +58,17 @@ try {
         const original = JSON.stringify(config);
         const host = createWidgetElement(config, services, snapshots('on'), true);
         fixture.append(host);
+        const title = host.shadowRoot.querySelector('[data-title]');
+        check(getComputedStyle(title).fontWeight === '600', `${type}: title is visually prominent`);
+        if (type !== 'fhem-icon') {
+          check(title.textContent === (titled ? 'Widget title' : 'Test'),
+            `${type}: device name is the default title`);
+        } else {
+          check(title.textContent === (titled ? 'Widget title' : 'Test'),
+            `${type}: device name is the default title`);
+          check(host.shadowRoot.querySelector('[data-state]').textContent === 'on',
+            'Mapped icon state is visible as text as well as color');
+        }
         for (const [width, height] of [[320, 180], [180, 320], [500, 90], [96, 96], [120, 40], [640, 360]]) {
           host.style.width = `${width}px`;
           host.style.height = `${height}px`;
@@ -90,6 +101,10 @@ try {
   slider.style.cssText = 'width:320px;height:180px';
   fixture.append(slider);
   await settle();
+  check(slider.shadowRoot.querySelector('[data-title]').textContent === 'Test',
+    'Slider uses its device name as the default title');
+  check(getComputedStyle(slider.shadowRoot.querySelector('[data-title]')).fontWeight === '600',
+    'Slider title is visually prominent');
   const range = slider.shadowRoot.querySelector('input[type="range"]').getBoundingClientRect();
   check(range.width / slider.getBoundingClientRect().width > 0.92, 'Slider reaches near both widget edges');
   slider.remove();

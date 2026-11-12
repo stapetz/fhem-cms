@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-12",
+  "version": "1.9.0-dev",
+  "title": "Kompakte Widget-Informationshierarchie",
+  "changes": [
+    "Geraetename als Standardtitel kompakter Wert-, Schalt-, Taster- und Statuskacheln; Titel sichtbar hervorgehoben (Refs #166).",
+    "Gemappte Statuskacheln zeigen den Statuswert zusaetzlich zum Icon als Text (Refs #166)."
+  ]
+}
