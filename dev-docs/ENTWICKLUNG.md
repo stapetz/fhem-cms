@@ -1448,12 +1448,30 @@ Gespeicherte Seiten und Layouts sind JSON-Daten und kein ausführbares HTML. Die
 
 - **Referenzumgebung:** FHEM 6.5 auf dem vorhandenen FHEM-System. Phone- und Tablet-Referenzmodelle werden vor der MVP-Abnahme in S10 festgehalten; sie blockieren nicht die Architekturprüfung.
 - **Browsermatrix:** jeweils aktuelle und vorherige stabile Hauptversion, bestimmt zum Zeitpunkt des Tests. Zu prüfen sind Edge, Chrome und Firefox auf Windows, macOS, Linux, Android und iOS sowie Safari auf macOS und iOS, soweit die jeweilige Browser-App auf der Plattform verfügbar ist.
-- **Mobile First:** Layout und Interaktionen werden zuerst für kleine Smartphone-Bildschirme entworfen und anschliessend für Tablets und Desktop erweitert. Phone-, Tablet- und Desktop-Ansichten sind Teil der Abnahme. Auf Phone-Breite darf kein horizontales Seiten-Scrolling erforderlich sein; Kernaktionen müssen mit Touch und Tastatur erreichbar sein und sichtbaren Tastaturfokus bieten. Touch-Ziele sollen mindestens 44 × 44 CSS-Pixel gross sein.
+- **Mobile First:** Layout und Interaktionen werden zuerst für kleine Smartphone-Bildschirme entworfen und anschliessend für Tablets und Desktop erweitert. Phone-, Tablet- und Desktop-Ansichten sind Teil der Abnahme. Auf Phone-Breite darf kein horizontales Seiten-Scrolling erforderlich sein; Kernaktionen müssen mit Touch und Tastatur erreichbar sein und sichtbaren Tastaturfokus bieten. Touch-Ziele sind mindestens 48 × 48 CSS-Pixel gross (siehe Styleguide).
 - **Bedienung:** responsive Darstellung für Wandtablet, Phone, Tablet und Desktop. Kernabläufe müssen auf den festgelegten Browser-/Betriebssystemkombinationen geprüft werden.
 - **Robustheit:** bei Verbindungsabbruch zeigt die UI einen erkennbaren Offline-/Wiederverbindungsstatus. Nach Wiederverbindung werden aktuelle Zustände erneut geladen und erforderliche Abonnements wiederhergestellt; veraltete Nachrichten dürfen keinen neueren Zustand überschreiben.
 - **Performance-Abnahme:** Für ein Dashboard mit 20 Widgets gelten im lokalen Netz die bestätigten Ziele: erste bedienbare Ansicht innerhalb von 2 Sekunden und Anzeige einer Reading-Änderung innerhalb von 500 ms. Die erste Zeit wird ab Navigation bis zur bedienbaren CMS-Ansicht gemessen; die zweite ab der ausgelösten FHEM-Änderung bis zur sichtbaren Aktualisierung im Widget. S10 protokolliert die Messungen auf dem FHEM-Referenzsystem und den dort getesteten Browser-/Gerätekombinationen.
 - **Serverlast:** Ereignisse sollen nur an interessierte Clients gehen. CPU- und Speicherverbrauch werden auf der festgelegten FHEM-Referenzhardware mit dokumentierter Anzahl von Geräten, Widgets und Ereignissen gemessen. Grenzwerte werden vor dem MVP-Abnahmetest festgelegt.
 - „60 FPS“ ist kein pauschales Abnahmekriterium für alle Zielgeräte. Animationen dürfen die Bedienung nicht blockieren; die Leistung wird auf der vereinbarten Referenzhardware geprüft.
+
+### Usability und Barrierefreiheit
+
+Für neue und geänderte Oberflächen gelten der
+[führende Styleguide](./entwicklerdoku_und_styleguides.md) und der
+[Usability-Leitfaden](./USABILITY.md). Vor der Umsetzung sind betroffene
+Nutzeraufgaben, Ansichts-/Bearbeitungs-/Entwurfszustände und vorhandene
+Bedienmuster zu prüfen. Abweichungen, neue Interaktionsverträge und
+Kompatibilitätsfolgen werden im jeweiligen Issue festgehalten; offene
+Roadmap-Beispiele sind keine stillschweigende Funktionsfreigabe.
+
+Die Abnahme umfasst die passenden Zustände für Laden, Erfolg, Fehler, leere
+Daten, Offline und veraltete Readings. Für Änderungen an der Oberfläche sind
+responsive Darstellung, Tastaturfokus, Touch-Bedienung, Kontrast und sichtbare
+Rückmeldungen zu prüfen. Geräte-/FHEM-Prüfungen werden mit Browser und Gerät
+dokumentiert; sie ersetzen keine automatisierten Regressionstests. Bestehende
+Sicherheits-, FHEMWEB-Berechtigungs-, CSRF-, Sanitizer- und
+Draft-/Live-Verträge bleiben unabhängig von der Darstellung verbindlich.
 
 ### Bestätigter MVP-Umfang und Abnahmekriterien
 
