@@ -19,6 +19,30 @@ verbindlich. Insbesondere bleiben bestehende Daten und die beiden
 [Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) erhalten; Codebeispiele des
 Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherung.
 
+## Dokumentationen synchron halten
+
+Der FHEM-Wiki-Onepager wird als MediaWiki-Quelltext in
+[`docs/fhem-cms-fhem-wiki.mediawiki`](../docs/fhem-cms-fhem-wiki.mediawiki)
+versioniert. Diese Datei ist die maßgebliche Kopiervorlage für den Artikel im
+FHEM-Wiki; eine Datei in einem lokalen KI-Sitzungsordner ist kein dauerhafter
+Pflegeort.
+
+- Bei sämtlichen Anpassungen am GitHub-Wiki und an internen Dokumentationen
+  den Onepager im selben Arbeitsgang prüfen und entsprechend aktualisieren.
+  Anwenderrelevante Erkenntnisse, Befehle, Grenzen und geänderte Bedienabläufe
+  müssen in allen betroffenen Dokumentationen übereinstimmen.
+- Interne Entwicklungsdetails und noch nicht veröffentlichte Funktionen nicht
+  ungekennzeichnet als verfügbares Anwenderverhalten darstellen. Vertrauliche
+  Daten gehören nicht in die öffentliche Kopiervorlage.
+- MediaWiki-Syntax beibehalten, insbesondere Tabellen und Links sowie
+  `<nowiki>` um CMS-Platzhalter gegen deren Auswertung durch das FHEM-Wiki.
+  Die Infobox verlinkt unter **Dokumentation** direkt auf das GitHub-Wiki.
+- Änderungen am Onepager versionieren. Die Veröffentlichung bzw. Übernahme im
+  externen FHEM-Wiki getrennt benennen; eine Repositoryänderung aktualisiert
+  den dortigen Artikel nicht automatisch.
+- Entwicklung und Dokumentationspflege erfolgen auf `dev`. Diese Pflegepflicht
+  ist keine Freigabe zur Veröffentlichung von Änderungen auf `main`.
+
 ## Ausgangsbasis für das FCUI-Refactoring
 
 Der Git-Tag `before-fcui-refactoring` bezeichnet den vollständigen
