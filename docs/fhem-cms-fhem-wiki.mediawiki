@@ -305,6 +305,17 @@ Im Einstellungsdialog ordnest du die Kacheln in einem eigenen '''12-Spalten-Rast
 
 Das innere Linkraster ist unabhängig vom äußeren Seitenraster. Ein „neues Fenster“ kann aufgrund von Browserregeln auch als Tab erscheinen.
 
+'''Entwicklungsstand auf dev, noch nicht veröffentlicht:''' Beim Speichern
+passt sich die äußere Widgetgröße an das belegte Rechteck der Linkkacheln an.
+Ein einzelner Link mit 4 × 3 inneren Feldern belegt bei 12 Seitenspalten
+4 × 3 äußere Felder; ein sichtbarer Widgettitel ergänzt eine Zeile. Feinere
+Seitendichten skalieren die Außenmaße. Leere Randspalten und -zeilen werden
+nicht angezeigt, Abstände zwischen Kacheln bleiben erhalten. Die Außenposition
+ändert sich nicht. Bei Überschneidungen oder Platzmangel am Seitenrand wird
+Speichern mit einer Meldung abgewiesen: zuerst Platz schaffen oder Kacheln
+verkleinern. Bestehende Widgets passen ihre Außenfläche beim nächsten
+Speichern des Einstellungsdialogs an.
+
 '''Entwicklungsstand auf dev, noch nicht veröffentlicht:''' Interne Linkkacheln
 können statt eines Seitenwechsels ein Popup in kleiner, mittlerer oder großer
 Breite öffnen. Es zeigt die Zielseite mit Live-Daten über der aktuellen Seite.

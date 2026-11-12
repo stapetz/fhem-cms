@@ -206,6 +206,48 @@ test('modal link survives real draft and publish without changing existing live 
   } finally { await rm(dir, { recursive: true }); }
 });
 
+test('compact link geometry survives real draft, reload and publication', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-link-fit-'));
+  const live = config();
+  const link = { id: 'one', kind: 'internal', page: 'start', text: 'Start', showText: true,
+    textPosition: 'overlay', target: 'self', grid: { col: 1, row: 1, w: 4, h: 3 } };
+  live.pages[0].widgets.push({ id: 'links', type: 'fhem-link', title: 'Links',
+    grid: { col: 9, row: 2, w: 4, h: 2 }, links: [link] });
+  const original = JSON.stringify(live);
+  const invoke = (operation, ...args) => {
+    const child = spawnSync('perl', ['-e', perl, dir, operation, ...args], { encoding: 'utf8' });
+    assert.equal(child.status, 0, child.stderr);
+    const { result, error } = JSON.parse(child.stdout);
+    if (error) throw new Error(error);
+    return result;
+  };
+  const controller = new Schema5DraftController({
+    read: async () => invoke('read'),
+    save: async (value, token) => invoke('save', Buffer.from(JSON.stringify(value)).toString('base64'), token),
+    publish: async token => invoke('publish', token),
+    discard: async token => invoke('discard', token),
+  });
+  try {
+    await writeFile(join(dir, 'config.json'), original);
+    await controller.reload();
+    const links = [link, { ...link, id: 'two', grid: { col: 1, row: 4, w: 4, h: 2 } }];
+    for (const [items, height] of [[[link], 4], [links, 6], [[link], 4]]) {
+      const state = controller.snapshot();
+      const widget = structuredClone((state.draft || state.live).pages[0].widgets[2]);
+      widget.links = structuredClone(items);
+      await controller.saveWidget('start', widget, state.token, 'update');
+      const reloaded = await controller.reload();
+      assert.deepEqual(reloaded.draft.pages[0].widgets[2].grid, { col: 9, row: 2, w: 4, h: height });
+      assert.deepEqual(reloaded.draft.pages[0].widgets[2].links, items);
+      assert.deepEqual(reloaded.draft.pages[0].widgets.slice(0, 2), live.pages[0].widgets.slice(0, 2));
+      assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
+    }
+    const draft = controller.snapshot().draft;
+    await controller.publishDraft(controller.snapshot().token);
+    assert.deepEqual((await controller.reload()).live, draft);
+  } finally { await rm(dir, { recursive: true }); }
+});
+
 test('navigation reflow survives real Perl persistence and rejects overflow before any write', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cms-v5-navigation-reflow-'));
   const live = config();

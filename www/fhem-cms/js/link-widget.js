@@ -72,4 +72,26 @@ export function linkHref(link) {
   if (link.kind === 'external' && validLinkUrl(link.url)) return link.url;
   throw new Error('Ungültiges Linkziel');
 }
+
+export function linkBounds(links) {
+  const col = Math.min(...links.map(link => link.grid.col));
+  const row = Math.min(...links.map(link => link.grid.row));
+  return { col, row,
+    w: Math.max(...links.map(link => link.grid.col + link.grid.w)) - col,
+    h: Math.max(...links.map(link => link.grid.row + link.grid.h)) - row };
+}
+
+export function fitLinkWidget(widget, columns, pages) {
+  validateLinkItems(widget.links, pages);
+  if (![12, 24, 48, 96, 192].includes(columns)) throw new Error('Ungültige Rasterdichte');
+  const bounds = linkBounds(widget.links);
+  const scale = columns / LINK_COLUMNS;
+  const result = structuredClone(widget);
+  result.grid.w = bounds.w * scale;
+  result.grid.h = (bounds.h + (widget.title && widget.showTitle !== false ? 1 : 0)) * scale;
+  if (result.grid.col + result.grid.w > columns + 1 || result.grid.row + result.grid.h > 1001) {
+    throw new Error('Die Linkkacheln benötigen mehr Platz als am Widgetstandort verfügbar. Widget zuerst verschieben oder Linkraster verkleinern.');
+  }
+  return result;
+}
 import { ASSET_DOCUMENT } from './asset-contract.js';

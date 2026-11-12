@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
-import { linkHref, validateLinkItems, validLinkUrl } from '../www/fhem-cms/js/link-widget.js';
+import { fitLinkWidget, linkBounds, linkHref, validateLinkItems, validLinkUrl } from '../www/fhem-cms/js/link-widget.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { Schema5WidgetSession } from '../www/fhem-cms/js/fcui-schema5-widget-session.js';
 import { resizeSchema5Grid, schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
 
 const link = () => ({ id: 'one', kind: 'internal', page: 'home', text: 'Startseite',
@@ -15,6 +17,93 @@ const source = () => ({
 });
 const script = 'use strict; use warnings; use JSON::PP (); require "./FHEM/01_FHEMCMS.pm";'
   + ' local $/; my $v=JSON::PP->new->utf8->decode(<STDIN>); my $e=FHEMCMS_ValidateConfig($v,5); print $e if defined $e;';
+
+test('LinkWidget occupied bounds produce compact density-independent outer dimensions', () => {
+  for (const columns of [12, 24, 48, 96, 192]) {
+    const widget = source().pages[0].widgets[0];
+    const before = structuredClone(widget);
+    const scale = columns / 12;
+    assert.deepEqual(linkBounds(widget.links), { col: 1, row: 1, w: 4, h: 3 });
+    const fitted = fitLinkWidget(widget, columns, source().pages);
+    assert.deepEqual(fitted.grid, { col: 1, row: 2, w: 4 * scale, h: 3 * scale });
+    assert.deepEqual(widget, before);
+    widget.title = 'Links';
+    assert.equal(fitLinkWidget(widget, columns, source().pages).grid.h, 4 * scale);
+    widget.showTitle = false;
+    assert.equal(fitLinkWidget(widget, columns, source().pages).grid.h, 3 * scale);
+    widget.links[0].grid = { col: 5, row: 7, w: 4, h: 3 };
+    assert.deepEqual(linkBounds(widget.links), { col: 5, row: 7, w: 4, h: 3 });
+    widget.links.push({ ...link(), id: 'two', grid: { col: 1, row: 11, w: 6, h: 2 } });
+    assert.deepEqual(linkBounds(widget.links), { col: 1, row: 7, w: 8, h: 6 });
+    assert.equal(fitLinkWidget(widget, columns, source().pages).grid.w, 8 * scale);
+    assert.equal(fitLinkWidget(widget, columns, source().pages).grid.h, 6 * scale);
+  }
+  const widget = source().pages[0].widgets[0];
+  widget.grid.col = 10;
+  assert.throws(() => fitLinkWidget(widget, 12, source().pages), /mehr Platz/);
+  widget.grid.col = 1; widget.grid.row = 999;
+  assert.throws(() => fitLinkWidget(widget, 12, source().pages), /mehr Platz/);
+});
+
+test('LinkWidget session persists fitted dimensions as draft and live without altering nested links', async () => {
+  let state = { live: source(), draft: null, token: 'a'.repeat(64) };
+  let writes = 0;
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async (draft, token) => {
+      assert.equal(token, state.token);
+      writes++;
+      state = { live: state.live, draft, token: String(writes).padStart(64, '0') };
+    },
+    publish: async token => {
+      assert.equal(token, state.token);
+      state = { live: state.draft, draft: null, token: 'f'.repeat(64) };
+    },
+    discard: async () => {},
+  });
+  await controller.reload();
+  const save = async links => {
+    const config = controller.snapshot();
+    const widget = (config.draft || config.live).pages[0].widgets[0];
+    const session = new Schema5WidgetSession({ controller, pageId: 'home', token: config.token, widget, action: 'update' });
+    await session.services({}).saveWidget({ ...widget, links });
+    return controller.snapshot().draft.pages[0].widgets[0];
+  };
+  let widget = await save([link()]);
+  assert.deepEqual(widget.grid, { col: 1, row: 2, w: 4, h: 3 });
+  assert.deepEqual(state.live, source(), 'live stays untouched before publication');
+  const links = [link(), { ...link(), id: 'two', grid: { col: 5, row: 1, w: 3, h: 2 } }];
+  widget = await save(links);
+  assert.deepEqual(widget.grid, { col: 1, row: 2, w: 7, h: 3 });
+  assert.deepEqual(widget.links, links);
+  const expanded = [{ ...link(), grid: { col: 1, row: 1, w: 8, h: 4 } }];
+  widget = await save(expanded);
+  assert.deepEqual(widget.grid, { col: 1, row: 2, w: 8, h: 4 });
+  widget = await save([link()]);
+  assert.deepEqual(widget.grid, { col: 1, row: 2, w: 4, h: 3 });
+  await controller.publishDraft(state.token);
+  await controller.reload();
+  assert.deepEqual(controller.snapshot().live.pages[0].widgets[0], widget);
+  parity(state.live, true, 'auto-sized published widget');
+});
+
+test('LinkWidget growth rejects collisions without writes or moving other widgets', async () => {
+  const live = source();
+  live.pages[0].widgets.push({ id: 'other', type: 'text', html: 'Keep',
+    grid: { col: 7, row: 2, w: 2, h: 4 } });
+  let writes = 0;
+  const controller = new Schema5DraftController({
+    read: async () => ({ live, draft: null, token: 'a'.repeat(64) }),
+    save: async () => { writes++; }, publish: async () => {}, discard: async () => {},
+  });
+  await controller.reload();
+  const widget = structuredClone(live.pages[0].widgets[0]);
+  widget.links[0].grid.w = 8;
+  assert.throws(() => controller.saveWidget('home', widget, 'a'.repeat(64), 'update'), /Rasterüberschneidung/);
+  assert.equal(writes, 0);
+  assert.deepEqual(controller.snapshot().live, live);
+  assert.equal(controller.snapshot().draft, null);
+});
 
 function parity(config, valid, name) {
   const before = structuredClone(config);

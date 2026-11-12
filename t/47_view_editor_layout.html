@@ -10,6 +10,7 @@
 <script type="module">
 import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
 import { Schema5View } from '../www/fhem-cms/js/fcui-schema5-view.js';
+import { fitLinkWidget } from '../www/fhem-cms/js/link-widget.js';
 
 const output = document.querySelector('#result');
 let checks = 0;
@@ -48,6 +49,15 @@ try {
         : { col: 1, row: 1, w: 11 * scale, h: scale } },
       pages: [{ id: 'one', title: 'Home', widgets: [widgets[1], widgets[0], widgets[3], widgets[2]] },
         { id: 'two', title: 'Other page', widgets: [] }] };
+    const links = [{ id: 'link1', kind: 'internal', page: 'two', text: 'Other page',
+      showText: true, textPosition: 'overlay', target: 'self',
+      grid: { col: 5, row: 3, w: 4, h: 3 } }];
+    if (columns >= 48) links.push({ ...links[0], id: 'link2',
+      grid: { col: 1, row: 6, w: 3, h: 2 } });
+    const linkWidget = fitLinkWidget({ id: 'links', type: 'fhem-link', title: 'Links', links,
+      grid: { col: 1, row: 20 * scale, w: 6 * scale, h: 4 * scale } }, columns, config.pages);
+    widgets.push(linkWidget);
+    config.pages[0].widgets.push(linkWidget);
     const original = JSON.stringify(config);
     const measurements = [];
     for (const editing of [null, { onChange() { throw new Error('Rendering must not save'); }, onEdit() {} }]) {
@@ -64,7 +74,17 @@ try {
           const items = Object.fromEntries([...root.children].map(element => [
             element.gridstackNode.id, rect(element.querySelector('.grid-stack-item-content')),
           ]));
-          states.push({ width, items, compact: root.querySelector('.cms-nav').hasAttribute('data-compact') });
+          const linkRoot = root.querySelector('cms-link').shadowRoot;
+          const linkBox = linkRoot.querySelector('[data-links]').getBoundingClientRect();
+          const tiles = [...linkRoot.querySelectorAll('.link-tile')].map(element => rect(element));
+          check(tiles.length === links.length, 'all links render in the page view');
+          for (const tile of linkRoot.querySelectorAll('.link-tile')) {
+            const box = tile.getBoundingClientRect();
+            check(box.width > 0 && box.height > 0 && box.left >= linkBox.left - 1
+              && box.right <= linkBox.right + 1 && box.top >= linkBox.top - 1
+              && box.bottom <= linkBox.bottom + 1, 'fitted link tiles stay within the widget in every viewport');
+          }
+          states.push({ width, items, tiles, compact: root.querySelector('.cms-nav').hasAttribute('data-compact') });
           check(JSON.stringify(config) === original, `${columns}/${width}: no config mutation`);
           check(JSON.stringify(root.gridstack.save(false).map(({ id, x = 0, y = 0, w = 1, h = 1 }) => ({ id, x, y, w, h }))
             .sort((a, b) => a.id.localeCompare(b.id))) === JSON.stringify(
@@ -96,8 +116,12 @@ try {
             `${columns}/${live.width}/${id}: same ${key}: ${live.items[id][key]} vs ${editor.items[id][key]}`);
         }
       }
+      for (let tile = 0; tile < live.tiles.length; tile++) for (const key of ['x', 'y', 'width', 'height']) {
+        check(Math.abs(live.tiles[tile][key] - editor.tiles[tile][key]) < 1,
+          `${columns}/${live.width}: link tiles have identical ${key} in view and editor`);
+      }
       const first = live.items.widget0;
-      check(Object.entries(live.items).filter(([id]) => id !== '__nav')
+      check(Object.entries(live.items).filter(([id]) => id.startsWith('widget'))
         .every(([, box]) => Math.abs(box.y - first.y) < 1), 'all four desktop widgets stay in saved row');
       if (precise) check(live.items.widget2.width < first.width * .5, 'small value is not enlarged to 25 percent');
     }

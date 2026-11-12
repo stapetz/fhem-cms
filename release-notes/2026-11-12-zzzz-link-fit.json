@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-12",
+  "version": "1.8.1-dev",
+  "title": "LinkWidget: passende Gesamtgroesse (Refs #148)",
+  "changes": [
+    "Beim Dialogspeichern folgt die Aussenflaeche dem belegten Linkraster und der Seitendichte; ein sichtbarer Titel erhaelt eine zusaetzliche Zeile.",
+    "Leere Linkrasterraender entfallen in der Anzeige. Position und innere Anordnung bleiben erhalten; Kollisionen verhindern das Speichern."
+  ]
+}

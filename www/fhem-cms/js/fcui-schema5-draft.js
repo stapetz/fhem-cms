@@ -1,4 +1,5 @@
 import { applySchema5GridItems, schema5GridItems } from './fcui-schema5-layout.js';
+import { fitLinkWidget } from './link-widget.js';
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -108,7 +109,9 @@ export class Schema5DraftController {
     if (!widget || typeof widget !== 'object' || Array.isArray(widget)
       || typeof widget.id !== 'string') throw new Error('Ungültiges Widget');
     if (action !== 'create' && action !== 'update') throw new Error('Widget-Aktion erforderlich');
-    const copy = structuredClone(widget);
+    const copy = widget.type === 'fhem-link'
+      ? fitLinkWidget(widget, Number(candidate.settings.gridColumns), candidate.pages)
+      : structuredClone(widget);
     const index = page.widgets.findIndex((entry) => entry.id === copy.id);
     if (action === 'create' && index >= 0) throw new Error('Widget-ID ist bereits vorhanden');
     if (action === 'update' && index < 0) throw new Error('Unbekanntes Widget');
