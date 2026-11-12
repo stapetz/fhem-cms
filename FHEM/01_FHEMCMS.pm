@@ -59,6 +59,8 @@ sub FHEMCMS_Define {
     return 'Der Device-Name darf nur Buchstaben, Ziffern, Punkt, Unterstrich und Bindestrich enthalten'
         if ($name !~ /\A[A-Za-z0-9_.-]{1,128}\z/ || $name eq '.' || $name eq '..');
 
+    $hash->{VERSION} = $FHEMCMS_VERSION;
+
     my $modPath = $main::attr{global}{modpath};
     my $hadPage = defined($modPath) && $modPath ne ''
         && -e File::Spec->catfile($modPath, 'www', 'fhem-cms', $name, 'index.html');
@@ -86,7 +88,6 @@ sub FHEMCMS_Define {
         return $error if (defined($error));
     }
 
-    $hash->{VERSION} = $FHEMCMS_VERSION;
     $hash->{STATE} = 'defined';
     return undef;
 }
@@ -2634,6 +2635,8 @@ use FHEMWEB and FHEM permissions.</p>
   Bild entfernen loescht nur den Widgetverweis. Verwendete Assets sind vor
   Loeschung geschuetzt. Assetaenderungen gelten unabhaengig vom Seitenentwurf.
   Die installierte Modulversion steht im Internal <code>VERSION</code>.
+  Sie wird auch gesetzt, wenn die anschliessende Initialisierung fehlschlaegt;
+  die Versionsangabe allein bestaetigt keine erfolgreiche Initialisierung.
   Nach Updates FHEM neu starten und CMS-Browserseiten vollstaendig neu laden.</p>
   <p>Ausfuehrliche Anleitung:
   <a href="https://github.com/stapetz/fhem-cms/blob/main/docs/ANWENDER.md">Anwenderdokumentation</a>.
