@@ -67,8 +67,10 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
     }
     const responsiveFlow = responsiveGrid && browser.getComputedStyle(responsiveGrid).display === 'flex';
     const availableWidth = responsiveFlow ? responsiveGrid.clientWidth : nav.clientWidth;
+    const narrowResponsiveFlow = responsiveFlow && responsiveGrid.clientWidth <= 600;
     const compact = required.width > availableWidth + 0.5
-      || (fixedHeight && required.height > nav.clientHeight + 0.5);
+      || (fixedHeight && required.height > nav.clientHeight + 0.5)
+      || narrowResponsiveFlow;
     if (compact) setScale(1);
     nav.toggleAttribute('data-compact', compact);
     const editableGrid = responsiveGrid?.classList.contains('cms-grid-editable');
@@ -87,7 +89,11 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
       || JSON.stringify(otherStyles()) !== observedStyles)) measure();
   });
   resize.observe(nav);
-  if (responsiveGrid && responsiveGrid !== nav) resize.observe(responsiveGrid);
+  if (responsiveGrid && responsiveGrid !== nav) {
+    resize.observe(responsiveGrid);
+    if (responsiveGrid.parentElement) resize.observe(responsiveGrid.parentElement);
+  }
+  browser.addEventListener?.('resize', measure);
   changes.observe(nav, { subtree: true, childList: true, characterData: true,
     attributes: true, attributeFilter: ['class', 'style', 'hidden', 'aria-current'] });
   const fonts = nav.ownerDocument.fonts;
@@ -98,6 +104,7 @@ export function observeSchema5Navigation(nav, constrainHeight = false) {
     stopped = true;
     resize.disconnect();
     changes.disconnect();
+    browser.removeEventListener?.('resize', measure);
     fonts?.removeEventListener('loadingdone', measure);
     nav.removeAttribute('data-adaptive');
     nav.removeAttribute('data-compact');
