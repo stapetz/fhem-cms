@@ -210,7 +210,7 @@ Lesbarkeit abhängig vom Bild verringern.
 === Fenstergröße, Zoom und mobile Ansicht ===
 
 Navigation und Widgets skalieren gemeinsam mit der verfügbaren Breite.
-'''Noch nicht veröffentlicht (stapetz/fhem-cms#155):''' Das Seitenraster nutzt
+'''Seit Version 1.9.0 (stapetz/fhem-cms#155):''' Das Seitenraster nutzt
 die gesamte verfügbare Inhaltsbreite, auch auf breiten Monitoren und beim
 Browserzoom. Kleine Außenabstände und sichere Bildschirmränder bleiben erhalten.
 Der Editor passt die Spaltenbreite ein, statt rechts Fläche freizulassen oder
@@ -223,7 +223,7 @@ Bis einschließlich '''600 Pixel Inhaltsbreite''' ordnen Homepage und Vorschau d
 
 Im schmalen Smartphone-Hochformat nutzen Widgets die gesamte verfügbare Breite; im kurzen Querformat erhalten sie mindestens 40 Prozent.
 
-'''Noch nicht veröffentlicht (stapetz/fhem-cms#141):''' Homepage und Vorschau
+'''Seit Version 1.9.0 (stapetz/fhem-cms#141):''' Homepage und Vorschau
 brechen auch im schmalen Desktopbrowser bis 80 rem Inhaltsbreite (bei
 Standardschrift 1280 Pixel) um. Breite Desktopansichten und das exakte
 Bearbeitungsraster bleiben erhalten. Im kurzen Phone-Querformat füllen die
