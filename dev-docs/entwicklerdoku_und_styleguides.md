@@ -299,11 +299,18 @@ geschlossen. Drop-Standardverhalten verhindern, Ablagefläche hervorheben und
 Ordner-Drops explizit ablehnen. Nach Abbruch/erstem Fehler keine weiteren Dateien
 starten; erfolgreiche Dateien erhalten und Anzahl sichtbar melden.
 Der Entwicklungsstand zu #138 gruppiert Bildvarianten über `variantOf` beim
-Original. Der Bearbeitungsdialog zeigt Quellauflösung, Ausschnittkoordinaten in
-Quellpixeln und die finale Ausgabeauflösung getrennt. Das Crop-Symbol aktiviert
-die Auswahl; `OK` bestätigt sie, erst „Variante erstellen“ startet den
-tokengebundenen Upload. Weitere Bildwerkzeuge werden über dieselbe Overlay-
-Werkzeugleiste ergänzt; Dreh-/Spiegelfunktionen sind ausdrücklich nicht Teil
+Original. Der Bearbeitungsdialog zeigt Quellauflösung, Ausschnittgröße in
+Quellpixeln und die finale Ausgabeauflösung getrennt. Numerische Zuschnittsfelder
+entfallen: Das Crop-Symbol aktiviert den direkt verschiebbaren Auswahlrahmen mit
+acht Skaliergriffen (Pointer Capture für Maus/Touch, Pfeiltasten mit optionalen
+10-Pixel-Schritten). Bildgrenzen gelten für Bewegen und Skalieren; Pointer-Abbruch
+stellt die Auswahl vor der Geste wieder her. Eine Zuschnittssperre hält das beim
+Aktivieren gewählte Seitenverhältnis. Die getrennte, standardmäßig aktive
+Ausgabesperre führt Breite/Höhe anhand des Ausschnittverhältnisses nach.
+`OK` bestätigt den Ausschnitt, `Abbrechen` stellt Auswahl, Ausgabemaße und Sperren
+wieder her; reines Verkleinern benötigt keinen Zuschnitt. Erst „Variante erstellen“
+startet den tokengebundenen Upload. Weitere Bildwerkzeuge werden über dieselbe
+Werkzeugleiste oberhalb des Bildes ergänzt; Dreh-/Spiegelfunktionen sind ausdrücklich nicht Teil
 des ersten Umfangs. Originale bleiben unverändert.
 GIF-Animation und APNG werden nicht als Einzelbild gespeichert. Maße werden vor
 dem Dekodieren und danach auf 8192 Pixel pro Seite und 16 Megapixel begrenzt.
@@ -311,6 +318,30 @@ Löschen prüft jede Datei separat; bei Originallöschung werden Varianten zu
 eigenständigen Bildern. Beim Rollback sind Code, Assetkatalog und Dateien einer
 zusammengehörigen Sicherung erforderlich, da alte Validatoren `variantOf` nicht
 akzeptieren. Dieser Entwicklungsstand ist noch nicht veröffentlicht.
+Regression für #138: `python3 -m http.server 8771 --bind 127.0.0.1` im
+Repository starten und `http://127.0.0.1:8771/t/61_asset_image.html` in Chrome
+öffnen. Die Fixture prüft Größenkopplung, alle acht Tastaturgriffe und Abbrechen
+und wartet dann mit `#result[data-ready="true"]` auf echte Pointer-Eingaben.
+`imageRegression.points([x,y],[x,y])` übersetzt die folgenden Quellpixel in
+Bildschirmkoordinaten; nach jeder Geste kann `assertCrop({x,y,w,h}, 'Prüfung')`
+den Zustand prüfen:
+
+| Geste | Von → nach | Erwarteter Ausschnitt x/y/w/h |
+|---|---|---|
+| Innen verschieben | 70/40 → 90/50 | 40/20/100/60 |
+| Eckgriff vergrößern | 140/80 → 160/90 | 40/20/120/70 |
+| Eckgriff verkleinern | 40/20 → 50/30 | 50/30/110/60 |
+| An Bildgrenze verschieben | 100/60 → -100/-100 | 0/0/110/60 |
+| `imageRegression.lock()`, Eckgriff skalieren | 110/60 → 160/80 | 0/0/160/87 |
+| Sperre wieder lösen, neu aufziehen | 199/1 → 100/99 | 100/1/99/98 |
+
+Dann am oberen Griff einmal Pfeil hoch, rechts einmal Pfeil rechts und unten
+einmal Pfeil runter drücken. `imageRegression.finish()` prüft 100/0/100/100,
+bestätigt den Zuschnitt, speichert die 5×5-PNG-Variante und prüft blaue Bildpixel,
+unverändertes Original und Auswahl/Löschung der Variante. Erwartet:
+`#result[data-result="pass"]`, mindestens 60 Prüfungen. Mit Maus bei 1280×900
+und emuliertem Touch bei 390×844 prüfen; zusätzlich eine Bewegung mit
+`pointercancel` bzw. `touchCancel` abbrechen und unveränderte Auswahl erwarten.
 Die bisherige Suche ist entfernt; Weiterentwicklung ausschließlich in #126
 (later/Backlog), nicht Bestandteil des aktuellen Assetmanager-Abnahmeumfangs.
 Zielordner für Assets und Ordner werden über denselben grafischen Ordnerpicker

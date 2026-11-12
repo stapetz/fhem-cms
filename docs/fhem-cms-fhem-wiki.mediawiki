@@ -398,10 +398,18 @@ Wähle eine Datei, um ihre Eigenschaften rechts zu öffnen:
 
 '''Entwicklungsstand auf dev, noch nicht veröffentlicht:''' Bilder lassen sich per
 '''Bild bearbeiten''' zuschneiden und verkleinern. Die Auflösung des Quellbildes
-wird angezeigt; die Ausschnittwerte beziehen sich auf Pixel im Quellbild, die
+wird angezeigt; die Ausschnittgröße bezieht sich auf Pixel im Quellbild, die
 Ausgabegröße auf die finale Auflösung der neuen Variante. Sie entspricht zunächst
 dem Ausschnitt und kann nicht größer als dieser sein. Das Crop-Symbol über dem
-Bild aktiviert die Auswahl per Maus oder Touch; '''OK''' bestätigt den Ausschnitt,
+Bild aktiviert die Auswahl per Maus oder Touch. Den Rahmen innen verschieben,
+an den acht Rand- und Eckgriffen skalieren oder außerhalb einen neuen Ausschnitt
+aufziehen; numerische Zuschnittsfelder entfallen. Rahmen und Griffe lassen sich
+auch mit Pfeiltasten bedienen (mit Umschalt: 10 Pixel).
+'''Seitenverhältnis beibehalten''' hält beim Zuschneiden das Verhältnis der
+aktuellen Auswahl fest. Die getrennte, zunächst aktivierte Option bei der
+Ausgabegröße führt beim Ändern von Breite oder Höhe die andere Dimension passend
+zum Ausschnitt nach; ohne Haken sind beide Werte frei wählbar. Reines Verkleinern
+benötigt keinen Zuschneidemodus. '''OK''' bestätigt den Ausschnitt,
 '''Abbrechen''' verwirft ihn. Erst '''Variante erstellen''' lädt das Ergebnis als
 neue Variante hoch; das Original bleibt unverändert. Rechts stehen Original und
 Varianten mit Dateigröße zur Auswahl. Varianten können einzeln gelöscht werden

@@ -72,53 +72,112 @@ try {
   'Ausschnitt- und Ausgabegröße sind klar unterschieden');
   const cropTool = editor.querySelector('[data-image-tool="crop"]');
   check(cropTool.getAttribute('aria-label') === 'Zuschneiden', 'Crop-Symbol ist zugänglich beschriftet');
+  check(!editor.querySelector('[data-crop]'), 'Zuschnitt hat keine numerischen Eingabefelder');
+  const outputW = editor.querySelector('[data-output="w"]');
+  const outputH = editor.querySelector('[data-output="h"]');
+  const outputLock = editor.querySelector('[data-output-ratio]');
+  const cropLock = editor.querySelector('[data-crop-ratio]');
+  const input = (field, value) => { field.value = String(value); field.dispatchEvent(new Event('input')); };
+  check(outputLock.checked && !cropLock.checked, 'Bildgröße ist proportional, Zuschnitt zunächst frei');
+  check(!editor.querySelector('[data-image-save]').disabled, 'Reine Größenänderung braucht keinen Zuschnitt');
+  input(outputW, 100);
+  check(outputH.value === '50', 'Gesperrte Ausgabehöhe folgt der Breite');
+  input(outputH, 20);
+  check(outputW.value === '40', 'Gesperrte Ausgabebreite folgt der Höhe');
+  outputLock.click();
+  input(outputW, 80);
+  check(outputH.value === '20', 'Freie Ausgabegröße erlaubt ein anderes Seitenverhältnis');
+  outputLock.click();
+  check(outputH.value === '40', 'Erneutes Sperren stellt das Ausschnittverhältnis her');
+  input(outputW, 201);
+  editor.querySelector('[data-image-save]').click();
+  check(!savedFile && editor.querySelector('[data-image-error]').textContent.includes('gültige Ausgabegröße'),
+    'Vergrößerung über die Quellauflösung wird sichtbar abgewiesen');
+  input(outputW, 200);
+  const selection = editor.querySelector('.image-editor-selection');
+  const key = (target, key, shiftKey = false) => target.dispatchEvent(
+    new KeyboardEvent('keydown', { key, shiftKey, bubbles: true }));
+  const handle = name => editor.querySelector(`[data-handle="${name}"]`);
+  const cropValues = () => {
+    const style = selection.style;
+    return { x: Math.round(parseFloat(style.left) * 2), y: Math.round(parseFloat(style.top)),
+      w: Math.round(parseFloat(style.width) * 2), h: Math.round(parseFloat(style.height)) };
+  };
+  const assertCrop = (expected, message) => {
+    check(JSON.stringify(cropValues()) === JSON.stringify(expected), `${message}: ${JSON.stringify(cropValues())}`);
+  };
   cropTool.click();
   check(cropTool.getAttribute('aria-pressed') === 'true' && !editor.querySelector('[data-crop-actions]').hidden,
     'Crop-Symbol aktiviert das Zuschneidewerkzeug');
-  const left = editor.querySelector('[data-crop="x"]');
-  left.value = '10'; left.dispatchEvent(new Event('input'));
+  check(selection.tabIndex === 0 && editor.querySelectorAll('[data-handle][tabindex="0"]').length === 8,
+    'Auswahl und acht Skaliergriffe sind per Tastatur erreichbar');
+  key(handle('e'), 'ArrowLeft', true);
+  assertCrop({ x: 0, y: 0, w: 190, h: 100 }, 'Rechter Griff verkleinert die Auswahl per Tastatur');
+  cropLock.click(); outputLock.click();
   editor.querySelector('[data-crop-cancel]').click();
-  check(cropTool.getAttribute('aria-pressed') === 'false' && left.value === '0'
+  assertCrop({ x: 0, y: 0, w: 200, h: 100 }, 'Abbrechen stellt den vorherigen Ausschnitt wieder her');
+  check(cropTool.getAttribute('aria-pressed') === 'false' && outputW.value === '200' && outputH.value === '100'
     && getComputedStyle(editor.querySelector('[data-crop-actions]')).display === 'none',
     'Abbrechen verwirft den unbestätigten Ausschnitt');
+  check(!cropLock.checked && outputLock.checked, 'Abbrechen stellt auch die Verhältnisoptionen wieder her');
   cropTool.click();
-  const invalid = editor.querySelector('[data-crop="w"]');
-  invalid.value = '0'; invalid.dispatchEvent(new Event('input'));
-  editor.querySelector('[data-crop-confirm]').click();
-  check(editor.open && editor.querySelector('[data-image-error]').textContent.includes('gültigen'),
-    'Ungültige Ausschnittgröße bleibt sichtbar und wird nicht gespeichert');
+  for (let i = 0; i < 10; i++) key(handle('e'), 'ArrowLeft', true);
+  for (let i = 0; i < 4; i++) key(handle('s'), 'ArrowUp', true);
+  key(selection, 'ArrowRight', true); key(selection, 'ArrowRight', true); key(selection, 'ArrowDown', true);
+  assertCrop({ x: 20, y: 10, w: 100, h: 60 }, 'Auswahl lässt sich per Tastatur bewegen');
+  for (const [name, forward, backward] of [
+    ['nw', 'ArrowLeft', 'ArrowRight'], ['n', 'ArrowUp', 'ArrowDown'], ['ne', 'ArrowUp', 'ArrowDown'],
+    ['e', 'ArrowRight', 'ArrowLeft'], ['se', 'ArrowRight', 'ArrowLeft'], ['s', 'ArrowDown', 'ArrowUp'],
+    ['sw', 'ArrowLeft', 'ArrowRight'], ['w', 'ArrowLeft', 'ArrowRight'],
+  ]) {
+    key(handle(name), forward);
+    check(cropValues().w !== 100 || cropValues().h !== 60, `Griff ${name} ändert die Auswahl`);
+    key(handle(name), backward);
+    assertCrop({ x: 20, y: 10, w: 100, h: 60 }, `Griff ${name} ist reversibel`);
+  }
+  cropLock.click();
+  key(handle('e'), 'ArrowRight', true);
+  assertCrop({ x: 20, y: 7, w: 110, h: 66 }, 'Verhältnissperre skaliert beide Maße am Seitengriff');
+  key(handle('e'), 'ArrowLeft', true);
+  assertCrop({ x: 20, y: 10, w: 100, h: 60 }, 'Proportionales Verkleinern hält die gegenüberliegende Kante');
+  cropLock.click();
   result.dataset.ready = 'true';
   await new Promise(resolve => {
     window.imageRegression = {
-      points() {
+      points(from, to) {
         const rect = editor.querySelector('img').getBoundingClientRect();
-        return { from: { x: rect.left + rect.width * .5, y: rect.top + .1 },
-          to: { x: rect.right - .1, y: rect.bottom - .1 } };
+        const xy = ([x, y]) => ({ x: rect.left + rect.width * x / 200, y: rect.top + rect.height * y / 100 });
+        return { from: xy(from), to: xy(to) };
+      },
+      assertCrop,
+      lock() { cropLock.click(); },
+      cancelGesture(pointerId = 1) {
+        const preview = editor.querySelector('.image-editor-preview');
+        preview.dispatchEvent(new PointerEvent('pointercancel', { pointerId, bubbles: true }));
       },
       finish() {
-        const x = Number(editor.querySelector('[data-crop="x"]').value);
-        const width = Number(editor.querySelector('[data-crop="w"]').value);
         const imageRect = editor.querySelector('img').getBoundingClientRect();
-        const cropRect = editor.querySelector('.image-editor-selection').getBoundingClientRect();
-        check(x === 100 && width === 100, 'Pointer zieht den rechten Bildbereich auf');
+        const cropRect = selection.getBoundingClientRect();
+        assertCrop({ x: 100, y: 0, w: 100, h: 100 }, 'Pointer zieht den rechten Bildbereich auf');
         check(Math.abs(cropRect.left - (imageRect.left + imageRect.width / 2)) < 2,
           'Schnittrahmen liegt über dem gezogenen Bildbereich');
         resolve();
       },
     };
   });
-  for (const [key, value] of Object.entries({ x: 100, y: 0, w: 100, h: 100 })) {
-    const input = editor.querySelector(`[data-crop="${key}"]`);
-    input.value = value; input.dispatchEvent(new Event('input'));
-  }
-  editor.querySelector('[data-output="w"]').value = 5;
-  editor.querySelector('[data-output="h"]').value = 5;
-  editor.querySelector('[data-output="w"]').dispatchEvent(new Event('input'));
+  input(outputW, 5);
+  check(outputH.value === '5', 'Ausgabeverhältnis folgt dem neuen quadratischen Ausschnitt');
   editor.querySelector('[data-crop-confirm]').click();
   check(editor.querySelector('[data-crop-actions]').hidden && cropTool.getAttribute('aria-pressed') === 'false'
     && !editor.querySelector('[data-image-save]').disabled, 'OK bestätigt den gewählten Ausschnitt');
   check(!editor.querySelector('.image-editor-selection').hidden,
     'Bestätigter Ausschnitt bleibt im Bild als Vorschau markiert');
+  cropTool.click();
+  key(handle('w'), 'ArrowRight', true);
+  editor.querySelector('[data-crop-cancel]').click();
+  assertCrop({ x: 100, y: 0, w: 100, h: 100 }, 'Abbruch erneuter Bearbeitung erhält bestätigten Zuschnitt');
+  check(outputW.value === '5' && outputH.value === '5' && !editor.querySelector('[data-image-save]').disabled,
+    'Abbruch erhält bestätigte Ausgabegröße und Speicherfreigabe');
   editor.querySelector('[data-image-save]').click();
   await wait(() => savedFile && root.querySelectorAll('[data-variant-id]').length === 2);
   check(root.querySelectorAll('[data-asset-id]').length === 1, 'Variante erscheint nur beim Original');
