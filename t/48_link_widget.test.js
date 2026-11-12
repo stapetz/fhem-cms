@@ -202,6 +202,116 @@ test('LinkWidget growth rejects collisions without writes or moving other widget
   assert.equal(controller.snapshot().draft, null);
 });
 
+function growthConfig() {
+  const live = source();
+  live.pages[0].widgets.push(
+    { id: 'neighbor', type: 'text', title: 'Neighbor', html: '{{Temp:state}}',
+      grid: { col: 1, row: '5', w: 4, h: '2' } },
+    { id: 'tail', type: 'text', html: 'Keep tail', grid: { col: 1, row: 7, w: 4, h: 2 } },
+    { id: 'side', type: 'text', html: 'Keep side', grid: { col: 8, row: '5', w: 4, h: '2' } });
+  live.pages.push({ id: 'other', title: 'Other', widgets: [
+    { id: 'other', type: 'text', html: 'Keep page', grid: { col: 1, row: 2, w: 4, h: 3 } },
+  ] });
+  return live;
+}
+
+test('LinkWidget placement preview is read-only and exact confirmation saves cascading reflow atomically', async () => {
+  const live = growthConfig();
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let writes = 0;
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async (draft, token) => {
+      assert.equal(token, state.token);
+      writes++;
+      state = { live, draft, token: 'b'.repeat(64) };
+    },
+    publish: async () => {}, discard: async () => {},
+  });
+  await controller.reload();
+  const session = new Schema5WidgetSession({ controller, pageId: 'home', token: state.token,
+    widget: live.pages[0].widgets[0], action: 'update' });
+  let completed = false;
+  session.completion.then(() => { completed = true; });
+  const services = session.services({});
+  const widget = session.widget;
+  widget.links.push({ ...link(), id: 'two', text: 'Keep new link', image: `media/${'a'.repeat(32)}.png`,
+    grid: { col: 1, row: 4, w: 4, h: 3 } });
+  const preview = await services.previewWidget(widget);
+  assert.equal(writes, 0);
+  assert.equal(completed, false);
+  assert.deepEqual(controller.snapshot(), state);
+  assert.deepEqual(preview.moved, ['neighbor', 'tail']);
+  assert.deepEqual(preview.after.map(item => [item.id, item.grid.row]),
+    [['__nav', 1], ['links', 2], ['neighbor', 8], ['tail', 10], ['side', '5']]);
+  assert.deepEqual(preview.before[1].grid, live.pages[0].widgets[0].grid);
+  assert.throws(() => controller.saveWidget('home', widget, state.token, 'update'), /Platzvorschau/);
+  const altered = structuredClone(preview);
+  altered.after.find(item => item.id === 'neighbor').grid.row = 20;
+  await assert.rejects(services.saveWidget(widget, altered), /erneut prüfen/);
+  await assert.rejects(services.saveWidget({ ...widget, title: 'Changed since preview' }, preview), /erneut prüfen/);
+  assert.equal(writes, 0);
+  const result = await services.saveWidget(widget, preview);
+  assert.equal(writes, 1, 'widget and all moved neighbors are one write');
+  assert.deepEqual((await session.completion).state, result);
+  assert.equal(result.draft.pages[0].widgets[0].grid.h, 6);
+  for (const [index, row] of [[1, 8], [2, 10]]) {
+    assert.deepEqual(result.draft.pages[0].widgets[index],
+      { ...live.pages[0].widgets[index], grid: { ...live.pages[0].widgets[index].grid, row } });
+  }
+  assert.deepEqual(result.draft.pages[0].widgets[3], live.pages[0].widgets[3]);
+  assert.deepEqual(result.draft.pages[1], live.pages[1]);
+  assert.deepEqual(result.draft.navigation, live.navigation);
+  assert.deepEqual(result.live, live);
+  parity(result.draft, true, 'explicitly confirmed cascading LinkWidget growth');
+});
+
+test('LinkWidget preview cancellation, stale tokens and impossible layouts never write', async () => {
+  for (const failure of ['cancel', 'stale', 'overflow', 'navigation', 'edge']) {
+    const live = growthConfig();
+    if (failure === 'navigation') {
+      live.navigation.grid = { col: 1, row: 5, w: 4, h: 1 };
+      live.pages[0].widgets[1].grid.row = 6;
+      live.pages[0].widgets[2].grid.row = 8;
+      live.pages[1].widgets = [];
+    }
+    let state = { live, draft: null, token: 'a'.repeat(64) };
+    let writes = 0;
+    const controller = new Schema5DraftController({
+      read: async () => structuredClone(state), save: async () => { writes++; },
+      publish: async () => {}, discard: async () => {},
+    });
+    await controller.reload();
+    const widget = structuredClone(live.pages[0].widgets[0]);
+    widget.links.push({ ...link(), id: 'two', grid: { col: 1, row: 4, w: 4, h: failure === 'overflow' ? 996 : 3 } });
+    if (failure === 'edge') {
+      widget.links[0].grid.w = 12;
+      widget.grid.col = 2;
+    }
+    if (['overflow', 'navigation', 'edge'].includes(failure)) {
+      assert.throws(() => controller.previewWidget('home', widget, state.token, 'update'), /Platz|Navigation/);
+    } else {
+      const session = new Schema5WidgetSession({ controller, pageId: 'home', token: state.token,
+        widget: live.pages[0].widgets[0], action: 'update' });
+      const services = session.services({});
+      const preview = await services.previewWidget(widget);
+      if (failure === 'cancel') {
+        session.close();
+        assert.deepEqual(await session.completion, { cancelled: true });
+        await assert.rejects(services.saveWidget(widget, preview), /nicht mehr aktiv/);
+      } else {
+        state.token = 'b'.repeat(64);
+        await controller.reload();
+        await assert.rejects(services.saveWidget(widget, preview), /veraltet/);
+        assert.match((await session.completion).error.message, /veraltet/);
+      }
+    }
+    assert.equal(writes, 0, failure);
+    assert.deepEqual(controller.snapshot().live, live);
+    assert.equal(controller.snapshot().draft, null);
+  }
+});
+
 function parity(config, valid, name) {
   const before = structuredClone(config);
   const result = spawnSync('perl', ['-e', script], { input: JSON.stringify(config), encoding: 'utf8' });

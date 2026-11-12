@@ -86,7 +86,19 @@ class FHEMCMSLink extends HTMLElement {
         .actions { display:flex; gap:.5rem; flex-wrap:wrap; justify-content:flex-end; }
         .error { margin:.2rem 0; color:var(--cms-danger,#ffb4a8); min-height:1.2em; }
         .hint { margin:0; color:var(--cms-muted,#a5c9b2); font-size:.85rem; }
-        @media (max-width:650px) { .editor { grid-template-columns:minmax(0,1fr); } }
+        [hidden] { display:none !important; }
+        .layout-comparison { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+        .layout-board { position:relative; width:100%; min-height:10rem; max-height:24rem;
+          border:1px solid var(--cms-border,#43564a); background:var(--cms-bg,#17211d); }
+        .layout-box { position:absolute; overflow:hidden; padding:.15rem; font-size:.75rem;
+          border:1px solid var(--cms-border,#43564a); background:var(--cms-surface-raised,#2a3b32); }
+        .layout-box[data-moving] { border:2px dashed var(--cms-accent,#8fd0a8); }
+        .layout-box[data-anchor] { border:2px solid var(--cms-accent,#8fd0a8); font-weight:bold; }
+        .layout-preview { display:grid; gap:.6rem; }
+        .layout-preview h4,.layout-preview p { margin:0; }
+        @media (max-width:650px) {
+          .editor,.layout-comparison { grid-template-columns:minmax(0,1fr); }
+        }
       </style>
       <article class="tile">
         <header><h3 data-title></h3><button type="button" data-open-config aria-label="LinkWidget konfigurieren">⚙</button></header>
@@ -96,17 +108,33 @@ class FHEMCMSLink extends HTMLElement {
       <dialog data-dialog aria-labelledby="link-dialog-title">
         <form data-form novalidate>
           <h3 id="link-dialog-title">LinkWidget konfigurieren</h3>
+          <div class="settings" data-edit-content>
           <label>Widgettitel (optional)<input name="title" maxlength="64"></label>
           <label class="check"><input name="showTitle" type="checkbox"> Widgettitel anzeigen</label>
           <p class="hint">Linkkacheln am Griff ziehen, an der Ecke skalieren. Eigenes Raster mit 12 Spalten.
           Die Widgetgröße folgt beim Speichern der belegten Linkfläche; ein sichtbarer Widgettitel
           benötigt eine zusätzliche Rasterzeile. Änderungen werden erst als Entwurf übernommen.
-          Bei Platzmangel zuerst das Widget verschieben oder Linkkacheln verkleinern.</p>
+          Braucht das Widget mehr Platz, zeigen wir dir vor dem Speichern, welche anderen Widgets
+          dafür nach unten rücken. Du entscheidest, ob du das übernehmen möchtest.</p>
           <div class="editor"><div><div class="canvas"><div class="grid-stack" data-grid></div></div>
             <button type="button" data-add>Link hinzufügen</button></div>
             <div class="settings" data-settings></div></div>
           <p class="hint">Neue Fenster werden angefordert; Browser können sie stattdessen als Tab öffnen.
           Bilder und Dokumente werden gemeinsam im Assetmanager verwaltet. Bild entfernen löscht nur den Verweis.</p>
+          </div>
+          <section class="layout-preview" data-layout-preview hidden aria-labelledby="link-layout-title">
+            <h4 id="link-layout-title">Platz für deine Links schaffen</h4>
+            <p>Deine Links sind im Linkraster richtig angeordnet. Auf der Seite braucht das
+            LinkWidget dafür mehr Platz. Die markierten Widgets rücken nach unten;
+            ihre Inhalte und Größen bleiben erhalten. Noch wurde nichts gespeichert.</p>
+            <div class="layout-comparison" data-layout-comparison></div>
+            <ul data-layout-moves></ul>
+            <p class="hint">Nur diese Seite wird im Entwurf angepasst. Die veröffentlichte Seite bleibt unverändert.</p>
+            <div class="actions">
+              <button type="button" data-layout-back>Zurück zur Linkbearbeitung</button>
+              <button type="button" data-layout-confirm>Platz schaffen und speichern</button>
+            </div>
+          </section>
           <p class="error" role="alert" data-error></p>
           <div class="actions">
             <button type="button" data-delete>Widget löschen</button>
@@ -120,6 +148,8 @@ class FHEMCMSLink extends HTMLElement {
       this.openConfig().catch(error => this.message(error.message));
     });
     this.$('[data-form]').addEventListener('submit', event => { event.preventDefault(); this.save(); });
+    this.$('[data-layout-back]').addEventListener('click', () => { if (!this.busy) this.clearLayoutPreview(); });
+    this.$('[data-layout-confirm]').addEventListener('click', () => this.confirmLayout());
     this.$('[data-cancel]').addEventListener('click', () => { if (!this.busy) this.closeDialog(); });
     this.$('[data-dialog]').addEventListener('cancel', event => {
       if (this.busy) event.preventDefault();
@@ -208,6 +238,7 @@ class FHEMCMSLink extends HTMLElement {
   async openConfig(options = {}) {
     if (this.$('[data-dialog]').open) return;
     this.isNew = Boolean(options.isNew);
+    this.clearLayoutPreview();
     this.links = structuredClone(this.config.links);
     this.selected = this.links[0]?.id;
     this.$('[name=title]').value = this.config.title || '';
@@ -246,6 +277,7 @@ class FHEMCMSLink extends HTMLElement {
   }
 
   closeDialog() {
+    this.clearLayoutPreview();
     this.stopGrid();
     this.$('[data-dialog]').close();
   }
@@ -401,7 +433,11 @@ class FHEMCMSLink extends HTMLElement {
     this.$('[data-form]').inert = true;
     try { await action(); }
     catch (error) { this.message(error.message || 'LinkWidget-Aktion fehlgeschlagen'); }
-    finally { this.busy = false; this.$('[data-form]').inert = false; }
+    finally {
+      this.busy = false;
+      this.$('[data-form]').inert = false;
+      if (this.layoutPending) this.$('[data-layout-back]').focus();
+    }
   }
 
   async chooseAsset(link, mode) {
@@ -418,14 +454,88 @@ class FHEMCMSLink extends HTMLElement {
   }
 
   async save() {
-    if (this.busy) return;
+    if (this.busy || this.layoutPending) return;
     await this.operation(async () => {
       this.syncGrid();
       validateLinkItems(this.links, this.pages);
       const title = this.$('[name=title]').value;
       if (title.length > 64 || /[\x00-\x1f\x7f]/.test(title)) throw new Error('Ungültiger Widgettitel');
-      await this.services.saveWidget({ ...this.config, title, showTitle: this.$('[name=showTitle]').checked,
-        links: structuredClone(this.links) });
+      const value = { ...this.config, title, showTitle: this.$('[name=showTitle]').checked,
+        links: structuredClone(this.links) };
+      if (typeof this.services.previewWidget === 'function') {
+        const preview = await this.services.previewWidget(value);
+        if (preview.moved.length) {
+          this.showLayoutPreview(value, preview);
+          return;
+        }
+      }
+      await this.services.saveWidget(value);
+      this.closeDialog();
+    });
+  }
+
+  clearLayoutPreview() {
+    this.layoutPending = null;
+    this.$('[data-layout-preview]').hidden = true;
+    this.$('[data-edit-content]').hidden = false;
+    this.$('[data-save]').hidden = false;
+    this.$('[data-delete]').hidden = Boolean(this.isNew);
+    this.$('[data-layout-comparison]').replaceChildren();
+    this.$('[data-layout-moves]').replaceChildren();
+    this.message('');
+  }
+
+  showLayoutPreview(value, preview) {
+    const height = Math.max(...preview.before.concat(preview.after).map(entry => Number(entry.grid.row) - 1 + Number(entry.grid.h)));
+    const names = { thermostat: 'Thermostat', 'fhem-value': 'Wert-Anzeige', 'fhem-switch': 'Schalter',
+      'fhem-button': 'Taster', 'fhem-html': 'Freies HTML', 'fhem-clock': 'Uhr / Datum',
+      'fhem-icon': 'Status-Symbol', 'fhem-table': 'Tabelle', 'fhem-slider': 'Schieberegler',
+      'fhem-chart': 'Diagramm', 'fhem-calllist': 'Anrufliste', 'fhem-solarflow': 'SolarFlow',
+      text: 'Textbaustein', 'fhem-link': 'LinkWidget', navigation: 'Navigation' };
+    const label = entry => entry.title || `${names[entry.type] || 'Widget'} (${entry.id})`;
+    const comparison = this.$('[data-layout-comparison]');
+    comparison.replaceChildren();
+    for (const [heading, entries] of [['Bisher', preview.before], ['Nach dem Platzschaffen', preview.after]]) {
+      const column = node('div');
+      const board = node('div');
+      board.className = 'layout-board';
+      board.style.aspectRatio = `${preview.columns} / ${height}`;
+      board.setAttribute('role', 'img');
+      board.setAttribute('aria-label', `${heading}: Seitenanordnung`);
+      for (const entry of entries) {
+        const box = node('div', label(entry));
+        box.className = 'layout-box';
+        box.title = label(entry);
+        box.dataset.widgetId = entry.id;
+        box.toggleAttribute('data-moving', preview.moved.includes(entry.id));
+        box.toggleAttribute('data-anchor', entry.id === value.id);
+        Object.assign(box.style, { left: `${(Number(entry.grid.col) - 1) / preview.columns * 100}%`,
+          top: `${(Number(entry.grid.row) - 1) / height * 100}%`,
+          width: `${Number(entry.grid.w) / preview.columns * 100}%`,
+          height: `${Number(entry.grid.h) / height * 100}%` });
+        board.append(box);
+      }
+      column.append(node('h4', heading), board);
+      comparison.append(column);
+    }
+    this.$('[data-layout-moves]').replaceChildren(...preview.moved.map(id => {
+      const entry = preview.after.find(item => item.id === id);
+      return node('li', `${label(entry)} wird nach unten verschoben.`);
+    }));
+    this.layoutPending = { value: structuredClone(value), preview: structuredClone(preview) };
+    this.$('[data-edit-content]').hidden = true;
+    this.$('[data-save]').hidden = true;
+    this.$('[data-delete]').hidden = true;
+    this.$('[data-layout-preview]').hidden = false;
+    this.message('');
+    this.$('[data-layout-preview]').scrollIntoView({ block: 'nearest' });
+  }
+
+  async confirmLayout() {
+    if (this.busy || !this.layoutPending) return;
+    const { value, preview } = this.layoutPending;
+    await this.operation(async () => {
+      await this.services.saveWidget(value, preview);
       this.closeDialog();
     });
   }

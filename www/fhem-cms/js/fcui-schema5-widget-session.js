@@ -55,7 +55,8 @@ export class Schema5WidgetSession {
     if (!services || typeof services !== 'object') throw new Error('Widget-Dienste erforderlich');
     return {
       ...services,
-      saveWidget: (widget) => this.#save(widget),
+      previewWidget: (widget) => this.#preview(widget),
+      saveWidget: (widget, approvedLayout = null) => this.#save(widget, approvedLayout),
       deleteWidget: (id) => this.#delete(id),
     };
   }
@@ -66,11 +67,15 @@ export class Schema5WidgetSession {
     this.#resolve({ cancelled: true });
   }
 
-  async #change(operation) {
+  async #change(operation, complete = true) {
     if (this.#status !== 'ready') throw new Error('Widget-Bearbeitung ist nicht mehr aktiv');
     this.#status = 'busy';
     try {
       const state = await operation();
+      if (!complete) {
+        if (this.#status !== 'closed') this.#status = 'ready';
+        return state;
+      }
       if (this.#status !== 'closed') {
         this.#status = 'closed';
         this.#resolve({ state });
@@ -89,12 +94,23 @@ export class Schema5WidgetSession {
     }
   }
 
-  #save(widget) {
+  #validateWidget(widget) {
+    if (!widget || widget.id !== this.#widget.id || widget.type !== this.#widget.type
+      || !sameGrid(widget.grid, this.#widget.grid)) {
+      throw new Error('Widget-Identität oder Raster wurde verändert');
+    }
+  }
+
+  #preview(widget) {
     return this.#change(() => {
-      if (!widget || widget.id !== this.#widget.id || widget.type !== this.#widget.type
-        || !sameGrid(widget.grid, this.#widget.grid)) {
-        throw new Error('Widget-Identität oder Raster wurde verändert');
-      }
+      this.#validateWidget(widget);
+      return this.#controller.previewWidget(this.#pageId, widget, this.#token, this.#action);
+    }, false);
+  }
+
+  #save(widget, approvedLayout) {
+    return this.#change(() => {
+      this.#validateWidget(widget);
       const candidate = structuredClone(widget);
       if (this.#action === 'create' && candidate.type === 'fhem-calllist'
         && Number.isInteger(candidate.limit) && candidate.limit >= 1 && candidate.limit <= 20) {
@@ -102,7 +118,7 @@ export class Schema5WidgetSession {
         const scale = Number((state.draft || state.live).settings.gridColumns) / 12;
         candidate.grid.h = (2 + Math.ceil(candidate.limit * 0.8)) * scale;
       }
-      return this.#controller.saveWidget(this.#pageId, candidate, this.#token, this.#action);
+      return this.#controller.saveWidget(this.#pageId, candidate, this.#token, this.#action, approvedLayout);
     });
   }
 

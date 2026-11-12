@@ -181,7 +181,8 @@ export class Schema5WidgetPanel {
         }
       };
       const item = this.#createElement(session.widget, {
-        ...services, saveWidget: invoke('saveWidget'), deleteWidget: invoke('deleteWidget'),
+        ...services, previewWidget: invoke('previewWidget'),
+        saveWidget: invoke('saveWidget'), deleteWidget: invoke('deleteWidget'),
       }, new Map(), false);
       this.#host.append(item);
       const dialog = item.shadowRoot?.querySelector('[data-dialog]');

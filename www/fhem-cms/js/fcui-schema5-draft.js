@@ -1,4 +1,4 @@
-import { applySchema5GridItems, schema5GridItems } from './fcui-schema5-layout.js';
+import { applySchema5GridItems, reflowSchema5Widget, schema5GridItems } from './fcui-schema5-layout.js';
 import { fitLinkWidget } from './link-widget.js';
 
 export class WidgetLayoutError extends Error {}
@@ -102,10 +102,10 @@ export class Schema5DraftController {
     return this.saveDraft(candidate, expectedToken);
   }
 
-  saveWidget(pageId, widget, expectedToken, action) {
+  #prepareWidget(pageId, widget, expectedToken, action, reflow) {
     const state = this.snapshot();
     requireToken(state, expectedToken);
-    const candidate = state.draft || state.live;
+    let candidate = state.draft || state.live;
     const page = candidate.pages.find((entry) => entry.id === pageId);
     if (!page) throw new Error('Unbekannte Seite');
     if (!widget || typeof widget !== 'object' || Array.isArray(widget)
@@ -114,6 +114,8 @@ export class Schema5DraftController {
     const index = page.widgets.findIndex((entry) => entry.id === widget.id);
     if (action === 'create' && index >= 0) throw new Error('Widget-ID ist bereits vorhanden');
     if (action === 'update' && index < 0) throw new Error('Unbekanntes Widget');
+    const before = [{ id: '__nav', type: 'navigation', title: 'Navigation', grid: candidate.navigation.grid },
+      ...page.widgets.map(({ id, type, title, grid }) => ({ id, type, title: title || '', grid }))];
     let copy = structuredClone(widget);
     if (widget.type === 'fhem-link') {
       try {
@@ -127,12 +129,34 @@ export class Schema5DraftController {
     else page.widgets[index] = copy;
     if (copy.type === 'fhem-link') {
       try {
+        if (reflow) candidate = reflowSchema5Widget(candidate, pageId, copy.id);
         validateConfig(candidate);
       } catch (error) {
-        throw new WidgetLayoutError(`Das LinkWidget benötigt mehr Platz und überschneidet sich mit einer anderen Rasterfläche. `
-          + `Es wurde nichts gespeichert. Linkkacheln kleiner oder anders anordnen; alternativ abbrechen, `
-          + `auf der Seite Platz schaffen und erneut öffnen. (${error.message})`, { cause: error });
+        throw new WidgetLayoutError(reflow
+          ? `Für diese Anordnung lässt sich kein Platz schaffen. Es wurde nichts gespeichert. ${error.message}`
+          : `Das LinkWidget benötigt mehr Platz. Bitte zuerst die Platzvorschau öffnen. Es wurde nichts gespeichert. (${error.message})`,
+        { cause: error });
       }
+    }
+    const after = [{ id: '__nav', type: 'navigation', title: 'Navigation', grid: candidate.navigation.grid },
+      ...candidate.pages.find(entry => entry.id === pageId).widgets
+        .map(({ id, type, title, grid }) => ({ id, type, title: title || '', grid }))];
+    const moved = after.filter(entry => entry.id !== copy.id && before.some(original =>
+      original.id === entry.id && !sameConfig(original.grid, entry.grid))).map(entry => entry.id);
+    return { candidate, preview: { pageId, token: expectedToken, columns: Number(candidate.settings.gridColumns),
+      widget: copy, before, after, moved } };
+  }
+
+  previewWidget(pageId, widget, expectedToken, action) {
+    if (widget?.type !== 'fhem-link') throw new Error('Platzvorschau ist nur für LinkWidgets verfügbar');
+    return this.#prepareWidget(pageId, widget, expectedToken, action, true).preview;
+  }
+
+  saveWidget(pageId, widget, expectedToken, action, approvedLayout = null) {
+    if (approvedLayout && widget?.type !== 'fhem-link') throw new Error('Ungültige Layoutbestätigung');
+    const { candidate, preview } = this.#prepareWidget(pageId, widget, expectedToken, action, Boolean(approvedLayout));
+    if (approvedLayout && !sameConfig(preview, approvedLayout)) {
+      throw new WidgetLayoutError('Die Platzvorschau passt nicht mehr zu den Änderungen. Bitte erneut prüfen und bestätigen.');
     }
     return this.saveDraft(candidate, expectedToken);
   }
