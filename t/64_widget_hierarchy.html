@@ -75,7 +75,8 @@ try {
       check(root.querySelector('[data-icon]').hidden === false, 'mapped state icon remains visible');
       check(root.querySelector('[data-state]').textContent === 'on', 'mapped state value remains visible');
       host.data = readingsForWidget({ state: 'unknown state' });
-      check(root.querySelector('[data-state]').textContent === 'unknown state', 'unmapped state remains visible');
+      check(root.querySelector('[data-state]').textContent === 'Unbekannt: unknown state',
+        'unmapped state remains explicit and visible');
       check(root.querySelector('[data-icon]').hidden, 'unmapped state does not show a misleading icon');
     } else {
       check(root.querySelector('[data-value]').textContent === '40', 'slider reading remains visible');

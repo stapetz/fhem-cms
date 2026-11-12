@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<title>Smart-Home-Statusfarben Regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<style>
+  body { display: flex; gap: 1rem; }
+  cms-switch, cms-icon { display: block; width: 280px; height: 180px; }
+</style>
+<pre id="result"></pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-switch.js';
+import '../www/fhem-cms/components/cms-icon.js';
+import '../www/fhem-cms/components/cms-thermostat.js';
+const result = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const luminance = color => {
+  const channels = color.match(/\d+/g).slice(0, 3).map(value => Number(value) / 255)
+    .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+};
+const contrast = (foreground, background) => {
+  const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+};
+try {
+  const toggle = document.createElement('cms-switch');
+  toggle.config = { id: 'switch', device: 'Lamp', reading: 'state', on: 'on', off: 'off',
+    showLabel: false, grid: { col: 1, row: 1, w: 1, h: 1 } };
+  toggle.services = { iconUrl: name => `/icons/${name}` };
+  document.body.append(toggle);
+  const switchButton = toggle.shadowRoot.querySelector('[data-toggle]');
+  const mark = toggle.shadowRoot.querySelector('[data-state-mark]');
+  toggle.data = [{ name: 'Lamp', readings: { state: 'on' } }];
+  check(mark.textContent === '●' && switchButton.getAttribute('aria-checked') === 'true'
+    && switchButton.getAttribute('role') === 'switch',
+    'active state has a visible symbol');
+  check(!getComputedStyle(switchButton).backgroundColor.includes('47, 107, 71'),
+    'active generic switch is not green-coded');
+  toggle.data = [{ name: 'Lamp', readings: { state: 'off' } }];
+  check(mark.textContent === '○' && switchButton.getAttribute('aria-checked') === 'false'
+    && switchButton.getAttribute('role') === 'switch',
+    'off state has a distinct visible symbol');
+  toggle.data = [{ name: 'Lamp', readings: { state: 'unavailable' } }];
+  check(mark.textContent === '?' && switchButton.hasAttribute('data-unknown')
+    && switchButton.getAttribute('role') === 'button' && !switchButton.hasAttribute('aria-checked'),
+  'unknown state remains explicit and is not exposed as off');
+  for (const theme of ['dark', 'light', 'oled-black', 'catppuccin-mocha', 'liquid-glass']) {
+    document.documentElement.dataset.cmsTheme = theme;
+    check(contrast(getComputedStyle(mark).color, getComputedStyle(switchButton).backgroundColor) >= 4.5,
+      `${theme} state symbol has text contrast`);
+  }
+  delete document.documentElement.dataset.cmsTheme;
+
+  const icon = document.createElement('cms-icon');
+  icon.config = { id: 'icon', device: 'Door', reading: 'state', title: 'Tür',
+    states: [{ value: 'closed', icon: 'door_closed', color: '#4caf50' }],
+    grid: { col: 1, row: 1, w: 1, h: 1 } };
+  icon.services = { iconUrl: () => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E' };
+  document.body.append(icon);
+  icon.data = [{ name: 'Door', readings: { state: 'closed' } }];
+  check(icon.shadowRoot.querySelector('[data-icon]').style.getPropertyValue('--state-color') === '#4caf50',
+    'saved custom status color is preserved');
+  icon.data = [{ name: 'Door', readings: { state: 'ajar' } }];
+  check(icon.shadowRoot.querySelector('[data-icon]').hidden
+    && icon.shadowRoot.querySelector('[data-state]').textContent === 'Unbekannt: ajar'
+    && icon.shadowRoot.querySelector('[data-accessible]').textContent === 'Tür, Unbekannt: ajar',
+  'unmapped status remains visible as text without a safety color');
+  icon.data = [{ name: 'Door', readings: { state: '' } }];
+  check(icon.shadowRoot.querySelector('[data-state]').textContent === 'Zustand unbekannt',
+    'missing status does not appear safe or empty');
+
+  const thermostat = document.createElement('cms-thermostat');
+  thermostat.config = { id: 'thermostat', device: 'Thermo',
+    readings: { actual: 'temperature', target: 'desiredTemperature', battery: 'battery' },
+    grid: { col: 1, row: 1, w: 1, h: 1 } };
+  thermostat.data = [{ name: 'Thermo', readings: {
+    temperature: '20', desiredTemperature: '21', battery: 'low',
+  } }];
+  document.body.append(thermostat);
+  const battery = thermostat.shadowRoot.querySelector('[data-battery]');
+  check(battery.textContent === 'low'
+    && getComputedStyle(battery).color === getComputedStyle(thermostat.shadowRoot.querySelector('.tile')).color,
+  'unclassified battery value is not marked safe with green');
+  result.dataset.result = 'pass';
+  result.textContent = JSON.stringify({ checks });
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = error.stack || String(error);
+}
+</script>
