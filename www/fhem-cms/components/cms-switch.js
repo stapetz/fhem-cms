@@ -59,6 +59,7 @@ class FHEMCMSSwitch extends HTMLElement {
         .toggle[data-unknown] { border-style: dashed; }
         .label { white-space: nowrap; line-height: 1.1; }
         .label[hidden] { display: none; }
+        .state { color: var(--cms-muted, #a5c9b2); font-size: 0.75em; line-height: 1.1; white-space: nowrap; }
         .toggle:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 3px; }
         .toggle:disabled { cursor: default; }
         .glyph { display: inline-block; flex: none; width: 1.1em; height: 1.1em; background-color: var(--cms-icon-color);
@@ -96,6 +97,7 @@ class FHEMCMSSwitch extends HTMLElement {
           <button type="button" class="toggle" role="switch" aria-checked="false" data-toggle data-fit-content aria-label="Schalter">
             <span class="glyph" data-icon aria-hidden="true" hidden></span>
             <span class="label" data-label></span>
+            <span class="state" data-state></span>
           </button>
         </div>
         <p class="msg" role="alert" data-msg></p>
@@ -241,20 +243,22 @@ class FHEMCMSSwitch extends HTMLElement {
     const state = this.currentState();
     toggle.setAttribute('aria-checked', String(state === 'on'));
     toggle.toggleAttribute('data-unknown', state === null);
-    const title = this.widgetConfig.showTitle === false ? '' : (this.widgetConfig.title || '');
+    const title = this.widgetConfig.title || this.widgetConfig.device || 'Schalter';
     const stateLabel = state === 'on' ? 'An' : state === 'off' ? 'Aus' : 'Zustand unbekannt';
     const label = this.widgetConfig.label || stateLabel;
-    toggle.setAttribute('aria-label', `${title || this.widgetConfig.device || 'Schalter'}: ${label}${this.widgetConfig.label ? ` (${stateLabel})` : ''}`);
+    toggle.setAttribute('aria-label', `${title}: ${label}${this.widgetConfig.label ? ` (${stateLabel})` : ''}`);
     toggle.title = stateLabel;
     const caption = this.shadowRoot.querySelector('[data-label]');
     caption.textContent = label;
     caption.hidden = this.widgetConfig.showLabel !== true;
+    this.shadowRoot.querySelector('[data-state]').textContent = stateLabel;
     const raw = this.readingValue();
     const tile = this.shadowRoot.querySelector('[data-tile]');
     tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''} = ${raw === null ? '–' : raw}`;
-    tile.toggleAttribute('data-has-title', Boolean(title));
+    const titleShown = this.widgetConfig.showTitle !== false;
+    tile.toggleAttribute('data-has-title', titleShown);
     this.shadowRoot.querySelector('[data-title]').textContent = title;
-    this.shadowRoot.querySelector('[data-header]').hidden = !title;
+    this.shadowRoot.querySelector('[data-header]').hidden = !titleShown;
     const name = state === 'off' && this.widgetConfig.iconOff ? this.widgetConfig.iconOff : this.widgetConfig.icon;
     const url = actionIconUrl(name, state || 'unknown', this.services);
     const icon = this.shadowRoot.querySelector('[data-icon]');
