@@ -94,6 +94,12 @@ try {
   check(root.querySelector('[data-assets-dialog]').open, 'manager opens as modal');
   check(root.querySelectorAll('[data-asset-id]').length === 2, 'images and documents share catalog');
   check(root.querySelector('[data-select]').hidden, 'File menu management has no insertion action');
+  for (const selector of ['[data-close]', '[data-select]']) {
+    check(root.querySelector(selector).compareDocumentPosition(root.querySelector('[data-admin]'))
+      & Node.DOCUMENT_POSITION_FOLLOWING, 'primary action precedes administration');
+  }
+  check(root.querySelector('[data-admin]').contains(root.querySelector('[data-reload]')),
+    'manual catalog reload belongs to administration, not primary actions');
   check(!root.querySelector('[data-folder-tools]'), 'no separate folder management area');
   check(!root.querySelector('[data-folders]') && !root.querySelector('nav'), 'no left folder tree');
   check(!root.querySelector('[data-search]') && !root.querySelector('input[type=search]'), 'search removed until later version');

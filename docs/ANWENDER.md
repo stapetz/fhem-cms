@@ -410,7 +410,13 @@ Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
   Binärfelder erscheinen als Rohwerte, lange Werte gekürzt und unbekannte Tags
   mit ihrer Nummer. Die Originaldatei wird nicht verändert oder bereinigt.
 - **Entwicklungsstand auf `dev` – noch nicht veröffentlicht:** Bei einem Bild
-  stehen rechts das Original und seine Varianten mit Dateigröße zur Auswahl.
+  stehen rechts das Original und seine Varianten mit Dateigröße und Bildmaßen
+  (Breite × Höhe in Pixeln) zur Auswahl. Der Detailkopf zeigt dieselben Angaben
+  für das ausgewählte Bild; die Maße werden aus der geladenen Vorschau gelesen.
+  **Schließen** und gegebenenfalls **Auswählen** stehen über der eingeklappten
+  Administration. Dort liegt **Neu laden** für Änderungen aus anderen Fenstern
+  oder einen erneuten Ladeversuch nach einem Verbindungsfehler; eigene Änderungen
+  erscheinen automatisch.
   **Bild bearbeiten** zeigt die Auflösung des Quellbildes. Die Ausschnittgröße
   wird in Quellpixeln angezeigt; die Ausgabegröße ist die
   finale Auflösung der neuen Variante nach Zuschnitt und möglicher Verkleinerung.
@@ -420,7 +426,8 @@ Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
   verkleinern oder vergrößern ihn. Außerhalb des Rahmens lässt sich ein neuer
   Ausschnitt aufziehen. Numerische Zuschnittsfelder gibt es nicht.
   Rahmen und Griffe sind auch per Pfeiltasten bedienbar (mit Umschalt: 10 Pixel).
-  **Seitenverhältnis beibehalten** hält beim Zuschneiden das Verhältnis der
+  Die kompakte Option **Seitenverhältnis beibehalten** erscheint beim aktiven
+  Zuschneidewerkzeug neben OK/Abbrechen und hält das Verhältnis der
   aktuellen Auswahl fest. Die getrennte, zunächst aktivierte Option bei der
   Ausgabegröße führt beim Ändern von Breite oder Höhe die andere Dimension
   passend zum Ausschnitt nach; ohne Haken sind beide Werte frei wählbar.

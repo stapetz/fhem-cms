@@ -405,14 +405,21 @@ Bild aktiviert die Auswahl per Maus oder Touch. Den Rahmen innen verschieben,
 an den acht Rand- und Eckgriffen skalieren oder außerhalb einen neuen Ausschnitt
 aufziehen; numerische Zuschnittsfelder entfallen. Rahmen und Griffe lassen sich
 auch mit Pfeiltasten bedienen (mit Umschalt: 10 Pixel).
-'''Seitenverhältnis beibehalten''' hält beim Zuschneiden das Verhältnis der
+Die kompakte Option '''Seitenverhältnis beibehalten''' erscheint nur beim aktiven
+Zuschneidewerkzeug neben OK/Abbrechen und hält das Verhältnis der
 aktuellen Auswahl fest. Die getrennte, zunächst aktivierte Option bei der
 Ausgabegröße führt beim Ändern von Breite oder Höhe die andere Dimension passend
 zum Ausschnitt nach; ohne Haken sind beide Werte frei wählbar. Reines Verkleinern
 benötigt keinen Zuschneidemodus. '''OK''' bestätigt den Ausschnitt,
 '''Abbrechen''' verwirft ihn. Erst '''Variante erstellen''' lädt das Ergebnis als
 neue Variante hoch; das Original bleibt unverändert. Rechts stehen Original und
-Varianten mit Dateigröße zur Auswahl. Varianten können einzeln gelöscht werden
+Varianten mit Dateigröße und Bildmaßen (Breite × Höhe in Pixeln) zur Auswahl.
+Der Detailkopf zeigt diese Angaben für das ausgewählte Bild.
+'''Schließen''' und gegebenenfalls '''Auswählen''' stehen über der Administration.
+'''Neu laden''' liegt in der Administration und liest Änderungen aus anderen
+Fenstern ein oder wiederholt einen fehlgeschlagenen Ladevorgang. Eigene Änderungen
+erscheinen automatisch.
+Varianten können einzeln gelöscht werden
 und folgen beim Verschieben dem Original. Nach Löschen des Originals bleiben sie als
 eigenständige Bilder erhalten. Der Verwendungsschutz gilt für jede Datei einzeln.
 Animierte GIFs und APNGs werden nicht bearbeitet; einzelne GIF-Bilder werden als
