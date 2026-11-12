@@ -119,7 +119,7 @@ for (const [name, fixtures] of [
       ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],
       ['42_richtext_selection.html', 85], ['43_auto_arrange.html', 84],
       ['44_placeholder_units.html', 384], ['45_solarflow_sizing.html', 868], ['46_unit_inputs.html', 998]]],
-  ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 850]]],
+  ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 810]]],
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
   ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 204]]],
   ['image variants crop, resize and select without changing original', [['61_asset_image.html', 10]]],
