@@ -435,6 +435,10 @@ ab, es gibt kein implizites Reflow anderer Widgets. Die Darstellung verwendet
 dieselben belegten Grenzen und zieht deren linke/obere Leerränder ab.
 Alte Konfigurationen bleiben lesbar und erhalten erst beim Dialogspeichern
 die passenden Außenmaße; reine Layoutänderungen passen diese nicht an.
+Entwicklungsstand #70: Das Dialograster zeigt ausschließlich gegen `LINK_MEDIA`
+validierte lokale Bildpfade als deckendes Hintergrundbild; Auswahl/Entfernen
+und Wiederöffnen aktualisieren die Vorschau. Griff und Auswahlschaltfläche
+haben darüber einen kontrastierenden Hintergrund.
 `services.pages` liefert nur `{id,title}` für die Zielauswahl. Seiten-ID-Änderungen
 müssen interne Referenzen atomar mitführen; Ziel-Löschungen scheitern sichtbar
 an der Konfigurationsvalidierung, ohne Links stillschweigend zu entfernen.

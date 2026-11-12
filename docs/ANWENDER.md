@@ -358,6 +358,8 @@ unverändert. Bei Überschneidungen oder zu wenig Platz am Seitenrand wird
 Speichern mit einer Meldung abgewiesen. Dann zuerst Platz schaffen oder die
 Linkkacheln verkleinern. Bestehende Widgets erhalten die passende Außenfläche
 beim nächsten Speichern ihres Einstellungsdialogs.
+Ausgewählte Bilder erscheinen sofort auch auf den Kacheln im Bearbeitungsraster.
+Das Entfernen eines Bildes löscht dort ebenfalls die Vorschau.
 
 **Speichern** übernimmt Links und innere Positionen gemeinsam in den Entwurf;
 **Abbrechen** verwirft diese Dialogänderungen. Die Homepage ändert sich erst mit

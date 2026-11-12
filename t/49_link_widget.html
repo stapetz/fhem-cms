@@ -126,8 +126,16 @@ try {
   await click('[data-media]');
   equal(picks, 1, 'image opens shared asset picker');
   equal(widget.links[0].image, image, 'selected image attached to selected tile');
+  const firstTile = () => [...$('[data-grid]').children]
+    .find(item => item.gridstackNode.id === widget.links[0].id).querySelector('.grid-stack-item-content');
+  check(firstTile().style.backgroundImage.includes(image), 'selected image immediately appears on the dialog grid tile');
+  equal(getComputedStyle(firstTile()).backgroundSize, 'cover', 'dialog grid image covers the tile');
+  equal(getComputedStyle(firstTile().querySelector('.choose')).color, 'rgb(255, 255, 255)',
+    'grid selection button stays readable over the image');
   await click('[data-clear-image]');
   check(!Object.hasOwn(widget.links[0], 'image'), 'image removable');
+  equal(firstTile().style.backgroundImage, '', 'removing image also clears the grid preview');
+  await click('[data-media]');
   mediaError = true;
   await click('[data-media]');
   check($('[data-error]').textContent.includes('Medien nicht verfügbar'), 'media failure visible');
@@ -148,6 +156,7 @@ try {
   widget.config = structuredClone(saved);
   await widget.openConfig();
   equal(widget.links, saved.links, 'reopen preserves all fields');
+  check(firstTile().style.backgroundImage.includes(image), 'saved image returns on the raster when reopening');
   field('kind', 'asset');
   await click('[data-document]');
   equal(widget.links[0].asset, `../../fhemcms-assets/CMS/${'b'.repeat(32)}`, 'document chosen from shared asset picker');

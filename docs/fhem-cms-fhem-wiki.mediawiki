@@ -317,6 +317,8 @@ nicht angezeigt, Abstände zwischen Kacheln bleiben erhalten. Die Außenposition
 Speichern mit einer Meldung abgewiesen: zuerst Platz schaffen oder Kacheln
 verkleinern. Bestehende Widgets passen ihre Außenfläche beim nächsten
 Speichern des Einstellungsdialogs an.
+Ausgewählte Bilder erscheinen sofort auf den Kacheln im Bearbeitungsraster;
+'''Bild entfernen''' entfernt dort auch die Vorschau.
 
 '''Entwicklungsstand auf dev, noch nicht veröffentlicht:''' Interne Linkkacheln
 können statt eines Seitenwechsels ein Popup in kleiner, mittlerer oder großer
