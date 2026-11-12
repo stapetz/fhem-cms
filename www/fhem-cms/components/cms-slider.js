@@ -1,5 +1,6 @@
 import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
+import { widgetHierarchyCss } from '../js/widget-content-fit.js';
 
 const SEND_DELAY_MS = 1500;
 const CONFIRM_WAIT_MS = 120000;
@@ -62,16 +63,17 @@ class FHEMCMSlider extends HTMLElement {
     }
     this.shadowRoot.innerHTML = `
       <style>
+        ${widgetHierarchyCss}
         [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; display: grid; height: 100%; align-content: center; gap: max(1px, 3cqh); overflow: hidden;
+        .tile { position: relative; display: grid; height: 100%; align-content: start; gap: max(1px, 3cqh); overflow: hidden;
           container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
           background: var(--cms-surface, #202e27); padding: max(2px, 3cqh) 3%; }
         header { padding-right: 0; color: var(--cms-muted, #a5c9b2); font-size: max(5px, min(10cqh, 4cqw)); }
         h3 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1em; font-weight: 400; }
         .value { display: flex; align-items: baseline; justify-content: center; gap: 0.35em; min-width: 0;
-          font-size: max(8px, min(22cqh, 9cqw)); line-height: 1.1; font-variant-numeric: tabular-nums; }
+          color: var(--cms-muted, #a5c9b2); font-size: clamp(10px, min(12cqh, 6cqw), 12px); line-height: 1.1; font-variant-numeric: tabular-nums; }
         output { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .reading { color: var(--cms-muted, #a5c9b2); font-size: 0.55em; overflow-wrap: anywhere; }
         input[type="range"] { width: 100%; margin: 0; accent-color: var(--cms-accent, #8fd0a8); }
@@ -100,7 +102,7 @@ class FHEMCMSlider extends HTMLElement {
         .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { min-height: 1.2em; margin: 0; color: var(--cms-danger, #ffb4a8); }
-        @container (max-height: 4.5rem) { header, .range, .status { display: none; } }
+        @container (max-height: 4.5rem) { .range, .status { display: none; } }
         /* Einheitliche Auswahllisten: eigener Pfeil statt Systemdarstellung (Safari). */
         select { appearance: none; -webkit-appearance: none;
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a9a8f' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");

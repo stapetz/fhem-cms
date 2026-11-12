@@ -51,7 +51,7 @@ class FHEMCMSValue extends HTMLElement {
         .glyph[hidden] { display: none; }
         .icon { height: 1.1em; width: 1.1em; flex: none; }
         .icon-row .icon { width: 2rem; height: 2rem; }
-        .value { font-size: inherit; line-height: 1.1; font-weight: 600; white-space: nowrap; }
+        .value { font-size: inherit; line-height: 1.1; font-weight: 500; color: var(--cms-muted, #a5c9b2); white-space: nowrap; }
         .unit { margin-left: 0.12em; font-size: 0.6em; font-weight: 400; color: var(--cms-muted, #a5c9b2); }
         .unit:empty { display: none; }
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
@@ -256,8 +256,8 @@ class FHEMCMSValue extends HTMLElement {
     const tile = this.shadowRoot.querySelector('[data-tile]');
     tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''}`;
     const title = this.shadowRoot.querySelector('[data-title]');
-    title.textContent = this.widgetConfig.title || '';
-    const titleShown = Boolean(this.widgetConfig.title) && this.widgetConfig.showTitle !== false;
+    title.textContent = this.widgetConfig.title || this.widgetConfig.device || 'Wert';
+    const titleShown = this.widgetConfig.showTitle !== false;
     this.shadowRoot.querySelector('[data-header]').hidden = !titleShown;
     tile.toggleAttribute('data-has-title', titleShown);
     const icon = this.shadowRoot.querySelector('[data-icon]');

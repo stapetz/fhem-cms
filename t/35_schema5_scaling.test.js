@@ -117,7 +117,7 @@ for (const [name, fixtures] of [
   ['widget titles inherit alignment and compact contents fill their available area',
     [['36_widget_titles.html', 180], ['37_widget_content.html', 600],
       ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],
-      ['42_richtext_selection.html', 85], ['43_auto_arrange.html', 84],
+      ['42_richtext_selection.html', 85], ['43_auto_arrange.html', 84], ['64_widget_hierarchy.html', 80],
       ['44_placeholder_units.html', 384], ['45_solarflow_sizing.html', 868], ['46_unit_inputs.html', 998]]],
   ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 810]]],
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],

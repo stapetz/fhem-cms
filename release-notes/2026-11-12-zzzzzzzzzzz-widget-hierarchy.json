@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-12",
+  "version": "1.10.0-dev",
+  "title": "Kompakte Widget-Informationshierarchie",
+  "changes": [
+    "Geraete-/Widgetnamen werden als primaere Titel hervorgehoben; Wert- und Statuszeilen bleiben sichtbar und gedimmt.",
+    "Fehlende Titel und Werte sowie unbekannte Schalt-/Reading-Zustaende erhalten klare Fallbacks; Einheiten, Zusatzinfos und Rasterdaten bleiben erhalten (Refs #166)."
+  ]
+}

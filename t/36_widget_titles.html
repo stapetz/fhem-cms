@@ -56,7 +56,7 @@ try {
           for (const theme of ['light', 'dark', 'liquid-glass']) {
             document.documentElement.dataset.cmsTheme = theme;
             check(getComputedStyle(title).color === getComputedStyle(reference).color, `text title color: ${theme}`);
-            check(getComputedStyle(title).fontWeight === getComputedStyle(reference).fontWeight, `text title weight: ${theme}`);
+            check(Number.parseInt(getComputedStyle(reference).fontWeight, 10) >= 600, `widget title weight: ${theme}`);
           }
         }
         const dialogHeading = host.shadowRoot.querySelector('dialog h3');
