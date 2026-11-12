@@ -87,6 +87,30 @@ export function schema5GridItems(config, pageId) {
     .map(({ id, grid }) => ({ id, x: grid.col - 1, y: grid.row - 1, w: grid.w, h: grid.h }));
 }
 
+export function reflowSchema5Widget(config, pageId, widgetId) {
+  const result = structuredClone(config);
+  const columns = Number(result.settings.gridColumns);
+  const page = result.pages.find(entry => entry.id === pageId);
+  const anchor = page?.widgets.find(widget => widget.id === widgetId);
+  if (!anchor || anchor.type !== 'fhem-link') throw new Error('LinkWidget für Platzvorschau erforderlich');
+  const fixed = geometry(anchor.grid, columns);
+  const navigation = geometry(result.navigation.grid, columns);
+  if (overlaps(fixed, navigation)) {
+    throw new Error('Das LinkWidget würde die Navigation verdecken. Bitte das LinkWidget auf der Seite verschieben.');
+  }
+  const placed = [navigation, fixed];
+  const ordered = page.widgets.filter(widget => widget.id !== widgetId)
+    .sort((a, b) => Number(a.grid.row) - Number(b.grid.row) || Number(a.grid.col) - Number(b.grid.col));
+  for (const widget of ordered) {
+    const current = geometry(widget.grid, columns);
+    const position = moveBelowCollisions({ ...current }, placed, columns);
+    if (position.row !== current.row) widget.grid = { ...widget.grid, row: position.row };
+    placed.push(position);
+  }
+  validateLayout(result);
+  return result;
+}
+
 export function applySchema5GridItems(config, pageId, items) {
   const expected = schema5GridItems(config, pageId);
   if (!Array.isArray(items) || items.length !== expected.length) {

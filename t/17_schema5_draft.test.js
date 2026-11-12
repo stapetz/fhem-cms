@@ -248,6 +248,70 @@ test('compact link geometry survives real draft, reload and publication', async 
   } finally { await rm(dir, { recursive: true }); }
 });
 
+test('confirmed LinkWidget growth persists the previewed page atomically through real Perl transactions', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-link-reflow-'));
+  const live = config();
+  live.settings.gridColumns = 96;
+  live.navigation.grid = { col: 1, row: 1, w: 92, h: 4 };
+  live.pages[0].widgets = [
+    { id: 'links', type: 'fhem-link', title: 'Existing links', grid: { col: 1, row: 27, w: 40, h: 23 },
+      links: [1, 2, 3].map(number => ({ id: `link${number}`, kind: 'internal', page: 'start',
+        text: `Link ${number}`, showText: true, textPosition: 'overlay', target: 'self',
+        grid: { col: 1 + (number - 1) * 4, row: 1, w: 4, h: 4 } })) },
+    { id: 'side', type: 'text', html: '{{Temp:state}}', grid: { col: 72, row: 23, w: 13, h: 12 } },
+    { id: 'below', type: 'fhem-html', devices: ['Temp'],
+      html: '<span device="Temp" reading="state"></span>', grid: { col: 27, row: 50, w: 45, h: 12 } },
+    { id: 'tail', type: 'text', html: 'Keep', grid: { col: 27, row: 62, w: 45, h: 8 } },
+  ];
+  live.pages.push({ id: 'other', title: 'Other', widgets: [
+    { id: 'untouched', type: 'text', html: 'Other page', grid: { col: 1, row: 5, w: 30, h: 8 } },
+  ] });
+  let writes = 0;
+  const original = JSON.stringify(live);
+  const invoke = (operation, ...args) => {
+    const child = spawnSync('perl', ['-e', perl, dir, operation, ...args], { encoding: 'utf8' });
+    assert.equal(child.status, 0, child.stderr);
+    const { result, error } = JSON.parse(child.stdout);
+    if (error) throw new Error(error);
+    return result;
+  };
+  const controller = new Schema5DraftController({
+    read: async () => invoke('read'),
+    save: async (value, token) => {
+      writes++;
+      invoke('save', Buffer.from(JSON.stringify(value)).toString('base64'), token);
+    },
+    publish: async token => invoke('publish', token),
+    discard: async token => invoke('discard', token),
+  });
+  try {
+    await writeFile(join(dir, 'config.json'), original);
+    const state = await controller.reload();
+    const widget = structuredClone(live.pages[0].widgets[0]);
+    widget.links.push({ ...widget.links[0], id: 'four', text: 'Fourth link', targetMode: 'modal', modalSize: 'lg',
+      image: `media/${'a'.repeat(32)}.png`, grid: { col: 1, row: 5, w: 4, h: 3 } });
+    widget.links.push({ id: 'five', kind: 'external', url: 'https://example.test/', text: 'Fifth link',
+      showText: true, textPosition: 'overlay', target: 'tab', grid: { col: 5, row: 5, w: 4, h: 3 } });
+    const preview = controller.previewWidget('start', widget, state.token, 'update');
+    assert.deepEqual(preview.moved, ['below', 'tail']);
+    assert.equal(writes, 0);
+    assert.deepEqual(await readdir(dir), ['config.json'], 'preview creates no draft or journal');
+    assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
+    const saved = await controller.saveWidget('start', widget, state.token, 'update', preview);
+    assert.equal(writes, 1);
+    const expected = structuredClone(live);
+    expected.pages[0].widgets[0] = { ...widget, grid: { ...widget.grid, h: 37 } };
+    expected.pages[0].widgets[2].grid.row = 64;
+    expected.pages[0].widgets[3].grid.row = 76;
+    assert.deepEqual(saved.draft, expected);
+    assert.deepEqual(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')), expected);
+    assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
+    assert.deepEqual((await controller.reload()).draft, expected);
+    assert.deepEqual((await controller.publishDraft(controller.snapshot().token)).live, expected);
+    assert.deepEqual((await controller.reload()).live, expected);
+  } finally { await rm(dir, { recursive: true }); }
+});
+
 test('navigation reflow survives real Perl persistence and rejects overflow before any write', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cms-v5-navigation-reflow-'));
   const live = config();

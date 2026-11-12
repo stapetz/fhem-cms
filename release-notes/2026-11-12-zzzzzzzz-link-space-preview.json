@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-12",
+  "version": "1.8.1-dev",
+  "title": "LinkWidget: Platzschaffen mit Vorschau und Bestaetigung (Refs #148)",
+  "changes": [
+    "Braucht das LinkWidget mehr Platz, zeigt der Dialog die bisherige und neue Seitenanordnung mit den betroffenen Widgets statt einer unverstaendlichen Kollisionsmeldung.",
+    "Erst Platz schaffen und speichern verschiebt benoetigte Nachbarwidgets nach unten und speichert alles gemeinsam im Entwurf. Andere Seiten, Navigation, Inhalte und Widgetgroessen bleiben erhalten.",
+    "Zurueck erhaelt Links und Bilder; Abbrechen schreibt nichts. Grenzen, veraltete Vorschauen und unsichere Schreibvorgaenge bleiben abgesichert."
+  ]
+}

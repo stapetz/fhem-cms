@@ -370,18 +370,23 @@ Linkflächen passen die Außenmaße proportional an, auf ganze Rasterfelder geru
 Ein volles inneres 12-Spalten-Raster bedeutet nicht volle Seitenbreite.
 Leere Randzeilen und -spalten werden in der Anzeige nicht mitgezählt;
 Abstände zwischen den Kacheln bleiben erhalten. Die Außenposition bleibt
-unverändert. Bei Überschneidungen oder zu wenig Platz am Seitenrand wird
-Speichern mit einer Meldung abgewiesen. Dann zuerst Platz schaffen oder die
-Linkkacheln verkleinern. Bei einer vorab erkannten Platzkollision bleibt der
-Linkdialog mit allen Eingaben offen: Kacheln ändern und erneut speichern oder
-abbrechen. Neuladen ist dafür nicht nötig. Zum Verschieben des äußeren Widgets
-zuerst abbrechen und auf der Seite Platz schaffen.
-Eine neue Linkzeile kann weiterhin mit einem Widget darunter kollidieren.
-Alternativ lassen sich mehr, entsprechend kleinere Links in derselben Zeile anordnen.
+unverändert. Braucht das LinkWidget mehr Platz, erscheint beim Speichern eine
+**Vorher-/Nachher-Vorschau** der Seite mit markierten und benannten Widgets,
+die dafür nach unten rücken müssen. Noch wird nichts gespeichert.
+Erst **Platz schaffen und speichern** übernimmt das gewachsene LinkWidget und
+die angezeigten Verschiebungen gemeinsam in den Entwurf. Die anderen Widgets
+behalten Inhalte, Breite, Höhe und horizontale Position; Navigation und andere
+Seiten bleiben unverändert. Auch notwendige Folgeverschiebungen werden gezeigt.
+**Zurück zur Linkbearbeitung** erhält alle Eingaben, Bilder und die Anordnung.
+**Abbrechen** verwirft die Dialogänderungen ohne Schreibzugriff.
+Bei zu wenig Platz am rechten/unteren Seitenrand oder einer Kollision mit der
+Navigation ist kein automatisches Platzschaffen möglich: Der Dialog bleibt mit
+einer Meldung offen. Dann Kacheln verkleinern oder das äußere Widget verschieben.
 Ausgewählte Bilder erscheinen sofort auch auf den Kacheln im Bearbeitungsraster.
 Das Entfernen eines Bildes löscht dort ebenfalls die Vorschau.
 
-**Speichern** übernimmt Links und innere Positionen gemeinsam in den Entwurf;
+**Speichern** übernimmt Links und innere Positionen gemeinsam in den Entwurf
+(bei nötigen Nachbarverschiebungen erst nach der zusätzlichen Bestätigung);
 **Abbrechen** verwirft diese Dialogänderungen. Die Homepage ändert sich erst mit
 **Veröffentlichen**. Interne Links werden beim Umbenennen einer Seitendatei
 automatisch mitgeführt. Vor dem Löschen einer verlinkten Seite müssen die

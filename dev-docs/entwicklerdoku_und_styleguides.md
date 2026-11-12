@@ -437,8 +437,20 @@ belegter Fläche; zwölf innere Spalten werden nicht zur vollen Seitenbreite.
 `col,row` und sämtliche inneren Koordinaten bleiben
 unverändert. Die Widget-Session akzeptiert weiterhin ausschließlich das
 ursprüngliche äußere Raster vom Dialog; nur der Controller passt `w,h` an.
-Normale Layoutvalidierung weist Überschneidungen und Grenzen ohne Schreibzugriff
-ab, es gibt kein implizites Reflow anderer Widgets.
+`previewWidget` liefert ohne Schreibzugriff einen an Token, Seite und vollständige
+Widgetdaten gebundenen Plan mit Außenmaßen sowie Vorher-/Nachher-Geometrie.
+`reflowSchema5Widget` hält LinkWidget und Navigation fest und verwendet den
+bestehenden `moveBelowCollisions`-Mechanismus für weitere Widgets derselben Seite,
+sortiert nach alter Zeile/Spalte. Nur nötige Verschiebungen nach unten sind erlaubt,
+auch kaskadierend. Inhalte, horizontale Position und Größen bleiben erhalten.
+Der Dialog zeigt beide Anordnungen und benennt die verschobenen Widgets.
+Erst `saveWidget(..., approvedLayout)` nach ausdrücklicher Bestätigung berechnet
+den Plan erneut und verlangt exakte Übereinstimmung. Ein geänderter Plan oder
+Widgetinhalt wird abgewiesen; veraltete Tokens behalten die Zustandssperre.
+Ohne Bestätigung werden Kollisionen weiterhin abgewiesen. Die gesamte Änderung
+wird atomar mit derselben Entwurfstransaktion gespeichert. Navigation, andere
+Seiten und Live werden nicht mitverschoben. Grenzen und Navigationskollisionen
+bleiben Fehler. Zurück/Abbrechen verändert weder Entwurf noch Token.
 Bei der Vorprüfung wirft ausschließlich der Controller vor Beginn des
 Schreibtransports `WidgetLayoutError`. Die Session behandelt nur diesen Typ
 als korrigierbar, ohne ihren Abschluss aufzulösen; alle anderen Fehler behalten

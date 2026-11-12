@@ -1070,8 +1070,23 @@ Leere Randspalten/-zeilen entfallen nur in der Darstellung. Bestehende
 Konfigurationen bleiben lesbar. Änderungen der belegten Linkfläche passen die
 Außenmaße erst beim Dialogspeichern an. Layoutänderungen allein lösen keine
 Größenanpassung aus und bilden danach den neuen Referenzmaßstab.
-Kollisionen und Seiten-/Höhengrenzen verhindern das Schreiben, ohne andere
-Widgets zu verschieben. Vor Schreibbeginn erkannte Link-Layoutfehler werden
+Bei Platzbedarf öffnet der Linkdialog vor dem Schreiben eine Vorher-/Nachher-
+Vorschau der Seite und benennt/markiert die betroffenen Widgets.
+`Schema5DraftController.previewWidget` berechnet den Plan auf einer Kopie:
+LinkWidget und Navigation bleiben fest; andere Widgets derselben Seite werden
+mit dem vorhandenen `moveBelowCollisions` in alter Zeilen-/Spaltenreihenfolge
+nur bei Bedarf nach unten verschoben. Kaskaden werden vollständig angezeigt.
+Inhalte, Breite/Höhe und horizontale Position bleiben erhalten; andere Seiten
+werden nicht angefasst. Ohne nötige Nachbarverschiebung speichert der Dialog direkt.
+Erst **Platz schaffen und speichern** übergibt den bestätigten Plan.
+`saveWidget` berechnet ihn gegen den aktuellen Token erneut und verlangt exakte
+Übereinstimmung einschließlich Widgetdaten, Außenmaßen und Vorher-/Nachher-
+Geometrie. Geänderte Daten verlangen eine neue Vorschau. Die Übernahme erfolgt
+zusammen in einer atomaren Entwurfstransaktion, niemals direkt nach Live.
+Zurück zur Linkbearbeitung erhält Eingaben/Bilder; Abbrechen schreibt nichts.
+Ohne Bestätigung verhindern Kollisionen weiterhin das Schreiben.
+Seiten-/Höhengrenzen und eine Kollision mit der festen Navigation bleiben Fehler.
+Vor Schreibbeginn erkannte Link-Layoutfehler werden
 als `WidgetLayoutError` gemeldet. Die Session bleibt nur für diesen Fehlertyp
 aktiv; Linkdialog, Eingaben und GridStack bleiben zum Korrigieren, erneuten
 Speichern oder Abbrechen bestehen. Der Controller behält Zustand und Token,
@@ -1088,10 +1103,15 @@ Hinzufügen/Entfernen/Skalieren und abgewiesene Kollisionen ab. Die Regression
 mit 96 Spalten, drei 4×4-Links, Außenmaß 40×23 und seitlichem/unterem Nachbarn
 prüft unverändertes Speichern und einen vierten Link: echte vertikale Kollision
 behält Eingaben, vier manuell auf 3×4 verkleinerte Links lassen sich in derselben
-Zeile und Session ohne Nachbaränderung speichern. Die echte Dialogbedienung
-dieses Falls wird zusätzlich in `t/49_link_widget.html` geprüft.
+Zeile und Session ohne Nachbaränderung speichern. Zusätzliche Tests prüfen
+bestätigtes Wachstum mit Kaskaden, Vorschau ohne Schreibzugriff, Zurück/Abbrechen,
+veränderte Bestätigungen, veraltete Tokens, Grenzen und feste Navigation.
+Die echte Dialogbedienung inklusive Vorher/Nachher, Eingabeerhalt, expliziter
+Bestätigung und vollständiger Widget-Panel-Anbindung wird in
+`t/49_link_widget.html` geprüft.
 `t/17_schema5_draft.test.js` prüft die tatsächliche Perl-Persistenz einschließlich
-Neuladen und Veröffentlichung in isolierten Dateien. Der Chrome-Runner
+Neuladen und Veröffentlichung in isolierten Dateien, auch für das bestätigte
+Wachstum mit Nachbarverschiebungen. Der Chrome-Runner
 `t/35_schema5_scaling.test.js` führt die Rasterbild-/Drag-/Resize-Prüfung
 `t/49_link_widget.html` und den Geometrievergleich `t/47_view_editor_layout.html`
 aus. Letzterer enthält kompakte Einzel- und Mehrfachlinks in allen Seitendichten

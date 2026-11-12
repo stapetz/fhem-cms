@@ -9,6 +9,7 @@ import '../www/fhem-cms/components/cms-link.js';
 import { fitLinkWidget } from '../www/fhem-cms/js/link-widget.js';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
 import { Schema5WidgetSession } from '../www/fhem-cms/js/fcui-schema5-widget-session.js';
+import { Schema5WidgetPanel } from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
 const result = document.querySelector('#result');
 let checks = 0;
 const check = (condition, name) => { checks++; if (!condition) throw new Error(name); };
@@ -198,7 +199,13 @@ try {
   check($('[data-dialog]').open && widget.grid, 'real local collision retains dialog and GridStack');
   check(!completed, 'local collision does not trigger panel completion');
   equal(retryWrites, 0, 'local collision never invokes transport');
-  check($('[data-error]').textContent.includes('nichts gespeichert'), 'collision explains no write took place');
+  check(!$('[data-layout-preview]').hidden && !$('[data-error]').textContent,
+    'collision opens an understandable layout preview instead of an error');
+  equal($('[data-layout-comparison]').children.length, 2, 'before and after are both shown');
+  check($('[data-layout-moves]').textContent.includes('neighbor'), 'affected widget is named');
+  check(widget.shadowRoot.activeElement === $('[data-layout-back]'), 'preview receives keyboard focus after busy state');
+  await click('[data-layout-back]');
+  check($('[data-layout-preview]').hidden && !$('[data-edit-content]').hidden, 'back returns to editable inputs');
   equal($('[data-field=text]').value, 'Keep my new link', 'new link text survives rejected save');
   equal(widget.links.length, 3, 'new link remains editable after collision');
   await click('[data-remove-link]');
@@ -248,25 +255,88 @@ try {
       equal(writes96, 1, 'colliding fourth link never writes');
       equal($('[data-field=text]').value, 'Keep fourth link', 'fourth link text survives');
       equal(widget.links[3].image, image, 'fourth link image survives');
-      check($('[data-error]').textContent.includes('nichts gespeichert'),
-        'actual lack of vertical space remains explicit');
-      widget.links.forEach((item, index) => {
-        const wrapper = [...$('[data-grid]').children].find(entry => entry.gridstackNode.id === item.id);
-        widget.grid.update(wrapper, { x: index * 3, y: 0, w: 3, h: 4 });
-      });
+      check(!$('[data-layout-preview]').hidden, '96-column growth opens before/after preview');
+      equal($('[data-layout-moves]').children.length, 1, 'only the widget below is listed');
+      equal(widget.layoutPending.preview.moved, ['below'], 'side neighbor is not moved');
+      equal(widget.layoutPending.preview.after.find(item => item.id === 'below').grid.row, 64,
+        'preview shows the exact resulting lower widget position');
+      equal($('[data-layout-comparison]').querySelectorAll('[data-moving]').length, 2,
+        'moved widget marked in before and after');
+      equal($('[data-layout-comparison]').querySelectorAll('[data-anchor]').length, 2,
+        'edited LinkWidget marked in before and after');
+      await widget.save();
+      equal(writes96, 1, 'ordinary save or Enter never bypasses explicit confirmation');
+      await click('[data-layout-back]');
+      equal($('[data-field=text]').value, 'Keep fourth link', 'back retains the new link input');
+      equal(widget.links[3].image, image, 'back retains the new link image');
+      await widget.save();
+      equal(writes96, 1, 'reopening preview still does not write');
+      await click('[data-cancel]');
+      equal(writes96, 1, 'canceling preview never writes');
+      check($('[data-dialog]').open === false, 'cancel closes the dialog');
+      session96.close();
+      const confirming = new Schema5WidgetSession({ controller: controller96, pageId: 'home',
+        token: state96.token, widget: current, action: 'update' });
+      widget.services = confirming.services(services);
+      widget.config = confirming.widget;
+      await widget.openConfig();
+      await click('[data-add]');
+      field('text', 'Keep fourth link');
+      await click('[data-media]');
+      await widget.save();
+      await click('[data-layout-confirm]');
+      check(!$('[data-dialog]').open && (await confirming.completion).state,
+        'explicit confirmation saves and completes the session');
+    } else {
+      await widget.save();
+      check(completed96 && !$('[data-dialog]').open, 'unchanged 96-column dialog saves normally');
     }
-    await widget.save();
-    check(completed96 && !$('[data-dialog]').open, '96-column dialog saves and closes normally');
-    equal(state96.draft.pages[0].widgets[0].grid, existing.grid,
-      '96-column dialog preserves 40 by 23 outer geometry');
-    equal(state96.draft.pages[0].widgets.slice(1), live96.pages[0].widgets.slice(1),
-      '96-column save never moves neighbors');
+    equal(state96.draft.pages[0].widgets[0].grid, { ...existing.grid, h: add ? 37 : 23 },
+      '96-column dialog preserves scale and grows only when necessary');
+    equal(state96.draft.pages[0].widgets[1], live96.pages[0].widgets[1], 'side neighbor is unchanged');
+    equal(state96.draft.pages[0].widgets[2].grid.row, add ? 64 : 50, 'lower neighbor moves only after confirmation');
     equal(state96.live, live96, '96-column dialog does not publish');
   }
-  equal(writes96, 2, 'existing save and corrected fourth link each write once');
+  equal(writes96, 2, 'existing save and confirmed fourth link each write once');
   equal(state96.draft.pages[0].widgets[0].links.length, 4, 'fourth link really persists');
   equal(state96.draft.pages[0].widgets[0].links[3].text, 'Keep fourth link', 'saved fourth link retains its input');
   equal(state96.draft.pages[0].widgets[0].links[3].image, image, 'saved fourth link retains its image');
+  state96 = { live: live96, draft: null, token: 'd'.repeat(64) };
+  await controller96.reload();
+  const panelRoot = document.createElement('div');
+  document.body.append(panelRoot);
+  let panelClosed;
+  const panel = new Schema5WidgetPanel({ root: panelRoot, controller: controller96, services,
+    pageId: 'home', token: state96.token, widgetId: existing.id, onClose: value => { panelClosed = value; } });
+  const originalWidget = widget;
+  widget = panelRoot.querySelector('cms-link');
+  for (let attempt = 0; attempt < 100 && !widget.grid; attempt++) await pause();
+  check(Boolean(widget.grid), 'actual panel opens the LinkWidget dialog');
+  await click('[data-add]');
+  field('text', 'Panel confirmed link');
+  field('kind', 'external');
+  field('url', 'https://example.test/');
+  await click('[data-add]');
+  field('text', 'Panel modal link');
+  field('targetMode', 'modal');
+  field('modalSize', 'md');
+  widget.grid.update([...$('[data-grid]').children].find(entry => entry.gridstackNode.id === widget.links[4].id),
+    { x: 4, y: 4, w: 4, h: 3 });
+  await widget.save();
+  check(!$('[data-layout-preview]').hidden && panelRoot.contains(widget), 'panel retains widget while preview is open');
+  equal(writes96, 2, 'panel preview does not save');
+  await click('[data-layout-confirm]');
+  equal(writes96, 3, 'panel invokes confirmed save exactly once');
+  equal(panelClosed, { requiresReload: false }, 'confirmed panel closes successfully without forced reload');
+  equal(panelRoot.children.length, 0, 'panel removes the completed dialog');
+  equal(state96.draft.pages[0].widgets[0].links[3].text, 'Panel confirmed link', 'panel persists the added link');
+  equal(state96.draft.pages[0].widgets[0].links.length, 5, 'five-link screenshot layout really saves');
+  equal(state96.draft.pages[0].widgets[0].links[4].targetMode, 'modal', 'fifth link preserves modal mode');
+  equal(state96.draft.pages[0].widgets[0].links[4].modalSize, 'md', 'fifth link preserves modal size');
+  equal(state96.draft.pages[0].widgets[2].grid.row, 64, 'panel persists the previewed neighbor position');
+  panel.close();
+  panelRoot.remove();
+  widget = originalWidget;
   widget.services = services;
   widget.config = structuredClone(initial);
   await widget.openConfig();

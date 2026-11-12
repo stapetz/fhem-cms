@@ -327,13 +327,16 @@ passen diese proportional und auf ganze Rasterfelder gerundet an.
 Ein volles inneres 12-Spalten-Raster bedeutet nicht volle Seitenbreite.
 Leere Randspalten und -zeilen werden
 nicht angezeigt, Abstände zwischen Kacheln bleiben erhalten. Die Außenposition
-ändert sich nicht. Bei Überschneidungen oder Platzmangel am Seitenrand wird
-Speichern mit einer Meldung abgewiesen: zuerst Platz schaffen oder Kacheln
-verkleinern. Bei vorab erkannten Platzkollisionen bleiben Linkdialog und
-Eingaben zum Korrigieren und erneuten Speichern offen; Neuladen ist nicht nötig.
-Alternativ abbrechen und auf der Seite Platz schaffen.
-Eine neue Linkzeile kann weiterhin mit einem Widget darunter kollidieren.
-Alternativ mehr, entsprechend kleinere Links in derselben Zeile anordnen.
+ändert sich nicht. Braucht das LinkWidget mehr Platz, zeigt '''Speichern'''
+eine '''Vorher-/Nachher-Vorschau''' der Seite. Betroffene Widgets werden
+markiert und benannt, auch bei nötigen Folgeverschiebungen.
+Erst '''Platz schaffen und speichern''' übernimmt das gewachsene LinkWidget
+und die gezeigten Verschiebungen nach unten gemeinsam in den Entwurf.
+Inhalte, Größen und horizontale Positionen anderer Widgets bleiben erhalten;
+Navigation und andere Seiten ändern sich nicht. '''Zurück zur Linkbearbeitung'''
+erhält alle Eingaben und Bilder; '''Abbrechen''' schreibt nichts.
+An Seiten-/Höhengrenzen oder bei einer Kollision mit der Navigation bleibt
+der Dialog mit einer Meldung offen: Kacheln verkleinern oder das äußere Widget verschieben.
 Ausgewählte Bilder erscheinen sofort auf den Kacheln im Bearbeitungsraster;
 '''Bild entfernen''' entfernt dort auch die Vorschau.
 
