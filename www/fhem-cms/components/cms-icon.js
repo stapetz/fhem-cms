@@ -1,6 +1,7 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { openIconPicker } from '../js/icon-picker.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
+import { dialogGroupStyles } from '../js/dialog-groups.js';
 
 const MAX_STATES = 20;
 
@@ -57,6 +58,7 @@ class FHEMCMSIcon extends HTMLElement {
           border: 1px solid var(--cms-border, #43564a); border-radius: 1rem; background: var(--cms-surface, #202e27); color: var(--cms-text, #edf4ef); }
         dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form { display: grid; gap: 0.75rem; }
+        ${dialogGroupStyles}
         label { display: grid; gap: 0.25rem; }
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
         input[type="text"], select { width: 100%; }
@@ -87,19 +89,31 @@ class FHEMCMSIcon extends HTMLElement {
       <dialog data-dialog aria-labelledby="icon-dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="icon-dialog-title">Status-Symbol konfigurieren</h3>
-          <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
-          <label>FHEM-Device
-            <span class="device-row"><input name="device" readonly required placeholder="Noch kein Device gewählt">
-              <button type="button" data-pick-device>Auswählen …</button></span>
-          </label>
-          <span class="hint" data-alias></span>
-          <label>Reading<select name="reading" required></select></label>
-          <fieldset><legend>Zuordnung von Reading-Werten</legend>
-            <div data-mappings></div>
-            <button type="button" data-add>Zuordnung hinzufügen</button>
-          </fieldset>
-          <p class="hint">Für jeden Reading-Wert ein Icon und eine Farbe wählen. Nicht zugeordnete Werte werden als Text angezeigt.</p>
+          <details class="config-group" open><summary>Allgemein</summary>
+            <div class="config-group-fields">
+              <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
+              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+            </div>
+          </details>
+          <details class="config-group" open><summary>Datenquelle</summary>
+            <div class="config-group-fields">
+              <label>FHEM-Device
+                <span class="device-row"><input name="device" readonly required placeholder="Noch kein Device gewählt">
+                  <button type="button" data-pick-device>Auswählen …</button></span>
+              </label>
+              <span class="hint" data-alias></span>
+              <label>Reading<select name="reading" required></select></label>
+            </div>
+          </details>
+          <details class="config-group"><summary>Wertzuordnung und Darstellung</summary>
+            <div class="config-group-fields">
+              <fieldset><legend>Zuordnung von Reading-Werten</legend>
+                <div data-mappings></div>
+                <button type="button" data-add>Zuordnung hinzufügen</button>
+              </fieldset>
+              <p class="hint">Für jeden Reading-Wert ein Icon und eine Farbe wählen. Nicht zugeordnete Werte werden als Text angezeigt.</p>
+            </div>
+          </details>
           <p class="error" data-error role="alert"></p>
           <div class="actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>

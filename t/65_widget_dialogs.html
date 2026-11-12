@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget-Dialoge Regression</title>
+<pre id="result"></pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-chart.js';
+import '../www/fhem-cms/components/cms-button.js';
+import '../www/fhem-cms/components/cms-calllist.js';
+import '../www/fhem-cms/components/cms-icon.js';
+import '../www/fhem-cms/components/cms-link.js';
+import '../www/fhem-cms/components/cms-slider.js';
+import '../www/fhem-cms/components/cms-solarflow.js';
+import '../www/fhem-cms/components/cms-switch.js';
+import '../www/fhem-cms/components/cms-table.js';
+import '../www/fhem-cms/components/cms-thermostat.js';
+import '../www/fhem-cms/components/cms-value.js';
+import '../www/fhem-cms/components/cms-clock.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks += 1;
+};
+const saved = [];
+const services = {
+  history: async () => ({ points: [] }),
+  logReadings: async () => ({ source: 'dblog', readings: ['temperature'] }),
+  listAllDevices: async () => [{ name: 'Meter', readings: { power: '12', temperature: '20' } }],
+  saveWidget: async (config) => { saved.push(config); },
+};
+
+try {
+  const chart = document.createElement('cms-chart');
+  chart.services = services;
+  chart.config = {
+    id: 'chart', type: 'fhem-chart', title: 'Original', device: 'Temp', reading: 'temperature',
+    range: '24h', granularity: 'auto', source: 'dblog', grid: { col: 1, row: 1, w: 12, h: 8 },
+  };
+  document.body.append(chart);
+  await chart.openConfig();
+  const chartDialog = chart.shadowRoot.querySelector('[data-dialog]');
+  const chartGroups = [...chartDialog.querySelectorAll('.config-group')];
+  check(chartGroups.length === 3, 'chart separates general, data source, and history settings');
+  check(chartGroups[0].open && chartGroups[1].open && !chartGroups[2].open,
+    'chart opens essential settings and progressively hides optional display settings');
+  const chartUnit = chartDialog.querySelector('[name="unit"]');
+  chartGroups[2].querySelector('summary').click();
+  chartUnit.value = '°C';
+  chartGroups[2].querySelector('summary').click();
+  chartGroups[2].querySelector('summary').click();
+  check(chartUnit.value === '°C', 'chart values survive closing and reopening a group');
+  chartDialog.querySelector('[name="title"]').value = 'Unpublished draft';
+  chart.closeConfig(false);
+  check(chart.config.title === 'Original' && saved.length === 0,
+    'cancelling the chart dialog does not change the live widget or save a draft');
+
+  await chart.openConfig();
+  const chartForm = chartDialog.querySelector('[data-form]');
+  chartForm.elements.device.value = '';
+  await chart.saveConfig();
+  check(chartDialog.open && chartDialog.querySelector('[data-error]').textContent,
+    'invalid chart input remains visible in the open dialog');
+  check(saved.length === 0, 'invalid chart input is not saved');
+  chartForm.elements.device.value = 'Temp';
+  chartForm.elements.title.value = 'Saved title';
+  await chart.saveConfig();
+  check(saved[0]?.title === 'Saved title', 'valid chart input still follows the existing save path');
+
+  const table = document.createElement('cms-table');
+  table.services = services;
+  table.config = {
+    id: 'table', type: 'fhem-table', title: 'Meter', sum: true, rows: [{ device: 'Meter', reading: 'power' }],
+    grid: { col: 1, row: 1, w: 12, h: 8 },
+  };
+  document.body.append(table);
+  await table.openConfig();
+  const tableDialog = table.shadowRoot.querySelector('[data-dialog]');
+  const tableGroups = [...tableDialog.querySelectorAll('.config-group')];
+  check(tableGroups.length === 3, 'table separates general, source/readings, and display settings');
+  const sumLabel = tableDialog.querySelector('[name="sumLabel"]');
+  tableGroups[2].querySelector('summary').click();
+  sumLabel.value = 'Gesamt';
+  tableGroups[2].querySelector('summary').click();
+  check(sumLabel.value === 'Gesamt', 'table values survive a disclosure change');
+  tableDialog.querySelector('[name="deviceSingle"]').value = '';
+  await table.saveConfig();
+  check(tableDialog.open && tableDialog.querySelector('[data-error]').textContent,
+    'table validation errors remain visible in the dialog');
+  check(saved.length === 1, 'invalid table input does not save');
+  table.closeConfig(false);
+  check(table.config.rows[0].device === 'Meter' && saved.length === 1,
+    'cancelling the table dialog preserves the original widget configuration');
+  await table.openConfig();
+  await table.saveConfig();
+  check(saved[1]?.rows[0].reading === 'power',
+    'valid table fields remain bound to the existing save path after regrouping');
+
+  const clock = document.createElement('cms-clock');
+  document.body.append(clock);
+  const clockDialog = clock.shadowRoot.querySelector('[data-dialog]');
+  check(clockDialog.querySelectorAll('fieldset').length === 2 && !clockDialog.querySelector('.config-group'),
+    'the concise clock dialog keeps its direct fieldset grouping instead of adding unnecessary disclosures');
+
+  window.dialogRegression = {
+    chart, chartDialog, chartGroups, table, finish() {
+      chart.disconnectedCallback();
+      table.disconnectedCallback?.();
+      clock.disconnectedCallback();
+      output.dataset.result = 'pass';
+      output.textContent = JSON.stringify({ checks });
+    },
+  };
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>

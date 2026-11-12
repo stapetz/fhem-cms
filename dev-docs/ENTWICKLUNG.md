@@ -3,6 +3,8 @@
 Diese Dokumentation richtet sich an Entwickler und KI-Agenten. Sie ist nicht für die Auslieferung an FHEM-Anwender bestimmt. Sie ist der zentrale Informationsraum für Projektziel, Anforderungen, technische Entscheidungen und Entwicklungswissen. Anforderungen dürfen und sollen hier im Entwicklungsverlauf ergänzt und angepasst werden.
 
 Die bekannten, nach Abhängigkeiten geordneten Umsetzungsstories stehen in der [Story- und Aufgabenliste](./STORIES.md). Diese Dokumentation beschreibt das Zielbild und die Anforderungen; die Storyliste verfolgt deren schrittweise Umsetzung.
+Die Bestandsaufnahme und Gruppierung der Widget-Konfigurationsdialoge steht in
+[WIDGET_DIALOGS.md](./WIDGET_DIALOGS.md) (Refs #165).
 
 ## Führendes Zielbild und bisheriger Stand
 

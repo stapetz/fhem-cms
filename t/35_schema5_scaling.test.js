@@ -132,6 +132,8 @@ for (const [name, fixtures] of [
   ['direct widget deletion preserves the draft and handles errors', [['60_direct_widget_delete.html', 15]]],
   ['call list displays and configures device readings', [['58_calllist.html', 61]]],
   ['Smart-Home-Statusfarben bleiben semantisch und kontrastreich', [['64_status_colors.html', 13]]],
+  ['Widget-Dialoge behalten Drafts, Validierung und responsive Disclosure-Gruppen',
+    [['65_widget_dialogs.html', 12]]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],
@@ -155,7 +157,7 @@ for (const [name, fixtures] of [
   try {
     for (const [fixture, minimum] of fixtures) {
       const interact = !['49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
-        '63_responsive_edges.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
+        '63_responsive_edges.html', '65_widget_dialogs.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
           assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
@@ -272,6 +274,65 @@ for (const [name, fixtures] of [
           await command('Input.dispatchDragEvent', { type: 'drop', ...point, data });
           await pause(150);
           await evaluate('window.assetRegression.finish()');
+          return;
+        } else if (fixture === '65_widget_dialogs.html') {
+          await evaluate(`new Promise(resolve => {
+            const timer = setInterval(() => {
+              if (!window.dialogRegression && !document.querySelector('#result').dataset.result) return;
+              clearInterval(timer); resolve();
+            }, 25);
+          })`);
+          const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
+            ? document.querySelector('#result').textContent : null`);
+          assert.equal(failure, null, failure);
+          const checkDialogFits = async (name) => {
+            for (const [width, height, mobile, label] of [
+              [390, 844, true, 'phone'],
+              [768, 1024, false, 'tablet'],
+              [1280, 900, false, 'desktop'],
+            ]) {
+              await command('Emulation.setDeviceMetricsOverride', {
+                width, height, deviceScaleFactor: 1, mobile,
+              });
+              await evaluate(`window.dialogRegression.${name}.openConfig()`);
+              const dimensions = await evaluate(`(() => {
+                const dialog = window.dialogRegression.${name}.shadowRoot.querySelector('[data-dialog]');
+                const rect = dialog.getBoundingClientRect();
+                return { width: rect.width, viewport: innerWidth, scroll: dialog.scrollWidth, client: dialog.clientWidth };
+              })()`);
+              assert.ok(dimensions.width <= dimensions.viewport, `${name} dialog fits a ${label} viewport`);
+              assert.ok(dimensions.scroll <= dimensions.client + 1,
+                `${name} dialog has no horizontal overflow on a ${label}`);
+              await evaluate(`window.dialogRegression.${name}.closeConfig(false)`);
+            }
+          };
+          await checkDialogFits('chart');
+          await checkDialogFits('table');
+          await evaluate('window.dialogRegression.chart.openConfig()');
+          const summary = await evaluate(`(() => {
+            const group = window.dialogRegression.chartGroups[2];
+            group.open = false;
+            group.querySelector('summary').focus();
+            return true;
+          })()`);
+          assert.equal(summary, true);
+          await command('Input.dispatchKeyEvent', {
+            type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+          });
+          await command('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+          });
+          assert.equal(await evaluate('window.dialogRegression.chartGroups[2].open'), true,
+            'Enter opens a focused disclosure group');
+          await command('Input.dispatchKeyEvent', {
+            type: 'keyDown', key: ' ', code: 'Space', windowsVirtualKeyCode: 32,
+          });
+          await command('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32,
+          });
+          assert.equal(await evaluate('window.dialogRegression.chartGroups[2].open'), false,
+            'Space closes a focused disclosure group');
+          await evaluate('window.dialogRegression.finish()');
           return;
         }
         const move = async (point, dx, dy) => {

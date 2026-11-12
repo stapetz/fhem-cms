@@ -1,4 +1,5 @@
 import { LINK_COLUMNS, MAX_LINKS, LINK_MEDIA, linkBounds, linkHref, validateLinkItems } from '../js/link-widget.js';
+import { dialogGroupStyles } from '../js/dialog-groups.js';
 
 function node(tag, text) {
   const result = document.createElement(tag);
@@ -63,6 +64,7 @@ class FHEMCMSLink extends HTMLElement {
           color:var(--cms-text,#edf4ef); background:var(--cms-surface,#202e27); }
         dialog::backdrop { background:var(--cms-backdrop,rgb(0 0 0 / .6)); }
         form,.settings { display:grid; gap:.6rem; }
+        ${dialogGroupStyles}
         label { display:grid; gap:.2rem; }
         .check { display:flex; align-items:center; gap:.4rem; }
         .check input { width:auto; }
@@ -109,18 +111,26 @@ class FHEMCMSLink extends HTMLElement {
         <form data-form novalidate>
           <h3 id="link-dialog-title">LinkWidget konfigurieren</h3>
           <div class="settings" data-edit-content>
-          <label>Widgettitel (optional)<input name="title" maxlength="64"></label>
-          <label class="check"><input name="showTitle" type="checkbox"> Widgettitel anzeigen</label>
-          <p class="hint">Linkkacheln am Griff ziehen, an der Ecke skalieren. Eigenes Raster mit 12 Spalten.
-          Die Widgetgröße folgt beim Speichern der belegten Linkfläche; ein sichtbarer Widgettitel
-          benötigt eine zusätzliche Rasterzeile. Änderungen werden erst als Entwurf übernommen.
-          Braucht das Widget mehr Platz, zeigen wir dir vor dem Speichern, welche anderen Widgets
-          dafür nach unten rücken. Du entscheidest, ob du das übernehmen möchtest.</p>
-          <div class="editor"><div><div class="canvas"><div class="grid-stack" data-grid></div></div>
-            <button type="button" data-add>Link hinzufügen</button></div>
-            <div class="settings" data-settings></div></div>
-          <p class="hint">Neue Fenster werden angefordert; Browser können sie stattdessen als Tab öffnen.
-          Bilder und Dokumente werden gemeinsam im Assetmanager verwaltet. Bild entfernen löscht nur den Verweis.</p>
+            <details class="config-group"><summary>Widgettitel</summary>
+              <div class="config-group-fields">
+                <label>Widgettitel (optional)<input name="title" maxlength="64"></label>
+                <label class="check"><input name="showTitle" type="checkbox"> Widgettitel anzeigen</label>
+              </div>
+            </details>
+            <details class="config-group" open><summary>Links und Layout</summary>
+              <div class="config-group-fields">
+                <p class="hint">Linkkacheln am Griff ziehen, an der Ecke skalieren. Eigenes Raster mit 12 Spalten.
+                Die Widgetgröße folgt beim Speichern der belegten Linkfläche; ein sichtbarer Widgettitel
+                benötigt eine zusätzliche Rasterzeile. Änderungen werden erst als Entwurf übernommen.
+                Braucht das Widget mehr Platz, zeigen wir dir vor dem Speichern, welche anderen Widgets
+                dafür nach unten rücken. Du entscheidest, ob du das übernehmen möchtest.</p>
+                <div class="editor"><div><div class="canvas"><div class="grid-stack" data-grid></div></div>
+                  <button type="button" data-add>Link hinzufügen</button></div>
+                  <div class="settings" data-settings></div></div>
+                <p class="hint">Neue Fenster werden angefordert; Browser können sie stattdessen als Tab öffnen.
+                Bilder und Dokumente werden gemeinsam im Assetmanager verwaltet. Bild entfernen löscht nur den Verweis.</p>
+              </div>
+            </details>
           </div>
           <section class="layout-preview" data-layout-preview hidden aria-labelledby="link-layout-title">
             <h4 id="link-layout-title">Platz für deine Links schaffen</h4>

@@ -1,4 +1,5 @@
 import { isValidName } from '../js/fhem-client.js';
+import { dialogGroupStyles } from '../js/dialog-groups.js';
 
 const TARGET_MIN = 5;
 const TARGET_MAX = 30;
@@ -190,6 +191,7 @@ class FHEMCMSThermostat extends HTMLElement {
           padding: 1.25rem; width: min(92vw, 32rem); }
         dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form, .picker-body { display: grid; gap: 0.75rem; }
+        ${dialogGroupStyles}
         .device-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
         dialog.picker { width: min(94vw, 44rem); }
         .picker-list { max-height: 50vh; overflow: auto; border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; }
@@ -251,20 +253,24 @@ class FHEMCMSThermostat extends HTMLElement {
       <dialog data-dialog aria-labelledby="dialog-title">
         <form method="dialog" data-form novalidate>
           <h3 id="dialog-title">Thermostat-Kachel konfigurieren</h3>
-          <label>Titel (optional)
-            <input name="title" maxlength="64" autocomplete="off">
-          </label>
-          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
-          <label>FHEM-Device
-            <span class="device-row">
-              <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
-              <button type="button" data-pick-device>Auswählen …</button>
-            </span>
-          </label>
-          <span class="hint" data-device-alias></span>
-          <fieldset data-readings>
-            <legend>Readings</legend>
-          </fieldset>
+          <details class="config-group" open><summary>Allgemein</summary>
+            <div class="config-group-fields">
+              <label>Titel (optional)<input name="title" maxlength="64" autocomplete="off"></label>
+              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+            </div>
+          </details>
+          <details class="config-group" open><summary>Datenquelle und Temperaturwerte</summary>
+            <div class="config-group-fields">
+              <label>FHEM-Device
+                <span class="device-row">
+                  <input name="device" maxlength="128" autocomplete="off" readonly required placeholder="Noch kein Device gewählt">
+                  <button type="button" data-pick-device>Auswählen …</button>
+                </span>
+              </label>
+              <span class="hint" data-device-alias></span>
+              <fieldset data-readings><legend>Readings</legend></fieldset>
+            </div>
+          </details>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
             <button type="button" class="danger" data-delete>Widget löschen</button>
