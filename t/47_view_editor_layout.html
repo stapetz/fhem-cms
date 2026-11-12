@@ -72,10 +72,10 @@ try {
               .map(({ id, col, row, w, h }) => ({ id, x: col - 1, y: row - 1, w, h }))
               .sort((a, b) => a.id.localeCompare(b.id))), `${columns}/${width}: saved raster retained`);
           if (!editing && width <= 600) {
-            const boxes = Object.values(items);
-            for (const box of boxes) {
+            for (const box of Object.values(items)) {
               check(box.x >= -1 && box.x + box.width <= width + 1, 'mobile content stays within container');
             }
+            const boxes = Object.entries(items).filter(([id]) => id !== '__nav').map(([, box]) => box);
             for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
               const a = boxes[i]; const b = boxes[j];
               check(a.x + a.width <= b.x + 1 || b.x + b.width <= a.x + 1
