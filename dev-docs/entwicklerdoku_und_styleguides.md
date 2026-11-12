@@ -318,30 +318,16 @@ Löschen prüft jede Datei separat; bei Originallöschung werden Varianten zu
 eigenständigen Bildern. Beim Rollback sind Code, Assetkatalog und Dateien einer
 zusammengehörigen Sicherung erforderlich, da alte Validatoren `variantOf` nicht
 akzeptieren. Dieser Entwicklungsstand ist noch nicht veröffentlicht.
-Regression für #138: `python3 -m http.server 8771 --bind 127.0.0.1` im
-Repository starten und `http://127.0.0.1:8771/t/61_asset_image.html` in Chrome
-öffnen. Die Fixture prüft Größenkopplung, alle acht Tastaturgriffe und Abbrechen
-und wartet dann mit `#result[data-ready="true"]` auf echte Pointer-Eingaben.
-`imageRegression.points([x,y],[x,y])` übersetzt die folgenden Quellpixel in
-Bildschirmkoordinaten; nach jeder Geste kann `assertCrop({x,y,w,h}, 'Prüfung')`
-den Zustand prüfen:
-
-| Geste | Von → nach | Erwarteter Ausschnitt x/y/w/h |
-|---|---|---|
-| Innen verschieben | 70/40 → 90/50 | 40/20/100/60 |
-| Eckgriff vergrößern | 140/80 → 160/90 | 40/20/120/70 |
-| Eckgriff verkleinern | 40/20 → 50/30 | 50/30/110/60 |
-| An Bildgrenze verschieben | 100/60 → -100/-100 | 0/0/110/60 |
-| `imageRegression.lock()`, Eckgriff skalieren | 110/60 → 160/80 | 0/0/160/87 |
-| Sperre wieder lösen, neu aufziehen | 199/1 → 100/99 | 100/1/99/98 |
-
-Dann am oberen Griff einmal Pfeil hoch, rechts einmal Pfeil rechts und unten
-einmal Pfeil runter drücken. `imageRegression.finish()` prüft 100/0/100/100,
-bestätigt den Zuschnitt, speichert die 5×5-PNG-Variante und prüft blaue Bildpixel,
-unverändertes Original und Auswahl/Löschung der Variante. Erwartet:
-`#result[data-result="pass"]`, mindestens 60 Prüfungen. Mit Maus bei 1280×900
-und emuliertem Touch bei 390×844 prüfen; zusätzlich eine Bewegung mit
-`pointercancel` bzw. `touchCancel` abbrechen und unveränderte Auswahl erwarten.
+Regression für #138:
+`node --test --test-name-pattern='image variants' t/35_schema5_scaling.test.js`.
+Chrome muss installiert sein (ggf. `CHROME_BIN` setzen). Der Testtreiber prüft
+`t/61_asset_image.html` mit echten Mausereignissen bei 1280×900 und emuliertem
+Touch bei 390×844: Bewegen, Vergrößern/Verkleinern, Bildgrenzen,
+Verhältnissperren, Pointer-/Touch-Abbruch, alle acht Tastaturgriffe,
+OK/Abbrechen und Größenkopplung. Anschließend wird die 5×5-PNG-Variante
+pixelgenau geprüft; Original, Auswahl und Löschschutz bleiben abgedeckt.
+Erwartet: beide Durchläufe mit `data-result="pass"` und jeweils mindestens
+67 Prüfungen; keine FHEM-Schreibzugriffe.
 Die bisherige Suche ist entfernt; Weiterentwicklung ausschließlich in #126
 (later/Backlog), nicht Bestandteil des aktuellen Assetmanager-Abnahmeumfangs.
 Zielordner für Assets und Ordner werden über denselben grafischen Ordnerpicker
