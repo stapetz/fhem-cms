@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-12",
+  "version": "1.9.1-dev",
+  "title": "Entwicklung nach Release 1.9.0",
+  "changes": [
+    "Der freigegebene Stand 1.9.0 wurde nach dev synchronisiert.",
+    "Seiten-Modals, Bildbearbeitung, LinkWidget-Platzvorschau und volle Rasterbreite sind auf main veroeffentlicht.",
+    "Nicht freigegebene Funktionen und interne AI-Anweisungen bleiben ausschliesslich auf dev."
+  ]
+}

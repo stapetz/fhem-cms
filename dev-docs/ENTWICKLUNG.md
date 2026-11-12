@@ -243,7 +243,7 @@ Umbruch, Rückkehr zum Desktop und unveränderte Rasterdaten geprüft. Die mobil
 Browserregression prüft zusätzlich 852×393 im Querformat, Burger-Overlay und
 Mindestbreiten der Widgets ohne Änderungen gespeicherter Rasterdaten.
 
-Nachkorrektur #141 (Entwicklungsstand `dev`, nicht veröffentlicht):
+Nachkorrektur #141 (veröffentlicht mit 1.9.0):
 Der Umbruch bis 80 rem gilt auch für Desktop-Zeiger. Damit bleibt die
 lesbare Mindest-Bezugsbreite der Kacheln erhalten, ohne den GridStack-
 Canvas in schmalen Ansichtsfenstern seitlich abschneiden zu müssen. Der
@@ -1088,7 +1088,7 @@ die korrigierte Variante besteht alle 85 Prüfungen.
 
 ## LinkWidget: Gesamtfläche und Rasterbilder (Refs #148, #70)
 
-Entwicklungsstand auf `dev`, noch nicht veröffentlicht:
+Veröffentlicht mit Version 1.9.0:
 Beim Speichern des LinkWidget-Dialogs bestimmt der Draft-Controller die Außenmaße
 aus dem belegten Rechteck aller inneren Linkkacheln. Neue Widgets verwenden
 `gridColumns / 12`; ein sichtbarer Widgettitel ergänzt eine innere Höheneinheit.

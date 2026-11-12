@@ -306,7 +306,7 @@ Upload wählt keine Datei automatisch aus: Detailspalte und EXIF-Anfragen bleibe
 geschlossen. Drop-Standardverhalten verhindern, Ablagefläche hervorheben und
 Ordner-Drops explizit ablehnen. Nach Abbruch/erstem Fehler keine weiteren Dateien
 starten; erfolgreiche Dateien erhalten und Anzahl sichtbar melden.
-Der Entwicklungsstand zu #138 gruppiert Bildvarianten über `variantOf` beim
+Version 1.9.0 (#138) gruppiert Bildvarianten über `variantOf` beim
 Original. Detailkopf und
 Variantenliste ergänzen die Dateigröße nach Laden der Vorschau um deren
 `naturalWidth × naturalHeight` in Pixeln; verspätete Ergebnisse einer vorherigen
@@ -332,7 +332,7 @@ dem Dekodieren und danach auf 8192 Pixel pro Seite und 16 Megapixel begrenzt.
 Löschen prüft jede Datei separat; bei Originallöschung werden Varianten zu
 eigenständigen Bildern. Beim Rollback sind Code, Assetkatalog und Dateien einer
 zusammengehörigen Sicherung erforderlich, da alte Validatoren `variantOf` nicht
-akzeptieren. Dieser Entwicklungsstand ist noch nicht veröffentlicht.
+akzeptieren. Dieser Umfang ist seit Version 1.9.0 veröffentlicht.
 Regression für #138:
 `node --test --test-name-pattern='image variants' t/35_schema5_scaling.test.js`.
 Chrome muss installiert sein (ggf. `CHROME_BIN` setzen). Der Testtreiber prüft
@@ -413,7 +413,7 @@ ohne Zugangsdaten) und `target: "self" | "tab" | "window"`. Dokumentlinks besitz
 `kind: "asset"` und `asset` mit dem stabilen Dokument-Downloadpfad anstelle
 von `page`/`url`; die gleichen externen Zielmodi sind möglich.
 
-Entwicklungsstand #146: Interne Links können optional `targetMode: "modal"`
+Seit Version 1.9.0 (#146): Interne Links können optional `targetMode: "modal"`
 und `modalSize: "sm" | "md" | "lg"` tragen; ohne Feld gilt Seitenwechsel,
 ohne Popupgröße `md`. Das optionale Feld ist nur für interne Links zulässig.
 Es erweitert den strikt validierten Schema-5-Vertrag, ohne eine Schema-6-
@@ -423,15 +423,14 @@ die zum Code passende Konfigurationssicherung. Das native modale `dialog`
 rendert ein zweites Raster ohne die Hauptseite zu zerstören; beide teilen einen
 Live-Client mit vereinigten Device-Abos. Beim Schließen werden Raster und
 Popup-Abos entfernt. Verschachtelte Popups werden ausdrücklich abgewiesen.
-Escape, X, Hintergrundklick und Fokus folgen dem Dialogvertrag. Der
-Entwicklungsstand ist noch nicht veröffentlicht.
+Escape, X, Hintergrundklick und Fokus folgen dem Dialogvertrag.
 
 Das innere `grid` enthält exakt numerische, positive Ganzzahlen `col,row,w,h`,
 1-basiert, 12 Spalten, höchstens 1000 Zeilen und keine Überlappungen.
 Die Seitendichte skaliert nur das äußere Raster. Gridstack wird erst beim Öffnen
 des Dialogs geladen; `save(false)` erfasst **alle** inneren Knoten einschließlich
 mitverschobener Kollisionspartner. Schließen/Entfernen zerstört die Instanz.
-Entwicklungsstand #148: `Schema5DraftController.saveWidget` berechnet für
+Seit Version 1.9.0 (#148): `Schema5DraftController.saveWidget` berechnet für
 `fhem-link` vor dem validierten Entwurfsschreiben die Außenmaße mit
 `fitLinkWidget`: belegtes Rechteck aus `linkBounds`; ein sichtbarer nichtleerer
 Widgettitel ergänzt eine innere Höheneinheit. Neue Widgets verwenden den Faktor
@@ -468,7 +467,7 @@ linke/obere Leerränder ab.
 Alte Konfigurationen bleiben lesbar; nur Änderungen der belegten Fläche oder
 Titelzeile passen beim Dialogspeichern die Außenmaße an. Reine Layoutänderungen
 passen diese nicht an und bilden beim nächsten Dialog den neuen Referenzmaßstab.
-Entwicklungsstand #70: Das Dialograster zeigt ausschließlich gegen `LINK_MEDIA`
+Seit Version 1.9.0 (#70): Das Dialograster zeigt ausschließlich gegen `LINK_MEDIA`
 validierte lokale Bildpfade als deckendes Hintergrundbild; Auswahl/Entfernen
 und Wiederöffnen aktualisieren die Vorschau. Griff und Auswahlschaltfläche
 haben darüber einen kontrastierenden Hintergrund.

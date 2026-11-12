@@ -2,7 +2,21 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
-**Aktuelle stabile Version: 1.8.0**
+**Aktuelle stabile Version: 1.9.0**
+
+## Neu in 1.9.0
+
+- Interne CMS-Seiten als Popup aus Linkkacheln öffnen, mit drei Größen und
+  Livewerten ohne Verlassen der Hauptseite.
+- Bilder im Assetmanager zuschneiden, skalieren und als Varianten speichern;
+  Originale bleiben erhalten. Dateigröße und Pixelmaße werden angezeigt.
+- LinkWidget-Größe passend zu den Linkkacheln; bei Platzmangel zeigt eine
+  Vorschau die nötigen Verschiebungen und verlangt eine ausdrückliche Bestätigung.
+  Kachelbilder sind bereits im inneren Bearbeitungsraster sichtbar.
+- Raster über die gesamte Inhaltsbreite, auch im Editor bei Browserzoom;
+  verbesserte mobile Navigation, Hoch-/Querformat und sichere Bildschirmränder.
+- Escape schließt die Geräte-Vorschau auch bei Fokus im Vorschauinhalt.
+- Das Internal `VERSION` wird auch bei fehlgeschlagener Initialisierung gesetzt.
 
 ## Neu in 1.8.0
 
@@ -80,7 +94,7 @@ ausgeben kann. `CHANGED` wird nicht als installierbare Datei geführt und
 
 ## Version
 
-Die aktuelle stabile Version ist **1.8.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`). Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
+Die aktuelle stabile Version ist **1.9.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`), auch wenn die anschließende Initialisierung fehlschlägt. Die Angabe allein bestätigt keine erfolgreiche Initialisierung. Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
 
 ## Installation und Update in FHEM
 

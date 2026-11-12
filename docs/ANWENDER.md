@@ -246,7 +246,7 @@ Wertanzeigen, Schalter, Taster und Statussymbole nutzen ihren Innenraum mit
 kleinem Sicherheitsabstand aus. Titel und eventuelle Fehlermeldungen bleiben
 separat; lange Werte und Beschriftungen werden kleiner eingepasst statt
 abgeschnitten. Schieberegler reichen bis nahe an die seitlichen Ränder.
-**Entwicklungsstand auf `dev` – noch nicht veröffentlicht (stapetz/fhem-cms#155):**
+**Seit Version 1.9.0 (stapetz/fhem-cms#155):**
 Das Raster bleibt auch beim Browserzoom über die volle verfügbare Inhaltsbreite
 eingepasst. Im Editor behalten Widgets ihre gespeicherten Rasteranteile;
 Zoom vergrößert deshalb nicht mehr zwingend die gesamte Kachel. Homepage
@@ -266,7 +266,7 @@ wird das Ansichts-Raster bei Bedarf an die Breite angepasst, damit es auch im
 Querformat nicht horizontal scrollt. Auf breiteren Ansichten bleibt dabei die
 gespeicherte Anordnung erhalten.
 
-**Entwicklungsstand auf `dev` – noch nicht veröffentlicht (stapetz/fhem-cms#141):**
+**Seit Version 1.9.0 (stapetz/fhem-cms#141):**
 Homepage und Vorschau brechen auch im schmalen Desktopbrowser bis 80 rem
 Inhaltsbreite (bei Standardschrift 1280 Pixel) in Leserichtung um, statt Teile
 des Rasters horizontal abzuschneiden. Oberhalb dieser Grenze bleibt das exakte
@@ -285,7 +285,7 @@ in der schmalen Ansicht vor den Widgets. Auch ihre konfigurierten Buttonbreiten
 und -höhen skalieren mit; Pixelangaben beziehen sich auf 1200 Pixel Inhaltsbreite
 bei Standardschrift. Passen alle sichtbaren
 Menüeinträge einschließlich Abständen in ihre verfügbare Breite, bleiben sie
-direkt sichtbar. Entwicklungsstand `dev`: Ist bei horizontaler Navigation nur die Höhe knapp, werden die
+direkt sichtbar. Ist bei horizontaler Navigation nur die Höhe knapp, werden die
 Einträge um höchstens 20 Prozent verkleinert. Reicht Breite oder Höhe auch dann
 nicht, erscheint das aufklappbare ☰-Menü. Die Platzprüfung
 reagiert auf Drehen, Größenänderungen, Beschriftungen und geladene Schriften.
@@ -336,7 +336,7 @@ auf eine vorhandene CMS-Seite; im Dialog wählen Sie das gewünschte Ziel:
 - **Dokument aus Assetmanager:** Ein abgelegtes Dokument auswählen.
   Es wird über einen Download-Link angeboten.
 
-**Entwicklungsstand auf `dev` – noch nicht veröffentlicht:** Für interne
+**Seit Version 1.9.0:** Für interne
 Linkkacheln lässt sich unter **Öffnen als** statt Seitenwechsel **Popup (Modal)**
 mit kleiner, mittlerer oder großer Breite wählen. Die Zielseite erscheint über
 der unveränderten aktuellen Seite und wird mit Live-Daten versorgt. Schließen
@@ -364,7 +364,7 @@ Position und Größe werden ausschließlich grafisch geändert.
 Überlappungen sind nicht speicherbar. Das äußere LinkWidget verschieben und
 skalieren Sie weiterhin wie andere Widgets auf der CMS-Seite.
 
-**Entwicklungsstand auf `dev` – noch nicht veröffentlicht:** Beim Speichern
+**Seit Version 1.9.0:** Beim Speichern
 passt sich die äußere Widgetgröße an die belegte Fläche der Linkkacheln an.
 Bei einem neuen Widget benötigt ein einzelner Link mit 4 × 3 inneren Rasterfeldern bei 12 Seitenspalten
 4 × 3 äußere Felder; ein sichtbarer Widgettitel ergänzt eine Zeile.
@@ -456,7 +456,7 @@ Bilder stehen automatisch im gemeinsamen Stammordner zur Verfügung.
   kein i; Lesefehler werden ausdrücklich angezeigt. Herstellerspezifische
   Binärfelder erscheinen als Rohwerte, lange Werte gekürzt und unbekannte Tags
   mit ihrer Nummer. Die Originaldatei wird nicht verändert oder bereinigt.
-- **Entwicklungsstand auf `dev` – noch nicht veröffentlicht:** Bei einem Bild
+- **Seit Version 1.9.0:** Bei einem Bild
   stehen rechts das Original und seine Varianten mit Dateigröße und Bildmaßen
   (Breite × Höhe in Pixeln) zur Auswahl. Der Detailkopf zeigt dieselben Angaben
   für das ausgewählte Bild; die Maße werden aus der geladenen Vorschau gelesen.
