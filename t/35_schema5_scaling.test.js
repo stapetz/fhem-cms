@@ -122,7 +122,8 @@ for (const [name, fixtures] of [
   ['view and editor retain identical desktop geometry', [['47_view_editor_layout.html', 810]]],
   ['LinkWidget configures nested tiles and renders safe links', [['49_link_widget.html', 65]]],
   ['shared Assetmanager handles folders, administration and widget insertion', [['51_asset_manager.html', 204]]],
-  ['image variants crop, resize and select without changing original', [['61_asset_image.html', 10]]],
+  ['image variants crop, resize and select without changing original',
+    [['61_asset_image.html', 67], ['61_asset_image.html?touch=1', 67]]],
   ['modal page preserves the main page and closes by keyboard and backdrop', [['62_page_modal.html', 35]]],
   ['themes use and restore page backgrounds', [['55_liquid_glass.html', 63]]],
   ['page settings preview shows the real phone page without saving', [['57_settings_preview.html', 25]]],
@@ -150,7 +151,7 @@ for (const [name, fixtures] of [
   const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
     for (const [fixture, minimum] of fixtures) {
-      const interact = !['49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html'].includes(fixture) ? undefined : async command => {
+      const interact = !['49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
           assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
@@ -164,12 +165,45 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
-        if (fixture === '61_asset_image.html') {
-          const points = await evaluate('window.imageRegression.points()');
-          await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...points.from });
-          await command('Input.dispatchMouseEvent', { type: 'mousePressed', ...points.from, button: 'left', clickCount: 1 });
-          await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...points.to, button: 'left', buttons: 1 });
-          await command('Input.dispatchMouseEvent', { type: 'mouseReleased', ...points.to, button: 'left', clickCount: 1 });
+        if (fixture.startsWith('61_asset_image.html')) {
+          const touch = fixture.endsWith('?touch=1');
+          const drag = async (from, to, cancel = false) => {
+            const points = await evaluate(`window.imageRegression.points(${JSON.stringify(from)},${JSON.stringify(to)})`);
+            if (touch) {
+              await command('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...points.from, id: 1 }] });
+              await command('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...points.to, id: 1 }] });
+              await command('Input.dispatchTouchEvent', { type: cancel ? 'touchCancel' : 'touchEnd', touchPoints: [] });
+            } else {
+              await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...points.from });
+              await command('Input.dispatchMouseEvent', { type: 'mousePressed', ...points.from, button: 'left', clickCount: 1 });
+              await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...points.to, button: 'left', buttons: 1 });
+              if (cancel) await evaluate('window.imageRegression.cancelGesture()');
+              await command('Input.dispatchMouseEvent', { type: 'mouseReleased', ...points.to, button: 'left', clickCount: 1 });
+            }
+          };
+          const checkCrop = (crop, message) => evaluate(
+            `window.imageRegression.assertCrop(${JSON.stringify(crop)},${JSON.stringify(message)})`);
+          await drag([70, 40], [90, 50], true);
+          await checkCrop({ x: 20, y: 10, w: 100, h: 60 }, 'Pointer-Abbruch stellt die Auswahl wieder her');
+          await drag([70, 40], [90, 50]);
+          await checkCrop({ x: 40, y: 20, w: 100, h: 60 }, 'Pointer verschiebt den Ausschnitt');
+          await drag([140, 80], [160, 90]);
+          await checkCrop({ x: 40, y: 20, w: 120, h: 70 }, 'Eckgriff vergrößert den Ausschnitt');
+          await drag([40, 20], [50, 30]);
+          await checkCrop({ x: 50, y: 30, w: 110, h: 60 }, 'Eckgriff verkleinert den Ausschnitt');
+          await drag([100, 60], [-100, -100]);
+          await checkCrop({ x: 0, y: 0, w: 110, h: 60 }, 'Pointer-Verschieben bleibt im Quellbild');
+          await evaluate('window.imageRegression.lock()');
+          await drag([110, 60], [160, 80]);
+          await checkCrop({ x: 0, y: 0, w: 160, h: 87 }, 'Pointer-Skalieren erhält das Seitenverhältnis');
+          await evaluate('window.imageRegression.lock()');
+          await drag([199, 1], [100, 99]);
+          await checkCrop({ x: 100, y: 1, w: 99, h: 98 }, 'Pointer zieht einen neuen Ausschnitt auf');
+          for (const [handle, key, keyCode] of [['n', 'ArrowUp', 38], ['e', 'ArrowRight', 39], ['s', 'ArrowDown', 40]]) {
+            await evaluate(`document.querySelector('[data-asset-manager]').shadowRoot.querySelector('[data-handle="${handle}"]').focus()`);
+            await command('Input.dispatchKeyEvent', { type: 'keyDown', key, code: key, windowsVirtualKeyCode: keyCode });
+            await command('Input.dispatchKeyEvent', { type: 'keyUp', key, code: key, windowsVirtualKeyCode: keyCode });
+          }
           await evaluate('window.imageRegression.finish()');
           return;
         } else if (fixture === '62_page_modal.html') {
@@ -237,7 +271,15 @@ for (const [name, fixtures] of [
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture.includes('landscape=1')
+        fixture.startsWith('61_asset_image.html')
+          ? async command => {
+            const touch = fixture.endsWith('?touch=1');
+            await command('Emulation.setDeviceMetricsOverride', {
+              width: touch ? 390 : 1280, height: touch ? 844 : 900, deviceScaleFactor: 1, mobile: touch,
+            });
+            await command('Emulation.setTouchEmulationEnabled', { enabled: touch });
+          }
+          : fixture.includes('landscape=1')
           ? command => command('Emulation.setDeviceMetricsOverride', {
             width: 852, height: 393, deviceScaleFactor: 1, mobile: true,
           })
