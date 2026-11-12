@@ -59,6 +59,8 @@ sub FHEMCMS_Define {
     return 'Der Device-Name darf nur Buchstaben, Ziffern, Punkt, Unterstrich und Bindestrich enthalten'
         if ($name !~ /\A[A-Za-z0-9_.-]{1,128}\z/ || $name eq '.' || $name eq '..');
 
+    $hash->{VERSION} = $FHEMCMS_VERSION;
+
     my $modPath = $main::attr{global}{modpath};
     my $hadPage = defined($modPath) && $modPath ne ''
         && -e File::Spec->catfile($modPath, 'www', 'fhem-cms', $name, 'index.html');
@@ -86,7 +88,6 @@ sub FHEMCMS_Define {
         return $error if (defined($error));
     }
 
-    $hash->{VERSION} = $FHEMCMS_VERSION;
     $hash->{STATE} = 'defined';
     return undef;
 }

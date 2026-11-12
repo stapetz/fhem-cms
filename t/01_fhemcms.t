@@ -8,7 +8,7 @@ use JSON::PP ();
 use MIME::Base64 ();
 use Test::More;
 
-our (%attr, $FW_ME);
+our (%attr, $FW_ME, $FHEMCMS_VERSION);
 
 sub CommandAttr {
     my ($client, $definition) = @_;
@@ -38,6 +38,7 @@ my $legacyDir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
 make_path($legacyDir);
 is(FHEMCMS_WriteConfig($name, $legacyDir, FHEMCMS_DefaultConfig()), undef, 'prepares existing legacy device');
 is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'defines a CMS test device');
+is($hash->{VERSION}, $FHEMCMS_VERSION, 'device exposes the loaded module version as an internal');
 is($attr{$name}{room}, 'FHEM CMS', 'assigns new devices to the FHEM CMS room');
 
 my $pagePath = File::Spec->catfile(
@@ -55,7 +56,9 @@ like($html, qr{\.\./css/fhem-cms\.css}, 'loads shared CSS from the common asset 
 like($html, qr{\.\./js/fhem-cms\.js}, 'loads shared JavaScript from the common asset tree');
 like($html, qr{type="module"}, 'loads the frontend as an ES module');
 
+$hash->{VERSION} = 'previous-version';
 is(FHEMCMS_Define($hash, "$name FHEMCMS"), undef, 'redefining a device accepts its generated page');
+is($hash->{VERSION}, $FHEMCMS_VERSION, 'redefined device reports the loaded module version');
 is(FHEMCMS_Get($hash, $name, 'url'),
     '/fhem/fhem-cms/CMS/index.html',
     'returns the test page URL');
@@ -225,8 +228,10 @@ like(FHEMCMS_Set($hash, $name, 'migrationcommit'), qr/interner Befehl.*Migration
 
 unlink(File::Spec->catfile($dataDir, 'config.json'));
 remove_tree($dataDir);
+$hash->{VERSION} = 'previous-version';
 like(FHEMCMS_Define($hash, "$name FHEMCMS"), qr/Bestehendes CMS.*Sicherung/,
     'redefine reports missing data for an existing device');
+is($hash->{VERSION}, $FHEMCMS_VERSION, 'failed initialization still reports the loaded module version');
 ok(!-e $dataDir, 'does not recreate missing data for an existing device');
 make_path($dataDir);
 is(FHEMCMS_WriteConfig($name, $dataDir, FHEMCMS_DefaultConfig()), undef, 'restores legacy test data');
