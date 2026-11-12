@@ -303,13 +303,25 @@ export class FhemClient {
       || !/^(?:auto|raw|15m|1h|1d)$/.test(granularity) || !/^(?:auto|dblog|filelog)$/.test(source)) {
       throw new Error('Ungültige Verlaufsabfrage');
     }
-    const result = await this.parseJsonResult(
-      await this.command(`get ${this.cmsDevice} history ${device} ${reading} ${range} ${granularity} ${source}`),
-      'Der Verlauf konnte nicht gelesen werden');
-    const points = Array.isArray(result?.points)
-      ? result.points.filter((p) => Array.isArray(p) && p.length >= 2 && p.slice(0, 4).every((n) => typeof n === 'number' && Number.isFinite(n)))
-      : [];
-    return { ...result, points };
+    const command = `get ${this.cmsDevice} history ${device} ${reading} ${range} ${granularity} ${source}`;
+    const deadline = Date.now() + 25000;
+    while (true) {
+      const result = await this.parseJsonResult(await this.command(command), 'Der Verlauf konnte nicht gelesen werden');
+      if (result?.status !== 'pending') {
+        if (result?.status === 'error') {
+          throw new Error(result.message || 'Der Verlauf konnte nicht geladen werden');
+        }
+        const points = Array.isArray(result?.points)
+          ? result.points.filter((p) => Array.isArray(p) && p.length >= 2
+            && p.slice(0, 4).every((n) => typeof n === 'number' && Number.isFinite(n)))
+          : [];
+        return { ...result, points };
+      }
+      if (Date.now() >= deadline) {
+        throw new Error('Zeitüberschreitung beim Laden des Verlaufs');
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
   }
 
   iconUrl(name) {
