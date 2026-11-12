@@ -1,4 +1,4 @@
-import { LINK_COLUMNS, MAX_LINKS, linkBounds, linkHref, validateLinkItems } from '../js/link-widget.js';
+import { LINK_COLUMNS, MAX_LINKS, LINK_MEDIA, linkBounds, linkHref, validateLinkItems } from '../js/link-widget.js';
 
 function node(tag, text) {
   const result = document.createElement(tag);
@@ -74,6 +74,9 @@ class FHEMCMSLink extends HTMLElement {
           background-size:calc(100% / 12) var(--gs-cell-height,3rem); }
         .grid-stack-item-content { display:flex; flex-direction:column; gap:.25rem; padding:.3rem;
           border:1px solid var(--cms-border,#43564a); background:var(--cms-surface-raised,#2a3b32); border-radius:.5rem; }
+        .grid-stack-item-content[data-image] { background-size:cover; background-position:center; }
+        .grid-stack-item-content[data-image] .handle,
+        .grid-stack-item-content[data-image] .choose { background:rgb(0 0 0 / .65); color:white; }
         .grid-stack-item[data-selected] .grid-stack-item-content { outline:2px solid var(--cms-accent,#8fd0a8); outline-offset:-2px; }
         .handle { touch-action:none; cursor:move; padding:.1rem; }
         .choose { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -302,7 +305,14 @@ class FHEMCMSLink extends HTMLElement {
     settings.replaceChildren();
     const link = this.links.find(item => item.id === this.selected);
     if (!link) return;
-    for (const wrapper of this.$('[data-grid]').children) wrapper.toggleAttribute('data-selected', wrapper.gridstackNode.id === link.id);
+    for (const wrapper of this.$('[data-grid]').children) {
+      const item = this.links.find(item => item.id === wrapper.gridstackNode.id);
+      wrapper.toggleAttribute('data-selected', item.id === link.id);
+      const content = wrapper.querySelector('.grid-stack-item-content');
+      const hasImage = typeof item.image === 'string' && LINK_MEDIA.test(item.image);
+      content.toggleAttribute('data-image', hasImage);
+      content.style.backgroundImage = hasImage ? `url("${item.image}")` : '';
+    }
     const field = (labelText, key, choices, onChange) => {
       const label = node('label', labelText);
       const input = node(choices ? 'select' : 'input');
