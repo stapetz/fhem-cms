@@ -167,9 +167,12 @@ Seite mit `?mode=preview` in einem maßgerechten Iframe, bietet Geräte- und
 Desktopauflösungen an und vertauscht beim Drehen Breite und Höhe.
 Touchgeräte und die mobile Geräte-Vorschau verwenden unabhängig von der
 Ausrichtung den responsiven Inhaltsfluss. Bei höchstens 600 Pixel Rasterbreite
-wird auch eine vertikale Navigation zum Burger-Menü; es liegt über den Widgets
-und reserviert keinen Platz im Fluss. Bei Größenänderungen wird die verfügbare
-Breite des Inhaltsrasters erneut ausgewertet.
+wird auch eine vertikale Navigation zum Burger-Menü; bei höchstens 600 Pixel
+Viewporthöhe gilt das ebenso für vertikale Navigation im responsiven Fluss.
+Sie liegt über den Widgets und reserviert keinen Platz im Fluss. Widgets nutzen
+bei höchstens 600 Pixel Rasterbreite mindestens die halbe Rasterbreite; in
+kurzen mobilen Queransichten mindestens 40 Prozent. Bei Größenänderungen werden
+Viewport und verfügbare Rasterbreite erneut ausgewertet.
 Auch im Bearbeitungsmodus liegt eine kompakte Navigation über dem Raster und
 bleibt bedienbar oberhalb der GridStack-Werkzeuge; die gespeicherten Positionen
 der Widgets ändern sich dadurch nicht.
@@ -202,7 +205,9 @@ eingesetzt, sodass Gridstack echte Pointerkoordinaten nutzt.
 Wert und HTML in allen fünf Rasterdichten bei 1000/800/700/601 Pixeln in beiden
 Ansichten pixelgenau (Toleranz kleiner 1 Pixel). Das 96er-Raster reproduziert
 die gemeldeten 14-/15-Spalten-Widgets; bei 600/393 Pixeln werden überlappungsfreier
-Umbruch, Rückkehr zum Desktop und unveränderte Rasterdaten geprüft.
+Umbruch, Rückkehr zum Desktop und unveränderte Rasterdaten geprüft. Die mobile
+Browserregression prüft zusätzlich 852×393 im Querformat, Burger-Overlay und
+Mindestbreiten der Widgets ohne Änderungen gespeicherter Rasterdaten.
 `t/35_schema5_scaling.test.js` vergleicht Editor-/Ansichtsbreiten und prüft
 Editor-Zoom bei 80/100/125/200 Prozent sowie unveränderte Rasterkoordinaten beim
 Resize. `t/38_editor_scaling.html` prüft im echten Editor Titelzentrierung,

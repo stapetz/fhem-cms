@@ -127,7 +127,10 @@ for (const [name, fixtures] of [
   ['themes use and restore page backgrounds', [['55_liquid_glass.html', 63]]],
   ['page settings preview shows the real phone page without saving', [['57_settings_preview.html', 25]]],
   ['call list displays and configures device readings', [['58_calllist.html', 61]]],
-  ['mobile device preview fits the raster without horizontal overflow', [['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200]]],
+  ['mobile device preview fits the raster without horizontal overflow', [
+    ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
+    ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],
+  ]],
   ['touch devices fit the raster without horizontal overflow', [['56_mobile_viewport.html?mode=touch-test', 200]]],
 ]) test(name, {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
@@ -232,8 +235,12 @@ for (const [name, fixtures] of [
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture.endsWith('?mode=touch-test')
-          ? command => command('Emulation.setTouchEmulationEnabled', { enabled: true }) : undefined);
+        fixture.includes('landscape=1')
+          ? command => command('Emulation.setDeviceMetricsOverride', {
+            width: 852, height: 393, deviceScaleFactor: 1, mobile: true,
+          })
+          : fixture.endsWith('?mode=touch-test')
+            ? command => command('Emulation.setTouchEmulationEnabled', { enabled: true }) : undefined);
       assert.ok(data.checks >= minimum, `${fixture}: complete regression coverage (${data.checks})`);
       console.log(`${fixture}: ${data.checks} browser checks`);
     }

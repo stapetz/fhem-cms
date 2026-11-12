@@ -338,6 +338,12 @@ body:has(.cms-schema5-grid) {
   height: auto;
 }
 
+@media (max-height: 600px) and (orientation: landscape) {
+  .cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item:not(.cms-responsive-navigation) {
+    flex-basis: min(100%, max(40%, calc((var(--cms-view-width) + var(--cms-view-gap)) * var(--cms-widget-fraction) - var(--cms-view-gap))));
+  }
+}
+
 @container cms-page (width <= 600px) {
   .cms-schema5-grid[data-responsive] {
     display: flex;
@@ -352,12 +358,16 @@ body:has(.cms-schema5-grid) {
   .cms-schema5-grid[data-responsive] > .grid-stack-item {
     position: relative !important;
     inset: auto !important;
-    flex: 0 0 min(100%, calc((var(--cms-view-width) + var(--cms-view-gap)) * var(--cms-widget-fraction) - var(--cms-view-gap)));
+    flex: 0 0 min(100%, max(50%, calc((var(--cms-view-width) + var(--cms-view-gap)) * var(--cms-widget-fraction) - var(--cms-view-gap))));
     width: auto !important;
     height: auto !important;
     min-width: 0;
     min-height: 6rem;
     max-width: 100%;
+  }
+
+  .cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item:not(.cms-responsive-navigation) {
+    flex-basis: min(100%, max(50%, calc((var(--cms-view-width) + var(--cms-view-gap)) * var(--cms-widget-fraction) - var(--cms-view-gap))));
   }
 
   .cms-schema5-grid[data-responsive] > .grid-stack-item::before {
