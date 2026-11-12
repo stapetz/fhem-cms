@@ -174,10 +174,18 @@ Das Root-Layout des Frameworks unterstützt drei frei wählbare Struktur-Modi. D
 ```
 
 ### 2.3 Responsives Verhalten & Hamburger-Menü
-Im aktuellen Schema-5-Renderer teilen Homepage und Vorschau eine Bezugsbreite
-aus `25rem + 66.666667cqi`. So skalieren Widgets und Navigationsschaltflächen
-mit Fenstergröße und Browser-Zoom, ohne den Zoom durch vollständiges Einpassen
-aufzuheben. Widgetbreiten folgen dem gespeicherten Rasteranteil, mindestens
+Im aktuellen Schema-5-Renderer teilen Homepage, Vorschau und Editor einen
+100 Prozent breiten Canvas im `cms-page`-Container (Refs #155).
+`--cms-view-width: calc(100cqi / 1.01)` und eine Lücke von einem Prozent dieser
+Bezugsbreite erhalten die bisherige Raster-/Content-Geometrie ohne künstliche
+Breitenbegrenzung. Das Raster passt auch bei Browserzoom in den Arbeitsbereich;
+Editor-Kacheln behalten ihren relativen Rasteranteil, nicht eine zusätzliche
+zoomabhängige Mindest-Canvasbreite. Die bisherige Formel
+`25rem + 66.666667cqi` gilt nur noch als Mindest-Bezugsbreite der umgebrochenen
+Desktopansicht bis 80 rem, nicht für den Canvas oder mobile Ansichten.
+Damit bleiben kleine Widgets im Umbruch lesbar, ohne eine breite rechte
+Leerfläche oder horizontales Scrollen zu erzeugen.
+Widgetbreiten im Fluss folgen dem gespeicherten Rasteranteil, mindestens
 einem Viertel der Bezugsbreite; bei Platzmangel wird auch auf dem Desktop
 umgebrochen. Die Navigation wächst mit ihrem Inhalt. Reflow verändert keine
 Konfiguration; der Editor behält sein präzises Raster, Geräte-Vorschau und

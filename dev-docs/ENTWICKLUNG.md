@@ -201,22 +201,29 @@ verfügbare Rasterbreite erneut ausgewertet.
 Auch im Bearbeitungsmodus liegt eine kompakte Navigation über dem Raster und
 bleibt bedienbar oberhalb der GridStack-Werkzeuge; die gespeicherten Positionen
 der Widgets ändern sich dadurch nicht.
-Homepage, Vorschau und Editor verwenden dasselbe zoomfähige Raster (Refs #119).
-Die gemeinsame Bezugsbreite `25rem + 66.666667cqi` entspricht bei 1200 Pixeln
-CMS-Inhaltsbreite und Standardschrift wieder 1200 Pixeln. Ein Drittel bleibt
-schrift-/zoomabhängig, zwei Drittel reagieren auf die Breite des benannten
-`cms-page`-Containers: Reine Prozent-/Containergrößen würden Browser-Zoom
-physisch wieder ausgleichen. Es gibt keine Zoom-Erkennung über Bildschirmdaten
-und keine kompensierenden Resize-Schreibzugriffe.
+Homepage, Vorschau und Editor verwenden dasselbe präzise Raster (Refs #119,
+#155). Der Canvas ist 100 Prozent des verfügbaren `cms-page`-Inhaltscontainers
+breit. `--cms-view-width: calc(100cqi / 1.01)` berücksichtigt gemeinsam mit der
+einprozentigen `--cms-view-gap` die bisherige Content-Geometrie. Breite Fenster
+lassen keine künstliche rechte Leerfläche mehr; kleine Außenabstände und
+Safe-Area-Ränder bleiben erhalten.
+Die alte Canvasformel `25rem + 66.666667cqi` ist abgelöst. Nur umgebrochene
+Desktopansichten bis 80 rem verwenden sie weiterhin als Mindest-Bezugsbreite
+für die enthaltenen Widgets (`max` mit der eingepassten Bezugsbreite); mobile
+Ansichten und das feste Raster bleiben immer eingepasst. Es gibt keine
+Zoom-Erkennung über Bildschirmdaten und keine kompensierenden Resize-Schreibzugriffe.
 Oberhalb von 80 rem Inhaltsbreite behalten alle drei Ansichten die exakten
 gespeicherten Gridstack-Koordinaten bei, einschließlich kleiner Widgets,
 Leerstellen und Navigation. Die gemeinsame Rasterbreite umfasst die zusätzliche
 letzte Rasterlücke; Gridstack arbeitet immer ohne eigene Margins, der Content
 erhält `--cms-view-gap` rechts/unten. Damit stimmen Positionen und beide
 Abmessungen auch unterhalb eines Viertelrasters überein. Das quadratische
-Koordinatenraster bleibt erhalten. Bei Platzmangel scrollt ausschließlich
-`.cms-schema5-workspace` im Editor; Homepage und Vorschau brechen bei schmaler
-Inhaltsbreite um, ohne Browserzoom durch vollständiges Einpassen aufzuheben. Der Editor stellt
+Koordinatenraster bleibt erhalten. Das feste Editorraster passt alle Spalten
+in die verfügbare Breite; es verlangt keinen seitlichen Scrollbereich mehr.
+Damit ändert sich bewusst die alte Zoomsemantik: Editor-Kacheln behalten ihren
+relativen Rasteranteil, statt mit Zoom einen breiteren Canvas zu erzeugen.
+Homepage und Vorschau brechen bei schmaler Inhaltsbreite weiterhin mit lesbaren
+Mindestgrößen um. Der Editor stellt
 die Scrollposition nach dem Neurendern einer gespeicherten Rasteränderung wieder
 her. Die feste Navigationshöhe wird auf dem Desktop in allen Ansichten geprüft;
 auf schmalen Ansichten prüft der bestehende Observer nur die verfügbare Breite.
@@ -227,8 +234,10 @@ nach gespeicherter Zeile/Spalte, mindestens ein Viertel der Bezugsbreite und
 bricht auch dort nicht um. Es werden weder CSS-Transforms noch Zoom-Kompensation
 eingesetzt, sodass Gridstack echte Pointerkoordinaten nutzt.
 `t/47_view_editor_layout.html` vergleicht Navigation sowie Thermostat, Text,
-Wert und HTML sowie kompakte Links in allen fünf Rasterdichten bei 1400 Pixeln
-in beiden Ansichten pixelgenau (Toleranz kleiner 1 Pixel). Das 96er-Raster reproduziert
+Wert und HTML sowie kompakte Links in allen fünf Rasterdichten bei 2560/1920/1400 Pixeln
+in beiden Ansichten pixelgenau (Toleranz kleiner 1 Pixel) und verlangt über alle
+getesteten Breiten die volle Canvasbreite (Abweichung kleiner 1 Pixel) ohne
+horizontalen Überlauf. Das 96er-Raster reproduziert
 die gemeldeten 14-/15-Spalten-Widgets; bei 1280/1000/800/700/601/600/393 Pixeln werden überlappungsfreier
 Umbruch, Rückkehr zum Desktop und unveränderte Rasterdaten geprüft. Die mobile
 Browserregression prüft zusätzlich 852×393 im Querformat, Burger-Overlay und
@@ -236,7 +245,7 @@ Mindestbreiten der Widgets ohne Änderungen gespeicherter Rasterdaten.
 
 Nachkorrektur #141 (Entwicklungsstand `dev`, nicht veröffentlicht):
 Der Umbruch bis 80 rem gilt auch für Desktop-Zeiger. Damit bleibt die
-zoomfähige Bezugsbreite der Kacheln erhalten, ohne den breiteren GridStack-
+lesbare Mindest-Bezugsbreite der Kacheln erhalten, ohne den GridStack-
 Canvas in schmalen Ansichtsfenstern seitlich abschneiden zu müssen. Der
 Editor bleibt ausdrücklich vom Umbruch ausgenommen. Im kurzen mobilen
 Querformat ergänzt `flex-grow: 1` die bisherigen Mindestbreiten, sodass
@@ -258,10 +267,12 @@ kurzen Phone-Querformat, erhaltene Hochformatregeln und unveränderte Daten.
 Die echten Safari-/Homescreen-Sicherheitsränder bleiben eine Geräteabnahme;
 eine normale Vorschau ohne Hardware-Aussparung ist dafür kein Nachweis.
 `t/35_schema5_scaling.test.js` vergleicht Editor-/Ansichtsbreiten und prüft
-Editor-Zoom bei 80/100/125/200 Prozent sowie unveränderte Rasterkoordinaten beim
-Resize. `t/38_editor_scaling.html` prüft im echten Editor Titelzentrierung,
+Editor-Zoom bei 80/100/125/200 Prozent, volle Inhaltsbreite ohne horizontalen
+Überlauf und unveränderte Rasterkoordinaten beim Resize.
+`t/38_editor_scaling.html` prüft im echten Editor Titelzentrierung,
 Light-Theme, ausgeblendete Rahmen, Hin-/Rückwechsel zur Vorschau und echte
-Pointer-Drag-/Resize-Aktionen nach horizontalem Scrollen bei 125 Prozent Zoom:
+Pointer-Drag-/Resize-Aktionen auf dem eingepassten Canvas bei 125 Prozent Zoom,
+einschließlich eines erfolglosen horizontalen Scrollversuchs:
 genau ein Entwurfsschreibzugriff pro Aktion, keine Gerätebefehle und keine
 Änderung an Live oder Darstellungseinstellungen.
 Refs #111 ergänzt eine flache Navigation aus 117×10 Zellen im 192-Spalten-Raster,

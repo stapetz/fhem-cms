@@ -223,10 +223,11 @@ Inhaltsfluss belegt; beim Drehen wird die verfügbare Breite neu ausgewertet.
 Wird die Navigation auch im schmalen Bearbeitungsfenster zum Burger-Menü,
 liegt das Menü über dem Raster; die gespeicherten Widgetpositionen bleiben
 für die präzise Bearbeitung erhalten.
-Widgetgrößen und Inhalte folgen dort der Fenstergröße und dem Browser-Zoom.
-Das exakte Bearbeitungsraster bricht nicht um: Reicht der Platz nicht, scrollen
-Sie innerhalb des Arbeitsbereichs seitlich zu den übrigen Widgets. Die
-Browserseite und Werkzeugleiste bleiben dabei an ihrer Position. Zoom und
+Das Raster nutzt die gesamte verfügbare Inhaltsbreite, auch auf großen Monitoren.
+Das exakte Bearbeitungsraster bricht nicht um und passt seine Spaltenbreite
+an den Arbeitsbereich an, statt rechts Fläche unbenutzbar zu lassen oder
+seitliches Scrollen zu verlangen. Kleine Außenabstände und sichere Geräte-
+Ränder bleiben erhalten. Zoom und
 Fensteränderungen verändern keine gespeicherten Rasterpositionen. Die Vorschau
 zeigt dieselbe Anordnung wie die spätere Ansicht.
 
@@ -245,10 +246,13 @@ Wertanzeigen, Schalter, Taster und Statussymbole nutzen ihren Innenraum mit
 kleinem Sicherheitsabstand aus. Titel und eventuelle Fehlermeldungen bleiben
 separat; lange Werte und Beschriftungen werden kleiner eingepasst statt
 abgeschnitten. Schieberegler reichen bis nahe an die seitlichen Ränder.
-Der Browser-Zoom wird dabei nicht mehr durch vollständiges Einpassen aufgehoben:
-Hineinzoomen vergrößert Kacheln und Beschriftungen sichtbar, Hinauszoomen verkleinert
-sie. Im Editor lässt sich der Rasterbereich bei Platzmangel seitlich scrollen;
-Werkzeugleiste und Browserseite bleiben an ihrer Position.
+**Entwicklungsstand auf `dev` – noch nicht veröffentlicht (stapetz/fhem-cms#155):**
+Das Raster bleibt auch beim Browserzoom über die volle verfügbare Inhaltsbreite
+eingepasst. Im Editor behalten Widgets ihre gespeicherten Rasteranteile;
+Zoom vergrößert deshalb nicht mehr zwingend die gesamte Kachel. Homepage
+und Vorschau können bei geringerer verfügbarer CSS-Breite früher umbrechen;
+deren Mindestgrößen für lesbare Inhalte bleiben erhalten. Zoom und Resize
+ändern weder gespeicherte Positionen noch Inhalte.
 
 Bis einschließlich 600 Pixel Inhaltsbreite ordnen Homepage und Vorschau die
 Widgets automatisch in Leserichtung mit Zeilenumbruch an, auch beim Drehen eines

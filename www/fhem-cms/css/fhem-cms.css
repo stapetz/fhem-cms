@@ -241,11 +241,10 @@ body {
   height: 100%;
 }
 
-/* Der rem-Anteil erhält Browser-Zoom, der Container-Anteil reagiert auf Fenstergrößen. */
 .cms-schema5-grid {
-  --cms-view-width: calc(25rem + 66.666667cqi);
+  --cms-view-width: calc(100cqi / 1.01);
   --cms-view-gap: calc(var(--cms-view-width) / 100);
-  width: calc(var(--cms-view-width) + var(--cms-view-gap));
+  width: 100%;
   max-width: none;
 }
 
@@ -280,18 +279,6 @@ body:has(.cms-schema5-grid) {
 .cms-page-modal > header button { min-width: 48px; min-height: 48px; font: inherit; font-size: 1.5rem;
   color: inherit; background: transparent; border: 1px solid var(--cms-border, #43564a); border-radius: .4rem; cursor: pointer; }
 .cms-page-modal > header button:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); }
-.cms-page-modal .cms-schema5-grid { --cms-view-width: 99.0099cqi; }
-
-.cms-schema5-grid[data-responsive][data-mobile-preview] {
-  --cms-view-width: min(calc(25rem + 66.666667cqi), 99.0099cqi);
-}
-
-@media (pointer: coarse) {
-  .cms-schema5-grid[data-responsive] {
-    --cms-view-width: min(calc(25rem + 66.666667cqi), 99.0099cqi);
-  }
-}
-
 .cms-schema5-grid > .grid-stack-item > .grid-stack-item-content {
   inset: 0 var(--cms-view-gap) var(--cms-view-gap) 0 !important;
 }
@@ -350,6 +337,7 @@ body:has(.cms-schema5-grid) {
 
 @container cms-page (width <= 80rem) {
   .cms-schema5-grid[data-responsive] {
+    --cms-view-width: max(calc(25rem + 66.666667cqi), calc(100cqi / 1.01));
     display: flex;
     flex-wrap: wrap;
     gap: var(--cms-view-gap);
@@ -357,6 +345,10 @@ body:has(.cms-schema5-grid) {
     align-items: flex-start;
     height: auto !important;
     min-height: 0 !important;
+  }
+
+  .cms-schema5-grid[data-responsive][data-mobile-layout] {
+    --cms-view-width: calc(100cqi / 1.01);
   }
 
   .cms-schema5-grid[data-responsive] > .grid-stack-item {
@@ -441,7 +433,7 @@ body:has(.cms-schema5-grid) {
 }
 
 .cms-schema5-grid.cms-grid-editable > .cms-responsive-navigation[data-nav-overlay] > .grid-stack-item-content {
-  z-index: 6;
+  z-index: 7;
 }
 
 .cms-schema5-grid[data-responsive] > .cms-responsive-navigation[data-nav-overlay] .cms-nav,

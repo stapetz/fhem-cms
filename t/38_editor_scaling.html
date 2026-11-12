@@ -87,15 +87,17 @@ try {
   };
   checkHandles();
   const workspace = root.querySelector('.cms-schema5-workspace');
-  check(workspace.scrollWidth > workspace.clientWidth, 'editing workspace scrolls rather than shrinking widgets');
+  check(workspace.scrollWidth <= workspace.clientWidth + 1, 'editing workspace uses its full width without horizontal overflow');
+  check(Math.abs(root.querySelector('.cms-schema5-grid').getBoundingClientRect().width - workspace.clientWidth) < 1,
+    'all editor columns span the available workspace');
   const toolbar = root.querySelector('.cms-toolbar');
   const previewButton = [...toolbar.querySelectorAll('button')].find((button) => button.textContent === 'Vorschau');
   const width = root.querySelector('cms-value').getBoundingClientRect().width;
   previewButton.click();
   await settle();
   check(root.querySelector('.cms-schema5-grid').hasAttribute('data-responsive'), 'preview uses responsive view');
-  check(Math.abs(root.querySelector('cms-value').getBoundingClientRect().width - width) < 2,
-    'preview and editor have matching widget widths');
+  check(root.querySelector('cms-value').getBoundingClientRect().width >= width,
+    'responsive preview may enlarge small widgets while the editor retains the exact fitted grid');
   appearance();
   previewButton.click();
   await settle();
@@ -129,7 +131,7 @@ try {
       check(JSON.stringify(state.draft.settings) === JSON.stringify(live.settings), 'saving layout preserves settings');
       check(commands === 0, 'editing sends no device commands');
       check(Math.abs(devicePixelRatio - 1.25) < 0.02, 'pointer interactions use real 125 percent browser zoom');
-      check(workspace.scrollLeft > 0, 'resize works after horizontally scrolling the editing workspace');
+      check(workspace.scrollLeft === 0, 'attempted horizontal scrolling does not shift the fitted editor canvas');
       appearance();
       editor.stop();
       await editor.start();

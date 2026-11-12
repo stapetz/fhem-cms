@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-12",
+  "version": "1.8.1-dev",
+  "title": "Seitenraster nutzt die volle Inhaltsbreite (Refs #155)",
+  "changes": [
+    "Editor, Vorschau und Homepage nutzen die gesamte verfuegbare Inhaltsbreite statt auf breiten Fenstern rechts Flaeche unbenutzbar zu lassen.",
+    "Das Editorraster bleibt auch beim Browserzoom eingepasst. Gespeicherte Rasteranteile und Anordnung bleiben erhalten; Zoom erzeugt keinen zusaetzlich verbreiterten Canvas mehr.",
+    "Mobile Umbrueche, lesbare Mindestgroessen und sichere Bildschirmraender bleiben erhalten. Die Burger-Navigation bleibt auch auf dem schmal eingepassten Editorraster bedienbar."
+  ]
+}
