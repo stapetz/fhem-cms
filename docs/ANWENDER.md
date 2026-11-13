@@ -240,6 +240,18 @@ Erst **Speichern** übernimmt das Widget in den Entwurf, nicht in die Live-Seite
 oder den gesamten Vorgang abzubrechen speichert und schaltet nichts.
 **Bearbeiten → Widget hinzufügen** bleibt als geräteunabhängiger Weg erhalten.
 
+### Automatische Tabellenbezeichner (dev, ab 1.11.0-dev)
+
+Ohne eigenen Bezeichner zeigt eine Tabelle mit Werten aus einem einzigen Device
+jeweils den **Readingnamen**. Bei mehreren tatsächlichen Quellen erscheint
+**Gerätename: Readingname**; der Alias wird dafür nicht verwendet.
+Entscheidend sind die ausgewählten Quellen, nicht der Ein-/Mehr-Device-Modus.
+Der Konfigurationsdialog zeigt den aktuellen Standard als Platzhalter im
+leeren Bezeichnerfeld. Quellen oder Readings ändern, hinzufügen und entfernen
+aktualisiert diese Vorgabe automatisch. Eigene Bezeichner bleiben erhalten;
+ein geleertes Bezeichnerfeld verwendet wieder die automatische Beschriftung.
+Auch nach Speichern und Neuladen bleibt diese Unterscheidung erhalten.
+
 ### Wert auswählen (dev, ab 1.11.0-dev)
 
 **Bearbeiten → Widget hinzufügen → Wert auswählen** zeigt diskrete FHEM-Set-Listen

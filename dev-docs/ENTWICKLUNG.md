@@ -124,6 +124,20 @@ ausstehende Anforderungen und Fehler werden sichtbar behandelt.
 `t/72_selection.html` läuft zusätzlich im gemeinsamen Chrome-Runner;
 die Titelprüfung enthält das Auswahlwidget.
 
+## Tabellenbezeichner (dev, 1.11.0-dev, Teilumfang Refs #152)
+
+`cms-table`
+leitet unbeschriftete Zeilen aus den tatsächlichen Quellen ab: ein Device
+verwendet den Readingnamen, mehrere verwenden `Gerätename: Readingname`.
+Automatische Bezeichner werden nicht als `label` materialisiert; so passen
+Quellenwechsel/-entfernung und Readingänderungen auch nach Neuladen.
+Im Dialog ist der aktuelle Standard der Platzhalter, ein eingegebener oder
+bereits gespeicherter Bezeichner bleibt unverändert. Leeren stellt den
+automatischen Modus wieder her. Keine Schemaänderung und keine Migration
+vorhandener Labels. `t/73_table_labels.html` prüft Anzeige, Quellenwechsel,
+Moduswechsel, Entfernen, Speichern/Neuladen und Abbruch im Chrome-Runner.
+Die weiteren Layout-/Schriftgrößenanforderungen aus #152 sind nicht enthalten.
+
 ## Dokumentationen synchron halten
 
 Der FHEM-Wiki-Onepager wird als MediaWiki-Quelltext in
