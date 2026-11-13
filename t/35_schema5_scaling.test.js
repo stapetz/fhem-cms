@@ -153,6 +153,8 @@ for (const [name, fixtures] of [
     [['81_table_design.html', 104]]],
   ['SolarFlow design preserves live flows in a theme-aware diagram',
     [['82_solarflow_design.html', 220], ['82_solarflow_design.html?reduced=1', 221]]],
+  ['Widget design follows page themes and live Liquid Glass appearance',
+    [['83_widget_theme_design.html', 600]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
       ['75_dialog_layout.html?width=852', 51]]],

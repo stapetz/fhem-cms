@@ -35,18 +35,22 @@ class FHEMCMSLink extends HTMLElement {
       <style>
         :host { display:block; min-width:0; min-height:0; }
         * { box-sizing:border-box; }
-        .tile { height:100%; min-height:0; overflow:hidden; padding:.4rem;
+        .tile { height:100%; min-height:0; overflow:hidden; padding:8px; gap:14px;
           border:1px solid var(--cms-frame,#7f8c84); border-radius:1.4rem; background:var(--cms-surface,#202e27);
-          display:flex; flex-direction:column; container-type:size; }
-        header { flex:none; padding:.2em .7em; font-size:max(5px,min(13cqh,5cqw)); display:flex; gap:.3em; }
+          display:flex; flex-direction:column; container-type:size; color:inherit;
+          font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+        header { flex:none; padding:0 0 8px; display:flex; align-items:center;
+          gap:8px; border-bottom:1px solid rgba(128,128,128,.25); }
         header[hidden] { display:none; }
-        [data-title] { margin:0; width:100%; min-width:0; font-size:1.1em; font-weight:400;
-          color:var(--cms-muted,#a5c9b2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        [data-title] { margin:0; width:100%; min-width:0; font-size:1.4rem; font-weight:700;
+          color:inherit; overflow-wrap:anywhere;
           text-align:var(--cms-widget-title-align,left); }
-        .links { flex:1; min-height:0; display:grid; gap:.3rem; grid-template-columns:repeat(12,minmax(0,1fr)); }
+        .links { flex:1; min-height:0; display:grid; gap:8px; grid-template-columns:repeat(12,minmax(0,1fr)); }
         .link-tile { position:relative; min-width:0; min-height:0; overflow:hidden; display:flex; flex-direction:column;
-          border:1px solid var(--cms-border,#43564a); border-radius:.6rem; color:var(--cms-text,#edf4ef);
-          background:var(--cms-surface-raised,#2a3b32); text-decoration:none; container-type:size; }
+          border:1px solid rgba(128,128,128,.18); border-radius:14px; color:inherit;
+          background:rgba(128,128,128,.08); text-decoration:none; container-type:size; }
+        .link-tile:hover { border-color:currentColor; }
+        .link-tile:active { transform:scale(.96); }
         .link-tile img { display:block; flex:1; min-height:0; width:100%; object-fit:cover; }
         .link-text { flex:none; margin:0; padding:.25em .4em; text-align:center; overflow-wrap:anywhere;
           font-size:clamp(10px, min(15cqh,8cqw),32px); line-height:1.15; }
@@ -56,6 +60,7 @@ class FHEMCMSLink extends HTMLElement {
         .link-tile:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
           outline:2px solid var(--cms-accent,#8fd0a8); outline-offset:-2px; }
         :host([view-only]) [data-open-config] { display:none; }
+        [data-open-config] { flex:none; min-width:48px; min-height:48px; }
         button,input,select { font:inherit; color:inherit; border:1px solid var(--cms-border,#43564a);
           border-radius:.4rem; background:var(--cms-bg,#17211d); padding:.4rem .5rem; }
         button { cursor:pointer; }
