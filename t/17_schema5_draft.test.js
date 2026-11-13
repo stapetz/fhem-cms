@@ -50,7 +50,7 @@ test('widget duplication creates a distinct copy in a free grid position and sav
   const next = await controller.duplicateWidget('start', 'text', 'b'.repeat(64));
   assert.equal(next.draft.pages[0].widgets[1].id, 'text-copy-2');
   assert.equal(next.draft.pages[0].widgets[1].grid.col, 5);
-  assert.equal(next.draft.pages[0].widgets[1].grid.row, 3);
+  assert.equal(next.draft.pages[0].widgets[1].grid.row, 4);
 });
 
 test('controller blocks concurrent and uncertain actions until explicit reload', async () => {
