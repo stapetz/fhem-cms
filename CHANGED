@@ -50,6 +50,15 @@ Administration
   eigene Bezeichner bleiben erhalten.
 - Abbruch und verspaetete Antworten veraendern keinen gespeicherten Entwurf.
 
+2026-11-13 - 1.11.0-dev: Klares Widget-Design: Tabellen als Pilot
+- Der Widget-Styleguide uebernimmt das neue neutrale Karten-Design mit
+  Systemschrift und einheitlicher Farbpalette.
+- Zunaechst verwendet nur das Tabellenwidget die neue Darstellung: klare Titel,
+  dezente Flaechen und Trennlinien, lesbare Zeilen und umbrechende Werte.
+- Titel-, Spalten-, Summen- und Einheitenoptionen sowie gespeicherte
+  Konfigurationen bleiben erhalten; andere Widgets werden noch nicht
+  umgestellt.
+
 2026-11-13 - 1.11.0-dev: Auswahl-Widget fuer diskrete Geraetewerte (#145)
 - Neues Auswahl-Widget erkennt sichere diskrete FHEM-Set-Wertelisten und
   unterstuetzt Dropdowns oder kompakte Buttons mit optionalen Anzeigenamen.
