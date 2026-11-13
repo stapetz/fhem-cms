@@ -618,6 +618,13 @@ Abfrageparameter und Device-Namen, keine Zugangsdaten.
 Widget-Ladezustände verwenden den wiederverwendbaren Statushelfer
 `www/fhem-cms/js/widget-status.js`; er stellt Spinner, `aria-busy` und
 `prefers-reduced-motion` gemeinsam bereit.
+Die Erststart-Erkennung des Einrichtungsassistenten akzeptiert die unveraenderte
+Startkonfiguration mit `liquid-glass` sowie den frueheren Standard `dark`.
+Ein vorhandener Entwurf oder eine gespeicherte Abschlusskennung verhindert
+weiterhin den automatischen Start. `t/15_migration_chain.test.js` prueft die
+Erkennung gegen die vom Perl-Backend neu erzeugte Konfiguration;
+`t/53_schema5_setup_wizard.html` prueft den Browserablauf mit Liquid Glass (Refs #176).
+
 Der Einrichtungsassistent ergänzt ein Temperaturdiagramm nur, wenn
 `logreadings` das Temperatur-Reading nachweist und die Verlaufsabfrage für die
 letzten 365 Tage mindestens einen Datenpunkt liefert. Bei `auto` wird DbLog

@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
 import { migrationPositions } from '../fcui/layout-migration.js';
 import { schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
+import { isSchema5InitialSetup } from '../www/fhem-cms/js/fcui-schema5-setup-wizard.js';
 
 const script = `
 use strict;
@@ -65,6 +66,8 @@ test('new CMS instances use liquid glass as their initial theme', async () => {
     const created = JSON.parse(result.stdout);
     assert.equal(created.error, null);
     assert.equal(JSON.parse(created.value).theme, 'liquid-glass');
+    assert.equal(isSchema5InitialSetup(JSON.parse(created.value)), true,
+      'the backend-created initial configuration opens the setup wizard');
   } finally {
     await rm(root, { recursive: true });
   }

@@ -243,7 +243,7 @@ export function createSchema5RoomPlan(room, devices, selectedNames, loggedReadin
 }
 
 export function isSchema5InitialSetup(config) {
-  if (!config || config.schemaVersion !== 5 || config.theme !== 'dark'
+  if (!config || config.schemaVersion !== 5 || !['dark', 'liquid-glass'].includes(config.theme)
     || config.settings?.layoutMode !== 'grid' || config.settings.gridColumns !== 12
     || config.navigation?.orientation !== 'horizontal'
     || config.navigation.grid?.col !== 1 || config.navigation.grid?.row !== 1
