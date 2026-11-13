@@ -1,0 +1,103 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Discrete selection widget regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-select.js';
+import { createWidgetElement, isLiveWidget } from '../www/fhem-cms/js/widget-factory.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks += 1;
+};
+const config = {
+  id: 'q1', type: 'fhem-select', device: 'Lamp', command: 'mode', reading: 'mode',
+  mode: 'buttons', labels: { eco: 'Sparbetrieb', comfort: 'Komfort' },
+  grid: { col: 1, row: 1, w: 4, h: 3 },
+};
+const lamp = {
+  name: 'Lamp', sets: 'mode:auto,eco,comfort dim:slider,0,1,100',
+  readings: { mode: 'eco' },
+};
+const snapshots = new Map([['Lamp', [lamp]]]);
+const calls = [];
+let resolveCommand;
+let rejectCommand = false;
+const services = {
+  listAllDevices: async () => [lamp],
+  setCommand: (...args) => {
+    calls.push(args);
+    if (rejectCommand) return Promise.reject(new Error('Device-Befehl fehlgeschlagen'));
+    return new Promise((resolve) => { resolveCommand = resolve; });
+  },
+  saveWidget: async () => {},
+  deleteWidget: async () => {},
+};
+
+try {
+  check(isLiveWidget(config), 'Selection widgets join the live data lifecycle');
+  const editor = createWidgetElement(config, services, snapshots, false);
+  document.body.append(editor);
+  const editorButton = editor.shadowRoot.querySelector('button[data-selection]');
+  check(editorButton.disabled, 'Editor selection controls are disabled');
+  await editor.sendValue('auto');
+  check(calls.length === 0, 'Editor never sends a device command');
+  check(editor.shadowRoot.querySelector('[data-status]').textContent.includes('Bearbeitungsmodus'),
+    'Editor state is explicit');
+
+  await editor.openConfig({ isNew: true });
+  const form = editor.shadowRoot.querySelector('[data-form]');
+  check(form.elements.command.value === 'mode', 'Configurator exposes valid discrete commands');
+  check([...form.elements.command.options].every((option) => !option.value || option.value === 'mode'),
+    'Slider and no-argument set entries are excluded');
+  check([...editor.shadowRoot.querySelectorAll('[data-label-value]')].length === 3,
+    'Configurator creates optional labels for every available value');
+  form.elements.title.value = 'Betriebsart';
+  check(editor.collectWidget().labels.eco === 'Sparbetrieb', 'Technical values map to human labels');
+  editor.closeConfig(true);
+  editor.remove();
+
+  const live = createWidgetElement(config, services, snapshots, true);
+  document.body.append(live);
+  const options = [...live.shadowRoot.querySelectorAll('button[data-selection]')];
+  check(options.map((button) => button.textContent).join(',') === 'auto,Sparbetrieb,Komfort',
+    'Button mode renders safe values with configured labels');
+  check(options.find((button) => button.value === 'eco').getAttribute('aria-pressed') === 'true',
+    'Current Reading is marked as selected');
+  options.find((button) => button.value === 'comfort').click();
+  check(calls.length === 1 && calls[0].join(' ') === 'Lamp mode comfort',
+    'Live button sends only a validated option value');
+  check(live.shadowRoot.querySelector('[data-status]').textContent.includes('gesendet'),
+    'Pending confirmation is visible after command acceptance');
+  resolveCommand();
+  await Promise.resolve();
+  lamp.readings.mode = 'comfort';
+  live.data = [lamp];
+  check(live.shadowRoot.querySelector('[data-status]').textContent === '',
+    'Device confirmation clears the pending state');
+
+  rejectCommand = true;
+  live.shadowRoot.querySelector('button[data-selection][value="auto"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  check(live.shadowRoot.querySelector('[data-status]').getAttribute('role') === 'alert'
+    && live.shadowRoot.querySelector('[data-status]').textContent.includes('fehlgeschlagen'),
+  'Command failures are visible as errors');
+  live.remove();
+
+  const dropdown = createWidgetElement({ ...config, mode: 'dropdown' }, services, snapshots, true);
+  document.body.append(dropdown);
+  const select = dropdown.shadowRoot.querySelector('select[data-selection]');
+  check(select.value === 'comfort' && select.options[2].textContent === 'Sparbetrieb'
+    && select.options[3].textContent === 'Komfort',
+  'Dropdown mode displays the current value and its human label');
+  dropdown.remove();
+
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || error.message;
+}
+</script>

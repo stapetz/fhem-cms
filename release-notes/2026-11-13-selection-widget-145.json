@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Auswahl-Widget fuer diskrete Geraetewerte (#145)",
+  "changes": [
+    "Neues Auswahl-Widget erkennt sichere diskrete FHEM-Set-Wertelisten und unterstuetzt Dropdowns oder kompakte Buttons mit optionalen Anzeigenamen."
+  ]
+}

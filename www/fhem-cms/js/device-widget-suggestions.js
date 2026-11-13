@@ -2,6 +2,7 @@ import { isValidName } from './fhem-client.js';
 import { schema5WidgetSuggestions } from './fcui-schema5-setup-wizard.js';
 import { suggestedReading } from './device-suggestions.js';
 import { sliderCommands } from './slider-commands.js';
+import { parseDiscreteSetCommands } from './select-commands.js';
 
 export function deviceWidgetSuggestions(device, devices = [], logInfo = null) {
   if (!device || !isValidName(device.name) || !Array.isArray(devices)) {
@@ -43,6 +44,12 @@ export function deviceWidgetSuggestions(device, devices = [], logInfo = null) {
     add('fhem-slider', { device: device.name, command: slider.command,
       reading: names.includes(slider.command) ? slider.command
         : suggestedReading(names, 'fhem-slider') || reading || '' });
+  }
+  const selection = parseDiscreteSetCommands(sets)[0];
+  if (selection) {
+    add('fhem-select', { device: device.name, command: selection.command,
+      reading: names.includes(selection.command) ? selection.command : '',
+      mode: 'dropdown' });
   }
   if (device.type === 'FB_CALLLIST') add('fhem-calllist', { device: device.name });
   if (logInfo && /^(?:dblog|filelog)$/.test(logInfo.source) && Array.isArray(logInfo.readings)) {

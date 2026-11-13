@@ -235,6 +235,20 @@ Erst **Speichern** übernimmt das Widget in den Entwurf, nicht in die Live-Seite
 oder den gesamten Vorgang abzubrechen speichert und schaltet nichts.
 **Bearbeiten → Widget hinzufügen** bleibt als geräteunabhängiger Weg erhalten.
 
+### Wert auswählen (dev, ab 1.11.0-dev)
+
+**Bearbeiten → Widget hinzufügen → Wert auswählen** zeigt diskrete FHEM-Set-Listen
+wie `mode:auto,eco,boost` als Dropdown oder kompakte Buttons. Auch **Gerät hinzufügen**
+bietet diesen Typ bei passenden Set-Angeboten an. Gerät, Befehl und optionales
+Statusreading werden im gewohnten Dialog gewählt. Eigene Anzeigenamen können
+technische Werte lesbar machen, etwa `eco` als „Sparbetrieb“; gesendet wird der
+unveränderte technische Wert.
+
+Slider-, Freitext- und andere FHEM-Eingabetypen sind keine diskreten Wertelisten.
+Das Widget sendet nur in der normalen Ansicht und nur Befehle/Werte aus dem
+aktuellen Geräteangebot. Laufende Anforderungen sperren die Bedienelemente;
+Fehler bleiben sichtbar. Im Editor wird nicht geschaltet.
+
 ### Theme-Manager und Hintergrundbilder
 
 Unter **Bearbeiten → Seiteneinstellungen**

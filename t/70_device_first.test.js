@@ -58,3 +58,12 @@ test('shared slider detection preserves signed ranges and rejects malformed or u
     assert.deepEqual(sliderCommands(sets), []);
   }
 });
+
+test('discrete set lists offer selection controls without inventing slider capabilities', () => {
+  const choices = deviceWidgetSuggestions({ name: 'Mode', readings: { mode: 'eco' },
+    sets: 'mode:auto,eco,boost desired:slider,5,0.5,30' });
+  assert.deepEqual(choices.get('fhem-select'),
+    { title: 'Mode', device: 'Mode', command: 'mode', reading: 'mode', mode: 'dropdown' });
+  assert.equal(deviceWidgetSuggestions({ name: 'Mode', sets: 'on:noArg level:slider,0,1,100' }).has('fhem-select'), false);
+  assert.equal(deviceWidgetSuggestions({ name: 'Mode', sets: 'mode:auto,eco;bad' }).has('fhem-select'), false);
+});

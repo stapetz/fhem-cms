@@ -1000,6 +1000,7 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'fhem-switch' && $widget->{type} ne 'fhem-button'
                         && $widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-icon'
                         && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-slider'
+                        && $widget->{type} ne 'fhem-select'
                         && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'
                         && !($targetSchema == 5 && ($widget->{type} eq 'fhem-link' || $widget->{type} eq 'fhem-calllist'))));
 
@@ -1037,6 +1038,9 @@ sub FHEMCMS_ValidateConfig {
                     ['title', 'showTitle', 'device', 'unit', 'invertGrid', 'invertBattery', 'threshold', 'deriveHome']);
             } elsif ($widget->{type} eq 'fhem-slider') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title', 'showTitle']);
+            } elsif ($widget->{type} eq 'fhem-select') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'mode', 'grid'],
+                    ['title', 'showTitle', 'labels']);
             } else {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title', 'showTitle']);
             }
@@ -1151,6 +1155,26 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-slider') {
                 for my $field ('command', 'reading') {
                     return "Ungueltiger Wert fuer $field" if (!$isName->($widget->{$field}));
+                }
+            } elsif ($widget->{type} eq 'fhem-select') {
+                for my $field ('command', 'reading') {
+                    return "Ungueltiger Wert fuer $field" if (!$isName->($widget->{$field}));
+                }
+                return 'Ungueltige Auswahl-Darstellung'
+                    if (ref($widget->{mode}) || !defined($widget->{mode})
+                        || $widget->{mode} !~ /\A(?:dropdown|buttons)\z/);
+                if (exists($widget->{labels})) {
+                    my $labels = $widget->{labels};
+                    return 'labels muss ein Objekt mit hoechstens 32 Eintraegen sein'
+                        if (ref($labels) ne 'HASH' || keys(%{$labels}) > 32);
+                    for my $value (keys %{$labels}) {
+                        my $label = $labels->{$value};
+                        return 'Ungueltiger technischer Auswahlwert'
+                            if ($value !~ /\A[A-Za-z0-9_.+-]{1,32}\z/ || $value eq '.' || $value eq '..');
+                        return 'Ungueltiger Anzeigename'
+                            if (ref($label) || !defined($label) || length($label) < 1 || length($label) > 64
+                                || $label =~ /[\x00-\x1f\x7f]/);
+                    }
                 }
             } elsif ($widget->{type} eq 'fhem-clock') {
                 return 'Ungueltige Uhr-Darstellung'

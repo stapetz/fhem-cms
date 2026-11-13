@@ -102,6 +102,21 @@ Standarddialog-Vorbereitung bleibt ein Abbruch, kein Reload-Fehler.
 Prüfung: `node --test t/70_device_first.test.js t/19_schema5_editor.test.js`
 und `t/71_device_first.html` über den bestehenden Chrome-Runner.
 
+## Diskrete Set-Wertelisten (dev, 1.11.0-dev, Refs #145)
+
+`fhem-select` verwendet `select-commands.js` für sichere diskrete Set-Angebote,
+nicht für Slider, freie Texte oder andere FHEM-Eingabetypen.
+Dropdown und Buttonleiste senden nur angebotene Werte; optionale Anzeigenamen
+ändern den technischen Wert nicht. Ein optionales Reading zeigt den Istzustand.
+Backendvalidierung, Factory, Live-Abonnements, Vorlagen und beide Editoren
+kennen den Widgettyp. Der gerätebasierte Weg aus #185 bietet ihn bei
+diskreten Set-Listen ebenfalls an. Im Editor bleiben Set-Befehle gesperrt;
+ausstehende Anforderungen und Fehler werden sichtbar behandelt.
+`t/72_selection.test.js` prüft Parser und isolierten Browserablauf,
+`t/72_selection_backend.t` die echte Perl-Persistenz.
+`t/72_selection.html` läuft zusätzlich im gemeinsamen Chrome-Runner;
+die Titelprüfung enthält das Auswahlwidget.
+
 ## Dokumentationen synchron halten
 
 Der FHEM-Wiki-Onepager wird als MediaWiki-Quelltext in

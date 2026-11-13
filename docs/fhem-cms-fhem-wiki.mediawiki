@@ -325,6 +325,8 @@ Nach der Widgetwahl öffnet sich der gewohnte Konfigurationsdialog mit änderbar
 
 === Verfügbare Widgets ===
 
+'''Neu auf dev, ab 1.11.0-dev:''' '''Wert auswählen''' zeigt diskrete Set-Angebote wie <code>mode:auto,eco,boost</code> als Dropdown oder kompakte Buttons. Optionale Anzeigenamen machen technische Werte lesbar, etwa „Sparbetrieb“ für <code>eco</code>; gesendet bleibt der technische Wert. Gerät, Befehl und optionales Statusreading lassen sich im Standarddialog einstellen. Der Typ erscheint auch bei '''Gerät hinzufügen''', wenn passende Set-Wertelisten vorhanden sind. Slider- und Freitextdeklarationen sind keine diskreten Listen. Nur in der Ansicht werden aktuell angebotene Befehle/Werte gesendet; während einer Anfrage sind die Bedienelemente gesperrt, Fehler bleiben sichtbar. Im Editor wird nicht geschaltet.
+
 {| class="wikitable"
 ! Widget !! Aufgabe und wichtige Hinweise
 |-
