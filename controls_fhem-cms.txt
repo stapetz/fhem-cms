@@ -2,7 +2,7 @@ UPD 2026-11-13_08:40:42 148728 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_08:27:19 8752 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-08_10:43:57 7458 www/fhem-cms/FCUI-LICENSES.txt
-UPD 2026-11-13_08:40:42 2505 www/fhem-cms/admin.html
+UPD 2026-11-13_09:04:26 2562 www/fhem-cms/admin.html
 UPD 2026-11-13_07:06:17 18401 www/fhem-cms/components/cms-button.js
 UPD 2026-11-13_07:06:17 15374 www/fhem-cms/components/cms-calllist.js
 UPD 2026-11-13_07:06:17 21916 www/fhem-cms/components/cms-chart.js
