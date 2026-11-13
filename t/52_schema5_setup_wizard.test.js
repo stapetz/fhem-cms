@@ -396,7 +396,7 @@ test('wizard preview selects a start room, shows widget types and saves only aft
     await action('Räume und Geräte auswählen');
     action('Weiter');
     action('Nächster Raum');
-    action('Zusammenfassung');
+    await action('Zusammenfassung');
     assert.equal(saved, undefined);
     const preview = root.children[3];
     const select = preview.children[0].children[0];

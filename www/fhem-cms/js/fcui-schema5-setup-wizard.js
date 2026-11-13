@@ -151,9 +151,17 @@ export function schema5TemperatureChartSuggestion(device, logInfo) {
 }
 
 export function schema5WidgetSuggestions(device, logInfo) {
+  const base = schema5BaseWidgetSuggestions(device);
+  const charts = schema5TemperatureChartSuggestion(device, logInfo);
+  const matchingValue = (widget, chart) => widget.type === 'fhem-value'
+    && widget.device === chart.device && widget.reading === chart.reading;
+  const suggestions = base.flatMap((widget) => {
+    const chart = charts.find((entry) => matchingValue(widget, entry));
+    return chart ? [chart] : [widget];
+  });
   return [
-    ...schema5BaseWidgetSuggestions(device),
-    ...schema5TemperatureChartSuggestion(device, logInfo),
+    ...suggestions,
+    ...charts.filter((chart) => !base.some((widget) => matchingValue(widget, chart))),
   ];
 }
 
