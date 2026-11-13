@@ -46,6 +46,9 @@ werden alle maximal 20 Eintraege geprueft. Purge und Delete laufen pro
 Device in dieser Reihenfolge; bei Purge-Fehler kein Delete. Teilerfolge
 werden nicht als atomare Transaktion ausgegeben. Kein automatischer Retry,
 kein globales `save`, keine automatische Sicherung.
+Nach vollstaendig bestaetigter erfolgreicher Loeschung wird die Seite automatisch
+neu geladen (auch bei Orphan-Bereinigung). Bei Fehlern oder Teilerfolgen bleibt
+die Ergebnisliste sichtbar; nur der Bestand wird neu abgefragt.
 
 Pruefung: `prove t/09_cms_admin.t`, `node --test t/68_cms_admin.test.js`
 und Browserfixture `t/69_cms_admin.html` ueber den bestehenden Chrome-Runner.

@@ -41,6 +41,8 @@ Bestaetigung <code>DELETE</code> erlauben Purge mit anschliessendem Delete
 Konfiguration, Entwurf, Sicherungen und Medien werden unwiderruflich entfernt.
 Fremde Dateien und Symlinks bleiben gesperrt. Es gelten FHEMWEB-Rechte und
 CSRF-Schutz; kein automatisches Backup und kein globales <code>save</code>.
+Nach vollstaendig erfolgreicher Loeschung laedt die Seite automatisch neu.
+Bei Fehlern und Teilerfolgen bleiben die Einzelergebnisse sichtbar.
 
 Neu in 1.9.0: interne Seiten als Modal-Popup, Bildbearbeitung mit Varianten,
 automatische LinkWidget-Größe mit bestätigter Platzschaffen-Vorschau sowie

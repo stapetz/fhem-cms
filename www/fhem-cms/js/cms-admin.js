@@ -53,7 +53,8 @@ export class CmsAdminClient {
   }
 }
 
-export async function mountCmsAdmin(root, client = new CmsAdminClient()) {
+export async function mountCmsAdmin(root, client = new CmsAdminClient(),
+  reload = () => root.ownerDocument.defaultView.location.reload()) {
   const $ = selector => root.querySelector(selector);
   const status = $('#status');
   const dialog = $('#confirmation');
@@ -152,8 +153,10 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient()) {
     actions();
     message('Ausgewählte CMS werden bearbeitet …');
     $('#results').replaceChildren();
+    let completed = false;
     try {
       const results = await client.remove(selected, inventory.token);
+      completed = results.length === selected.length && results.every(result => result.ok);
       for (const result of results) {
         const li = element('li', `${result.name}: ${result.message}`);
         li.toggleAttribute('data-error', !result.ok);
@@ -166,6 +169,7 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient()) {
     } finally {
       await refresh();
     }
+    if (completed) reload();
   });
   await refresh();
 }
