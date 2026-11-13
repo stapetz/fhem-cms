@@ -37,7 +37,7 @@ Nach `update all …` hängt das weitere Vorgehen davon ab, was sich geändert h
 
 `rebuild` erzeugt nur die Startseite `www/fhem-cms/<Device>/index.html` neu und aktualisiert dabei die Versionsparameter, damit der Browser die neuen Dateien lädt. Konfiguration, Entwurf und Backups bleiben unberührt. Dieselbe Neuerzeugung läuft automatisch bei jedem FHEM-Start. Meldet `update` „nothing to do“, obwohl es Änderungen gibt, ist meist das Manifest auf GitHub noch nicht fertig (ein bis zwei Minuten nach dem Push) oder gecacht.
 
-## CMS-Systeme verwalten (dev, vorgesehen fuer 1.10.0)
+## CMS-Systeme verwalten (seit 1.10.0)
 
 Die zentrale Verwaltung ist direkt unter `/fhem/fhem-cms/admin.html` erreichbar
 (bei abweichendem FHEMWEB-Pfad entsprechend anpassen). Erst nach expliziter
@@ -168,7 +168,7 @@ oder FileLog protokolliert werden, ergänzt der Assistent ein Verlaufsdiagramm;
 bei `auto` wird DbLog bevorzugt. Ohne geloggtes Temperatur-Reading wird kein
 Diagramm erzeugt. Schalter können zusätzlich Messwerte anzeigen.
 Temperaturvorschläge benötigen einen gültigen numerischen Istwert.
-**Neu auf dev:** Unter dem Spinner zeigt eine gepunktete Linie den Fortschritt
+**Seit Version 1.10.0:** Unter dem Spinner zeigt eine gepunktete Linie den Fortschritt
 beim Laden, Prüfen, Planen, Anordnen und Speichern. Zur DbLog-Prüfung wird
 kein Jahresverlauf mehr geladen: Die vorhandenen gespeicherten Readings
 reichen als Nachweis, auch bei älteren Daten. Echte Abfragefehler werden
@@ -618,11 +618,11 @@ Fenstern schrumpfen die Punkte mit. Im Schema-5-Renderer entscheidet die
 tatsächlich benötigte Menübreite statt eines festen Bildschirm-Breakpoints
 über das ☰-Menü.
 
-Entwicklungsstand `dev`: Mit **Seite duplizieren** in der Seitenverwaltung
+Seit Version 1.10.0: Mit **Seite duplizieren** in der Seitenverwaltung
 entsteht eine Kopie mit eigener Seiten-ID, Widgets und Layout. Sie wird erst
 mit **Speichern** im Entwurf angelegt; die Live-Seite bleibt unverändert.
 
-Entwicklungsstand `dev`: Das X am Widget entfernt es nach einer Bestätigung
+Seit Version 1.10.0: Das X am Widget entfernt es nach einer Bestätigung
 direkt aus dem Entwurf. Die veröffentlichte Seite bleibt bis zur Veröffentlichung
 des Entwurfs unverändert.
 
