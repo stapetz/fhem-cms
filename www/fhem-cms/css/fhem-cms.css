@@ -314,6 +314,17 @@ body:has(.cms-schema5-grid) {
   inset: 0 !important;
 }
 
+.cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item:has(cms-solar-energy)::before {
+  display: none;
+}
+.cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item:has(cms-solar-energy) > .grid-stack-item-content {
+  position: relative;
+  overflow: visible;
+}
+.cms-schema5-grid[data-responsive][data-mobile-layout] cms-solar-energy {
+  height: auto;
+}
+
 .cms-schema5-grid[data-responsive][data-mobile-layout] > .cms-responsive-navigation {
   flex-basis: 100%;
   min-height: 0;
@@ -371,6 +382,17 @@ body:has(.cms-schema5-grid) {
 
   .cms-schema5-grid[data-responsive] > .grid-stack-item > .grid-stack-item-content {
     inset: 0 !important;
+  }
+
+  .cms-schema5-grid[data-responsive] > .grid-stack-item:has(cms-solar-energy)::before {
+    display: none;
+  }
+  .cms-schema5-grid[data-responsive] > .grid-stack-item:has(cms-solar-energy) > .grid-stack-item-content {
+    position: relative;
+    overflow: visible;
+  }
+  .cms-schema5-grid[data-responsive] cms-solar-energy {
+    height: auto;
   }
 
   .cms-schema5-grid[data-responsive] > .cms-responsive-navigation {

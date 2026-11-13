@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Solarwidget: Originalgeometrie und mobile Inhaltshoehe",
+  "changes": [
+    "Abstaende, Zeilenhoehen und Stationsbeschriftungen am ausgelesenen HTML-Original ausgerichtet; PV-Verbindungen verwenden dessen korrekt gebogene Pfade.",
+    "Dach, Garage und Gartenhaus zeigen die Emojis der Vorlage.",
+    "Im responsiven Layout waechst das Widget mit dem Inhalt: keine interne Scrollbar oder abgeschnittene Karten. Gespeicherte Raster und Reading-Zuordnungen bleiben erhalten."
+  ]
+}

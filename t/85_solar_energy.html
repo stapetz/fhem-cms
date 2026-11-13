@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
 <link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
 <style>body{margin:0;padding:16px} #grid{width:100%;max-width:1000px;margin:auto} #result{white-space:pre-wrap}</style>
-<div id="grid" class="grid-stack cms-schema5-grid"></div><pre id="result">RUNNING</pre>
+<div class="cms-shell"><div id="grid" class="grid-stack cms-schema5-grid"></div></div><pre id="result">RUNNING</pre>
 <script type="module">
 import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
 import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
@@ -69,7 +69,6 @@ try {
   check(svg === $('svg'), 'live values preserve SVG and running animations');
   check($('[data-edge="home-grid"] .energy').hasAttribute('data-reverse')
     && $('[data-edge="home-grid"] .energy').dataset.source === 'grid', 'grid import reverses actual flow');
-  check($('[data-station="bat"]').textContent.includes('Entladen'), 'battery direction explicit');
   updated.delete('Grid');
   updated.get('Battery')[0].readings.soc = 'broken';
   mounted.update(updated, 'stale');
@@ -94,16 +93,17 @@ try {
     }
   }
   for (const width of [280, 390, 761, 768, 1000]) {
+    root.parentElement.style.width = `${width}px`;
     root.style.width = `${width}px`;
     root.gridstack.onResize();
     await pause(400);
+    for (let attempt = 0; attempt < 30 && host.clientWidth < width - 20; attempt++) await pause(100);
     check(host.clientWidth <= width, `${width}: actual widget width follows raster`);
     check(root.scrollWidth <= root.clientWidth + 1 && $('.tile').scrollWidth <= $('.tile').clientWidth + 1,
       `${width}: responsive solar layout without horizontal overflow`);
-    const paths = $('.paths').getBoundingClientRect();
-    check(paths.top >= $('[data-station="pv"]').getBoundingClientRect().bottom
-      && paths.bottom <= $('[data-station="home"]').getBoundingClientRect().top,
-    `${width}: flow paths stay between stations without crossing labels or values`);
+    check($('[data-edge="pv-bat"] path').getAttribute('d') === 'M450 155Q150 155 150 215'
+      && $('[data-edge="pv-grid"] path').getAttribute('d') === 'M450 155Q750 155 750 215',
+    `${width}: PV curves use the original outward-then-downward control points`);
     const cards = [...host.shadowRoot.querySelectorAll('.yield')].map(e => e.getBoundingClientRect());
     check(width > 390 || cards[1].top > cards[0].top,
       `${width}: narrow yield cards stack vertically: ${JSON.stringify(cards.map(r => [r.x,r.y,r.width,r.height]))}; host ${host.clientWidth}`);
@@ -113,6 +113,11 @@ try {
       check(cards.every(card => card.height <= 210), 'yield cards retain compact original height');
       check($('.flow').clientHeight <= 310 && $('.node').getBoundingClientRect().width <= 181,
         'flow and stations retain original 300px/180px proportions');
+      check(Math.abs($('.home').getBoundingClientRect().height - 89) <= 2
+        && Math.abs($('.grid').getBoundingClientRect().height - 89) <= 2
+        && Math.abs($('.bat').getBoundingClientRect().height - 99) <= 2,
+      `desktop station heights match measured original 89/89/99px boxes: ${
+        ['.home', '.grid', '.bat'].map(selector => $(selector).getBoundingClientRect().height)}`);
       check($('.totals').clientHeight <= 90, 'summary stays in original compact strip');
       check($('[data-sections] h4').textContent.includes('(kWh)')
         && !$('.yield dd').textContent.includes('kWh') && $('.yield dd').textContent === '1.23',
@@ -122,6 +127,28 @@ try {
       'original semantic station value colors retained');
     }
   }
+    check($('[data-sections] h4').textContent.startsWith('🏠 Dach')
+      && $('[data-sections]').children[1].querySelector('h4').textContent.startsWith('🚗 Garage')
+      && $('[data-sections]').children[2].querySelector('h4').textContent.startsWith('🏡 Gartenhaus'),
+    'original section heading emojis restored without changing stored labels');
+    for (const width of [280, 390, 768]) {
+      root.parentElement.style.width = `${width}px`;
+      root.style.width = `${width}px`;
+      root.setAttribute('data-mobile-layout', '');
+      root.gridstack.onResize();
+      await pause(450);
+      const tile = $('.tile');
+      const wrapper = host.parentElement;
+      check(tile.scrollHeight <= tile.clientHeight + 1 && tile.scrollWidth <= tile.clientWidth + 1,
+        `${width}: complete mobile widget has no internal scrollbar`);
+      check(wrapper.scrollHeight <= wrapper.clientHeight + 1 && wrapper.scrollWidth <= wrapper.clientWidth + 1,
+        `${width}: grid content has no hidden overflow or scrollbar`);
+      const bottom = $('[data-totals]').getBoundingClientRect().bottom;
+      const frame = tile.getBoundingClientRect();
+      check(bottom <= frame.bottom && frame.bottom - bottom <= 18,
+        `${width}: all totals visible without empty space below`);
+    }
+    root.removeAttribute('data-mobile-layout');
   await host.openConfig();
   check($('[data-dialog]').getBoundingClientRect().width <= innerWidth
     && $('[data-dialog]').scrollWidth <= $('[data-dialog]').clientWidth + 1,

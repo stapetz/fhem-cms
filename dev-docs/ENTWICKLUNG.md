@@ -122,6 +122,16 @@ Ertragseinheit in der Kartenueberschrift statt an jedem Wert, urspruengliche
 feste Nachkommastellen ohne Tausendertrennzeichen und semantisch farbige Werte.
 Summen als kompakte zentrierte Leiste. Auf Phone umbrechen die Karten weiterhin;
 Themeflaechen, Readingerkennung und gespeicherte Raster bleiben unveraendert.
+Erneuter Direktabgleich mit dem ausgelesenen HTML: 16px Gesamtinnenabstand
+(aeussere HTML-Huelle plus 8px Entwurfsabstand), Zeilenhoehe 1.3 und blockweise
+Stationslabels erhalten die Originalhoehen und beseitigen den zusaetzlichen
+Leerraum. Ein gemeinsames SVG mit viewBox 900x320 verwendet die Originalpfade:
+PV-Kurven laufen zuerst seitwaerts und dann nach unten. Stationslabels enthalten
+den Ladestand wie die Vorlage; Dach/Garage/Gartenhaus bekommen ihre Emojis.
+Im responsiven Seitenlayout hat ausschliesslich dieses Widget intrinsische
+Hoehe statt der allgemeinen Seitenverhaeltnis-Reserve: keine interne Scrollbar,
+keine abgeschnittenen Ertragskarten, kein leerer Hoehenrest. Die Seite selbst
+scrollt bei langen mobilen Inhalten normal. Desktop-Rasterdaten bleiben erhalten.
 Pruefung: `t/85_solar_energy.t`, `t/85_solar_energy.test.js` und Browserfixture
 `t/85_solar_energy.html` (Desktop/Phone/Tablet, reduzierte Bewegung, alle Themes,
 Dialogroundtrip, mehrere Devices, fehlende Werte und Liveupdates).
