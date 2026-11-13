@@ -51,7 +51,7 @@ function freeGridPosition(widget, occupied, columns) {
   ];
   for (let targetRow = row; targetRow + h <= 1001; targetRow += 1) {
     const targetColumns = targetRow === row
-      ? nearby : [col, ...nearby, ...Array.from({ length: maxColumn }, (_, index) => index + 1)
+      ? nearby : [...nearby, col, ...Array.from({ length: maxColumn }, (_, index) => index + 1)
         .filter((targetCol) => targetCol !== col && !nearby.includes(targetCol))];
     for (const targetCol of targetColumns) {
       const proposed = { col: targetCol, row: targetRow, w, h };
