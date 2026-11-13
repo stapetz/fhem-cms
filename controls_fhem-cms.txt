@@ -14,7 +14,7 @@ UPD 2026-11-13_11:48:14 22580 www/fhem-cms/components/cms-select.js
 UPD 2026-11-13_11:43:02 19857 www/fhem-cms/components/cms-slider.js
 UPD 2026-11-13_07:06:17 28655 www/fhem-cms/components/cms-solarflow.js
 UPD 2026-11-13_07:06:17 23861 www/fhem-cms/components/cms-switch.js
-UPD 2026-11-13_12:55:56 29226 www/fhem-cms/components/cms-table.js
+UPD 2026-11-13_14:30:26 29419 www/fhem-cms/components/cms-table.js
 UPD 2026-11-13_07:06:17 10023 www/fhem-cms/components/cms-text.js
 UPD 2026-11-13_07:06:17 38158 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-13_07:06:17 25621 www/fhem-cms/components/cms-value.js
@@ -61,7 +61,7 @@ UPD 2026-11-13_11:48:14 15261 www/fhem-cms/js/fcui-schema5-widget-panel.js
 UPD 2026-11-12_17:22:24 4819 www/fhem-cms/js/fcui-schema5-widget-session.js
 UPD 2026-11-13_07:06:17 6815 www/fhem-cms/js/fcui-schema5-widgets.js
 UPD 2026-11-13_09:56:15 22418 www/fhem-cms/js/fhem-client.js
-UPD 2026-11-13_11:48:14 81049 www/fhem-cms/js/fhem-cms.js
+UPD 2026-11-13_14:30:26 81098 www/fhem-cms/js/fhem-cms.js
 UPD 2026-10-31_16:30:23 12159 www/fhem-cms/js/freehtml.js
 UPD 2026-11-10_09:09:16 4991 www/fhem-cms/js/icon-picker.js
 UPD 2026-11-08_11:00:11 7487 www/fhem-cms/js/layout.js
@@ -75,5 +75,5 @@ UPD 2026-11-13_07:06:17 909 www/fhem-cms/js/status-colors.js
 UPD 2026-11-13_07:06:17 2441 www/fhem-cms/js/unit-input.js
 UPD 2026-11-12_23:54:21 2903 www/fhem-cms/js/widget-content-fit.js
 UPD 2026-11-13_11:48:14 3416 www/fhem-cms/js/widget-factory.js
-UPD 2026-11-10_14:35:39 2047 www/fhem-cms/js/widget-services.js
+UPD 2026-11-13_14:30:26 2082 www/fhem-cms/js/widget-services.js
 UPD 2026-11-13_01:25:30 1026 www/fhem-cms/js/widget-status.js
