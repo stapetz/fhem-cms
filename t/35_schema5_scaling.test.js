@@ -154,6 +154,8 @@ for (const [name, fixtures] of [
       ['75_dialog_layout.html?width=852', 51]]],
   ['Chart configuration distinguishes absent logging from an empty history interval',
     [['76_chart_empty.html', 9]]],
+  ['Free HTML permits passive layouts and SVG with validated live image sources',
+    [['78_freehtml.html', 48]]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],

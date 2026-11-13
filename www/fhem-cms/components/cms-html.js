@@ -100,7 +100,8 @@ class FHEMCMSHtml extends HTMLElement {
               <li>Zustandsklassen: <code>data-cms-class="Device:reading=on:aktiv; Device:temperature&gt;25:heiss"</code> setzt die Klasse, wenn die Bedingung stimmt (<code>= != &gt; &lt; &gt;= &lt;=</code>). Die Klassen definierst du in einem <code>&lt;style&gt;</code>-Element.</li>
             </ul>
             <pre>${EXAMPLE.replace(/</g, '&lt;')}</pre>
-            <p>Erlaubt sind <code>div span p h1–h4 strong b em i u small br hr ul ol li table thead tbody tr th td style</code> und die Attribute <code>class style title colspan rowspan data-cms-class device reading filter</code>. Skripte, Ereignis-Attribute, Bilder, Formulare und <code>url()</code> sind nicht erlaubt.</p>
+            <p>Erlaubt sind passive HTML-Struktur, Tabellen, Kommentare, Flex-/Grid-CSS, sichere Links und Bilder sowie statisches SVG (Formen, Pfade, Text und lokale Verläufe). <code>id</code>, <code>class</code>, <code>style</code>, <code>title</code>, ARIA-/data-Attribute und Reading-Attribute sind möglich. Attribute bitte in doppelten Anführungszeichen schreiben.</p>
+            <p>Bildquellen und Links dürfen lokale Pfade oder HTTPS-URLs verwenden, auch als einzelner Reading-Platzhalter: <code>&lt;img src="{{MeinElch:vehicle_images_exteriorImageUrl}}"&gt;</code>. Der gelesene Wert wird vor jeder Anzeige erneut geprüft; externe Bilder übertragen Anfragen an ihren Anbieter. Skripte, Ereignis-Attribute, Formulare, Iframes, aktive SVG-Inhalte, CSS-Netzwerkzugriffe und <code>position: fixed/sticky</code> bleiben gesperrt.</p>
             <p><a href="${HELP_URL}" target="_blank" rel="noopener noreferrer">Ausführliche Beschreibung (PLATZHALTER.md)</a></p>
           </details>
           <p class="hint" data-devices></p>

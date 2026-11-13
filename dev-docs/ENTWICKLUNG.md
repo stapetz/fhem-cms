@@ -204,6 +204,25 @@ bleiben Fehler; leere historische Serien bleiben „Keine Werte im gewählten Ze
 `t/76_chart_empty.html` und `t/71_device_first.html` prüfen diese Unterscheidung.
 Weitere Diagrammfeatures aus #170 sind nicht enthalten.
 
+## Free-HTML-Vorbereitung (dev, Teilumfang Refs #188)
+
+`freehtml.js` und
+`FHEMCMS_ValidateFreeHtml` erlauben Kommentare, passive HTML-Struktur,
+Links/Bilder sowie eine statische SVG-Teilmenge. SVG-Namespace und gemischte
+Tag-/Attributschreibweisen bleiben beim Sanitizing erhalten; `foreignObject`,
+`use`, Skripte, Animationen und Eventhandler bleiben gesperrt.
+Bild-/Linkquellen erlauben lokale Pfade oder HTTPS sowie genau einen
+ungefilterten Reading-Platzhalter als gesamten Attributwert. Unaufgeloeste
+URLs werden nur als Template-Metadaten gehalten; erst nach Substitution
+und erneuter URL-Pruefung wird `src`/`href` gesetzt. Ungueltige Livewerte
+erzeugen einen sichtbaren Hinweis. Platzhalter in Text bleiben Text.
+Bildquellen setzen `referrerpolicy=no-referrer`, Links `rel=noopener noreferrer`.
+CSS-Netzwerkzugriffe bleiben gesperrt; SVG-Paintattribute erlauben lokale
+`url(#id)`-Referenzen. Die erlaubte Attributmenge wird beim Pruefen und
+Sanitizing durch denselben Helper bestimmt. Backendpruefung in
+`t/01_fhemcms.t`, 48 Browserchecks in `t/78_freehtml.html` ueber den
+vorhandenen Runner. Keine KI-Integration aus #188 implementiert.
+
 ## Dokumentationen synchron halten
 
 Der FHEM-Wiki-Onepager wird als MediaWiki-Quelltext in

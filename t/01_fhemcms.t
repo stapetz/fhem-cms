@@ -546,13 +546,20 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
     $w->{html} = '<span data-cms-class="Temp:temperature>25:hot; Lamp:state=on:an">x</span>';
     is(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html accepts conditions');
     for my $good ('<span device="Temp" reading="temperature"></span>', '<td device="Temp" reading="@alias" filter="round(1)|suffix( C)">-</td>',
-        '<span device="Temp" reading="state" filter="map(on=An,off=Aus)"></span>', '<p title="a device=b">x</p>') {
+        '<span device="Temp" reading="state" filter="map(on=An,off=Aus)"></span>', '<p title="a device=b">x</p>',
+        '<!-- Kopfzeile --><section style="display:grid;gap:14px"><figure><img src="{{Temp:imageUrl}}" alt="Bild"></figure></section>',
+        '<a href="https://example.test/path?a=1&amp;b=2" target="_blank">Link</a>',
+        '<img src="media/test.jpg"><div data-x="1">x</div>',
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="pv"><stop offset="0%" stop-color="#ff0"/></linearGradient></defs><path d="M0 0 L10 10" fill="url(#pv)"/></svg>') {
         $w->{html} = $good;
         is(FHEMCMS_ValidateConfig($hcfg), undef, "fhem-html accepts: $good");
     }
-    for my $bad ('<script>alert(1)</script>', '<img src="x">', '<div onclick="x()">a</div>', '<a href="javascript:x">a</a>',
+    for my $bad ('<script>alert(1)</script>', '<img src="javascript:x">', '<div onclick="x()">a</div>', '<a href="javascript:x">a</a>',
         '<iframe src="x"></iframe>', '<div style="background:url(x)">a</div>', '<div style="position:fixed">a</div>',
-        '<style>@import "x";</style>', '<!-- c -->', '<div', '<div data-x="1">a</div>', "<p>a\x01</p>",
+        '<style>@import "x";</style>', '<!-- c', '<div', '<svg><foreignObject><p>x</p></foreignObject></svg>', "<p>a\x01</p>",
+        '<svg onload="x()"></svg>', '<svg><use href="https://example.test/x.svg"/></svg>',
+        '<svg><animate attributeName="href"/></svg>', '<svg><path fill="url(https://example.test/x)"/></svg>',
+        '<img src="//example.test/x">', '<img src="data:image/svg+xml,x">', '<img src="{{Temp:image|prefix(javascript:)}}">',
         '<span data-cms-class="bad">x</span>', 'a < b',
         '<span device="Temp">x</span>', '<span reading="a">x</span>', '<span device="a b" reading="c"></span>',
         '<span device="a" reading="c d"></span>', '<span device="a" reading="c" filter="x(<b>)"></span>',

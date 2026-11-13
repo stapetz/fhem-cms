@@ -517,7 +517,11 @@ Freies HTML unterstützt Platzhalter und alternativ Elemente mit <code>device</c
 <span device="Garten" reading="humidity" filter="int|suffix( %)"></span></nowiki>
 </pre>
 
-Erlaubtes HTML wird geprüft und bereinigt. Skripte, Iframes, Ereignisattribute und beliebige externe Inhalte sind nicht vorgesehen. Für Bilder und Links verwendest du das Textwidget oder LinkWidget.
+Erlaubtes HTML wird geprüft und bereinigt. Auf dev sind zusätzlich Kommentare, passive Strukturelemente, Flex-/Grid-Gestaltung, sichere Links/Bilder und statisches SVG mit Formen, Pfaden, Text und lokalen Verläufen erlaubt. Skripte, Iframes, Ereignisattribute, Formulare, aktive SVG-Inhalte und CSS-Netzwerkzugriffe bleiben gesperrt.
+
+<pre><nowiki><img src="{{MeinElch:vehicle_images_exteriorImageUrl}}" alt="Fahrzeug" width="100%"></nowiki></pre>
+
+Bildquellen und Links dürfen lokale Pfade oder HTTPS-URLs sein. Ein einzelner ungefilterter Reading-Platzhalter als gesamter <code>src</code>- oder <code>href</code>-Wert wird bei jeder Anzeige aufgelöst und erneut geprüft. Ungültige oder fehlende URLs erzeugen einen sichtbaren Hinweis statt einer Anfrage. Externe Bilder kontaktieren ihren Anbieter ohne Seiten-Referrer; Links in neuen Tabs dürfen den CMS-Tab nicht steuern. Keine <code>javascript:</code>-, <code>data:</code>- oder protokollrelativen URLs.
 
 == Assetmanager: gemeinsame Bilder und Dokumente ==
 
