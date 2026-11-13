@@ -21,7 +21,8 @@ const STYLE = `
   .cms-dp-dialog .actions { display: flex; justify-content: flex-end; }
 `;
 
-export function openDevicePicker({ services, title = 'Device auswählen', accept = () => true }) {
+export function openDevicePicker({ services, title = 'Device auswählen', accept = () => true, signal }) {
+  if (signal?.aborted) return Promise.resolve(null);
   return new Promise((resolve) => {
     const dialog = document.createElement('dialog');
     dialog.className = 'cms-dp-dialog';
@@ -45,12 +46,15 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
         return;
       }
       done = true;
+      signal?.removeEventListener('abort', abort);
       if (dialog.open) {
         dialog.close();
       }
       dialog.remove();
       resolve(value);
     };
+    const abort = () => finish(null);
+    signal?.addEventListener('abort', abort, { once: true });
 
     const render = () => {
       const terms = $('[data-search]').value.toLowerCase().split(/\s+/).filter(Boolean);
@@ -92,9 +96,11 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
     $('[data-search]').focus();
     $('[data-info]').textContent = 'Geräteliste wird geladen …';
     services.listAllDevices().then((list) => {
+      if (done) return;
       devices = list;
       render();
     }, (error) => {
+      if (done) return;
       $('[data-info]').textContent = `Geräteliste nicht verfügbar: ${error.message || 'Fehler'}`;
     });
   });

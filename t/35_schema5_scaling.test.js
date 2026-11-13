@@ -143,6 +143,8 @@ for (const [name, fixtures] of [
     [['65_widget_dialogs.html', 12]]],
   ['Device-Widgetdialoge schlagen passende Readings und Set-Werte vor',
     [['66_device_suggestions.html', 27]]],
+  ['Device-first flow filters capabilities and prefills standard widget dialogs',
+    [['71_device_first.html', 21]]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],

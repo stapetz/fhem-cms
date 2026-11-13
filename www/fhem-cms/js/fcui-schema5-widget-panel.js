@@ -1,6 +1,9 @@
 import { Schema5WidgetSession } from './fcui-schema5-widget-session.js';
 import { schema5GridItems } from './fcui-schema5-layout.js';
 import { createWidgetElement } from './widget-factory.js';
+import { openDevicePicker } from './device-picker.js';
+import { deviceWidgetSuggestions } from './device-widget-suggestions.js';
+import { isValidName } from './fhem-client.js';
 
 const WIDGET_TYPES = [
   ['thermostat', 'Thermostat', 't', 4, 2, { device: '', readings: { actual: '', target: '' } }],
@@ -44,8 +47,14 @@ export class Schema5WidgetPanel {
   #closed = false;
   #requiresReload = false;
   #createElement;
+  #deviceFirst;
+  #deviceChoice;
+  #suggestions = new Map();
+  #selectedDevice = null;
+  #pickerAbort = new AbortController();
 
-  constructor({ root, controller, services, pageId, token, onClose, widgetId, createElement = createWidgetElement }) {
+  constructor({ root, controller, services, pageId, token, onClose, widgetId,
+    deviceFirst = false, createElement = createWidgetElement }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
       || !services || typeof onClose !== 'function' || typeof createElement !== 'function') {
       throw new Error('Dienste und leerer Container für Widget-Verwaltung erforderlich');
@@ -61,6 +70,7 @@ export class Schema5WidgetPanel {
     this.#page = pageId;
     this.#onClose = onClose;
     this.#createElement = createElement;
+    this.#deviceFirst = deviceFirst && !widgetId;
     this.#mode = widgetId ? 'edit' : 'add';
     this.#status = element('p');
     this.#status.setAttribute('role', 'status');
@@ -79,7 +89,7 @@ export class Schema5WidgetPanel {
     this.#close.className = 'cms-button cms-panel-close';
     this.#close.type = 'button';
     this.#close.addEventListener('click', () => {
-      if (this.#busy || this.#session || this.#closed) return;
+      if ((this.#busy && !this.#deviceFirst) || this.#session || this.#closed) return;
       const outcome = { requiresReload: this.#requiresReload };
       this.close();
       this.#onClose(outcome);
@@ -87,17 +97,26 @@ export class Schema5WidgetPanel {
     const footer = element('div');
     footer.className = 'cms-panel-footer';
     footer.append(this.#close);
-    const heading = this.#mode === 'edit' ? 'Widget bearbeiten' : 'Widget hinzufügen';
+    const heading = this.#deviceFirst ? 'Gerät zur Seite hinzufügen'
+      : this.#mode === 'edit' ? 'Widget bearbeiten' : 'Widget hinzufügen';
     const hint = this.#mode === 'edit'
       ? 'Änderungen werden als Entwurf gespeichert.'
-      : 'Widget-Typ wählen; das neue Widget wird als Entwurf gespeichert.';
+      : this.#deviceFirst ? 'Zuerst ein Gerät wählen, danach ein passendes Widget. Gespeichert wird nur im Entwurf.'
+        : 'Widget-Typ wählen; das neue Widget wird als Entwurf gespeichert.';
+    this.#deviceChoice = element('button', 'Gerät auswählen …');
+    this.#deviceChoice.type = 'button';
+    this.#deviceChoice.className = 'cms-button cms-device-first-choice';
+    this.#deviceChoice.hidden = !this.#deviceFirst;
+    this.#deviceChoice.addEventListener('click', () => this.#pickDevice());
     if (this.#mode === 'edit') {
       this.#searchLabel.hidden = true;
       this.#list.hidden = true;
     }
     root.append(element('h2', heading), element('p', hint),
+      ...(this.#deviceFirst ? [this.#deviceChoice] : []),
       this.#status, this.#searchLabel, this.#list, this.#host, footer);
     this.#render();
+    if (this.#deviceFirst) this.#pickDevice();
     if (widgetId) {
       const widget = page.widgets.find((entry) => entry.id === widgetId);
       if (!widget) throw new Error('Unbekanntes Widget');
@@ -111,6 +130,7 @@ export class Schema5WidgetPanel {
     const query = this.#search.value.trim().toLowerCase();
     let matches = 0;
     for (const [type, name] of WIDGET_TYPES) {
+      if (this.#deviceFirst && !this.#suggestions.has(type)) continue;
       if (query && !name.toLowerCase().includes(query)) continue;
       matches += 1;
       const button = element('button', name);
@@ -127,7 +147,65 @@ export class Schema5WidgetPanel {
       });
       this.#list.append(button);
     }
-    if (!matches) this.#list.append(element('p', 'Kein Widget-Typ gefunden.'));
+    if (!matches) this.#list.append(element('p', this.#deviceFirst && !this.#selectedDevice
+      ? 'Bitte zuerst ein Gerät auswählen.' : 'Kein Widget-Typ gefunden.'));
+  }
+
+  async #pickDevice() {
+    if (this.#closed || this.#busy || this.#session) return;
+    this.#busy = true;
+    this.#deviceChoice.disabled = true;
+    this.#close.disabled = true;
+    this.#list.inert = true;
+    this.#search.disabled = true;
+    this.#status.removeAttribute('data-error');
+    this.#status.textContent = 'Gerät auswählen …';
+    try {
+      const device = await openDevicePicker({ services: this.#services,
+        title: 'Gerät zur Seite hinzufügen', accept: (entry) => isValidName(entry.name),
+        signal: this.#pickerAbort.signal });
+      if (this.#closed) return;
+      if (!device) {
+        this.#status.textContent = 'Geräteauswahl abgebrochen.';
+        return;
+      }
+      this.#selectedDevice = device;
+      this.#deviceChoice.textContent = `Gerät ändern: ${device.alias || device.name}`;
+      const devices = await this.#services.listAllDevices();
+      if (this.#closed) return;
+      this.#suggestions = deviceWidgetSuggestions(device, devices);
+      this.#status.textContent = 'Passende Widgets werden geprüft …';
+      this.#close.disabled = false;
+      this.#render();
+      let logInfo = null;
+      let warning = '';
+      if (Object.values(device.readings || {}).some((value) =>
+        String(value).trim() !== '' && Number.isFinite(Number(value)))) {
+        try {
+          logInfo = await this.#services.logReadings(device.name, 'auto');
+        } catch (error) {
+          warning = `Verlaufsprüfung fehlgeschlagen: ${error.message || String(error)}. Diagrammvorschlag nicht verfügbar.`;
+        }
+      }
+      if (this.#closed) return;
+      this.#suggestions = deviceWidgetSuggestions(device, devices, logInfo);
+      this.#render();
+      if (warning) this.#status.setAttribute('data-error', '');
+      this.#status.textContent = warning || `Passende Widgets für ${device.name}. Alle Vorgaben bleiben im Widgetdialog änderbar.`;
+    } catch (error) {
+      if (this.#closed) return;
+      this.#suggestions.clear();
+      this.#selectedDevice = null;
+      this.#render();
+      this.#status.setAttribute('data-error', '');
+      this.#status.textContent = `Gerät konnte nicht vorbereitet werden: ${error.message || String(error)}`;
+    } finally {
+      this.#busy = false;
+      this.#deviceChoice.disabled = false;
+      this.#close.disabled = false;
+      this.#list.inert = false;
+      this.#search.disabled = false;
+    }
   }
 
   #newWidget(type) {
@@ -144,6 +222,7 @@ export class Schema5WidgetPanel {
       ...page.widgets.map((widget) => Number(widget.grid.row) + Number(widget.grid.h)));
     const scale = Number(config.settings.gridColumns) / 12;
     const widget = { id: `${prefix}${number}`, type, ...structuredClone(fields),
+      ...(this.#deviceFirst ? structuredClone(this.#suggestions.get(type)) : {}),
       grid: { col: 1, row, w: w * scale, h: h * scale } };
     if (type === 'fhem-link') widget.links = [{ id: 'link1', kind: 'internal', page: page.id,
       text: page.title, showText: true, textPosition: 'overlay', target: 'self',
@@ -162,6 +241,7 @@ export class Schema5WidgetPanel {
         token: this.#state.token, widget, action });
       this.#session = session;
       this.#list.inert = true;
+      this.#deviceChoice.disabled = true;
       this.#close.disabled = true;
       this.#status.textContent = 'Widgetdialog wird geöffnet …';
       const rejectCommand = async () => { throw new Error('Geräteaktionen sind im Widgetdialog gesperrt'); };
@@ -203,8 +283,14 @@ export class Schema5WidgetPanel {
         if (!this.#busy) session.close();
       });
       session.completion.then((outcome) => this.#finish(session, outcome));
-      await item.openConfig({ isNew: action === 'create' });
+      const opening = item.openConfig({ isNew: action === 'create' });
+      const opened = dialog.open;
+      await opening;
       if (this.#closed || this.#session !== session) return;
+      if (opened && !dialog.open) {
+        session.close();
+        return;
+      }
       if (!dialog.open) throw new Error('Widgetdialog wurde nicht geöffnet');
       this.#root.setAttribute('data-widget-open', '');
       this.#status.textContent = '';
@@ -217,6 +303,7 @@ export class Schema5WidgetPanel {
       this.#list.inert = true;
       this.#requiresReload = true;
       this.#close.disabled = false;
+      this.#deviceChoice.disabled = true;
       this.#status.setAttribute('data-error', '');
       this.#status.textContent = `Widgetdialog fehlgeschlagen: ${error.message || String(error)}. Bitte Zustand erneut laden.`;
     }
@@ -228,6 +315,7 @@ export class Schema5WidgetPanel {
     this.#root.removeAttribute('data-widget-open');
     this.#host.replaceChildren();
     this.#close.disabled = false;
+    this.#deviceChoice.disabled = false;
     if (outcome.error) {
       this.#requiresReload = true;
       this.#list.inert = true;
@@ -255,6 +343,7 @@ export class Schema5WidgetPanel {
   close() {
     if (this.#closed) return;
     this.#closed = true;
+    this.#pickerAbort.abort();
     if (this.#session) this.#session.close();
     this.#session = null;
     this.#root.removeAttribute('data-widget-open');

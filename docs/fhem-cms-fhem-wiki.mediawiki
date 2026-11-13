@@ -317,6 +317,14 @@ Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Brows
 
 == Widgetübersicht ==
 
+=== Gerät zuerst hinzufügen (dev, ab 1.11.0-dev) ===
+
+Unter '''Bearbeiten → Gerät hinzufügen''' zuerst nach Name, Alias, Typ oder Raum suchen und ein Gerät wählen. Danach werden passende Widgets anhand seiner Readings und Set-Angebote vorgeschlagen; Thermostatkanäle werden berücksichtigt. Ein bloßes Thermometer erhält keinen Thermostat- oder Slider-Vorschlag. '''Textbaustein''' und '''Freies HTML''' stehen immer bereit, '''Diagramm''' nur bei bestätigten geloggten numerischen Readings. Prüfungsfehler bleiben sichtbar; über '''Gerät ändern''' ist eine erneute Prüfung möglich.
+
+Nach der Widgetwahl öffnet sich der gewohnte Konfigurationsdialog mit änderbaren Vorgaben. Erst '''Speichern''' schreibt den Entwurf; '''Abbrechen''' kehrt zur Vorschlagsliste zurück. Geräteauswahl und Abbruch speichern oder schalten nichts. '''Widget hinzufügen''' bleibt unverändert verfügbar.
+
+=== Verfügbare Widgets ===
+
 {| class="wikitable"
 ! Widget !! Aufgabe und wichtige Hinweise
 |-

@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Geraet zuerst zur Seite hinzufuegen",
+  "changes": [
+    "Bearbeiten -> Geraet hinzufuegen sucht nach Name, Alias, Typ und Raum und bietet passende Widgets an.",
+    "Readings, Set-Angebote und erkannte Thermostatkanaele bestimmen die Vorschlaege; Text und freies HTML bleiben immer verfuegbar.",
+    "Diagramme werden nur fuer bestaetigte geloggte numerische Readings vorgeschlagen; Prueffehler bleiben sichtbar.",
+    "Der bekannte Widgetdialog oeffnet mit aenderbaren Vorgaben. Erst Speichern schreibt den Entwurf; Abbrechen schaltet oder speichert nichts."
+  ]
+}

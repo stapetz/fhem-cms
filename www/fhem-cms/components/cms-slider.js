@@ -3,6 +3,7 @@ import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { widgetHierarchyCss } from '../js/widget-content-fit.js';
 import { createManualFieldTracker, suggestedChoice, suggestedReading } from '../js/device-suggestions.js';
+import { sliderCommands } from '../js/slider-commands.js';
 
 const SEND_DELAY_MS = 1500;
 const CONFIRM_WAIT_MS = 120000;
@@ -14,26 +15,6 @@ function parseNumber(value) {
   }
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
-}
-
-function sliderCommands(sets) {
-  if (typeof sets !== 'string') {
-    return [];
-  }
-  const result = [];
-  const pattern = /(?:^|\s)([A-Za-z0-9_.-]+):slider,([-+]?(?:\d+(?:\.\d*)?|\.\d+)),([-+]?(?:\d+(?:\.\d*)?|\.\d+)),([-+]?(?:\d+(?:\.\d*)?|\.\d+))(?=\s|$)/g;
-  for (const match of sets.matchAll(pattern)) {
-    const min = parseNumber(match[2]);
-    const step = parseNumber(match[3]);
-    const max = parseNumber(match[4]);
-    const count = (max - min) / step;
-    if (min === null || step === null || max === null || step <= 0 || max <= min
-      || !Number.isFinite(count) || count > 10000) {
-      continue;
-    }
-    result.push({ command: match[1], min, step, max });
-  }
-  return result;
 }
 
 function readingNumber(value) {
