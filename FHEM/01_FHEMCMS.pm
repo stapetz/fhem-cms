@@ -45,10 +45,19 @@ sub FHEMCMS_Initialize {
     $modHash->{UndefFn} = 'FHEMCMS_Undef';
     $modHash->{GetFn} = 'FHEMCMS_Get';
     $modHash->{SetFn} = 'FHEMCMS_Set';
+    $modHash->{AttrFn} = 'FHEMCMS_Attr';
     $modHash->{FW_summaryFn} = 'FHEMCMS_Summary';
-    $modHash->{AttrList} = 'dbLog fileLog historySource:auto,dblog,filelog ' . ($readingFnAttributes // '');
+    $modHash->{AttrList} = 'adminMenu:0,1 dbLog fileLog historySource:auto,dblog,filelog ' . ($readingFnAttributes // '');
     $data{FWEXT}{'/fhemcms-assets'}{FUNC} = 'FHEMCMS_AssetDownload';
     $data{FWEXT}{'/fhemcms-admin'}{FUNC} = 'FHEMCMS_AdminEndpoint';
+}
+
+sub FHEMCMS_Attr {
+    my ($command, $name, $attribute, $value) = @_;
+    return 'adminMenu erwartet 0 oder 1'
+        if ($command eq 'set' && $attribute eq 'adminMenu'
+            && (!defined($value) || $value !~ /\A[01]\z/));
+    return undef;
 }
 
 sub FHEMCMS_Define {
@@ -142,7 +151,11 @@ sub FHEMCMS_Get {
         return $error if (defined($error));
         my ($format, $formatError) = FHEMCMS_ReadLayoutFormat($dataDir);
         return $formatError if (defined($formatError));
-        return JSON::PP->new->utf8->canonical->encode({schemaVersion => $format});
+        return JSON::PP->new->utf8->canonical->encode({
+            schemaVersion => $format,
+            adminMenuEnabled => ($main::attr{$name}{adminMenu} // '0') eq '1'
+                ? JSON::PP::true : JSON::PP::false,
+        });
     }
 
     if ($cmd eq 'migrationstate') {
@@ -2855,8 +2868,12 @@ use FHEMWEB and FHEM permissions.</p>
     bestaetigt die Loeschung. Anschliessend das FHEM-Device loeschen.
     <code>delete &lt;name&gt;</code> allein laesst CMS-Dateien erhalten.</li>
     <li>Die gemeinsame Verwaltungsseite <code>/fhem/fhem-cms/admin.html</code>
-    (FHEMWEB-Pfad ggf. anpassen) ist in beiden Editoren unter
+    (FHEMWEB-Pfad ggf. anpassen) ist nach expliziter Freigabe mit
+    <code>attr &lt;name&gt; adminMenu 1</code> in beiden Editoren unter
     <b>Datei / Globale CMS Administration</b> verlinkt.
+    Ohne Attribut oder bei <code>0</code> fehlt der Menueeintrag.
+    Nach Aenderung die CMS-Seite neu laden. Dies ist keine Zugriffssperre
+    fuer die direkte URL; FHEMWEB-Berechtigungen bleiben erforderlich.
     Sie bietet bestaetigte Sammelloeschung (Purge vor Delete) und separat
     die Bereinigung eindeutig zuordenbarer verwaister CMS-Verzeichnisse.
     FHEMWEB-Rechte und aktivierter CSRF-Schutz sind erforderlich; kein

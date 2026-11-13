@@ -24,7 +24,8 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 ## Zentrale CMS-Verwaltung (dev, 1.10.0-dev, Refs #177)
 
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.
-Beide Editor-Versionen verlinken sie im Dateimenue mit
+Beide Editor-Versionen verlinken sie ausschliesslich nach expliziter Freigabe
+mit `attr <CMS> adminMenu 1` im Dateimenue mit
 `Globale CMS Administration` (auch Seitentitel). Der Menue-Link nutzt dieselbe
 Buttonformatierung wie die anderen Eintraege; `CMS oeffnen` erscheint auf der
 Verwaltungsseite rechtsbuendig neben Checkbox und Device-Namen als Button-Link
@@ -36,6 +37,12 @@ die alte Textlink-Darstellung beibehalten.
 `FHEM/lib/FHEMCMS/Admin.pm` registriert
 `/fhemcms-admin` als FHEMWEB-Erweiterung; private Verzeichnisse werden nicht
 statisch ausgeliefert. Das Modul muss geladen sein, auch wenn kein CMS mehr existiert.
+Ohne `adminMenu` oder bei `0` erscheint kein Menueeintrag. `layoutformat`
+liefert die Freigabe als boolesches `adminMenuEnabled`, beide Editoren
+werten ausschliesslich `true` aus. Die Einstellung wird beim Seitenladen
+abgefragt; nach Attributaenderung die CMS-Seite neu laden. Das Attribut
+ist eine Menuefreigabe, keine Zugriffssperre fuer die direkt aufrufbare
+Administration; deren FHEMWEB-Berechtigungen gelten unveraendert.
 
 Die lesende Bestandsaufnahme prueft `get`- und Device-Berechtigungen, zeigt
 aktive Devices und separat erkannte verwaiste Verzeichnisse sowie begrenzte

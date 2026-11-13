@@ -7,3 +7,7 @@ export function createCmsAdminLink() {
   link.rel = 'noopener';
   return link;
 }
+
+export function createCmsAdminMenuLinks(client) {
+  return client.adminMenuEnabled === true ? [createCmsAdminLink()] : [];
+}

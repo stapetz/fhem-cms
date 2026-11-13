@@ -5,7 +5,7 @@
 <pre id="result">RUNNING</pre>
 <script type="module">
 import { mountCmsAdmin } from '../www/fhem-cms/js/cms-admin.js';
-import { createCmsAdminLink } from '../www/fhem-cms/js/cms-admin-link.js';
+import { createCmsAdminMenuLinks } from '../www/fhem-cms/js/cms-admin-link.js';
 const frame = document.querySelector('iframe');
 const output = document.querySelector('#result');
 let checks = 0;
@@ -78,7 +78,10 @@ try {
     const button = doc.createElement('button');
     button.className = 'cms-button';
     button.textContent = 'Sicherungen';
-    const link = createCmsAdminLink();
+    check(createCmsAdminMenuLinks({}).length === 0
+      && createCmsAdminMenuLinks({ adminMenuEnabled: false }).length === 0,
+    `${editorClass}: administration menu absent without explicit opt-in`);
+    const [link] = createCmsAdminMenuLinks({ adminMenuEnabled: true });
     menu.append(button, link);
     toolbar.append(menu);
     doc.body.append(toolbar);

@@ -34,7 +34,8 @@ Dieser Artikel beschreibt den stabilen Funktionsstand '''1.9.0''' und das aktuel
 
 '''Nur Entwicklungsstand dev (geplant fuer 1.10.0):''' Die zentrale Seite
 <code>/fhem/fhem-cms/admin.html</code> listet CMS-Devices und getrennt davon
-verwaiste CMS-Dateistrukturen. Im Dateimenue jedes CMS fuehrt
+verwaiste CMS-Dateistrukturen. Erst nach <code>attr &lt;CMS&gt; adminMenu 1</code>
+fuehrt im Dateimenue des jeweiligen CMS
 '''Globale CMS Administration''' dorthin. Checkbox-Auswahl und die
 Bestaetigung <code>DELETE</code> erlauben Purge mit anschliessendem Delete
 (nur bei erfolgreichem Purge) bzw. separat die Bereinigung verwaister Daten.
@@ -46,6 +47,9 @@ Bei Fehlern und Teilerfolgen bleiben die Einzelergebnisse sichtbar.
 '''CMS oeffnen''' steht als rechtsbuendiger Button in der jeweiligen CMS-Zeile.
 Nach Updates die Seite neu laden; versionierte Asset-URLs vermeiden alte Styles
 aus dem Browsercache.
+Ohne Attribut oder bei <code>adminMenu 0</code> fehlt der Menuepunkt.
+Nach Attributaenderung die CMS-Seite neu laden. Dies steuert nur den
+Menueeintrag; direkte Zugriffe unterliegen weiterhin den FHEMWEB-Rechten.
 
 Neu in 1.9.0: interne Seiten als Modal-Popup, Bildbearbeitung mit Varianten,
 automatische LinkWidget-Größe mit bestätigter Platzschaffen-Vorschau sowie
