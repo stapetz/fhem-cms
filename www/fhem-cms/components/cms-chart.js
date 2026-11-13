@@ -2,6 +2,7 @@ import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { setWidgetStatus, widgetStatusStyles } from '../js/widget-status.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const REFRESH_MS = 300000;
@@ -85,6 +86,7 @@ class FHEMCMSChart extends HTMLElement {
         .message { position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
           color: var(--cms-muted, #a5c9b2); font-size: 0.85rem; padding: 0.5rem; }
         .message[data-error] { color: var(--cms-danger, #ffb4a8); }
+        ${widgetStatusStyles}
         .stats { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; color: var(--cms-muted, #a5c9b2); font-size: 0.75rem;
           font-variant-numeric: tabular-nums; }
         .gear, button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
@@ -122,7 +124,7 @@ class FHEMCMSChart extends HTMLElement {
             <select data-granularity aria-label="Granularität"></select></span></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Diagramm konfigurieren">⚙</button>
         <div class="plot"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" data-svg role="img" aria-label="Verlaufsdiagramm"></svg>
-          <div class="message" data-message role="status"></div></div>
+          <div class="message cms-widget-status" data-message role="status" aria-busy="false"></div></div>
         <div class="stats" data-stats></div>
       </article>
       <dialog data-dialog aria-labelledby="chart-dialog-title">
@@ -232,11 +234,9 @@ class FHEMCMSChart extends HTMLElement {
     $('[data-granularity]').value = this.granularity || 'auto';
   }
 
-  message(text, isError = false) {
+  message(text, isError = false, isLoading = false) {
     const node = this.shadowRoot.querySelector('[data-message]');
-    node.textContent = text;
-    node.toggleAttribute('data-error', isError);
-    node.hidden = !text;
+    setWidgetStatus(node, text, { error: isError, loading: isLoading });
   }
 
   async load() {
@@ -246,7 +246,7 @@ class FHEMCMSChart extends HTMLElement {
       return;
     }
     const requestId = ++this.requestId;
-    this.message('Verlauf wird geladen …');
+    this.message('Verlauf wird geladen …', false, true);
     try {
       const result = await this.services.history(config.device, config.reading, this.range, this.granularity, config.source || 'auto');
       if (requestId !== this.requestId) {

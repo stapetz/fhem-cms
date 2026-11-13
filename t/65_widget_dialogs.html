@@ -40,6 +40,21 @@ try {
     range: '24h', granularity: 'auto', source: 'dblog', grid: { col: 1, row: 1, w: 12, h: 8 },
   };
   document.body.append(chart);
+  let finishHistory;
+  const loadingChart = document.createElement('cms-chart');
+  loadingChart.services = { ...services, history: () => new Promise((resolve) => { finishHistory = resolve; }) };
+  loadingChart.config = chart.config;
+  document.body.append(loadingChart);
+  const loadingStatus = loadingChart.shadowRoot.querySelector('[data-message]');
+  check(loadingStatus.hasAttribute('data-loading') && loadingStatus.getAttribute('aria-busy') === 'true',
+    'chart announces and displays its pending state');
+  check(getComputedStyle(loadingStatus, '::before').animationName === 'cms-widget-status-spin',
+    'chart pending state uses the shared visual spinner');
+  finishHistory({ points: [] });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  check(!loadingStatus.hasAttribute('data-loading') && loadingStatus.getAttribute('aria-busy') === 'false',
+    'chart clears its pending state after loading');
+  loadingChart.remove();
   await chart.openConfig();
   const chartDialog = chart.shadowRoot.querySelector('[data-dialog]');
   const chartGroups = [...chartDialog.querySelectorAll('.config-group')];

@@ -24,7 +24,7 @@ test('chart ignores detached responses and refreshes on reconnect', async () => 
     chart.isConnected = true;
     chart.scheduleRefresh = () => {};
     chart.render = () => {};
-    chart.message = (text) => messages.push(text);
+    chart.message = (text, isError, isLoading) => messages.push({ text, isError, isLoading });
     chart.draw = (result) => drawn.push(result);
     chart.config = { device: 'Temp', reading: 'state' };
     assert.equal(pending.length, 1);
@@ -41,13 +41,14 @@ test('chart ignores detached responses and refreshes on reconnect', async () => 
     pending[1].resolve({ points: [[2, 2]] });
     await Promise.resolve();
     assert.deepEqual(drawn, [{ points: [[2, 2]] }]);
-    assert.equal(messages.at(-1), 'Verlauf wird geladen …');
+    assert.deepEqual(messages.at(-1), { text: 'Verlauf wird geladen …', isError: false, isLoading: true });
     const rejected = chart.load();
     chart.isConnected = false;
     chart.disconnectedCallback();
     pending[2].reject(new Error('late network failure'));
     await rejected;
-    assert.equal(messages.at(-1), 'Verlauf wird geladen …', 'detached chart ignores late errors');
+    assert.deepEqual(messages.at(-1), { text: 'Verlauf wird geladen …', isError: false, isLoading: true },
+      'detached chart ignores late errors');
   } finally {
     globalThis.window = previous.window;
     globalThis.HTMLElement = previous.HTMLElement;
