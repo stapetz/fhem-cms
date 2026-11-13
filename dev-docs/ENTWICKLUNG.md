@@ -25,7 +25,9 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.
 Beide Editor-Versionen verlinken sie im Dateimenue mit
-`administrate existing CMS systems`. `FHEM/lib/FHEMCMS/Admin.pm` registriert
+`Globale CMS Administration` (auch Seitentitel). Der Menue-Link nutzt dieselbe
+Buttonformatierung wie die anderen Eintraege; `CMS oeffnen` erscheint auf der
+Verwaltungsseite als Button-Link. `FHEM/lib/FHEMCMS/Admin.pm` registriert
 `/fhemcms-admin` als FHEMWEB-Erweiterung; private Verzeichnisse werden nicht
 statisch ausgeliefert. Das Modul muss geladen sein, auch wenn kein CMS mehr existiert.
 
