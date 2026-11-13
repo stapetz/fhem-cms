@@ -39,10 +39,11 @@ Einheiten, Dialoge, Titel-Ausrichtung und Einrichtungsassistent.
 ## SolarFlow im neuen Widget-Design (dev, 1.11.0-dev, Refs #197)
 
 Nach dem Tabellenpilot folgt SolarFlow mit Systemschrift, klarer Kopfzeile,
-transparenter Hero-Flaeche und themefaehigen SVG-Stationen statt weisser Kreise.
-PV, Haus, Netz und Batterie verwenden die neue Farbpalette. Lesbare Detail-Karten
-zeigen Leistungswerte sowie Bezug/Einspeisung, Laden/Entladen und Ladestand
-zusaetzlich als Text. Optionale Stationen bleiben optional, fehlende Werte
+der aeusseren Themeflaeche und themefaehigen SVG-Stationen statt weisser Kreise.
+PV, Haus, Netz und Batterie verwenden die neue Farbpalette. Nach der Abnahme-
+korrektur zeigt das Widget nur das animierte Diagramm; keine Hero-Zusatzflaeche
+und keine Wertekacheln darunter. Die Stationen enthalten Leistung und Ladestand.
+Optionale Stationen bleiben optional, fehlende Werte
 bleiben unbekannt. Berechnungen, Schwellwerte, Richtungen und Animationen
 bleiben unveraendert; reine Wertupdates erhalten die SVG-Struktur.
 

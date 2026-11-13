@@ -176,10 +176,11 @@ Reading angezeigt und beim erneuten Bearbeiten übernommen. Details stehen
 unter [Platzhalter](./PLATZHALTER.md#platzhalter-suchen-statt-tippen).
 
 Beim **SolarFlow** bleibt der sichtbare Titel oberhalb des Diagramms frei.
-Auf `dev` verwendet es das neue transparente Karten-Design mit themefähigen
-Stationen. Unter dem Flussdiagramm stehen lesbare Detail-Karten für Leistungen,
-Netzbezug/Einspeisung, Laden/Entladen und Ladestand. Nicht konfigurierte
-Stationen und deren Karten entfallen weiterhin. Kleine Kacheln scrollen
+Auf `dev` verwendet es das neue transparente Design mit themefähigen
+Stationen und der Außenfläche des Seitenthemes einschließlich Glass-Transparenz.
+Es zeigt ausschließlich das animierte Flussdiagramm mit Leistungen und Ladestand
+in den Stationen, keine zusätzlichen Wertekacheln. Nicht konfigurierte
+Stationen entfallen weiterhin. Sehr kleine Kacheln scrollen
 vertikal, statt Schrift und Diagramm unlesbar zu verkleinern. Titel und
 globale Titelausrichtung bleiben konfigurierbar; gespeicherte Raster und
 Datenquellen werden durch das neue Design nicht verändert.

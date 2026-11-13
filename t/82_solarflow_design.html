@@ -54,29 +54,32 @@ try {
       host.style.cssText = `width:${width}px;height:${height}px`;
       await settle();
       const tile = $('.tile');
+      const surface = document.createElement('span');
+      surface.style.background = 'var(--cms-surface)';
+      host.shadowRoot.append(surface);
+      const expectedSurface = getComputedStyle(surface).backgroundColor;
+      surface.remove();
       check(getComputedStyle(tile).fontFamily.startsWith('system-ui'), `${theme}/${width}: system font`);
       check(getComputedStyle($('[data-title]')).fontSize === '22.4px',
         `${theme}/${width}: legible title, not container-shrunk`);
-      check(getComputedStyle($('.flow-card')).borderRadius === '16px'
-        && getComputedStyle($('.flow-card')).backgroundImage.includes('linear-gradient'),
-      `${theme}/${width}: hero surface`);
-      check(getComputedStyle($('.metric')).borderRadius === '14px', `${theme}/${width}: detail surface`);
+      check(getComputedStyle(tile).backgroundColor === expectedSurface, `${theme}/${width}: exact theme surface`);
+      check(!$('.metrics') && !$('.metric'), `${theme}/${width}: diagram only, no duplicate value cards`);
       check(tile.scrollWidth <= tile.clientWidth + 1, `${theme}/${width}: no horizontal overflow`);
       check($('[data-svg]').getBoundingClientRect().top >= $('[data-header]').getBoundingClientRect().bottom,
         `${theme}/${width}: no title/diagram overlap`);
-      check($('[data-power="pv"]').textContent === '1250W'
-        && $('[data-mode="grid"]').textContent === 'Einspeisung'
-        && $('[data-mode="bat"]').textContent === 'Laden',
+      check($('[data-value="pv"]').textContent === '1250W'
+        && $('[data-station="grid"]').getAttribute('aria-label').includes('Einspeisung')
+        && $('[data-station="bat"]').getAttribute('aria-label').includes('Laden'),
       `${theme}/${width}: readable live values and directions`);
-      check($('[data-charge]').textContent === 'Ladestand: 65 %', `${theme}/${width}: charge text`);
+      check($('[data-soc]').textContent === '65%', `${theme}/${width}: charge text`);
       check(getComputedStyle($('[data-value="pv"]')).fill === getComputedStyle(tile).color,
         `${theme}/${width}: graph values inherit theme text color`);
       check(getComputedStyle($('[data-station="pv"] [data-ring]')).fill !== 'rgb(250, 250, 250)',
         `${theme}/${width}: no hardcoded white station`);
-      if (height <= 320) {
+      if (height === 40) {
         check(tile.scrollHeight > tile.clientHeight, `${theme}/${width}: small tiles scroll vertically`);
         tile.scrollTop = tile.scrollHeight;
-        const last = $('[data-metric="bat"]').getBoundingClientRect();
+        const last = $('.flow-card').getBoundingClientRect();
         check(last.bottom <= tile.getBoundingClientRect().bottom + 1,
           `${theme}/${width}: last battery metric reachable`);
         tile.scrollTop = 0;
@@ -86,10 +89,10 @@ try {
   const graph = $('[data-station="pv"]');
   host.data = snapshots({ pv: '1251', home: '801' });
   check($('[data-station="pv"]') === graph, 'same flow structure preserves SVG nodes and animation');
-  check($('[data-power="pv"]').textContent === '1251W', 'live metric refresh');
+  check($('[data-value="pv"]').textContent === '1251W', 'live value refresh');
   host.data = snapshots({ pv: '0', home: '800', grid: '-500', battery: '-300', soc: '20' });
-  check($('[data-mode="grid"]').textContent === 'Bezug'
-    && $('[data-mode="bat"]').textContent === 'Entladen', 'negative powers have explicit directions');
+  check($('[data-station="grid"]').getAttribute('aria-label').includes('Bezug')
+    && $('[data-station="bat"]').getAttribute('aria-label').includes('Entladen'), 'negative powers have explicit directions');
   check($('[data-station="grid"]').dataset.state === 'red'
     && $('[data-station="bat"]').dataset.state === 'red', 'existing negative state semantics preserved');
   check([...host.shadowRoot.querySelectorAll('animateMotion')].some(node =>
@@ -103,41 +106,48 @@ try {
       `battery segment count ${soc}`);
   }
   host.data = snapshots({ grid: '9', battery: '-9', soc: undefined });
-  check($('[data-mode="grid"]').textContent === 'Inaktiv'
-    && $('[data-mode="bat"]').textContent === 'Inaktiv', 'threshold semantics retained');
-  check($('[data-charge]').textContent === 'Ladestand nicht verfügbar', 'unknown charge remains explicit');
+  check($('[data-station="grid"]').getAttribute('aria-label').includes('Inaktiv')
+    && $('[data-station="bat"]').getAttribute('aria-label').includes('Inaktiv'), 'threshold semantics retained');
+  check($('[data-soc]').textContent === '', 'unknown charge does not invent a value');
   host.data = snapshots({ grid: undefined, battery: undefined });
-  check($('[data-mode="grid"]').textContent === 'Wert nicht verfügbar'
-    && $('[data-mode="bat"]').textContent === 'Wert nicht verfügbar', 'unknown values are not idle');
+  check($('[data-station="grid"]').getAttribute('aria-label').includes('Wert nicht verfügbar')
+    && $('[data-station="bat"]').getAttribute('aria-label').includes('Wert nicht verfügbar'), 'unknown values are not idle');
   host.config = { ...config, readings: { pv: config.readings.pv }, deriveHome: false };
-  check($('[data-metric="grid"]').hidden && $('[data-metric="bat"]').hidden
-    && host.shadowRoot.querySelectorAll('[data-station]').length === 2, 'optional station/card pairs disappear');
-  check($('[data-power="home"]').textContent === '–', 'unverified home power is not invented');
+  check(!$('[data-station="grid"]') && !$('[data-station="bat"]')
+    && host.shadowRoot.querySelectorAll('[data-station]').length === 2, 'optional stations disappear');
+  check($('[data-value="home"]').textContent === '–', 'unverified home power is not invented');
   const legacy = { ...config, device: 'Demo',
     readings: { pv: 'pv', home: 'home', grid: 'grid', battery: 'battery', soc: 'soc' } };
   host.config = legacy;
   host.data = snapshots();
-  check($('[data-power="pv"]').textContent === '1250W', 'legacy shared-device bindings retained');
+  check($('[data-value="pv"]').textContent === '1250W', 'legacy shared-device bindings retained');
   host.config = { ...config, unit: 'kW' };
   host.data = snapshots({ pv: '1.25', home: '.8', grid: '.2', battery: '.25' });
-  check($('[data-power="pv"]').textContent === '1250W'
+  check($('[data-value="pv"]').textContent === '1250W'
     && computeModel(host.config, snapshots({ pv: '1.25' })).values.pv === 1250,
   'kW inputs retain conversion to watts');
   host.stale = Date.now();
-  check(getComputedStyle($('.flow-card')).borderStyle === 'dashed', 'stale state remains visible');
+  check(getComputedStyle($('.tile')).borderStyle === 'dashed', 'stale state remains visible');
   host.stale = null;
-  check(getComputedStyle($('.flow-card')).borderStyle === 'solid', 'reconnect clears stale state');
+  check(getComputedStyle($('.tile')).borderStyle === 'solid', 'reconnect clears stale state');
   host.config = { ...config, showTitle: false };
   host.removeAttribute('view-only');
   await settle();
   const gear = $('[data-open-config]').getBoundingClientRect();
   check(gear.width >= 48 && gear.height >= 48, 'configuration target meets touch size');
-  check($('.dashboard').getBoundingClientRect().top >= gear.bottom, 'hidden title reserves configuration space');
+  check($('.flow-card').getBoundingClientRect().top >= gear.bottom, 'hidden title reserves configuration space');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   check([...host.shadowRoot.querySelectorAll('animateMotion')].every(node =>
     node.getAttribute('repeatCount') === (reduced ? '1' : 'indefinite')),
   'motion preference honored');
   check(JSON.stringify(config) === original, 'rendering does not mutate configuration');
+  for (const opacity of [.12, .88]) {
+    host.style.setProperty('--cms-surface', `rgb(19 34 52 / ${opacity})`);
+    check(getComputedStyle($('.tile')).backgroundColor === `rgba(19, 34, 52, ${opacity})`,
+      `outer surface follows page transparency ${opacity}`);
+    check(getComputedStyle($('[data-ring]')).fill === 'rgba(128, 128, 128, 0.08)',
+      `stations use only a subtle neutral overlay ${opacity}`);
+  }
   host.remove();
 
   document.documentElement.dataset.cmsTheme = 'liquid-glass';

@@ -153,7 +153,9 @@ class FHEMCMSSolarFlow extends HTMLElement {
         * { box-sizing: border-box; }
         .tile { position: relative; display: flex; flex-direction: column; gap: 14px;
           height: 100%; overflow: auto; container-type: size; padding: 8px;
-          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: inherit; }
+          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: inherit;
+          background: var(--cms-surface, #202e27); border: 1px solid var(--cms-frame, #7f8c84);
+          border-radius: 1.4rem; }
         header { display: flex; justify-content: space-between; align-items: center;
           flex: 0 0 auto; min-width: 0; padding: 0 48px 8px 0;
           border-bottom: 1px solid rgba(128,128,128,.25); }
@@ -161,39 +163,24 @@ class FHEMCMSSolarFlow extends HTMLElement {
         h3[data-title] { font-size: 1.4rem; font-weight: 700; color: inherit;
           white-space: normal; overflow-wrap: anywhere; }
         header[hidden] { display: none; }
-        .dashboard { display: grid; align-content: start; gap: 14px; flex: 1 0 auto; min-width: 0; }
-        .flow-card { height: clamp(240px, 50cqh, 420px); padding: 16px; border-radius: 16px;
-          background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(59,130,246,.12));
-          border: 1px solid rgba(16,185,129,.35); }
-        svg { display: block; width: 100%; height: 100%; }
+        .flow-card { flex: 1 0 160px; min-height: 160px; min-width: 0; position: relative; }
+        svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
         .link { fill: none; stroke-linecap: round; stroke: rgba(128,128,128,.3); stroke-width: 6; }
         .dot { fill: #f59e0b; stroke: var(--cms-text, #edf4ef); stroke-width: 0.4; }
-        [data-station="pv"], [data-metric="pv"] { --station-color: #f59e0b; }
-        [data-station="home"], [data-metric="home"] { --station-color: #3b82f6; }
-        [data-station="grid"], [data-metric="grid"] { --station-color: #8b5cf6; }
-        [data-station="bat"], [data-metric="bat"] { --station-color: #10b981; }
+        [data-station="pv"] { --station-color: #f59e0b; }
+        [data-station="home"] { --station-color: #3b82f6; }
+        [data-station="grid"] { --station-color: #8b5cf6; }
+        [data-station="bat"] { --station-color: #10b981; }
         [data-state="red"] { --station-color: #ef4444; }
         [data-state="green"] { --station-color: #10b981; }
-        [data-ring] { fill: var(--cms-surface, #202e27); stroke: var(--station-color); stroke-width: 2; }
+        [data-ring] { fill: rgba(128,128,128,.08); stroke: var(--station-color); stroke-width: 2; }
         .value { fill: currentColor; font-size: 16px; font-weight: 700; text-anchor: middle; }
         .soc { fill: currentColor; font-size: 11px; text-anchor: middle; }
         .icon { fill: none; color: var(--station-color); stroke: currentColor; stroke-width: 2.4;
           stroke-linecap: round; stroke-linejoin: round; }
-        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
-          gap: 14px; margin: 0; }
-        .metric { min-width: 0; overflow-wrap: anywhere; background: rgba(128,128,128,.08);
-          border: 1px solid rgba(128,128,128,.18); border-radius: 14px; padding: 14px; }
-        .metric dt { font-size: .86rem; padding-bottom: 6px; border-bottom: 1px solid rgba(128,128,128,.2);
-          display: flex; align-items: center; gap: 8px; }
-        .metric dt::before { content: ""; width: 8px; height: 8px; flex: 0 0 8px;
-          border-radius: 50%; background: var(--station-color); }
-        .metric dd { margin: 8px 0 0; font-size: 1.75rem; font-weight: 700;
-          font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-        .metric [data-mode], .metric [data-charge] { display: block; margin-top: 6px; font-size: .86rem; }
-        .metric [data-mode]:empty { display: none; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
         .tile[data-stale] { opacity: 0.65; }
-        .tile[data-stale] .flow-card { border-style: dashed; }
+        .tile[data-stale] { border-style: dashed; }
         .gear, button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
         .gear { position: absolute; top: 8px; right: 8px; min-width: 48px; min-height: 48px; }
@@ -229,17 +216,8 @@ class FHEMCMSSolarFlow extends HTMLElement {
       <article class="tile">
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="SolarFlow konfigurieren">⚙</button>
-        <div class="dashboard">
-          <div class="flow-card">
+        <div class="flow-card">
             <svg data-svg viewBox="0 0 400 375" preserveAspectRatio="xMidYMid meet" role="img"></svg>
-          </div>
-          <dl class="metrics">
-            ${[['pv', 'PV-Leistung'], ['home', 'Hausverbrauch'], ['grid', 'Netz'], ['bat', 'Batterie']]
-              .map(([key, label]) => `<div class="metric" data-metric="${key}">
-                <dt>${label}</dt><dd><span data-power="${key}">–</span>
-                <span data-mode="${key}"></span>${key === 'bat' ? '<span data-charge></span>' : ''}</dd>
-              </div>`).join('')}
-          </dl>
         </div>
         <span class="sr-only" data-accessible></span>
       </article>
@@ -554,8 +532,6 @@ class FHEMCMSSolarFlow extends HTMLElement {
       if (text) {
         text.textContent = formatPower(model.values[station]);
       }
-      root.querySelector(`[data-metric="${station}"]`).hidden = !model.visible[station];
-      root.querySelector(`[data-power="${station}"]`).textContent = formatPower(model.values[station]);
     }
     const { grid, bat } = model.values;
     const active = (value) => value !== null && Math.abs(value) >= Math.max(model.threshold, 1);
@@ -563,14 +539,12 @@ class FHEMCMSSolarFlow extends HTMLElement {
       ['grid', grid, 'Einspeisung', 'Bezug'], ['bat', bat, 'Laden', 'Entladen'],
     ]) {
       const state = !active(value) ? 'idle' : value > 0 ? 'green' : 'red';
-      for (const element of root.querySelectorAll(`[data-station="${station}"], [data-metric="${station}"]`)) {
+      for (const element of root.querySelectorAll(`[data-station="${station}"]`)) {
         element.dataset.state = state;
+        const label = value === null ? 'Wert nicht verfügbar' : !active(value) ? 'Inaktiv' : value > 0 ? positive : negative;
+        element.setAttribute('aria-label', `${station === 'grid' ? 'Netz' : 'Batterie'}: ${label}, ${formatPower(value)}`);
       }
-      root.querySelector(`[data-mode="${station}"]`).textContent = value === null
-        ? 'Wert nicht verfügbar' : !active(value) ? 'Inaktiv' : value > 0 ? positive : negative;
     }
-    root.querySelector('[data-charge]').textContent = model.soc === null
-      ? 'Ladestand nicht verfügbar' : `Ladestand: ${Math.round(model.soc)} %`;
     const soc = root.querySelector('[data-soc]');
     if (soc) {
       soc.textContent = model.soc === null ? '' : `${Math.round(model.soc)}%`;
