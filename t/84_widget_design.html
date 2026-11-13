@@ -68,6 +68,9 @@ try {
     root.style.width = `${width}px`;
     root.gridstack.onResize();
     await new Promise(resolve => setTimeout(resolve, 400));
+    for (let attempt = 0; attempt < 50 && hosts.some(host => host.clientWidth > width); attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
     check(root.scrollWidth <= root.clientWidth + 1, `${width}: no page overflow`);
     for (const host of hosts) {
       const tile = host.shadowRoot.querySelector('.tile');
