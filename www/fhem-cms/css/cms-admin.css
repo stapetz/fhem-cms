@@ -7,10 +7,23 @@
   margin-block: 2rem;
 }
 .cms-admin article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .5rem .75rem;
   border: 1px solid var(--cms-border);
   border-radius: .5rem;
   margin-block: .75rem;
   padding: .75rem;
+}
+.cms-admin article > label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cms-admin article > details,
+.cms-admin article > p {
+  grid-column: 1 / -1;
+  min-width: 0;
 }
 .cms-admin label,
 #confirmation label {
@@ -33,7 +46,21 @@
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
-  margin-block: .5rem;
+  justify-self: end;
+  justify-content: center;
+  grid-column: 2;
+  grid-row: 1;
+  padding: .5rem .9rem;
+  border: 1px solid var(--cms-accent);
+  border-radius: .5rem;
+  background: var(--cms-surface-raised);
+  color: var(--cms-text);
+  font: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.cms-admin a.cms-button:hover {
+  background: var(--cms-surface-hover);
 }
 .cms-admin pre {
   white-space: pre-wrap;
