@@ -63,6 +63,16 @@ Administration
   Upload verhindern den Magic-Entwurf.
 - Bestehende Seiten werden nicht nachtraeglich veraendert.
 
+2026-11-13 - 1.11.0-dev: Lokale Fahrzeugkarte im HTML-Widget
+- HTML-Divs mit data-map=vehicle zeigen eine lokal bereitgestellte
+  Leaflet-Karte mit weissem Automarker und Live-Koordinaten.
+- Standortwechsel zentrieren die Karte; normale Readingupdates erhalten Zoom
+  und Kartenausschnitt. Startzoom 16, konfigurierbar von 2 bis 19.
+- Ungueltige Koordinaten und Kachel-Ladefehler werden sichtbar gemeldet.
+  OpenStreetMap-Kacheln bleiben externe Inhalte mit sichtbarer Attribution.
+- Karteninstanzen werden bei Resize angepasst und beim Entfernen freigegeben;
+  keine Freigabe von Skripten im eigenen HTML.
+
 2026-11-13 - 1.11.0-dev: Volvo-Dashboard im freien HTML
 - Gueltiges scroll-behavior wird nicht mehr mit dem alten ausfuehrbaren
   behavior-Attribut verwechselt.
