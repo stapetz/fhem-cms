@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "CSS-Gestaltung und OpenStreetMap im freien HTML",
+  "changes": [
+    "CSS url() und @import erlauben gepruefte lokale und HTTPS-Ressourcen.",
+    "Alle Positionierungsarten und CSS-Keyframe-Animationen sind erlaubt; feste Elemente bleiben innerhalb der Kachel.",
+    "OpenStreetMap-Karten koennen ueber export/embed.html mit begrenzter Sandbox eingebettet werden.",
+    "Skripte im eigenen HTML, Eventhandler, aktive SVG-Inhalte und unsichere URL-Schemata bleiben gesperrt."
+  ]
+}

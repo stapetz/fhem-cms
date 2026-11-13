@@ -517,7 +517,9 @@ Freies HTML unterstützt Platzhalter und alternativ Elemente mit <code>device</c
 <span device="Garten" reading="humidity" filter="int|suffix( %)"></span></nowiki>
 </pre>
 
-Erlaubtes HTML wird geprüft und bereinigt. Auf dev sind zusätzlich Kommentare, passive Strukturelemente, Flex-/Grid-Gestaltung, sichere Links/Bilder und statisches SVG mit Formen, Pfaden, Text und lokalen Verläufen erlaubt. Skripte, Iframes, Ereignisattribute, Formulare, aktive SVG-Inhalte und CSS-Netzwerkzugriffe bleiben gesperrt.
+Erlaubtes HTML wird geprüft und bereinigt. Auf dev sind zusätzlich Kommentare, passive Strukturelemente, Flex-/Grid-Gestaltung, sichere Links/Bilder und statisches SVG mit Formen, Pfaden, Text und lokalen Verläufen erlaubt. CSS unterstützt relative/absolute/fixed/sticky (auf die Kachel begrenzt), <code>@keyframes</code> sowie lokale/HTTPS-Ressourcen über <code>url()</code> und <code>@import</code>. Skripte im eigenen HTML, Ereignisattribute, Formulare, aktive SVG-Inhalte und beliebige Iframes bleiben gesperrt.
+
+OpenStreetMap-Karten dürfen über <code>https://www.openstreetmap.org/export/embed.html?...</code> eingebettet werden (auch ohne <code>www</code>). Verwende den HTML-Einbettungscode aus OpenStreetMap. Der Frame erhält eine begrenzte Sandbox ohne Zugriff auf den CMS-Tab und ohne Seiten-Referrer. Externe Karten und CSS-Ressourcen kontaktieren ihren Anbieter; weitere Ressourcen importierter Stylesheets werden nicht durch den Sanitizer geprüft.
 
 <pre><nowiki><img src="{{MeinElch:vehicle_images_exteriorImageUrl}}" alt="Fahrzeug" width="100%"></nowiki></pre>
 

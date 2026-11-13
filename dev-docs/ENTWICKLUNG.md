@@ -217,10 +217,20 @@ URLs werden nur als Template-Metadaten gehalten; erst nach Substitution
 und erneuter URL-Pruefung wird `src`/`href` gesetzt. Ungueltige Livewerte
 erzeugen einen sichtbaren Hinweis. Platzhalter in Text bleiben Text.
 Bildquellen setzen `referrerpolicy=no-referrer`, Links `rel=noopener noreferrer`.
-CSS-Netzwerkzugriffe bleiben gesperrt; SVG-Paintattribute erlauben lokale
+CSS-Ressourcen in `url()` und `@import` erlauben lokale/HTTPS-URLs; Kommentare
+werden vor der Pruefung entfernt, CSS-Escapes und ausfuehrbare Angaben
+bleiben gesperrt. Relative/absolute/fixed/sticky und `@keyframes` sind erlaubt.
+Die HTML-Kachel erhaelt inline `contain: layout paint !important`, damit
+feste Elemente nicht auf den gesamten CMS-Viewport ausgreifen.
+OSM-Iframes erlauben nur HTTPS auf openstreetmap.org/www.openstreetmap.org,
+Pfad `/export/embed.html`. Der Sanitizer setzt `sandbox=allow-scripts`,
+`referrerpolicy=no-referrer`, standardmaessig lazy loading; keine
+srcdoc-/Sandbox-/Berechtigungsattribute aus dem Quelltext.
+Externe CSS-Inhalte werden nicht nachgeladen oder rekursiv validiert.
+SVG-Paintattribute erlauben lokale
 `url(#id)`-Referenzen. Die erlaubte Attributmenge wird beim Pruefen und
 Sanitizing durch denselben Helper bestimmt. Backendpruefung in
-`t/01_fhemcms.t`, 48 Browserchecks in `t/78_freehtml.html` ueber den
+`t/01_fhemcms.t`, 77 Browserchecks in `t/78_freehtml.html` ueber den
 vorhandenen Runner. Keine KI-Integration aus #188 implementiert.
 
 ## Dokumentationen synchron halten

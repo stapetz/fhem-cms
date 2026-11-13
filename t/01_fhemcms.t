@@ -550,13 +550,25 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
         '<!-- Kopfzeile --><section style="display:grid;gap:14px"><figure><img src="{{Temp:imageUrl}}" alt="Bild"></figure></section>',
         '<a href="https://example.test/path?a=1&amp;b=2" target="_blank">Link</a>',
         '<img src="media/test.jpg"><div data-x="1">x</div>',
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="pv"><stop offset="0%" stop-color="#ff0"/></linearGradient></defs><path d="M0 0 L10 10" fill="url(#pv)"/></svg>') {
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="pv"><stop offset="0%" stop-color="#ff0"/></linearGradient></defs><path d="M0 0 L10 10" fill="url(#pv)"/></svg>',
+        '<style>@keyframes flow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}.badge{position:absolute}.flow{position:relative;animation:flow 1s infinite}</style>',
+        '<div style="position:fixed">Badge</div><div style="position:sticky">Badge</div>',
+        '<style>@import "https://example.test/theme.css";.pv{background:url(media/pv.png)}</style>',
+        '<style>@import url("https://example.test/theme.css") screen;.pv{fill:url(#pv)}</style>',
+        '<div style="background:url(&quot;https://example.test/pv.png?a=1&amp;b=2&quot;)"></div>',
+        '<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=1%2C2%2C3%2C4&amp;layer=mapnik" width="100%" height="300" frameborder="0" loading="lazy"></iframe>') {
         $w->{html} = $good;
         is(FHEMCMS_ValidateConfig($hcfg), undef, "fhem-html accepts: $good");
     }
     for my $bad ('<script>alert(1)</script>', '<img src="javascript:x">', '<div onclick="x()">a</div>', '<a href="javascript:x">a</a>',
-        '<iframe src="x"></iframe>', '<div style="background:url(x)">a</div>', '<div style="position:fixed">a</div>',
-        '<style>@import "x";</style>', '<!-- c', '<div', '<svg><foreignObject><p>x</p></foreignObject></svg>', "<p>a\x01</p>",
+        '<iframe src="x"></iframe>', '<div style="background:url(javascript:x)">a</div>',
+        '<style>@import "http://example.test/theme.css";</style>', '<!-- c', '<div', '<svg><foreignObject><p>x</p></foreignObject></svg>', "<p>a\x01</p>",
+        '<style>.x{background:url(//example.test/x)}</style>', '<style>.x{background:url(data:image/svg+xml,x)}</style>',
+        '<style>.x{background:u/**/rl(jav/**/ascript:x)}</style>', '<style>@import;</style>',
+        '<style>.x{background:url("unterminated)}</style>', '<div style="background:url(&#106;avascript:x)"></div>',
+        '<iframe src="https://openstreetmap.org.evil.test/export/embed.html"></iframe>',
+        '<iframe src="https://openstreetmap.org/export/embed.html" srcdoc="x"></iframe>',
+        '<iframe src="https://openstreetmap.org/export/embed.html" sandbox="allow-same-origin"></iframe>',
         '<svg onload="x()"></svg>', '<svg><use href="https://example.test/x.svg"/></svg>',
         '<svg><animate attributeName="href"/></svg>', '<svg><path fill="url(https://example.test/x)"/></svg>',
         '<img src="//example.test/x">', '<img src="data:image/svg+xml,x">', '<img src="{{Temp:image|prefix(javascript:)}}">',

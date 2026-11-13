@@ -101,7 +101,8 @@ class FHEMCMSHtml extends HTMLElement {
             </ul>
             <pre>${EXAMPLE.replace(/</g, '&lt;')}</pre>
             <p>Erlaubt sind passive HTML-Struktur, Tabellen, Kommentare, Flex-/Grid-CSS, sichere Links und Bilder sowie statisches SVG (Formen, Pfade, Text und lokale Verläufe). <code>id</code>, <code>class</code>, <code>style</code>, <code>title</code>, ARIA-/data-Attribute und Reading-Attribute sind möglich. Attribute bitte in doppelten Anführungszeichen schreiben.</p>
-            <p>Bildquellen und Links dürfen lokale Pfade oder HTTPS-URLs verwenden, auch als einzelner Reading-Platzhalter: <code>&lt;img src="{{MeinElch:vehicle_images_exteriorImageUrl}}"&gt;</code>. Der gelesene Wert wird vor jeder Anzeige erneut geprüft; externe Bilder übertragen Anfragen an ihren Anbieter. Skripte, Ereignis-Attribute, Formulare, Iframes, aktive SVG-Inhalte, CSS-Netzwerkzugriffe und <code>position: fixed/sticky</code> bleiben gesperrt.</p>
+            <p>Bildquellen, Links und CSS-Ressourcen (<code>url()</code>, <code>@import</code>) dürfen lokale Pfade oder HTTPS-URLs verwenden. Einzelne Bild-/Link-Readings wie <code>&lt;img src="{{MeinElch:vehicle_images_exteriorImageUrl}}"&gt;</code> werden bei jeder Anzeige geprüft. CSS-Animationen mit <code>@keyframes</code> und alle Positionierungsarten sind erlaubt; feste Elemente bleiben innerhalb der Kachel.</p>
+            <p>Standortkarten dürfen <code>&lt;iframe src="https://www.openstreetmap.org/export/embed.html?…"&gt;&lt;/iframe&gt;</code> verwenden, mit begrenzter Sandbox. Externe Bilder, Styles und Karten kontaktieren ihren Anbieter. Skripte im eigenen HTML, Ereignis-Attribute, Formulare, andere Iframes und aktive SVG-Inhalte bleiben gesperrt.</p>
             <p><a href="${HELP_URL}" target="_blank" rel="noopener noreferrer">Ausführliche Beschreibung (PLATZHALTER.md)</a></p>
           </details>
           <p class="hint" data-devices></p>
@@ -116,6 +117,7 @@ class FHEMCMSHtml extends HTMLElement {
     `;
 
     const $ = (selector) => this.shadowRoot.querySelector(selector);
+    $('[data-tile]').style.setProperty('contain', 'layout paint', 'important');
     $('[data-open-config]').addEventListener('click', () => this.openConfig());
     $('[data-cancel]').addEventListener('click', () => this.closeDialog(true));
     $('[data-delete]').addEventListener('click', () => this.onDelete());
