@@ -133,7 +133,7 @@ for (const [name, fixtures] of [
   ['Widget-Vorlagen speichern, Device-Referenzen ersetzen und als Entwurf einfügen',
     [['67_blueprints.html', 16]]],
   ['CMS-Verwaltung bestaetigt Sammelloeschung und trennt verwaiste Dateien',
-    [['69_cms_admin.html', 25]]],
+    [['69_cms_admin.html', 26]]],
   ['Einrichtungsassistent zeigt echten Fortschritt ohne historische Serienabfragen',
     [['53_schema5_setup_wizard.html', 59]]],
   ['direct widget deletion preserves the draft and handles errors', [['60_direct_widget_delete.html', 15]]],

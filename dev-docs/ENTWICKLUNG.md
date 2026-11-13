@@ -29,6 +29,10 @@ Beide Editor-Versionen verlinken sie im Dateimenue mit
 Buttonformatierung wie die anderen Eintraege; `CMS oeffnen` erscheint auf der
 Verwaltungsseite rechtsbuendig neben Checkbox und Device-Namen als Button-Link
 mit sichtbarem Rahmen, Hintergrund und mindestens 48px Hoehe.
+Die statische Verwaltungsseite versioniert ihre CSS-Dateien und ihr
+Einstiegsmodul mit `?v=admin-20261113-2`. Bei Aenderungen dieser Assets
+die gemeinsame Kennung erhoehen, damit bestehende Browsercaches nicht
+die alte Textlink-Darstellung beibehalten.
 `FHEM/lib/FHEMCMS/Admin.pm` registriert
 `/fhemcms-admin` als FHEMWEB-Erweiterung; private Verzeichnisse werden nicht
 statisch ausgeliefert. Das Modul muss geladen sein, auch wenn kein CMS mehr existiert.
