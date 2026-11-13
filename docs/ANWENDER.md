@@ -44,6 +44,9 @@ Die zentrale Verwaltung ist direkt unter `/fhem/fhem-cms/admin.html` erreichbar
 Freigabe mit `attr <CMS-Device> adminMenu 1` oeffnet im Bearbeitungsmodus
 **Datei → Globale FHEM-CMS Administration** dieselbe Seite in einem neuen Tab,
 auch im bisherigen Schema-4-Editor.
+Beim Aufruf uebernimmt die Administration das aktuelle CMS-Theme einschliesslich
+Seitenhintergrund und Liquid-Glass-Darstellung. Direktaufrufe ohne diesen
+Darstellungskontext verwenden weiterhin das dunkle Standardtheme.
 Ohne Attribut oder mit `adminMenu 0` ist der Menuepunkt ausgeblendet.
 Nach Aenderung die CMS-Seite neu laden. Die Freigabe gilt nur fuer den
 Menueeintrag, nicht als Zugriffsschutz fuer den direkten URL-Aufruf;

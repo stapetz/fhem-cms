@@ -1,8 +1,31 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { CmsAdminClient, validateInventory } from '../www/fhem-cms/js/cms-admin.js';
-import { createCmsAdminMenuLinks } from '../www/fhem-cms/js/cms-admin-link.js';
+import { applyCmsAdminAppearance, createCmsAdminMenuLinks } from '../www/fhem-cms/js/cms-admin-link.js';
 import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
+
+test('administration accepts bounded themes and local CMS backgrounds and rejects injected appearance', () => {
+  const styles = new Map();
+  let theme = 'dark';
+  const root = { setAttribute: (key, value) => { theme = value; },
+    style: { setProperty: (key, value) => styles.set(key, value) } };
+  for (const value of ['dark', 'light', 'liquid-glass', 'oled-black', 'catppuccin-mocha']) {
+    applyCmsAdminAppearance(root, `#theme=${value}`);
+    assert.equal(theme, value);
+  }
+  const background = `/custom/fhem-cms/CMS/media/${'a'.repeat(32)}.jpg`;
+  applyCmsAdminAppearance(root, `#${new URLSearchParams({
+    theme: 'liquid-glass', background, blur: '14.1', gloss: '0.094', opacity: '0.88',
+  })}`);
+  assert.equal(styles.get('--cms-page-image'), `url("${background}")`);
+  assert.equal(styles.get('--cms-liquid-blur'), '14.1px');
+  for (const params of [
+    { theme: 'unknown' }, { theme: 'dark', background: 'https://other.test/x.jpg' },
+    { theme: 'dark', background: background.replace('/CMS/', '/../') },
+    { theme: 'dark', blur: '31' }, { theme: 'dark', opacity: '-1' },
+    { theme: 'dark', gloss: 'url(x)' },
+  ]) assert.throws(() => applyCmsAdminAppearance(root, `#${new URLSearchParams(params)}`), /Ungültig/);
+});
 
 test('admin menu is hidden by default and enabled only by an explicit backend boolean', async () => {
   const client = new FhemClient('CMS', 'https://example.test/fhem/');

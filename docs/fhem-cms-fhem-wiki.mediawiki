@@ -52,6 +52,9 @@ aus dem Browsercache.
 Ohne Attribut oder bei <code>adminMenu 0</code> fehlt der Menuepunkt.
 Nach Attributaenderung die CMS-Seite neu laden. Dies steuert nur den
 Menueeintrag; direkte Zugriffe unterliegen weiterhin den FHEMWEB-Rechten.
+Beim Menueaufruf uebernimmt die Administration das aktuelle Theme, das
+Seitenhintergrundbild und die Liquid-Glass-Werte des aufrufenden CMS.
+Direktaufrufe ohne Darstellungskontext bleiben im dunklen Standardtheme.
 
 '''Nur Entwicklungsstand dev (geplant fuer 1.10.0):''' Magic verwendet das
 mitgelieferte Strandfoto als Hintergrund aller erzeugten Seiten, auch der

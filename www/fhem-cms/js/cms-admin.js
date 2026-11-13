@@ -1,4 +1,5 @@
 import { isValidName } from './fhem-client.js';
+import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261113-5';
 
 export function validateInventory(value) {
   if (!value || typeof value.token !== 'string' || !/^[0-9a-f]{64}$/.test(value.token) || !Array.isArray(value.items)
@@ -175,5 +176,12 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
 }
 
 if (typeof document !== 'undefined' && document.querySelector('.cms-admin')) {
-  mountCmsAdmin(document.documentElement);
+  try {
+    applyCmsAdminAppearance(document.documentElement, document.defaultView.location.hash);
+    mountCmsAdmin(document.documentElement);
+  } catch (error) {
+    const status = document.querySelector('#status');
+    status.textContent = error.message;
+    status.setAttribute('data-error', '');
+  }
 }
