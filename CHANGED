@@ -8,6 +8,12 @@
   Upload verhindern den Magic-Entwurf.
 - Bestehende Seiten werden nicht nachtraeglich veraendert.
 
+2026-11-13 - 1.10.0-dev: Globale Administration im CMS-Theme
+- Die globale Administration uebernimmt beim Menueaufruf Theme,
+  Seitenhintergrund und Liquid-Glass-Werte des aufrufenden CMS.
+- Die Darstellung bleibt beim Neuladen erhalten; direkte Aufrufe ohne Kontext
+  verwenden das dunkle Standardtheme.
+
 2026-11-12 - 1.9.1-dev: Kompakte Widget-Informationshierarchie
 - Geraete-/Widgetnamen werden als primaere Titel hervorgehoben; Wert- und
   Statuszeilen bleiben sichtbar und gedimmt.

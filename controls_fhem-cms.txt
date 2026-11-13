@@ -2,7 +2,7 @@ UPD 2026-11-13_09:19:01 149611 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-08_10:43:57 7458 www/fhem-cms/FCUI-LICENSES.txt
-UPD 2026-11-13_09:48:38 2572 www/fhem-cms/admin.html
+UPD 2026-11-13_10:06:04 2572 www/fhem-cms/admin.html
 UPD 2026-11-13_07:06:17 18401 www/fhem-cms/components/cms-button.js
 UPD 2026-11-13_07:06:17 15374 www/fhem-cms/components/cms-calllist.js
 UPD 2026-11-13_07:06:17 21916 www/fhem-cms/components/cms-chart.js
@@ -17,7 +17,7 @@ UPD 2026-11-13_07:06:17 28430 www/fhem-cms/components/cms-table.js
 UPD 2026-11-13_07:06:17 10023 www/fhem-cms/components/cms-text.js
 UPD 2026-11-13_07:06:17 38158 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-13_07:06:17 25621 www/fhem-cms/components/cms-value.js
-UPD 2026-11-13_08:58:55 1844 www/fhem-cms/css/cms-admin.css
+UPD 2026-11-13_10:06:04 2220 www/fhem-cms/css/cms-admin.css
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
 UPD 2026-11-13_08:52:24 45692 www/fhem-cms/css/fhem-cms.css
 UPD 2026-11-10_07:50:19 26290 www/fhem-cms/examples/fcui-check.html
@@ -29,8 +29,8 @@ UPD 2026-11-10_15:19:55 8043 www/fhem-cms/js/asset-exif.js
 UPD 2026-11-12_15:42:33 19879 www/fhem-cms/js/asset-image-editor.js
 UPD 2026-11-12_10:29:43 4879 www/fhem-cms/js/asset-image.js
 UPD 2026-11-12_15:42:33 38047 www/fhem-cms/js/asset-manager.js
-UPD 2026-11-13_09:48:38 397 www/fhem-cms/js/cms-admin-link.js
-UPD 2026-11-13_09:19:01 7615 www/fhem-cms/js/cms-admin.js
+UPD 2026-11-13_10:06:04 2577 www/fhem-cms/js/cms-admin-link.js
+UPD 2026-11-13_10:06:04 7959 www/fhem-cms/js/cms-admin.js
 UPD 2026-11-04_21:52:16 5087 www/fhem-cms/js/device-picker.js
 UPD 2026-11-12_11:01:52 7232 www/fhem-cms/js/device-preview.js
 UPD 2026-11-13_07:06:17 2398 www/fhem-cms/js/device-suggestions.js
