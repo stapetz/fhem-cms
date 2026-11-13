@@ -31,7 +31,7 @@ Buttonformatierung wie die anderen Eintraege; `CMS oeffnen` erscheint auf der
 Verwaltungsseite rechtsbuendig neben Checkbox und Device-Namen als Button-Link
 mit sichtbarem Rahmen, Hintergrund und mindestens 48px Hoehe.
 Die statische Verwaltungsseite versioniert ihre CSS-Dateien und ihr
-Einstiegsmodul mit `?v=admin-20261113-2`. Bei Aenderungen dieser Assets
+Einstiegsmodul mit `?v=admin-20261113-3`. Bei Aenderungen dieser Assets
 die gemeinsame Kennung erhoehen, damit bestehende Browsercaches nicht
 die alte Textlink-Darstellung beibehalten.
 `FHEM/lib/FHEMCMS/Admin.pm` registriert
@@ -52,8 +52,13 @@ gesperrt. Orphan-Zuordnung verlangt eine generierte Startseite oder eine
 validierte CMS-Konfiguration. Der vorhandene Purge wird auch als Vorpruefung
 verwendet; er validiert den Namen nun direkt an seiner Funktionsgrenze.
 
-Schreibzugriffe verlangen POST, den aktuellen FHEMWEB-CSRF-Token sowie
-`set`-/`delete`- und Device-Berechtigungen. Ein Snapshot-Token bindet die
+Schreibzugriffe verlangen POST und beachten die FHEMWEB-CSRF-Einstellung:
+Bei explizitem `csrfToken=none` am verwendeten FHEMWEB-Device entfaellt
+die CSRF-Pruefung. Andernfalls bleibt ein gueltiger Token erforderlich;
+ein lediglich fehlender Token schaltet die Pruefung nicht ab. Diese
+Kompatibilitaet ist kein eigener Ersatzschutz gegen fremde Webseiten.
+Die WEB-Konfiguration wird nicht veraendert. `set`-/`delete`- und
+Device-Berechtigungen bleiben erhalten. Ein Snapshot-Token bindet die
 Auswahl an Bestand, Device-NR und Dateimetadaten. Vor einer Batchaktion
 werden alle maximal 20 Eintraege geprueft. Purge und Delete laufen pro
 Device in dieser Reihenfolge; bei Purge-Fehler kein Delete. Teilerfolge

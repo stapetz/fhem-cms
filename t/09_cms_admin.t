@@ -156,6 +156,24 @@ $FW_webArgs{payload} = JSON::PP->new->encode({token => $value->{token}, confirma
     items => [{name => 'Later', kind => 'device'}]});
 (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=delete');
 ok(JSON::PP->new->decode($body)->{results}[0]{ok}, 'authenticated POST dispatches real deletion');
+delete($defs{WEB}{CSRFTOKEN});
+delete($FW_webArgs{fwcsrf});
+$FW_webArgs{payload} = '{}';
+(undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=delete');
+like(JSON::PP->new->decode($body)->{error}, qr/CSRF/, 'missing token alone does not disable server validation');
+$attr{WEB}{csrfToken} = 'none';
+@FW_httpheader = ('GET /fhem/fhemcms-admin?op=delete HTTP/1.1');
+(undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=delete');
+like(JSON::PP->new->decode($body)->{error}, qr/POST/, 'disabled CSRF still requires POST');
+@FW_httpheader = ('POST /fhem/fhemcms-admin?op=delete HTTP/1.1');
+create_cms('NoCsrf');
+$value = inventory();
+$FW_webArgs{payload} = JSON::PP->new->encode({token => $value->{token}, confirmation => 'DELETE',
+    items => [{name => 'NoCsrf', kind => 'device'}]});
+(undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=delete');
+ok(JSON::PP->new->decode($body)->{results}[0]{ok}, 'explicit csrfToken none permits confirmed deletion without token');
+ok(!$defs{NoCsrf} && !-d "$root/fhem-cms-data/NoCsrf", 'disabled-CSRF deletion actually purges and deletes test CMS');
+delete($attr{WEB}{csrfToken});
 like(FHEMCMS_Purge('../'), qr/Ungueltiger/, 'purge validates names at core boundary');
 delete($defs{$_}) for grep { ($defs{$_}{TYPE} // '') eq 'FHEMCMS' } keys %defs;
 $value = inventory();
