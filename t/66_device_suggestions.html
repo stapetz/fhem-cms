@@ -210,7 +210,7 @@ try {
   table.closeConfig(false);
   table.remove();
 
-  result.textContent = `PASS (${checks.length} checks)\n${checks.join('\n')}`;
+  result.textContent = JSON.stringify({ checks: checks.length, messages: checks });
   result.dataset.result = 'pass';
 } catch (error) {
   result.textContent = `FAIL: ${error.stack || error.message}`;
