@@ -118,11 +118,11 @@ Das Root-Layout des Frameworks unterstützt drei frei wählbare Struktur-Modi. D
 :root {
   --fcui-sidebar-width: 240px;
   --fcui-header-height: 60px;
-  --fcui-grid-gap: 16px;
-  --fcui-card-bg: #1e1e1e;
-  --fcui-text: #ffffff;
-  --fcui-accent: #ff9900;
-  --fcui-border-radius: 16px;
+  --fcui-grid-gap: 14px;
+  --fcui-card-bg: rgba(128,128,128,.08);
+  --fcui-text: inherit;
+  --fcui-accent: #3b82f6;
+  --fcui-border-radius: 14px;
 }
 
 /* --- Globale App Shell Zuweisung --- */
@@ -599,10 +599,58 @@ Die ergänzenden, anwendungsorientierten Regeln und die Abnahmecheckliste stehen
 beide Dokumente anzuwenden; offene Funktionsideen im Leitfaden sind dagegen keine
 automatisch freigegebenen Architektur- oder Implementierungsentscheidungen.
 
-### 5.1 Informationsdichte (Die Zwei-Zeilen-Regel)
-Standard-Kacheln dürfen den Nutzer nicht mit Text überladen. Jede Karte ist strikt hierarchisch aufgebaut:
-1.  **Zeile 1 (Primär):** Name des Geräts/Gewerks (z. B. *Stehlampe*) -> Fett, Schriftgröße `15px`.
-2.  **Zeile 2 (Sekundär):** Statuswert oder Sensor-Reading (z. B. *Eingeschaltet - 42W*) -> Matt/gedimmt, Schriftgröße `12px`.
+### 5.1 Verbindliches Widget-Design (Refs #196)
+
+Die Designvorgaben aus dem
+[Google-Grundprompt](./google_prompt_fuer_widgets.md) ersetzen die bisherigen
+optischen Widget-Vorgaben, insbesondere die starre Zwei-Zeilen-Regel mit
+15/12-Pixel-Schrift und die bisherige Farbpalette. Architektur, gespeicherte
+Konfigurationen, Sanitizer, sichere Bedienung und Barrierefreiheit bleiben
+verbindlich. Technische Ausgabevorgaben für KI-HTML sind keine neue Freigabe
+für Skripte oder Befehle in Widgets.
+
+Ziel ist dieses Design für alle Widgets. Die Umstellung erfolgt schrittweise:
+**zunächst ausschließlich das Tabellenwidget**. Andere Widgets bleiben bis zu
+ihrer eigenen Umstellung unverändert; dies ist keine bereits abgeschlossene
+globale Designmigration.
+
+- **Basis:** `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`,
+  geerbte Textfarbe, volle verfügbare Breite/Höhe, `border-box`, vertikale
+  Flexbox, 14px Abstand und 8px Innenabstand.
+- **Kopfzeile:** Flexbox mit `space-between`, vertikal zentriert, 8px Abstand
+  unten, untere Linie `1px solid rgba(128,128,128,.25)`. Titel 1.4rem/fett,
+  optional fachlich passendes Emoji; Untertitel .86rem mit Deckkraft .72.
+  Vorhandene Titel und deren Sichtbarkeit/Ausrichtung bleiben erhalten.
+  Keine erfundenen Untertitel, Badges oder Zustände zur Dekoration hinzufügen.
+- **Status-Badge, falls fachlich vorhanden:** Radius 20px, Innenabstand
+  4px 12px, Schrift .8rem/600.
+- **Mehrteilige Widgets:** CSS-Grid mit
+  `repeat(auto-fit, minmax(min(100%, 300px), 1fr))` und 14px Abstand.
+  Die Ergänzung `min(100%, 300px)` verhindert Überlauf unter 300px
+  tatsächlicher Kachelbreite; die Browserbreite allein ist kein Maßstab.
+- **Hero-Karte:** Radius 16px, Innenabstand 16px,
+  `linear-gradient(135deg, rgba(16,185,129,.15), rgba(59,130,246,.12))`,
+  Rahmen `1px solid rgba(16,185,129,.35)`.
+  Primärwert 2.7rem/800, Sekundärwert 1.75rem/700, Fortschrittsbalken
+  13px hoch mit Radius 99px. Sub-Pills erhalten Radius 10px und
+  `rgba(128,128,128,.12)` als Hintergrund.
+- **Detail-Karte:** `rgba(128,128,128,.08)` als Hintergrund, Rahmen
+  `1px solid rgba(128,128,128,.18)`, Radius 14px, Innenabstand 14px.
+  Kartenüberschrift mit unterer Linie `rgba(128,128,128,.2)`.
+  Key-Value-Zeilen mit gegenüberliegenden Bezeichnern/Werten,
+  Schrift .86rem und Trennlinien `rgba(128,128,128,.1)`.
+  Tabellen behalten ihre semantischen Spalten und numerisch ausgerichteten
+  Werte; nicht jede Datentabelle benötigt eine Hero-Karte.
+- **Fußzeile, falls vorhanden:** Flexbox mit `space-between`,
+  Schrift .75rem und Deckkraft .65.
+
+Text darf auf kleinen Kacheln nicht auf unlesbare Container-Schriftgrößen
+schrumpfen. Lange Bezeichner/Werte umbrechen, zusätzliche Zeilen vertikal
+scrollen. Keine horizontale Seitenverbreiterung. Transparente Flächen
+übernehmen das bestehende Hell-/Dunkel-Theme; tatsächlichen Textkontrast
+weiterhin prüfen. Dialogfunktionen und vorhandene Benutzerfarben bleiben
+erhalten. Jede Umstellung prüft Phone-, Tablet- und Desktop-Kachelgrößen,
+beide Themes, Liveupdates und unveränderte gespeicherte Konfigurationen.
 
 ### 5.2 Touchscreen-Optimierung für Wandtablets
 *   **Mindest-Interaktionsfläche:** Kein klickbares Element oder Steuerung darf eine physische Touch-Fläche von weniger als **`48px × 48px`** aufweisen, um Fehlbedienungen an der Wand zu minimieren.
@@ -649,11 +697,21 @@ prüfen. Bestehende Referenztests:
 [`44_placeholder_units.html`](../t/44_placeholder_units.html) und
 [`46_unit_inputs.html`](../t/46_unit_inputs.html).
 
-### 5.4 Semantische Farb-Zustände nach Gewerken
-Farbkodierung ist ein Zusatzsignal und nur für eindeutig bekannte fachliche Zustände zulässig. Aktive Zustände können flächig die Hintergrundbeleuchtung oder die Farbintensität des zugehörigen Icons verändern:
-*   💡 **Beleuchtungs-Gewerk:** Kräftiges, warmes Amber/Gelb (`#ffb300`) für aktive Leuchtmittel.
-*   🌡️ **Klima / Heizungs-Gewerk:** Signal-Orange/Rot (`#ff5722`) im aktiven Heizmodus, kühles Blau (`#2196f3`) im Kühlmodus.
-*   🔒 **Sicherheits-Gewerk (Fenster, Türen, Alarme):** Sattes Grün (`#4caf50`) für geschlossene/sichere Zustände, Warn-Rot (`#f44336`) für offene Kontakte oder anstehende Alarme.
+### 5.4 Verbindliche semantische Farbpalette
+
+Farbkodierung ist ein Zusatzsignal und nur für eindeutig bekannte fachliche
+Zustände zulässig. Die neue Palette ersetzt die bisherigen Designfarben:
+
+| Bedeutung | Akzent | Transparente Fläche |
+|---|---|---|
+| OK, Akku, Ertrag; geschlossener/sicherer Zustand | `#10b981` | `rgba(16,185,129,.15)` |
+| Verbrauch, Reichweite, Ist; Kühlung | `#3b82f6` | `rgba(59,130,246,.15)` |
+| PV, Laden, Soll; Beleuchtung/Heizen | `#f59e0b` | `rgba(245,158,11,.15)` |
+| Netz, Information | `#8b5cf6` | `rgba(139,92,246,.15)` |
+| Fehler, Bezug, Alarm; offener Sicherheitskontakt | `#ef4444` | `rgba(239,68,68,.15)` |
+
+Eine generische Tabelle färbt Messwerte nicht allein anhand ihres Vorzeichens
+oder Readingnamens ein. Bedeutung und Farbe müssen fachlich gesichert sein.
 
 Generische Schalter kennen kein Gewerk und dürfen „An“ daher nicht pauschal als
 sicher/erfolgreich grün markieren. An, Aus und unbekannt erhalten zusätzlich

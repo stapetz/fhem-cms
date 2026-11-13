@@ -21,6 +21,21 @@ verbindlich. Insbesondere bleiben bestehende Daten und die beiden
 [Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) erhalten; Codebeispiele des
 Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherung.
 
+## Widget-Design: Tabellenpilot (dev, 1.11.0-dev, Refs #196)
+
+Die optischen Vorgaben aus `google_prompt_fuer_widgets.md` ersetzen im
+fuehrenden Styleguide die bisherigen Widget-Schrift- und Farbregeln.
+Sicherheits-, Bedienungs- und Barrierefreiheitsregeln bleiben bestehen.
+Zunaechst ist nur `cms-table` umgestellt: Systemschrift, geerbte Textfarbe,
+1.4rem-Titel, .86rem-Tabellenzeilen und neutrale Detail-Karte mit 14px
+Radius/Innenabstand. Lange Texte umbrechen, weitere Zeilen scrollen innerhalb
+der Karte. Bestehende Titel-/Spaltenoptionen, Summen, Einheiten und Liveupdates
+bleiben unveraendert. Keine Migration von Konfigurationen; andere Widgets
+folgen erst in eigenen Umstellungen.
+
+Pruefung: `t/81_table_design.html` im Chrome-Runner, dazu Tabellenlabels,
+Einheiten, Dialoge, Titel-Ausrichtung und Einrichtungsassistent.
+
 ## Zentrale CMS-Verwaltung (dev, 1.10.0-dev, Refs #177)
 
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.

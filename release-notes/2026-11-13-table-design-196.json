@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Klares Widget-Design: Tabellen als Pilot",
+  "changes": [
+    "Der Widget-Styleguide uebernimmt das neue neutrale Karten-Design mit Systemschrift und einheitlicher Farbpalette.",
+    "Zunaechst verwendet nur das Tabellenwidget die neue Darstellung: klare Titel, dezente Flaechen und Trennlinien, lesbare Zeilen und umbrechende Werte.",
+    "Titel-, Spalten-, Summen- und Einheitenoptionen sowie gespeicherte Konfigurationen bleiben erhalten; andere Widgets werden noch nicht umgestellt."
+  ]
+}
