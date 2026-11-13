@@ -108,6 +108,8 @@ class FHEMCMSValue extends HTMLElement {
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
         ${unitInputCss}
+        .tile .value { color: inherit; font-weight: 800; }
+        .tile .unit { color: inherit; opacity: .72; }
       </style>
       <article class="tile" data-tile>
         <header data-header hidden>

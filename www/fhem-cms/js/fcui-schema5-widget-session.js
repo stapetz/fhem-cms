@@ -116,7 +116,7 @@ export class Schema5WidgetSession {
         && Number.isInteger(candidate.limit) && candidate.limit >= 1 && candidate.limit <= 20) {
         const state = this.#controller.snapshot();
         const scale = Number((state.draft || state.live).settings.gridColumns) / 12;
-        candidate.grid.h = (2 + Math.ceil(candidate.limit * 0.8)) * scale;
+        candidate.grid.h = (3 + Math.ceil(candidate.limit * 0.9)) * scale;
       }
       return this.#controller.saveWidget(this.#pageId, candidate, this.#token, this.#action, approvedLayout);
     });

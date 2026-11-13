@@ -59,7 +59,7 @@ try {
   for (const limit of [1, 5, 20]) {
     widget.config = { ...config, limit };
     widget.style.width = '360px';
-    widget.style.height = `${(2 + Math.ceil(limit * 0.8)) * 60}px`;
+    widget.style.height = `${(3 + Math.ceil(limit * 0.9)) * 60}px`;
     const tile = $('[data-tile]');
     check(tile.scrollHeight <= tile.clientHeight,
       `${limit} calls fit the initial grid height at 720px grid width: ${tile.scrollHeight}/${tile.clientHeight}`);
@@ -177,7 +177,7 @@ try {
   equal(savedWidget.type, 'fhem-calllist', 'draft contains the new widget');
   equal(savedWidget.device, 'Calls', 'draft retains selected device');
   equal(savedWidget.limit, 5, 'draft retains default limit');
-  equal(savedWidget.grid, { col: 1, row: 2, w: 6, h: 6 }, 'five calls use compact initial geometry');
+  equal(savedWidget.grid, { col: 1, row: 2, w: 6, h: 8 }, 'five calls reserve space for readable heading and rows');
   panel.remove();
   const detect = document.createElement('cms-calllist');
   detect.config = { ...config, device: '' };

@@ -70,6 +70,18 @@ Teilflaechen. Digitale/analoge Uhr, Datum, Sekunden, Timer-Cleanup, Bilder,
 Linkziele und internes Linkraster bleiben erhalten. Keine automatische
 Migration oder Aenderung produktiver Konfigurationen.
 
+## Vollstaendige Widget-Designmigration (dev, 1.11.0-dev, Refs #199)
+
+Nach den vier Piloten sind auch Thermostat, Wert, Schalter, Taster, Status-Symbol,
+Schieberegler, Wertauswahl, Diagramm, Anrufliste sowie die Huelle von Text/Freiem
+HTML umgestellt. `js/widget-design.js` stellt gemeinsame Huelle und Kopfzeile
+bereit. Selbst verfasste Inhalte und Benutzerfarben bleiben erhalten.
+Fachlich mehrteilige Widgets erhalten neutrale transparente Detailflaechen.
+Kleine Kacheln scrollen, statt Titel oder Text unlesbar zu verkleinern; Steuerungen
+behalten mindestens 48px Touchflaeche. Bestehende Raster bleiben unveraendert,
+nur neue Anruflisten reservieren mehr Anfangshoehe. Siehe Styleguide und
+`t/84_widget_design.html` sowie bestehende Groessen-/Funktionsregressionen.
+
 ## Zentrale CMS-Verwaltung (dev, 1.10.0-dev, Refs #177)
 
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.

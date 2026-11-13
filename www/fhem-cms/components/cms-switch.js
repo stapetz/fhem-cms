@@ -56,13 +56,13 @@ class FHEMCMSSwitch extends HTMLElement {
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         ${fittedContentCss}
         .toggle { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 0.14em; padding: 0.15em; flex: none; border-radius: 0.3em;
-          background: var(--cms-bg, #17211d); border: 0.08em solid var(--cms-border, #43564a); position: relative; cursor: pointer; }
+          background: rgba(128,128,128,.08); border: 1px solid rgba(128,128,128,.18); position: relative; cursor: pointer; }
         .toggle[data-unknown] { border-style: dashed; }
         .state-mark { display: inline-block; flex: none; text-align: center; font-size: 0.75em; font-weight: 700; line-height: 1; }
         .state-mark[hidden], .state[hidden] { display: none; }
         .label { white-space: nowrap; line-height: 1.1; }
         .label[hidden] { display: none; }
-        .state { color: var(--cms-muted, #a5c9b2); font-size: 0.75em; line-height: 1.1; white-space: nowrap; }
+        .state { color: inherit; font-size: 0.75em; line-height: 1.1; white-space: nowrap; }
         .toggle:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 3px; }
         .toggle:disabled { cursor: default; }
         .glyph { display: inline-block; flex: none; width: 1.1em; height: 1.1em; background-color: var(--cms-icon-color);

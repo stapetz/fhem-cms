@@ -46,7 +46,7 @@ class FHEMCMSIcon extends HTMLElement {
         .glyph { display: block; width: 1em; height: 1em; background-color: var(--state-color, var(--cms-accent, #8fd0a8));
           -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
         .glyph[hidden] { display: none; }
-        .state { color: var(--cms-muted, #a5c9b2); font-size: 0.75em; white-space: nowrap; text-align: center; line-height: 1.1; }
+        .state { color: inherit; font-size: 0.75em; white-space: nowrap; text-align: center; line-height: 1.1; }
         .state:empty { display: none; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
         .tile[data-stale] { opacity: 0.65; border-style: dashed; }

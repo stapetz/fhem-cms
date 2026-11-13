@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Einheitliches themegerechtes Design aller bestehenden Widgets",
+  "changes": [
+    "Die elf verbliebenen Widgettypen folgen jetzt dem neuen Design mit klaren Titeln, Systemschrift und transparenten Teilflaechen.",
+    "Alle Seitenthemes und laufende Glass-Einstellungen bleiben erhalten; eigene HTML-/Textformatierungen, Symbolfarben und gespeicherte Raster bleiben unveraendert.",
+    "Kleine Widgets bleiben lesbar und scrollbar, Steuerungen behalten 48px Touchflaeche. Neue Anruflisten erhalten eine passende Anfangshoehe."
+  ]
+}

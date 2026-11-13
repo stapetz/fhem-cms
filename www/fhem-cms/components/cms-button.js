@@ -47,12 +47,12 @@ class FHEMCMSButton extends HTMLElement {
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         ${fittedContentCss}
         .push { display: inline-flex; align-items: center; justify-content: center; gap: 0.14em;
-          padding: 0.25em 0.35em; border-radius: 0.35em; border: 0.06em solid var(--cms-accent, #8fd0a8); background: var(--cms-accent-strong, #2f6b47); color: var(--cms-on-accent, #e9f8ee);
+          padding: 0.25em 0.35em; border-radius: 14px; border: 1px solid rgba(16,185,129,.35); background: rgba(16,185,129,.15); color: inherit;
           font-size: 1em; line-height: 1.1; font-weight: 600; transition: background 0.15s, transform 0.1s; }
-        .push:hover { background: var(--cms-accent-hover, #3a7f55); }
+        .push:hover { background: rgba(16,185,129,.25); }
         .push:active { transform: scale(0.96); }
         .push:disabled { cursor: default; opacity: 0.7; }
-        .push[data-done] { background: var(--cms-accent, #8fd0a8); color: var(--cms-bg, #17211d); }
+        .push[data-done] { background: rgba(16,185,129,.25); border-color: #10b981; }
         .label { white-space: nowrap; }
         .label[hidden] { display: none; }
         .glyph { display: inline-block; flex: none; width: 1.1em; height: 1.1em; background-color: currentColor;

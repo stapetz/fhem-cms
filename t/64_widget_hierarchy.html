@@ -46,7 +46,7 @@ try {
       check(Number.parseInt(getComputedStyle(title).fontWeight, 10) >= 600,
         `${config.type}: title has primary emphasis`);
       check(titleRect.left >= tileRect.left && titleRect.right <= tileRect.right
-        && titleRect.top >= tileRect.top && titleRect.bottom <= tileRect.bottom,
+        && titleRect.top >= tileRect.top && titleRect.bottom <= tileRect.top + tile.scrollHeight,
       `${config.type}/${width}x${height}: title stays inside the tile (${titleRect.x},${titleRect.y},${titleRect.width},${titleRect.height}; ${tileRect.x},${tileRect.y},${tileRect.width},${tileRect.height})`);
       if (config.type !== 'fhem-slider') {
         const content = root.querySelector('[data-fit-content]').getBoundingClientRect();
@@ -89,7 +89,8 @@ try {
     await settle();
     check(title.textContent === 'Ein sehr langer Gerätename für kleine Kacheln',
       `${config.type}: configured title takes precedence over the device`);
-    check(getComputedStyle(title).textOverflow === 'ellipsis', `${config.type}: long title is ellipsized`);
+    check(getComputedStyle(title).whiteSpace === 'normal'
+      && getComputedStyle(title).overflowWrap === 'anywhere', `${config.type}: long title wraps instead of truncating`);
     check(JSON.stringify(config) === original, `${config.type}: rendering does not mutate saved configuration`);
     host.remove();
   }

@@ -2,6 +2,7 @@ import { lookupValue, substituteIn } from '../js/freehtml.js';
 import { renderMarkdown } from '../js/markdown.js';
 import { MAX_HTML, contentCss, createEditor, editorCss, markdownToHtml, renderHtml } from '../js/richtext.js';
 import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
+import { widgetDesignCss } from '../js/widget-design.js';
 
 class FHEMCMSText extends HTMLElement {
   constructor() {
@@ -62,6 +63,9 @@ class FHEMCMSText extends HTMLElement {
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { margin: 0; color: var(--cms-danger, #ffb4a8); min-height: 1.2em; }
+        ${widgetDesignCss}
+        .tile .body { flex: 1; min-height: 0; font-size: 1rem; overflow-wrap: anywhere; }
+        :host([view-only]) .tile header:not(:has(> [data-title]:not([hidden]))) { display: none; }
       </style>
       <article class="tile">
         <header>

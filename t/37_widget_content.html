@@ -35,9 +35,13 @@ const measure = (host, context) => {
   const title = $('[data-header]').getBoundingClientRect();
   const status = $('[data-msg]')?.getBoundingClientRect();
   const ratio = Math.max(group.width / area.width, group.height / area.height);
-  check(ratio >= 0.90 && ratio <= 1.005, `${context}: occupancy ${ratio}`);
-  check(group.left >= area.left - 1 && group.right <= area.right + 1
-    && group.top >= area.top - 1 && group.bottom <= area.bottom + 1, `${context}: content stays inside usable area`);
+  const fontSize = Number.parseFloat(getComputedStyle($('.main')).fontSize);
+  check(fontSize >= 12, `${context}: content never shrinks below readable 12px`);
+  check(ratio >= 0.90 && (ratio <= 1.005 || fontSize <= 12.01), `${context}: occupancy or readable scrolling ${ratio}`);
+  check(group.left >= area.left - 1 && group.top >= area.top - 1,
+    `${context}: content starts within scrollable usable area`);
+  check($('.main').scrollWidth >= group.width - 1 && $('.main').scrollHeight >= group.height - 1,
+    `${context}: complete content remains reachable in usable area`);
   check(!title.height || group.top >= title.bottom, `${context}: no title overlap`);
   check(!status?.height || group.bottom <= status.top, `${context}: no error overlap`);
   for (const selector of ['[data-value]', '[data-label]', '[data-state]']) {
@@ -91,7 +95,8 @@ try {
   fixture.append(slider);
   await settle();
   const range = slider.shadowRoot.querySelector('input[type="range"]').getBoundingClientRect();
-  check(range.width / slider.getBoundingClientRect().width > 0.92, 'Slider reaches near both widget edges');
+  check(range.width >= slider.shadowRoot.querySelector('.tile').clientWidth - 17,
+    'Slider fills the inner widget width including a possible vertical scrollbar');
   slider.remove();
   check(observers === 0, 'No observers left behind');
   output.dataset.result = 'pass';

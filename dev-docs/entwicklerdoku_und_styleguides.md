@@ -609,10 +609,22 @@ Konfigurationen, Sanitizer, sichere Bedienung und Barrierefreiheit bleiben
 verbindlich. Technische Ausgabevorgaben für KI-HTML sind keine neue Freigabe
 für Skripte oder Befehle in Widgets.
 
-Ziel ist dieses Design für alle Widgets. Die Umstellung erfolgt schrittweise:
-**Tabelle, SolarFlow, Uhr und Linkwidget** (Refs #196, #197, #198). Andere Widgets bleiben bis zu
-ihrer eigenen Umstellung unverändert; dies ist keine bereits abgeschlossene
-globale Designmigration.
+Alle 15 bestehenden Widgettypen sind auf `dev` umgestellt (Refs #196–#199):
+Tabelle, SolarFlow, Uhr, Linkwidget, Thermostat, Wert-Anzeige, Schalter, Taster,
+Status-Symbol, Schieberegler, Wertauswahl, Diagramm, Anrufliste, Textbaustein
+und Freies HTML. Bei Freiem HTML und Text betrifft dies nur die native Hülle:
+selbst verfasste Inhalte und explizite Benutzerfarben werden nicht umgestaltet.
+Navigation und Verwaltungsdialoge sind keine zusätzlichen Daten-Widgettypen.
+
+Die elf nachgezogenen Typen verwenden `js/widget-design.js` als gemeinsame
+Designbasis. `widget-content-fit.js` ergänzt die messende Inhaltsanpassung für
+Wert, Schalter, Taster und Symbol: mindestens 12px Text, mindestens 48px
+Touchfläche, bei Platzmangel scrollbare Inhalte statt unlesbarer Verkleinerung.
+Auch die Kopfzeile liegt im normalen Layoutfluss und überlagert keine Inhalte.
+Bestehende Raster werden nicht migriert. Neu angelegte Anruflisten erhalten
+mehr Anfangshöhe für die lesbare Kopfzeile und Tabellenzeilen.
+Regression: `t/84_widget_design.html` erfasst alle elf Typen im echten Raster
+mit gemessenen Kachelbreiten und laufenden Theme-/Glass-Wechseln.
 
 - **Basis:** `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`,
   geerbte Textfarbe, volle verfügbare Breite/Höhe, `border-box`, vertikale

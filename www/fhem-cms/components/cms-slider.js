@@ -46,7 +46,6 @@ class FHEMCMSlider extends HTMLElement {
     }
     this.shadowRoot.innerHTML = `
       <style>
-        ${widgetHierarchyCss}
         [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
@@ -92,6 +91,11 @@ class FHEMCMSlider extends HTMLElement {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a9a8f' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
+        ${widgetHierarchyCss}
+        .tile .value { font-size: 2.7rem; font-weight: 800; color: inherit; flex-wrap: wrap; }
+        .tile .reading, .tile .range { color: inherit; font-size: .86rem; opacity: .72; }
+        .tile .status { font-size: .86rem; }
+        .tile input[type="range"] { min-height: 48px; flex: none; }
       </style>
       <article class="tile" data-tile>
         <header><h3 data-title></h3></header>
