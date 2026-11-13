@@ -259,6 +259,22 @@ Shadow-DOM-Vertrag umgeschrieben, ohne den CMS-Router zu navigieren.
 Importierte CSS-Dateien sind eine ausdruecklich freigegebene Ausnahme:
 deren Inhalt wird nicht durch Positivliste/z-index-Pruefung validiert.
 
+Lokale Fahrzeugkarten im HTML: `div[id][data-map="vehicle"]` mit live
+substituierten data-latitude/data-longitude und data-zoom (2-19, Default 16).
+`vehicle-map.js` verwaltet Leaflet-Instanzen pro Widget/id; Re-Rendering
+verwendet die vorhandenen Karten-DOM-Knoten. Nur geaenderte Koordinaten
+zentrieren neu, mit bestehendem Zoom; Aenderung der konfigurierten Zoomstufe
+setzt den neuen Wert. Entfernen/Disconnect loest Instanz und ResizeObserver.
+Jede Karte hat einen eigenen Shadow-DOM-Stilbereich mit lokal gebautem CSS,
+weissem SVG-Automarker und sichtbarer OSM-Attribution. Ungueltige Daten entfernen
+Marker/Tiles mit Statusmeldung; Tile-/CSS-Ladefehler bleiben sichtbar.
+Leaflet 1.9.4 (BSD-2-Clause) wird ueber den bestehenden Build lokal ausgeliefert,
+inklusive Lizenz in FCUI-LICENSES.txt. Historische IE-VML-behavior-Regel wird
+beim CSS-Build entfernt; PNG-Ressourcen sind im CSS eingebettet.
+Tests: `t/80_vehicle_map.html` im Chrome-Runner (Livedaten, Zoom/Pan,
+Marker, Attribution, Fehler/Recovery, Resize, Cleanup/Reconnect).
+Nur Kartendaten werden von tile.openstreetmap.org geladen, kein Remote-JS.
+
 ## Dokumentationen synchron halten
 
 Der FHEM-Wiki-Onepager wird als MediaWiki-Quelltext in

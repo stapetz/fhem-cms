@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "gridstack": "14.1.0",
+    "leaflet": "1.9.4",
     "lit": "3.3.3"
   },
   "devDependencies": {

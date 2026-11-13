@@ -529,6 +529,12 @@ Numerische Reading-Platzhalter sind in Inline-Styles möglich, etwa <code>style=
 
 Bildquellen und Links dürfen lokale Pfade oder HTTP-/HTTPS-URLs sein. Ein einzelner ungefilterter Reading-Platzhalter als gesamter <code>src</code>- oder <code>href</code>-Wert wird bei jeder Anzeige aufgelöst und erneut geprüft. Ungültige oder fehlende URLs erzeugen einen sichtbaren Hinweis statt einer Anfrage. Externe Bilder kontaktieren ihren Anbieter ohne Seiten-Referrer; Links in neuen Tabs dürfen den CMS-Tab nicht steuern. Keine <code>javascript:</code>-, <code>data:</code>- oder protokollrelativen URLs.
 
+=== Lokale Fahrzeugkarte (dev) ===
+
+<pre><nowiki><div id="volvo-map" data-map="vehicle" data-latitude="{{MeinElch:location_latitude}}" data-longitude="{{MeinElch:location_longitude}}" data-zoom="16" style="width:100%;height:175px"></div></nowiki></pre>
+
+Die lokal ausgelieferte Leaflet-Karte zeigt ein weißes Auto an den Live-Koordinaten. Ein Standortwechsel zentriert die Karte; unveränderte Readings erhalten Zoom und Kartenausschnitt. Zoom 2–19, Standard 16. Ungültige/fehlende Koordinaten und Kachelfehler werden sichtbar gemeldet. Kartenkacheln kommen weiterhin extern von OpenStreetMap; die Kachelanfragen übertragen den dargestellten Bereich an den Anbieter. Die Karte ist nicht offline.
+
 == Assetmanager: gemeinsame Bilder und Dokumente ==
 
 Über '''Datei → Assetmanager''' verwaltest du Dateien unabhängig vom gerade bearbeiteten Widget. Textwidget und LinkWidget verwenden denselben Katalog des CMS-Devices.
