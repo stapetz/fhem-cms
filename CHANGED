@@ -63,6 +63,15 @@ Administration
   Upload verhindern den Magic-Entwurf.
 - Bestehende Seiten werden nicht nachtraeglich veraendert.
 
+2026-11-13 - 1.11.0-dev: CSS-Gestaltung und OpenStreetMap im freien HTML
+- CSS url() und @import erlauben gepruefte lokale und HTTPS-Ressourcen.
+- Alle Positionierungsarten und CSS-Keyframe-Animationen sind erlaubt; feste
+  Elemente bleiben innerhalb der Kachel.
+- OpenStreetMap-Karten koennen ueber export/embed.html mit begrenzter Sandbox
+  eingebettet werden.
+- Skripte im eigenen HTML, Eventhandler, aktive SVG-Inhalte und unsichere
+  URL-Schemata bleiben gesperrt.
+
 2026-11-13 - 1.11.0-dev: Mehr passive Gestaltung im freien HTML
 - Freies HTML erlaubt Kommentare, weitere Strukturelemente, sichere Links und
   Bilder sowie statisches SVG.

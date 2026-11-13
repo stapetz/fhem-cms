@@ -1,4 +1,4 @@
-UPD 2026-11-13_15:55:34 154828 FHEM/01_FHEMCMS.pm
+UPD 2026-11-13_16:25:22 156159 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-08_10:43:57 7458 www/fhem-cms/FCUI-LICENSES.txt
@@ -7,7 +7,7 @@ UPD 2026-11-13_07:06:17 18401 www/fhem-cms/components/cms-button.js
 UPD 2026-11-13_07:06:17 15374 www/fhem-cms/components/cms-calllist.js
 UPD 2026-11-13_15:13:59 22253 www/fhem-cms/components/cms-chart.js
 UPD 2026-11-13_07:06:17 13985 www/fhem-cms/components/cms-clock.js
-UPD 2026-11-13_15:55:34 14501 www/fhem-cms/components/cms-html.js
+UPD 2026-11-13_16:25:22 14892 www/fhem-cms/components/cms-html.js
 UPD 2026-11-13_07:06:17 18582 www/fhem-cms/components/cms-icon.js
 UPD 2026-11-13_07:06:17 28619 www/fhem-cms/components/cms-link.js
 UPD 2026-11-13_11:48:14 22580 www/fhem-cms/components/cms-select.js
@@ -62,7 +62,7 @@ UPD 2026-11-12_17:22:24 4819 www/fhem-cms/js/fcui-schema5-widget-session.js
 UPD 2026-11-13_07:06:17 6815 www/fhem-cms/js/fcui-schema5-widgets.js
 UPD 2026-11-13_09:56:15 22418 www/fhem-cms/js/fhem-client.js
 UPD 2026-11-13_15:48:11 81247 www/fhem-cms/js/fhem-cms.js
-UPD 2026-11-13_15:55:34 16535 www/fhem-cms/js/freehtml.js
+UPD 2026-11-13_16:25:22 18100 www/fhem-cms/js/freehtml.js
 UPD 2026-11-13_15:48:11 930 www/fhem-cms/js/grid-preference.js
 UPD 2026-11-10_09:09:16 4991 www/fhem-cms/js/icon-picker.js
 UPD 2026-11-08_11:00:11 7487 www/fhem-cms/js/layout.js
