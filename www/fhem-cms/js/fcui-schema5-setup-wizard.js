@@ -41,6 +41,12 @@ function safeRoomName(value) {
     : '';
 }
 
+function temperatureReadings(readings) {
+  return Object.fromEntries(Object.entries(readings).filter(([, value]) =>
+    (typeof value === 'string' || typeof value === 'number')
+    && String(value).trim() !== '' && Number.isFinite(Number(value))));
+}
+
 export function groupSchema5DevicesByRoom(devices) {
   if (!Array.isArray(devices)) throw new Error('Ungültige Geräteliste');
   const rooms = new Map();
@@ -62,7 +68,8 @@ export function schema5ReadingSuggestions(device) {
   if (!device || !isValidName(device.name)
     || !device.readings || typeof device.readings !== 'object' || Array.isArray(device.readings)) return [];
   return READING_PRESETS.flatMap(({ names, label, unit }) => {
-    const reading = names.find((name) => Object.hasOwn(device.readings, name));
+    const available = label === 'Temperatur' ? temperatureReadings(device.readings) : device.readings;
+    const reading = names.find((name) => Object.hasOwn(available, name));
     if (!reading) return [];
     if (label === 'Luftfeuchtigkeit') {
       const value = String(device.readings[reading]).trim();
@@ -99,7 +106,7 @@ function schema5BaseWidgetSuggestions(device) {
   const alias = typeof device.alias === 'string' && device.alias.trim()
     && !/[\x00-\x1f\x7f]/.test(device.alias) ? device.alias.trim() : device.name;
   const title = alias.slice(0, 64);
-  const actual = suggestedReading(readings, 'thermostat.actual');
+  const actual = suggestedReading(temperatureReadings(readings), 'thermostat.actual');
   const target = suggestedReading(readings, 'thermostat.target');
   if (actual && target && hasTemperatureCommand(target)) {
     const fields = { actual, target };
@@ -138,7 +145,7 @@ export function schema5TemperatureChartSuggestion(device, logInfo) {
     || !logInfo || !Array.isArray(logInfo.readings)
     || !/^(?:dblog|filelog)$/.test(logInfo.source)) return [];
   const reading = suggestedReading(
-    logInfo.readings.filter((name) => Object.prototype.hasOwnProperty.call(device.readings, name)),
+    logInfo.readings.filter((name) => Object.hasOwn(temperatureReadings(device.readings), name)),
     'fhem-chart'
   );
   if (!reading) return [];
@@ -483,6 +490,32 @@ export class Schema5SetupWizard {
     ]);
   }
 
+  #progress(value, label) {
+    let progress = [...this.#status.children].find(node => node.className === 'cms-setup-wizard-progress');
+    if (!progress) {
+      progress = element('span');
+      progress.className = 'cms-setup-wizard-progress';
+      progress.setAttribute('role', 'progressbar');
+      progress.setAttribute('aria-label', 'Einrichtung');
+      progress.setAttribute('aria-valuemin', '0');
+      progress.setAttribute('aria-valuemax', '5');
+      for (let index = 0; index < 25; index++) {
+        const dot = element('span');
+        dot.setAttribute('aria-hidden', 'true');
+        dot.setAttribute('style', `transition-delay: ${index * 20}ms`);
+        progress.append(dot);
+      }
+      this.#status.append(progress);
+    }
+    progress.setAttribute('aria-valuenow', String(value));
+    progress.setAttribute('aria-valuetext', label);
+    progress.title = label;
+    [...progress.children].forEach((dot, index) => {
+      if (index < Math.floor(value * 5)) dot.setAttribute('data-complete', '');
+      else dot.removeAttribute('data-complete');
+    });
+  }
+
   async #magic() {
     if (this.#busy || this.#closed) return;
     this.#busy = true;
@@ -490,6 +523,7 @@ export class Schema5SetupWizard {
     this.#status.setAttribute('data-loading', '');
     this.#status.setAttribute('aria-busy', 'true');
     this.#status.textContent = 'Erstelle die Oberfläche …';
+    this.#progress(0, 'FHEM-Geräte laden');
     try {
       const devices = await this.#client.jsonlist('.*');
       if (this.#suspended || this.#closed) return;
@@ -504,6 +538,7 @@ export class Schema5SetupWizard {
       const plan = createSchema5MagicPlan(devices, this.#loggedReadings);
       this.#pages = plan.pages;
       this.#startRoom = plan.startRoom;
+      this.#progress(3, 'Seiten und Widgets vorbereitet');
     } catch (error) {
       if (!this.#suspended && !this.#closed) {
         this.#status.removeAttribute('data-loading');
@@ -519,16 +554,22 @@ export class Schema5SetupWizard {
   }
 
   async #loadTemperatureReadings(devices, { preserveStatus = false } = {}) {
+    this.#status.setAttribute('data-loading', '');
+    this.#status.setAttribute('aria-busy', 'true');
     const candidates = [...new Map(devices.flatMap((device) => {
       if (!device || !isValidName(device.name) || !device.readings
         || typeof device.readings !== 'object' || Array.isArray(device.readings)) return [];
-      const reading = suggestedReading(device.readings, 'fhem-chart');
+      const reading = suggestedReading(temperatureReadings(device.readings), 'fhem-chart');
       return reading ? [[device.name, { device, reading }]] : [];
     })).values()];
     const readings = new Map();
     const warnings = [];
     const failures = [];
-    if (!candidates.length) return { readings, warnings, failures };
+    this.#progress(1, 'Geloggte Temperatur-Readings prüfen');
+    if (!candidates.length) {
+      this.#progress(2, 'Keine Temperaturdaten zu prüfen');
+      return { readings, warnings, failures };
+    }
     if (typeof this.#client.logReadings !== 'function') {
       failures.push('Die geloggten Temperatur-Readings konnten mit diesem FHEM-Client nicht geprüft werden.');
       return { readings, warnings, failures };
@@ -546,21 +587,15 @@ export class Schema5SetupWizard {
             || !Array.isArray(result.readings)) {
             throw new Error('FHEM lieferte eine ungültige Reading-Liste.');
           }
-          if (!result.readings.includes(reading)) return { device, reading, result };
-          if (typeof this.#client.history !== 'function') {
-            throw new Error('Historische Daten konnten mit diesem FHEM-Client nicht geprüft werden.');
-          }
-          const history = await this.#client.history(device.name, reading, '365d', 'raw', result.source);
-          if (!history || !Array.isArray(history.points)) {
-            throw new Error('FHEM lieferte ungültige Verlaufsdaten.');
-          }
-          return { device, reading, result, history };
+          return { device, reading, result };
         } catch (error) {
           return { device, reading, error };
         }
       }));
       if (this.#suspended || this.#closed) return { readings, warnings, failures };
-      for (const { device, reading, result, history, error } of results) {
+      this.#progress(1 + Math.min(offset + batch.length, candidates.length) / candidates.length,
+        `Temperaturdaten geprüft: ${Math.min(offset + batch.length, candidates.length)}/${candidates.length}`);
+      for (const { device, reading, result, error } of results) {
         if (error) {
           const message = error.message || String(error);
           const detail = /Kein DbLog-Device|Kein DbLog- oder FileLog-Device/.test(message)
@@ -572,12 +607,6 @@ export class Schema5SetupWizard {
         readings.set(device.name, result);
         if (!result.readings.includes(reading)) {
           warnings.push(`${device.name}: ${reading} ist nicht geloggt; kein Temperaturverlauf ergänzt.`);
-        } else if (!history.points.length) {
-          readings.set(device.name, {
-            ...result,
-            readings: result.readings.filter((loggedReading) => loggedReading !== reading),
-          });
-          warnings.push(`${device.name}: keine Verlaufsdaten für ${reading} in den letzten 365 Tagen; kein Temperaturverlauf ergänzt.`);
         }
       }
     }
@@ -588,6 +617,9 @@ export class Schema5SetupWizard {
     if (this.#busy || this.#closed) return;
     this.#busy = true;
     this.#status.textContent = 'FHEM-Geräte werden geladen …';
+    this.#status.setAttribute('data-loading', '');
+    this.#status.setAttribute('aria-busy', 'true');
+    this.#progress(0, 'FHEM-Geräte laden');
     try {
       const devices = await this.#client.jsonlist('.*');
       if (this.#suspended || this.#closed) return;
@@ -598,6 +630,8 @@ export class Schema5SetupWizard {
       this.#renderRooms();
     } catch (error) {
       if (this.#suspended || this.#closed) return;
+      this.#status.removeAttribute('data-loading');
+      this.#status.setAttribute('aria-busy', 'false');
       this.#status.setAttribute('data-error', '');
       this.#status.textContent = `Geräte konnten nicht geladen werden: ${error.message || String(error)}`;
     } finally {
@@ -848,6 +882,7 @@ export class Schema5SetupWizard {
       const state = this.#controller.snapshot();
       if (state.token !== this.#state.token) throw new Error('Der Konfigurationsstand hat sich geändert. Bitte die Seite neu laden.');
       const source = state.draft || state.live;
+      this.#progress(3, 'Seiten und Widgets vorbereiten');
       let config = buildSchema5SetupConfig(source, this.#pages, this.#startRoom);
       if (typeof this.#fitNavigation === 'function') config = this.#fitNavigation(config);
       config = arrangeSchema5SetupPages(config);
@@ -859,8 +894,10 @@ export class Schema5SetupWizard {
       if (isMagic) this.#status.setAttribute('data-loading', '');
       else this.#status.removeAttribute('data-loading');
       this.#status.setAttribute('aria-busy', String(isMagic));
+      this.#progress(4, 'Layout angeordnet; Entwurf speichern');
       const result = await this.#controller.saveDraft(config, state.token);
       if (this.#suspended || this.#closed) return;
+      this.#progress(5, 'Entwurf gespeichert');
       this.#onComplete?.();
       this.#finish({ saved: true, state: result });
     } catch (error) {

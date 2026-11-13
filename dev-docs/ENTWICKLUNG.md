@@ -631,15 +631,25 @@ weiterhin den automatischen Start. `t/15_migration_chain.test.js` prueft die
 Erkennung gegen die vom Perl-Backend neu erzeugte Konfiguration;
 `t/53_schema5_setup_wizard.html` prueft den Browserablauf mit Liquid Glass (Refs #176).
 
-Der Einrichtungsassistent ergänzt ein Temperaturdiagramm nur, wenn
-`logreadings` das Temperatur-Reading nachweist und die Verlaufsabfrage für die
-letzten 365 Tage mindestens einen Datenpunkt liefert. Bei `auto` wird DbLog
+Der Einrichtungsassistent ergänzt ein Temperaturdiagramm nur, wenn ein
+numerischer Istwert vorhanden ist und `logreadings` gespeicherte Daten fuer
+das Temperatur-Reading nachweist. Seit Refs #178 entfaellt der zusaetzliche
+365-Tage-Serienabruf: DbLog ermittelt mit `getreadings` bereits die tatsaechlich
+in der Historientabelle vorhandenen Readings. Der Nachweis ist damit nicht mehr
+auf die letzten 365 Tage begrenzt. FileLog nutzt weiterhin den begrenzten
+Scan der vorhandenen Erkennung. Pro eindeutigem Temperaturdevice wird nur
+die Reading-Erkennung aufgerufen; Geraete ohne numerische Temperatur werden
+nicht abgefragt und erhalten keine Temperaturanzeige. Bei `auto` wird DbLog
 bevorzugt und andernfalls FileLog verwendet; die ermittelte Quelle wird im
 Diagramm festgehalten. Ein nicht geloggtes Reading oder ein Reading ohne
 Verlaufsdaten erzeugt kein Diagramm. Fehler bei der Prüfung werden in der
 Zusammenfassung sichtbar; Magic zeigt während Vorbereitung und Speichern
 „Erstelle die Oberfläche“ mit Spinner und speichert bei fehlgeschlagener
-Prüfung keinen Entwurf.
+Prüfung keinen Entwurf. Direkt darunter fuellt eine Linie aus 25 Punkten
+die bestaetigten Schritte Geraete laden, Temperaturdaten pruefen (mit
+Teilfortschritt je Batch), Seiten planen, Layout anordnen und Entwurf speichern.
+Erst die Speicherbestaetigung fuellt die letzten Punkte. Die Anzeige besitzt
+ARIA-Fortschrittswerte und beachtet reduzierte Bewegung.
 Beim Verlassen der bestehenden Oberfläche werden ausstehende Snapshots und
 Ereignisse geschlossener WebSockets verworfen; sie dürfen keine Abonnements
 erneut starten. Eine vollständige Umstellung auf den zentralen FCUI-Controller

@@ -652,6 +652,31 @@ body:has(.cms-schema5-grid) {
   color: var(--cms-danger);
 }
 
+.cms-editor-dialog[data-panel="setup"] .cms-setup-wizard-status {
+  flex-wrap: wrap;
+}
+
+.cms-setup-wizard-progress {
+  display: flex;
+  flex: 0 0 100%;
+  gap: .2rem;
+}
+
+.cms-setup-wizard-progress > span {
+  flex: 1;
+  height: .4rem;
+  max-width: .8rem;
+  border-radius: 50%;
+  background: var(--cms-text);
+  opacity: .2;
+  transition: background-color .5s ease, opacity .5s ease;
+}
+
+.cms-setup-wizard-progress > span[data-complete] {
+  background: var(--cms-accent);
+  opacity: 1;
+}
+
 .cms-editor-dialog[data-panel="setup"] .cms-setup-wizard-status::before {
   content: none;
 }
@@ -672,6 +697,10 @@ body:has(.cms-schema5-grid) {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .cms-setup-wizard-progress > span {
+    transition: none;
+  }
+
   .cms-editor-dialog[data-panel="setup"] .cms-setup-wizard-status[data-loading]::before {
     animation: none;
     border-right-color: currentColor;

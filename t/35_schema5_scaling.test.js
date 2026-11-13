@@ -134,6 +134,8 @@ for (const [name, fixtures] of [
     [['67_blueprints.html', 16]]],
   ['CMS-Verwaltung bestaetigt Sammelloeschung und trennt verwaiste Dateien',
     [['69_cms_admin.html', 18]]],
+  ['Einrichtungsassistent zeigt echten Fortschritt ohne historische Serienabfragen',
+    [['53_schema5_setup_wizard.html', 59]]],
   ['direct widget deletion preserves the draft and handles errors', [['60_direct_widget_delete.html', 15]]],
   ['call list displays and configures device readings', [['58_calllist.html', 61]]],
   ['Smart-Home-Statusfarben bleiben semantisch und kontrastreich', [['64_status_colors.html', 13]]],

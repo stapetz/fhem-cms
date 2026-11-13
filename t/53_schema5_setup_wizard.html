@@ -69,11 +69,9 @@ try {
     client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
       jsonlist: async () => devices,
       logReadings: async (device) => ({
-        source: 'dblog', readings: ['Device17', 'RoomSensor'].includes(device) ? ['temperature'] : [],
+        source: 'dblog', readings: device === 'Device17' ? ['temperature'] : [],
       }),
-      history: async (device) => ({
-        points: device === 'Device17' ? [[Date.now() / 1000, 21]] : [],
-      }),
+      history: async () => { throw new Error('Wizard must not fetch time series'); },
       subscribe() {}, unsubscribe() {} } });
   await editor.start();
   check(!!root.querySelector('[data-panel="setup"]'), 'first-run wizard opens');
@@ -138,18 +136,21 @@ try {
   editor = new Schema5Editor({ GridStack, root, controller, browser: window, services: {},
     client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
       jsonlist: () => new Promise((resolve) => { resolveMagicDevices = resolve; }),
-      logReadings: async (device) => ({
-        source: 'dblog', readings: ['Device17', 'RoomSensor'].includes(device) ? ['temperature'] : [],
-      }),
-      history: async (device) => device === 'Device17'
+      logReadings: async (device) => device === 'Device17'
         ? new Promise((resolve) => { resolveMagicHistory = resolve; })
-        : ({ points: [] }),
+        : ({ source: 'dblog', readings: [] }),
+      history: async () => { throw new Error('Wizard must not fetch time series'); },
       subscribe() {}, unsubscribe() {} } });
   await editor.start();
   check(!!root.querySelector('[data-panel="setup"]'), 'recreated instance prompts despite same device name');
   button('Magic - auf gut Glück');
   await waitFor(() => typeof resolveMagicDevices === 'function');
   const magicStatus = root.querySelector('[data-panel="setup"] .cms-setup-wizard-status');
+  const progress = () => magicStatus.querySelector('[role="progressbar"]');
+  check(progress()?.getAttribute('aria-valuenow') === '0' && progress().children.length === 25,
+    'progress starts with 25 unfilled dots');
+  check(progress().getBoundingClientRect().top >= magicStatus.getBoundingClientRect().top + 15,
+    'dotted progress is on the line below the spinner');
   check(magicStatus.textContent === 'Erstelle die Oberfläche …'
     && magicStatus.getAttribute('aria-busy') === 'true'
     && magicStatus.hasAttribute('data-loading'), 'Magic announces while preparing the surface');
@@ -157,18 +158,27 @@ try {
     'Magic preparation displays a spinner');
   resolveMagicDevices(devices);
   await waitFor(() => typeof resolveMagicHistory === 'function');
+  check(Number(progress().getAttribute('aria-valuenow')) >= 1
+    && progress().querySelectorAll('[data-complete]').length >= 5,
+    'device loading completes first progress milestone');
   check(magicStatus.textContent === 'Erstelle die Oberfläche …'
     && magicStatus.getAttribute('aria-busy') === 'true'
     && getComputedStyle(magicStatus, '::before').animationName === 'cms-setup-wizard-spin',
   'Magic keeps its spinner visible while checking historical data');
-  resolveMagicHistory({ points: [[Date.now() / 1000, 21]] });
+  resolveMagicHistory({ source: 'dblog', readings: ['temperature'] });
   await waitFor(() => typeof resolveMagicSave === 'function');
+  check(progress().getAttribute('aria-valuenow') === '4'
+    && progress().querySelectorAll('[data-complete]').length === 20,
+    'progress leaves final dots empty until draft save is confirmed');
   check(magicStatus.textContent === 'Erstelle die Oberfläche …'
     && magicStatus.getAttribute('aria-busy') === 'true'
     && getComputedStyle(magicStatus, '::before').animationName === 'cms-setup-wizard-spin',
   'Magic keeps its spinner visible while saving the surface');
   resolveMagicSave();
   await waitFor(() => writes === 2 && root.querySelector('.cms-nav'));
+  check(progress().getAttribute('aria-valuenow') === '5'
+    && progress().querySelectorAll('[data-complete]').length === 25,
+    'confirmed save completes dotted progress');
   check(state.draft.pages.length === 8, 'magic limits the number of pages');
   check(state.draft.pages.every((page) => page.widgets.length <= 8), 'magic limits widgets per page');
   check(state.draft.pages[0].widgets.some((widget) => widget.type === 'fhem-solarflow'

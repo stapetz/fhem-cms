@@ -127,6 +127,12 @@ Verwende bevorzugt die erzeugten Device-Links, da Host, Port und Webname von dei
 
 Bei einer neuen, leeren Konfiguration erscheint der '''Einrichtungsassistent'''. Du kannst leer beginnen, Räume und Geräte mit Vorschau auswählen oder mit '''Magic - auf gut Glück''' einen Entwurf erzeugen. Magic berücksichtigt höchstens acht Räume mit je acht Widgets und nur unterstützte Geräte. Nicht erkannte Geräte lassen sich später im Editor ergänzen. Für Temperatur-Readings, die in DbLog oder FileLog protokolliert werden, ergänzt der Assistent ein Verlaufsdiagramm; DbLog wird bevorzugt. Ohne nachgewiesene Protokollierung wird kein Diagramm angelegt. Der Assistent veröffentlicht nichts; Bedienelemente können reale Geräte steuern.
 
+'''Neu auf dev:''' Temperaturvorschlaege setzen einen gueltigen numerischen
+Istwert voraus. Eine gepunktete Linie unter dem Spinner zeigt die erledigten
+Einrichtungsschritte. Die DbLog-Pruefung nutzt nur die gespeicherten Readings
+statt eines zusaetzlichen Jahresverlaufs; auch aeltere Daten gelten als
+Nachweis. Abfragefehler bleiben sichtbar und verhindern die automatische Erstellung.
+
 Die folgenden Schritte beschreiben den manuellen Ausbau mit leerer Startseite oder bei einer bestehenden Einrichtung:
 
 # Öffne am CMS-Device '''CMS starten'''.
