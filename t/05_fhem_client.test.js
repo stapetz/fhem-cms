@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 test('Magic background loads the bundled JPEG and uploads exact bytes through the media contract', async () => {
-  const image = await readFile(new URL('../www/fhem-cms/images/parachute.jpg', import.meta.url));
+  const image = await readFile(new URL('../www/fhem-cms/images/sunnybeach.jpg', import.meta.url));
   assert.equal(image.readUInt16BE(0), 0xffd8);
   const client = new FhemClient('cms', 'https://fhem.example/fhem/');
   const background = `media/${'a'.repeat(32)}.jpg`;
@@ -29,7 +29,7 @@ test('Magic background loads the bundled JPEG and uploads exact bytes through th
     return background;
   };
   globalThis.fetch = async (url, options) => {
-    assert.ok(String(url).endsWith('/images/parachute.jpg'));
+    assert.ok(String(url).endsWith('/images/sunnybeach.jpg'));
     assert.equal(options.credentials, 'same-origin');
     return new Response(image);
   };
