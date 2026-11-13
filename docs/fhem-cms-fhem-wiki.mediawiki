@@ -47,7 +47,7 @@ Kein automatisches Backup und kein globales <code>save</code>.
 Nach vollstaendig erfolgreicher Loeschung laedt die Seite automatisch neu.
 Bei Fehlern und Teilerfolgen bleiben die Einzelergebnisse sichtbar.
 '''CMS oeffnen''' steht als rechtsbuendiger Button in der jeweiligen CMS-Zeile.
-Nach Updates die Seite neu laden; versionierte Asset-URLs vermeiden alte Styles
+Nach Updates die Seite neu laden; versionierte Asset-URLs vermeiden alte Styles und Skripte
 aus dem Browsercache.
 Ohne Attribut oder bei <code>adminMenu 0</code> fehlt der Menuepunkt.
 Nach Attributaenderung die CMS-Seite neu laden. Dies steuert nur den

@@ -11,6 +11,7 @@ my %denied;
 my @deleted;
 my @logs;
 my $deleteFailure;
+my $deleteSuccess = '';
 sub Authorized { my (undef, $type, $value) = @_; return !$denied{"$type:$value"}; }
 sub CommandAttr { return undef; }
 sub CommandDelete {
@@ -18,7 +19,7 @@ sub CommandDelete {
     return $deleteFailure if (defined($deleteFailure));
     push(@deleted, $name);
     delete($defs{$name});
-    return undef;
+    return $deleteSuccess;
 }
 sub Log3 { push(@logs, [@_]); }
 require './FHEM/01_FHEMCMS.pm';
@@ -103,10 +104,20 @@ like(execute($value, 'Remove')->{error}, qr/veraltet/, 'recreated device identit
 my $result = execute(inventory(), 'Remove', 'Orphan', 'DataOnly');
 is(scalar(@{$result->{results}}), 3, 'batch reports every result');
 ok(!grep({ !$_->{ok} } @{$result->{results}}), 'selected device and orphans removed');
+is($result->{results}[0]{message}, 'Purge und Delete abgeschlossen',
+    'empty CommandDelete success return produces explicit success message');
 is_deeply(\@deleted, ['Remove'], 'only selected active device passed to CommandDelete');
 ok(-d "$root/fhem-cms-data/Keep", 'unselected data preserved');
 ok(!-e "$root/fhem-cms-data/Orphan" && !-e "$root/www/fhem-cms/Remove", 'selected file structures removed');
 ok(-d "$root/www/fhem-cms/js" && -d $outside, 'shared and external roots preserved');
+
+{
+    $deleteSuccess = undef;
+    create_cms('UndefinedDeleteSuccess');
+    $result = execute(inventory(), 'UndefinedDeleteSuccess');
+    ok($result->{results}[0]{ok}, 'undefined CommandDelete success return remains accepted');
+    $deleteSuccess = '';
+}
 
 create_cms('FailDuringPurge');
 create_cms('BatchSuccess');

@@ -31,7 +31,7 @@ Buttonformatierung wie die anderen Eintraege; `CMS oeffnen` erscheint auf der
 Verwaltungsseite rechtsbuendig neben Checkbox und Device-Namen als Button-Link
 mit sichtbarem Rahmen, Hintergrund und mindestens 48px Hoehe.
 Die statische Verwaltungsseite versioniert ihre CSS-Dateien und ihr
-Einstiegsmodul mit `?v=admin-20261113-3`. Bei Aenderungen dieser Assets
+Einstiegsmodul mit `?v=admin-20261113-4`. Bei Aenderungen dieser Assets
 die gemeinsame Kennung erhoehen, damit bestehende Browsercaches nicht
 die alte Textlink-Darstellung beibehalten.
 `FHEM/lib/FHEMCMS/Admin.pm` registriert
@@ -61,8 +61,11 @@ Die WEB-Konfiguration wird nicht veraendert. `set`-/`delete`- und
 Device-Berechtigungen bleiben erhalten. Ein Snapshot-Token bindet die
 Auswahl an Bestand, Device-NR und Dateimetadaten. Vor einer Batchaktion
 werden alle maximal 20 Eintraege geprueft. Purge und Delete laufen pro
-Device in dieser Reihenfolge; bei Purge-Fehler kein Delete. Teilerfolge
-werden nicht als atomare Transaktion ausgegeben. Kein automatischer Retry,
+Device in dieser Reihenfolge; bei Purge-Fehler kein Delete.
+`CommandDelete` kann Erfolg als leere
+Zeichenkette oder `undef` liefern; beides gilt als Erfolg und ermoeglicht
+den automatischen Seitenreload. Nichtleere Fehlermeldungen bleiben Fehler.
+Teilerfolge werden nicht als atomare Transaktion ausgegeben. Kein automatischer Retry,
 kein globales `save`, keine automatische Sicherung.
 Nach vollstaendig bestaetigter erfolgreicher Loeschung wird die Seite automatisch
 neu geladen (auch bei Orphan-Bereinigung). Bei Fehlern oder Teilerfolgen bleibt

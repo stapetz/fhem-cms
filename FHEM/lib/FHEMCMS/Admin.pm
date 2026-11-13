@@ -129,6 +129,7 @@ sub FHEMCMS_AdminExecute {
             $FHEMCMS_PURGED{$name} = 1;
             $defs{$name}{STATE} = 'purged';
             $deleteError = CommandDelete($FW_chash, $name);
+            undef($deleteError) if (defined($deleteError) && $deleteError eq '');
         }
         my $failure = $purgeError // $deleteError;
         Log3('FHEMCMS', defined($failure) ? 1 : 3,
