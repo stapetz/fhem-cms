@@ -72,6 +72,20 @@ Administration
 - Vollstaendiges Volvo-Beispiel mit korrigierter Karten-URL als Backend- und
   Browserregression aufgenommen.
 
+2026-11-13 - 1.11.0-dev: HTML-Widget mit abgestimmter Positivliste
+- HTML/SVG und CSS verwenden abgestimmte Positivlisten mit modernen Layouts,
+  Selektoren, Variablen, Filtern und Animationen; unbekannte CSS-Konstrukte
+  werden abgelehnt.
+- Position fixed und gepruefte @import-Ressourcen bleiben erlaubt; eigener
+  z-index ist auf ganze Zahlen bis 100 oder auto begrenzt.
+- Iframes erlauben beliebige HTTP-/HTTPS-Ziele und relative Pfade bei fester
+  Sandbox; unsichere URL-Schemata und eigene Berechtigungsfreigaben bleiben
+  gesperrt.
+- data-/ARIA-/alt-Attribute erhalten Livewerte als sicheren Text; lokale
+  Sprungmarken und :target funktionieren ohne CMS-Seitenwechsel.
+- Gemeinsame Frontend-/Backend-Policytests sichern gleiche CSS-Listen;
+  HTML-Vorbereitung fuer #188, keine KI-Integration.
+
 2026-11-13 - 1.11.0-dev: CSS-Gestaltung und OpenStreetMap im freien HTML
 - CSS url() und @import erlauben gepruefte lokale und HTTPS-Ressourcen.
 - Alle Positionierungsarten und CSS-Keyframe-Animationen sind erlaubt; feste
