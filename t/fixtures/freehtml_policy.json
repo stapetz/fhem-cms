@@ -1,5 +1,6 @@
 {
   "css": [
+    ["padding: 6px 4px; text-align: right; font-variant-numeric: tabular-nums;", true],
     [".panel{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}", true],
     [".panel{--accent:#10b981;color:var(--accent);box-shadow:0 2px 8px #000;backdrop-filter:blur(4px)}", true],
     [".panel:hover:has(img){filter:drop-shadow(0 4px 4px #000);transition:transform .2s;transform:translateX(5px)}", true],
@@ -57,6 +58,7 @@
     ["https://example.test/\" onload=\"x", false]
   ],
   "html": [
+    ["<table><tbody><tr><td style=\"padding: 6px 4px; text-align: right; font-variant-numeric: tabular-nums;\">123</td></tr></tbody></table>", true],
     ["<iframe src=\"http://grafana.local:3000/panel\" width=\"100%\" height=\"300\" loading=\"lazy\"></iframe>", true],
     ["<iframe src=\"/radar/panel\"></iframe>", true],
     ["<iframe src=\"../radar/panel\"></iframe>", true],

@@ -36,3 +36,35 @@ test('CSS property and function allowlists remain identical in Perl and JavaScri
     assert.deepEqual(words(jsWords), words(perlWords), name);
   }
 });
+
+test('existing numeric table formatting leaves live and draft readable without changing their bytes', () => {
+  const result = spawnSync('perl', ['-MJSON::PP', '-MFile::Temp=tempdir', '-e', `
+    require './FHEM/01_FHEMCMS.pm';
+    my $dir = tempdir(CLEANUP => 1);
+    my $html = '<table><tbody><tr><td style="padding: 6px 4px; text-align: right; font-variant-numeric: tabular-nums;">123</td></tr></tbody></table>';
+    my $config = {
+      schemaVersion => 5, theme => 'dark', settings => {layoutMode => 'grid', gridColumns => 12},
+      navigation => {orientation => 'horizontal', grid => {col => 1, row => 1, w => 12, h => 1}},
+      pages => [{id => 'start', title => 'Start', widgets => [
+        {id => 'h2', type => 'fhem-html', html => $html, devices => [], grid => {col => 1, row => 2, w => 4, h => 2}}
+      ]}]
+    };
+    my $bytes = JSON::PP->new->utf8->encode($config);
+    for my $name ('config.json', 'draft.json') {
+      open(my $out, '>:raw', "$dir/$name") or die $!;
+      print {$out} $bytes or die $!;
+      close($out) or die $!;
+    }
+    my ($state, $error) = FHEMCMS_ReadVersion5State($dir);
+    die $error if defined($error);
+    for my $name ('config.json', 'draft.json') {
+      my ($after, $readError) = FHEMCMS_ReadFile("$dir/$name");
+      die 'read modified saved data' if defined($readError) || $after ne $bytes;
+    }
+    print encode_json([$state->{live}{pages}[0]{widgets}[0]{html}, $state->{draft}{pages}[0]{widgets}[0]{html}]);
+  `], { encoding: 'utf8', timeout: 10000 });
+  assert.equal(result.status, 0, result.stderr);
+  const [live, draft] = JSON.parse(result.stdout);
+  assert.equal(live, draft);
+  assert.match(draft, /font-variant-numeric: tabular-nums/);
+});

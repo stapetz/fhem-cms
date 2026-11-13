@@ -244,6 +244,9 @@ vorhandenen Runner. Keine KI-Integration aus #188 implementiert.
 Volvo-Dashboard; ausschliesslich die unvollstaendige Karten-URL wurde zu
 einer Einbettungs-URL mit numerischen Koordinaten korrigiert.
 Die CSS-Struktur wird durch `freehtml-css.js` und das Perl-Pendant tokenisiert:
+`font-variant-numeric` bleibt fuer bestehende Tabellen mit `tabular-nums`
+erlaubt. Ein gemeinsamer Regressionstest liest Live und Entwurf mit dieser
+Formatierung durch den echten Schema-5-Lesevertrag und prueft unveraenderte Bytes.
 Quoting/Klammern/Regelkontexte, Eigenschaften, Funktionen und At-Regeln haben
 Positivlisten. Unbekannte Konstrukte werden abgelehnt; z-index erlaubt auto
 oder ganze Zahlen bis 100, keine var()/calc()-Umgehung.

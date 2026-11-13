@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Bestehende HTML-Tabellen bleiben im Editor lesbar",
+  "changes": [
+    "Die CSS-Positivliste erlaubt font-variant-numeric fuer Tabellen mit gleich breiten Ziffern.",
+    "Ein bisher gespeicherter Entwurf mit tabular-nums blockiert das Laden des CMS-Editors nicht mehr; HTML-Code und Entwurfsdaten bleiben unveraendert.",
+    "Regression prueft den echten Live-/Entwurfs-Lesevertrag ohne Dateiaenderungen sowie die Darstellung im Browser."
+  ]
+}
