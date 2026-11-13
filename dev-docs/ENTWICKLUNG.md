@@ -105,6 +105,16 @@ Factory, Live-Abos, Widgetauswahl, Device-first-Angebot und strikte
 Backendvalidierung sind angebunden. Duplizieren und Vorlagen verwenden die
 vorhandenen generischen Mechanismen inklusive verschachtelter Device-Ersetzung.
 Abhaengigkeit: gemeinsamer Designkern aus #199, deshalb zusammen abnehmen.
+Nachbesserung der Abnahme: `js/solar-energy-suggestions.js` ist die gemeinsame
+konservative Readingerkennung fuer normales Neuanlegen, Device-first und
+Device-Auswahl im Dialog. Keine Beschraenkung auf Solax-Typen. Eindeutige
+PV-Quelle als Anker, lokale bekannte Namen bevorzugen, externe Leistungsquelle
+nur bei eindeutiger Zuordnung; mehrere PV-Devices erfordern eine Auswahl.
+Energy-/statistics-Familien erzeugen Summen und bis zu acht benannte Karten.
+Keine Einheiten aus Momentanwerten erraten. Vorschlaege bleiben im Dialogentwurf,
+vorhandene/manuell geleerte Felder werden beim Ergaenzen nicht ueberschrieben
+(`createManualFieldTracker`); expliziter gemeinsamer Device-Wechsel bleibt eine
+Neuzuordnung. Bestehende Widgets beim Oeffnen unveraendert lassen.
 Pruefung: `t/85_solar_energy.t`, `t/85_solar_energy.test.js` und Browserfixture
 `t/85_solar_energy.html` (Desktop/Phone/Tablet, reduzierte Bewegung, alle Themes,
 Dialogroundtrip, mehrere Devices, fehlende Werte und Liveupdates).

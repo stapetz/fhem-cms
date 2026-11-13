@@ -3,6 +3,7 @@ import { schema5WidgetSuggestions } from './fcui-schema5-setup-wizard.js';
 import { suggestedReading } from './device-suggestions.js';
 import { sliderCommands } from './slider-commands.js';
 import { parseDiscreteSetCommands } from './select-commands.js';
+import { solarEnergySuggestions } from './solar-energy-suggestions.js';
 
 export function deviceWidgetSuggestions(device, devices = [], logInfo = null) {
   if (!device || !isValidName(device.name) || !Array.isArray(devices)) {
@@ -27,11 +28,11 @@ export function deviceWidgetSuggestions(device, devices = [], logInfo = null) {
       if (['thermostat', 'fhem-solarflow'].includes(suggestion.type) && !result.has(suggestion.type)) {
         const { type, label, ...fields } = suggestion;
         add(type, fields);
-        if (type === 'fhem-solarflow') {
-          add('fhem-solar-energy', { readings: Object.fromEntries(
-            Object.entries(fields.readings).map(([key, source]) => [key,
-              typeof source === 'string' ? { device: fields.device, reading: source } : source])),
-          sections: [] });
+      }
+      for (const candidate of candidates) {
+        const solar = solarEnergySuggestions([candidate, ...devices.filter(entry => entry.name !== candidate.name)], candidate.name);
+        if (solar.readings.pv && !result.has('fhem-solar-energy')) {
+          add('fhem-solar-energy', { readings: solar.readings, sections: solar.sections });
         }
       }
     }
