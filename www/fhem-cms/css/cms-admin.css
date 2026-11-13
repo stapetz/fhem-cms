@@ -1,0 +1,57 @@
+.cms-admin {
+  max-width: 70rem;
+  margin: auto;
+  padding: 1rem;
+}
+.cms-admin section {
+  margin-block: 2rem;
+}
+.cms-admin article {
+  border: 1px solid var(--cms-border);
+  border-radius: .5rem;
+  margin-block: .75rem;
+  padding: .75rem;
+}
+.cms-admin label,
+#confirmation label {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.cms-admin input[type="checkbox"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+.cms-admin button,
+#confirmation button,
+#confirmation input {
+  min-height: 48px;
+}
+.cms-admin pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#confirmation {
+  max-width: min(36rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  box-sizing: border-box;
+  background: var(--cms-surface);
+  color: var(--cms-text);
+  border: 1px solid var(--cms-border);
+  border-radius: .75rem;
+}
+#confirmation label {
+  flex-wrap: wrap;
+}
+#confirmation input {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+#confirmation::backdrop {
+  background: #000a;
+}
+[data-error] {
+  color: var(--cms-danger, #ff9999);
+}

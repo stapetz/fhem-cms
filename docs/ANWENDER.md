@@ -37,6 +37,35 @@ Nach `update all …` hängt das weitere Vorgehen davon ab, was sich geändert h
 
 `rebuild` erzeugt nur die Startseite `www/fhem-cms/<Device>/index.html` neu und aktualisiert dabei die Versionsparameter, damit der Browser die neuen Dateien lädt. Konfiguration, Entwurf und Backups bleiben unberührt. Dieselbe Neuerzeugung läuft automatisch bei jedem FHEM-Start. Meldet `update` „nothing to do“, obwohl es Änderungen gibt, ist meist das Manifest auf GitHub noch nicht fertig (ein bis zwei Minuten nach dem Push) oder gecacht.
 
+## CMS-Systeme verwalten (dev, vorgesehen fuer 1.10.0)
+
+Die zentrale Verwaltung ist direkt unter `/fhem/fhem-cms/admin.html` erreichbar
+(bei abweichendem FHEMWEB-Pfad entsprechend anpassen). In jedem CMS oeffnet
+**Datei → administrate existing CMS systems** dieselbe Seite in einem neuen Tab,
+auch im bisherigen Schema-4-Editor.
+
+- CMS-Devices per Checkbox auswaehlen und **Purge + Delete** starten.
+- Der Bestaetigungsdialog nennt alle ausgewaehlten Devices. Erst die Eingabe
+  `DELETE` gibt die unwiderrufliche Loeschung frei.
+- Purge entfernt Konfiguration, Entwurf, Sicherungen und Medien. Nur nach
+  erfolgreichem Purge wird das Device geloescht. Ergebnisse stehen je Eintrag
+  auf der Seite; bei einem Verbindungsfehler vor einem weiteren Versuch den
+  Bestand aktualisieren.
+- Verwaiste Verzeichnisse geloeschter Devices erscheinen getrennt, mit ihrer
+  Dateistruktur. Sie werden separat ausgewaehlt und bestaetigt. Unbekannte
+  Verzeichnisse, fremde Dateien, Symlinks und Namen anderer Devices sind gesperrt.
+- Hoechstens 20 Eintraege pro Vorgang. Ein zwischenzeitlich geaenderter Bestand
+  muss neu geladen und bestaetigt werden.
+- Es gelten die FHEMWEB-Berechtigungen fuer `get`, `set`, `delete` und den
+  jeweiligen Device-Namen. Loeschen erfordert einen aktivierten
+  FHEMWEB-CSRF-Token. Die Seite hat keine eigene Anmeldung.
+
+Die Verwaltung erstellt kein automatisches Backup und fuehrt kein globales
+`save` aus. Die geaenderte FHEM-Konfiguration nach Pruefung bei Bedarf in
+FHEMWEB speichern. Ohne verbliebene CMS-Devices funktioniert die Verwaltung
+weiter, solange das Modul in der laufenden FHEM-Sitzung geladen ist. Nach einem
+Neustart ohne CMS-Device muss das Modul erst wieder geladen werden.
+
 ## Umstellung und Wiederherstellung testen
 
 Im Bearbeitungsmodus steht bei alten CMS-Devices **Jetzt umstellen** direkt über

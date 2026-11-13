@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de" data-cms-theme="dark">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CMS-Verwaltung</title>
+<link rel="stylesheet" href="css/fhem-cms.css">
+<link rel="stylesheet" href="css/cms-admin.css">
+<main class="cms-admin">
+  <h1>administrate existing CMS systems</h1>
+  <p>CMS-Devices und verbliebene Dateistrukturen verwalten. Purge entfernt Konfigurationen, Sicherungen und Medien unwiderruflich. Danach wird das Device gel&ouml;scht.</p>
+  <p>Verwaiste Verzeichnisse werden separat ausgew&auml;hlt. Fremde Dateien und Symlinks bleiben gesch&uuml;tzt. Maximal 20 Eintr&auml;ge pro Vorgang.</p>
+  <button class="cms-button" id="refresh" type="button">Bestand aktualisieren</button>
+  <p id="status" role="status" aria-live="polite"></p>
+  <section aria-labelledby="devices-heading">
+    <h2 id="devices-heading">CMS-Devices</h2>
+    <div id="devices"></div>
+    <button class="cms-button" id="delete-devices" type="button" disabled>Ausgew&auml;hlte CMS: Purge + Delete</button>
+  </section>
+  <section aria-labelledby="orphans-heading">
+    <h2 id="orphans-heading">Verwaiste Dateistrukturen</h2>
+    <div id="orphans"></div>
+    <button class="cms-button" id="delete-orphans" type="button" disabled>Ausgew&auml;hlte verwaiste Dateien bereinigen</button>
+  </section>
+  <section aria-labelledby="results-heading">
+    <h2 id="results-heading">Ergebnis je Eintrag</h2>
+    <ul id="results"></ul>
+  </section>
+  <p>Eine &Auml;nderung der FHEM-Konfiguration wird nicht automatisch mit <code>save</code> gespeichert. Nach der Pr&uuml;fung bei Bedarf in FHEMWEB speichern.</p>
+</main>
+<dialog id="confirmation" aria-labelledby="confirm-title">
+  <form method="dialog">
+    <h2 id="confirm-title">Unwiderruflich l&ouml;schen</h2>
+    <p>Nur die folgenden ausgew&auml;hlten Eintr&auml;ge werden bearbeitet:</p>
+    <ul id="selected"></ul>
+    <label>Zur Best&auml;tigung DELETE eingeben
+      <input id="confirm-text" autocomplete="off" required pattern="DELETE">
+    </label>
+    <p>Bei einem Purge-Fehler bleibt das Device erhalten. Bereits abgeschlossene L&ouml;schungen lassen sich nicht zur&uuml;cknehmen.</p>
+    <div class="cms-panel-footer">
+      <button class="cms-button" value="cancel" formnovalidate>Abbrechen</button>
+      <button class="cms-button" value="delete">Endg&uuml;ltig l&ouml;schen</button>
+    </div>
+  </form>
+</dialog>
+<script type="module" src="js/cms-admin.js"></script>
+</html>

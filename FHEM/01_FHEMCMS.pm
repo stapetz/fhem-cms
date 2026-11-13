@@ -18,6 +18,7 @@ use Time::HiRes ();
 use Time::Local ();
 
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
+require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
 our $FHEMCMS_VERSION = '1.10.0-dev';
 our ($readingFnAttributes, $FW_ME);
@@ -47,6 +48,7 @@ sub FHEMCMS_Initialize {
     $modHash->{FW_summaryFn} = 'FHEMCMS_Summary';
     $modHash->{AttrList} = 'dbLog fileLog historySource:auto,dblog,filelog ' . ($readingFnAttributes // '');
     $data{FWEXT}{'/fhemcms-assets'}{FUNC} = 'FHEMCMS_AssetDownload';
+    $data{FWEXT}{'/fhemcms-admin'}{FUNC} = 'FHEMCMS_AdminEndpoint';
 }
 
 sub FHEMCMS_Define {
@@ -452,7 +454,8 @@ sub FHEMCMS_Summary {
 
 # Entfernt Datenordner und Startseite eines Devices. Symlinks und fremde Dateien werden nicht angetastet.
 sub FHEMCMS_Purge {
-    my ($name) = @_;
+    my ($name, $checkOnly) = @_;
+    return 'Ungueltiger CMS-Device-Name' if (!FHEMCMS_ValidName($name));
     my $modPath = $main::attr{global}{modpath};
     return 'FHEM global modpath ist nicht gesetzt' if (!defined($modPath) || $modPath eq '');
     my $root = abs_path($modPath);
@@ -498,6 +501,7 @@ sub FHEMCMS_Purge {
         }
     }
 
+    return undef if ($checkOnly);
     for my $dir ($dataDir, $pageDir) {
         next if (!-d $dir);
         my $errors;
@@ -2850,6 +2854,13 @@ use FHEMWEB and FHEM permissions.</p>
     CMS-Daten, Bilder und Startseite dauerhaft. Der wiederholte Device-Name
     bestaetigt die Loeschung. Anschliessend das FHEM-Device loeschen.
     <code>delete &lt;name&gt;</code> allein laesst CMS-Dateien erhalten.</li>
+    <li>Die gemeinsame Verwaltungsseite <code>/fhem/fhem-cms/admin.html</code>
+    (FHEMWEB-Pfad ggf. anpassen) ist in beiden Editoren unter
+    <b>Datei / administrate existing CMS systems</b> verlinkt.
+    Sie bietet bestaetigte Sammelloeschung (Purge vor Delete) und separat
+    die Bereinigung eindeutig zuordenbarer verwaister CMS-Verzeichnisse.
+    FHEMWEB-Rechte und aktivierter CSRF-Schutz sind erforderlich; kein
+    automatisches Backup und kein globales <code>save</code>.</li>
     <li>Entwurf, Veroeffentlichen, Verwerfen, Sicherungen und Bilder werden
     vorzugsweise im CMS-Editor bedient. Die dort verwendeten technischen
     Transportbefehle sind keine Anleitung zum manuellen Schreiben von JSON.

@@ -1,0 +1,87 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CMS administration regression</title>
+<iframe></iframe>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { mountCmsAdmin } from '../www/fhem-cms/js/cms-admin.js';
+const frame = document.querySelector('iframe');
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const wait = async predicate => {
+  for (let i = 0; i < 100; i++) {
+    if (predicate()) return;
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+  throw new Error('Timeout');
+};
+try {
+  const html = await (await fetch('../www/fhem-cms/admin.html')).text();
+  frame.srcdoc = html.replace('<script type="module" src="js/cms-admin.js"></scr' + 'ipt>', '')
+    .replace('<title>', `<base href="${new URL('../www/fhem-cms/', location.href)}"><title>`);
+  await wait(() => frame.contentDocument?.querySelector('#refresh'));
+  const doc = frame.contentDocument;
+  const body = doc.documentElement;
+  let removed = [];
+  const items = [
+    {name: 'Keep', kind: 'device', blocked: null, files: [{path: 'fhem-cms-data/Keep', directory: true}]},
+    {name: 'Drop', kind: 'device', blocked: null, files: []},
+    {name: 'Orphan', kind: 'orphan', blocked: null, files: []},
+    {name: 'Foreign', kind: 'orphan', blocked: 'Keine CMS-Daten', files: []},
+  ];
+  const client = {
+    base: new URL('http://example.test/custom/'),
+    inventory: async () => ({token: 'a'.repeat(64), items: items.filter(item => !removed.includes(item.name))}),
+    remove: async selection => {
+      removed.push(...selection.map(item => item.name));
+      return selection.map(item => ({...item, ok: true, message: 'Erledigt'}));
+    },
+  };
+  await mountCmsAdmin(body, client);
+  const $ = selector => doc.querySelector(selector);
+  check($('#devices').querySelectorAll('input').length === 2, 'active devices listed');
+  check($('#orphans').querySelectorAll('input').length === 2, 'orphans separately listed');
+  check($('input[value="Foreign"]').disabled, 'foreign structures cannot be selected');
+  check($('#delete-devices').disabled && $('#delete-orphans').disabled, 'no preselection');
+  check($('#devices a').getAttribute('href') === '/custom/fhem-cms/Keep/index.html?mode=edit', 'device link uses FHEMWEB prefix');
+  const select = name => {
+    const input = $(`input[value="${name}"]`);
+    input.checked = true;
+    input.dispatchEvent(new Event('change'));
+  };
+  select('Drop');
+  $('#delete-devices').click();
+  check($('#confirmation').open && $('#selected').textContent === 'Drop', 'confirmation names exact selection');
+  $('button[value="cancel"]').click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check(removed.length === 0, 'cancel never deletes');
+  $('#delete-devices').click();
+  $('button[value="delete"]').click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check(removed.length === 0, 'missing DELETE confirmation never deletes');
+  check($('#confirmation').open, 'invalid confirmation keeps dialog open');
+  $('#confirm-text').value = 'DELETE';
+  $('button[value="delete"]').click();
+  await wait(() => $('#results').textContent.includes('Drop: Erledigt') && !$('input[value="Drop"]'));
+  check(removed.join() === 'Drop' && !!$('input[value="Keep"]'), 'only selected device removed and list refreshed');
+  select('Orphan');
+  $('#delete-orphans').click();
+  $('#confirm-text').value = 'DELETE';
+  $('button[value="delete"]').click();
+  await wait(() => removed.includes('Orphan') && !$('input[value="Orphan"]'));
+  check(removed.join() === 'Drop,Orphan', 'orphan cleanup has a separate selection');
+  client.remove = async () => { throw new Error('Zugriff verweigert'); };
+  select('Keep');
+  $('#delete-devices').click();
+  $('#confirm-text').value = 'DELETE';
+  $('button[value="delete"]').click();
+  await wait(() => $('#results').textContent.includes('Zugriff verweigert'));
+  check(!!$('input[value="Keep"]'), 'failure retains device and reports error');
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({checks});
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>
