@@ -11,6 +11,7 @@ import { applySchema5GridItems, arrangeSchema5Widgets, schema5GridItems } from '
 import { DevicePreview } from './device-preview.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-wizard.js';
+import { createCmsAdminLink } from './cms-admin-link.js';
 import { Schema5SettingsPreview } from './fcui-schema5-settings-preview.js';
 import { Schema5BlueprintPanel } from './fcui-schema5-blueprints.js';
 
@@ -140,7 +141,7 @@ export class Schema5Editor {
     this.#previewToggle.textContent = 'Vorschau';
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
-    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets]);
+    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets, createCmsAdminLink()]);
     this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#blueprints, this.#arrange]);
     this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);

@@ -32,6 +32,16 @@
 
 Dieser Artikel beschreibt den stabilen Funktionsstand '''1.9.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
 
+'''Nur Entwicklungsstand dev (geplant fuer 1.10.0):''' Die zentrale Seite
+<code>/fhem/fhem-cms/admin.html</code> listet CMS-Devices und getrennt davon
+verwaiste CMS-Dateistrukturen. Im Dateimenue jedes CMS fuehrt
+'''administrate existing CMS systems''' dorthin. Checkbox-Auswahl und die
+Bestaetigung <code>DELETE</code> erlauben Purge mit anschliessendem Delete
+(nur bei erfolgreichem Purge) bzw. separat die Bereinigung verwaister Daten.
+Konfiguration, Entwurf, Sicherungen und Medien werden unwiderruflich entfernt.
+Fremde Dateien und Symlinks bleiben gesperrt. Es gelten FHEMWEB-Rechte und
+CSRF-Schutz; kein automatisches Backup und kein globales <code>save</code>.
+
 Neu in 1.9.0: interne Seiten als Modal-Popup, Bildbearbeitung mit Varianten,
 automatische LinkWidget-Größe mit bestätigter Platzschaffen-Vorschau sowie
 volle Rasterbreite und verbesserte mobile Navigation.

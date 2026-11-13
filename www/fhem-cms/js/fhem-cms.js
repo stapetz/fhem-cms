@@ -1,5 +1,6 @@
 import { createWidgetElement, dataFor, devicesOf, groupSnapshots, isLiveWidget } from './widget-factory.js';
 import { FhemClient, isValidName } from './fhem-client.js';
+import { createCmsAdminLink } from './cms-admin-link.js';
 import { DevicePreview } from './device-preview.js';
 import { createSchema5WidgetServices, createWidgetServices } from './widget-services.js';
 import { listenForSettingsPreview } from './fcui-schema5-settings-preview.js';
@@ -221,7 +222,7 @@ export class CmsPage {
       this.menus.push(menu);
       return menu;
     };
-    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton]);
+    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton, createCmsAdminLink()]);
     const editMenu = makeMenu('Bearbeiten', [this.navButton]);
     this.menu = makeMenu('Einfügen', this.menuButtons);
     const viewMenu = makeMenu('Ansicht', [this.gridButton]);
