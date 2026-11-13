@@ -154,6 +154,12 @@ in einer Tabelle stehen. Für Temperatur-Readings, die nachweislich in DbLog
 oder FileLog protokolliert werden, ergänzt der Assistent ein Verlaufsdiagramm;
 bei `auto` wird DbLog bevorzugt. Ohne geloggtes Temperatur-Reading wird kein
 Diagramm erzeugt. Schalter können zusätzlich Messwerte anzeigen.
+Temperaturvorschläge benötigen einen gültigen numerischen Istwert.
+**Neu auf dev:** Unter dem Spinner zeigt eine gepunktete Linie den Fortschritt
+beim Laden, Prüfen, Planen, Anordnen und Speichern. Zur DbLog-Prüfung wird
+kein Jahresverlauf mehr geladen: Die vorhandenen gespeicherten Readings
+reichen als Nachweis, auch bei älteren Daten. Echte Abfragefehler werden
+weiterhin angezeigt und verhindern die automatische Erstellung.
 Schalter und Thermostate können in der Ansicht Geräte steuern.
 Für SolaxModbus nutzt SolarFlow die PV-Gesamtleistung und gegebenenfalls Batterie-
 Readings; ein nicht eindeutig zuordenbarer Hausverbrauch und Energiefluss werden

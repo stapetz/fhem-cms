@@ -50,6 +50,20 @@ test('setup wizard suggests only allowlisted read-only readings', () => {
   ]);
 });
 
+test('wizard omits temperature suggestions without a finite measured value', () => {
+  for (const value of ['', ' ', 'unknown', '???', null, undefined, true, Infinity, NaN]) {
+    const device = { name: 'Heat', readings: { temperature: value, 'desired-temp': '21' },
+      sets: 'desired-temp:slider,5,0.5,30' };
+    assert.ok(!schema5ReadingSuggestions(device).some(({ label }) => label === 'Temperatur'));
+    assert.deepEqual(schema5TemperatureChartSuggestion(device, {
+      source: 'dblog', readings: ['temperature'],
+    }), []);
+    assert.ok(!schema5WidgetSuggestions(device).some(({ type }) => type === 'thermostat'));
+  }
+  assert.ok(schema5ReadingSuggestions({ name: 'Zero', readings: { temperature: '0' } })
+    .some(({ label }) => label === 'Temperatur'));
+});
+
 test('setup wizard includes only selected devices and labels unsupported devices in the preview plan', () => {
   const plan = createSchema5RoomPlan('Wohnzimmer', [
     { name: 'Temp', readings: { temperature: '21' } },
@@ -383,7 +397,7 @@ test('wizard preview selects a start room, shows widget types and saves only aft
     new Schema5SetupWizard({ root, controller, client: {
       jsonlist: async () => devices,
       logReadings: async () => ({ source: 'dblog', readings: ['temperature'] }),
-      history: async () => ({ points: [[1, 21]] }),
+      history: async () => { throw new Error('Wizard must not download historical series'); },
     },
       fitNavigation: (candidate) => { fitted += 1; return candidate; },
       onClose: (value) => { outcome = value; } });
@@ -499,6 +513,35 @@ test('magic saves exactly one draft without preview or publication and handles f
     await action(root, 'Magic - auf gut Glück');
     assert.match(root.children[2].textContent, /Konfigurationsstand hat sich geändert/);
     assert.equal(saves, 2);
+
+    snapshot = { ...snapshot, token: 'token' };
+    const checked = [];
+    const temperatureDevices = [
+      { name: 'Valid', type: 'CUL_HM', rooms: ['Wohnzimmer', 'Küche'], readings: { temperature: '21' } },
+      { name: 'Empty', type: 'CUL_HM', rooms: ['Wohnzimmer'], readings: { temperature: '' } },
+      { name: 'Missing', type: 'CUL_HM', rooms: ['Wohnzimmer'], readings: { 'desired-temp': '21' } },
+    ];
+    const probeClient = {
+      jsonlist: async () => temperatureDevices,
+      logReadings: async name => {
+        checked.push(name);
+        return { source: 'dblog', readings: [] };
+      },
+      history: async () => { throw new Error('No series downloads permitted'); },
+    };
+    root = launch(probeClient);
+    await action(root, 'Magic - auf gut Glück');
+    assert.deepEqual(checked, ['Valid'], 'one query per numeric device, even in multiple rooms');
+    assert.equal(saves, 3);
+    assert.ok(outcome.state.draft.pages.every(page =>
+      page.widgets.every(widget => widget.type !== 'fhem-chart')),
+    'no chart for a device without stored temperature records');
+
+    root = launch({ ...probeClient,
+      logReadings: async () => { throw new Error('DbLog-Zeitlimit'); } });
+    await action(root, 'Magic - auf gut Glück');
+    assert.match(root.children[2].textContent, /Magic konnte nicht vorbereitet werden.*DbLog-Zeitlimit/);
+    assert.equal(saves, 3, 'real query errors still prevent automatic save');
   } finally {
     globalThis.document = previous;
   }
