@@ -50,8 +50,11 @@ try {
           check(getComputedStyle(title).textAlign === alignment, 'global title alignment retained');
           check(!showTitle || graphRect.top >= titleRect.bottom, `${width}x${height}: diagram below title`);
           check(graphRect.height > 0 && graphRect.width > 0, 'diagram remains visible at small dimensions');
-          check(graphRect.top >= tileRect.top && graphRect.bottom <= tileRect.bottom
-            && graphRect.left >= tileRect.left && graphRect.right <= tileRect.right, 'diagram stays inside widget');
+          const tile = root.querySelector('.tile');
+          check(graphRect.top >= tileRect.top
+            && graphRect.bottom <= tileRect.top + tile.scrollHeight
+            && graphRect.left >= tileRect.left && graphRect.right <= tileRect.right,
+          'diagram stays within scrollable widget content');
           const stations = svg.querySelectorAll('[data-station]');
           check(stations.length === 4, 'all configured stations rendered');
           for (const station of stations) {
@@ -91,7 +94,9 @@ try {
         check(host.clientWidth > 0 && host.clientHeight > 0,
           `widget mounted in real grid: ${columns} ${editing} ${host.clientWidth}x${host.clientHeight}`);
         check(svg.top >= header.bottom, `real grid ${columns} / editing=${editing}: no title overlap`);
-        check(svg.height > 0 && svg.bottom <= tile.bottom, 'real grid diagram fits available height');
+        check(svg.height > 0
+          && svg.bottom <= tile.top + host.shadowRoot.querySelector('.tile').scrollHeight,
+        'real grid diagram remains reachable in scrollable content');
         check(grid.classList.contains('cms-grid-editable') === editing, 'actual edit and responsive modes exercised');
       } finally {
         mounted.destroy();

@@ -36,6 +36,23 @@ folgen erst in eigenen Umstellungen.
 Pruefung: `t/81_table_design.html` im Chrome-Runner, dazu Tabellenlabels,
 Einheiten, Dialoge, Titel-Ausrichtung und Einrichtungsassistent.
 
+## SolarFlow im neuen Widget-Design (dev, 1.11.0-dev, Refs #197)
+
+Nach dem Tabellenpilot folgt SolarFlow mit Systemschrift, klarer Kopfzeile,
+transparenter Hero-Flaeche und themefaehigen SVG-Stationen statt weisser Kreise.
+PV, Haus, Netz und Batterie verwenden die neue Farbpalette. Lesbare Detail-Karten
+zeigen Leistungswerte sowie Bezug/Einspeisung, Laden/Entladen und Ladestand
+zusaetzlich als Text. Optionale Stationen bleiben optional, fehlende Werte
+bleiben unbekannt. Berechnungen, Schwellwerte, Richtungen und Animationen
+bleiben unveraendert; reine Wertupdates erhalten die SVG-Struktur.
+
+Kleine Kacheln scrollen nun vertikal, statt Titel und Diagramm bis zur
+Unlesbarkeit zu schrumpfen. Keine Aenderung gespeicherter Raster oder Werte.
+Lokale visuelle Abnahme im VS-Code-Browser auf 127.0.0.1 verwendet Liquid Glass.
+`t/82_solarflow_design.html` prueft zusaetzlich Hell/Dunkel, echte Glass-Raster,
+Updates, Schwellen, Ladestand, optionale Stationen und reduzierte Bewegung;
+`t/45_solarflow_sizing.html` prueft Titel und scrollbare Diagrammgeometrie.
+
 ## Zentrale CMS-Verwaltung (dev, 1.10.0-dev, Refs #177)
 
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.

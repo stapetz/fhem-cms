@@ -51,11 +51,11 @@ const EDGES = [
 
 const ICONS = {
   pv: `<circle cx="0" cy="-13" r="4.5"/><path d="M0 -23V-20M-10 -20L-8 -18M10 -20L8 -18M-14 -13H-11M14 -13H11"/>
-    <path d="M-14 -4L14 -4L18 13L-18 13Z" fill="#888"/><path d="M-5 -4L-6.500 13M5 -4L6.500 13M-16 4.500H16" stroke="#fafafa"/>
+    <path d="M-14 -4L14 -4L18 13L-18 13Z" fill="currentColor" fill-opacity=".15"/><path d="M-5 -4L-6.500 13M5 -4L6.500 13M-16 4.500H16"/>
     <path d="M0 13V19M-8 19H8"/>`,
   home: '<path d="M-22 1L0 -20L22 1M-15 -5V19H15V-5M-5 19V6H5V19"/><circle cx="0" cy="-6" r="2.500"/>',
   grid: '<path d="M0 -22L-8 22M0 -22L8 22M-10 -12H10M-15 0H15M-6 10H6M-8 22H8"/>',
-  bat: '<path d="M-4 -24H4V-21H-4Z" fill="#888"/><rect x="-11" y="-21" width="22" height="40" rx="3"/>'
+  bat: '<path d="M-4 -24H4V-21H-4Z" fill="currentColor"/><rect x="-11" y="-21" width="22" height="40" rx="3"/>'
 };
 
 const parseNumber = (value) => {
@@ -126,7 +126,7 @@ export const computeModel = (config, snapshots) => {
 };
 
 // Unter 30 % rot, ab 30 % bis unter 65 % gelb, ab 65 % grün.
-export const batteryColor = (soc) => (soc < 30 ? '#e53935' : soc < 65 ? '#f0c020' : '#43c04a');
+export const batteryColor = (soc) => (soc < 30 ? '#ef4444' : soc < 65 ? '#f59e0b' : '#10b981');
 
 const formatPower = (value) => (value === null ? '–' : `${Math.round(value)}W`);
 
@@ -151,23 +151,56 @@ class FHEMCMSSolarFlow extends HTMLElement {
         [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; display: flex; flex-direction: column; height: 100%; overflow: hidden; container-type: size;
-          border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem; background: var(--cms-surface, #202e27); padding: 0.4rem; }
-        header { flex: 0 0 auto; min-width: 0; margin: 0 1.6rem 0.25rem 0.3rem; }
+        .tile { position: relative; display: flex; flex-direction: column; gap: 14px;
+          height: 100%; overflow: auto; container-type: size; padding: 8px;
+          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: inherit; }
+        header { display: flex; justify-content: space-between; align-items: center;
+          flex: 0 0 auto; min-width: 0; padding: 0 48px 8px 0;
+          border-bottom: 1px solid rgba(128,128,128,.25); }
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 1.05rem; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        h3[data-title] { font-size: max(5px, min(9cqh, 4cqw)); }
+        h3[data-title] { font-size: 1.4rem; font-weight: 700; color: inherit;
+          white-space: normal; overflow-wrap: anywhere; }
         header[hidden] { display: none; }
-        svg { display: block; flex: 1 1 0; width: 100%; height: 0; min-height: 0; }
-        .link { fill: none; stroke-linecap: round; stroke: #c9c9c9; stroke-width: 9; }
-        .dot { fill: #f6c945; stroke: #fff7d0; stroke-width: 0.4; }
-        .value { fill: #d4a030; font-size: 14px; text-anchor: middle; }
-        .soc { fill: #d4a030; font-size: 11px; text-anchor: middle; }
-        .icon { fill: none; stroke: #8a8a8a; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+        .dashboard { display: grid; align-content: start; gap: 14px; flex: 1 0 auto; min-width: 0; }
+        .flow-card { height: clamp(240px, 50cqh, 420px); padding: 16px; border-radius: 16px;
+          background: linear-gradient(135deg, rgba(16,185,129,.15), rgba(59,130,246,.12));
+          border: 1px solid rgba(16,185,129,.35); }
+        svg { display: block; width: 100%; height: 100%; }
+        .link { fill: none; stroke-linecap: round; stroke: rgba(128,128,128,.3); stroke-width: 6; }
+        .dot { fill: #f59e0b; stroke: var(--cms-text, #edf4ef); stroke-width: 0.4; }
+        [data-station="pv"], [data-metric="pv"] { --station-color: #f59e0b; }
+        [data-station="home"], [data-metric="home"] { --station-color: #3b82f6; }
+        [data-station="grid"], [data-metric="grid"] { --station-color: #8b5cf6; }
+        [data-station="bat"], [data-metric="bat"] { --station-color: #10b981; }
+        [data-state="red"] { --station-color: #ef4444; }
+        [data-state="green"] { --station-color: #10b981; }
+        [data-ring] { fill: var(--cms-surface, #202e27); stroke: var(--station-color); stroke-width: 2; }
+        .value { fill: currentColor; font-size: 16px; font-weight: 700; text-anchor: middle; }
+        .soc { fill: currentColor; font-size: 11px; text-anchor: middle; }
+        .icon { fill: none; color: var(--station-color); stroke: currentColor; stroke-width: 2.4;
+          stroke-linecap: round; stroke-linejoin: round; }
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+          gap: 14px; margin: 0; }
+        .metric { min-width: 0; overflow-wrap: anywhere; background: rgba(128,128,128,.08);
+          border: 1px solid rgba(128,128,128,.18); border-radius: 14px; padding: 14px; }
+        .metric dt { font-size: .86rem; padding-bottom: 6px; border-bottom: 1px solid rgba(128,128,128,.2);
+          display: flex; align-items: center; gap: 8px; }
+        .metric dt::before { content: ""; width: 8px; height: 8px; flex: 0 0 8px;
+          border-radius: 50%; background: var(--station-color); }
+        .metric dd { margin: 8px 0 0; font-size: 1.75rem; font-weight: 700;
+          font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+        .metric [data-mode], .metric [data-charge] { display: block; margin-top: 6px; font-size: .86rem; }
+        .metric [data-mode]:empty { display: none; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-        .tile[data-stale] { opacity: 0.65; border-style: dashed; }
+        .tile[data-stale] { opacity: 0.65; }
+        .tile[data-stale] .flow-card { border-style: dashed; }
         .gear, button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
-        .gear { position: absolute; top: 0.2rem; right: 0.3rem; padding: 0 0.35em; }
+        .gear { position: absolute; top: 8px; right: 8px; min-width: 48px; min-height: 48px; }
+        .gear:active { transform: scale(.96); }
+        :host(:not([view-only])) header { min-height: 56px; }
+        :host(:not([view-only])) .tile:has(header[hidden]) { padding-top: 64px; }
+        :host([view-only]) header { padding-right: 0; }
         button:hover { background: var(--cms-surface-hover, #34493e); }
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         :host([view-only]) [data-open-config] { display: none; }
@@ -196,7 +229,18 @@ class FHEMCMSSolarFlow extends HTMLElement {
       <article class="tile">
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="SolarFlow konfigurieren">⚙</button>
-        <svg data-svg viewBox="0 0 400 375" preserveAspectRatio="xMidYMid meet" role="img"></svg>
+        <div class="dashboard">
+          <div class="flow-card">
+            <svg data-svg viewBox="0 0 400 375" preserveAspectRatio="xMidYMid meet" role="img"></svg>
+          </div>
+          <dl class="metrics">
+            ${[['pv', 'PV-Leistung'], ['home', 'Hausverbrauch'], ['grid', 'Netz'], ['bat', 'Batterie']]
+              .map(([key, label]) => `<div class="metric" data-metric="${key}">
+                <dt>${label}</dt><dd><span data-power="${key}">–</span>
+                <span data-mode="${key}"></span>${key === 'bat' ? '<span data-charge></span>' : ''}</dd>
+              </div>`).join('')}
+          </dl>
+        </div>
         <span class="sr-only" data-accessible></span>
       </article>
       <dialog data-dialog aria-labelledby="solarflow-dialog-title">
@@ -459,7 +503,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
   buildStructure(model) {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const svg = this.shadowRoot.querySelector('[data-svg]');
-    // Die Verbindungen sind immer gleich dick und grau; nur die Punkte zeigen den Fluss.
+    // Nur die Punkte zeigen den Fluss, die Verbindungen bleiben neutral.
     const links = model.edges.map((edge) => {
       const path = `<path class="link" d="${edge.d}"/>`;
       if (edge.power === 0) {
@@ -482,18 +526,13 @@ class FHEMCMSSolarFlow extends HTMLElement {
       }
       const { x, y } = STATIONS[key];
       return `<g transform="translate(${x} ${y})" data-station="${key}">
-        <circle r="${STATION_R}" fill="url(#ring-grey)" data-ring/>
-        <circle r="36" fill="#fafafa"/>
+        <circle r="${STATION_R}" data-ring/>
         <g class="icon" transform="translate(0 -9) scale(0.85)">${ICONS[key]}${key === 'bat' ? [0, 1, 2, 3, 4].map((index) => `<rect data-segment="${index}" x="-8" y="${(10.8 - index * 6.8).toFixed(1)}" width="16" height="5.2" rx="1" fill="none" stroke="none"/>`).join('') : ''}</g>
         <text class="value" y="${key === 'bat' ? 22 : 28}" data-value="${key}">–</text>
         ${key === 'bat' ? '<text class="soc" y="34" data-soc>–</text>' : ''}
       </g>`;
     };
-    svg.innerHTML = `<defs>
-        <linearGradient id="ring-grey" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b4b4b4"/><stop offset="1" stop-color="#ececec"/></linearGradient>
-        <linearGradient id="ring-green" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6bff00"/><stop offset="1" stop-color="#f4fff0"/></linearGradient>
-        <linearGradient id="ring-red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff1a1a"/><stop offset="1" stop-color="#fff0f0"/></linearGradient>
-      </defs>${links}${['pv', 'home', 'grid', 'bat'].map(station).join('')}`;
+    svg.innerHTML = `${links}${['pv', 'home', 'grid', 'bat'].map(station).join('')}`;
   }
 
   render() {
@@ -510,17 +549,28 @@ class FHEMCMSSolarFlow extends HTMLElement {
       this.buildStructure(model);
     }
     const root = this.shadowRoot;
-    const ring = (station, color) => root.querySelector(`[data-station="${station}"] [data-ring]`)?.setAttribute('fill', `url(#ring-${color})`);
     for (const station of ['pv', 'home', 'grid', 'bat']) {
       const text = root.querySelector(`[data-value="${station}"]`);
       if (text) {
         text.textContent = formatPower(model.values[station]);
       }
+      root.querySelector(`[data-metric="${station}"]`).hidden = !model.visible[station];
+      root.querySelector(`[data-power="${station}"]`).textContent = formatPower(model.values[station]);
     }
     const { grid, bat } = model.values;
     const active = (value) => value !== null && Math.abs(value) >= Math.max(model.threshold, 1);
-    ring('grid', !active(grid) ? 'grey' : grid < 0 ? 'red' : 'green');
-    ring('bat', !active(bat) ? 'grey' : bat > 0 ? 'green' : 'red');
+    for (const [station, value, positive, negative] of [
+      ['grid', grid, 'Einspeisung', 'Bezug'], ['bat', bat, 'Laden', 'Entladen'],
+    ]) {
+      const state = !active(value) ? 'idle' : value > 0 ? 'green' : 'red';
+      for (const element of root.querySelectorAll(`[data-station="${station}"], [data-metric="${station}"]`)) {
+        element.dataset.state = state;
+      }
+      root.querySelector(`[data-mode="${station}"]`).textContent = value === null
+        ? 'Wert nicht verfügbar' : !active(value) ? 'Inaktiv' : value > 0 ? positive : negative;
+    }
+    root.querySelector('[data-charge]').textContent = model.soc === null
+      ? 'Ladestand nicht verfügbar' : `Ladestand: ${Math.round(model.soc)} %`;
     const soc = root.querySelector('[data-soc]');
     if (soc) {
       soc.textContent = model.soc === null ? '' : `${Math.round(model.soc)}%`;

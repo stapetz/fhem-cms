@@ -151,6 +151,8 @@ for (const [name, fixtures] of [
     [['73_table_labels.html', 27]]],
   ['Table design uses neutral cards and preserves responsive live readings',
     [['81_table_design.html', 104]]],
+  ['SolarFlow design preserves live flows and renders Liquid Glass cards',
+    [['82_solarflow_design.html', 220], ['82_solarflow_design.html?reduced=1', 221]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
       ['75_dialog_layout.html?width=852', 51]]],
@@ -383,7 +385,11 @@ for (const [name, fixtures] of [
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture.startsWith('75_dialog_layout.html')
+        fixture.startsWith('82_solarflow_design.html')
+          ? command => command('Emulation.setEmulatedMedia', { features: [{
+            name: 'prefers-reduced-motion', value: fixture.includes('reduced=1') ? 'reduce' : 'no-preference',
+          }] })
+          : fixture.startsWith('75_dialog_layout.html')
           ? command => command('Emulation.setDeviceMetricsOverride', {
             width: Number(new URLSearchParams(fixture.split('?')[1]).get('width')),
             height: fixture.includes('width=852') ? 393 : 1000, deviceScaleFactor: 1, mobile: false,

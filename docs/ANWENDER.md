@@ -176,8 +176,13 @@ Reading angezeigt und beim erneuten Bearbeiten übernommen. Details stehen
 unter [Platzhalter](./PLATZHALTER.md#platzhalter-suchen-statt-tippen).
 
 Beim **SolarFlow** bleibt der sichtbare Titel oberhalb des Diagramms frei.
-Das Diagramm skaliert in der verbleibenden Widgetfläche; bei ausgeblendetem
-Titel steht diese Fläche wieder dem Diagramm zur Verfügung.
+Auf `dev` verwendet es das neue transparente Karten-Design mit themefähigen
+Stationen. Unter dem Flussdiagramm stehen lesbare Detail-Karten für Leistungen,
+Netzbezug/Einspeisung, Laden/Entladen und Ladestand. Nicht konfigurierte
+Stationen und deren Karten entfallen weiterhin. Kleine Kacheln scrollen
+vertikal, statt Schrift und Diagramm unlesbar zu verkleinern. Titel und
+globale Titelausrichtung bleiben konfigurierbar; gespeicherte Raster und
+Datenquellen werden durch das neue Design nicht verändert.
 
 ## Schema-5-Editor bedienen
 

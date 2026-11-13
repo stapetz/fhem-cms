@@ -610,7 +610,7 @@ verbindlich. Technische Ausgabevorgaben für KI-HTML sind keine neue Freigabe
 für Skripte oder Befehle in Widgets.
 
 Ziel ist dieses Design für alle Widgets. Die Umstellung erfolgt schrittweise:
-**zunächst ausschließlich das Tabellenwidget**. Andere Widgets bleiben bis zu
+**Tabellenwidget und SolarFlow** (Refs #196, #197). Andere Widgets bleiben bis zu
 ihrer eigenen Umstellung unverändert; dies ist keine bereits abgeschlossene
 globale Designmigration.
 
