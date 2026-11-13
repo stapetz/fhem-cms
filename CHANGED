@@ -79,6 +79,15 @@ Administration
 - Datenquellen, Berechnungen, Schwellen, Flussrichtungen und Einstellungen
   bleiben erhalten; lokale visuelle Pruefung mit Liquid Glass.
 
+2026-11-13 - 1.11.0-dev: Neues Widget Solar und Energiefluss
+- Solar und Energiefluss ergaenzt SolarFlow um ein rechteckiges Flussbild, frei
+  benannte Ertragskarten und optionale Gesamtertraege.
+- Jedes Reading kann aus einem anderen Device kommen; bis zu acht Ertragskarten
+  und 20 Devices sind konfigurierbar.
+- Die responsive Anzeige respektiert alle Seitenthemes und reduzierte Bewegung.
+  Fehlende Werte bleiben unbekannt; bestehende HTML-Widgets werden nicht
+  automatisch ersetzt.
+
 2026-11-13 - 1.11.0-dev: Auswahl-Widget fuer diskrete Geraetewerte (#145)
 - Neues Auswahl-Widget erkennt sichere diskrete FHEM-Set-Wertelisten und
   unterstuetzt Dropdowns oder kompakte Buttons mit optionalen Anzeigenamen.
@@ -197,6 +206,16 @@ Administration
   entfernt; verspaetete Antworten ersetzen keinen neueren Zustand.
 - Fehler der Datenquelle und ein leerer ausgewaehlter Zeitraum bleiben
   unterscheidbar.
+
+2026-11-13 - 1.11.0-dev: Einheitliches themegerechtes Design aller bestehenden
+Widgets
+- Die elf verbliebenen Widgettypen folgen jetzt dem neuen Design mit klaren
+  Titeln, Systemschrift und transparenten Teilflaechen.
+- Alle Seitenthemes und laufende Glass-Einstellungen bleiben erhalten; eigene
+  HTML-/Textformatierungen, Symbolfarben und gespeicherte Raster bleiben
+  unveraendert.
+- Kleine Widgets bleiben lesbar und scrollbar, Steuerungen behalten 48px
+  Touchflaeche. Neue Anruflisten erhalten eine passende Anfangshoehe.
 
 2026-11-13 - 1.10.0-dev: Globale Administration im CMS-Theme
 - Die globale Administration uebernimmt beim Menueaufruf Theme,
