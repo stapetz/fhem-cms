@@ -1,0 +1,124 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Device-first widget regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { Schema5WidgetPanel } from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
+const checks = [];
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+};
+const until = async (predicate) => {
+  for (let i = 0; i < 200; i++) {
+    if (predicate()) return;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  throw new Error('Timed out waiting for dialog');
+};
+const devices = [
+  { name: 'Thermometer', alias: 'Kitchen', type: 'Unknown', readings: { temperature: '21.5' }, sets: '' },
+  { name: 'Light', readings: { state: 'off', pct: '20' }, sets: 'on:noArg off:noArg pct:slider,0,1,100' },
+];
+const live = { schemaVersion: 5, theme: 'dark', settings: { gridColumns: 12, layoutMode: 'grid' },
+  navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } },
+  pages: [{ id: 'start', title: 'Start', widgets: [] }] };
+let saved = 0;
+let savedWidget = null;
+const controller = { snapshot: () => ({ token: 'token', draft: null, live }),
+  async deleteWidget() { throw new Error('Unexpected delete'); },
+  async saveWidget(pageId, widget, token, action) {
+    check(pageId === 'start' && token === 'token' && action === 'create', 'Save uses standard token-bound creation');
+    saved++;
+    savedWidget = structuredClone(widget);
+    return { token, draft: { ...live, pages: [{ ...live.pages[0], widgets: [widget] }] }, live };
+  } };
+const services = { listAllDevices: async () => devices, logReadings: async () => ({ source: 'dblog', readings: ['temperature'] }),
+  setCommand: async () => { throw new Error('Unexpected command'); } };
+const root = document.createElement('div');
+document.body.append(root);
+let closed = false;
+let panel;
+try {
+  panel = new Schema5WidgetPanel({ root, controller, services, pageId: 'start', token: 'token',
+    deviceFirst: true, onClose: () => { closed = true; } });
+  await until(() => document.querySelector('.cms-dp-dialog [data-list] button'));
+  const picker = document.querySelector('.cms-dp-dialog');
+  picker.querySelector('[data-search]').value = 'Kitchen';
+  picker.querySelector('[data-search]').dispatchEvent(new Event('input'));
+  check(picker.querySelectorAll('[data-list] button').length === 1, 'Shared device picker searches aliases');
+  picker.querySelector('[data-list] button').click();
+  await until(() => !root.querySelector('.cms-panel-close').disabled);
+  let choices = [...root.querySelectorAll('.cms-widget-choice')];
+  check(choices.some(button => button.textContent === 'Diagramm'), 'Logged numeric reading offers chart');
+  check(!choices.some(button => ['Thermostat', 'SolarFlow', 'Schieberegler', 'Schalter'].includes(button.textContent)),
+    'Thermometer does not offer incompatible controls');
+  check(choices.some(button => button.textContent === 'Textbaustein')
+    && choices.some(button => button.textContent === 'Freies HTML'), 'Text and HTML always available');
+  choices.find(button => button.textContent === 'Wert-Anzeige').click();
+  await until(() => root.querySelector('cms-value')?.shadowRoot.querySelector('[data-dialog]').open);
+  const widget = root.querySelector('cms-value');
+  check(widget.shadowRoot.querySelector('[name="device"]').value === 'Thermometer', 'Standard value dialog has chosen device');
+  check(widget.shadowRoot.querySelector('[name="reading"]').value === 'temperature', 'Standard value dialog has chosen reading');
+  check(widget.shadowRoot.querySelector('[name="title"]').value === 'Kitchen', 'Standard dialog uses alias as editable title');
+  check(saved === 0 && live.pages[0].widgets.length === 0, 'No draft is saved before standard dialog confirmation');
+  widget.shadowRoot.querySelector('[data-cancel]').click();
+  await until(() => !root.querySelector('cms-value'));
+  check(!closed, 'Cancel returns to matching suggestions without saving');
+  root.querySelector('.cms-device-first-choice').click();
+  await until(() => document.querySelector('.cms-dp-dialog [data-list] button'));
+  document.querySelector('.cms-dp-dialog [data-cancel]').click();
+  await until(() => !root.querySelector('.cms-panel-close').disabled);
+  check(root.querySelectorAll('.cms-widget-choice').length === choices.length, 'Cancel device change retains earlier suggestions');
+  panel.close();
+  panel = new Schema5WidgetPanel({ root, controller, services: { ...services,
+    logReadings: async () => { throw new Error('DbLog timeout'); } },
+    pageId: 'start', token: 'token', deviceFirst: true, onClose() {} });
+  await until(() => document.querySelector('.cms-dp-dialog [data-list] button'));
+  document.querySelector('.cms-dp-dialog [data-list] button').click();
+  await until(() => !root.querySelector('.cms-panel-close').disabled);
+  check(root.querySelector('[role="status"]').textContent.includes('DbLog timeout'), 'History errors remain visible');
+  check(![...root.querySelectorAll('.cms-widget-choice')].some(button => button.textContent === 'Diagramm'),
+    'Failed history discovery does not invent chart support');
+  check(saved === 0, 'Picking, switching and cancelling devices never writes a draft');
+  [...root.querySelectorAll('.cms-widget-choice')].find(button => button.textContent === 'Wert-Anzeige').click();
+  await until(() => root.hasAttribute('data-widget-open'));
+  const form = root.querySelector('cms-value').shadowRoot.querySelector('[data-form]');
+  form.elements.title.value = 'My own title';
+  form.elements.title.dispatchEvent(new Event('input'));
+  form.requestSubmit();
+  await until(() => saved === 1 && !root.querySelector('cms-value'));
+  check(savedWidget.title === 'My own title' && savedWidget.device === 'Thermometer'
+    && savedWidget.reading === 'temperature', 'Manual overrides persist through the standard configuration dialog');
+  check(saved === 1 && live.pages[0].widgets.length === 0, 'Exactly one draft write leaves live configuration untouched');
+  let releaseList;
+  panel = new Schema5WidgetPanel({ root, controller, services: { ...services,
+    listAllDevices: () => new Promise(resolve => { releaseList = resolve; }) },
+    pageId: 'start', token: 'token', deviceFirst: true, onClose() {} });
+  check(Boolean(document.querySelector('.cms-dp-dialog')), 'Device picker opens while data is loading');
+  panel.suspend();
+  check(!document.querySelector('.cms-dp-dialog') && !root.childElementCount, 'Suspending editor removes nested device picker');
+  releaseList(devices);
+  await new Promise(resolve => setTimeout(resolve, 20));
+  check(!document.querySelector('.cms-dp-dialog') && !root.childElementCount, 'Late device response cannot reopen a suspended panel');
+  let releaseLogs;
+  panel = new Schema5WidgetPanel({ root, controller, services: { ...services,
+    logReadings: () => new Promise(resolve => { releaseLogs = resolve; }) },
+    pageId: 'start', token: 'token', deviceFirst: true, onClose() {} });
+  await until(() => document.querySelector('.cms-dp-dialog [data-list] button'));
+  document.querySelector('.cms-dp-dialog [data-list] button').click();
+  await until(() => typeof releaseLogs === 'function');
+  root.querySelector('.cms-panel-close').click();
+  check(!root.childElementCount, 'Pending history discovery can be canceled without waiting');
+  releaseLogs({ source: 'dblog', readings: ['temperature'] });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  check(!root.childElementCount && saved === 1, 'Late history result does not modify a canceled panel or draft');
+  result.dataset.result = 'pass';
+  result.textContent = JSON.stringify({ status: 'pass', checks: checks.length, messages: checks });
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = JSON.stringify({ status: 'fail', error: error.stack, checks, panel: root.textContent });
+} finally {
+  panel?.close();
+}
+</script>

@@ -80,6 +80,28 @@ Pruefung: `prove t/09_cms_admin.t`, `node --test t/68_cms_admin.test.js`
 und Browserfixture `t/69_cms_admin.html` ueber den bestehenden Chrome-Runner.
 Produktive CMS werden bei Tests nicht geloescht.
 
+## Gerätebasierte Widgetauswahl (dev, 1.11.0-dev, Refs #185)
+
+Der Schema-5-Editor ergänzt **Bearbeiten → Gerät hinzufügen**, ohne den
+geräteunabhängigen Bibliotheksweg zu ersetzen. `Schema5WidgetPanel` verwendet
+im Modus `deviceFirst` die gemeinsame Gerätesuche und die reine Funktion
+`deviceWidgetSuggestions`. Sie liefert je tatsächlich passendem Widgettyp
+änderbare Vorgaben; Thermostat-/PV-Erkennung wird aus dem Einrichtungsassistenten
+wiederverwendet, die Slidererkennung aus `slider-commands.js`.
+Direkte Gerätekanäle werden für Thermostate berücksichtigt.
+Text und HTML bleiben verfügbar; Diagramme verlangen geloggte numerische
+Readings aus `logReadings`, niemals eine historische Serienabfrage.
+Fehler der Logprüfung bleiben sichtbar und sperren keine anderen Typen.
+
+Neue Widgets laufen ausschließlich durch die vorhandene tokengebundene
+`Schema5WidgetSession` und deren Standarddialog. Geräteauswahl und Abbruch
+verursachen keine Entwurfsänderung und keinen Set-Befehl. Beim Suspend/Close
+bricht ein `AbortSignal` den vorgeschalteten Picker ab; späte Metadaten dürfen
+keinen Dialog wieder öffnen. Auch Abbruch während der asynchronen
+Standarddialog-Vorbereitung bleibt ein Abbruch, kein Reload-Fehler.
+Prüfung: `node --test t/70_device_first.test.js t/19_schema5_editor.test.js`
+und `t/71_device_first.html` über den bestehenden Chrome-Runner.
+
 ## Dokumentationen synchron halten
 
 Der FHEM-Wiki-Onepager wird als MediaWiki-Quelltext in

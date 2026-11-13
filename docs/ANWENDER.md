@@ -217,6 +217,24 @@ Geräte lassen sich später im Editor hinzufügen.
   sowie Widget hinzufügen (mit Suche) und Widgets automatisch anordnen.
 - **Ansicht:** Vorschau (zeigt die Seite ohne Bearbeitungselemente) und Raster anzeigen.
 
+### Gerät zuerst hinzufügen (dev, ab 1.11.0-dev)
+
+**Bearbeiten → Gerät hinzufügen** öffnet die gemeinsame Gerätesuche nach Name,
+Alias, Typ und Raum. Nach der Auswahl erscheinen nur Widgettypen, für die das
+Gerät passende Readings oder Set-Angebote besitzt. Ein reines Thermometer
+erhält beispielsweise keinen Thermostat- oder Schieberegler-Vorschlag.
+Thermostatkanäle werden berücksichtigt. **Textbaustein** und **Freies HTML**
+stehen immer bereit; **Diagramm** nur bei einem nachgewiesenen geloggten
+numerischen Reading. Fehler dieser Prüfung werden angezeigt und verhindern
+die übrigen Vorschläge nicht; über **Gerät ändern** lässt sich erneut prüfen.
+
+Die Widgetwahl öffnet den gewohnten Konfigurationsdialog mit vorbelegtem Gerät,
+passenden Readings und gegebenenfalls Befehlen. Diese Angaben bleiben änderbar.
+Erst **Speichern** übernimmt das Widget in den Entwurf, nicht in die Live-Seite.
+**Abbrechen** im Widgetdialog kehrt zur Vorschlagsliste zurück; die Geräteauswahl
+oder den gesamten Vorgang abzubrechen speichert und schaltet nichts.
+**Bearbeiten → Widget hinzufügen** bleibt als geräteunabhängiger Weg erhalten.
+
 ### Theme-Manager und Hintergrundbilder
 
 Unter **Bearbeiten → Seiteneinstellungen**

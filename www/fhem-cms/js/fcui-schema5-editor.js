@@ -43,6 +43,7 @@ export class Schema5Editor {
   #page;
   #mode;
   #widgets;
+  #addDevice;
   #blueprints;
   #arrange;
   #backup;
@@ -113,6 +114,10 @@ export class Schema5Editor {
     this.#widgets = document.createElement('button');
     this.#widgets.type = 'button';
     this.#widgets.textContent = 'Widget hinzufügen';
+    this.#addDevice = document.createElement('button');
+    this.#addDevice.type = 'button';
+    this.#addDevice.textContent = 'Gerät hinzufügen';
+    this.#addDevice.className = 'cms-button';
     this.#blueprints = document.createElement('button');
     this.#blueprints.type = 'button';
     this.#blueprints.textContent = 'Widget-Vorlagen';
@@ -145,7 +150,7 @@ export class Schema5Editor {
     this.#previewToggle.setAttribute('aria-pressed', 'false');
     this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets,
       ...createCmsAdminMenuLinks({ adminMenuEnabled })]);
-    this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#blueprints, this.#arrange]);
+    this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#addDevice, this.#blueprints, this.#arrange]);
     this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
@@ -156,6 +161,7 @@ export class Schema5Editor {
     this.#content.className = 'cms-schema5-workspace';
     this.#page.addEventListener('click', () => this.#openPage());
     this.#widgets.addEventListener('click', () => this.#openWidgets());
+    this.#addDevice.addEventListener('click', () => this.#openWidgets(undefined, true));
     this.#blueprints.addEventListener('click', () => this.#openBlueprints());
     this.#arrange.addEventListener('click', () => this.#arrangeWidgets());
     this.#backup.addEventListener('click', () => this.#openBackup());
@@ -253,6 +259,7 @@ export class Schema5Editor {
   #setActions(enabled, hasDraft) {
     this.#page.disabled = !enabled;
     this.#widgets.disabled = !enabled;
+    this.#addDevice.disabled = !enabled;
     this.#blueprints.disabled = !enabled;
     this.#arrange.disabled = !enabled;
     this.#backup.disabled = !enabled;
@@ -694,7 +701,7 @@ export class Schema5Editor {
     }
   }
 
-  #openWidgets(widgetId) {
+  #openWidgets(widgetId, deviceFirst = false) {
     if (!this.#active || this.#suspended || !this.#view || this.#widgets.disabled) return;
     try {
       const pageId = this.#view.current;
@@ -706,7 +713,7 @@ export class Schema5Editor {
       this.#content.replaceChildren();
       const container = this.#panelContainer('widgets');
       this.#panel = new Schema5WidgetPanel({
-        root: container, controller: this.#controller, services: this.#services, pageId, token: state.token, widgetId,
+        root: container, controller: this.#controller, services: this.#services, pageId, token: state.token, widgetId, deviceFirst,
         onClose: ({ requiresReload }) => {
           this.#panel = null;
           Promise.resolve().then(() => requiresReload
