@@ -89,6 +89,15 @@ vorbelegen
 - Freie Felder lassen sich gezielt ergaenzen. Bestehende und manuelle Eingaben
   bleiben erhalten; mehrdeutige Quellen werden nicht willkuerlich ausgewaehlt.
 
+2026-11-13 - 1.11.0-dev: Solarwidget: Originalgeometrie und mobile Inhaltshoehe
+- Abstaende, Zeilenhoehen und Stationsbeschriftungen am ausgelesenen
+  HTML-Original ausgerichtet; PV-Verbindungen verwenden dessen korrekt gebogene
+  Pfade.
+- Dach, Garage und Gartenhaus zeigen die Emojis der Vorlage.
+- Im responsiven Layout waechst das Widget mit dem Inhalt: keine interne
+  Scrollbar oder abgeschnittene Karten. Gespeicherte Raster und
+  Reading-Zuordnungen bleiben erhalten.
+
 2026-11-13 - 1.11.0-dev: Solar und Energiefluss: kompakt wie der HTML-Entwurf
 - Kompakte Stationsgroessen, drei Ertragskarten nebeneinander bei Desktopbreite
   und eine schmale Summenleiste folgen jetzt dem freigegebenen HTML-Vorbild.
