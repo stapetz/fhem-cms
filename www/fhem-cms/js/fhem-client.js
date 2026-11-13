@@ -436,6 +436,15 @@ export class FhemClient {
     }
   }
 
+  async uploadMagicBackground() {
+    const response = await fetch(new URL('../images/parachute.jpg', import.meta.url),
+      { credentials: 'same-origin' });
+    if (!response.ok) throw new Error(`Magic-Hintergrund: HTTP ${response.status}`);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (!bytes.length || bytes.length > 3 * 1024 * 1024) throw new Error('Ungültige Größe des Magic-Hintergrundbilds');
+    return this.uploadMedia(bytes);
+  }
+
   async uploadMedia(bytes) {
     let binary = '';
     for (let i = 0; i < bytes.length; i += 0x8000) {

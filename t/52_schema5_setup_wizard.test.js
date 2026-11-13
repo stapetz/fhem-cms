@@ -430,6 +430,8 @@ test('wizard preview selects a start room, shows widget types and saves only aft
     assert.equal(saved.pages[0].widgets[1].type, 'fhem-chart');
     assert.equal(saved.pages[0].widgets[1].source, 'dblog');
     assert.equal(saved.pages[1].widgets[0].type, 'fhem-switch');
+    assert.ok(saved.pages.every((page) => page.background === undefined),
+      'guided setup does not assign a background');
     assert.equal(outcome.saved, true);
   } finally {
     globalThis.document = previous;
@@ -454,6 +456,8 @@ test('magic saves exactly one draft without preview or publication and handles f
     const devices = [{ name: 'Lamp', type: 'Shelly', rooms: ['Wohnzimmer'],
       readings: { state: 'off' }, sets: 'on:noArg off:noArg' }];
     let saves = 0;
+    let uploads = 0;
+    const background = `media/${'a'.repeat(32)}.jpg`;
     let outcome;
     let fail = false;
     let snapshot = { live: config, draft: null, token: 'token' };
@@ -468,7 +472,10 @@ test('magic saves exactly one draft without preview or publication and handles f
     };
     const launch = (client = { jsonlist: async () => devices }) => {
       const root = new Element();
-      new Schema5SetupWizard({ root, controller, client, onClose: (value) => { outcome = value; } });
+      new Schema5SetupWizard({ root, controller, client: {
+        uploadMagicBackground: async () => { uploads += 1; return background; },
+        ...client,
+      }, onClose: (value) => { outcome = value; } });
       return root;
     };
     const action = (root, label) => root.children[4].children.find((node) => node.textContent === label).fire('click');
@@ -484,7 +491,15 @@ test('magic saves exactly one draft without preview or publication and handles f
     assert.equal(saves, 1);
     assert.equal(outcome.saved, true);
     assert.equal(outcome.state.draft.pages[0].widgets[0].type, 'fhem-switch');
+    assert.ok(outcome.state.draft.pages.every((page) => page.background === background));
+    assert.equal(uploads, 1, 'one image upload serves all Magic pages');
     assert.deepEqual(config, initialConfig());
+
+    root = launch({ jsonlist: async () => devices,
+      uploadMagicBackground: async () => { throw new Error('Hintergrund konnte nicht geladen werden'); } });
+    await action(root, 'Magic - auf gut Glück');
+    assert.match(root.children[2].textContent, /Entwurf konnte nicht vorbereitet werden.*Hintergrund/);
+    assert.equal(saves, 1, 'failed background preparation does not save a draft');
 
     root = launch({ jsonlist: async () => [] });
     await action(root, 'Magic - auf gut Glück');

@@ -674,6 +674,15 @@ die bestaetigten Schritte Geraete laden, Temperaturdaten pruefen (mit
 Teilfortschritt je Batch), Seiten planen, Layout anordnen und Entwurf speichern.
 Erst die Speicherbestaetigung fuellt die letzten Punkte. Die Anzeige besitzt
 ARIA-Fortschrittswerte und beachtet reduzierte Bewegung.
+Magic laedt das mitgelieferte `www/fhem-cms/images/parachute.jpg` ueber den
+validierten Medienupload genau einmal pro Einrichtung in das jeweilige CMS.
+Der relative `media/<md5>.jpg`-Pfad wird auf allen Magic-Seiten einschliesslich
+Start gespeichert. Die bestehende Medien-Deduplizierung vermeidet doppelte
+Bilddateien bei Wiederholung. Leere und gefuehrt erstellte Seiten erhalten kein
+Standardhintergrundbild; bestehende CMS werden nicht nachtraeglich umgestellt.
+Download-/Uploadfehler verhindern das Speichern des Magic-Entwurfs und werden
+sichtbar gemeldet. Scheitert erst das Speichern, bleibt das bereits hochgeladene
+Bild als verwaltbares Medium erhalten (Refs #182).
 Beim Verlassen der bestehenden Oberfläche werden ausstehende Snapshots und
 Ereignisse geschlossener WebSockets verworfen; sie dürfen keine Abonnements
 erneut starten. Eine vollständige Umstellung auf den zentralen FCUI-Controller

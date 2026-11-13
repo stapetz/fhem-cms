@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
+import { readFile } from 'node:fs/promises';
 import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
 import { createPreviewServices } from '../fcui/preview-services.js';
 
@@ -13,6 +14,35 @@ afterEach(() => {
   globalThis.fetch = original.fetch;
   globalThis.window = original.window;
   globalThis.WebSocket = original.WebSocket;
+});
+
+test('Magic background loads the bundled JPEG and uploads exact bytes through the media contract', async () => {
+  const image = await readFile(new URL('../www/fhem-cms/images/parachute.jpg', import.meta.url));
+  assert.equal(image.readUInt16BE(0), 0xffd8);
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  const background = `media/${'a'.repeat(32)}.jpg`;
+  let uploads = 0;
+  client.command = async command => {
+    uploads += 1;
+    assert.ok(command.startsWith('set cms media '));
+    assert.deepEqual(Buffer.from(command.slice('set cms media '.length), 'base64'), image);
+    return background;
+  };
+  globalThis.fetch = async (url, options) => {
+    assert.ok(String(url).endsWith('/images/parachute.jpg'));
+    assert.equal(options.credentials, 'same-origin');
+    return new Response(image);
+  };
+  assert.equal(await client.uploadMagicBackground(), background);
+  assert.equal(uploads, 1);
+  globalThis.fetch = async () => new Response('', { status: 404 });
+  await assert.rejects(client.uploadMagicBackground(), /Magic-Hintergrund: HTTP 404/);
+  globalThis.fetch = async () => new Response('');
+  await assert.rejects(client.uploadMagicBackground(), /Größe/);
+  assert.equal(uploads, 1, 'failed downloads never upload an empty fallback');
+  globalThis.fetch = async () => new Response(image);
+  client.command = async () => 'Speichern verweigert';
+  await assert.rejects(client.uploadMagicBackground(), /Speichern verweigert/);
 });
 
 test('commands use same-origin credentials and renew a rejected CSRF token once', async () => {
