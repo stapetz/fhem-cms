@@ -67,3 +67,25 @@ test('discrete set lists offer selection controls without inventing slider capab
   assert.equal(deviceWidgetSuggestions({ name: 'Mode', sets: 'on:noArg level:slider,0,1,100' }).has('fhem-select'), false);
   assert.equal(deviceWidgetSuggestions({ name: 'Mode', sets: 'mode:auto,eco;bad' }).has('fhem-select'), false);
 });
+
+test('sensor maintenance and generic set syntax are not everyday actuator capabilities', () => {
+  for (const sets of ['replaceBatteryForSec', 'wakeUp:noArg factoryReset:noArg',
+    'getConfig:noArg clear:noArg regSet:foo,bar maintenance:slider,0,1,100']) {
+    const choices = deviceWidgetSuggestions({ name: 'Sensor', type: 'LaCrosse',
+      readings: { temperature: '6.3', humidity: '90', state: 'T: 6.3 H: 90' }, sets });
+    for (const type of ['fhem-button', 'fhem-switch', 'fhem-slider', 'fhem-select', 'thermostat']) {
+      assert.equal(choices.has(type), false, `${sets} must not suggest ${type}`);
+    }
+  }
+  const choices = deviceWidgetSuggestions({ name: 'Sensor', readings: { temperature: '20', state: 'T: 20' },
+    sets: 'on:noArg off:noArg' });
+  assert.equal(choices.has('fhem-switch'), false, 'measurement state is not a switch state');
+  assert.equal(deviceWidgetSuggestions({ name: 'Blind', readings: { pct: '40' },
+    sets: 'up:noArg down:noArg stop:noArg pct:slider,0,1,100' }).has('fhem-slider'), true);
+  assert.equal(deviceWidgetSuggestions({ name: 'Light', readings: { state: 'on' },
+    sets: 'on off toggle' }).has('fhem-switch'), true);
+  assert.equal(deviceWidgetSuggestions({ name: 'Light', readings: { pct: '40' },
+    sets: 'maintenance:slider,0,1,100' }).has('fhem-slider'), false);
+  assert.equal(deviceWidgetSuggestions({ name: 'Light', readings: { pct: '40' },
+    sets: 'dim:slider,0,1,100' }).get('fhem-slider').reading, 'pct');
+});

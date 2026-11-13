@@ -31,21 +31,25 @@ export function deviceWidgetSuggestions(device, devices = [], logInfo = null) {
     }
   }
   const sets = typeof device.sets === 'string' ? device.sets : '';
+  // Bare FHEM set entries do not prove that a command takes no argument.
+  // Offer everyday actuator actions, not sensor maintenance or reset commands.
   const noArgs = sets.split(/\s+/).filter((entry) =>
-    /^[A-Za-z0-9_.-]+(?::noArg)?$/.test(entry)).map((entry) => entry.split(':')[0]);
+    /^(?:on|off|toggle|up|down|stop|open|close)(?::noArg)?$/.test(entry)).map((entry) => entry.split(':')[0]);
   if (noArgs.length) {
     add('fhem-button', { device: device.name, command: noArgs.includes('toggle') ? 'toggle' : noArgs[0] });
   }
-  if (noArgs.includes('on') && noArgs.includes('off') && names.includes('state')) {
+  if (noArgs.includes('on') && noArgs.includes('off') && names.includes('state')
+    && /^(?:on|off)$/.test(readings.state)) {
     add('fhem-switch', { device: device.name, reading: 'state', on: 'on', off: 'off' });
   }
-  const slider = sliderCommands(sets)[0];
+  const sliderReading = (command) => names.includes(command) ? command
+    : command === 'dim' && names.includes('pct') ? 'pct' : '';
+  const slider = sliderCommands(sets).find(({ command }) => sliderReading(command));
   if (slider) {
     add('fhem-slider', { device: device.name, command: slider.command,
-      reading: names.includes(slider.command) ? slider.command
-        : suggestedReading(names, 'fhem-slider') || reading || '' });
+      reading: sliderReading(slider.command) });
   }
-  const selection = parseDiscreteSetCommands(sets)[0];
+  const selection = parseDiscreteSetCommands(sets).find(({ command }) => names.includes(command));
   if (selection) {
     add('fhem-select', { device: device.name, command: selection.command,
       reading: names.includes(selection.command) ? selection.command : '',

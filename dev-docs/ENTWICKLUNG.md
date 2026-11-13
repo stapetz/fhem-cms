@@ -92,6 +92,13 @@ Direkte Gerätekanäle werden für Thermostate berücksichtigt.
 Text und HTML bleiben verfügbar; Diagramme verlangen geloggte numerische
 Readings aus `logReadings`, niemals eine historische Serienabfrage.
 Fehler der Logprüfung bleiben sichtbar und sperren keine anderen Typen.
+Ein nackter Set-Eintrag beweist keine Parameterfreiheit: etwa
+`replaceBatteryForSec` ist kein Taster. Automatische Tastervorschläge beschränken
+sich auf angebotene Alltagsaktionen (`on`, `off`, `toggle`, `up`, `down`, `stop`,
+`open`, `close`); Wartung und Reset bleiben außen vor. Schalter verlangen
+zusätzlich einen `on`-/`off`-Status. Slider benötigen ein passendes vorhandenes
+Statusreading, Auswahllisten ein Reading mit dem Namen des Set-Befehls.
+Unklare Geräte lassen sich weiterhin über die vollständige Bibliothek einrichten.
 
 Neue Widgets laufen ausschließlich durch die vorhandene tokengebundene
 `Schema5WidgetSession` und deren Standarddialog. Geräteauswahl und Abbruch

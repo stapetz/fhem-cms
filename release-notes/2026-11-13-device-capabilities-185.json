@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Geraetevorschlaege ohne Wartungsaktionen",
+  "changes": [
+    "Geraet hinzufuegen verwechselt Wartungsbefehle von Thermometern nicht mehr mit Tastern.",
+    "Automatische Schaltervorschlaege verlangen einen passenden An-/Aus-Status; Slider und Auswahllisten ein zuordenbares Reading.",
+    "Die vollstaendige Widgetbibliothek bleibt fuer individuelle Zuordnungen verfuegbar."
+  ]
+}

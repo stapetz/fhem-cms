@@ -223,6 +223,11 @@ Geräte lassen sich später im Editor hinzufügen.
 Alias, Typ und Raum. Nach der Auswahl erscheinen nur Widgettypen, für die das
 Gerät passende Readings oder Set-Angebote besitzt. Ein reines Thermometer
 erhält beispielsweise keinen Thermostat- oder Schieberegler-Vorschlag.
+Wartungsbefehle wie Batteriewechsel, Aufwecken oder Werksreset begründen
+keinen Tastervorschlag. Schalter benötigen angebotene An-/Aus-Befehle und
+einen passenden `on`-/`off`-Status; Slider und Auswahllisten zusätzlich
+ein zuordenbares Statusreading. Die automatische Auswahl ist bewusst
+zurückhaltend; andere Konfigurationen bleiben über **Widget hinzufügen** möglich.
 Thermostatkanäle werden berücksichtigt. **Textbaustein** und **Freies HTML**
 stehen immer bereit; **Diagramm** nur bei einem nachgewiesenen geloggten
 numerischen Reading. Fehler dieser Prüfung werden angezeigt und verhindern

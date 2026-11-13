@@ -17,7 +17,8 @@ const until = async (predicate) => {
   throw new Error('Timed out waiting for dialog');
 };
 const devices = [
-  { name: 'Thermometer', alias: 'Kitchen', type: 'Unknown', readings: { temperature: '21.5' }, sets: '' },
+  { name: 'Thermometer', alias: 'Kitchen', type: 'LaCrosse',
+    readings: { temperature: '21.5', humidity: '60', state: 'T: 21.5 H: 60' }, sets: 'replaceBatteryForSec' },
   { name: 'Light', readings: { state: 'off', pct: '20' }, sets: 'on:noArg off:noArg pct:slider,0,1,100' },
 ];
 const live = { schemaVersion: 5, theme: 'dark', settings: { gridColumns: 12, layoutMode: 'grid' },
@@ -51,7 +52,7 @@ try {
   await until(() => !root.querySelector('.cms-panel-close').disabled);
   let choices = [...root.querySelectorAll('.cms-widget-choice')];
   check(choices.some(button => button.textContent === 'Diagramm'), 'Logged numeric reading offers chart');
-  check(!choices.some(button => ['Thermostat', 'SolarFlow', 'Schieberegler', 'Schalter'].includes(button.textContent)),
+  check(!choices.some(button => ['Thermostat', 'SolarFlow', 'Schieberegler', 'Schalter', 'Taster', 'Wert auswählen'].includes(button.textContent)),
     'Thermometer does not offer incompatible controls');
   check(choices.some(button => button.textContent === 'Textbaustein')
     && choices.some(button => button.textContent === 'Freies HTML'), 'Text and HTML always available');
