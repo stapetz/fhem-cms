@@ -27,6 +27,10 @@ Administration
 - Schema 5 bleibt erhalten; neue optionale Felder erfordern aktuelle
   Validatoren.
 
+2026-11-13 - 1.11.0-dev: Auswahl-Widget fuer diskrete Geraetewerte (#145)
+- Neues Auswahl-Widget erkennt sichere diskrete FHEM-Set-Wertelisten und
+  unterstuetzt Dropdowns oder kompakte Buttons mit optionalen Anzeigenamen.
+
 2026-11-13 - 1.10.0-dev: Standardhintergrund fuer Magic-Seiten
 - Magic verwendet das mitgelieferte Strandfoto auf allen erzeugten Seiten
   einschliesslich Start.
@@ -35,6 +39,16 @@ Administration
 - Das Bild wird als normales CMS-Medium gespeichert; Fehler beim Laden oder
   Upload verhindern den Magic-Entwurf.
 - Bestehende Seiten werden nicht nachtraeglich veraendert.
+
+2026-11-13 - 1.11.0-dev: Geraet zuerst zur Seite hinzufuegen
+- Bearbeiten -> Geraet hinzufuegen sucht nach Name, Alias, Typ und Raum und
+  bietet passende Widgets an.
+- Readings, Set-Angebote und erkannte Thermostatkanaele bestimmen die
+  Vorschlaege; Text und freies HTML bleiben immer verfuegbar.
+- Diagramme werden nur fuer bestaetigte geloggte numerische Readings
+  vorgeschlagen; Prueffehler bleiben sichtbar.
+- Der bekannte Widgetdialog oeffnet mit aenderbaren Vorgaben. Erst Speichern
+  schreibt den Entwurf; Abbrechen schaltet oder speichert nichts.
 
 2026-11-13 - 1.10.0-dev: Globale Administration im CMS-Theme
 - Die globale Administration uebernimmt beim Menueaufruf Theme,
