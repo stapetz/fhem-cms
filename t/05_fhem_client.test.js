@@ -86,6 +86,29 @@ test('history waits for asynchronous DbLog results and surfaces worker errors', 
   await assert.rejects(client.history('Temp', 'temperature'), /DbLog-Abfrage fehlgeschlagen/);
 });
 
+test('log reading discovery polls asynchronous results and validates source responses', async () => {
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  const commands = [];
+  const replies = [
+    JSON.stringify({ status: 'pending' }),
+    JSON.stringify({ source: 'dblog', readings: ['temperature', 'bad reading'] }),
+  ];
+  client.command = async (command) => {
+    commands.push(command);
+    return replies.shift();
+  };
+  assert.deepEqual(await client.logReadings('Thermometer'), {
+    source: 'dblog', readings: ['temperature'],
+  });
+  assert.equal(commands.length, 2);
+  assert.ok(commands.every((command) => command === 'get cms logreadings Thermometer auto'));
+
+  client.command = async () => 'Kein DbLog- oder FileLog-Device gefunden';
+  await assert.rejects(client.logReadings('Thermometer'), /Kein DbLog- oder FileLog-Device gefunden/);
+  client.command = async () => JSON.stringify({ source: 'unknown', readings: [] });
+  await assert.rejects(client.logReadings('Thermometer'), /ungültige Reading-Liste/);
+});
+
 test('preview services expose only reads and explicitly reject actions', async () => {
   const calls = [];
   const client = {

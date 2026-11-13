@@ -289,12 +289,28 @@ export class FhemClient {
     if (!isValidName(device) || !/^(?:auto|dblog|filelog)$/.test(source)) {
       throw new Error('Ungültiges Device');
     }
-    const result = await this.parseJsonResult(
-      await this.command(`get ${this.cmsDevice} logreadings ${device} ${source}`),
-      'Die geloggten Readings konnten nicht gelesen werden');
+    const command = `get ${this.cmsDevice} logreadings ${device} ${source}`;
+    const deadline = Date.now() + 25000;
+    let result;
+    while (true) {
+      result = await this.parseJsonResult(await this.command(command),
+        'Die geloggten Readings konnten nicht gelesen werden');
+      if (result?.status !== 'pending') break;
+      if (Date.now() >= deadline) {
+        throw new Error('Zeitüberschreitung beim Ermitteln der geloggten Readings');
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    if (result?.status === 'error') {
+      throw new Error(result.message || 'Die geloggten Readings konnten nicht gelesen werden');
+    }
+    if (!result || typeof result !== 'object' || Array.isArray(result)
+      || !/^(?:dblog|filelog)$/.test(result.source) || !Array.isArray(result.readings)) {
+      throw new Error('FHEM lieferte eine ungültige Reading-Liste');
+    }
     return {
-      source: result?.source,
-      readings: Array.isArray(result?.readings) ? result.readings.filter(isValidName) : []
+      source: result.source,
+      readings: result.readings.filter(isValidName)
     };
   }
 

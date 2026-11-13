@@ -114,7 +114,7 @@ Verwende bevorzugt die erzeugten Device-Links, da Host, Port und Webname von dei
 
 == Erste Seite erstellen ==
 
-Bei einer neuen, leeren Konfiguration erscheint der '''Einrichtungsassistent'''. Du kannst leer beginnen, Räume und Geräte mit Vorschau auswählen oder mit '''Magic - auf gut Glück''' einen Entwurf erzeugen. Magic berücksichtigt höchstens acht Räume mit je acht Widgets und nur unterstützte Geräte. Nicht erkannte Geräte lassen sich später im Editor ergänzen. Der Assistent veröffentlicht nichts; Bedienelemente können reale Geräte steuern. Automatische Temperaturverläufe werden nicht angelegt.
+Bei einer neuen, leeren Konfiguration erscheint der '''Einrichtungsassistent'''. Du kannst leer beginnen, Räume und Geräte mit Vorschau auswählen oder mit '''Magic - auf gut Glück''' einen Entwurf erzeugen. Magic berücksichtigt höchstens acht Räume mit je acht Widgets und nur unterstützte Geräte. Nicht erkannte Geräte lassen sich später im Editor ergänzen. Für Temperatur-Readings, die in DbLog oder FileLog protokolliert werden, ergänzt der Assistent ein Verlaufsdiagramm; DbLog wird bevorzugt. Ohne nachgewiesene Protokollierung wird kein Diagramm angelegt. Der Assistent veröffentlicht nichts; Bedienelemente können reale Geräte steuern.
 
 Die folgenden Schritte beschreiben den manuellen Ausbau mit leerer Startseite oder bei einer bestehenden Einrichtung:
 
@@ -524,7 +524,7 @@ Die genannten Logdevices müssen existieren und korrekt eingerichtet sein. Die B
 * Höchstens 400 dargestellte Punkte; größere Mengen werden mit Mittelwert und Min-/Max-Band zusammengefasst.
 * Aktualisierung alle fünf Minuten; Abfragecache 30 Sekunden.
 
-'''DbLog-Abfragen sind synchron und können FHEM blockieren.''' Beginne mit kurzen Zeiträumen und öffne nicht unnötig viele große Jahresdiagramme gleichzeitig.
+DbLog- und FileLog-Verläufe werden im Hintergrund abgefragt, damit FHEM währenddessen bedienbar bleibt. Die Abfragen haben ein Zeitlimit; bei großen Datenmengen kann ein Verlauf daher mit einem Fehler enden.
 
 == Updates ==
 
