@@ -50,9 +50,10 @@ auch im bisherigen Schema-4-Editor.
 - Der Bestaetigungsdialog nennt alle ausgewaehlten Devices. Erst die Eingabe
   `DELETE` gibt die unwiderrufliche Loeschung frei.
 - Purge entfernt Konfiguration, Entwurf, Sicherungen und Medien. Nur nach
-  erfolgreichem Purge wird das Device geloescht. Ergebnisse stehen je Eintrag
-  auf der Seite; bei einem Verbindungsfehler vor einem weiteren Versuch den
-  Bestand aktualisieren.
+  erfolgreichem Purge wird das Device geloescht. Nach vollstaendig erfolgreicher
+  Loeschung wird die Seite automatisch neu geladen. Bei Fehlern oder
+  Teilerfolgen bleiben die Einzelergebnisse sichtbar; bei einem Verbindungsfehler
+  vor einem weiteren Versuch den Bestand pruefen.
 - Verwaiste Verzeichnisse geloeschter Devices erscheinen getrennt, mit ihrer
   Dateistruktur. Sie werden separat ausgewaehlt und bestaetigt. Unbekannte
   Verzeichnisse, fremde Dateien, Symlinks und Namen anderer Devices sind gesperrt.

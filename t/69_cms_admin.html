@@ -40,7 +40,8 @@ try {
       return selection.map(item => ({...item, ok: true, message: 'Erledigt'}));
     },
   };
-  await mountCmsAdmin(body, client);
+  let reloads = 0;
+  await mountCmsAdmin(body, client, () => { reloads++; });
   const $ = selector => doc.querySelector(selector);
   check(doc.title === 'Globale CMS Administration' && $('h1').textContent === doc.title,
     'page heading and browser title use the global administration name');
@@ -84,29 +85,38 @@ try {
   check($('#confirmation').open && $('#selected').textContent === 'Drop', 'confirmation names exact selection');
   $('button[value="cancel"]').click();
   await new Promise(resolve => setTimeout(resolve, 0));
-  check(removed.length === 0, 'cancel never deletes');
+  check(removed.length === 0 && reloads === 0, 'cancel never deletes or reloads');
   $('#delete-devices').click();
   $('button[value="delete"]').click();
   await new Promise(resolve => setTimeout(resolve, 0));
-  check(removed.length === 0, 'missing DELETE confirmation never deletes');
+  check(removed.length === 0 && reloads === 0, 'missing DELETE confirmation never deletes or reloads');
   check($('#confirmation').open, 'invalid confirmation keeps dialog open');
   $('#confirm-text').value = 'DELETE';
   $('button[value="delete"]').click();
   await wait(() => $('#results').textContent.includes('Drop: Erledigt') && !$('input[value="Drop"]'));
   check(removed.join() === 'Drop' && !!$('input[value="Keep"]'), 'only selected device removed and list refreshed');
+  check(reloads === 1, 'successful confirmed device deletion reloads the page once');
   select('Orphan');
   $('#delete-orphans').click();
   $('#confirm-text').value = 'DELETE';
   $('button[value="delete"]').click();
   await wait(() => removed.includes('Orphan') && !$('input[value="Orphan"]'));
   check(removed.join() === 'Drop,Orphan', 'orphan cleanup has a separate selection');
+  check(reloads === 2, 'successful orphan cleanup also reloads the page once');
   client.remove = async () => { throw new Error('Zugriff verweigert'); };
   select('Keep');
   $('#delete-devices').click();
   $('#confirm-text').value = 'DELETE';
   $('button[value="delete"]').click();
   await wait(() => $('#results').textContent.includes('Zugriff verweigert'));
-  check(!!$('input[value="Keep"]'), 'failure retains device and reports error');
+  check(!!$('input[value="Keep"]') && reloads === 2, 'failure retains device and error without a page reload');
+  client.remove = async selection => selection.map(item => ({...item, ok: false, message: 'Purge fehlgeschlagen'}));
+  select('Keep');
+  $('#delete-devices').click();
+  $('#confirm-text').value = 'DELETE';
+  $('button[value="delete"]').click();
+  await wait(() => $('#results').textContent.includes('Purge fehlgeschlagen') && !$('#refresh').disabled);
+  check(reloads === 2 && !!$('#results [data-error]'), 'unsuccessful batch keeps per-entry errors visible without reload');
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({checks});
 } catch (error) {
