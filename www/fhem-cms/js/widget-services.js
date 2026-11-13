@@ -39,8 +39,8 @@ export function createSchema5WidgetServices(client) {
       if (!devices) devices = await client.jsonlist('TYPE=MAX,TYPE=CUL_HM');
       return devices;
     },
-    listAllDevices: async () => {
-      if (!allDevices) allDevices = await client.jsonlist('.*');
+    listAllDevices: async ({ refresh = false } = {}) => {
+      if (refresh || !allDevices) allDevices = await client.jsonlist('.*');
       return allDevices;
     },
     listIcons: async () => {

@@ -137,6 +137,17 @@ automatischen Modus wieder her. Keine Schemaänderung und keine Migration
 vorhandener Labels. `t/73_table_labels.html` prüft Anzeige, Quellenwechsel,
 Moduswechsel, Entfernen, Speichern/Neuladen und Abbruch im Chrome-Runner.
 Die weiteren Layout-/Schriftgrößenanforderungen aus #152 sind nicht enthalten.
+Bei der Tabellen-Geräteauswahl wird `listAllDevices({ refresh: true })`
+verwendet. Beide Editor-Servicewege umgehen dabei den Cache und ersetzen ihn
+nur nach erfolgreicher Abfrage; Lesefehler bleiben im Picker sichtbar.
+Der ausgewählte aktuelle Device-Eintrag ersetzt auch den lokalen Tabellen-Cache.
+Gemeinsamer und zeilenweiser Devicewechsel belegen das Reading neu vor,
+unabhängig von früheren manuellen Readingänderungen. Gespeicherte fehlende
+Readings bleiben beim bloßen Öffnen weiterhin sichtbar; ein Moduswechsel
+erhält gültige Readings unveränderter Quellen. Eigene Labels bleiben erhalten.
+Schließen oder Entfernen der Tabelle bricht den Picker ab; späte Antworten
+dürfen den Dialog nicht ändern. Service-Refresh wird in
+`t/27_widget_services.test.js`, der Ablauf in `t/73_table_labels.html` geprüft.
 
 ## Dokumentationen synchron halten
 

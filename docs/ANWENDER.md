@@ -251,6 +251,10 @@ leeren Bezeichnerfeld. Quellen oder Readings ändern, hinzufügen und entfernen
 aktualisiert diese Vorgabe automatisch. Eigene Bezeichner bleiben erhalten;
 ein geleertes Bezeichnerfeld verwendet wieder die automatische Beschriftung.
 Auch nach Speichern und Neuladen bleibt diese Unterscheidung erhalten.
+Beim Auswählen eines Devices werden dessen Readings frisch aus FHEM geladen.
+Die Readingauswahl wird neu vorbelegt, auch wenn zuvor manuell ein anderes
+Reading gewählt war. Das gilt für das gemeinsame Device und einzelne Zeilen
+im Mehr-Device-Modus. Eigene Bezeichner bleiben unverändert.
 
 ### Wert auswählen (dev, ab 1.11.0-dev)
 

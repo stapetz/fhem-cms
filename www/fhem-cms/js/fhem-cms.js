@@ -1330,7 +1330,7 @@ export class CmsPage {
     return createWidgetServices({
       client: this.client,
       listDevices: () => this.listDevices(),
-      listAllDevices: () => this.listAllDevices(),
+      listAllDevices: (options) => this.listAllDevices(options),
       listIcons: () => this.listIcons(),
       saveWidget: (widget) => this.saveWidget(widget),
       deleteWidget: (id) => this.deleteWidget(id)
@@ -1344,8 +1344,8 @@ export class CmsPage {
     return this.deviceCache;
   }
 
-  async listAllDevices() {
-    if (!this.allDeviceCache) {
+  async listAllDevices({ refresh = false } = {}) {
+    if (refresh || !this.allDeviceCache) {
       this.allDeviceCache = await this.client.jsonlist('.*');
     }
     return this.allDeviceCache;

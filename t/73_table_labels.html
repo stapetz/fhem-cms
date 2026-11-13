@@ -71,6 +71,56 @@ try {
   check(saved.rows.length === 1, 'Cancel does not persist dialog changes');
   table.config = { ...saved, rows: [{ device: 'Missing', reading: 'unavailable' }] };
   check(labels()[0] === 'unavailable', 'Missing snapshots do not change derived labels');
+  const waitFor = async (predicate) => {
+    for (let i = 0; i < 100; i++) {
+      if (predicate()) return;
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    throw new Error('Device picker timed out');
+  };
+  const fresh = { ...devices[1], readings: { temperature: '25', pressure: '1000' } };
+  let refreshes = 0;
+  table.services.listAllDevices = async (options) => {
+    if (options?.refresh) { refreshes++; return [devices[0], fresh]; }
+    return devices;
+  };
+  table.config = { ...saved, rows: [{ device: 'Sensor', reading: 'humidity', label: 'Keep label', unit: '%' }] };
+  await table.openConfig();
+  rows = table.rowsInDialog();
+  rows[0].querySelector('select').dispatchEvent(new Event('change', { bubbles: true }));
+  let picking = table.pickSingleDevice();
+  await waitFor(() => document.querySelector('.cms-dp-dialog [data-list] button'));
+  [...document.querySelectorAll('.cms-dp-dialog [data-list] button')].find(button => button.textContent.startsWith('Other')).click();
+  await picking;
+  check(refreshes === 1, 'Single-device picker explicitly reloads current FHEM readings');
+  check(rows[0].querySelector('select').value === 'temperature', 'Device change replaces a manually chosen reading with new suggestion');
+  check([...rows[0].querySelector('select').options].map(option => option.value).join('|') === '|pressure|temperature',
+    'Only current readings from new device are offered, no stale unavailable option');
+  check(field(rows[0]).value === 'Keep label', 'Device refresh preserves custom label');
+  table.setMode('multi');
+  rows[0].querySelector('select').value = 'pressure';
+  rows[0].querySelector('select').dispatchEvent(new Event('change', { bubbles: true }));
+  rows[0].querySelector('.device button').click();
+  await waitFor(() => document.querySelector('.cms-dp-dialog [data-list] button'));
+  document.querySelector('.cms-dp-dialog [data-list] button').click();
+  await waitFor(() => rows[0].querySelector('.device input').value === 'Sensor');
+  check(refreshes === 2 && rows[0].querySelector('select').value === 'temperature',
+    'Multi-device row picker reloads and resets reading selection too');
+  check(![...rows[0].querySelector('select').options].some(option => option.value === 'pressure'),
+    'Old device readings are removed on row device change');
+  table.closeConfig(false);
+  check(saved.rows[0].reading === 'humidity', 'Canceling refreshed device choices leaves saved configuration intact');
+  await table.openConfig();
+  let releaseRefresh;
+  table.services.listAllDevices = () => new Promise(resolve => { releaseRefresh = resolve; });
+  picking = table.pickSingleDevice();
+  check(Boolean(document.querySelector('.cms-dp-dialog')), 'Refresh picker can open while device query is pending');
+  table.closeConfig(false);
+  await picking;
+  releaseRefresh([fresh]);
+  await new Promise(resolve => setTimeout(resolve, 20));
+  check(!document.querySelector('.cms-dp-dialog') && table.config.rows[0].device === 'Sensor',
+    'Closing table aborts picker and ignores late refreshed device results');
   result.dataset.result = 'pass';
   result.textContent = JSON.stringify({ status: 'pass', checks: checks.length, messages: checks });
 } catch (error) {
