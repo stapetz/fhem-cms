@@ -98,6 +98,7 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient()) {
         row.append(label);
         if (kind === 'device') {
           const link = element('a', 'CMS öffnen');
+          link.className = 'cms-button';
           link.href = `${client.base.pathname.replace(/\/$/, '')}/fhem-cms/${encodeURIComponent(item.name)}/index.html?mode=edit`;
           row.append(link);
         }

@@ -2856,7 +2856,7 @@ use FHEMWEB and FHEM permissions.</p>
     <code>delete &lt;name&gt;</code> allein laesst CMS-Dateien erhalten.</li>
     <li>Die gemeinsame Verwaltungsseite <code>/fhem/fhem-cms/admin.html</code>
     (FHEMWEB-Pfad ggf. anpassen) ist in beiden Editoren unter
-    <b>Datei / administrate existing CMS systems</b> verlinkt.
+    <b>Datei / Globale CMS Administration</b> verlinkt.
     Sie bietet bestaetigte Sammelloeschung (Purge vor Delete) und separat
     die Bereinigung eindeutig zuordenbarer verwaister CMS-Verzeichnisse.
     FHEMWEB-Rechte und aktivierter CSRF-Schutz sind erforderlich; kein

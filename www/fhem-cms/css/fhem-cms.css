@@ -1476,6 +1476,10 @@ body:has(.cms-schema5-grid) {
   background: var(--cms-surface-hover);
 }
 
+a.cms-button {
+  text-decoration: none;
+}
+
 .cms-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;

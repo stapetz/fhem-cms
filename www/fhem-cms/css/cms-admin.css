@@ -24,9 +24,16 @@
   flex-shrink: 0;
 }
 .cms-admin button,
+.cms-admin a.cms-button,
 #confirmation button,
 #confirmation input {
   min-height: 48px;
+}
+.cms-admin a.cms-button {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  margin-block: .5rem;
 }
 .cms-admin pre {
   white-space: pre-wrap;

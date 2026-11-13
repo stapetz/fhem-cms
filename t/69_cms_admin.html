@@ -5,6 +5,7 @@
 <pre id="result">RUNNING</pre>
 <script type="module">
 import { mountCmsAdmin } from '../www/fhem-cms/js/cms-admin.js';
+import { createCmsAdminLink } from '../www/fhem-cms/js/cms-admin-link.js';
 const frame = document.querySelector('iframe');
 const output = document.querySelector('#result');
 let checks = 0;
@@ -23,6 +24,7 @@ try {
   await wait(() => frame.contentDocument?.querySelector('#refresh'));
   const doc = frame.contentDocument;
   const body = doc.documentElement;
+  await wait(() => [...doc.querySelectorAll('link[rel="stylesheet"]')].every(link => link.sheet));
   let removed = [];
   const items = [
     {name: 'Keep', kind: 'device', blocked: null, files: [{path: 'fhem-cms-data/Keep', directory: true}]},
@@ -40,6 +42,33 @@ try {
   };
   await mountCmsAdmin(body, client);
   const $ = selector => doc.querySelector(selector);
+  check(doc.title === 'Globale CMS Administration' && $('h1').textContent === doc.title,
+    'page heading and browser title use the global administration name');
+  const openLink = $('#devices a');
+  const openStyle = frame.contentWindow.getComputedStyle(openLink);
+  check(openLink.classList.contains('cms-button') && openStyle.textDecorationLine === 'none'
+    && openStyle.display === 'inline-flex' && openLink.getBoundingClientRect().height >= 48,
+    'open CMS link uses a touch-sized styled button');
+  for (const editorClass of ['cms-schema5-editor', 'cms-editor']) {
+    const toolbar = doc.createElement('div');
+    toolbar.className = `cms-toolbar ${editorClass}`;
+    const menu = doc.createElement('div');
+    menu.className = 'cms-menu-items';
+    const button = doc.createElement('button');
+    button.className = 'cms-button';
+    button.textContent = 'Sicherungen';
+    const link = createCmsAdminLink();
+    menu.append(button, link);
+    toolbar.append(menu);
+    doc.body.append(toolbar);
+    const style = node => frame.contentWindow.getComputedStyle(node);
+    check(link.textContent === 'Globale CMS Administration' && link.getAttribute('href') === '../admin.html',
+      `${editorClass}: administration label and destination`);
+    check(['fontFamily', 'fontSize', 'fontWeight', 'color', 'backgroundColor', 'padding',
+      'border', 'borderRadius', 'textAlign', 'textDecorationLine'].every(key => style(link)[key] === style(button)[key]),
+    `${editorClass}: menu link matches other menu buttons`);
+    toolbar.remove();
+  }
   check($('#devices').querySelectorAll('input').length === 2, 'active devices listed');
   check($('#orphans').querySelectorAll('input').length === 2, 'orphans separately listed');
   check($('input[value="Foreign"]').disabled, 'foreign structures cannot be selected');
