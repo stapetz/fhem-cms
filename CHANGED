@@ -72,6 +72,14 @@ Administration
 - Vollstaendiges Volvo-Beispiel mit korrigierter Karten-URL als Backend- und
   Browserregression aufgenommen.
 
+2026-11-13 - 1.11.0-dev: Bestehende HTML-Tabellen bleiben im Editor lesbar
+- Die CSS-Positivliste erlaubt font-variant-numeric fuer Tabellen mit gleich
+  breiten Ziffern.
+- Ein bisher gespeicherter Entwurf mit tabular-nums blockiert das Laden des
+  CMS-Editors nicht mehr; HTML-Code und Entwurfsdaten bleiben unveraendert.
+- Regression prueft den echten Live-/Entwurfs-Lesevertrag ohne Dateiaenderungen
+  sowie die Darstellung im Browser.
+
 2026-11-13 - 1.11.0-dev: HTML-Widget mit abgestimmter Positivliste
 - HTML/SVG und CSS verwenden abgestimmte Positivlisten mit modernen Layouts,
   Selektoren, Variablen, Filtern und Animationen; unbekannte CSS-Konstrukte
