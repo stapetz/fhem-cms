@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-13",
+  "version": "1.10.0-dev",
+  "title": "Globale Administration im CMS-Theme",
+  "changes": [
+    "Die globale Administration uebernimmt beim Menueaufruf Theme, Seitenhintergrund und Liquid-Glass-Werte des aufrufenden CMS.",
+    "Die Darstellung bleibt beim Neuladen erhalten; direkte Aufrufe ohne Kontext verwenden das dunkle Standardtheme."
+  ]
+}

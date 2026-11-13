@@ -5,7 +5,7 @@
 <pre id="result">RUNNING</pre>
 <script type="module">
 import { mountCmsAdmin } from '../www/fhem-cms/js/cms-admin.js';
-import { createCmsAdminMenuLinks } from '../www/fhem-cms/js/cms-admin-link.js';
+import { applyCmsAdminAppearance, createCmsAdminMenuLinks } from '../www/fhem-cms/js/cms-admin-link.js';
 const frame = document.querySelector('iframe');
 const output = document.querySelector('#result');
 let checks = 0;
@@ -91,8 +91,35 @@ try {
     check(['fontFamily', 'fontSize', 'fontWeight', 'color', 'backgroundColor', 'padding',
       'border', 'borderRadius', 'textAlign', 'textDecorationLine'].every(key => style(link)[key] === style(button)[key]),
     `${editorClass}: menu link matches other menu buttons`);
+    const source = document.documentElement;
+    const previousTheme = source.getAttribute('data-cms-theme');
+    const previousStyle = source.getAttribute('style');
+    source.setAttribute('data-cms-theme', 'liquid-glass');
+    source.style.setProperty('--cms-page-image', `url("${new URL(`../www/fhem-cms/CMS/media/${'a'.repeat(32)}.jpg`, location.href).href}")`);
+    source.style.setProperty('--cms-liquid-blur', '12px');
+    link.addEventListener('click', event => event.preventDefault());
+    link.click();
+    const appearance = new URL(link.href).hash;
+    check(appearance.includes('theme=liquid-glass') && appearance.includes('blur=12')
+      && appearance.includes('background='), `${editorClass}: click transfers current theme and image`);
+    if (previousTheme === null) source.removeAttribute('data-cms-theme');
+    else source.setAttribute('data-cms-theme', previousTheme);
+    if (previousStyle === null) source.removeAttribute('style');
+    else source.setAttribute('style', previousStyle);
     toolbar.remove();
   }
+  const context = `#${new URLSearchParams({ theme: 'liquid-glass',
+    background: `/fhem/fhem-cms/CMS/media/${'a'.repeat(32)}.jpg`,
+    blur: '12', opacity: '0.7', gloss: '0.1' })}`;
+  applyCmsAdminAppearance(body, context);
+  check(body.getAttribute('data-cms-theme') === 'liquid-glass'
+    && frame.contentWindow.getComputedStyle($('#devices article')).backdropFilter === 'blur(12px)'
+    && body.style.getPropertyValue('--cms-page-image').includes('/CMS/media/'),
+  'administration renders transferred Liquid Glass values and background');
+  applyCmsAdminAppearance(body, context);
+  check(body.style.getPropertyValue('--cms-liquid-opacity') === '0.7',
+    'appearance survives repeated initialization with the same URL context');
+  applyCmsAdminAppearance(body, '#theme=dark');
   check($('#devices').querySelectorAll('input').length === 2, 'active devices listed');
   check($('#orphans').querySelectorAll('input').length === 2, 'orphans separately listed');
   check($('input[value="Foreign"]').disabled, 'foreign structures cannot be selected');
