@@ -513,6 +513,9 @@ test('setup wizard only offers automatic startup for the untouched initial confi
     pages: [{ id: 'start', title: 'Start', widgets: [] }],
   };
   assert.equal(isSchema5InitialSetup(config), true);
+  assert.equal(isSchema5InitialSetup({ ...config, theme: 'liquid-glass' }), true);
+  assert.equal(isSchema5InitialSetup({ ...config, theme: 'liquid-glass',
+    pages: [{ ...config.pages[0], widgets: [{ id: 'x' }] }] }), false);
   assert.equal(isSchema5InitialSetup({ ...config, pages: [{ ...config.pages[0], widgets: [{ id: 'x' }] }] }), false);
   assert.equal(isSchema5InitialSetup({ ...config, theme: 'light' }), false);
 });
