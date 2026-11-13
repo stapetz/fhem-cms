@@ -882,11 +882,17 @@ export class Schema5SetupWizard {
       const state = this.#controller.snapshot();
       if (state.token !== this.#state.token) throw new Error('Der Konfigurationsstand hat sich geändert. Bitte die Seite neu laden.');
       const source = state.draft || state.live;
+      this.#busy = true;
       this.#progress(3, 'Seiten und Widgets vorbereiten');
       let config = buildSchema5SetupConfig(source, this.#pages, this.#startRoom);
+      if (isMagic) {
+        this.#progress(3, 'Standardhintergrund laden');
+        const background = await this.#client.uploadMagicBackground();
+        if (this.#suspended || this.#closed) return;
+        for (const page of config.pages) page.background = background;
+      }
       if (typeof this.#fitNavigation === 'function') config = this.#fitNavigation(config);
       config = arrangeSchema5SetupPages(config);
-      this.#busy = true;
       this.#saving = true;
       saveStarted = true;
       this.#status.removeAttribute('data-error');

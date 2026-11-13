@@ -96,6 +96,8 @@ try {
   const required = measureSchema5Navigation(nav);
   check(state.draft.navigation.orientation === 'vertical', 'vertical direction saved');
   check(state.draft.pages.length === 18, 'one page per room, no duplicate empty start');
+  check(state.draft.pages.every((page) => page.background === undefined),
+    'guided setup leaves every page without a background image');
   check(state.draft.pages[0].id === 'start', 'chosen room is start');
   check(state.draft.pages[0].widgets[0].type === 'thermostat', 'thermostat on start page');
   check(state.draft.pages.some((page) => page.widgets.some((widget) => widget.type === 'fhem-chart'
@@ -136,6 +138,7 @@ try {
   editor = new Schema5Editor({ GridStack, root, controller, browser: window, services: {},
     client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
       jsonlist: () => new Promise((resolve) => { resolveMagicDevices = resolve; }),
+      uploadMagicBackground: async () => `media/${'a'.repeat(32)}.jpg`,
       logReadings: async (device) => device === 'Device17'
         ? new Promise((resolve) => { resolveMagicHistory = resolve; })
         : ({ source: 'dblog', readings: [] }),
@@ -180,6 +183,8 @@ try {
     && progress().querySelectorAll('[data-complete]').length === 25,
     'confirmed save completes dotted progress');
   check(state.draft.pages.length === 8, 'magic limits the number of pages');
+  check(state.draft.pages.every((page) => page.background === `media/${'a'.repeat(32)}.jpg`),
+    'all Magic pages use the uploaded default background');
   check(state.draft.pages.every((page) => page.widgets.length <= 8), 'magic limits widgets per page');
   check(state.draft.pages[0].widgets.some((widget) => widget.type === 'fhem-solarflow'
     && widget.readings.pv.reading === 'pv_total_power' && widget.deriveHome === false),
@@ -199,6 +204,18 @@ try {
   check(live.pages[0].widgets.length === 0, 'magic does not modify live');
   check(![...root.querySelectorAll('button')].some((entry) => entry.textContent === 'Einrichtungsassistent'),
     'wizard cannot be reopened from the file menu');
+  editor.stop();
+  state = { live, draft: null, token: 'a'.repeat(64), setupIdentity: 'c'.repeat(64) };
+  editor = new Schema5Editor({ GridStack, root, controller, browser: window, services: {},
+    client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
+      uploadMagicBackground: async () => { throw new Error('Empty setup must not upload a background'); },
+      jsonlist: async () => [],
+      subscribe() {}, unsubscribe() {} } });
+  await editor.start();
+  button('Mit leerer Startseite fortfahren');
+  check(!root.querySelector('[data-panel="setup"]'), 'empty setup closes without invoking Magic');
+  check(writes === 2 && state.draft === null && live.pages[0].background === undefined,
+    'empty setup neither saves a draft nor assigns a background');
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });
 } catch (error) {

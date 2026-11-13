@@ -53,6 +53,13 @@ Ohne Attribut oder bei <code>adminMenu 0</code> fehlt der Menuepunkt.
 Nach Attributaenderung die CMS-Seite neu laden. Dies steuert nur den
 Menueeintrag; direkte Zugriffe unterliegen weiterhin den FHEMWEB-Rechten.
 
+'''Nur Entwicklungsstand dev (geplant fuer 1.10.0):''' Magic verwendet das
+mitgelieferte Fallschirmfoto als Hintergrund aller erzeugten Seiten, auch der
+Startseite. Das Bild liegt danach als normales Medium im jeweiligen CMS und
+kann ueber die Seiteneinstellungen ersetzt oder entfernt werden.
+Leere Seiten und Seiten aus dem gefuehrten Einrichtungsassistenten starten
+ohne Hintergrundbild. Bestehende Seiten werden nicht automatisch geaendert.
+
 Neu in 1.9.0: interne Seiten als Modal-Popup, Bildbearbeitung mit Varianten,
 automatische LinkWidget-Größe mit bestätigter Platzschaffen-Vorschau sowie
 volle Rasterbreite und verbesserte mobile Navigation.
