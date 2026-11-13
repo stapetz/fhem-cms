@@ -14,7 +14,7 @@ UPD 2026-11-13_11:48:14 22580 www/fhem-cms/components/cms-select.js
 UPD 2026-11-13_11:43:02 19857 www/fhem-cms/components/cms-slider.js
 UPD 2026-11-13_07:06:17 28655 www/fhem-cms/components/cms-solarflow.js
 UPD 2026-11-13_07:06:17 23861 www/fhem-cms/components/cms-switch.js
-UPD 2026-11-13_07:06:17 28430 www/fhem-cms/components/cms-table.js
+UPD 2026-11-13_12:55:56 29226 www/fhem-cms/components/cms-table.js
 UPD 2026-11-13_07:06:17 10023 www/fhem-cms/components/cms-text.js
 UPD 2026-11-13_07:06:17 38158 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-13_07:06:17 25621 www/fhem-cms/components/cms-value.js
