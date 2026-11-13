@@ -148,7 +148,8 @@ try {
       output.textContent = JSON.stringify({ checks });
     },
   };
-} catch (error) {
+  output.dataset.ready = 'true';
+  } catch (error) {
   output.dataset.result = 'fail';
   output.textContent = error.stack || String(error);
 }

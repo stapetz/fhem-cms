@@ -322,7 +322,8 @@ for (const [name, fixtures] of [
           })()`);
           assert.equal(summary, true);
           await command('Input.dispatchKeyEvent', {
-            type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+            type: 'keyDown', key: 'Enter', code: 'Enter', text: '\r', unmodifiedText: '\r',
+            windowsVirtualKeyCode: 13,
           });
           await command('Input.dispatchKeyEvent', {
             type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
@@ -330,7 +331,8 @@ for (const [name, fixtures] of [
           assert.equal(await evaluate('window.dialogRegression.chartGroups[2].open'), true,
             'Enter opens a focused disclosure group');
           await command('Input.dispatchKeyEvent', {
-            type: 'keyDown', key: ' ', code: 'Space', windowsVirtualKeyCode: 32,
+            type: 'keyDown', key: ' ', code: 'Space', text: ' ', unmodifiedText: ' ',
+            windowsVirtualKeyCode: 32,
           });
           await command('Input.dispatchKeyEvent', {
             type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32,
@@ -519,6 +521,7 @@ test('real editor pointer drag and resize preserve appearance on a full-width ca
             cell:grid.getBoundingClientRect().width/grid.gridstack.getColumn() };
         })()`);
         await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+        if (selector === '.cms-widget-drag') await pause(100);
         await command('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
         if (selector === '.cms-widget-drag') {
           // Gridstack sets its drag origin only after crossing the 3px activation threshold.
