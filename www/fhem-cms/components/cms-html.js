@@ -1,5 +1,6 @@
 import { MAX_FREE_DEVICES, checkSource, elementText, extractDevices, lookupValue, placeholderText, renderTemplate, sanitize } from '../js/freehtml.js';
 import { openPlaceholderPicker } from '../js/placeholder-picker.js';
+import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
 
 const HELP_URL = 'https://github.com/stapetz/fhem-cms/blob/dev/docs/PLATZHALTER.md';
 const EXAMPLE = `<div class="box">
@@ -55,6 +56,7 @@ class FHEMCMSHtml extends HTMLElement {
           padding: 1.25rem; width: min(94vw, 46rem); max-height: 94vh; overflow: auto; }
         dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form { display: grid; gap: 0.75rem; }
+        ${titleVisibilityStyles}
         label { display: grid; gap: 0.25rem; font-size: 0.9rem; }
         input, textarea { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; width: 100%; }
@@ -82,7 +84,7 @@ class FHEMCMSHtml extends HTMLElement {
           <label>Titel (optional)
             <input name="title" maxlength="64" autocomplete="off">
           </label>
-          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+          ${titleVisibilityField}
           <label>HTML-Code
             <textarea name="html" spellcheck="false" autocomplete="off" placeholder="${EXAMPLE.replace(/"/g, '&quot;')}"></textarea>
           </label>

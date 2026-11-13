@@ -1,6 +1,7 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
+import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
 
 const MAX_ROWS = 40;
 
@@ -94,7 +95,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
           <details class="config-group" open><summary>Allgemein</summary>
             <div class="config-group-fields">
               <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+              ${titleVisibilityField}
             </div>
           </details>
           <details class="config-group" open><summary>Datenquelle und Readings</summary>
@@ -140,6 +141,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         </form>
       </dialog>`;
     this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
+    this.suggestionTracker = createManualFieldTracker(this.shadowRoot.querySelector('[data-form]'));
     this.shadowRoot.querySelector('[data-add]').addEventListener('click', () => this.addRow());
     this.shadowRoot.querySelector('[name="sum"]').addEventListener('change', (event) => {
       this.shadowRoot.querySelector('[data-sum-field]').hidden = !event.target.checked;
@@ -148,7 +150,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
       this.shadowRoot.querySelector('[data-header-fields]').hidden = !event.target.checked;
     });
     this.shadowRoot.querySelector('[data-sum-unit-choices]')
-      .append(unitSuggestions(this.shadowRoot.querySelector('[name="sumUnit"]')));
+      .append(unitSuggestions(this.shadowRoot.querySelector('[name="sumUnit"]'), { compact: true }));
     this.shadowRoot.querySelector('[name="sumUnitAuto"]').addEventListener('change', (event) => {
       this.shadowRoot.querySelector('[data-sum-unit-fields]').hidden = event.target.checked;
     });
@@ -196,6 +198,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
 
   async openConfig({ isNew = false } = {}) {
     this.isNew = isNew;
+    this.suggestionTracker.reset();
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
     form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
@@ -264,15 +267,19 @@ class FHEMCMSReadingsTable extends HTMLElement {
       const name = this.rowsInDialog().map((row) => row.querySelector('.device input').value).find(Boolean) || '';
       form.elements.deviceSingle.value = name;
       this.showAlias(name);
-      this.applySharedDevice(name);
+      this.applySharedDevice(name, true);
     }
     this.applyMode();
   }
 
-  applySharedDevice(name) {
+  applySharedDevice(name, preserveExisting = false) {
     const device = this.devices.find((item) => item.name === name);
     for (const row of this.rowsInDialog()) {
-      this.setRowDevice(row, device, row.querySelector('select').value);
+      const select = row.querySelector('select');
+      const currentDevice = row.querySelector('.device input').value;
+      const keepCurrent = this.suggestionTracker.isEdited(select)
+        || (preserveExisting && currentDevice === name && device?.readings?.[select.value] !== undefined);
+      this.setRowDevice(row, device, keepCurrent ? select.value : undefined);
     }
   }
 
@@ -347,7 +354,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     unitLabel.append(unitInput);
     const unitFields = document.createElement('div');
     unitFields.className = 'unit-fields unit-label';
-    unitFields.append(unitLabel, unitSuggestions(unitInput));
+    unitFields.append(unitLabel, unitSuggestions(unitInput, { compact: true }));
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = 'Entfernen';
@@ -359,7 +366,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
           if (!this.devices.some((item) => item.name === device.name)) {
             this.devices = [...this.devices, device];
           }
-          this.setRowDevice(row, device, '');
+          const select = row.querySelector('select');
+          const selectedReading = this.suggestionTracker.isEdited(select) ? select.value : undefined;
+          this.setRowDevice(row, device, selectedReading);
         }
       } catch (error) {
         this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
@@ -386,13 +395,20 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const select = row.querySelector('select');
     deviceInput.value = device?.name || '';
     const readings = Object.keys(device?.readings || {}).sort();
-    select.replaceChildren(...readings.map((name) => {
+    const selected = selectedReading === undefined
+      ? suggestedReading(device?.readings, 'fhem-table')
+      : selectedReading;
+    const options = [new Option('Reading wählen …', ''), ...readings.map((name) => {
       const option = document.createElement('option');
       option.value = name;
       option.textContent = name;
       return option;
-    }));
-    select.value = readings.includes(selectedReading) ? selectedReading : (readings[0] || '');
+    })];
+    if (selected && !readings.includes(selected)) {
+      options.push(new Option(`${selected} (nicht verfügbar)`, selected));
+    }
+    select.replaceChildren(...options);
+    select.value = selected || '';
   }
 
   setRowUnit(row, unit) {

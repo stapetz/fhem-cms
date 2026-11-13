@@ -1,6 +1,6 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { isValidName } from '../js/fhem-client.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 
 const COLUMNS = [
   ['state', 'Status'], ['party', 'Name oder Nummer'], ['timestamp', 'Datum / Uhrzeit'],
@@ -108,7 +108,7 @@ class FHEMCMSCallList extends HTMLElement {
           <details class="config-group" open><summary>Allgemein</summary>
             <div class="config-group-fields">
               <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-              <label class="check"><input name="showTitle" type="checkbox"> Titel anzeigen</label>
+              ${titleVisibilityField}
             </div>
           </details>
           <details class="config-group" open><summary>Datenquelle</summary>

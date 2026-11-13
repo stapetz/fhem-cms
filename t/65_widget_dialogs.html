@@ -83,17 +83,26 @@ try {
   chartForm.elements.title.value = 'Saved title';
   await chart.saveConfig();
   check(saved[0]?.title === 'Saved title', 'valid chart input still follows the existing save path');
-  await chart.openConfig();
-  const titleLabel = chartDialog.querySelector('label:has([name="showTitle"])');
-  const titleCheckbox = titleLabel.querySelector('[name="showTitle"]');
-  const titleText = [...titleLabel.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
-  const titleRange = document.createRange();
-  titleRange.selectNodeContents(titleText);
-  const titleTextRect = titleRange.getBoundingClientRect();
-  const titleCheckboxRect = titleCheckbox.getBoundingClientRect();
-  check(titleTextRect.left >= titleCheckboxRect.right && titleTextRect.left - titleCheckboxRect.right < 24,
-    'title checkbox text is adjacent to its checkbox');
-  chart.closeConfig(false);
+
+  const switchWidget = document.createElement('cms-switch');
+  switchWidget.services = services;
+  document.body.append(switchWidget);
+  switchWidget.config = { id: 'switch', type: 'fhem-switch', title: 'Lamp', device: 'Lamp',
+    reading: 'state', on: 'on', off: 'off', showLabel: false,
+    grid: { col: 1, row: 1, w: 4, h: 2 } };
+  switchWidget.data = [{ name: 'Lamp', readings: { state: 'on' } }];
+  const switchMark = switchWidget.shadowRoot.querySelector('[data-state-mark]');
+  const switchIcon = switchWidget.shadowRoot.querySelector('[data-icon]');
+  const switchLabel = switchWidget.shadowRoot.querySelector('[data-label]');
+  const switchState = switchWidget.shadowRoot.querySelector('[data-state]');
+  check(switchMark.hidden && switchLabel.hidden && switchState.hidden && !switchIcon.hidden,
+    'icon-only switch renders only its symbol');
+  check(switchWidget.shadowRoot.querySelector('[data-toggle]').getAttribute('aria-label').includes('Lamp'),
+    'icon-only switch retains an accessible label');
+  switchWidget.config = { ...switchWidget.config, showLabel: true };
+  check(!switchMark.hidden && !switchLabel.hidden && !switchState.hidden && !switchIcon.hidden,
+    'symbol and caption mode keeps its state mark and text');
+  switchWidget.remove();
 
   const table = document.createElement('cms-table');
   table.services = services;

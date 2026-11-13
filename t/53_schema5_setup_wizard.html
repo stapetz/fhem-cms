@@ -51,11 +51,13 @@ try {
   })));
   let state = { live, draft: null, token: 'a'.repeat(64), setupIdentity: 'a'.repeat(64) };
   let writes = 0;
+  let resolveMagicSave;
   const controller = new Schema5DraftController({
     read: async () => structuredClone(state),
     save: async (draft, token) => {
       check(token === state.token, 'current token is used');
       writes += 1;
+      if (writes === 2) await new Promise((resolve) => { resolveMagicSave = resolve; });
       state = { ...state, live, draft: structuredClone(draft), token: 'b'.repeat(64) };
     },
     publish: async () => { throw new Error('Unexpected publication'); },
@@ -67,7 +69,10 @@ try {
     client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
       jsonlist: async () => devices,
       logReadings: async (device) => ({
-        source: 'dblog', readings: device === 'Device17' ? ['temperature'] : [],
+        source: 'dblog', readings: ['Device17', 'RoomSensor'].includes(device) ? ['temperature'] : [],
+      }),
+      history: async (device) => ({
+        points: device === 'Device17' ? [[Date.now() / 1000, 21]] : [],
       }),
       subscribe() {}, unsubscribe() {} } });
   await editor.start();
@@ -78,7 +83,7 @@ try {
   await waitFor(() => root.textContent.includes('Räume auswählen'));
   button('Weiter');
   for (let i = 0; i < 17; i++) button('Nächster Raum');
-  button('Vorschau');
+  button('Zusammenfassung');
   await waitFor(() => root.querySelector('.cms-setup-wizard-preview select'));
   const select = root.querySelector('.cms-setup-wizard-preview select');
   select.value = 'Raum 18';
@@ -98,6 +103,9 @@ try {
   check(state.draft.pages.some((page) => page.widgets.some((widget) => widget.type === 'fhem-chart'
     && widget.device === 'Device17' && widget.reading === 'temperature' && widget.source === 'dblog')),
   'logged thermostat temperature gets an explicit-source chart');
+  check(!state.draft.pages.some((page) => page.widgets.some((widget) => widget.type === 'fhem-chart'
+    && widget.device === 'RoomSensor')),
+  'temperature without historical data does not get a chart');
   check(state.draft.pages[1].widgets[0].type === 'fhem-switch', 'switch on another page');
   check(location.hash === '#/start', 'chosen start page displayed');
   check(nav.clientWidth + 0.5 >= required.width && nav.clientHeight + 0.5 >= required.height,
@@ -125,16 +133,41 @@ try {
   check(!root.querySelector('[data-panel="setup"]'), 'same instance does not prompt again');
   editor.stop();
   state = { ...state, setupIdentity: 'b'.repeat(64) };
+  let resolveMagicDevices;
+  let resolveMagicHistory;
   editor = new Schema5Editor({ GridStack, root, controller, browser: window, services: {},
     client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
-      jsonlist: async () => devices,
+      jsonlist: () => new Promise((resolve) => { resolveMagicDevices = resolve; }),
       logReadings: async (device) => ({
-        source: 'dblog', readings: device === 'Device17' ? ['temperature'] : [],
+        source: 'dblog', readings: ['Device17', 'RoomSensor'].includes(device) ? ['temperature'] : [],
       }),
+      history: async (device) => device === 'Device17'
+        ? new Promise((resolve) => { resolveMagicHistory = resolve; })
+        : ({ points: [] }),
       subscribe() {}, unsubscribe() {} } });
   await editor.start();
   check(!!root.querySelector('[data-panel="setup"]'), 'recreated instance prompts despite same device name');
   button('Magic - auf gut Glück');
+  await waitFor(() => typeof resolveMagicDevices === 'function');
+  const magicStatus = root.querySelector('[data-panel="setup"] .cms-setup-wizard-status');
+  check(magicStatus.textContent === 'Erstelle die Oberfläche …'
+    && magicStatus.getAttribute('aria-busy') === 'true'
+    && magicStatus.hasAttribute('data-loading'), 'Magic announces while preparing the surface');
+  check(getComputedStyle(magicStatus, '::before').animationName === 'cms-setup-wizard-spin',
+    'Magic preparation displays a spinner');
+  resolveMagicDevices(devices);
+  await waitFor(() => typeof resolveMagicHistory === 'function');
+  check(magicStatus.textContent === 'Erstelle die Oberfläche …'
+    && magicStatus.getAttribute('aria-busy') === 'true'
+    && getComputedStyle(magicStatus, '::before').animationName === 'cms-setup-wizard-spin',
+  'Magic keeps its spinner visible while checking historical data');
+  resolveMagicHistory({ points: [[Date.now() / 1000, 21]] });
+  await waitFor(() => typeof resolveMagicSave === 'function');
+  check(magicStatus.textContent === 'Erstelle die Oberfläche …'
+    && magicStatus.getAttribute('aria-busy') === 'true'
+    && getComputedStyle(magicStatus, '::before').animationName === 'cms-setup-wizard-spin',
+  'Magic keeps its spinner visible while saving the surface');
+  resolveMagicSave();
   await waitFor(() => writes === 2 && root.querySelector('.cms-nav'));
   check(state.draft.pages.length === 8, 'magic limits the number of pages');
   check(state.draft.pages.every((page) => page.widgets.length <= 8), 'magic limits widgets per page');

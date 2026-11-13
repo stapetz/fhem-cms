@@ -1,5 +1,5 @@
 import { LINK_COLUMNS, MAX_LINKS, LINK_MEDIA, linkBounds, linkHref, validateLinkItems } from '../js/link-widget.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 
 function node(tag, text) {
   const result = document.createElement(tag);
@@ -114,7 +114,7 @@ class FHEMCMSLink extends HTMLElement {
             <details class="config-group"><summary>Widgettitel</summary>
               <div class="config-group-fields">
                 <label>Widgettitel (optional)<input name="title" maxlength="64"></label>
-                <label class="check"><input name="showTitle" type="checkbox"> Widgettitel anzeigen</label>
+                ${titleVisibilityField}
               </div>
             </details>
             <details class="config-group" open><summary>Links und Layout</summary>

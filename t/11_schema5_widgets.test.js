@@ -9,6 +9,7 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
   class Element {
     constructor(tag) {
       this.tag = tag; this.children = []; this.attributes = {};
+      this.listeners = {};
       this.style = { setProperty(name, value) { this[name] = value; } };
       this.classList = { toggle() {} };
     }
@@ -16,7 +17,7 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
     replaceChildren(...children) { this.children = children; }
     setAttribute(name, value) { this.attributes[name] = value; }
     removeAttribute(name) { delete this.attributes[name]; }
-    addEventListener() {}
+    addEventListener(name, listener) { this.listeners[name] = listener; }
   }
   globalThis.window = { location: { href: 'https://example.test/' } };
   globalThis.document = { createElement: (tag) => new Element(tag) };
@@ -113,11 +114,20 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
       assert.equal(root.style['--cms-widget-title-align'], 'right');
       view.destroy();
       const editor = mountSchema5Widgets(api, root, current, 'one', navigation, services, new Map(),
-        { onEdit() {}, onChange() {} });
+        { onEdit() {}, onChange() {}, onDuplicate(id) { assert.equal(id, 'html'); },
+          onSaveBlueprint(id) { assert.equal(id, 'html'); } });
       assert.equal('data-responsive' in root.attributes, false, 'editing is never reflowed');
       assert.ok(root.children.every((child) => !('--cms-widget-fraction' in child.style)));
       assert.ok(root.children.every((child) => !('--cms-widget-padding' in child.style)));
       assert.equal(grid.static, false);
+      const tools = root.children.find((child) => child.gridstackNode.id === 'html').children[1];
+      const duplicate = tools.children.find((child) => child.className === 'cms-widget-duplicate');
+      assert.ok(duplicate, 'widget duplication control is rendered in the editor');
+      assert.equal(duplicate.attributes['aria-label'], 'Widget „html“ duplizieren');
+      duplicate.listeners.click();
+      const blueprint = tools.children.find((child) => child.className === 'cms-widget-blueprint');
+      assert.ok(blueprint, 'widget template control is rendered in the editor');
+      blueprint.listeners.click();
       assert.deepEqual(current, before);
       editor.destroy();
     }

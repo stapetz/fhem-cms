@@ -65,7 +65,8 @@ Die Projektanleitung nennt Perl 5.40 als getestete Umgebung, nicht als einzig m�
 
 * Eine ausgeblendete Navigation oder eine Seite ohne Editor ist '''keine Zugriffssperre'''.
 * <code>?mode=edit</code> schaltet die Ansicht um, ist aber keine Berechtigungsprüfung.
-* Eine eigenständige CMS-Rollenverwaltung für Leser und Bearbeiter ist nicht vorauszusetzen.
+* Das FHEM-CMS ist bewusst kein klassisches Mehrbenutzer-CMS, sondern ein leichtgewichtiges Frontend, um schnell FHEM-Oberflächen und redaktionelle Texte zu erstellen. Eigene CMS-Konten, Rollen und persönliche Entwürfe gehören deshalb nicht zum Kernumfang.
+* Alle über FHEMWEB berechtigten Bearbeiter arbeiten am selben CMS-Datenbestand. Gleichzeitige Bearbeitungen können zu Konflikten führen; Anmeldung und Zugriffsschutz bleiben Aufgabe von FHEMWEB.
 * Bedienelemente können reale Geräte schalten. Auch die Vorschau ist nicht automatisch ein Simulationsmodus.
 * Zugangsdaten, Tokens und sensible Metadaten gehören nicht in öffentliche Widgets, Screenshots oder Fehlerberichte.
 
@@ -151,7 +152,7 @@ Device- und Reading-Namen werden nicht automatisch angelegt. Wähle die tatsäch
 * '''Entwurf veröffentlichen''' ersetzt den Live-Stand; der bisherige Live-Stand wird gesichert.
 * '''Entwurf verwerfen''' entfernt den Entwurf, nicht die Live-Konfiguration.
 
-Ein CMS-Device hat '''einen gemeinsamen Entwurf''', nicht einen eigenen je Browser. Bei Konflikten oder einer unklaren Speicherbestätigung lädst du den aktuellen Zustand neu, statt mehrfach zu speichern.
+Ein CMS-Device hat '''einen gemeinsamen Entwurf''', nicht einen eigenen je Browser. Speichert ein anderer Bearbeiter zwischenzeitlich, weist die Versionsprüfung einen veralteten Speicherversuch zurück, statt den neueren Stand zu überschreiben. Lade bei einem Konflikt den aktuellen Zustand neu und übernimm deine Änderungen erneut. Eine Bearbeitungssperre oder Anzeige, wer gerade bearbeitet, gibt es nicht.
 
 {| class="wikitable"
 ! Menü !! Typische Aufgaben

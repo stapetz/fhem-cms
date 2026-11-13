@@ -48,6 +48,24 @@ try {
       for (const host of root.querySelectorAll('.grid-stack-item-content > *')) {
         if (!host.shadowRoot) continue;
         const title = host.shadowRoot.querySelector('[data-title]');
+        const titleVisibility = host.shadowRoot.querySelector('.cms-title-visibility');
+        if (titleVisibility) {
+          const titleDialog = titleVisibility.closest('dialog');
+          titleDialog.showModal();
+          const titleCheckbox = titleVisibility.querySelector('input[type="checkbox"]');
+          const titleText = [...titleVisibility.childNodes].find((node) =>
+            node.nodeType === Node.TEXT_NODE && node.textContent.includes('Titel anzeigen'));
+          const titleRange = document.createRange();
+          titleRange.selectNodeContents(titleText);
+          const textRect = titleRange.getBoundingClientRect();
+          const checkboxRect = titleCheckbox.getBoundingClientRect();
+          check(textRect.left >= checkboxRect.right && textRect.left - checkboxRect.right < 24
+            && Math.abs(textRect.top + textRect.height / 2 - checkboxRect.top - checkboxRect.height / 2) < 4,
+          `${host.localName}: title checkbox label is adjacent and aligned`);
+          titleDialog.close();
+        } else {
+          throw new Error(`${host.localName}: shared title visibility field missing`);
+        }
         check(getComputedStyle(host.parentElement).backdropFilter.includes('blur'),
           `${host.localName}: liquid glass blur`);
         check(getComputedStyle(title).textAlign === (alignment || 'left'), `${host.localName}: ${alignment}`);

@@ -383,6 +383,7 @@ test('wizard preview selects a start room, shows widget types and saves only aft
     new Schema5SetupWizard({ root, controller, client: {
       jsonlist: async () => devices,
       logReadings: async () => ({ source: 'dblog', readings: ['temperature'] }),
+      history: async () => ({ points: [[1, 21]] }),
     },
       fitNavigation: (candidate) => { fitted += 1; return candidate; },
       onClose: (value) => { outcome = value; } });
@@ -395,7 +396,7 @@ test('wizard preview selects a start room, shows widget types and saves only aft
     await action('Räume und Geräte auswählen');
     action('Weiter');
     action('Nächster Raum');
-    action('Vorschau');
+    action('Zusammenfassung');
     assert.equal(saved, undefined);
     const preview = root.children[3];
     const select = preview.children[0].children[0];
@@ -457,8 +458,15 @@ test('magic saves exactly one draft without preview or publication and handles f
       return root;
     };
     const action = (root, label) => root.children[4].children.find((node) => node.textContent === label).fire('click');
-    let root = launch();
-    await action(root, 'Magic - auf gut Glück');
+    let root;
+    let resolveDevices;
+    root = launch({ jsonlist: () => new Promise((resolve) => { resolveDevices = resolve; }) });
+    const magic = action(root, 'Magic - auf gut Glück');
+    assert.equal(root.children[2].textContent, 'Erstelle die Oberfläche …');
+    assert.equal(root.children[2].attributes['data-loading'], '');
+    assert.equal(root.children[2].attributes['aria-busy'], 'true');
+    resolveDevices(devices);
+    await magic;
     assert.equal(saves, 1);
     assert.equal(outcome.saved, true);
     assert.equal(outcome.state.draft.pages[0].widgets[0].type, 'fhem-switch');

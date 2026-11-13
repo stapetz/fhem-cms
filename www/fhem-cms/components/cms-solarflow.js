@@ -1,5 +1,5 @@
 import { openDevicePicker } from '../js/device-picker.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MAX_POWER = 3000;
@@ -205,7 +205,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
           <details class="config-group" open><summary>Allgemein</summary>
             <div class="config-group-fields">
               <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+              ${titleVisibilityField}
             </div>
           </details>
           <details class="config-group" open><summary>Datenquelle und Readings</summary>

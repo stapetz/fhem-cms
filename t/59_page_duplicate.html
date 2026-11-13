@@ -7,6 +7,9 @@
 <pre id="result">RUNNING</pre>
 <script type="module">
 import { Schema5NavigationPanel } from '../www/fhem-cms/js/fcui-schema5-navigation.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
 
 const output = document.querySelector('#result');
 let checks = 0;
@@ -55,6 +58,60 @@ try {
     'copy is disabled at the 50-page limit');
   root.querySelector('.cms-panel-close').click();
   check(writes === 1 && state.draft === null, 'closing without changes does not save');
+
+  const widgetLive = {
+    schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'start', title: 'Start', widgets: [
+      { id: 'text', type: 'text', title: 'Status', html: '{{Temp:state}}',
+        grid: { col: 1, row: 2, w: 4, h: 2 } },
+      { id: 'html', type: 'fhem-html', devices: ['Lamp'], html: '<b>Licht</b>',
+        grid: { col: 5, row: 2, w: 4, h: 2 } },
+    ] }],
+  };
+  let widgetState = { live: widgetLive, draft: null, token: 'c'.repeat(64) };
+  const draftController = new Schema5DraftController({
+    read: async () => structuredClone(widgetState),
+    save: async (draft, token) => {
+      check(token === widgetState.token, 'widget copy uses the current state token');
+      widgetState = { live: widgetLive, draft: structuredClone(draft), token: 'd'.repeat(64) };
+    },
+    publish: async () => { throw new Error('Unexpected publication'); },
+    discard: async () => { throw new Error('Unexpected discard'); },
+  });
+  await draftController.reload();
+  const copied = await draftController.duplicateWidget('start', 'text', 'c'.repeat(64));
+  const cloned = copied.draft.pages[0].widgets[1];
+  check(cloned.id === 'text-copy' && cloned.id !== 'text', 'widget copy receives a fresh ID');
+  check(JSON.stringify({ ...cloned, id: 'text', grid: widgetLive.pages[0].widgets[0].grid })
+    === JSON.stringify(widgetLive.pages[0].widgets[0]), 'widget copy retains all configuration except its ID and position');
+  check(cloned.grid.col === 9 && cloned.grid.row === 2, 'widget copy uses a free adjacent grid position');
+  check(widgetLive.pages[0].widgets.length === 2
+    && JSON.stringify(copied.live) === JSON.stringify(widgetLive),
+    'widget duplication leaves live configuration untouched');
+
+  const gridRoot = document.createElement('div');
+  gridRoot.className = 'grid-stack';
+  document.body.append(gridRoot);
+  let duplicatedWidgetId = '';
+  let blueprintWidgetId = '';
+  const mounted = mountSchema5Widgets(GridStack, gridRoot, widgetLive, 'start',
+    document.createElement('nav'), {}, new Map(), {
+      onEdit() {}, onChange() {}, onDuplicate(id) { duplicatedWidgetId = id; },
+      onSaveBlueprint(id) { blueprintWidgetId = id; },
+    });
+  const duplicateWidgetButton = gridRoot.querySelector('.cms-widget-duplicate');
+  check(duplicateWidgetButton?.getAttribute('aria-label') === 'Widget „Status“ duplizieren',
+    'editor exposes an accessible widget duplication button');
+  duplicateWidgetButton.click();
+  check(duplicatedWidgetId === 'text', 'duplicate button requests a copy of the selected widget');
+  const blueprintButton = gridRoot.querySelector('.cms-widget-blueprint');
+  check(blueprintButton?.getAttribute('aria-label') === 'Widget „Status“ als Vorlage speichern',
+    'editor exposes an accessible widget blueprint action');
+  blueprintButton.click();
+  check(blueprintWidgetId === 'text', 'blueprint action targets the selected widget');
+  mounted.destroy();
+  gridRoot.remove();
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });
 } catch (error) {

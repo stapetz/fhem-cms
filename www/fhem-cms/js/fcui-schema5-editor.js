@@ -12,6 +12,7 @@ import { DevicePreview } from './device-preview.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-wizard.js';
 import { Schema5SettingsPreview } from './fcui-schema5-settings-preview.js';
+import { Schema5BlueprintPanel } from './fcui-schema5-blueprints.js';
 
 export function createSchema5Editor({ GridStack, root, draftClient, liveClient, services, browser = window }) {
   if (!draftClient || !liveClient || draftClient === liveClient) {
@@ -40,6 +41,7 @@ export class Schema5Editor {
   #page;
   #mode;
   #widgets;
+  #blueprints;
   #arrange;
   #backup;
   #assets;
@@ -108,10 +110,14 @@ export class Schema5Editor {
     this.#widgets = document.createElement('button');
     this.#widgets.type = 'button';
     this.#widgets.textContent = 'Widget hinzufügen';
+    this.#blueprints = document.createElement('button');
+    this.#blueprints.type = 'button';
+    this.#blueprints.textContent = 'Widget-Vorlagen';
     this.#arrange = document.createElement('button');
     this.#arrange.type = 'button';
     this.#arrange.textContent = 'Widgets automatisch anordnen';
-    for (const button of [this.#page, this.#publish, this.#discard, this.#reloadButton, this.#widgets, this.#arrange]) {
+    for (const button of [this.#page, this.#publish, this.#discard, this.#reloadButton,
+      this.#widgets, this.#blueprints, this.#arrange]) {
       button.className = 'cms-button';
     }
     this.#publish.className = 'cms-button cms-publish';
@@ -135,7 +141,7 @@ export class Schema5Editor {
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
     this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets]);
-    this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#arrange]);
+    this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#blueprints, this.#arrange]);
     this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
@@ -146,6 +152,7 @@ export class Schema5Editor {
     this.#content.className = 'cms-schema5-workspace';
     this.#page.addEventListener('click', () => this.#openPage());
     this.#widgets.addEventListener('click', () => this.#openWidgets());
+    this.#blueprints.addEventListener('click', () => this.#openBlueprints());
     this.#arrange.addEventListener('click', () => this.#arrangeWidgets());
     this.#backup.addEventListener('click', () => this.#openBackup());
     this.#assets.addEventListener('click', async () => {
@@ -242,6 +249,7 @@ export class Schema5Editor {
   #setActions(enabled, hasDraft) {
     this.#page.disabled = !enabled;
     this.#widgets.disabled = !enabled;
+    this.#blueprints.disabled = !enabled;
     this.#arrange.disabled = !enabled;
     this.#backup.disabled = !enabled;
     this.#assets.disabled = !enabled;
@@ -334,6 +342,8 @@ export class Schema5Editor {
         },
         onEdit: (pageId, id) => id === '__nav' ? this.#openNavigation() : this.#openWidgets(id),
         onMove: (pageId, id) => this.#openMove(id),
+        onDuplicate: (pageId, id) => this.#duplicateWidget(pageId, id),
+        onSaveBlueprint: (pageId, id) => this.#saveWidgetBlueprint(pageId, id),
         onDelete: (pageId, id) => this.#deleteWidget(pageId, id),
       } });
     this.#view = view;
@@ -472,6 +482,80 @@ export class Schema5Editor {
       await this.#display(result, generation);
     } catch (error) {
       if (generation === this.#generation) this.#error(error);
+    }
+  }
+
+  async #duplicateWidget(pageId, widgetId) {
+    if (!this.#active || this.#suspended || !this.#view || this.#widgets.disabled
+      || this.#view.current !== pageId) return;
+    const generation = this.#generation;
+    try {
+      const state = this.#controller.snapshot();
+      const widget = (state.draft || state.live).pages.find((page) => page.id === pageId)
+        ?.widgets.find((entry) => entry.id === widgetId);
+      if (!widget) throw new Error('Unbekanntes Widget');
+      if ((state.draft || state.live).pages.find((page) => page.id === pageId).widgets.length >= 200) {
+        throw new Error('Die Seite enthält bereits 200 Widgets');
+      }
+      this.#view.lock();
+      this.#setActions(false, false);
+      this.#status.removeAttribute('data-error');
+      this.#status.textContent = `Widget „${widget.title || widget.id}“ wird dupliziert …`;
+      const result = await this.#controller.duplicateWidget(pageId, widgetId, state.token);
+      await this.#display(result, generation);
+    } catch (error) {
+      if (generation === this.#generation) this.#error(error);
+    }
+  }
+
+  #saveWidgetBlueprint(pageId, widgetId) {
+    if (!this.#active || this.#suspended || !this.#view || this.#view.current !== pageId) return;
+    try {
+      const state = this.#controller.snapshot();
+      const widget = (state.draft || state.live).pages.find((page) => page.id === pageId)
+        ?.widgets.find((entry) => entry.id === widgetId);
+      if (!widget) throw new Error('Unbekanntes Widget');
+      this.#openBlueprints(widget);
+    } catch (error) {
+      this.#status.setAttribute('data-error', 'true');
+      this.#status.textContent = `Vorlagen konnten nicht geöffnet werden: ${error.message}`;
+    }
+  }
+
+  #openBlueprints(widget = null) {
+    if (!this.#active || this.#suspended || !this.#view || this.#blueprints.disabled) return;
+    try {
+      const state = this.#controller.snapshot();
+      const pageId = this.#view.current;
+      const generation = ++this.#generation;
+      this.#setActions(false, false);
+      this.#view.stop();
+      this.#view = null;
+      this.#content.replaceChildren();
+      const container = this.#panelContainer('blueprints');
+      this.#panel = new Schema5BlueprintPanel({
+        root: container,
+        client: this.#client,
+        services: this.#services,
+        widget,
+        browser: this.#browser,
+        onInsert: async (blueprintWidget) => {
+          if (!this.#active || this.#suspended || generation !== this.#generation) {
+            throw new Error('Der Editorzustand hat sich geändert; bitte erneut laden');
+          }
+          const result = await this.#controller.insertWidget(pageId, blueprintWidget, state.token);
+          this.#panel = null;
+          await this.#display(result, generation);
+        },
+        onClose: () => {
+          this.#panel = null;
+          Promise.resolve().then(() => this.#display(this.#controller.snapshot(), this.#generation))
+            .catch((error) => this.#error(error));
+        },
+      });
+    } catch (error) {
+      this.#content.replaceChildren();
+      this.#error(error);
     }
   }
 

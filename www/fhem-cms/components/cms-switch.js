@@ -2,7 +2,8 @@ import { openDevicePicker } from '../js/device-picker.js';
 import { openIconPicker } from '../js/icon-picker.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 import { actionIconUrl, actionPresentationFields, collectActionPresentation } from '../js/action-presentation.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
+import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const PENDING_MS = 4000;
@@ -58,6 +59,7 @@ class FHEMCMSSwitch extends HTMLElement {
           background: var(--cms-bg, #17211d); border: 0.08em solid var(--cms-border, #43564a); position: relative; cursor: pointer; }
         .toggle[data-unknown] { border-style: dashed; }
         .state-mark { display: inline-block; flex: none; text-align: center; font-size: 0.75em; font-weight: 700; line-height: 1; }
+        .state-mark[hidden], .state[hidden] { display: none; }
         .label { white-space: nowrap; line-height: 1.1; }
         .label[hidden] { display: none; }
         .state { color: var(--cms-muted, #a5c9b2); font-size: 0.75em; line-height: 1.1; white-space: nowrap; }
@@ -111,7 +113,7 @@ class FHEMCMSSwitch extends HTMLElement {
           <details class="config-group" open><summary>Allgemein</summary>
             <div class="config-group-fields">
               <label>Titel (optional)<input name="title" maxlength="64" autocomplete="off"></label>
-              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+              ${titleVisibilityField}
             </div>
           </details>
           <details class="config-group" open><summary>Datenquelle und Schaltverhalten</summary>
@@ -163,6 +165,7 @@ class FHEMCMSSwitch extends HTMLElement {
 
     const $ = (selector) => this.shadowRoot.querySelector(selector);
     const form = $('[data-form]');
+    this.suggestionTracker = createManualFieldTracker(form);
     this.shadowRoot.querySelectorAll('[data-open-config]').forEach((button) => button.addEventListener('click', () => this.openConfig()));
     $('[data-toggle]').addEventListener('click', () => this.toggle());
     $('[data-cancel]').addEventListener('click', () => this.closeDialog(true));
@@ -253,7 +256,10 @@ class FHEMCMSSwitch extends HTMLElement {
       toggle.setAttribute('aria-checked', String(state === 'on'));
     }
     toggle.toggleAttribute('data-unknown', state === null);
-    this.shadowRoot.querySelector('[data-state-mark]').textContent = state === 'on' ? '●' : state === 'off' ? '○' : '?';
+    const showLabel = this.widgetConfig.showLabel === true;
+    const stateMark = this.shadowRoot.querySelector('[data-state-mark]');
+    stateMark.textContent = state === 'on' ? '●' : state === 'off' ? '○' : '?';
+    stateMark.hidden = !showLabel;
     const title = this.widgetConfig.title || this.widgetConfig.device || 'Schalter';
     const stateLabel = state === 'on' ? 'An' : state === 'off' ? 'Aus' : 'Zustand unbekannt';
     const label = this.widgetConfig.label || stateLabel;
@@ -261,8 +267,10 @@ class FHEMCMSSwitch extends HTMLElement {
     toggle.title = stateLabel;
     const caption = this.shadowRoot.querySelector('[data-label]');
     caption.textContent = label;
-    caption.hidden = this.widgetConfig.showLabel !== true;
-    this.shadowRoot.querySelector('[data-state]').textContent = stateLabel;
+    caption.hidden = !showLabel;
+    const stateText = this.shadowRoot.querySelector('[data-state]');
+    stateText.textContent = stateLabel;
+    stateText.hidden = !showLabel;
     const raw = this.readingValue();
     const tile = this.shadowRoot.querySelector('[data-tile]');
     tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''} = ${raw === null ? '–' : raw}`;
@@ -327,6 +335,7 @@ class FHEMCMSSwitch extends HTMLElement {
   async openConfig(options = {}) {
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
+    this.suggestionTracker.reset();
     form.elements.title.value = this.widgetConfig.title || '';
     form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.device.value = this.widgetConfig.device || '';
@@ -351,29 +360,43 @@ class FHEMCMSSwitch extends HTMLElement {
     const form = this.shadowRoot.querySelector('[data-form]');
     const name = form.elements.device.value.trim();
     const device = this.devices.find((item) => item.name === name);
-    const readings = new Set(Object.keys(device ? device.readings : {}));
+    const readings = new Set(Object.keys(device?.readings || {}));
     const commands = new Set(device ? switchCommands(device.sets) : []);
     for (const [key, field] of [['reading', readings], ['on', commands], ['off', commands]]) {
       if (wanted && wanted[key]) {
         field.add(wanted[key]);
       }
     }
-    readings.add('state');
-    const fill = (select, names, chosen, preferred) => {
-      const options = [...names].sort((a, b) => a.localeCompare(b)).map((item) => {
+    const fill = (select, names, chosen) => {
+      if (chosen) {
+        names.add(chosen);
+      }
+      const options = [new Option('Auswählen …', ''), ...[...names].sort((a, b) => a.localeCompare(b)).map((item) => {
         const option = document.createElement('option');
         option.value = item;
-        const value = select.name === 'reading' && device ? device.readings[item] : undefined;
-        option.textContent = value === undefined ? item : `${item} (${value})`;
+        const value = select.name === 'reading' && device ? device.readings?.[item] : undefined;
+        const available = select.name === 'reading'
+          ? value !== undefined
+          : switchCommands(device?.sets).includes(item);
+        option.textContent = !available && device ? `${item} (nicht verfügbar)`
+          : value === undefined ? item : `${item} (${value})`;
         return option;
-      });
+      })];
       select.replaceChildren(...options);
-      const pick = [chosen, preferred].find((candidate) => candidate && names.has(candidate));
-      select.value = pick || (options[0]?.value || '');
+      select.value = chosen && names.has(chosen) ? chosen : '';
     };
-    fill(form.elements.reading, readings, wanted && wanted.reading, 'state');
-    fill(form.elements.on, commands, wanted && wanted.on, 'on');
-    fill(form.elements.off, commands, wanted && wanted.off, 'off');
+    const readingSuggestion = suggestedReading(device?.readings, 'fhem-switch');
+    const onSuggestion = commands.has('on') ? 'on' : '';
+    const offSuggestion = commands.has('off') ? 'off' : '';
+    const choose = (key, suggestion) => {
+      if (this.suggestionTracker.isEdited(form.elements[key])) {
+        return form.elements[key].value;
+      }
+      return wanted && wanted[key] || suggestion;
+    };
+    fill(form.elements.reading, readings, choose('reading', readingSuggestion));
+    fill(form.elements.on, commands, choose('on', onSuggestion));
+    fill(form.elements.off, commands, choose('off', offSuggestion));
     const alias = device && device.alias && device.alias !== name ? `Alias: ${device.alias}` : '';
     this.shadowRoot.querySelector('[data-device-alias]').textContent = alias;
   }
@@ -426,6 +449,10 @@ class FHEMCMSSwitch extends HTMLElement {
       if (!NAME_PATTERN.test(value(field))) {
         throw new Error(`Bitte ${label} angeben`);
       }
+    }
+    const device = this.devices.find((item) => item.name === value('device'));
+    if (device && ['on', 'off'].some((field) => !switchCommands(device.sets).includes(value(field)))) {
+      throw new Error('Das Device bietet einen ausgewählten An-/Aus-Befehl nicht an.');
     }
     if (value('on') === value('off')) {
       throw new Error('„An“ und „Aus“ brauchen verschiedene Befehle');

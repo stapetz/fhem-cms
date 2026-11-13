@@ -177,6 +177,35 @@ export class FhemClient {
     return state;
   }
 
+  async getBlueprints() {
+    const text = await this.command(`get ${this.cmsDevice} version5blueprints`);
+    const result = await this.parseJsonResult(text, 'Die Widget-Vorlagen konnten nicht gelesen werden');
+    if (!result || typeof result !== 'object' || Array.isArray(result)
+      || !Array.isArray(result.items) || result.items.length > 100
+      || typeof result.token !== 'string' || !STATE_TOKEN.test(result.token)
+      || result.items.some((item) => !item || typeof item !== 'object' || Array.isArray(item)
+        || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 64
+        || !item.widget || typeof item.widget !== 'object' || Array.isArray(item.widget))) {
+      throw new Error('FHEM lieferte eine ungültige Vorlagenliste');
+    }
+    return result;
+  }
+
+  async saveBlueprints(items, token) {
+    if (!Array.isArray(items) || items.length > 100 || typeof token !== 'string' || !STATE_TOKEN.test(token)) {
+      throw new Error('Ungültige Vorlagenänderung');
+    }
+    const result = await this.parseJsonResult(
+      await this.command(`set ${this.cmsDevice} version5blueprints ${token} ${toBase64(JSON.stringify(items))}`),
+      'Die Widget-Vorlagen konnten nicht gespeichert werden',
+    );
+    if (!result || typeof result !== 'object' || Array.isArray(result)
+      || typeof result.token !== 'string' || !STATE_TOKEN.test(result.token)) {
+      throw new Error('FHEM bestätigte die Vorlagenänderung nicht');
+    }
+    return result;
+  }
+
   async saveDraft(config) {
     const result = await this.command(`set ${this.cmsDevice} draft ${toBase64(JSON.stringify(config))}`);
     if (result) {

@@ -1,5 +1,6 @@
 import { isValidName } from '../js/fhem-client.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
+import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
 
 const TARGET_MIN = 5;
 const TARGET_MAX = 30;
@@ -27,14 +28,6 @@ function lookupReading(group, name) {
   }
   return null;
 }
-
-const PRESETS = {
-  actual: ['temperature', 'measured-temp'],
-  target: ['desiredTemperature', 'desired-temp'],
-  valve: ['valveposition', 'ValvePosition'],
-  mode: ['mode', 'R-controlMode', 'controlMode'],
-  battery: ['batteryPercent', 'battery', 'batteryState', 'batteryLevel']
-};
 
 const FIELDS = [
   { key: 'actual', label: 'Isttemperatur', required: true },
@@ -256,7 +249,7 @@ class FHEMCMSThermostat extends HTMLElement {
           <details class="config-group" open><summary>Allgemein</summary>
             <div class="config-group-fields">
               <label>Titel (optional)<input name="title" maxlength="64" autocomplete="off"></label>
-              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+              ${titleVisibilityField}
             </div>
           </details>
           <details class="config-group" open><summary>Datenquelle und Temperaturwerte</summary>
@@ -299,6 +292,7 @@ class FHEMCMSThermostat extends HTMLElement {
     `;
 
     this.buildDialogFields();
+    this.suggestionTracker = createManualFieldTracker(this.shadowRoot.querySelector('[data-form]'));
     this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
     this.shadowRoot.querySelector('[data-slider]').addEventListener('input', () => this.onSliderInput());
     this.shadowRoot.querySelector('[data-mode-select]').addEventListener('change', () => this.onModeChange());
@@ -568,6 +562,7 @@ class FHEMCMSThermostat extends HTMLElement {
     const dialog = this.shadowRoot.querySelector('[data-dialog]');
     const form = this.shadowRoot.querySelector('[data-form]');
     const config = this.widgetConfig;
+    this.suggestionTracker.reset();
 
     form.elements.title.value = config.title || '';
     form.elements.showTitle.checked = config.showTitle !== false;
@@ -700,7 +695,17 @@ class FHEMCMSThermostat extends HTMLElement {
   onDeviceChanged() {
     const form = this.shadowRoot.querySelector('[data-form]');
     const group = this.groupFor(form.elements.device.value.trim());
-    this.fillReadingOptions(group, {});
+    const readings = Object.assign({}, ...(group || []).map((device) => device.readings));
+    const selected = {};
+    for (const field of FIELDS) {
+      const select = form.elements[`reading-${field.key}`];
+      if (this.suggestionTracker.isEdited(select)) {
+        selected[field.key] = select.value;
+      } else {
+        selected[field.key] = suggestedReading(readings, `thermostat.${field.key}`);
+      }
+    }
+    this.fillReadingOptions(group, selected);
     this.setDialogError(group || !form.elements.device.value.trim()
       ? ''
       : 'Dieses Device wurde nicht gefunden');
@@ -715,10 +720,13 @@ class FHEMCMSThermostat extends HTMLElement {
       }
     }
     const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    const availableReadings = Object.fromEntries(sorted.map((name) => [name, true]));
 
     for (const field of FIELDS) {
       const select = form.elements[`reading-${field.key}`];
-      const wanted = selected[field.key] || PRESETS[field.key].find((name) => names.has(name)) || '';
+      const wanted = Object.prototype.hasOwnProperty.call(selected, field.key)
+        ? selected[field.key]
+        : suggestedReading(availableReadings, `thermostat.${field.key}`);
       const entries = new Set(sorted);
       if (wanted) {
         entries.add(wanted);

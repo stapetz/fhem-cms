@@ -628,6 +628,57 @@ body:has(.cms-schema5-grid) {
   flex-wrap: wrap;
 }
 
+.cms-editor-dialog[data-panel="setup"] .cms-setup-wizard-status {
+  position: static;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: auto;
+  height: auto;
+  gap: .6rem;
+  margin: 0 0 .5rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: .9rem;
+  cursor: default;
+}
+
+.cms-editor-dialog[data-panel="setup"] .cms-setup-wizard-status[hidden] {
+  display: none;
+}
+
+.cms-editor-dialog[data-panel="setup"] .cms-setup-wizard-status[data-error] {
+  color: var(--cms-danger);
+}
+
+.cms-editor-dialog[data-panel="setup"] .cms-setup-wizard-status::before {
+  content: none;
+}
+
+.cms-editor-dialog[data-panel="setup"] .cms-setup-wizard-status[data-loading]::before {
+  content: "";
+  flex: 0 0 1em;
+  width: 1em;
+  height: 1em;
+  border: .16em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: cms-setup-wizard-spin .8s linear infinite;
+}
+
+@keyframes cms-setup-wizard-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cms-editor-dialog[data-panel="setup"] .cms-setup-wizard-status[data-loading]::before {
+    animation: none;
+    border-right-color: currentColor;
+    border-top-color: transparent;
+  }
+}
+
 .cms-setup-wizard-content,
 .cms-setup-wizard-list,
 .cms-setup-wizard-preview {
@@ -1073,6 +1124,46 @@ body:has(.cms-schema5-grid) {
   background: var(--cms-tile-inset);
   color: var(--cms-muted-strong);
   font-size: .8rem;
+}
+
+.cms-editor-panel .cms-blueprint-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.cms-blueprint-panel [hidden] {
+  display: none !important;
+}
+
+.cms-blueprint-panel > :is(h2, [role="status"], [data-list], .cms-panel-actions) {
+  grid-column: 1 / -1;
+}
+
+.cms-blueprint-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem;
+  margin-block: .5rem;
+  padding: .5rem;
+  border: 1px solid var(--cms-border-subtle);
+  border-radius: .65rem;
+}
+
+.cms-blueprint-row strong {
+  flex: 1 1 8rem;
+  overflow-wrap: anywhere;
+}
+
+.cms-blueprint-row select {
+  flex: 1 1 12rem;
+}
+
+.cms-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: .5rem;
 }
 
 /* Einheitliche Dialog-Fußzeile: Speichern und Abbrechen nebeneinander direkt unter dem Inhalt. */
