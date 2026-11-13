@@ -2,7 +2,23 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
-**Aktuelle stabile Version: 1.9.0**
+**Aktuelle stabile Version: 1.10.0**
+
+## Neu in 1.10.0
+
+- Widgets und Seiten duplizieren, Widgets als Vorlagen mit neuem Zielgerät
+  wiederverwenden und direkt auf der Seite löschen; Änderungen bleiben im Entwurf.
+- Widgetdialoge nach Aufgaben gruppiert, passende Geräte-/Reading-Vorschläge,
+  kompakte Informationshierarchie und konsistente semantische Statusfarben.
+- DbLog-Abfragen im Hintergrund mit Ladeanzeige, Cache und Timeout.
+- Einrichtungsassistent mit Temperaturverläufen, gepunktetem Fortschritt und
+  schlanker Datenprüfung; Magic-Seiten erhalten das mitgelieferte Strandfoto.
+  Leere und geführt erstellte Seiten starten ohne Hintergrundbild.
+- Globale FHEM-CMS Administration mit Bestandsübersicht und bestätigter
+  Sammellöschung. Der Menüpunkt wird pro CMS mit `adminMenu 1` freigeschaltet;
+  beim Aufruf werden Theme und Hintergrund des CMS übernommen.
+- Zuverlässiger Assistentenstart bei neuen Liquid-Glass-CMS und eingebettete
+  FHEM-Gerätehilfe auf Deutsch.
 
 ## Neu in 1.9.0
 
@@ -55,8 +71,9 @@ Automatische Temperaturverläufe sind nicht Teil dieses Releases.
   und Hash-Dateinamen bleiben erhalten.
 - Einheitliche Titeldarstellung auch im Textwidget.
 
-Die Assetsuche und die vollständige deutsche/englische Gerätehilfe bleiben
-separaten Weiterentwicklungen vorbehalten.
+Die Assetsuche und eine vollständige englische Gerätehilfe bleiben
+separaten Weiterentwicklungen vorbehalten. Die deutsche Gerätehilfe ist seit
+1.10.0 eingebettet; der englische Einstieg verweist auf diese Referenz.
 
 **Entwicklungsstand auf `dev`: 1.8.1-dev** – basiert auf Release 1.8.0;
 die vollständige DE/EN-Gerätehilfe bleibt als offene Arbeit auf `dev`.
@@ -94,7 +111,7 @@ ausgeben kann. `CHANGED` wird nicht als installierbare Datei geführt und
 
 ## Version
 
-Die aktuelle stabile Version ist **1.9.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`), auch wenn die anschließende Initialisierung fehlschlägt. Die Angabe allein bestätigt keine erfolgreiche Initialisierung. Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
+Die aktuelle stabile Version ist **1.10.0**. Die installierte Version steht im Internal `VERSION` des FHEMCMS-Devices (`list <gerät>`), auch wenn die anschließende Initialisierung fehlschlägt. Die Angabe allein bestätigt keine erfolgreiche Initialisierung. Entwicklungsstände auf `dev` tragen den Suffix `-dev`; die stabile Versionsnummer wird für jeden freigegebenen `main`-Release nach SemVer erhöht.
 
 ## Installation und Update in FHEM
 

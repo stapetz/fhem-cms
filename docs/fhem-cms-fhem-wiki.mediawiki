@@ -30,9 +30,9 @@
 
 '''fhem-cms''' ergänzt FHEM um eine frei gestaltbare Bedienoberfläche im Browser. Du kombinierst Gerätewerte, Bedienelemente, Texte, Bilder und Links auf eigenen Seiten. Das Layout erstellst du grafisch, ohne dafür eine komplette HTML-Oberfläche programmieren zu müssen.
 
-Dieser Artikel beschreibt den stabilen Funktionsstand '''1.9.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+Dieser Artikel beschreibt den stabilen Funktionsstand '''1.10.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
 
-'''Nur Entwicklungsstand dev (geplant fuer 1.10.0):''' Die zentrale Seite
+'''Seit Version 1.10.0:''' Die zentrale Seite
 <code>/fhem/fhem-cms/admin.html</code> listet CMS-Devices und getrennt davon
 verwaiste CMS-Dateistrukturen. Erst nach <code>attr &lt;CMS&gt; adminMenu 1</code>
 fuehrt im Dateimenue des jeweiligen CMS
@@ -56,16 +56,18 @@ Beim Menueaufruf uebernimmt die Administration das aktuelle Theme, das
 Seitenhintergrundbild und die Liquid-Glass-Werte des aufrufenden CMS.
 Direktaufrufe ohne Darstellungskontext bleiben im dunklen Standardtheme.
 
-'''Nur Entwicklungsstand dev (geplant fuer 1.10.0):''' Magic verwendet das
+'''Seit Version 1.10.0:''' Magic verwendet das
 mitgelieferte Strandfoto als Hintergrund aller erzeugten Seiten, auch der
 Startseite. Das Bild liegt danach als normales Medium im jeweiligen CMS und
 kann ueber die Seiteneinstellungen ersetzt oder entfernt werden.
 Leere Seiten und Seiten aus dem gefuehrten Einrichtungsassistenten starten
 ohne Hintergrundbild. Bestehende Seiten werden nicht automatisch geaendert.
 
-Neu in 1.9.0: interne Seiten als Modal-Popup, Bildbearbeitung mit Varianten,
-automatische LinkWidget-Größe mit bestätigter Platzschaffen-Vorschau sowie
-volle Rasterbreite und verbesserte mobile Navigation.
+Neu in 1.10.0: Widgets und Seiten duplizieren, wiederverwendbare Widgetvorlagen,
+direktes Loeschen im Entwurf, aufgabenbezogene Widgetdialoge mit
+Geraete-/Reading-Vorschlaegen, konsistente Statusfarben, DbLog-Abfragen im
+Hintergrund sowie der verbesserte Einrichtungsassistent und die globale
+Administration.
 
 __TOC__
 
@@ -148,7 +150,7 @@ Verwende bevorzugt die erzeugten Device-Links, da Host, Port und Webname von dei
 
 Bei einer neuen, leeren Konfiguration erscheint der '''Einrichtungsassistent'''. Du kannst leer beginnen, Räume und Geräte mit Vorschau auswählen oder mit '''Magic - auf gut Glück''' einen Entwurf erzeugen. Magic berücksichtigt höchstens acht Räume mit je acht Widgets und nur unterstützte Geräte. Nicht erkannte Geräte lassen sich später im Editor ergänzen. Für Temperatur-Readings, die in DbLog oder FileLog protokolliert werden, ergänzt der Assistent ein Verlaufsdiagramm; DbLog wird bevorzugt. Ohne nachgewiesene Protokollierung wird kein Diagramm angelegt. Der Assistent veröffentlicht nichts; Bedienelemente können reale Geräte steuern.
 
-'''Neu auf dev:''' Temperaturvorschlaege setzen einen gueltigen numerischen
+'''Seit Version 1.10.0:''' Temperaturvorschlaege setzen einen gueltigen numerischen
 Istwert voraus. Eine gepunktete Linie unter dem Spinner zeigt die erledigten
 Einrichtungsschritte. Die DbLog-Pruefung nutzt nur die gespeicherten Readings
 statt eines zusaetzlichen Jahresverlaufs; auch aeltere Daten gelten als
@@ -212,8 +214,8 @@ Die Navigation ist ein gemeinsames Widget für alle Seiten des CMS-Devices. Öff
 * Ausgeblendete Seiten bleiben über ihren Link erreichbar und sind nicht geschützt.
 * Zum Löschen einer Seite entfernst oder verschiebst du zunächst ihre Widgets und änderst referenzierende LinkWidget-Kacheln.
 * Die letzte verbleibende Seite kann nicht einfach entfernt werden.
-* Entwicklungsstand <code>dev</code>: Eine Seite kann mit Widgets und Layout dupliziert und als Entwurf gespeichert werden; die Live-Seite bleibt unverändert.
-* Entwicklungsstand <code>dev</code>: Das X am Widget entfernt dieses nach Bestätigung direkt aus dem Entwurf; die veröffentlichte Seite bleibt zunächst unverändert.
+* Seit Version 1.10.0: Eine Seite kann mit Widgets und Layout dupliziert und als Entwurf gespeichert werden; die Live-Seite bleibt unverändert.
+* Seit Version 1.10.0: Das X am Widget entfernt dieses nach Bestätigung direkt aus dem Entwurf; die veröffentlichte Seite bleibt zunächst unverändert.
 * Die Navigation lässt sich horizontal oder vertikal ausrichten, verschieben und skalieren.
 * Bei Platzmangel erscheint ein aufklappbares Burger-Menü. Bei vertikaler Navigation wird es auf Touchgeräten und in der Geräte-Vorschau unabhängig von der Ausrichtung verwendet; es liegt über den Widgets, ohne Platz im Inhaltsfluss zu belegen. Beim Drehen wird die verfügbare Breite neu ausgewertet.
 * Bei horizontaler Navigation werden Einträge bei knappem Platz in der Höhe um höchstens 20 Prozent verkleinert; reicht der Platz auch dann nicht, erscheint das Burger-Menü.

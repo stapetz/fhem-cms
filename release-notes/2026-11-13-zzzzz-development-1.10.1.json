@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.10.1-dev",
+  "title": "Entwicklung nach dem freigegebenen Release 1.10.0",
+  "changes": [
+    "Main-Release 1.10.0 in dev integriert; noch keine weiteren Funktionsaenderungen.",
+    "Interne Entwicklungs- und KI-Anweisungen bleiben auf dev.",
+    "Die offene Wiki-Dokumentationsaufgabe #171 ist nicht Teil dieses Releases."
+  ]
+}
