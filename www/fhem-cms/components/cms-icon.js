@@ -1,7 +1,9 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { openIconPicker } from '../js/icon-picker.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
+import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
+import { statusColorPresets } from '../js/status-colors.js';
 
 const MAX_STATES = 20;
 
@@ -63,7 +65,7 @@ class FHEMCMSIcon extends HTMLElement {
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
         input[type="text"], select { width: 100%; }
         .device-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
-        .mapping { display: grid; grid-template-columns: minmax(5rem, 1fr) minmax(7rem, 1fr) 3rem auto; align-items: end; gap: 0.4rem; padding: 0.5rem 0; border-top: 1px solid var(--cms-border-subtle, #3a4d42); }
+        .mapping { display: grid; grid-template-columns: minmax(4rem, 0.9fr) minmax(6rem, 1fr) 3rem minmax(9rem, 1.4fr) auto; align-items: end; gap: 0.4rem; padding: 0.5rem 0; border-top: 1px solid var(--cms-border-subtle, #3a4d42); }
         .mapping button { min-height: 2.2rem; }
         .color { width: 3rem; height: 2.2rem; padding: 0.2rem; }
         .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
@@ -92,7 +94,7 @@ class FHEMCMSIcon extends HTMLElement {
           <details class="config-group" open><summary>Allgemein</summary>
             <div class="config-group-fields">
               <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+              ${titleVisibilityField}
             </div>
           </details>
           <details class="config-group" open><summary>Datenquelle</summary>
@@ -120,6 +122,7 @@ class FHEMCMSIcon extends HTMLElement {
         </form>
       </dialog>`;
     this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
+    this.suggestionTracker = createManualFieldTracker(this.shadowRoot.querySelector('[data-form]'));
     this.shadowRoot.querySelector('[data-pick-device]').addEventListener('click', () => this.pickDevice());
     this.shadowRoot.querySelector('[name="device"]').addEventListener('click', () => this.pickDevice());
     this.shadowRoot.querySelector('[data-add]').addEventListener('click', () => this.addMapping());
@@ -165,6 +168,7 @@ class FHEMCMSIcon extends HTMLElement {
   async openConfig({ isNew = false } = {}) {
     this.isNew = isNew;
     const form = this.shadowRoot.querySelector('[data-form]');
+    this.suggestionTracker.reset();
     form.elements.title.value = this.widgetConfig.title || '';
     form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.device.value = this.widgetConfig.device || '';
@@ -174,7 +178,7 @@ class FHEMCMSIcon extends HTMLElement {
     try {
       const devices = await this.services.listAllDevices();
       this.device = devices.find((item) => item.name === this.widgetConfig.device) || null;
-      this.setReadings(this.device, this.widgetConfig.reading);
+      this.setReadings(this.device, this.widgetConfig.reading || undefined);
       this.shadowRoot.querySelector('[data-alias]').textContent = this.device?.alias || '';
     } catch (error) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Devices konnten nicht geladen werden: ${error.message}`;
@@ -190,13 +194,18 @@ class FHEMCMSIcon extends HTMLElement {
   setReadings(device, selected) {
     const select = this.shadowRoot.querySelector('[name="reading"]');
     const names = Object.keys(device?.readings || {}).sort();
-    select.replaceChildren(...names.map((name) => {
+    const proposed = selected === undefined ? suggestedReading(device?.readings, 'fhem-icon') : selected;
+    const options = [new Option('Reading wählen …', ''), ...names.map((name) => {
       const option = document.createElement('option');
       option.value = name;
       option.textContent = name;
       return option;
-    }));
-    select.value = names.includes(selected) ? selected : (names[0] || '');
+    })];
+    if (proposed && !names.includes(proposed)) {
+      options.push(new Option(`${proposed} (nicht verfügbar)`, proposed));
+    }
+    select.replaceChildren(...options);
+    select.value = proposed ? proposed : '';
   }
 
   async pickDevice() {
@@ -205,10 +214,15 @@ class FHEMCMSIcon extends HTMLElement {
       if (!device) {
         return;
       }
+      const readingSelect = this.shadowRoot.querySelector('[name="reading"]');
+      const reading = this.suggestionTracker.value(
+        readingSelect,
+        suggestedReading(device.readings, 'fhem-icon')
+      );
       this.device = device;
       this.shadowRoot.querySelector('[name="device"]').value = device.name;
       this.shadowRoot.querySelector('[data-alias]').textContent = device.alias || '';
-      this.setReadings(device, '');
+      this.setReadings(device, reading);
     } catch (error) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
     }
@@ -243,6 +257,26 @@ class FHEMCMSIcon extends HTMLElement {
     color.className = 'color';
     color.value = stateColorInputValue(mapping.color, this);
     colorLabel.append(color);
+    const presetLabel = document.createElement('label');
+    presetLabel.textContent = 'Semantischer Farbvorschlag';
+    const presets = statusColorPresets(document.documentElement.dataset.cmsTheme);
+    const preset = document.createElement('select');
+    preset.setAttribute('aria-label', 'Semantischen Farbvorschlag wählen');
+    preset.append(new Option('Farbe wählen …', ''));
+    for (const item of presets) {
+      preset.append(new Option(item.label, item.role));
+    }
+    preset.value = presets.find((item) => item.color === color.value)?.role || '';
+    preset.addEventListener('change', () => {
+      const selected = presets.find((item) => item.role === preset.value);
+      if (selected) {
+        color.value = selected.color;
+      }
+    });
+    color.addEventListener('input', () => {
+      preset.value = '';
+    });
+    presetLabel.append(preset);
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = 'Entfernen';
@@ -257,7 +291,7 @@ class FHEMCMSIcon extends HTMLElement {
     if (mapping.icon) {
       iconButton.dataset.icon = mapping.icon;
     }
-    row.append(valueLabel, iconLabel, colorLabel, remove);
+    row.append(valueLabel, iconLabel, colorLabel, presetLabel, remove);
     container.append(row);
   }
 

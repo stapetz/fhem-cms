@@ -619,11 +619,14 @@ Widget-Ladezustände verwenden den wiederverwendbaren Statushelfer
 `www/fhem-cms/js/widget-status.js`; er stellt Spinner, `aria-busy` und
 `prefers-reduced-motion` gemeinsam bereit.
 Der Einrichtungsassistent ergänzt ein Temperaturdiagramm nur, wenn
-`logreadings` genau das Temperatur-Reading nachweist. Bei `auto` wird DbLog
+`logreadings` das Temperatur-Reading nachweist und die Verlaufsabfrage für die
+letzten 365 Tage mindestens einen Datenpunkt liefert. Bei `auto` wird DbLog
 bevorzugt und andernfalls FileLog verwendet; die ermittelte Quelle wird im
-Diagramm festgehalten. Ein nicht geloggtes Reading erzeugt kein Diagramm.
-Fehler bei der Prüfung werden in der Vorschau sichtbar; Magic speichert bei
-fehlgeschlagener Prüfung keinen Entwurf.
+Diagramm festgehalten. Ein nicht geloggtes Reading oder ein Reading ohne
+Verlaufsdaten erzeugt kein Diagramm. Fehler bei der Prüfung werden in der
+Zusammenfassung sichtbar; Magic zeigt während Vorbereitung und Speichern
+„Erstelle die Oberfläche“ mit Spinner und speichert bei fehlgeschlagener
+Prüfung keinen Entwurf.
 Beim Verlassen der bestehenden Oberfläche werden ausstehende Snapshots und
 Ereignisse geschlossener WebSockets verworfen; sie dürfen keine Abonnements
 erneut starten. Eine vollständige Umstellung auf den zentralen FCUI-Controller
@@ -953,6 +956,34 @@ Test dokumentiert; konkrete Modelle sind noch offen. FHEM ist in der aktuellen
 stabilen Version zu prüfen; verwendete FHEM-Version und Plattform werden beim
 Test festgehalten. Die unten beschriebene breitere Browsermatrix bleibt bestehen.
 Ohne dokumentierte Durchführung und Messwerte ist keine Geräteabnahme erfolgt.
+
+## Widget- und Seitenduplizierung sowie Vorlagen (Refs #143)
+
+Die Seitenverwaltung dupliziert Seiten als Entwurf mit neuer Seiten-ID und
+unverändertem Widgetinhalt/Layout. Im Bearbeitungsmodus dupliziert jedes Widget
+als Entwurf mit neuer ID und einer kollisionsfreien Rasterposition. Die
+gemeinsame `insertWidget`-Transaktion verwendet dieselbe ID-/Rasterlogik auch
+für Vorlagen; Live-Konfiguration wird dabei nicht verändert.
+
+Vorlagen liegen dauerhaft und getrennt je CMS-Device in
+`fhem-cms-data/<Device>/blueprints.json`. `get/set
+<CMS> version5blueprints` verwenden eine SHA-256-Zustandskennung gegen
+überschriebene Änderungen. Die FHEM-Seite begrenzt die Datei auf 1 MiB und
+100 Vorlagen, validiert jedes Widget gegen das Schema-5-Widgetformat und
+schreibt atomar. Vorlagen enthalten nur den Widgetinhalt; beim Einfügen werden
+ID und Rasterposition neu vergeben und der Eintrag zunächst als Entwurf
+gespeichert.
+
+Bei Vorlagen mit Device-Bezug kann ein Quell-Device auf ein Ziel-Device
+abgebildet werden. Unterstützt werden Schemafelder `device`/`devices`,
+`{{Device:reading}}`, Freies-HTML-Attribut `device="Device"` und
+`data-cms-class`-Bedingungen. Bei mehreren Quell-Devices muss eines zum Ersetzen
+gewählt werden; andere Gerätebezüge bleiben bestehen. Die Umstellung arbeitet
+auf einer Kopie der Vorlage.
+
+Offline-/Browserregressionen: `perl t/08_schema5_blueprints.t`,
+`t/59_page_duplicate.html` und `t/67_blueprints.html`; der gemeinsame
+Browserläufer ist `node --test t/35_schema5_scaling.test.js`.
 
 ## Widgets automatisch anordnen (Refs #115)
 
@@ -1536,6 +1567,7 @@ Das Testfrontend bestätigt die Anlage und zeigt den Device-Namen. Eine JSON-API
 
 - Pfad: `<modpath>/fhem-cms-data/<Device>/config.json`, ausserhalb von `www`. Der Ordner wird beim `define` und bei jedem FHEM-Start nachgerüstet, falls er fehlt; eine vorhandene Konfiguration wird nie überschrieben.
 - Format: `{"schemaVersion":4,"theme":"dark|light","navigation":{"orientation":"horizontal|vertical","grid":{…}},"pages":[{"id","title","widgets":[{"type":"fhem-value","device","reading","grid":{"col","row","w","h"}}]}]}`. Unbekannte Felder, fehlende Pflichtfelder und nicht unterstützte Versionen werden abgewiesen. `theme` ist die globale Farbpalette des Devices (Standard `dark`); `navigation` bleibt optional (S18).
+- Eine neu angelegte CMS-Instanz startet mit Schema 5 und dem Theme `liquid-glass`. Vorhandene Konfigurationen und Migrationen behalten ihr gespeichertes Theme; das historische Schema-4-Standardtheme bleibt `dark`.
 - Limits: 1 MiB, höchstens 50 Seiten, 200 Widgets je Seite, Raster 48 Spalten. Schema-Version 2 wird beim Lesen migriert: `col` wird als `(col - 1) * 4 + 1`, `w` als `w * 4` umgesetzt; `row` und `h` bleiben unverändert. Damit behalten bestehende Layouts ihre Position und Grösse.
 - Schema-Version 3 wird auf Version 4 migriert und erhält standardmässig das dunkle Theme. Die Ansichts- und Bearbeitungsmodi verwenden dieselbe deviceweite Auswahl `dark` oder `light`; CSS Custom Properties werden auch von Web Components im Shadow DOM geerbt. Freie Farben und weitere Themes sind nicht Teil dieser Ausbaustufe.
 - Schreiben: temporäre Datei, dann atomares `rename`; die Vorgängerversion bleibt als `config.json.<JJJJMMTT-hhmmss>.bak` erhalten (die letzten 20).
@@ -1578,7 +1610,7 @@ synthetischen Daten; eine Prüfung auf einer FHEM-Testinstanz steht noch aus.
 - **Wert-Anzeige (`type: "fhem-value"`, S25):** Felder `id`, `type`, `device`, `reading`, `grid`, optional `unit` (1–16 Zeichen ohne Steuerzeichen) und `icon` (logischer FHEMWEB-Icon-Name wie `temp_temperature` oder `weather/sunny`, ohne `..`, höchstens 80 Zeichen). Komponente `components/cms-value.js`; Wert aus `snapshots` des Devices (Hauptdevice, dann Kanäle), Aktualisierung wie die Thermostat-Kachel (`isLiveWidget`). Device-Auswahl wie bei der Thermostat-Kachel (Suchdialog, siehe „Konfigurationsdialog für Widgets“). Die Auswahllisten nutzen `jsonlist2 .*` (`listAllDevices`, einmal je Seite zwischengespeichert) und `get <CMS> icons`: `FHEMCMS_ListIcons` liest `www/images/<Stil>/` (Tiefe ≤ 4, keine Symlinks, höchstens 5000 Namen, ohne Endung). Das Icon lädt der Browser über FHEMWEB unter `<FHEMWEB>/icons/<Name>`. Angezeigt wird Text (`textContent`), kein HTML.
 - **Uhr/Datum (`type: "fhem-clock"`, S38):** speichert nur `style` (`digital`, `date` oder `analog`) sowie die booleschen Optionen `showSeconds`, `showDate` und `showWeekday`; keine FHEM-Devices oder Netzwerkzugriffe. Zeit und Datum stammen lokal aus dem Browser. Das Layout wird im Dialog über Vorschaukarten gewählt.
 - **Status-Symbol (`type: "fhem-icon"`, S36):** Felder `id`, `type`, `device`, `reading`, `states` (1–20 eindeutige Reading-Werte mit logischem Icon-Namen und Hex-Farbe), `grid`, optional `title`. Readings kommen aus dem Live-Snapshot; es gibt keine Schreibaktion. Nicht zugeordnete Werte werden als Text ausgegeben.
-- **Tabelle (`type: "fhem-table"`, S41):** Felder `id`, `type`, `rows` (1–40 eindeutige Device/Reading-Paare, optional `unit`), `grid`, optional `title` und `deviceLabel` (Überschrift der Geräte-/Bezeichnungsspalte). Die Reading-Spalte bleibt intern und wird nicht angezeigt. Übliche Einheiten sind auswählbar, eigene Einheiten sind auf 16 Zeichen ohne Steuerzeichen begrenzt. `devicesOf()` abonniert die verwendeten Devices; die Komponente erhält eine Map der Snapshots und rendert Werte und Einheiten ausschließlich als Text.
+- **Tabelle (`type: "fhem-table"`, S41):** Felder `id`, `type`, `rows` (1–40 eindeutige Device/Reading-Paare, optional `unit`), `grid`, optional `title` und `deviceLabel` (Überschrift der Geräte-/Bezeichnungsspalte). Die Reading-Spalte bleibt intern und wird nicht angezeigt. Fünf häufige Einheiten (`°C`, `%`, `W`, `kW`, `kWh`) stehen direkt zur Auswahl, weitere Vorschläge sind eingeklappt erreichbar; eigene Einheiten sind auf 16 Zeichen ohne Steuerzeichen begrenzt. `devicesOf()` abonniert die verwendeten Devices; die Komponente erhält eine Map der Snapshots und rendert Werte und Einheiten ausschließlich als Text.
 - **Textbaustein (`type: "text"`):** Felder `id`, `type`, genau eines von `html` (WYSIWYG, siehe unten) oder `markdown` (Altbestand; höchstens 20000 Zeichen, keine Steuerzeichen außer Tab/Zeilenumbruch), optional `title` (höchstens 64 Zeichen), `grid`. Der Renderer `js/markdown.js` ist eigenständig und baut nur DOM-Knoten per `createElement`/`textContent`. Unterstützt: `#`–`###`, Absätze, `-`/`1.`-Listen, `**fett**`, `*kursiv*`, `` `code` ``, `[Text](URL)`. HTML bleibt Text; Links nur mit `http(s)` oder relativ (`/`, `./`, `../`, `#`), mit `rel="noopener noreferrer"`.
 
 ## Konfigurationsdialog für Widgets (verbindlich für alle Widgets)
@@ -1597,7 +1629,7 @@ Jedes Widget mit Device-Bezug folgt dem Muster der Thermostat-Kachel:
 
 8. Icon-Liste: `get <CMS> icons` listet alle Stile unter `www/images/`; eine Filterung nach `iconPath` hat die Liste leer gemacht und ist daher nicht vorgesehen. Namen, die FHEMWEB nicht ausliefert (Fehler 404), entfernt der Icon-Picker nach dem Laden selbst wieder, damit keine leeren Kacheln bleiben.
 9. Container-Einheiten (`cqh`/`cqw`) im Shadow-DOM: Der Container (`container-type: size`) muss ein Element innerhalb des Shadow-DOMs sein (z. B. die Kachel), nicht der Host.
-10. Optionaler Titel: Jedes Widget hat im Dialog das Feld „Titel (optional)“ (`title`, höchstens 64 Zeichen, keine Steuerzeichen; im Schema als optionales Feld, in `FHEMCMS_ValidateConfig` für alle Widget-Typen geprüft). Ohne Titel verwendet das Widget einen sinnvollen Ersatz (Alias, Device-Name). Neue Widgets müssen `title` im Schema erlauben und in der Kachel (ausblendbar bei kleiner Größe) anzeigen.
+10. Optionaler Titel: Jedes Widget hat im Dialog das Feld „Titel (optional)“ (`title`, höchstens 64 Zeichen, keine Steuerzeichen; im Schema als optionales Feld, in `FHEMCMS_ValidateConfig` für alle Widget-Typen geprüft). Die Checkbox „Titel anzeigen“ verwendet `titleVisibilityField` und `titleVisibilityStyles` aus `js/dialog-groups.js`, damit Text und Checkbox direkt nebeneinanderstehen. Ohne Titel verwendet das Widget einen sinnvollen Ersatz (Alias, Device-Name). Neue Widgets müssen `title` im Schema erlauben und in der Kachel (ausblendbar bei kleiner Größe) anzeigen.
 11. Alias anzeigen: Unter dem Feld „FHEM-Device“ steht, falls vorhanden und vom Namen verschieden, „Alias: …“ (Element `data-device-alias`, gefüllt beim Öffnen des Dialogs und nach der Auswahl aus der Geräteliste). Im Widget wird weiterhin der technische Name gespeichert. Auch der Suchdialog zeigt Name und Alias.
 12. Schriftgrößen: Inhalte in Kacheln sind klein und fließend skalierend (`clamp(min, <n>cqh/cqw, max)` mit kleinen Obergrenzen, z. B. Wert höchstens 1,5 rem, Icon höchstens 1,5 rem, Thermostat-Zahlen höchstens 1,9 rem). Die Thermostat-Kachel folgt der Darstellung des ThermostatDashboard (Titelzeile, Box Ist/Soll, Zeile mit Modus, Ventil, Batterie); Neue Thermostat-ähnliche Widgets übernehmen sie. Raster: Abstand (`--cms-gap`) und Zeilenhöhe (`--cms-row-h`) sind ab 40 rem in `cqw` der Seitenbreite angegeben (`.cms-shell` ist Container); neue Layout-Logik darf keine festen px/rem für Rasterzellen annehmen, sondern muss die Variablen verwenden. Widgets mit mehreren Bereichen passen ihr Layout der Kachelform an (Container-Query auf `aspect-ratio`) und skalieren die Schrift so, dass der Inhalt die Kachel in beiden Richtungen ausnutzt; den Platzbedarf in `em` vorher ausmessen. Der Inhalt von Widgets mit mehreren Bereichen (Thermostat) ist oben ausgerichtet; einfache Anzeigen mit einem einzigen Wert (Wert-Anzeige) stehen mittig in der Kachel, das Titel-Label bleibt in beiden Fällen oben links und kompakt gesetzt; bleibt Platz übrig, bleibt er unten frei. Titel aller Widgets: kleines Label (gedämpftes Grün) oben links, ohne Kopfzeile und Trennlinie; Zahnrad klein absolut oben rechts, nur im Bearbeitungsmodus (`view-only` blendet es aus). Rahmen: dünn, Radius ca. 1,4 rem (FTUI-Stil: klein, kompakt, einfach). Schriftgrößen werden ohne feste Ober- und Untergrenzen (höchstens ein kleiner Mindestwert wie `max(4px, …)`) aus `cqh`/`cqw` berechnet, damit das Skalieren nahtlos ist. Kacheln mit mehreren Bereichen skalieren den gesamten Inhalt über eine Basisschrift (`font-size` aus `cqh`/`cqw`, Inhalt in `em`) und verteilen Restplatz mit `justify-content: space-evenly`; Bereiche werden nicht auf die Kachelhöhe gestreckt (sonst entstehen Leerflächen), und Texte dürfen nicht abgeschnitten werden.
 13. Verschieben und Größe ändern: Jedes Widget lässt sich im Bearbeitungsmodus gleich verschieben (Griff oben, Pfeiltasten) und in der Größe ändern (Griff unten rechts). Das leistet allein die App-Shell über `syncOverlays()` und das Raster `grid`; ein Widget implementiert dafür nichts selbst, darf aber den oberen Streifen (1,6 rem) und die untere rechte Ecke nicht mit eigenen, höher liegenden Elementen belegen. Die Overlays werden nach jeder Änderung der Widget-Liste neu aufgebaut: nach dem ersten Speichern eines neuen Widgets (`saveWidget`), nach dem Löschen (`deleteWidget`) und in `renderWidgets`. Wer einen neuen Widget-Typ ergänzt, prüft im Test: hinzufügen, speichern, sofort verschieben und in der Größe ändern, ohne die Seite neu zu laden.
@@ -1727,7 +1759,12 @@ Die Farbzustands-Inventur umfasst folgende vorhandene Anzeigen:
 - `cms-icon` ordnet explizite Benutzerwerte Icons und frei gewählten Farben zu.
   Diese Farben bleiben unverändert; nicht zugeordnete Rohwerte erscheinen
   ausdrücklich als unbekannt und ohne Statusfarbe. Ein neuer Farbeintrag schlägt
-  den aktuellen Theme-Akzent vor.
+  den aktuellen Theme-Akzent vor. Im Zuordnungsdialog stehen zusätzlich
+  ausdrücklich auswählbare semantische Farbpaletten für Licht, Heizen, Kühlen,
+  sicher/geschlossen und offen/Alarm bereit. Die Palette ist ein manueller
+  Vorschlag je Statuswert, keine Geräteklassifikation; das gespeicherte Schema
+  bleibt beim vorhandenen Hex-Farbwert. Die Presets berücksichtigen beim Wählen
+  das aktive helle bzw. dunkle Theme.
 - `cms-thermostat` zeigte jeden Batteriewert grün, auch ohne Klassifikation.
   Der Wert bleibt Text und verwendet nun die normale Textfarbe. Die
   Ventil-Leiste bleibt eine Prozent-Grafik; Betriebsarten werden als Text
@@ -1735,8 +1772,9 @@ Die Farbzustands-Inventur umfasst folgende vorhandene Anzeigen:
 - `cms-calllist` kennzeichnet Anrufzustände mit Symbolen und zugänglichen
   Beschriftungen, nicht mit Farben.
 
-Die Regression liegt in `t/64_status_colors.test.js` und
-`t/64_status_colors.html`; letztere prüft den realen Widget-Renderer im Browser.
+Die Regression liegt in `t/64_status_colors.html`; der gemeinsame
+Browserläufer `node --test t/35_schema5_scaling.test.js` prüft den realen
+Widget-Renderer in mehreren Themes.
 
 ## Kacheln verschieben (Bearbeitungsmodus)
 

@@ -31,6 +31,14 @@ if ($operation eq 'get') {
     $error = FHEMCMS_Set($hash, 'CMS', @args);
 } elsif ($operation eq 'restart') {
     $error = FHEMCMS_Define($hash, 'CMS FHEMCMS');
+} elsif ($operation eq 'new') {
+    $error = FHEMCMS_Define($hash, 'CMS FHEMCMS');
+    if (!defined($error)) {
+        open(my $input, '<', File::Spec->catfile($dir, 'config.json')) or die "open config: $!";
+        local $/;
+        $value = <$input>;
+        close($input) or die "close config: $!";
+    }
 } elsif ($operation eq 'migrate') {
     my $plan = $json->decode(decode_base64($args[0]));
     ($value, $error) = FHEMCMS_CommitLayoutMigration($dir, $plan, $args[1]);
@@ -46,6 +54,21 @@ if ($operation eq 'get') {
 }
 print $json->encode({value => $value, error => $error});
 `;
+
+test('new CMS instances use liquid glass as their initial theme', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fhem-cms-default-theme-'));
+  try {
+    await mkdir(join(root, 'www', 'fhem-cms'), { recursive: true });
+    const result = spawnSync('perl', ['-e', script, root, 'new'], { encoding: 'utf8' });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, result.stderr);
+    const created = JSON.parse(result.stdout);
+    assert.equal(created.error, null);
+    assert.equal(JSON.parse(created.value).theme, 'liquid-glass');
+  } finally {
+    await rm(root, { recursive: true });
+  }
+});
 
 test('isolated migration, restart, versioned draft and restore form one protected chain', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fhem-cms-chain-'));

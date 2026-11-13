@@ -67,6 +67,27 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       edit.setAttribute('aria-label', edit.title);
       edit.addEventListener('click', () => editing.onEdit(id));
       controls.append(edit);
+      if (widget && typeof editing.onDuplicate === 'function') {
+        const duplicate = document.createElement('button');
+        duplicate.type = 'button';
+        duplicate.className = 'cms-widget-duplicate';
+        duplicate.textContent = '⧉';
+        duplicate.title = `Widget „${widget.title || widget.id}“ duplizieren`;
+        duplicate.setAttribute('aria-label', duplicate.title);
+        duplicate.disabled = page.widgets.length >= 200;
+        duplicate.addEventListener('click', () => editing.onDuplicate(id));
+        controls.append(duplicate);
+      }
+      if (widget && typeof editing.onSaveBlueprint === 'function') {
+        const blueprint = document.createElement('button');
+        blueprint.type = 'button';
+        blueprint.className = 'cms-widget-blueprint';
+        blueprint.textContent = '▧';
+        blueprint.title = `Widget „${widget.title || widget.id}“ als Vorlage speichern`;
+        blueprint.setAttribute('aria-label', blueprint.title);
+        blueprint.addEventListener('click', () => editing.onSaveBlueprint(id));
+        controls.append(blueprint);
+      }
       if (widget && typeof editing.onMove === 'function') {
         const move = document.createElement('button');
         move.type = 'button';

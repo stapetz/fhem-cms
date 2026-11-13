@@ -1,3 +1,5 @@
+import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
+
 const STYLES = ['digital', 'date', 'analog'];
 
 class FHEMCMSClock extends HTMLElement {
@@ -55,6 +57,7 @@ class FHEMCMSClock extends HTMLElement {
           color: var(--cms-text, #edf4ef); }
         dialog::backdrop { background: var(--cms-backdrop, rgb(0 0 0 / 0.6)); }
         form { display: grid; gap: 0.75rem; }
+        ${titleVisibilityStyles}
         label { display: grid; gap: 0.25rem; }
         input[type="text"] { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
@@ -89,7 +92,7 @@ class FHEMCMSClock extends HTMLElement {
         <form method="dialog" data-form novalidate>
           <h3 id="clock-dialog-title">Uhr / Datum konfigurieren</h3>
           <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-          <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+          ${titleVisibilityField}
           <fieldset>
             <legend>Darstellung wählen</legend>
             <div class="presets">

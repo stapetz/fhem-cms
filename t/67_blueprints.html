@@ -1,0 +1,161 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget blueprint regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<main class="cms-shell"><section id="panel"></section></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { blueprintDevices, remapBlueprintDevice, Schema5BlueprintPanel } from '../www/fhem-cms/js/fcui-schema5-blueprints.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { FhemClient } from '../www/fhem-cms/js/fhem-client.js?blueprint-regression=1';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+try {
+  const blueprint = {
+    id: 'status', type: 'fhem-html', devices: ['Temp', 'Humidity'],
+    device: 'Temp', grid: { col: 1, row: 2, w: 4, h: 2 },
+    html: '<span device="Temp" reading="state">{{Temp:state}}</span>'
+      + '<div data-cms-class="Temp:state=on:on; Humidity:state=low:warn"></div>',
+  };
+  check(JSON.stringify(blueprintDevices(blueprint)) === JSON.stringify(['Temp', 'Humidity']),
+    'detects widget fields, HTML attributes, placeholders, and state conditions');
+  const remapped = remapBlueprintDevice(blueprint, 'Temp', 'Room');
+  check(remapped.device === 'Room' && remapped.devices[0] === 'Room',
+    'remaps explicit widget device fields');
+  check(remapped.html.includes('device="Room"') && remapped.html.includes('{{Room:state}}'),
+    'remaps both free-HTML device reference forms');
+  check(remapped.html.includes('data-cms-class="Room:state=on:on; Humidity:state=low:warn"'),
+    'remaps status-condition references without changing other devices');
+  check(blueprint.html.includes('{{Temp:state}}') && remapped.devices[1] === 'Humidity',
+    'does not mutate the saved blueprint or unrelated device references');
+
+  const live = {
+    schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'start', title: 'Start', widgets: [
+      { id: 'text', type: 'text', markdown: '{{Temp:state}}', grid: { col: 1, row: 2, w: 4, h: 2 } },
+    ] }],
+  };
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let writes = 0;
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async (draft, token) => {
+      check(token === state.token, 'blueprint insertion uses the current draft token');
+      writes++;
+      state = { live, draft: structuredClone(draft), token: 'b'.repeat(64) };
+    },
+    publish: async () => {}, discard: async () => {},
+  });
+  await controller.reload();
+  const inserted = await controller.insertWidget('start',
+    { id: 'text', type: 'text', markdown: '{{Room:state}}', grid: { col: 1, row: 2, w: 4, h: 2 } },
+    'a'.repeat(64));
+  check(inserted.draft.pages[0].widgets[1].id === 'text-copy',
+    'inserted blueprint receives a unique widget ID');
+  check(inserted.draft.pages[0].widgets[1].grid.col === 5 && writes === 1,
+    'inserted blueprint gets a free adjacent grid position and saves as a draft');
+  check(live.pages[0].widgets.length === 1 && inserted.live.pages[0].widgets.length === 1,
+    'blueprint insertion leaves live configuration unchanged');
+
+  const crowded = structuredClone(live);
+  crowded.pages[0].widgets.push(
+    { id: 'left-blocker', type: 'text', markdown: 'left',
+      grid: { col: 5, row: 2, w: 4, h: 3 } },
+    { id: 'right-blocker', type: 'text', markdown: 'right',
+      grid: { col: 9, row: 2, w: 4, h: 3 } },
+  );
+  let crowdedState = { live: crowded, draft: null, token: 'f'.repeat(64) };
+  const crowdedController = new Schema5DraftController({
+    read: async () => structuredClone(crowdedState),
+    save: async (draft) => { crowdedState = { live: crowded, draft, token: 'e'.repeat(64) }; },
+    publish: async () => {}, discard: async () => {},
+  });
+  await crowdedController.reload();
+  const below = await crowdedController.insertWidget('start',
+    { id: 'text', type: 'text', markdown: 'copy', grid: { col: 1, row: 2, w: 4, h: 2 } },
+    'f'.repeat(64));
+  check(below.draft.pages[0].widgets[3].grid.col === 1
+    && below.draft.pages[0].widgets[3].grid.row === 4,
+  'when adjacent columns are occupied, insertion tries the free area below the source');
+
+  let savedItems = [];
+  let currentToken = 'c'.repeat(64);
+  const client = {
+    async getBlueprints() { return { items: structuredClone(savedItems), token: currentToken }; },
+    async saveBlueprints(items, token) {
+      check(token === currentToken, 'blueprint save uses the latest server token');
+      savedItems = structuredClone(items);
+      currentToken = 'd'.repeat(64);
+    },
+  };
+  const root = document.createElement('dialog');
+  root.className = 'cms-editor-panel cms-editor-dialog';
+  document.querySelector('#panel').append(root);
+  let closed = false;
+  new Schema5BlueprintPanel({ root, client, services: { listAllDevices: async () => [] },
+    browser: { confirm: () => true }, widget: blueprint, onInsert: async () => {},
+    onClose: () => { closed = true; } });
+  root.showModal();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  root.querySelector('[name="name"]').value = 'Statusanzeige';
+  root.querySelector('[data-save]').click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check(savedItems.length === 1 && savedItems[0].name === 'Statusanzeige',
+    'panel stores a named reusable blueprint');
+  root.querySelector('[data-close]').click();
+  check(closed, 'blueprint panel offers an explicit close action');
+  root.close();
+  root.remove();
+
+  const insertionRoot = document.createElement('dialog');
+  insertionRoot.className = 'cms-editor-panel cms-editor-dialog';
+  document.querySelector('#panel').append(insertionRoot);
+  let insertedWidget;
+  new Schema5BlueprintPanel({ root: insertionRoot, client,
+    services: { listAllDevices: async () => [{ name: 'Room', alias: '', type: 'dummy' }] },
+    browser: { confirm: () => true }, onInsert: async (widget) => { insertedWidget = widget; },
+    onClose: () => {} });
+  insertionRoot.showModal();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const sourceSelect = insertionRoot.querySelector('.cms-blueprint-row select');
+  sourceSelect.value = 'Temp';
+  sourceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  insertionRoot.querySelector('.cms-blueprint-row button').click();
+  await new Promise(resolve => setTimeout(resolve, 20));
+  document.querySelector('.cms-dp-dialog [role="option"]').click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check(insertedWidget.device === 'Room' && insertedWidget.html.includes('{{Room:state}}')
+    && insertedWidget.html.includes('device="Room"'),
+  'blueprint insertion picks a target device and rewrites all supported references');
+  insertionRoot.close();
+  insertionRoot.remove();
+
+  const originalFetch = globalThis.fetch;
+  const commands = [];
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'csrf' } });
+    const command = options.body.get('cmd');
+    commands.push(command);
+    return new Response(command.startsWith('get ')
+      ? JSON.stringify({ items: savedItems, token: currentToken })
+      : JSON.stringify({ token: 'e'.repeat(64) }));
+  };
+  const fhem = new FhemClient('cms', new URL('/fhem/', location.href));
+  const fetched = await fhem.getBlueprints();
+  check(fetched.items.length === 1 && commands[0] === 'get cms version5blueprints',
+    'FHEM client reads the validated device-scoped blueprint list');
+  await fhem.saveBlueprints([], currentToken);
+  check(commands[1].startsWith(`set cms version5blueprints ${currentToken} `),
+    'FHEM client sends revision-checked blueprint updates');
+  globalThis.fetch = originalFetch;
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>

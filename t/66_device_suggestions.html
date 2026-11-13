@@ -1,0 +1,219 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Device suggestions regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-button.js';
+import '../www/fhem-cms/components/cms-chart.js';
+import '../www/fhem-cms/components/cms-icon.js';
+import '../www/fhem-cms/components/cms-slider.js';
+import '../www/fhem-cms/components/cms-switch.js';
+import '../www/fhem-cms/components/cms-table.js';
+import '../www/fhem-cms/components/cms-thermostat.js';
+import '../www/fhem-cms/components/cms-value.js';
+import { createManualFieldTracker, suggestedChoice, suggestedReading } from '../www/fhem-cms/js/device-suggestions.js';
+import { schema5ReadingSuggestions, schema5TemperatureChartSuggestion } from '../www/fhem-cms/js/fcui-schema5-setup-wizard.js';
+
+const result = document.querySelector('#result');
+const checks = [];
+function check(condition, message) {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+}
+
+const devices = [
+  { name: 'Lamp', parent: '', alias: '', type: 'FSD', room: 'Test',
+    readings: { state: 'off', temperature: '20', humidity: '40', power: '9', pct: '25' },
+    sets: 'on:noArg off:noArg toggle:noArg press:noArg dim:slider,0,1,100 pct:slider,0,1,100' },
+  { name: 'Other', parent: '', alias: '', type: 'FSD', room: 'Test',
+    readings: { humidity: '45', 'measured-temp': '21', desiredTemperature: '22', valveposition: '30' },
+    sets: 'dim:slider,0,1,100' },
+  { name: 'ToggleOnly', parent: '', alias: '', type: 'FSD', room: 'Test',
+    readings: { humidity: '40' }, sets: 'toggle:noArg' },
+  { name: 'OneButton', parent: '', alias: '', type: 'FSD', room: 'Test',
+    readings: {}, sets: 'press:noArg' },
+  { name: 'MultiButton', parent: '', alias: '', type: 'FSD', room: 'Test',
+    readings: {}, sets: 'on:noArg off:noArg' },
+  { name: 'Climate', parent: '', alias: '', type: 'FSD', room: 'Test',
+    readings: { temperature: '20', desiredTemperature: '21' }, sets: '' },
+  { name: 'ClimateChannel', parent: 'Climate', alias: '', type: 'FSD', room: 'Test',
+    readings: { temperature: '20', 'measured-temp': '19', desiredTemperature: '21', 'desired-temp': '20',
+      valveposition: '15', mode: 'auto' }, sets: '' },
+  { name: 'ClimateChannel2', parent: 'Climate', alias: '', type: 'FSD', room: 'Test',
+    readings: { temperature: '21', 'measured-temp': '20', desiredTemperature: '22', 'desired-temp': '21',
+      valveposition: '25', mode: 'manual' }, sets: '' },
+].map((device) => ({ ...device, readings: { ...device.readings } }));
+const services = { listAllDevices: async () => devices, listDevices: async () => devices,
+  logReadings: async () => ({ source: 'dblog', readings: ['humidity', 'temperature'] }),
+  history: async () => ({ points: [] }) };
+const grid = { col: 1, row: 1, w: 4, h: 2 };
+
+try {
+  check(suggestedReading({ temperature: '20', state: 'on' }, 'fhem-value') === 'temperature',
+    'Known readings use a deterministic preference order');
+  check(suggestedReading({ customReading: '1' }, 'fhem-value') === '',
+    'Unknown readings are never guessed');
+  check(suggestedChoice(['on', 'off']) === '', 'Multiple commands are ambiguous');
+  check(suggestedChoice(['press']) === 'press', 'A single available command can be suggested');
+  check(schema5ReadingSuggestions(devices[0])[0].reading === suggestedReading(devices[0].readings, 'fhem-value'),
+    'Setup wizard and widget dialogs share the same reading preference list');
+  check(schema5TemperatureChartSuggestion(devices[0], {
+    source: 'dblog', readings: ['humidity', 'temperature'],
+  })[0]?.reading === 'temperature', 'Setup wizard uses the shared temperature suggestion');
+
+  const form = document.createElement('form');
+  const tracked = document.createElement('select');
+  tracked.innerHTML = '<option value="state">state</option><option value="humidity">humidity</option>';
+  form.append(tracked);
+  const tracker = createManualFieldTracker(form);
+  check(tracker.value(tracked, 'state') === 'state', 'Untouched fields use the suggestion');
+  tracked.value = 'humidity';
+  tracked.dispatchEvent(new Event('change', { bubbles: true }));
+  check(tracker.value(tracked, 'state') === 'humidity', 'Manual selection is recorded');
+  tracker.reset();
+  check(tracker.value(tracked, 'state') === 'state', 'Opening a new dialog resets manual-selection tracking');
+
+  const value = document.createElement('cms-value');
+  value.services = services;
+  value.config = { id: 'value', type: 'fhem-value', device: '', reading: '', grid };
+  document.body.append(value);
+  await value.openConfig({ isNew: true });
+  value.pickDevice(devices[0]);
+  const valueReading = value.shadowRoot.querySelector('[name="reading"]');
+  check(valueReading.value === 'temperature', 'Value widget suggests a supported Reading');
+  valueReading.value = 'humidity';
+  valueReading.dispatchEvent(new Event('change', { bubbles: true }));
+  value.pickDevice(devices[1]);
+  check(valueReading.value === 'humidity', 'Value widget keeps a manually selected Reading on device change');
+  valueReading.value = '';
+  valueReading.dispatchEvent(new Event('change', { bubbles: true }));
+  value.pickDevice(devices[0]);
+  check(valueReading.value === '', 'Value widget keeps a deliberately cleared Reading');
+  value.closeDialog(true);
+  value.remove();
+
+  const icon = document.createElement('cms-icon');
+  icon.services = services;
+  icon.config = { id: 'icon', type: 'fhem-icon', device: 'Lamp', reading: '', grid };
+  document.body.append(icon);
+  await icon.openConfig({ isNew: true });
+  icon.setReadings(devices[0], undefined);
+  check(icon.shadowRoot.querySelector('[name="reading"]').value === 'state',
+    'Status icon suggests only the state Reading');
+  icon.closeConfig(false);
+  icon.remove();
+
+  const switchWidget = document.createElement('cms-switch');
+  switchWidget.services = services;
+  switchWidget.config = { id: 'switch', type: 'fhem-switch', device: '', reading: '', on: '', off: '', grid };
+  document.body.append(switchWidget);
+  await switchWidget.openConfig({ isNew: true });
+  const switchForm = switchWidget.shadowRoot.querySelector('[data-form]');
+  switchForm.elements.device.value = 'Lamp';
+  switchWidget.fillChoices(null);
+  check(switchForm.elements.reading.value === 'state' && switchForm.elements.on.value === 'on'
+    && switchForm.elements.off.value === 'off', 'Switch suggests state and exact on/off commands');
+  switchForm.elements.reading.value = 'humidity';
+  switchForm.elements.reading.dispatchEvent(new Event('change', { bubbles: true }));
+  switchForm.elements.device.value = 'Other';
+  switchWidget.fillChoices(null);
+  check(switchForm.elements.reading.value === 'humidity', 'Switch keeps a manually selected Reading');
+  switchForm.elements.device.value = 'ToggleOnly';
+  switchWidget.fillChoices(null);
+  check(!switchForm.elements.on.value && !switchForm.elements.off.value,
+    'Toggle is not incorrectly assigned as both on and off');
+  switchWidget.closeDialog(true);
+  switchWidget.remove();
+
+  const button = document.createElement('cms-button');
+  button.services = services;
+  button.config = { id: 'button', type: 'fhem-button', device: 'OneButton', command: '', grid };
+  document.body.append(button);
+  await button.openConfig({ isNew: true });
+  const buttonForm = button.shadowRoot.querySelector('[data-form]');
+  buttonForm.elements.device.value = 'OneButton';
+  button.fillCommands(null);
+  check(buttonForm.elements.command.value === 'press', 'Button suggests a unique available command');
+  buttonForm.elements.device.value = 'MultiButton';
+  button.fillCommands(null);
+  check(buttonForm.elements.command.value === '', 'Button leaves multiple commands unselected');
+  button.closeDialog(true);
+  button.remove();
+
+  const slider = document.createElement('cms-slider');
+  slider.services = services;
+  slider.config = { id: 'slider', type: 'fhem-slider', device: '', command: '', reading: '', grid };
+  document.body.append(slider);
+  slider.setDevice(devices[0], undefined, undefined);
+  const sliderForm = slider.shadowRoot.querySelector('[data-form]');
+  check(sliderForm.elements.command.value === 'pct' && sliderForm.elements.reading.value === 'pct',
+    'Slider suggests the matching command and current-value Reading');
+  sliderForm.elements.command.value = 'dim';
+  sliderForm.elements.command.dispatchEvent(new Event('change', { bubbles: true }));
+  sliderForm.elements.reading.value = 'humidity';
+  sliderForm.elements.reading.dispatchEvent(new Event('change', { bubbles: true }));
+  slider.setDevice(
+    devices[1],
+    slider.suggestionTracker.isEdited(sliderForm.elements.command) ? sliderForm.elements.command.value : undefined,
+    slider.suggestionTracker.isEdited(sliderForm.elements.reading) ? sliderForm.elements.reading.value : undefined
+  );
+  check(sliderForm.elements.command.value === 'dim' && sliderForm.elements.reading.value === 'humidity',
+    'Slider keeps manually selected command and Reading on device change');
+  slider.remove();
+
+  const chart = document.createElement('cms-chart');
+  chart.services = services;
+  chart.config = { id: 'chart', type: 'fhem-chart', device: '', reading: '', grid };
+  document.body.append(chart);
+  chart.fillReadings(['humidity', 'temperature'], undefined);
+  const chartReading = chart.shadowRoot.querySelector('[name="reading"]');
+  check(chartReading.value === 'temperature', 'Chart suggests a logged temperature');
+  chart.fillReadings(['humidity', 'power'], '');
+  check(chartReading.value === '', 'Chart leaves unsupported or ambiguous suggestions blank');
+  chart.remove();
+
+  const thermostat = document.createElement('cms-thermostat');
+  thermostat.services = services;
+  thermostat.config = { id: 'thermostat', type: 'thermostat', device: 'Climate', readings: {}, grid };
+  document.body.append(thermostat);
+  await thermostat.openConfig({ isNew: true });
+  const thermostatForm = thermostat.shadowRoot.querySelector('[data-form]');
+  const actual = thermostatForm.elements['reading-actual'];
+  thermostatForm.elements.device.value = 'ClimateChannel';
+  thermostat.onDeviceChanged();
+  check(actual.value === 'temperature'
+    && thermostatForm.elements['reading-target'].value === 'desiredTemperature',
+  'Thermostat proposes temperature and target fields from available readings');
+  actual.value = 'measured-temp';
+  actual.dispatchEvent(new Event('change', { bubbles: true }));
+  thermostatForm.elements.device.value = 'ClimateChannel2';
+  thermostat.onDeviceChanged();
+  check(actual.value === 'measured-temp', 'Thermostat retains a manually selected Reading');
+  thermostat.closeDialog(true);
+  thermostat.remove();
+
+  const table = document.createElement('cms-table');
+  table.services = services;
+  table.config = { id: 'table', type: 'fhem-table', rows: [{ device: 'Lamp' }], grid };
+  document.body.append(table);
+  await table.openConfig({ isNew: true });
+  const row = table.shadowRoot.querySelector('[data-config-rows] .row');
+  const tableReading = row.querySelector('select');
+  check(tableReading.value === 'temperature', 'Table suggests a common supported Reading');
+  table.setMode('multi');
+  table.setMode('single');
+  check(tableReading.value === 'temperature', 'Table mode changes preserve a still-valid Reading');
+  tableReading.value = 'humidity';
+  tableReading.dispatchEvent(new Event('change', { bubbles: true }));
+  table.setRowDevice(row, devices[1], table.suggestionTracker.isEdited(tableReading) ? tableReading.value : undefined);
+  check(tableReading.value === 'humidity', 'Table keeps a manually selected Reading after device change');
+  table.closeConfig(false);
+  table.remove();
+
+  result.textContent = `PASS (${checks.length} checks)\n${checks.join('\n')}`;
+  result.dataset.result = 'pass';
+} catch (error) {
+  result.textContent = `FAIL: ${error.stack || error.message}`;
+  result.dataset.result = 'fail';
+}
+</script>

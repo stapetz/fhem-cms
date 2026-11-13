@@ -518,9 +518,16 @@ gelöschte Dateien verweisen. Assets deshalb separat mit sichern.
 Die Verwendungsprüfung umfasst die gespeicherten Live-/Entwurfsseiten dieses
 CMS-Devices, nicht externe Verweise oder noch ungespeicherte Dialogänderungen.
 
-Unter **Administration: Dateitypen und Speichergrenzen** sind zunächst alle
-CMS-Bearbeiter gleichberechtigt; ein eigenes Rollen-/Berechtigungskonzept folgt
-später. FHEM-/FHEMWEB-Zugriffsschutz bleibt bestehen.
+Das FHEM-CMS ist bewusst kein klassisches Mehrbenutzer-CMS, sondern ein
+leichtgewichtiges Frontend, mit dem sich schnell FHEM-Oberflächen und
+redaktionelle Texte erstellen lassen. Deshalb gibt es keine eigenen CMS-Konten,
+Rollen oder persönlichen Entwürfe. Anmeldung und Zugriffsrechte bleiben bei
+FHEMWEB. Alle dort berechtigten Bearbeiter arbeiten am selben CMS-Datenbestand;
+gleichzeitige Bearbeitungen können zu Konflikten führen. Schütze den Zugriff
+deshalb mit den passenden FHEMWEB-Rechten.
+
+Unter **Administration: Dateitypen und Speichergrenzen** gelten die
+Administrationsfunktionen für alle berechtigten CMS-Bearbeiter gleich.
 
 | Vorgabe | Standard |
 |---|---|
@@ -647,7 +654,7 @@ Homepage zeigt Live, `?mode=preview` den Entwurf und `?mode=edit` den Editor.
 - **Werkzeugleiste und Meldungen:** Die Leiste ist eine Menüleiste wie in klassischen Programmen mit den Menüs **Datei** (Seite einrichten …, Vorschau, Veröffentlichen, Entwurf verwerfen, Backups …, Daten löschen …), **Bearbeiten** (Navigation bearbeiten …), **Einfügen** (Thermostat-Kachel, Wert-Anzeige, Schalter, Taster, Freies HTML, Uhr / Datum, Status-Symbol, Tabelle, Schieberegler, Diagramm, SolarFlow, Textbaustein) und **Ansicht** (Raster anzeigen, mit Häkchen) (sie schwebt oben links in Blau über der Seite, auf gleicher Höhe wie die Geräte-Auswahl rechts, und gehört nicht zum Inhaltsraster; Kacheln lassen sich bis ganz nach oben schieben). Meldungen (z. B. „Layout gespeichert“, Hinweis auf einen unveröffentlichten Entwurf) erscheinen als rotes Ausrufezeichen oben rechts; ein Klick darauf öffnet eine kleine Box mit den Meldungen (Klick daneben oder Esc schließt sie). Im Ansichtsmodus erscheinen nur akute Fehler.
 - **Raster anzeigen:** Im Menü Ansicht blendet „Raster anzeigen“ das Raster des Seiteninhalts als Gitterlinien ein oder aus (wird im Browser gemerkt). Es erscheint nur im Bearbeitungsmodus und folgt der gewählten Rastergröße.
 - **Wiederherstellen per Modul:** `set <CMS> restore` bietet die 20 neuesten Backups als Auswahlliste an.
-- **Entwurf und Veröffentlichen:** Änderungen im Bearbeitungsmodus landen in einem Entwurf. „Zeige Homepage“ zeigt weiter den bisherigen Live-Stand. `Veröffentlichen` übernimmt den Entwurf als Live-Stand, `Entwurf verwerfen` löscht ihn. Es gibt einen Entwurf pro Device; bearbeiten zwei Personen gleichzeitig, gewinnt die letzte Speicherung.
+- **Entwurf und Veröffentlichen:** Änderungen im Bearbeitungsmodus landen in einem Entwurf. „Zeige Homepage“ zeigt weiter den bisherigen Live-Stand. `Veröffentlichen` übernimmt den Entwurf als Live-Stand, `Entwurf verwerfen` löscht ihn. Es gibt einen gemeinsamen Entwurf pro Device. Speichert ein anderer Bearbeiter zwischenzeitlich, wird ein veralteter Speicherversuch abgelehnt, statt den neueren Stand zu überschreiben. Lade dann den aktuellen Stand neu und übernimm deine Änderungen erneut. Eine Bearbeitungssperre oder Anzeige, wer gerade bearbeitet, gibt es nicht.
 - **Backups:** Jede Veröffentlichung sichert den bisherigen Live-Stand als Backup. `Backups` zeigt die Liste; ein Klick stellt den Live-Stand nach Bestätigung wieder her (der aktuelle Live-Stand wird vorher gesichert). Ein offener Entwurf bleibt dabei unverändert.
 - **Unbekanntes Datenformat:** Meldet ein Schreibbefehl eine nicht unterstützte `schemaVersion` in Live-Daten oder Entwurf, werden Speichern, Veröffentlichen, Verwerfen und Wiederherstellen zum Schutz der Daten abgelehnt. Sichern Sie die Daten und verwenden Sie den zum Datenformat passenden CMS-Stand. Bei beschädigtem JSON können Sie einen Entwurf ausdrücklich verwerfen oder ein gültiges Backup wiederherstellen; beim Verwerfen geht der Entwurf verloren.
 - **CMS-Daten löschen:** Unter `Datei → Daten löschen …` zeigt der Dialog die beiden betroffenen Device-Ordner sowie die Folgen. `Behalten` schließt den Dialog ohne Änderung, `Abbrechen` verwirft die Aktion. `Daten endgültig löschen` entfernt Konfiguration, Entwurf, Backups, Medien und Startseite; danach muss das FHEM-Device gelöscht oder FHEM neu gestartet werden.

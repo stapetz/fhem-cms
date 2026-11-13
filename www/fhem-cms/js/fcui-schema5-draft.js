@@ -36,6 +36,44 @@ function requireToken(state, token) {
   if (state.token !== token) throw new Error('Zustand ist veraltet; bitte erneut laden');
 }
 
+function freeGridPosition(widget, occupied, columns) {
+  const { col, row, w, h } = widget.grid || {};
+  if (![col, row, w, h, columns].every(Number.isInteger)
+    || col < 1 || row < 1 || w < 1 || h < 1 || w > columns || col + w > columns + 1) {
+    throw new Error('Ungültige Rastergröße für die Widget-Kopie');
+  }
+  const maxColumn = columns - w + 1;
+  const nearby = [
+    ...Array.from({ length: Math.max(0, maxColumn - (col + w) + 1) },
+      (_, index) => col + w + index),
+    ...Array.from({ length: Math.max(0, Math.min(col - 1, maxColumn)) },
+      (_, index) => index + 1),
+  ];
+  for (let targetRow = row; targetRow + h <= 1001; targetRow += 1) {
+    const targetColumns = targetRow === row
+      ? nearby : [col, ...nearby, ...Array.from({ length: maxColumn }, (_, index) => index + 1)
+        .filter((targetCol) => targetCol !== col && !nearby.includes(targetCol))];
+    for (const targetCol of targetColumns) {
+      const proposed = { col: targetCol, row: targetRow, w, h };
+      const overlaps = occupied.some((other) => proposed.col < other.col + other.w
+        && other.col < proposed.col + proposed.w
+        && proposed.row < other.row + other.h
+        && other.row < proposed.row + proposed.h);
+      if (!overlaps) return proposed;
+    }
+  }
+  throw new Error('Auf der Seite ist kein freier Platz für die Widget-Kopie');
+}
+
+function uniqueCopyId(sourceId, ids) {
+  const baseId = `${sourceId.slice(0, 56)}-copy`;
+  let id = baseId;
+  for (let suffix = 2; ids.has(id); suffix += 1) {
+    id = `${baseId.slice(0, 63 - String(suffix).length)}-${suffix}`;
+  }
+  return id;
+}
+
 export class Schema5DraftController {
   #transport;
   #state = null;
@@ -171,6 +209,47 @@ export class Schema5DraftController {
     if (index < 0) throw new Error('Unbekanntes Widget');
     page.widgets.splice(index, 1);
     return this.saveDraft(candidate, expectedToken);
+  }
+
+  duplicateWidget(pageId, widgetId, expectedToken) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    const config = state.draft || state.live;
+    const page = config.pages.find((entry) => entry.id === pageId);
+    if (!page) throw new Error('Unbekannte Seite');
+    if (page.widgets.length >= 200) throw new Error('Die Seite enthält bereits 200 Widgets');
+    const source = page.widgets.find((entry) => entry.id === widgetId);
+    if (!source) throw new Error('Unbekanntes Widget');
+    return this.insertWidget(pageId, source, expectedToken, widgetId);
+  }
+
+  insertWidget(pageId, widget, expectedToken, afterWidgetId = null) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    const candidate = structuredClone(state.draft || state.live);
+    const page = candidate.pages.find((entry) => entry.id === pageId);
+    if (!page) throw new Error('Unbekannte Seite');
+    if (page.widgets.length >= 200) throw new Error('Die Seite enthält bereits 200 Widgets');
+    if (!widget || typeof widget !== 'object' || Array.isArray(widget)
+      || typeof widget.id !== 'string' || !widget.grid) throw new Error('Ungültige Widget-Vorlage');
+    const ids = new Set(page.widgets.map((entry) => entry.id));
+    let copy = structuredClone(widget);
+    copy.id = uniqueCopyId(copy.id, ids);
+    const columns = Number(candidate.settings.gridColumns);
+    if (copy.type === 'fhem-link') {
+      copy = fitLinkWidget(copy, columns, candidate.pages, null);
+    }
+    copy.grid = freeGridPosition(copy, [candidate.navigation.grid, ...page.widgets.map((entry) => entry.grid)], columns);
+    const prepared = this.#prepareWidget(pageId, copy, expectedToken, 'create', false);
+    if (afterWidgetId !== null) {
+      const preparedPage = prepared.candidate.pages.find((entry) => entry.id === pageId);
+      const copyIndex = preparedPage.widgets.findIndex((entry) => entry.id === copy.id);
+      const sourceIndex = preparedPage.widgets.findIndex((entry) => entry.id === afterWidgetId);
+      if (sourceIndex < 0) throw new Error('Unbekanntes Widget für die Kopie');
+      const [inserted] = preparedPage.widgets.splice(copyIndex, 1);
+      preparedPage.widgets.splice(sourceIndex + 1, 0, inserted);
+    }
+    return this.saveDraft(prepared.candidate, expectedToken);
   }
 
   addPage(id, title, expectedToken) {

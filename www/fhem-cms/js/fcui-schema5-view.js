@@ -139,6 +139,8 @@ export class Schema5View {
           onEdit: (id) => this.editing.onEdit(pageId, id),
           onMove: typeof this.editing.onMove === 'function'
             ? (id) => this.editing.onMove(pageId, id) : undefined,
+          onDuplicate: typeof this.editing.onDuplicate === 'function'
+            ? (id) => this.editing.onDuplicate(pageId, id) : undefined,
           onDelete: typeof this.editing.onDelete === 'function'
             ? (id) => this.editing.onDelete(pageId, id) : undefined,
         });

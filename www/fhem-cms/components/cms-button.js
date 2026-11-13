@@ -3,7 +3,8 @@ import { openIconPicker } from '../js/icon-picker.js';
 import { switchCommands } from './cms-switch.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 import { actionIconUrl, actionPresentationFields, collectActionPresentation } from '../js/action-presentation.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
+import { createManualFieldTracker, suggestedChoice } from '../js/device-suggestions.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const FEEDBACK_MS = 1500;
@@ -100,7 +101,7 @@ class FHEMCMSButton extends HTMLElement {
           <details class="config-group" open><summary>Allgemein</summary>
             <div class="config-group-fields">
               <label>Titel (optional)<input name="title" maxlength="64" autocomplete="off"></label>
-              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+              ${titleVisibilityField}
             </div>
           </details>
           <details class="config-group" open><summary>Datenquelle und Aktion</summary>
@@ -141,6 +142,7 @@ class FHEMCMSButton extends HTMLElement {
 
     const $ = (selector) => this.shadowRoot.querySelector(selector);
     const form = $('[data-form]');
+    this.suggestionTracker = createManualFieldTracker(form);
     $('[data-open-config]').addEventListener('click', () => this.openConfig());
     $('[data-push]').addEventListener('click', () => this.push());
     $('[data-cancel]').addEventListener('click', () => this.closeDialog(true));
@@ -249,6 +251,7 @@ class FHEMCMSButton extends HTMLElement {
   async openConfig(options = {}) {
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
+    this.suggestionTracker.reset();
     form.elements.title.value = this.widgetConfig.title || '';
     form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.device.value = this.widgetConfig.device || '';
@@ -272,18 +275,25 @@ class FHEMCMSButton extends HTMLElement {
     const form = this.shadowRoot.querySelector('[data-form]');
     const name = form.elements.device.value.trim();
     const device = this.devices.find((item) => item.name === name);
-    const names = new Set(device ? switchCommands(device.sets) : []);
+    const available = new Set(device ? switchCommands(device.sets) : []);
+    const names = new Set(available);
     if (wanted) {
       names.add(wanted);
     }
-    const options = [...names].sort((a, b) => a.localeCompare(b)).map((item) => {
+    const selected = this.suggestionTracker.isEdited(form.elements.command)
+      ? form.elements.command.value
+      : (wanted || suggestedChoice([...names]));
+    if (selected) {
+      names.add(selected);
+    }
+    const options = [new Option('Befehl wählen …', ''), ...[...names].sort((a, b) => a.localeCompare(b)).map((item) => {
       const option = document.createElement('option');
       option.value = item;
-      option.textContent = item;
+      option.textContent = available.has(item) || !device ? item : `${item} (nicht verfügbar)`;
       return option;
-    });
+    })];
     form.elements.command.replaceChildren(...options);
-    form.elements.command.value = wanted && names.has(wanted) ? wanted : (options[0]?.value || '');
+    form.elements.command.value = selected && names.has(selected) ? selected : '';
     this.setIcon(this.icon);
     this.shadowRoot.querySelector('[data-device-alias]').textContent =
       device && device.alias && device.alias !== name ? `Alias: ${device.alias}` : '';
@@ -331,6 +341,10 @@ class FHEMCMSButton extends HTMLElement {
     }
     if (!NAME_PATTERN.test(value('command'))) {
       throw new Error('Bitte einen Befehl wählen');
+    }
+    const device = this.devices.find((item) => item.name === value('device'));
+    if (device && !switchCommands(device.sets).includes(value('command'))) {
+      throw new Error('Das Device bietet den ausgewählten Befehl nicht an.');
     }
     if (value('label').length > 32 || /[\u0000-\u001f\u007f]/.test(value('label'))) {
       throw new Error('Die Beschriftung enthält ungültige Zeichen');

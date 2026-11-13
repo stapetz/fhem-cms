@@ -1,8 +1,9 @@
 import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { setWidgetStatus, widgetStatusStyles } from '../js/widget-status.js';
+import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const REFRESH_MS = 300000;
@@ -133,7 +134,7 @@ class FHEMCMSChart extends HTMLElement {
           <details class="config-group" open><summary>Allgemein</summary>
             <div class="config-group-fields">
               <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+              ${titleVisibilityField}
             </div>
           </details>
           <details class="config-group" open><summary>Datenquelle</summary>
@@ -161,6 +162,7 @@ class FHEMCMSChart extends HTMLElement {
         </form>
       </dialog>`;
     const $ = (selector) => this.shadowRoot.querySelector(selector);
+    this.suggestionTracker = createManualFieldTracker($('[data-form]'));
     fillSelect($('[data-range]'), RANGES);
     fillSelect($('[data-granularity]'), GRANULARITIES);
     fillSelect($('[name="range"]'), RANGES);
@@ -323,6 +325,7 @@ class FHEMCMSChart extends HTMLElement {
 
   async openConfig({ isNew = false } = {}) {
     this.isNew = isNew;
+    this.suggestionTracker.reset();
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
     form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
@@ -335,7 +338,7 @@ class FHEMCMSChart extends HTMLElement {
     this.shadowRoot.querySelector('[data-error]').textContent = '';
     this.shadowRoot.querySelector('[data-dialog]').showModal();
     if (this.widgetConfig.device) {
-      await this.loadReadings(this.widgetConfig.reading);
+      await this.loadReadings(this.widgetConfig.reading || undefined);
     } else {
       this.fillReadings([], '');
     }
@@ -343,14 +346,18 @@ class FHEMCMSChart extends HTMLElement {
 
   fillReadings(readings, selected) {
     const select = this.shadowRoot.querySelector('[name="reading"]');
-    const names = selected && !readings.includes(selected) ? [selected, ...readings] : readings;
-    select.replaceChildren(...names.map((name) => {
+    const missing = selected && !readings.includes(selected);
+    const names = missing ? [selected, ...readings] : readings;
+    const options = [new Option('Reading wählen …', ''), ...names.map((name) => {
       const option = document.createElement('option');
       option.value = name;
-      option.textContent = name;
+      option.textContent = missing && name === selected ? `${name} (nicht verfügbar)` : name;
       return option;
-    }));
-    select.value = names.includes(selected) ? selected : (names[0] || '');
+    })];
+    select.replaceChildren(...options);
+    const suggestion = suggestedReading(readings, 'fhem-chart');
+    const proposed = selected === undefined ? suggestion : selected;
+    select.value = names.includes(proposed) ? proposed : '';
   }
 
   async loadReadings(selected) {
@@ -380,8 +387,12 @@ class FHEMCMSChart extends HTMLElement {
     try {
       const device = await openDevicePicker({ services: this.services, accept: () => true });
       if (device) {
-        this.shadowRoot.querySelector('[name="device"]').value = device.name;
-        await this.loadReadings('');
+        const form = this.shadowRoot.querySelector('[data-form]');
+        const reading = this.suggestionTracker.isEdited(form.elements.reading)
+          ? form.elements.reading.value
+          : undefined;
+        form.elements.device.value = device.name;
+        await this.loadReadings(reading);
       }
     } catch (error) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;

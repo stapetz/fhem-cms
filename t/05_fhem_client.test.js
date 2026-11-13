@@ -256,6 +256,26 @@ test('versioned state uses a read-only command and checks the response shape', a
   }
 });
 
+test('blueprint commands validate revisions and preserve the device-scoped list', async () => {
+  const calls = [];
+  let answer = { items: [{ name: 'Status', widget: { id: 'w1', type: 'text' } }], token: 'a'.repeat(64) };
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    calls.push(options.body.get('cmd'));
+    return new Response(JSON.stringify(answer));
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  assert.deepEqual(await client.getBlueprints(), answer);
+  assert.equal(calls[0], 'get cms version5blueprints');
+  const next = [{ name: 'Status', widget: { id: 'w1', type: 'text' } }];
+  answer = { token: 'b'.repeat(64) };
+  assert.deepEqual(await client.saveBlueprints(next, 'a'.repeat(64)), answer);
+  assert.match(calls[1], /^set cms version5blueprints a{64} /);
+  answer = { items: [], token: 'invalid' };
+  await assert.rejects(client.getBlueprints(), /Vorlagenliste/);
+  await assert.rejects(client.saveBlueprints([], 'stale'), /Ungültige Vorlagenänderung/);
+});
+
 test('layout format uses a read-only command and rejects ambiguous responses', async () => {
   let answer = '{"schemaVersion":4}';
   const calls = [];

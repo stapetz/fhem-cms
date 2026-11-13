@@ -1,7 +1,8 @@
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
+import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
 const ICON_PAGE = 120;
 const PICKER_MAX_ROWS = 200;
 const PICKER_COLUMNS = [
@@ -126,7 +127,7 @@ class FHEMCMSValue extends HTMLElement {
           <details class="config-group" open><summary>Allgemein</summary>
             <div class="config-group-fields">
               <label>Titel (optional)<input name="title" maxlength="64" autocomplete="off"></label>
-              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+              ${titleVisibilityField}
             </div>
           </details>
           <details class="config-group" open><summary>Datenquelle</summary>
@@ -199,6 +200,7 @@ class FHEMCMSValue extends HTMLElement {
     $('[data-icon-clear]').addEventListener('click', () => this.setIcon(''));
     $('[data-icon-filter]').addEventListener('input', () => this.renderIcons());
     const form = $('[data-form]');
+    this.suggestionTracker = createManualFieldTracker(form);
     $('[data-unit-choices]').append(unitSuggestions(form.elements.unit));
     $('[data-pick-device]').addEventListener('click', () => this.openPicker());
     form.elements.device.addEventListener('click', () => this.openPicker());
@@ -297,6 +299,7 @@ class FHEMCMSValue extends HTMLElement {
   async openConfig(options = {}) {
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
+    this.suggestionTracker.reset();
     form.elements.device.value = this.widgetConfig.device || '';
     form.elements.title.value = this.widgetConfig.title || '';
     form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
@@ -308,11 +311,11 @@ class FHEMCMSValue extends HTMLElement {
     this.setDialogError('');
     this.shadowRoot.querySelector('[data-dialog]').showModal();
     this.devices = [];
-    this.fillReadings(this.widgetConfig.reading || '');
+    this.fillReadings(this.widgetConfig.reading || undefined);
     try {
       this.devices = await this.services.listAllDevices();
       this.showAlias();
-      this.fillReadings(this.widgetConfig.reading || '');
+      this.fillReadings(this.widgetConfig.reading || undefined);
     } catch (error) {
       this.setDialogError(`Geräteliste nicht verfügbar: ${error.message}`);
     }
@@ -321,19 +324,21 @@ class FHEMCMSValue extends HTMLElement {
   fillReadings(wanted) {
     const form = this.shadowRoot.querySelector('[data-form]');
     const device = (this.devices || []).find((item) => item.name === form.elements.device.value.trim());
-    const names = new Set(Object.keys(device ? device.readings : {}));
-    if (wanted) {
-      names.add(wanted);
+    const names = new Set(Object.keys(device?.readings || {}));
+    const proposed = wanted === undefined ? suggestedReading(device?.readings, 'fhem-value') : wanted;
+    if (proposed) {
+      names.add(proposed);
     }
-    const options = [...names].sort((a, b) => a.localeCompare(b)).map((name) => {
+    const options = [new Option('Reading wählen …', ''), ...[...names].sort((a, b) => a.localeCompare(b)).map((name) => {
       const option = document.createElement('option');
       option.value = name;
-      const value = device && device.readings[name];
-      option.textContent = value === undefined ? name : `${name} (${value})`;
+      const value = device?.readings?.[name];
+      option.textContent = value === undefined && device ? `${name} (nicht verfügbar)`
+        : value === undefined ? name : `${name} (${value})`;
       return option;
-    });
+    })];
     form.elements.reading.replaceChildren(...options);
-    form.elements.reading.value = wanted && names.has(wanted) ? wanted : (options[0]?.value || '');
+    form.elements.reading.value = proposed && names.has(proposed) ? proposed : '';
   }
 
   async openPicker() {
@@ -410,11 +415,16 @@ class FHEMCMSValue extends HTMLElement {
   }
 
   pickDevice(device) {
-    this.shadowRoot.querySelector('[data-form]').elements.device.value = device.name;
+    const form = this.shadowRoot.querySelector('[data-form]');
+    const reading = this.suggestionTracker.value(
+      form.elements.reading,
+      suggestedReading(device.readings, 'fhem-value')
+    );
+    form.elements.device.value = device.name;
     this.showAlias(device);
     this.closePicker();
     this.setDialogError('');
-    this.fillReadings('');
+    this.fillReadings(reading);
   }
 
   closePicker() {

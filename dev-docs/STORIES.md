@@ -278,11 +278,13 @@ Diese Liste ordnet die bekannten Stories nach ihren Voraussetzungen und der vorg
 - [ ] Auf der Testinstanz prüfen (Bearbeiten, Veröffentlichen, Verwerfen, Restore mit offenem Entwurf).
 - [x] Bei `restore` bleibt ein vorhandener Entwurf unverändert und wird nicht automatisch aus dem wiederhergestellten Live-Stand neu erzeugt; der Statushinweis erläutert das Verhalten.
 
-**Bewusst akzeptiert:** Zwei Benutzer können denselben Entwurf gleichzeitig bearbeiten; der letzte Speichervorgang gewinnt. Schutz folgt mit S14.
+**Bewusst akzeptiert:** Zwei Benutzer können denselben Entwurf gleichzeitig bearbeiten. Die Versionsprüfung weist einen veralteten Speicherversuch zurück, statt den neueren Stand zu überschreiben. Eine Bearbeitungssperre oder Anzeige, wer gerade bearbeitet, gibt es nicht; eine optionale Erweiterung wird in S14 betrachtet.
 
-### S14 - Rechte- und Rollenkonzept
+### S14 - Optionale Erweiterungen für Rechte und Zusammenarbeit
 
-**Ziel:** Wer darf bearbeiten, veröffentlichen, wiederherstellen und löschen?
+**Abgrenzung:** Das FHEM-CMS ist ein leichtgewichtiges Frontend für FHEM-Oberflächen und redaktionelle Texte, kein klassisches Mehrbenutzer-CMS. Eigene CMS-Konten, Rollen und persönliche Entwürfe sind nicht Teil des Kernumfangs; Anmeldung und Rechte bleiben bei FHEMWEB. Diese Story ist nur bei ausdrücklichem Bedarf an zusätzlichen Redaktions- oder Zusammenarbeitspflichten relevant.
+
+**Ziel:** Prüfen, ob ein optionales Rollen- oder Zusammenarbeitssystem benötigt wird und wie es sich in FHEMWEB/`allowed` einfügen müsste.
 
 - [ ] Rollen (z. B. Betrachter, Redakteur, Administrator) und Abbildung auf FHEMWEB/`allowed`.
 - [ ] Sperre (Semaphore oder Lock mit Ablauf) gegen gleichzeitiges Bearbeiten desselben Entwurfs, inkl. Anzeige, wer gerade bearbeitet.

@@ -18,6 +18,41 @@ const config = () => ({
   ] }],
 });
 
+test('widget duplication creates a distinct copy in a free grid position and saves only a draft', async () => {
+  const live = config();
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  let writes = 0;
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async (draft, token) => {
+      writes += 1;
+      assert.equal(token, state.token);
+      state = { live, draft: structuredClone(draft), token: 'b'.repeat(64) };
+    },
+    publish: async () => {},
+    discard: async () => {},
+  });
+  await controller.reload();
+  const saved = await controller.duplicateWidget('start', 'text', 'a'.repeat(64));
+  const widgets = saved.draft.pages[0].widgets;
+  assert.equal(writes, 1);
+  assert.equal(widgets.length, 3);
+  const copy = widgets[1];
+  assert.equal(copy.id, 'text-copy');
+  assert.deepEqual({ ...copy, id: 'text', grid: live.pages[0].widgets[0].grid },
+    live.pages[0].widgets[0]);
+  assert.deepEqual(copy.grid, { col: 9, row: 2, w: 4, h: 2 },
+    'copy moves to a free neighboring grid area instead of overlapping the next widget');
+  assert.equal(live.pages[0].widgets.length, 2, 'live configuration remains unchanged');
+  assert.throws(() => controller.duplicateWidget('start', 'text', 'a'.repeat(64)), /veraltet/);
+  assert.equal(writes, 1, 'stale tokens cannot create additional copies');
+
+  const next = await controller.duplicateWidget('start', 'text', 'b'.repeat(64));
+  assert.equal(next.draft.pages[0].widgets[1].id, 'text-copy-2');
+  assert.equal(next.draft.pages[0].widgets[1].grid.col, 5);
+  assert.equal(next.draft.pages[0].widgets[1].grid.row, 3);
+});
+
 test('controller blocks concurrent and uncertain actions until explicit reload', async () => {
   let state = { live: config(), draft: null, token: 'a'.repeat(64) };
   let finishSave;

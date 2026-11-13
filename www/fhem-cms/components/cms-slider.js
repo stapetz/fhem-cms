@@ -1,7 +1,8 @@
 import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
-import { dialogGroupStyles } from '../js/dialog-groups.js';
+import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { widgetHierarchyCss } from '../js/widget-content-fit.js';
+import { createManualFieldTracker, suggestedChoice, suggestedReading } from '../js/device-suggestions.js';
 
 const SEND_DELAY_MS = 1500;
 const CONFIRM_WAIT_MS = 120000;
@@ -125,7 +126,7 @@ class FHEMCMSlider extends HTMLElement {
           <details class="config-group" open><summary>Allgemein</summary>
             <div class="config-group-fields">
               <label>Titel (optional)<input name="title" type="text" maxlength="64" autocomplete="off"></label>
-              <label style="display:flex;align-items:center;gap:0.35em"><input name="showTitle" type="checkbox" checked> Titel anzeigen</label>
+              ${titleVisibilityField}
             </div>
           </details>
           <details class="config-group" open><summary>Datenquelle und Steuerung</summary>
@@ -146,6 +147,7 @@ class FHEMCMSlider extends HTMLElement {
         </form>
       </dialog>`;
     const $ = (selector) => this.shadowRoot.querySelector(selector);
+    this.suggestionTracker = createManualFieldTracker($('[data-form]'));
     $('[data-open-config]').addEventListener('click', () => this.openConfig());
     $('[data-pick-device]').addEventListener('click', () => this.pickDevice());
     $('[name="device"]').addEventListener('click', () => this.pickDevice());
@@ -192,6 +194,7 @@ class FHEMCMSlider extends HTMLElement {
 
   async openConfig({ isNew = false } = {}) {
     this.isNew = isNew;
+    this.suggestionTracker.reset();
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
     form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
@@ -201,7 +204,7 @@ class FHEMCMSlider extends HTMLElement {
     try {
       const devices = await this.services.listAllDevices();
       const device = devices.find((item) => item.name === this.widgetConfig.device) || null;
-      this.setDevice(device, this.widgetConfig.command, this.widgetConfig.reading);
+      this.setDevice(device, this.widgetConfig.command || undefined, this.widgetConfig.reading || undefined);
       this.shadowRoot.querySelector('[data-alias]').textContent = device?.alias || '';
       if (this.widgetConfig.device && !device) {
         this.shadowRoot.querySelector('[data-error]').textContent = 'Das konfigurierte Device ist nicht verfügbar.';
@@ -219,7 +222,12 @@ class FHEMCMSlider extends HTMLElement {
         accept: (item) => sliderCommands(item.sets).length > 0
       });
       if (device) {
-        this.setDevice(device, '', '');
+        const form = this.shadowRoot.querySelector('[data-form]');
+        this.setDevice(
+          device,
+          this.suggestionTracker.isEdited(form.elements.command) ? form.elements.command.value : undefined,
+          this.suggestionTracker.isEdited(form.elements.reading) ? form.elements.reading.value : undefined
+        );
       }
     } catch (error) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
@@ -232,26 +240,39 @@ class FHEMCMSlider extends HTMLElement {
     form.elements.device.value = device?.name || '';
     const commands = sliderCommands(device?.sets);
     const commandSelect = form.elements.command;
-    commandSelect.replaceChildren(...commands.map((item) => {
+    const suggestedCommand = suggestedChoice(
+      commands.map((item) => item.command),
+      ['pct', 'position', 'desiredTemperature', 'dim', 'level']
+    );
+    const commandSuggestion = selectedCommand === undefined ? suggestedCommand : selectedCommand;
+    const commandOptions = [new Option('Befehl wählen …', ''), ...commands.map((item) => {
       const option = document.createElement('option');
       option.value = item.command;
       option.textContent = item.command;
       return option;
-    }));
-    commandSelect.value = commands.some((item) => item.command === selectedCommand)
-      ? selectedCommand
-      : (commands[0]?.command || '');
+    })];
+    if (commandSuggestion && !commands.some((item) => item.command === commandSuggestion)) {
+      commandOptions.push(new Option(`${commandSuggestion} (nicht verfügbar)`, commandSuggestion));
+    }
+    commandSelect.replaceChildren(...commandOptions);
+    commandSelect.value = commandSuggestion || '';
 
     const readings = Object.keys(device?.readings || {}).sort();
     const readingSelect = form.elements.reading;
-    readingSelect.replaceChildren(...readings.map((name) => {
+    const suggestedValue = suggestedReading(device?.readings, 'fhem-slider')
+      || (readings.includes(commandSelect.value) ? commandSelect.value : '');
+    const wantedReading = selectedReading === undefined ? suggestedValue : selectedReading;
+    const readingOptions = [new Option('Reading wählen …', ''), ...readings.map((name) => {
       const option = document.createElement('option');
       option.value = name;
       option.textContent = name;
       return option;
-    }));
-    const wantedReading = selectedReading || commandSelect.value;
-    readingSelect.value = readings.includes(wantedReading) ? wantedReading : (readings[0] || '');
+    })];
+    if (wantedReading && !readings.includes(wantedReading)) {
+      readingOptions.push(new Option(`${wantedReading} (nicht verfügbar)`, wantedReading));
+    }
+    readingSelect.replaceChildren(...readingOptions);
+    readingSelect.value = wantedReading || '';
     this.updateRangeHint();
   }
 

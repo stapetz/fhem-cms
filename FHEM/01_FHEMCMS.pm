@@ -19,7 +19,7 @@ use Time::Local ();
 
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 
-our $FHEMCMS_VERSION = '1.9.1-dev';
+our $FHEMCMS_VERSION = '1.10.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -180,6 +180,16 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->canonical->encode($state);
     }
 
+    if ($cmd eq 'version5blueprints') {
+        return 'version5blueprints erwartet keine Parameter' if (@args);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
+        return $error if (defined($error));
+        my ($blueprints, $token, $readError) = FHEMCMS_ReadBlueprints($dataDir);
+        return $readError if (defined($readError));
+        return JSON::PP->new->utf8->canonical->encode({items => $blueprints, token => $token});
+    }
+
     if ($cmd eq 'migrationbackups') {
         return 'migrationbackups erwartet keine Parameter' if (@args);
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
@@ -249,7 +259,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings history layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings history layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version5blueprints:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -257,10 +267,11 @@ sub FHEMCMS_Set {
     my ($hash, $name, $cmd, @args) = @_;
     my $result = FHEMCMS_SetCommand($hash, $name, $cmd, @args);
     if (defined($result) && length($result) && defined($cmd)
-        && $cmd =~ /\A(?:config|draft|restore|publish|discard|media|purge|rebuild|version5draft|migrationcommit|layoutupgrade)\z/
+        && $cmd =~ /\A(?:config|draft|restore|publish|discard|media|purge|rebuild|version5draft|version5blueprints|migrationcommit|layoutupgrade)\z/
         && !($cmd eq 'layoutupgrade' && $result =~ /\A\{.*"schemaVersion":5\}\z/)
         && !($cmd eq 'migrationcommit'
-            && $result =~ /\A\{"backup":"config\.json\.\d{8}-\d{6}(?:-\d+)?\.bak"\}\z/)) {
+            && $result =~ /\A\{"backup":"config\.json\.\d{8}-\d{6}(?:-\d+)?\.bak"\}\z/)
+        && !($cmd eq 'version5blueprints' && $result =~ /\A\{"token":"[0-9a-f]{64}"\}\z/)) {
         my $reason = substr($result, 0, 200);
         $reason =~ s/[\x00-\x1f\x7f]/ /g;
         Log3($name, 3, "FHEMCMS ($name): set $cmd abgewiesen: $reason");
@@ -299,6 +310,30 @@ sub FHEMCMS_SetCommand {
         $backups .= "; Entwurfssicherung: $result->{draftBackup}" if (defined($result->{draftBackup}));
         Log3($name, 3, "FHEMCMS ($name): $backups; Live und Entwurf getrennt erhalten");
         return JSON::PP->new->utf8->canonical->encode($result);
+    }
+
+    if ($cmd eq 'version5blueprints') {
+        return 'version5blueprints erwartet Zustandskennung und Base64-Daten' if (@args != 2);
+        return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
+        return 'Ungueltige Zustandskennung' if (!defined($args[0]) || $args[0] !~ /\A[0-9a-f]{64}\z/);
+        return 'Vorlagen sind zu gross' if (!defined($args[1]) || length($args[1]) > 2 * $FHEMCMS_MAX_CONFIG_BYTES);
+        return 'Vorlagen sind nicht Base64-kodiert' if ($args[1] !~ /\A[A-Za-z0-9+\/]+={0,2}\z/);
+        my $decoded = decode_base64($args[1]);
+        return 'Vorlagen sind zu gross' if (length($decoded) > $FHEMCMS_MAX_CONFIG_BYTES);
+        my $blueprints = eval { JSON::PP->new->utf8->decode($decoded) };
+        return 'Vorlagen sind kein gueltiges JSON' if ($@ || !defined($blueprints));
+        my $validationError = FHEMCMS_ValidateBlueprints($blueprints);
+        return $validationError if (defined($validationError));
+        my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
+        return $error if (defined($error));
+        my (undef, $currentToken, $readError) = FHEMCMS_ReadBlueprints($dataDir);
+        return $readError if (defined($readError));
+        return 'Vorlagen wurden zwischenzeitlich geändert; bitte erneut laden' if ($currentToken ne $args[0]);
+        my $path = File::Spec->catfile($dataDir, 'blueprints.json');
+        my $bytes = JSON::PP->new->utf8->canonical->pretty->encode($blueprints);
+        my $writeError = FHEMCMS_WriteUpgradeFile($path, $bytes, 1);
+        return $writeError if (defined($writeError));
+        return JSON::PP->new->utf8->canonical->encode({token => sha256_hex($bytes)});
     }
 
     if ($cmd eq 'version5draft' || $cmd eq 'migrationcommit') {
@@ -392,7 +427,7 @@ sub FHEMCMS_SetUsage {
         splice(@backups, $FHEMCMS_USAGE_BACKUPS) if (@backups > $FHEMCMS_USAGE_BACKUPS);
     }
     my $restore = @backups ? 'restore:' . join(',', @backups) : 'restore';
-    return "config draft publish:noArg discard:noArg $restore rebuild:noArg media purge layoutupgrade:noArg";
+    return "config draft publish:noArg discard:noArg $restore rebuild:noArg media purge layoutupgrade:noArg version5blueprints";
 }
 
 sub FHEMCMS_Summary {
@@ -640,6 +675,56 @@ sub FHEMCMS_CreateDataDir {
     return (undef, $realPath, $created);
 }
 
+sub FHEMCMS_ReadBlueprints {
+    my ($dataDir) = @_;
+    my $path = File::Spec->catfile($dataDir, 'blueprints.json');
+    return (undef, undef, 'Symlink fuer Vorlagen ist nicht erlaubt') if (-l $path);
+    my $bytes = '';
+    if (-e $path) {
+        my ($read, $error) = FHEMCMS_ReadFile($path);
+        return (undef, undef, $error) if (defined($error));
+        $bytes = $read;
+    }
+    my $items = length($bytes)
+        ? eval { JSON::PP->new->utf8->decode($bytes) }
+        : [];
+    return (undef, undef, 'Vorlagendatei enthaelt ungueltiges JSON') if ($@ || !defined($items));
+    my $error = FHEMCMS_ValidateBlueprints($items);
+    return (undef, undef, $error) if (defined($error));
+    return ($items, sha256_hex($bytes), undef);
+}
+
+sub FHEMCMS_ValidateBlueprints {
+    my ($items) = @_;
+    return 'Vorlagen muessen eine Liste sein' if (ref($items) ne 'ARRAY');
+    return 'Es koennen hoechstens 100 Vorlagen gespeichert werden' if (@{$items} > 100);
+    my %names;
+    for my $item (@{$items}) {
+        return 'Ungueltige Vorlage' if (ref($item) ne 'HASH'
+            || scalar(keys(%{$item})) != 2
+            || !exists($item->{name}) || !exists($item->{widget})
+            || ref($item->{name}) || !defined($item->{name})
+            || $item->{name} !~ /\A[^\x00-\x1f\x7f]{1,64}\z/
+            || $item->{name} !~ /\S/
+            || ref($item->{widget}) ne 'HASH');
+        return 'Vorlagenname ist doppelt vorhanden' if ($names{$item->{name}}++);
+        my $widget = eval { JSON::PP->new->decode(JSON::PP->new->encode($item->{widget})) };
+        return 'Vorlagen-Widget ist ungueltig' if ($@ || ref($widget) ne 'HASH');
+        return 'Vorlagen-Widget benoetigt ein Raster' if (ref($widget->{grid}) ne 'HASH');
+        $widget->{grid} = {%{$widget->{grid}}, col => 1, row => 2};
+        my $config = {
+            schemaVersion => 5,
+            theme => 'dark',
+            settings => {layoutMode => 'grid', gridColumns => 12},
+            navigation => {orientation => 'horizontal', grid => {col => 1, row => 1, w => 12, h => 1}},
+            pages => [{id => 'blueprints', title => 'Vorlagen', widgets => [$widget]}],
+        };
+        my $error = FHEMCMS_ValidateConfig($config, 5);
+        return "Ungueltiges Vorlagen-Widget: $error" if (defined($error));
+    }
+    return undef;
+}
+
 sub FHEMCMS_DefaultConfig {
     return {
         schemaVersion => 4,
@@ -667,7 +752,7 @@ sub FHEMCMS_EnsureConfig {
     return "Einrichtungskennung konnte nicht geschrieben werden: $!" if (!$identityWritten || !$identityClosed);
     my $config = {
         schemaVersion => 5,
-        theme => 'dark',
+        theme => 'liquid-glass',
         settings => {layoutMode => 'grid', gridColumns => 12},
         navigation => {orientation => 'horizontal', grid => {col => 1, row => 1, w => 12, h => 1}},
         pages => [{id => 'start', title => 'Start', widgets => []}],
