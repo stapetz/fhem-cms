@@ -149,6 +149,9 @@ for (const [name, fixtures] of [
     [['72_selection.html', 15]]],
   ['Table labels follow actual device sources and preserve manual overrides',
     [['73_table_labels.html', 27]]],
+  ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
+    [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
+      ['75_dialog_layout.html?width=852', 51]]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],
@@ -367,12 +370,17 @@ for (const [name, fixtures] of [
         let points = await evaluate('window.linkRegression.points("drag")');
         await move(points.drag, 4 * points.cell, 0);
         points = await evaluate('window.linkRegression.points("resize")');
-        await move(points.resize, 2 * points.cell, points.cell);
+        await move(points.resize, 2 * points.cell, points.cellHeight);
         await evaluate('window.linkRegression.finish()');
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture.startsWith('61_asset_image.html')
+        fixture.startsWith('75_dialog_layout.html')
+          ? command => command('Emulation.setDeviceMetricsOverride', {
+            width: Number(new URLSearchParams(fixture.split('?')[1]).get('width')),
+            height: fixture.includes('width=852') ? 393 : 1000, deviceScaleFactor: 1, mobile: false,
+          })
+          : fixture.startsWith('61_asset_image.html')
           ? async command => {
             const touch = fixture.endsWith('?touch=1');
             await command('Emulation.setDeviceMetricsOverride', {

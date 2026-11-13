@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Breitere einheitliche Widget-Konfigurationsdialoge",
+  "changes": [
+    "Alle Widget-Konfigurationsdialoge verwenden auf Desktop eine gemeinsame Breite bis 1100 Pixel und passen sich kleineren Bildschirmen an.",
+    "Die Hoehe folgt dem Inhalt und bleibt scrollbar innerhalb des Viewports.",
+    "Tabellen-Einheiten und Vorschlaege stehen in einer eigenen breiten Zeile unter den uebrigen Feldern."
+  ]
+}

@@ -367,7 +367,8 @@ try {
           rows: widget.grid.getRow(), cellHeight: widget.grid.opts.cellHeight,
           nodes: widget.grid.save(false) })}`);
       return { drag: { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 },
-        resize: { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }, cell };
+        resize: { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 },
+        cell, cellHeight: widget.grid.getCellHeight() };
     },
     async finish() {
       try {

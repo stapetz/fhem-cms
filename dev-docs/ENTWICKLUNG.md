@@ -166,6 +166,20 @@ interne Seitenlinks referenzieren Seiten und bleiben unverändert.
 `t/74_widget_ids.test.js`, `t/74_widget_ids.t` sowie die bestehenden echten
 Entwurfstransaktions- und Seitenkopietests prüfen diesen Vertrag.
 
+## Widgetdialog-Layout (dev, Refs #187)
+
+Die gemeinsame Regel in
+`titleVisibilityStyles` gilt nur für `dialog[data-dialog]` (alle 15 Widgettypen),
+nicht für verschachtelte Geräte-, Icon- oder Medienauswahlen.
+`box-sizing: border-box`, `width: min(94vw, 1100px)`, `max-height: 94vh`,
+inhaltabhängige Höhe und Scrollen sichern identische Desktopbreiten ohne
+Viewportüberlauf. Die Tabellen-Gridzeile enthält zunächst Device/Bezeichner/
+Reading/Entfernen; die Einheitengruppe folgt über alle Spalten.
+`t/75_dialog_layout.html` prüft tatsächliche Geometrie aller Widgetdialoge
+sowie Tabellen-Einheiten bei 1440, 390 und 852 Pixeln.
+Der LinkWidget-Drag-/Resize-Test verwendet für die vertikale Bewegung die
+tatsächliche GridStack-Zellenhöhe statt einer angenommenen quadratischen Zelle.
+
 ## Dokumentationen synchron halten
 
 Der FHEM-Wiki-Onepager wird als MediaWiki-Quelltext in

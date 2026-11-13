@@ -56,16 +56,16 @@ class FHEMCMSReadingsTable extends HTMLElement {
         label { display: grid; gap: 0.25rem; }
         input, select { font: inherit; color: inherit; background: var(--cms-bg, #17211d); border: 1px solid var(--cms-border, #43564a); border-radius: 0.5rem; padding: 0.4rem 0.5rem; }
         input[type="text"], select { width: 100%; }
-        .row { display: grid; grid-template-columns: minmax(9rem, 1.2fr) minmax(7rem, 0.9fr) minmax(7rem, 1fr) minmax(8rem, 0.8fr) auto; align-items: end; gap: 0.45rem;
+        .row { display: grid; grid-template-columns: minmax(9rem, 1.2fr) minmax(7rem, 0.9fr) minmax(7rem, 1fr) auto; align-items: end; gap: 0.45rem;
           padding: 0.5rem 0; border-top: 1px solid var(--cms-border-subtle, #3a4d42); }
         [hidden] { display: none !important; }
         fieldset.mode { display: grid; gap: 0.4rem; }
         label.check { display: flex; align-items: center; gap: 0.5rem; }
         .hint { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 0.8rem; }
-        .single .row { grid-template-columns: minmax(7rem, 1fr) minmax(8rem, 1fr) minmax(7rem, 0.8fr) auto; }
+        .single .row { grid-template-columns: minmax(7rem, 1fr) minmax(8rem, 1fr) auto; }
         .device, .single-device { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.3rem; }
         .device input { min-width: 0; }
-        .unit-fields { display: grid; gap: 0.3rem; }
+        .unit-fields { display: grid; grid-column: 1 / -1; gap: 0.3rem; }
         .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { min-height: 1.2em; margin: 0; color: var(--cms-danger, #ffb4a8); }
@@ -392,7 +392,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     };
     pick.addEventListener('click', pickRowDevice);
     deviceInput.addEventListener('click', pickRowDevice);
-    row.append(deviceLabel, nameLabel, readingLabel, unitFields, remove);
+    row.append(deviceLabel, nameLabel, readingLabel, remove, unitFields);
     readingSelect.addEventListener('change', () => this.updateLabelDefaults());
     container.append(row);
     this.setRowUnit(row, initial.unit || '');

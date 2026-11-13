@@ -240,6 +240,16 @@ Erst **Speichern** übernimmt das Widget in den Entwurf, nicht in die Live-Seite
 oder den gesamten Vorgang abzubrechen speichert und schaltet nichts.
 **Bearbeiten → Widget hinzufügen** bleibt als geräteunabhängiger Weg erhalten.
 
+### Einheitliche Widget-Konfigurationsdialoge (dev, ab 1.11.0-dev)
+
+Widget-Konfigurationsdialoge sind auf dem Desktop bis **1100 Pixel** breit.
+Alle Widgettypen nutzen dieselbe Größenregel; auf kleinen Bildschirmen passt
+sich die Breite an. Die Höhe folgt dem Inhalt, längere Formulare bleiben
+innerhalb des Bildschirms scrollbar. Verschachtelte Geräte-/Medienauswahlen
+behalten ihre auf die jeweilige Aufgabe abgestimmten Größen.
+In Tabellen stehen Einheit und Vorschläge in einer eigenen Zeile über die
+volle Breite unter Device, Bezeichner und Reading – auch im Ein-Device-Modus.
+
 ### Eindeutige Widget-IDs (dev, ab 1.11.0-dev)
 
 Widgets im Schema-5-CMS besitzen seitenübergreifend eindeutige IDs. Auch
