@@ -59,6 +59,14 @@ Administration
   Konfigurationen bleiben erhalten; andere Widgets werden noch nicht
   umgestellt.
 
+2026-11-13 - 1.11.0-dev: SolarFlow im klaren Widget-Design
+- SolarFlow uebernimmt das neue Design mit klarer Kopfzeile, dezenter
+  Hero-Flaeche und themefaehigen Stationen.
+- Lesbare Detail-Karten zeigen Leistungen, Netz-/Batterierichtung und
+  Ladestand; kleine Kacheln scrollen vertikal statt unlesbar zu schrumpfen.
+- Datenquellen, Berechnungen, Schwellen, Flussrichtungen und Einstellungen
+  bleiben erhalten; lokale visuelle Pruefung mit Liquid Glass.
+
 2026-11-13 - 1.11.0-dev: Auswahl-Widget fuer diskrete Geraetewerte (#145)
 - Neues Auswahl-Widget erkennt sichere diskrete FHEM-Set-Wertelisten und
   unterstuetzt Dropdowns oder kompakte Buttons mit optionalen Anzeigenamen.
