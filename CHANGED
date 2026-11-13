@@ -63,6 +63,21 @@ Administration
   Upload verhindern den Magic-Entwurf.
 - Bestehende Seiten werden nicht nachtraeglich veraendert.
 
+2026-11-13 - 1.11.0-dev: Mehr passive Gestaltung im freien HTML
+- Freies HTML erlaubt Kommentare, weitere Strukturelemente, sichere Links und
+  Bilder sowie statisches SVG.
+- Bild- und Linkquellen aus einzelnen Reading-Platzhaltern werden bei jeder
+  Aktualisierung als lokale oder HTTPS-URL geprueft.
+- Skripte, Ereignisattribute, aktive SVG-Inhalte und CSS-Netzwerkzugriffe
+  bleiben gesperrt; KI-Integration ist nicht enthalten.
+
+2026-11-13 - 1.11.0-dev: Editor-Menues und dauerhafte Rasteranzeige
+- Globale Administration steht unter Bearbeiten; Einfuegen enthaelt Widgets,
+  Geraete und Widget-Vorlagen.
+- Automatische Widgetanordnung steht unter Ansicht.
+- Rasteranzeige bleibt browserlokal pro CMS auch bei spaeteren Besuchen
+  erhalten.
+
 2026-11-13 - 1.11.0-dev: Breitere einheitliche Widget-Konfigurationsdialoge
 - Alle Widget-Konfigurationsdialoge verwenden auf Desktop eine gemeinsame
   Breite bis 1100 Pixel und passen sich kleineren Bildschirmen an.
