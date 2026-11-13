@@ -12,7 +12,7 @@ UPD 2026-11-13_22:11:25 18564 www/fhem-cms/components/cms-icon.js
 UPD 2026-11-13_21:47:26 28851 www/fhem-cms/components/cms-link.js
 UPD 2026-11-13_22:11:25 23040 www/fhem-cms/components/cms-select.js
 UPD 2026-11-13_22:11:25 20155 www/fhem-cms/components/cms-slider.js
-UPD 2026-11-13_22:18:43 21162 www/fhem-cms/components/cms-solar-energy.js
+UPD 2026-11-13_22:44:51 24586 www/fhem-cms/components/cms-solar-energy.js
 UPD 2026-11-13_21:40:03 29723 www/fhem-cms/components/cms-solarflow.js
 UPD 2026-11-13_22:11:25 23834 www/fhem-cms/components/cms-switch.js
 UPD 2026-11-13_21:37:51 30373 www/fhem-cms/components/cms-table.js
@@ -37,7 +37,7 @@ UPD 2026-11-13_10:06:04 7959 www/fhem-cms/js/cms-admin.js
 UPD 2026-11-13_11:43:02 5347 www/fhem-cms/js/device-picker.js
 UPD 2026-11-12_11:01:52 7232 www/fhem-cms/js/device-preview.js
 UPD 2026-11-13_07:06:17 2398 www/fhem-cms/js/device-suggestions.js
-UPD 2026-11-13_22:18:43 4311 www/fhem-cms/js/device-widget-suggestions.js
+UPD 2026-11-13_22:44:51 4423 www/fhem-cms/js/device-widget-suggestions.js
 UPD 2026-11-13_15:13:05 1476 www/fhem-cms/js/dialog-groups.js
 UPD 2026-11-13_17:56:27 150460 www/fhem-cms/js/fcui-map-runtime.js
 UPD 2026-11-08_15:33:41 3422 www/fhem-cms/js/fcui-migration-controller.js
@@ -76,6 +76,7 @@ UPD 2026-11-10_11:28:51 14610 www/fhem-cms/js/placeholder-picker.js
 UPD 2026-11-10_14:35:39 37387 www/fhem-cms/js/richtext.js
 UPD 2026-11-13_11:48:14 1419 www/fhem-cms/js/select-commands.js
 UPD 2026-11-13_11:43:02 618 www/fhem-cms/js/slider-commands.js
+UPD 2026-11-13_22:44:51 3338 www/fhem-cms/js/solar-energy-suggestions.js
 UPD 2026-11-13_22:18:43 5113 www/fhem-cms/js/solar-energy.js
 UPD 2026-11-13_07:06:17 909 www/fhem-cms/js/status-colors.js
 UPD 2026-11-13_07:06:17 2441 www/fhem-cms/js/unit-input.js

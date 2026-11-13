@@ -79,6 +79,16 @@ Administration
 - Datenquellen, Berechnungen, Schwellen, Flussrichtungen und Einstellungen
   bleiben erhalten; lokale visuelle Pruefung mit Liquid Glass.
 
+2026-11-13 - 1.11.0-dev: Solar und Energiefluss: Readings intelligent
+vorbelegen
+- Neue Solarwidgets erkennen eindeutige PV-Devices, auch Dummys, und schlagen
+  passende Leistungs-, Status- und Ertragsreadings sowie benannte Ertragskarten
+  vor.
+- Dieselbe Erkennung gilt bei Device-Auswahl und Geraet-zuerst; eindeutige
+  weitere Leistungsquellen koennen aus anderen Devices stammen.
+- Freie Felder lassen sich gezielt ergaenzen. Bestehende und manuelle Eingaben
+  bleiben erhalten; mehrdeutige Quellen werden nicht willkuerlich ausgewaehlt.
+
 2026-11-13 - 1.11.0-dev: Neues Widget Solar und Energiefluss
 - Solar und Energiefluss ergaenzt SolarFlow um ein rechteckiges Flussbild, frei
   benannte Ertragskarten und optionale Gesamtertraege.
