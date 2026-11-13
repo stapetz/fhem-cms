@@ -1,0 +1,155 @@
+<!doctype html>
+<html data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget theme contract — Liquid Glass</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<style>
+  body { margin: 0; padding: 16px; }
+  #grid { width: min(100%, 1100px); margin: auto; }
+  #result { white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>
+<div id="grid" class="grid-stack cms-schema5-grid"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+import { setLiquidAppearance } from '../www/fhem-cms/js/fcui-schema5-appearance.js';
+
+const checks = [];
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+};
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+const root = document.querySelector('#grid');
+const output = document.querySelector('#result');
+const referenceHtml = '<div style="font-family:system-ui;color:inherit">'
+  + '<strong>HTML-Referenz</strong><div style="background:rgba(128,128,128,.08);'
+  + 'border-radius:14px;padding:14px">Dezente Teilfläche</div></div>';
+const image = `media/${'a'.repeat(32)}.png`;
+const specifications = [
+  { type: 'fhem-html', devices: [], html: referenceHtml },
+  { type: 'fhem-table', rows: [{ device: 'Demo', reading: 'power', unit: 'W' }] },
+  { type: 'fhem-solarflow', device: 'Demo',
+    readings: { pv: 'power', home: 'home', grid: 'grid', battery: 'battery', soc: 'soc' } },
+  { type: 'fhem-clock', style: 'digital', showSeconds: true, showDate: true, showWeekday: true },
+  { type: 'fhem-link', links: [{ id: 'one', kind: 'internal', page: 'second', text: 'Zur zweiten Seite',
+    textPosition: 'above', showText: true, target: 'self', grid: { col: 1, row: 1, w: 6, h: 3 } }] },
+];
+const config = { schemaVersion: 5, theme: 'liquid-glass',
+  settings: { layoutMode: 'grid', gridColumns: 12 },
+  navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } },
+  pages: [{ id: 'start', widgets: specifications.map((spec, i) => ({ ...spec,
+    id: `w${i}`, title: ['HTML-Referenz', 'Tabelle', 'SolarFlow', 'Uhr', 'Links'][i],
+    grid: { col: 1 + i % 2 * 6, row: 2 + Math.floor(i / 2) * 5, w: 6, h: 5 },
+  })) }, { id: 'second', widgets: [] }] };
+const original = JSON.stringify(config);
+const data = new Map([['Demo', [{ name: 'Demo',
+  readings: { power: '1250', home: '800', grid: '200', battery: '250', soc: '65' } }]]]);
+let mounted;
+try {
+  mounted = mountSchema5Widgets(GridStack, root, config, 'start', document.createElement('nav'), {}, data);
+  const hosts = [...root.querySelectorAll('.grid-stack-item-content > *')].filter(n => n.shadowRoot);
+  const reference = root.querySelector('cms-html');
+  const tile = host => host.shadowRoot.querySelector('.tile');
+  const identities = hosts.map(host => tile(host));
+  for (const theme of ['liquid-glass', 'dark', 'light', 'oled-black', 'catppuccin-mocha']) {
+    document.documentElement.dataset.cmsTheme = theme;
+    for (const [intensity, transparency] of [[0, 0], [47, 12], [100, 88]]) {
+      setLiquidAppearance(document.documentElement, {
+        liquidIntensity: intensity, liquidTransparency: transparency,
+      });
+      for (const background of ['linear-gradient(45deg, #27445d, #eacda3)',
+        'linear-gradient(135deg, #101820, #1d5e51)']) {
+        document.documentElement.style.setProperty('--cms-page-image', background);
+        await pause(20);
+        const expected = getComputedStyle(tile(reference));
+        for (const host of hosts) {
+          const actual = getComputedStyle(tile(host));
+          check(actual.backgroundColor === expected.backgroundColor,
+            `${host.localName}/${theme}/${transparency}: exact HTML reference surface`);
+          check(actual.color === expected.color,
+            `${host.localName}/${theme}/${transparency}: exact HTML reference text`);
+          check(tile(host) === identities[hosts.indexOf(host)], `${host.localName}: no remount`);
+          if (theme === 'liquid-glass') {
+            check(getComputedStyle(host.parentElement).backdropFilter === `blur(${intensity * .3}px)`,
+              `${host.localName}: current glass blur`);
+            check(getComputedStyle(host.parentElement, '::after').backgroundImage
+              .includes(intensity === 0 ? 'rgba(255, 255, 255, 0)' : String(intensity * .002)),
+            `${host.localName}: current glass gloss`);
+          }
+        }
+        const table = root.querySelector('cms-table');
+        check(getComputedStyle(table.shadowRoot.querySelector('th')).backgroundColor === 'rgba(0, 0, 0, 0)',
+          'table heading does not duplicate theme surface');
+        const link = root.querySelector('cms-link');
+        check(getComputedStyle(link.shadowRoot.querySelector('.link-tile')).backgroundColor === 'rgba(128, 128, 128, 0.08)',
+          'link surface is only neutral overlay');
+      }
+    }
+  }
+  const clock = root.querySelector('cms-clock');
+  const $clock = selector => clock.shadowRoot.querySelector(selector);
+  check(/^\d{2}:\d{2}:\d{2}$/.test($clock('[data-time]').textContent), 'digital time includes seconds');
+  const before = $clock('[data-time]').textContent;
+  await pause(1200);
+  check($clock('[data-time]').textContent !== before, 'clock timer updates displayed time');
+  check(/\d{2}\.\d{2}\.\d{4}/.test($clock('[data-date]').textContent), 'date retained');
+  const clockConfig = clock.config;
+  for (const style of ['analog', 'date', 'digital']) {
+    clock.config = { ...clockConfig, style };
+    check($clock('[data-face]').hidden === (style !== 'analog'), `${style}: face visibility`);
+    check($clock('[data-time]').hidden === (style === 'analog'), `${style}: digital visibility`);
+  }
+  clock.config = { ...clockConfig, style: 'analog', showSeconds: false, showTitle: false };
+  check($clock('[data-second]').hidden && $clock('[data-header]').hidden, 'clock visibility options retained');
+  clock.config = clockConfig;
+  const link = root.querySelector('cms-link');
+  const linkConfig = link.config;
+  const anchor = () => link.shadowRoot.querySelector('a');
+  check(anchor().getAttribute('href') === '#/second', 'internal link target retained');
+  for (const textPosition of ['above', 'below', 'overlay']) {
+    link.config = { ...linkConfig, links: [{ ...linkConfig.links[0], image, textPosition }] };
+    await anchor().querySelector('img').decode();
+    check(anchor().querySelector('img').naturalWidth > 0, `${textPosition}: image loaded`);
+    check(anchor().dataset.position === textPosition, `${textPosition}: placement retained`);
+  }
+  const { page, ...externalLink } = linkConfig.links[0];
+  link.config = { ...linkConfig, links: [{ ...externalLink,
+    kind: 'external', url: 'https://example.test/', target: 'tab', showText: false }] };
+  check(anchor().target === '_blank' && anchor().rel.includes('noopener')
+    && anchor().getAttribute('aria-label') === 'Zur zweiten Seite', 'safe external link and hidden label retained');
+  link.config = linkConfig;
+  for (const width of [280, 390, 768, 1100]) {
+    root.style.width = `${width}px`;
+    await pause(70);
+    check(root.scrollWidth <= root.clientWidth + 1, `${width}: no horizontal page overflow`);
+    for (const host of hosts) {
+      if (host !== reference) check(getComputedStyle(host.shadowRoot.querySelector('[data-title]')).fontWeight === '700',
+        `${host.localName}/${width}: bold title`);
+      check(tile(host).scrollWidth <= tile(host).clientWidth + 1, `${host.localName}/${width}: no horizontal tile overflow`);
+    }
+  }
+  check(!root.querySelector('cms-solarflow').shadowRoot.querySelector('.metrics'), 'SolarFlow contains no extra value cards');
+  check(JSON.stringify(config) === original, 'theme and rendering do not mutate saved configuration');
+  const timer = clock.timer;
+  const clearInterval = window.clearInterval;
+  const cleared = [];
+  window.clearInterval = id => { cleared.push(id); clearInterval(id); };
+  try { mounted.destroy(); } finally { window.clearInterval = clearInterval; }
+  check(cleared.includes(timer), 'clock interval cleared on disconnect');
+  check(timer !== null, 'clock had an active interval');
+  mounted = mountSchema5Widgets(GridStack, root, config, 'start', document.createElement('nav'), {}, data);
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks: checks.length, messages: checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = JSON.stringify({ error: error.stack, checks });
+} finally {
+  document.documentElement.dataset.cmsTheme = 'liquid-glass';
+  setLiquidAppearance(document.documentElement, { liquidIntensity: 47, liquidTransparency: 12 });
+}
+</script>
+</html>

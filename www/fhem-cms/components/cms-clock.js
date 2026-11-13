@@ -20,36 +20,47 @@ class FHEMCMSClock extends HTMLElement {
         [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; display: flex; height: 100%; align-items: center; justify-content: center;
-          overflow: hidden; container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
-          background: var(--cms-surface, #202e27); padding: 0.8rem; text-align: center; }
-        .content { display: grid; width: 100%; height: 100%; align-content: center; justify-items: center; gap: 0.3em; min-width: 0; }
+        .tile { position: relative; display: flex; flex-direction: column; gap: 14px; height: 100%;
+          overflow: auto; container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
+          background: var(--cms-surface, #202e27); padding: 8px; color: inherit;
+          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; text-align: center; }
+        header { flex: none; display: flex; align-items: center; padding: 0 48px 8px 0;
+          border-bottom: 1px solid rgba(128,128,128,.25); }
+        header[hidden] { display: none; }
+        .content { display: grid; width: 100%; flex: 1 0 auto; align-content: center;
+          justify-items: center; gap: 14px; min-width: 0; }
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 1.05rem; font-weight: 400; overflow-wrap: anywhere; }
-        h3[data-title] { font-size: max(5px, min(11cqh, 5cqw)); }
-        .time { font-size: max(4px, min(38cqh, 16cqw)); font-variant-numeric: tabular-nums; line-height: 1; }
+        h3[data-title] { font-size: 1.4rem; font-weight: 700; color: inherit; }
+        .time { font-size: max(12px, min(38cqh, 16cqw)); font-weight: 800;
+          font-variant-numeric: tabular-nums; line-height: 1.1; }
         /* Ohne Datum/Wochentag füllt die Uhr das Widget aus. */
-        .content[data-time-only] .time { font-size: max(4px, min(72cqh, 22cqw)); }
-        .date { color: var(--cms-muted-strong, #c4d0c8); font-size: max(5px, min(11cqh, 5cqw)); }
+        .content[data-time-only] .time { font-size: max(12px, min(72cqh, 22cqw)); }
+        .date { color: inherit; font-size: .86rem; opacity: .72; overflow-wrap: anywhere; max-width: 100%; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-        .face { position: relative; width: min(78cqh, 62cqw); aspect-ratio: 1; border: 2px solid var(--cms-accent, #8fd0a8);
-          border-radius: 50%; }
+        .face { position: relative; width: min(65cqh, 62cqw); aspect-ratio: 1;
+          border: 2px solid rgba(128,128,128,.25);
+          background: rgba(128,128,128,.08); border-radius: 50%; }
         .content[data-time-only] .face { width: min(92cqh, 80cqw); }
         .face[hidden], .date[hidden], h3[hidden] { display: none; }
         .mark-rotor { position: absolute; inset: 0; transform: rotate(var(--angle)); }
-        .mark { position: absolute; top: 2%; left: 50%; transform: translateX(-50%); background: var(--cms-accent, #8fd0a8); }
+        .mark { position: absolute; top: 2%; left: 50%; transform: translateX(-50%); background: currentColor; }
         .mark.minute { top: 2.5%; width: 1.3%; aspect-ratio: 1; border-radius: 50%; }
         .mark.five-minute { top: 2%; width: 1%; height: 5%; }
         .mark.quarter-hour { top: 2%; width: 1.5%; height: 9%; }
-        .hand { position: absolute; left: 50%; bottom: 50%; width: 1%; border-radius: 2px; background: var(--cms-text, #edf4ef);
+        .hand { position: absolute; left: 50%; bottom: 50%; width: 1%; border-radius: 2px; background: currentColor;
           transform: translateX(-50%) rotate(var(--angle)); transform-origin: center bottom; }
         .hand.hour { height: 25%; width: 1.8%; }
         .hand.minute { height: 36%; }
-        .hand.second { height: 40%; width: 0.6%; background: var(--cms-danger, #ffb4a8); }
+        .hand.second { height: 40%; width: 0.6%; background: #ef4444; }
         .center { position: absolute; top: 50%; left: 50%; width: 4%; aspect-ratio: 1; border-radius: 50%;
-          background: var(--cms-accent, #8fd0a8); transform: translate(-50%, -50%); }
+          background: currentColor; transform: translate(-50%, -50%); }
         .gear, button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.3rem 0.55rem; }
-        .gear { position: absolute; top: 0.2rem; right: 0.3rem; padding: 0 0.35em; }
+        .gear { position: absolute; top: 8px; right: 8px; min-width: 48px; min-height: 48px; }
+        .gear:active { transform: scale(.96); }
+        :host(:not([view-only])) header { min-height: 56px; }
+        :host(:not([view-only])) .tile:has(header[hidden]) { padding-top: 64px; }
+        :host([view-only]) header { padding-right: 0; }
         button:focus-visible, input:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         :host([view-only]) [data-open-config] { display: none; }
         dialog { width: min(92vw, 30rem); max-height: 94vh; overflow: auto; padding: 1.25rem;
@@ -73,8 +84,8 @@ class FHEMCMSClock extends HTMLElement {
       </style>
       <article class="tile">
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Uhr konfigurieren">⚙</button>
+        <header data-header hidden><h3 data-title hidden></h3></header>
         <div class="content">
-          <h3 data-title hidden></h3>
           <div class="time" data-time></div>
           <div class="face" data-face hidden aria-hidden="true">
             ${Array.from({ length: 60 }, (_, minute) => {
@@ -225,6 +236,7 @@ class FHEMCMSClock extends HTMLElement {
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
     title.hidden = !this.widgetConfig.title || this.widgetConfig.showTitle === false;
+    title.parentElement.hidden = title.hidden;
     const time = this.shadowRoot.querySelector('[data-time]');
     const face = this.shadowRoot.querySelector('[data-face]');
     const date = this.shadowRoot.querySelector('[data-date]');

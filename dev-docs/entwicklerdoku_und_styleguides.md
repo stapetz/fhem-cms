@@ -610,7 +610,7 @@ verbindlich. Technische Ausgabevorgaben für KI-HTML sind keine neue Freigabe
 für Skripte oder Befehle in Widgets.
 
 Ziel ist dieses Design für alle Widgets. Die Umstellung erfolgt schrittweise:
-**Tabellenwidget und SolarFlow** (Refs #196, #197). Andere Widgets bleiben bis zu
+**Tabelle, SolarFlow, Uhr und Linkwidget** (Refs #196, #197, #198). Andere Widgets bleiben bis zu
 ihrer eigenen Umstellung unverändert; dies ist keine bereits abgeschlossene
 globale Designmigration.
 
@@ -651,6 +651,44 @@ scrollen. Keine horizontale Seitenverbreiterung. Transparente Flächen
 weiterhin prüfen. Dialogfunktionen und vorhandene Benutzerfarben bleiben
 erhalten. Jede Umstellung prüft Phone-, Tablet- und Desktop-Kachelgrößen,
 beide Themes, Liveupdates und unveränderte gespeicherte Konfigurationen.
+
+#### Themevertrag für alle bestehenden und künftigen Widgets (Refs #198)
+
+**Google-Styles immer unter Beachtung des tatsächlichen Seitenthemes übernehmen.**
+Referenz sind die freien HTML-Entwürfe „Solaranlage Übersicht“ und „Volvo EX40“:
+geerbte Textfarbe, dezente transparente Teilflächen, keine eigenen globalen
+Hintergründe. Ein einzelner Screenshot im Standard-Glass-Theme reicht nicht.
+
+- Die äußere `.tile` behält `background: var(--cms-surface, #202e27)`,
+  den Theme-Rahmen `var(--cms-frame, #7f8c84)` und den Radius der CMS-Hülle.
+  `color: inherit` übernimmt den Seitentext, SVG-Text und Uhrzeiger nutzen
+  `currentColor`. Nicht den Widgethintergrund ersatzlos transparent machen:
+  sonst fehlt die vom Benutzer eingestellte Glass-Fläche.
+- Farben und Flächen nicht beim Erstellen aus `getComputedStyle` kopieren oder
+  als Inlinewerte einfrieren. CSS-Variablen müssen während der Anzeige weiter
+  vererbt werden, damit Themewechsel ohne Neuaufbau wirken.
+- Liquid Glass übernimmt die **aktuellen** Werte für Transparenz, Blur und Glanz
+  aus dem vorhandenen Appearance-/Rastermechanismus. Keine eigenen festen
+  Opazitäten für die Außenfläche und keine zweite deckende Oberfläche darüber.
+  Dialoge behalten ihre separate, lesbare Theme-Fläche.
+- Innere Flächen nur dezent (`rgba(128,128,128,.08)`), Rahmen/Trenner
+  entsprechend Grundprompt. Keine zusätzliche `--cms-surface`-Ebene etwa in
+  Tabellenköpfen oder SVG-Stationen. Semantische Akzentfarben sind erlaubt,
+  dürfen die geerbte Textfarbe aber nicht pauschal ersetzen.
+- Nur die gewünschte Darstellung übernehmen, keine zusätzlichen Inhalte
+  erfinden: SolarFlow bleibt **ausschließlich das animierte Flussbild** mit
+  Werten in den Stationen, ohne weitere Wertekacheln.
+- Abnahme auf echtem Schema-5-Raster mit Hell, Dunkel, OLED, Catppuccin und
+  Liquid Glass, Themewechsel ohne Remount, mehreren Glass-Transparenzen
+  (einschließlich 88 %), Intensitäten und wechselnden Hintergrundbildern.
+  Gemessene Außenfläche/Textfarbe mit einem freien HTML-Referenzwidget im
+  selben Raster vergleichen. Die lokale visuelle Prüfung in VS Code auf
+  `127.0.0.1` erfolgt ausdrücklich mit **Liquid Glass**.
+
+Regression: `t/83_widget_theme_design.html` vergleicht Tabelle, SolarFlow, Uhr
+und Links mit einem freien HTML-Referenzwidget einschließlich dynamischer
+Appearance-Änderungen. Vorhandene Größen-, Dialog- und Funktionstests bleiben
+zusätzlich verbindlich.
 
 ### 5.2 Touchscreen-Optimierung für Wandtablets
 *   **Mindest-Interaktionsfläche:** Kein klickbares Element oder Steuerung darf eine physische Touch-Fläche von weniger als **`48px × 48px`** aufweisen, um Fehlbedienungen an der Wand zu minimieren.

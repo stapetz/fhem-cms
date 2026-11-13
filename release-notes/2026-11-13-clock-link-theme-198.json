@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Uhr und Links im themegerechten Google-Design",
+  "changes": [
+    "Uhr und Linkwidget verwenden klare Titel, Systemschrift und dezente transparente Teilflaechen, ohne das Seitentheme zu ersetzen.",
+    "Der verbindliche Themevertrag erhaelt aktuelle Glass-Transparenz, Blur, Glanz und geerbte Textfarben auch bei laufenden Themewechseln.",
+    "Digitale und analoge Uhr, Datum, Sekunden, Linkziele, Bilder und gespeicherte Layouts bleiben erhalten."
+  ]
+}

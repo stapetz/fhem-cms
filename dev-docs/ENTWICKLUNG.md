@@ -54,6 +54,22 @@ Lokale visuelle Abnahme im VS-Code-Browser auf 127.0.0.1 verwendet Liquid Glass.
 Updates, Schwellen, Ladestand, optionale Stationen und reduzierte Bewegung;
 `t/45_solarflow_sizing.html` prueft Titel und scrollbare Diagrammgeometrie.
 
+## Themevertrag, Uhr und Linkwidget (dev, 1.11.0-dev, Refs #198)
+
+Google-Styles gelten nur zusammen mit dem Themevertrag des fuehrenden
+Styleguides: aeussere Themeflaeche, geerbte Textfarbe und aktuelle Glass-Werte
+erhalten; innere Flaechen bleiben dezente transparente Ueberlagerungen.
+Keine Farben bei Initialisierung einfrieren. Vorbild sind die bestehenden
+HTML-Entwuerfe Solaranlage Uebersicht und Volvo EX40. Lokale visuelle Tests
+auf 127.0.0.1 verwenden Liquid Glass. Dynamische Theme-, Transparenz-,
+Intensitaets- und Hintergrundwechsel werden mit einem HTML-Referenzwidget im
+echten Raster verglichen (`t/83_widget_theme_design.html`).
+
+Uhr und Linkwidget verwenden die neue Kopfzeile/Systemschrift und dezente
+Teilflaechen. Digitale/analoge Uhr, Datum, Sekunden, Timer-Cleanup, Bilder,
+Linkziele und internes Linkraster bleiben erhalten. Keine automatische
+Migration oder Aenderung produktiver Konfigurationen.
+
 ## Zentrale CMS-Verwaltung (dev, 1.10.0-dev, Refs #177)
 
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.

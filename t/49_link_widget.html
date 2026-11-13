@@ -62,7 +62,7 @@ try {
   widget.setAttribute('view-only', '');
   document.body.prepend(widget);
   check($('[data-title]').textContent === initial.title, 'title rendered');
-  check(getComputedStyle($('[data-title]')).fontWeight === '400', 'shared lightweight title');
+  check(getComputedStyle($('[data-title]')).fontWeight === '700', 'new bold widget title');
   check($('[data-open-config]').getClientRects().length === 0, 'live view has no configuration button');
   check($('[data-links]').children.length === 2, 'two links rendered');
   const internal = $('[data-links]').children[0];
