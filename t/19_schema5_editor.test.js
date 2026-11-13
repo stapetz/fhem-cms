@@ -234,7 +234,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const toolbar = { children: toolbarControls(root.children[0]) };
     assert.equal(root.children[0].className, 'cms-toolbar');
     const [fileMenu, editMenu, viewMenu] = root.children[0].children;
-    assert.ok(!fileMenu.children[1].children.some(item => item.textContent === 'Globale CMS Administration'),
+    assert.ok(!fileMenu.children[1].children.some(item => item.textContent === 'Globale FHEM-CMS Administration'),
       'administration entry is absent without explicit CMS opt-in');
     assert.deepEqual([fileMenu, editMenu, viewMenu].map((menu) => menu.children[0].textContent),
       ['Datei', 'Bearbeiten', 'Ansicht']);
@@ -505,7 +505,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     editor = new Schema5Editor({ GridStack, root, controller, client, services: {}, browser, adminMenuEnabled: true });
     await editor.start();
     assert.ok(root.children[0].children[0].children[1].children.some(item =>
-      item.textContent === 'Globale CMS Administration'), 'explicit CMS opt-in shows administration entry');
+      item.textContent === 'Globale FHEM-CMS Administration'), 'explicit CMS opt-in shows administration entry');
     const [, status, content] = root.children;
     const toolbar = { children: toolbarControls(root.children[0]) };
     const [edit, mode, publish, discard, reload] = toolbar.children;

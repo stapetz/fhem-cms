@@ -26,7 +26,7 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.
 Beide Editor-Versionen verlinken sie ausschliesslich nach expliziter Freigabe
 mit `attr <CMS> adminMenu 1` im Dateimenue mit
-`Globale CMS Administration` (auch Seitentitel). Der Menue-Link nutzt dieselbe
+`Globale FHEM-CMS Administration` (auch Seitentitel). Der Menue-Link nutzt dieselbe
 Buttonformatierung wie die anderen Eintraege; `CMS oeffnen` erscheint auf der
 Verwaltungsseite rechtsbuendig neben Checkbox und Device-Namen als Button-Link
 mit sichtbarem Rahmen, Hintergrund und mindestens 48px Hoehe.

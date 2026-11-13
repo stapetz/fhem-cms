@@ -42,7 +42,7 @@ Nach `update all …` hängt das weitere Vorgehen davon ab, was sich geändert h
 Die zentrale Verwaltung ist direkt unter `/fhem/fhem-cms/admin.html` erreichbar
 (bei abweichendem FHEMWEB-Pfad entsprechend anpassen). Erst nach expliziter
 Freigabe mit `attr <CMS-Device> adminMenu 1` oeffnet im Bearbeitungsmodus
-**Datei → Globale CMS Administration** dieselbe Seite in einem neuen Tab,
+**Datei → Globale FHEM-CMS Administration** dieselbe Seite in einem neuen Tab,
 auch im bisherigen Schema-4-Editor.
 Ohne Attribut oder mit `adminMenu 0` ist der Menuepunkt ausgeblendet.
 Nach Aenderung die CMS-Seite neu laden. Die Freigabe gilt nur fuer den
