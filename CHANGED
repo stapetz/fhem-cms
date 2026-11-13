@@ -50,6 +50,14 @@ Administration
 - Der bekannte Widgetdialog oeffnet mit aenderbaren Vorgaben. Erst Speichern
   schreibt den Entwurf; Abbrechen schaltet oder speichert nichts.
 
+2026-11-13 - 1.11.0-dev: Geraetevorschlaege ohne Wartungsaktionen
+- Geraet hinzufuegen verwechselt Wartungsbefehle von Thermometern nicht mehr
+  mit Tastern.
+- Automatische Schaltervorschlaege verlangen einen passenden An-/Aus-Status;
+  Slider und Auswahllisten ein zuordenbares Reading.
+- Die vollstaendige Widgetbibliothek bleibt fuer individuelle Zuordnungen
+  verfuegbar.
+
 2026-11-13 - 1.10.0-dev: Globale Administration im CMS-Theme
 - Die globale Administration uebernimmt beim Menueaufruf Theme,
   Seitenhintergrund und Liquid-Glass-Werte des aufrufenden CMS.

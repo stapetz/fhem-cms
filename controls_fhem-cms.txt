@@ -35,7 +35,7 @@ UPD 2026-11-13_10:06:04 7959 www/fhem-cms/js/cms-admin.js
 UPD 2026-11-13_11:43:02 5347 www/fhem-cms/js/device-picker.js
 UPD 2026-11-12_11:01:52 7232 www/fhem-cms/js/device-preview.js
 UPD 2026-11-13_07:06:17 2398 www/fhem-cms/js/device-suggestions.js
-UPD 2026-11-13_11:48:14 3634 www/fhem-cms/js/device-widget-suggestions.js
+UPD 2026-11-13_12:10:04 3994 www/fhem-cms/js/device-widget-suggestions.js
 UPD 2026-11-13_07:06:17 1309 www/fhem-cms/js/dialog-groups.js
 UPD 2026-11-08_15:33:41 3422 www/fhem-cms/js/fcui-migration-controller.js
 UPD 2026-11-13_09:56:15 24163 www/fhem-cms/js/fcui-migration-preview.js
