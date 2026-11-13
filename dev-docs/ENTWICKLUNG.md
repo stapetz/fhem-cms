@@ -115,6 +115,13 @@ Keine Einheiten aus Momentanwerten erraten. Vorschlaege bleiben im Dialogentwurf
 vorhandene/manuell geleerte Felder werden beim Ergaenzen nicht ueberschrieben
 (`createManualFieldTracker`); expliziter gemeinsamer Device-Wechsel bleibt eine
 Neuzuordnung. Bestehende Widgets beim Oeffnen unveraendert lassen.
+Visuelle Abnahmekorrektur: kompakte Proportionen des freigegebenen HTML-Originals
+erhalten: Stationen maximal 180px, 80px Flusszwischenraum, drei Ertragskarten
+bereits bei 761px Kachelbreite, 12px Kartenpadding und 2px Zeilenpadding.
+Ertragseinheit in der Kartenueberschrift statt an jedem Wert, urspruengliche
+feste Nachkommastellen ohne Tausendertrennzeichen und semantisch farbige Werte.
+Summen als kompakte zentrierte Leiste. Auf Phone umbrechen die Karten weiterhin;
+Themeflaechen, Readingerkennung und gespeicherte Raster bleiben unveraendert.
 Pruefung: `t/85_solar_energy.t`, `t/85_solar_energy.test.js` und Browserfixture
 `t/85_solar_energy.html` (Desktop/Phone/Tablet, reduzierte Bewegung, alle Themes,
 Dialogroundtrip, mehrere Devices, fehlende Werte und Liveupdates).

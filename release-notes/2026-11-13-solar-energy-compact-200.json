@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Solar und Energiefluss: kompakt wie der HTML-Entwurf",
+  "changes": [
+    "Kompakte Stationsgroessen, drei Ertragskarten nebeneinander bei Desktopbreite und eine schmale Summenleiste folgen jetzt dem freigegebenen HTML-Vorbild.",
+    "Einheiten stehen im Kartenkopf statt hinter jedem Wert; Abstaende, Zahlenpraezision und semantische Wertfarben entsprechen dem Original.",
+    "Responsive Umbrueche, Themeunterstuetzung und die bereits abgenommene Reading-Erkennung bleiben erhalten."
+  ]
+}

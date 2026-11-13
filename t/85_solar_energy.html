@@ -93,7 +93,7 @@ try {
       probe.remove();
     }
   }
-  for (const width of [280, 390, 768, 1000]) {
+  for (const width of [280, 390, 761, 768, 1000]) {
     root.style.width = `${width}px`;
     root.gridstack.onResize();
     await pause(400);
@@ -107,6 +107,20 @@ try {
     const cards = [...host.shadowRoot.querySelectorAll('.yield')].map(e => e.getBoundingClientRect());
     check(width > 390 || cards[1].top > cards[0].top,
       `${width}: narrow yield cards stack vertically: ${JSON.stringify(cards.map(r => [r.x,r.y,r.width,r.height]))}; host ${host.clientWidth}`);
+    if (width === 761) {
+      check(cards.every(card => Math.abs(card.top - cards[0].top) < 1),
+        'reference desktop width: all three yield cards in one row, not two plus one');
+      check(cards.every(card => card.height <= 210), 'yield cards retain compact original height');
+      check($('.flow').clientHeight <= 310 && $('.node').getBoundingClientRect().width <= 181,
+        'flow and stations retain original 300px/180px proportions');
+      check($('.totals').clientHeight <= 90, 'summary stays in original compact strip');
+      check($('[data-sections] h4').textContent.includes('(kWh)')
+        && !$('.yield dd').textContent.includes('kWh') && $('.yield dd').textContent === '1.23',
+      'units appear in card header, compact numeric precision matches original');
+      check(getComputedStyle($('[data-power="pv"]')).color === 'rgb(245, 158, 11)'
+        && getComputedStyle($('[data-power="home"]')).color === 'rgb(59, 130, 246)',
+      'original semantic station value colors retained');
+    }
   }
   await host.openConfig();
   check($('[data-dialog]').getBoundingClientRect().width <= innerWidth
