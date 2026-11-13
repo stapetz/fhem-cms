@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Volvo-Dashboard im freien HTML",
+  "changes": [
+    "Gueltiges scroll-behavior wird nicht mehr mit dem alten ausfuehrbaren behavior-Attribut verwechselt.",
+    "Numerische Inline-Style-Readings und OSM-Koordinaten im Querystring werden bei jeder Anzeige sicher aufgeloest.",
+    "map-Filter akzeptiert neben key=value auch key:value.",
+    "Vollstaendiges Volvo-Beispiel mit korrigierter Karten-URL als Backend- und Browserregression aufgenommen."
+  ]
+}

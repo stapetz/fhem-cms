@@ -2,6 +2,14 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { formatValue, lookupValue, substitute } from '../www/fhem-cms/js/freehtml.js';
 
+test('map filters accept both separators without changing unmapped values or label punctuation', () => {
+  assert.equal(formatValue('authenticated', 'map(authenticated:Verbunden,unauthenticated:Getrennt)'), 'Verbunden');
+  assert.equal(formatValue('CHARGING', 'map(IDLE:Bereit,CHARGING:Lädt)'), 'Lädt');
+  assert.equal(formatValue('on', 'map(on=An: aktiv,off=Aus)'), 'An: aktiv');
+  assert.equal(formatValue('off', 'map(on:An,off:Aus)'), 'Aus');
+  assert.equal(formatValue('unknown', 'map(on=An,off=Aus)'), 'unknown');
+});
+
 test('free HTML devices receive snapshots, channel readings and live subscriptions', async () => {
   const previous = {
     window: globalThis.window, document: globalThis.document,

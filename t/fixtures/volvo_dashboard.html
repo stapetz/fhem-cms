@@ -1,0 +1,111 @@
+<style>
+.volvo-dash{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:inherit;width:100%;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;padding:8px}
+.volvo-dash *{box-sizing:border-box}
+.vd-header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid rgba(128,128,128,.25)}
+.vd-title{font-size:1.45rem;font-weight:700}
+.vd-sub{font-size:.88rem;opacity:.72}
+.vd-badge-ok{background:rgba(16,185,129,.16);color:#10b981;border:1px solid rgba(16,185,129,.35);padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:600}
+.vd-top-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px}
+.vd-bat-hero{border-radius:16px;background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(59,130,246,.12));border:1px solid rgba(16,185,129,.35);padding:18px;display:flex;flex-direction:column;justify-content:space-between;gap:14px}
+.vd-bat-main{display:flex;justify-content:space-between;align-items:flex-end}
+.vd-soc-big{font-size:2.8rem;font-weight:800;color:#10b981;line-height:1}
+.vd-range-big{font-size:1.8rem;font-weight:700;color:#3b82f6;text-align:right;line-height:1.1}
+.vd-range-lbl{font-size:.78rem;opacity:.75;display:block;font-weight:500}
+.vd-bar-bg{width:100%;height:14px;background:rgba(128,128,128,.22);border-radius:99px;overflow:hidden}
+.vd-bar-fill{height:100%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:99px}
+.vd-bat-subgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:.84rem}
+.vd-bat-pill{background:rgba(128,128,128,.12);border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between}
+.vd-bat-pill span:first-child{opacity:.75}
+.vd-slider-box{position:relative;border-radius:16px;background:radial-gradient(circle at 50% 65%,rgba(16,185,129,.12),rgba(128,128,128,.07) 75%);border:1px solid rgba(128,128,128,.2);padding:12px;display:flex;flex-direction:column;justify-content:space-between;min-height:230px}
+.vd-slider{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;gap:12px;width:100%;flex:1;align-items:center}
+.vd-slide{flex:0 0 100%;width:100%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.vd-img-ext{width:100%;max-height:180px;object-fit:contain;filter:drop-shadow(0 12px 18px rgba(0,0,0,.35))}
+.vd-img-int{width:100%;height:180px;object-fit:cover;border-radius:12px}
+.vd-bottom-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;flex:1}
+.vd-card{background:rgba(128,128,128,.08);border:1px solid rgba(128,128,128,.18);border-radius:14px;padding:15px;display:flex;flex-direction:column;gap:10px}
+.vd-card-head{font-size:.95rem;font-weight:700;padding-bottom:6px;border-bottom:1px solid rgba(128,128,128,.2);display:flex;justify-content:space-between}
+.vd-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:.88rem;padding-bottom:5px;border-bottom:1px solid rgba(128,128,128,.1)}
+.vd-row:last-child{border-bottom:none;padding-bottom:0}
+.vd-row span:first-child{opacity:.75}
+.vd-status-pills{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:2px}
+.vd-sp{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:10px 6px;text-align:center}
+.vd-sp-lbl{font-size:.74rem;opacity:.8;display:block;margin-bottom:4px}
+.vd-sp-val{font-size:1.35rem;line-height:1}
+.vd-map-frame{width:100%;height:175px;border:0;border-radius:10px;display:block}
+.vd-footer{display:flex;flex-wrap:wrap;justify-content:space-between;font-size:.76rem;opacity:.65}
+</style>
+<div class="volvo-dash">
+  <div class="vd-header">
+    <div>
+      <div class="vd-title">🚙 Volvo {{MeinElch:vehicle_descriptions_model|default(EX40)}}</div>
+      <div class="vd-sub">{{MeinElch:vehicle_externalColour}} · MJ {{MeinElch:vehicle_modelYear}} · {{MeinElch:vehicle_specifications_enginePowerKw|int}} kW {{MeinElch:vehicle_specifications_driveType}}</div>
+    </div>
+    <span class="vd-badge-ok">API: {{MeinElch:authStatus|map(authenticated:Verbunden,unauthenticated:Getrennt)|default(Offline)}}</span>
+  </div>
+  <div class="vd-top-grid">
+    <div class="vd-bat-hero">
+      <div style="display:flex;justify-content:space-between;font-size:.85rem;font-weight:600;opacity:.85;">
+        <span>🔋 Batterie &amp; Laden ({{MeinElch:vehicle_batteryCapacityKWH|round(1)}} kWh)</span>
+        <span>{{MeinElch:state_chargingStatus|map(IDLE:Bereit,CHARGING:Lädt,DONE:Voll,DISCHARGING:Entlädt)}}</span>
+      </div>
+      <div class="vd-bat-main">
+        <div>
+          <div class="vd-soc-big">{{MeinElch:state_batteryChargeLevel|int|suffix(%)}}</div>
+          <div style="font-size:.8rem;opacity:.75;margin-top:4px;">Ladeziel: <strong>{{MeinElch:state_targetBatteryChargeLevel|int|suffix(%)}}</strong></div>
+        </div>
+        <div class="vd-range-big">
+          <span class="vd-range-lbl">Restreichweite</span>
+          {{MeinElch:state_electricRange|int|suffix( km)}}
+        </div>
+      </div>
+      <div class="vd-bar-bg"><div class="vd-bar-fill" style="width:{{MeinElch:state_batteryChargeLevel|int}}%;"></div></div>
+      <div class="vd-bat-subgrid">
+        <div class="vd-bat-pill"><span>Kabel</span><strong>{{MeinElch:state_chargerConnectionStatus|map(DISCONNECTED:Getrennt,CONNECTED:Verbunden)}}</strong></div>
+        <div class="vd-bat-pill"><span>Ladetyp</span><strong>{{MeinElch:state_chargingType|map(NONE:Keiner,AC:AC Wechselstrom,DC:DC Schnellladen)}}</strong></div>
+        <div class="vd-bat-pill"><span>Stromlimit</span><strong>{{MeinElch:state_chargingCurrentLimit|int}} A</strong></div>
+        <div class="vd-bat-pill"><span>Restladezeit</span><strong>{{MeinElch:state_estimatedChargingTimeToTargetBatteryChargeLevel|int}} min</strong></div>
+      </div>
+    </div>
+    <div class="vd-slider-box">
+      <div style="display:flex;justify-content:space-between;font-size:.76rem;opacity:.75;text-transform:uppercase;letter-spacing:.6px;font-weight:600;">
+        <span>Ansicht (↔ wischen)</span>
+        <span>Motor: {{MeinElch:engine_engineStatus|map(STOPPED:Aus,RUNNING:Läuft)}}</span>
+      </div>
+      <div class="vd-slider">
+        <div class="vd-slide"><img class="vd-img-ext" src="{{MeinElch:vehicle_images_exteriorImageUrl}}" alt="Volvo EX40 Außen" /></div>
+        <div class="vd-slide"><img class="vd-img-int" src="{{MeinElch:vehicle_images_internalImageUrl}}" alt="Volvo EX40 Innen" /></div>
+      </div>
+      <div style="font-size:.75rem;opacity:.7;text-align:center;">● ○ Außen- &amp; Innenansicht</div>
+    </div>
+  </div>
+  <div class="vd-bottom-grid">
+    <div class="vd-card">
+      <div class="vd-card-head"><span>📊 Kilometer &amp; Fahrstatistik</span><span>🛣️</span></div>
+      <div class="vd-row"><span>Gesamtkilometerstand</span><strong>{{MeinElch:odometer_odometer|int|suffix( km)}}</strong></div>
+      <div class="vd-row"><span>Trip (Automatisch)</span><strong>{{MeinElch:statistics_tripMeterAutomatic|round(1)}} km (Ø {{MeinElch:statistics_averageSpeedAutomatic|int}} km/h)</strong></div>
+      <div class="vd-row"><span>Trip (Manuell)</span><strong>{{MeinElch:statistics_tripMeterManual|round(1)}} km</strong></div>
+      <div class="vd-row"><span>Ø Energieverbrauch</span><strong>{{MeinElch:statistics_averageEnergyConsumption|round(1)}} kWh/100km</strong></div>
+      <div class="vd-row"><span>Ø Geschwindigkeit gesamt</span><strong>{{MeinElch:statistics_averageSpeed|int}} km/h</strong></div>
+    </div>
+    <div class="vd-card">
+      <div class="vd-card-head"><span>🛡️ Verschluss &amp; Diagnose</span><span>{{MeinElch:doors_centralLock|map(LOCKED:🔒,UNLOCKED:🔓)}}</span></div>
+      <div class="vd-status-pills">
+        <div class="vd-sp"><span class="vd-sp-lbl">Zentralverr.</span><span class="vd-sp-val">{{MeinElch:doors_centralLock|map(LOCKED:🔒,UNLOCKED:🔓)}}</span></div>
+        <div class="vd-sp"><span class="vd-sp-lbl">Türen</span><span class="vd-sp-val">{{MeinElch:doors_frontLeftDoor|map(CLOSED:🔒,OPEN:🔓)}}</span></div>
+        <div class="vd-sp"><span class="vd-sp-lbl">Fenster</span><span class="vd-sp-val">{{MeinElch:windows_frontLeftWindow|map(CLOSED:🔒,OPEN:🔓)|default(🔒)}}</span></div>
+      </div>
+      <div class="vd-row" style="margin-top:4px;"><span>Ladeklappe / Heckklappe</span><strong>{{MeinElch:doors_tankLid|map(CLOSED:🔒 Zu,OPEN:🔓 Offen)}} / {{MeinElch:doors_tailgate|map(CLOSED:🔒 Zu,OPEN:🔓 Offen)}}</strong></div>
+      <div class="vd-row"><span>Bremsflüssigkeit</span><strong>{{MeinElch:brakes_brakeFluidLevelWarning|map(NO_WARNING:✅ OK,WARNING:⚠️ Prüfen)}}</strong></div>
+      <div class="vd-row"><span>Kühlmittelstand</span><strong>{{MeinElch:engineDiagnostics_engineCoolantLevelWarning|map(NO_WARNING:✅ OK,WARNING:⚠️ Prüfen)}}</strong></div>
+    </div>
+    <div class="vd-card">
+      <div class="vd-card-head"><span>📍 Aktueller Standort</span><span style="font-size:.82rem;opacity:.8;">{{MeinElch:location_city}}</span></div>
+      <iframe class="vd-map-frame" src="https://openstreetmap.org/export/embed.html?layer=mapnik&amp;marker={{MeinElch:location_latitude}}%2C{{MeinElch:location_longitude}}"></iframe>
+      <div style="font-size:.82rem;opacity:.85;">{{MeinElch:location_road}} {{MeinElch:location_house_number}}, {{MeinElch:location_postcode}} {{MeinElch:location_city}}</div>
+    </div>
+  </div>
+  <div class="vd-footer">
+    <span>VIN: {{MeinElch:vehicle_vin}}</span>
+    <span>Letztes Update: {{MeinElch:lastUpdate}}</span>
+  </div>
+</div>

@@ -226,12 +226,23 @@ OSM-Iframes erlauben nur HTTPS auf openstreetmap.org/www.openstreetmap.org,
 Pfad `/export/embed.html`. Der Sanitizer setzt `sandbox=allow-scripts`,
 `referrerpolicy=no-referrer`, standardmaessig lazy loading; keine
 srcdoc-/Sandbox-/Berechtigungsattribute aus dem Quelltext.
+Numerische Reading-Platzhalter in Inline-Styles und im Querystring von OSM-URLs
+werden mit `int`/`round(0..6)` unterstuetzt. Templates setzen vor Aufloesung kein
+Style-/Quellattribut; rohe Readingwerte muessen endliche Dezimalzahlen sein,
+Koordinaten innerhalb -90..90 (Latitude) bzw. -180..180 liegen.
+Fehler werden sichtbar gemeldet, alte Werte nicht wiederverwendet.
+Stylesheet-Platzhalter bleiben gesperrt. `scroll-behavior` darf nicht durch
+eine Teilstringpruefung auf das alte `behavior:` abgelehnt werden.
+`map` unterstuetzt sowohl `key=value` als auch `key:value`.
 Externe CSS-Inhalte werden nicht nachgeladen oder rekursiv validiert.
 SVG-Paintattribute erlauben lokale
 `url(#id)`-Referenzen. Die erlaubte Attributmenge wird beim Pruefen und
 Sanitizing durch denselben Helper bestimmt. Backendpruefung in
-`t/01_fhemcms.t`, 77 Browserchecks in `t/78_freehtml.html` ueber den
+`t/01_fhemcms.t`, 99 Browserchecks in `t/78_freehtml.html` ueber den
 vorhandenen Runner. Keine KI-Integration aus #188 implementiert.
+`t/fixtures/volvo_dashboard.html` enthaelt das vollstaendige gemeldete
+Volvo-Dashboard; ausschliesslich die unvollstaendige Karten-URL wurde zu
+einer Einbettungs-URL mit numerischen Koordinaten korrigiert.
 
 ## Dokumentationen synchron halten
 

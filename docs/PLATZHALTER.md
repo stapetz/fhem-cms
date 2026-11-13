@@ -68,7 +68,7 @@ Filter werden mit `|` angehängt und von links nach rechts angewendet, z. B. `{{
 | `upper`, `lower` | Groß- oder Kleinschreibung |
 | `default(Text)` | Text, wenn der Wert leer ist |
 | `prefix(Text)`, `suffix(Text)` | Text vor oder hinter einen nicht leeren Wert setzen |
-| `map(on=An,off=Aus)` | Werte ersetzen; nicht aufgeführte Werte bleiben unverändert |
+| `map(on=An,off=Aus)` oder `map(on:An,off:Aus)` | Werte ersetzen; nicht aufgeführte Werte bleiben unverändert |
 
 Texte in Klammern dürfen kein `|`, `(`, `)`, `{` oder `}` enthalten.
 
@@ -113,6 +113,29 @@ Popups oder Navigation des CMS-Tabs, sowie `referrerpolicy="no-referrer"`.
 Die Karte und externe CSS-Ressourcen kontaktieren ihre Anbieter; importierte
 Stylesheets sind externe Inhalte und ihre weiteren Ressourcen werden nicht
 vom CMS-Sanitizer geprüft.
+
+Koordinaten können numerische Reading-Platzhalter im Querystring verwenden:
+
+```html
+<iframe src="https://openstreetmap.org/export/embed.html?layer=mapnik&amp;marker={{MeinElch:location_latitude}}%2C{{MeinElch:location_longitude}}"></iframe>
+```
+
+Latitude muss zwischen -90 und 90 liegen, Longitude zwischen -180 und 180.
+Ein fehlender, ungültiger oder außerhalb liegender Wert lädt keine Karte und
+zeigt einen Hinweis. Domain und Einbettungspfad dürfen keine Platzhalter enthalten.
+`https://openstreetmap.org{{Device:latitude}}...` ist keine gültige Einbettungs-URL.
+
+Numerische Platzhalter sind auch in Inline-Styles möglich:
+
+```html
+<div style="width:{{MeinElch:state_batteryChargeLevel|int}}%;"></div>
+```
+
+Erlaubt sind reine Zahlen sowie die Filter `int` und `round(0)` bis `round(6)`.
+Der Wert wird bei jeder Aktualisierung geprüft, bevor das Style-Attribut gesetzt
+wird. Beliebiger Readingtext wird nicht als CSS eingesetzt; ungültige Werte
+erzeugen einen Hinweis. Platzhalter in `<style>`-Blöcken bleiben gesperrt.
+`scroll-behavior:smooth` ist erlaubt; das alte ausführbare `behavior:` nicht.
 
 ### Bilder und Links aus Readings (dev)
 
