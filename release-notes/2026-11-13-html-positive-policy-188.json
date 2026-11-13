@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "HTML-Widget mit abgestimmter Positivliste",
+  "changes": [
+    "HTML/SVG und CSS verwenden abgestimmte Positivlisten mit modernen Layouts, Selektoren, Variablen, Filtern und Animationen; unbekannte CSS-Konstrukte werden abgelehnt.",
+    "Position fixed und gepruefte @import-Ressourcen bleiben erlaubt; eigener z-index ist auf ganze Zahlen bis 100 oder auto begrenzt.",
+    "Iframes erlauben beliebige HTTP-/HTTPS-Ziele und relative Pfade bei fester Sandbox; unsichere URL-Schemata und eigene Berechtigungsfreigaben bleiben gesperrt.",
+    "data-/ARIA-/alt-Attribute erhalten Livewerte als sicheren Text; lokale Sprungmarken und :target funktionieren ohne CMS-Seitenwechsel.",
+    "Gemeinsame Frontend-/Backend-Policytests sichern gleiche CSS-Listen; HTML-Vorbereitung fuer #188, keine KI-Integration."
+  ]
+}

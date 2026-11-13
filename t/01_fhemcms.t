@@ -569,12 +569,12 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
         is(FHEMCMS_ValidateConfig($hcfg), undef, "fhem-html accepts: $good");
     }
     for my $bad ('<script>alert(1)</script>', '<img src="javascript:x">', '<div onclick="x()">a</div>', '<a href="javascript:x">a</a>',
-        '<iframe src="x"></iframe>', '<div style="background:url(javascript:x)">a</div>',
-        '<style>@import "http://example.test/theme.css";</style>', '<!-- c', '<div', '<svg><foreignObject><p>x</p></foreignObject></svg>', "<p>a\x01</p>",
+        '<iframe src="javascript:x"></iframe>', '<div style="background:url(javascript:x)">a</div>',
+        '<style>@import "ftp://example.test/theme.css";</style>', '<!-- c', '<div', '<svg><foreignObject><p>x</p></foreignObject></svg>', "<p>a\x01</p>",
         '<style>.x{background:url(//example.test/x)}</style>', '<style>.x{background:url(data:image/svg+xml,x)}</style>',
         '<style>.x{background:u/**/rl(jav/**/ascript:x)}</style>', '<style>@import;</style>',
         '<style>.x{background:url("unterminated)}</style>', '<div style="background:url(&#106;avascript:x)"></div>',
-        '<iframe src="https://openstreetmap.org.evil.test/export/embed.html"></iframe>',
+        '<iframe src="data:text/html,x"></iframe>',
         '<iframe src="https://openstreetmap.org/export/embed.html" srcdoc="x"></iframe>',
         '<iframe src="https://openstreetmap.org/export/embed.html" sandbox="allow-same-origin"></iframe>',
         '<iframe src="https://openstreetmap.org{{Temp:latitude}}%2C{{Temp:longitude}}"></iframe>',

@@ -19,6 +19,7 @@ class FHEMCMSHtml extends HTMLElement {
     this.isNew = false;
     this.template = null;
     this.templateSource = null;
+    this.fragmentTarget = null;
   }
 
   connectedCallback() {
@@ -101,8 +102,9 @@ class FHEMCMSHtml extends HTMLElement {
             </ul>
             <pre>${EXAMPLE.replace(/</g, '&lt;')}</pre>
             <p>Erlaubt sind passive HTML-Struktur, Tabellen, Kommentare, Flex-/Grid-CSS, sichere Links und Bilder sowie statisches SVG (Formen, Pfade, Text und lokale Verläufe). <code>id</code>, <code>class</code>, <code>style</code>, <code>title</code>, ARIA-/data-Attribute und Reading-Attribute sind möglich. Attribute bitte in doppelten Anführungszeichen schreiben.</p>
-            <p>Bildquellen, Links und CSS-Ressourcen (<code>url()</code>, <code>@import</code>) dürfen lokale Pfade oder HTTPS-URLs verwenden. Einzelne Bild-/Link-Readings wie <code>&lt;img src="{{MeinElch:vehicle_images_exteriorImageUrl}}"&gt;</code> werden bei jeder Anzeige geprüft. CSS-Animationen mit <code>@keyframes</code> und alle Positionierungsarten sind erlaubt; feste Elemente bleiben innerhalb der Kachel.</p>
-            <p>Standortkarten dürfen <code>&lt;iframe src="https://www.openstreetmap.org/export/embed.html?…"&gt;&lt;/iframe&gt;</code> verwenden, mit begrenzter Sandbox. Externe Bilder, Styles und Karten kontaktieren ihren Anbieter. Skripte im eigenen HTML, Ereignis-Attribute, Formulare, andere Iframes und aktive SVG-Inhalte bleiben gesperrt.</p>
+            <p>CSS verwendet eine Positivliste für Eigenschaften, Funktionen und At-Regeln: moderne Layouts, Animationen, Filter, Variablen, <code>:has()</code> und Attributselektoren sind möglich. Alle Positionierungsarten inklusive <code>fixed</code> bleiben offen, auf die Kachel begrenzt. <code>z-index</code> darf höchstens 100 sein. Unbekannte Regeln und <code>:host</code> werden abgelehnt.</p>
+            <p>Bildquellen, Links, Iframes und CSS-Ressourcen (<code>url()</code>, <code>@import</code>) dürfen lokale Pfade oder HTTP-/HTTPS-URLs verwenden. Einzelne URL-Readings werden bei jeder Anzeige geprüft. Iframes haben keine Anbieterbeschränkung, aber eine feste Sandbox ohne Originfreigabe, Popups oder Topnavigation; Anbieter-/Browserregeln können Einbettungen dennoch blockieren. Externe Ressourcen kontaktieren ihre Anbieter; importierte Styles werden nicht rekursiv geprüft. Skripte im eigenen HTML, Eventhandler, Formulare, <code>srcdoc</code> und aktive SVG-Inhalte bleiben gesperrt.</p>
+            <p><code>data-value="{{Device:power|int}}"</code> und <code>data-state="{{Device:state}}"</code> setzen sicheren Attributtext für CSS. <code>data-cms-*</code> ist intern reserviert (Ausnahme: <code>data-cms-class</code>). Links auf <code>#id</code> und <code>:target</code> funktionieren innerhalb des Widgets ohne CMS-Seitenwechsel.</p>
             <p>Numerische Inline-Styles wie <code>width:{{MeinElch:state_batteryChargeLevel|int}}%;</code> und Kartenkoordinaten im Querystring unterstützen geprüfte Zahlen mit <code>int</code> oder <code>round(0)</code> bis <code>round(6)</code>. <code>scroll-behavior:smooth</code> ist erlaubt; <code>map(on:An,off:Aus)</code> funktioniert ebenso wie die Schreibweise mit <code>=</code>.</p>
             <p><a href="${HELP_URL}" target="_blank" rel="noopener noreferrer">Ausführliche Beschreibung (PLATZHALTER.md)</a></p>
           </details>
@@ -129,6 +131,27 @@ class FHEMCMSHtml extends HTMLElement {
     });
     $('[data-form]').elements.html.addEventListener('input', () => this.showDevices());
     $('[data-insert-placeholder]').addEventListener('click', () => this.insertPlaceholder());
+    $('[data-content]').addEventListener('click', (event) => {
+      const link = event.target.closest('a[href^="#"]');
+      if (!link) return;
+      const id = link.getAttribute('href').slice(1);
+      if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id)) return;
+      const target = [...$('[data-content]').querySelectorAll('[id]')].find(element => element.id === id);
+      event.preventDefault();
+      $('[data-content]').querySelector('[data-cms-fragment-warning]')?.remove();
+      if (!target) {
+        const warning = document.createElement('span');
+        warning.setAttribute('data-cms-fragment-warning', '');
+        warning.setAttribute('role', 'status');
+        warning.textContent = 'Sprungziel im HTML-Widget nicht gefunden';
+        $('[data-content]').append(warning);
+        return;
+      }
+      $('[data-content]').querySelectorAll('[data-cms-fragment-target]').forEach(element => element.removeAttribute('data-cms-fragment-target'));
+      target.setAttribute('data-cms-fragment-target', '');
+      this.fragmentTarget = id;
+      target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    });
     this.render();
   }
 
@@ -167,6 +190,10 @@ class FHEMCMSHtml extends HTMLElement {
       this.templateSource = html;
     }
     content.replaceChildren(renderTemplate(this.template, (device, reading) => this.lookup(device, reading)));
+    if (this.fragmentTarget) {
+      [...content.querySelectorAll('[id]')].find(element => element.id === this.fragmentTarget)
+        ?.setAttribute('data-cms-fragment-target', '');
+    }
     const title = this.widgetConfig.showTitle === false ? '' : (this.widgetConfig.title || '');
     this.shadowRoot.querySelector('[data-title]').textContent = title;
     this.shadowRoot.querySelector('[data-header]').hidden = !title;

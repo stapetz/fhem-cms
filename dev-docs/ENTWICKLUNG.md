@@ -211,19 +211,19 @@ Weitere Diagrammfeatures aus #170 sind nicht enthalten.
 Links/Bilder sowie eine statische SVG-Teilmenge. SVG-Namespace und gemischte
 Tag-/Attributschreibweisen bleiben beim Sanitizing erhalten; `foreignObject`,
 `use`, Skripte, Animationen und Eventhandler bleiben gesperrt.
-Bild-/Linkquellen erlauben lokale Pfade oder HTTPS sowie genau einen
+Bild-/Linkquellen erlauben lokale Pfade oder HTTP/HTTPS sowie genau einen
 ungefilterten Reading-Platzhalter als gesamten Attributwert. Unaufgeloeste
 URLs werden nur als Template-Metadaten gehalten; erst nach Substitution
 und erneuter URL-Pruefung wird `src`/`href` gesetzt. Ungueltige Livewerte
 erzeugen einen sichtbaren Hinweis. Platzhalter in Text bleiben Text.
 Bildquellen setzen `referrerpolicy=no-referrer`, Links `rel=noopener noreferrer`.
-CSS-Ressourcen in `url()` und `@import` erlauben lokale/HTTPS-URLs; Kommentare
+CSS-Ressourcen in `url()` und `@import` erlauben lokale/HTTP-/HTTPS-URLs; Kommentare
 werden vor der Pruefung entfernt, CSS-Escapes und ausfuehrbare Angaben
 bleiben gesperrt. Relative/absolute/fixed/sticky und `@keyframes` sind erlaubt.
 Die HTML-Kachel erhaelt inline `contain: layout paint !important`, damit
 feste Elemente nicht auf den gesamten CMS-Viewport ausgreifen.
-OSM-Iframes erlauben nur HTTPS auf openstreetmap.org/www.openstreetmap.org,
-Pfad `/export/embed.html`. Der Sanitizer setzt `sandbox=allow-scripts`,
+Iframes erlauben beliebige HTTP-/HTTPS-Ziele und relative Pfade, auch als
+einzelne URL-Readings; keine Anbieter-/Hostliste. Der Sanitizer setzt `sandbox=allow-scripts`,
 `referrerpolicy=no-referrer`, standardmaessig lazy loading; keine
 srcdoc-/Sandbox-/Berechtigungsattribute aus dem Quelltext.
 Numerische Reading-Platzhalter in Inline-Styles und im Querystring von OSM-URLs
@@ -238,11 +238,23 @@ Externe CSS-Inhalte werden nicht nachgeladen oder rekursiv validiert.
 SVG-Paintattribute erlauben lokale
 `url(#id)`-Referenzen. Die erlaubte Attributmenge wird beim Pruefen und
 Sanitizing durch denselben Helper bestimmt. Backendpruefung in
-`t/01_fhemcms.t`, 99 Browserchecks in `t/78_freehtml.html` ueber den
+`t/01_fhemcms.t` und Browserchecks in `t/78_freehtml.html` ueber den
 vorhandenen Runner. Keine KI-Integration aus #188 implementiert.
 `t/fixtures/volvo_dashboard.html` enthaelt das vollstaendige gemeldete
 Volvo-Dashboard; ausschliesslich die unvollstaendige Karten-URL wurde zu
 einer Einbettungs-URL mit numerischen Koordinaten korrigiert.
+Die CSS-Struktur wird durch `freehtml-css.js` und das Perl-Pendant tokenisiert:
+Quoting/Klammern/Regelkontexte, Eigenschaften, Funktionen und At-Regeln haben
+Positivlisten. Unbekannte Konstrukte werden abgelehnt; z-index erlaubt auto
+oder ganze Zahlen bis 100, keine var()/calc()-Umgehung.
+`t/79_freehtml_policy.test.js` prueft gleiche Eigenschafts-/Funktionsmengen
+und gemeinsame CSS-/URL-/HTML-Testfaelle aus `t/fixtures/freehtml_policy.json`.
+Livewerte in data-*/ARIA/alt werden als Attributtext auf dem geklonten Template
+eingesetzt, interne data-cms-* gesperrt ausser data-cms-class.
+Widgetlokale Links #id markieren interne Fragmentziele; :target wird fuer den
+Shadow-DOM-Vertrag umgeschrieben, ohne den CMS-Router zu navigieren.
+Importierte CSS-Dateien sind eine ausdruecklich freigegebene Ausnahme:
+deren Inhalt wird nicht durch Positivliste/z-index-Pruefung validiert.
 
 ## Dokumentationen synchron halten
 

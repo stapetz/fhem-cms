@@ -89,12 +89,46 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 
 ## Erlaubter Code
 
-- Elemente: `div span p h1 h2 h3 h4 strong b em i u small br hr ul ol li table thead tbody tr th td style`
+- Struktur: `div span p h1 h2 h3 h4 h5 h6 strong b em i u small br hr ul ol li section article header footer main aside nav figure figcaption details summary dl dt dd pre code blockquote sub sup mark`
+- Tabellen: `table thead tbody tfoot tr th td caption`
+- Medien/Navigation: `img a iframe`
+- SVG: `svg g path rect circle ellipse line polyline polygon text tspan defs linearGradient radialGradient stop title desc`; außerdem `<style>`.
 - Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class device reading filter`, außerdem `id`, passive `data-*`-/ARIA-Attribute, `role` und passende Link-/Bild-/SVG-Attribute.
-- `title` darf Platzhalter enthalten.
+- `title`, `alt`, ARIA-Attribute und `data-*` dürfen Live-Platzhalter enthalten. Sie werden als Attributtext gesetzt, niemals als HTML. `data-cms-*` ist intern reserviert; die dokumentierte Ausnahme `data-cms-class` bleibt erhalten.
 - **Zusätzlich erlaubt auf dev:** HTML-Kommentare, passive Struktur wie `section`, `figure`, `details/summary`, `pre/code`, Links und Bilder sowie statisches SVG mit Formen, Pfaden, Text und lokalen Verläufen. Flex-/Grid-Layout und Farben bleiben möglich.
-- **CSS auf dev:** `position: relative/absolute/fixed/sticky` und `@keyframes` sind möglich. Feste Elemente bleiben innerhalb der Kachel. `url()` und `@import` erlauben lokale Pfade oder HTTPS-Ressourcen; SVG-Füllungen dürfen `url(#lokaleId)` nutzen. CSS-Kommentare werden vor der Prüfung berücksichtigt; unsichere URL-Schemata und verschleierte ausführbare Angaben bleiben gesperrt.
-- **Nicht erlaubt:** `script`, Formulare, Ereignis-Attribute (`onclick` …), aktive SVG-Elemente (`foreignObject`, `use`, SVG-Animationselemente), beliebige Iframes, `javascript:`, `data:` und CSS-Escapes. Eine Verletzung zeigt der Dialog beim Speichern als Fehler.
+- **CSS-Positivliste auf dev:** Layout-/Größen-/Abstands-/Typografie-/Farb-/Rahmen-Eigenschaften, Flex/Grid, Positionierung, Scrollen, Animationen/Transitions, Filter/Backdrop-Filter, Schatten, Transformationen und SVG-Paintwerte sind erlaubt. Unbekannte Eigenschaften, Funktionen und At-Regeln werden abgelehnt. CSS-Variablen (`--name`, `var()`), `calc/min/max/clamp`, Gradienten und `drop-shadow()` bleiben möglich. Regeln unterstützen `@media`, `@supports`, `@container`, `@layer`, `@keyframes` und wie ausdrücklich freigegeben `@import`. Die genaue Eigenschafts-/Funktionsliste steht in [freehtml-css.js](../www/fhem-cms/js/freehtml-css.js).
+- **Layoutschutz:** `position: relative/absolute/fixed/sticky` bleibt erlaubt; feste Elemente bleiben innerhalb der Kachel. `z-index` akzeptiert `auto` oder ganze Zahlen bis **100**, keine Variablen/Formeln. Selektoren `:hover`, `:has(...)` und Attributselektoren funktionieren; `:host`/`:host-context` sind im eigenen CSS gesperrt. `url()` und `@import` erlauben lokale Pfade oder HTTP-/HTTPS-Ressourcen; SVG-Füllungen dürfen `url(#lokaleId)` nutzen.
+- **Nicht erlaubt:** `script`, Formulare, Ereignis-Attribute (`onclick` …), aktive SVG-Elemente (`foreignObject`, `use`, SVG-Animationselemente), `javascript:`, `data:`, `srcdoc`, eigene Sandbox-/Berechtigungsfreigaben und CSS-Escapes. Ungültiger Code zeigt einen Fehler beim Speichern.
+
+```html
+<style>
+[data-value^="-"] { color: #f59e0b; }
+[data-state="on"] { font-weight: 700; }
+</style>
+<div data-value="{{virtualSolar:battery_power|int}}" data-state="{{Lampe:state}}">
+  {{virtualSolar:battery_power|int}} W
+</div>
+```
+
+Sprungmarken `<a href="#slide1">` springen zum `id="slide1"` im selben Widget,
+ohne den CMS-Seitenrouter zu verändern. `:target` markiert dieses widgetlokale
+Ziel auch innerhalb des Shadow DOM. Fehlende Ziele werden sichtbar gemeldet.
+
+### Iframes für Grafana, Wetter und Karten (dev)
+
+```html
+<iframe src="http://grafana.local:3000/d-solo/panel" width="100%" height="300"></iframe>
+<iframe src="/radar/panel" loading="lazy"></iframe>
+<iframe src="{{Dashboard:panelUrl}}" title="Panel"></iframe>
+```
+
+Es gibt **keine Anbieter-/Hostliste**. Statische HTTP-/HTTPS-URLs und relative
+Pfade sowie einzelne URL-Readings sind erlaubt. Alle Frames erhalten die feste
+Sandbox `allow-scripts` ohne `allow-same-origin`, Popups oder Topnavigation und
+keinen Seiten-Referrer. `srcdoc`, eigene Sandbox und zusätzliche Berechtigungen
+bleiben gesperrt. Das eingebettete Angebot kann durch `X-Frame-Options`, CSP,
+Mixed-Content-Regeln oder benötigte Origin-/Storage-Rechte trotzdem blockiert
+werden; der Sanitizer umgeht diese Browser-/Anbieterregeln nicht.
 
 ### OpenStreetMap-Karte (dev)
 
@@ -105,14 +139,15 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 ```
 
 Verwende den **HTML-Einbettungscode** aus OpenStreetMap, nicht die normale
-Karten-Startseite. Erlaubt sind ausschließlich HTTPS-URLs auf
-`openstreetmap.org` oder `www.openstreetmap.org` mit `/export/embed.html`.
+Karten-Startseite. Für OpenStreetMap ist `/export/embed.html` der passende Pfad.
 Die Anzeige setzt eine Sandbox mit `allow-scripts`, ohne Originfreigabe,
 Popups oder Navigation des CMS-Tabs, sowie `referrerpolicy="no-referrer"`.
 `srcdoc`, Eventhandler und eigene Sandbox-/Berechtigungsfreigaben sind gesperrt.
 Die Karte und externe CSS-Ressourcen kontaktieren ihre Anbieter; importierte
 Stylesheets sind externe Inhalte und ihre weiteren Ressourcen werden nicht
-vom CMS-Sanitizer geprüft.
+vom CMS-Sanitizer geprüft. Die CSS-Positivliste und das `z-index`-Limit gelten
+für den eigenen Code, nicht rekursiv für importierte Stylesheets. Nur
+vertrauenswürdige Styles importieren; HTTP ist unverschlüsselt.
 
 Koordinaten können numerische Reading-Platzhalter im Querystring verwenden:
 
@@ -144,7 +179,7 @@ erzeugen einen Hinweis. Platzhalter in `<style>`-Blöcken bleiben gesperrt.
 <a href="https://example.org/" target="_blank">Informationen</a>
 ```
 
-`src` und `href` akzeptieren lokale Pfade oder HTTPS-URLs. Ein einzelner
+`src` und `href` akzeptieren lokale Pfade oder HTTP-/HTTPS-URLs. Ein einzelner
 ungefilterter Platzhalter als gesamter Attributwert wird bei jeder Anzeige
 aufgelöst und anschließend als URL geprüft. Fehlende oder ungültige Werte
 werden nicht geladen; ein sichtbarer Hinweis erscheint. Mischungen aus
