@@ -504,8 +504,8 @@ body:has(.cms-schema5-grid) {
 }
 
 .cms-widget-tools button {
-  width: 1.8rem;
-  height: 1.8rem;
+  width: 1.5rem;
+  height: 1.5rem;
   padding: 0;
   border: 1px solid var(--cms-border);
   border-radius: .45rem;

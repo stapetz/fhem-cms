@@ -521,7 +521,18 @@ test('real editor pointer drag and resize preserve appearance on a full-width ca
             cell:grid.getBoundingClientRect().width/grid.gridstack.getColumn() };
         })()`);
         await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
-        if (selector === '.cms-widget-drag') await pause(100);
+        if (selector === '.cms-widget-drag') {
+          await pause(100);
+          const hit = await evaluate(`(() => {
+            const grid = document.querySelector('.cms-grid-editable');
+            const widget = [...grid.children].find(el => el.gridstackNode?.id === '${id}');
+            const handle = widget.querySelector('.cms-widget-drag');
+            const target = document.elementFromPoint(${point.x}, ${point.y});
+            return target?.closest('.grid-stack-item') === widget
+              && target?.closest('.cms-widget-drag') === handle;
+          })()`);
+          assert.equal(hit, true, 'drag handle receives the initial pointer press');
+        }
         await command('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
         if (selector === '.cms-widget-drag') {
           // Gridstack sets its drag origin only after crossing the 3px activation threshold.
