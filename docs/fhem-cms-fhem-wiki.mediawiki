@@ -36,7 +36,7 @@ Dieser Artikel beschreibt den stabilen Funktionsstand '''1.9.0''' und das aktuel
 <code>/fhem/fhem-cms/admin.html</code> listet CMS-Devices und getrennt davon
 verwaiste CMS-Dateistrukturen. Erst nach <code>attr &lt;CMS&gt; adminMenu 1</code>
 fuehrt im Dateimenue des jeweiligen CMS
-'''Globale CMS Administration''' dorthin. Checkbox-Auswahl und die
+'''Globale FHEM-CMS Administration''' dorthin. Checkbox-Auswahl und die
 Bestaetigung <code>DELETE</code> erlauben Purge mit anschliessendem Delete
 (nur bei erfolgreichem Purge) bzw. separat die Bereinigung verwaister Daten.
 Konfiguration, Entwurf, Sicherungen und Medien werden unwiderruflich entfernt.

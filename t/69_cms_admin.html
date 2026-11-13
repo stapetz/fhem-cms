@@ -48,7 +48,7 @@ try {
   let reloads = 0;
   await mountCmsAdmin(body, client, () => { reloads++; });
   const $ = selector => doc.querySelector(selector);
-  check(doc.title === 'Globale CMS Administration' && $('h1').textContent === doc.title,
+  check(doc.title === 'Globale FHEM-CMS Administration' && $('h1').textContent === doc.title,
     'page heading and browser title use the global administration name');
   const openLink = $('#devices a');
   const openStyle = frame.contentWindow.getComputedStyle(openLink);
@@ -86,7 +86,7 @@ try {
     toolbar.append(menu);
     doc.body.append(toolbar);
     const style = node => frame.contentWindow.getComputedStyle(node);
-    check(link.textContent === 'Globale CMS Administration' && link.getAttribute('href') === '../admin.html',
+    check(link.textContent === 'Globale FHEM-CMS Administration' && link.getAttribute('href') === '../admin.html',
       `${editorClass}: administration label and destination`);
     check(['fontFamily', 'fontSize', 'fontWeight', 'color', 'backgroundColor', 'padding',
       'border', 'borderRadius', 'textAlign', 'textDecorationLine'].every(key => style(link)[key] === style(button)[key]),
