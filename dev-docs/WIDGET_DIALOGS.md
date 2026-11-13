@@ -19,6 +19,7 @@ Formulare bleiben kompakt.
 | FHEM-Wert | Titel, Device/Reading, Einheit und Icon | Allgemein, Datenquelle, Darstellung |
 | LinkWidget | Widgettitel, Linkraster, Linkeinstellungen und Asset-Auswahl | Widgettitel, Links und Layout |
 | SolarFlow | Titel, ein oder mehrere Devices/Readings, Einheiten und Berechnung | Allgemein, Datenquelle und Readings, Darstellung und Berechnung |
+| Solar und Energiefluss | Titel, Leistungs-/Ertragseinheiten, einzelne Device-/Reading-Quellen, benannte Ertragskarten und Summen | Allgemein, Datenquellen, Ertragskarten je Anlagenteil |
 | Status-Symbol | Titel, Device/Reading, Zuordnung der Reading-Werte zu Icon und Farbe | Allgemein, Datenquelle, Wertzuordnung und Darstellung |
 | Uhr/Datum | Titel, Uhrdarstellung und Zusatzangaben | Kompakt; Darstellungsoptionen sind bereits in Fieldsets gruppiert |
 | Freies HTML | Titel, HTML-Editor und Platzhalterhilfe | Kompakt; die optionale Hilfe ist bereits einklappbar |

@@ -157,6 +157,9 @@ for (const [name, fixtures] of [
     [['83_widget_theme_design.html', 600]]],
   ['All remaining widget designs inherit themes and preserve responsive content',
     [['84_widget_design.html', 600]]],
+  ['Solar und Energiefluss configures cross-device sources and preserves responsive live data',
+    [['85_solar_energy.html', 60], ['85_solar_energy.html?width=390', 60],
+      ['85_solar_energy.html?width=768&reduced=1', 60]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
       ['75_dialog_layout.html?width=852', 51]]],
@@ -393,6 +396,16 @@ for (const [name, fixtures] of [
           ? command => command('Emulation.setEmulatedMedia', { features: [{
             name: 'prefers-reduced-motion', value: fixture.includes('reduced=1') ? 'reduce' : 'no-preference',
           }] })
+          : fixture.startsWith('85_solar_energy.html')
+          ? async command => {
+            await command('Emulation.setDeviceMetricsOverride', {
+              width: Number(new URLSearchParams(fixture.split('?')[1]).get('width') || 1440),
+              height: 1000, deviceScaleFactor: 1, mobile: false,
+            });
+            await command('Emulation.setEmulatedMedia', { features: [{
+              name: 'prefers-reduced-motion', value: fixture.includes('reduced=1') ? 'reduce' : 'no-preference',
+            }] });
+          }
           : fixture.startsWith('75_dialog_layout.html')
           ? command => command('Emulation.setDeviceMetricsOverride', {
             width: Number(new URLSearchParams(fixture.split('?')[1]).get('width')),

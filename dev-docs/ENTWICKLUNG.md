@@ -82,6 +82,33 @@ behalten mindestens 48px Touchflaeche. Bestehende Raster bleiben unveraendert,
 nur neue Anruflisten reservieren mehr Anfangshoehe. Siehe Styleguide und
 `t/84_widget_design.html` sowie bestehende Groessen-/Funktionsregressionen.
 
+## Solar und Energiefluss (dev, 1.11.0-dev, Refs #200)
+
+Neuer Schema-5-Typ `fhem-solar-energy`, zusaetzlich zum unveraenderten SolarFlow.
+Der HTML-Entwurf wird nicht automatisch ersetzt. Die native Umsetzung zeigt
+das rechteckige Energieflussbild, bis zu acht frei benannte Ertragskarten
+und optionale Gesamtertraege. Alle Quellen liegen als `{device, reading}` in
+`readings` bzw. `sections[].readings`; hoechstens 20 unterschiedliche Devices.
+Ein gemeinsames Device kann im Dialog als Eingabehilfe gewaehlt werden.
+Keine fest verdrahteten Nutzerdaten oder Readingnamen.
+
+`js/solar-energy.js` prueft Quellen/Einheiten und bildet den numerischen Zustand;
+die Flussverteilung verwendet den bestehenden SolarFlow-Kern. Fehlende oder
+ungueltige Werte bleiben unbekannt und erzeugen keine erfundene Flussanimation.
+Hausverbrauch wird nur ohne explizite Hausquelle und mit vollstaendigen
+konfigurierten Leistungsquellen berechnet. Netz: + Einspeisung / - Bezug;
+Speicher: + Laden / - Entladen. Leistungsquellen W oder kW, Ertragsquellen
+Wh/kWh/MWh (gemeinsame Quelleneinheit), Ladestand in Prozent. Anzeigeleistung
+wird nach Watt umgerechnet; Ertraege werden in ihrer gewaehlten Einheit gezeigt.
+
+Factory, Live-Abos, Widgetauswahl, Device-first-Angebot und strikte
+Backendvalidierung sind angebunden. Duplizieren und Vorlagen verwenden die
+vorhandenen generischen Mechanismen inklusive verschachtelter Device-Ersetzung.
+Abhaengigkeit: gemeinsamer Designkern aus #199, deshalb zusammen abnehmen.
+Pruefung: `t/85_solar_energy.t`, `t/85_solar_energy.test.js` und Browserfixture
+`t/85_solar_energy.html` (Desktop/Phone/Tablet, reduzierte Bewegung, alle Themes,
+Dialogroundtrip, mehrere Devices, fehlende Werte und Liveupdates).
+
 ## Zentrale CMS-Verwaltung (dev, 1.10.0-dev, Refs #177)
 
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.

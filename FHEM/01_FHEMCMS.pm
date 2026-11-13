@@ -1002,7 +1002,8 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-slider'
                         && $widget->{type} ne 'fhem-select'
                         && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'
-                        && !($targetSchema == 5 && ($widget->{type} eq 'fhem-link' || $widget->{type} eq 'fhem-calllist'))));
+                        && !($targetSchema == 5 && ($widget->{type} eq 'fhem-link' || $widget->{type} eq 'fhem-calllist'
+                            || $widget->{type} eq 'fhem-solar-energy'))));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -1031,6 +1032,9 @@ sub FHEMCMS_ValidateConfig {
                     ['title', 'showTitle', 'unit', 'range', 'granularity', 'source']);
             } elsif ($widget->{type} eq 'fhem-calllist') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
+            } elsif ($widget->{type} eq 'fhem-solar-energy') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'sections', 'grid'],
+                    ['title', 'showTitle', 'powerUnit', 'energyUnit', 'threshold', 'deriveHome']);
             } elsif ($widget->{type} eq 'fhem-solarflow') {
                 # 'device' mit Reading-Namen als Text ist das aeltere Format (ein gemeinsames Device);
                 # invertGrid/invertBattery sind veraltet und wirkungslos, bleiben aber fuer gespeicherte Entwuerfe gueltig.
@@ -1081,7 +1085,7 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-link') {
                 my $linkError = FHEMCMS_ValidateLinks($widget->{links}, $config->{pages});
                 return $linkError if (defined($linkError));
-            } elsif ($widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-table'
+            } elsif ($widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-solar-energy'
                 && !($widget->{type} eq 'fhem-solarflow' && !exists($widget->{device}))) {
                 return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
             }
@@ -1183,6 +1187,49 @@ sub FHEMCMS_ValidateConfig {
                 for my $field ('showSeconds', 'showDate', 'showWeekday') {
                     return "Ungueltiger Wert fuer $field" if (!$isBool->($widget->{$field}));
                 }
+            } elsif ($widget->{type} eq 'fhem-solar-energy') {
+                my %seenSource;
+                my $checkSources = sub {
+                    my ($sources, $required, $optional) = @_;
+                    my $sourceError = $exact->($sources, 'readings', $required, $optional);
+                    return $sourceError if ($sourceError);
+                    for my $field (sort keys %{$sources}) {
+                        my $source = $sources->{$field};
+                        $sourceError = $exact->($source, "readings.$field", ['device', 'reading']);
+                        return $sourceError if ($sourceError);
+                        return "Ungueltige Quelle readings.$field"
+                            if (!$isName->($source->{device}) || !$isName->($source->{reading}));
+                        $seenSource{$source->{device}} = 1;
+                    }
+                    return;
+                };
+                $err = $checkSources->($widget->{readings}, ['pv'],
+                    ['home', 'grid', 'battery', 'soc', 'status', 'hour', 'day', 'month', 'year', 'total']);
+                return $err if ($err);
+                return 'sections muss eine Liste mit hoechstens 8 Ertragskarten sein'
+                    if (ref($widget->{sections}) ne 'ARRAY' || @{$widget->{sections}} > 8);
+                for my $section (@{$widget->{sections}}) {
+                    $err = $exact->($section, 'Ertragskarte', ['label', 'readings']);
+                    return $err if ($err);
+                    return 'Ungueltiger Name der Ertragskarte'
+                        if (!defined($section->{label}) || ref($section->{label})
+                            || $section->{label} !~ /\S/ || length($section->{label}) > 64
+                            || $section->{label} =~ /[\x00-\x1f\x7f]/);
+                    $err = $checkSources->($section->{readings}, [], ['total', 'hour', 'day', 'month', 'previousMonth', 'year']);
+                    return $err if ($err);
+                    return 'Ertragskarte benoetigt mindestens ein Reading' if (!keys %{$section->{readings}});
+                }
+                return 'Zu viele Devices (hoechstens 20)' if (keys(%seenSource) > 20);
+                for my $spec (['powerUnit', qr/\A(?:W|kW)\z/], ['energyUnit', qr/\A(?:Wh|kWh|MWh)\z/]) {
+                    my ($field, $pattern) = @{$spec};
+                    return "Ungueltiger Wert fuer $field"
+                        if (exists($widget->{$field}) && (!defined($widget->{$field}) || ref($widget->{$field})
+                            || $widget->{$field} !~ $pattern));
+                }
+                return 'Ungueltiger Schwellwert'
+                    if (exists($widget->{threshold}) && !$isInt->($widget->{threshold}, 0, 1000));
+                return 'Ungueltiger Wert fuer deriveHome'
+                    if (exists($widget->{deriveHome}) && !$isBool->($widget->{deriveHome}));
             } elsif ($widget->{type} eq 'fhem-solarflow') {
                 $err = $exact->($widget->{readings}, 'readings', ['pv'], ['home', 'grid', 'battery', 'soc']);
                 return $err if ($err);

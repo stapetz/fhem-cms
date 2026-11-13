@@ -13,6 +13,8 @@ import '../components/cms-link.js';
 import '../components/cms-chart.js';
 import '../components/cms-calllist.js';
 import { devicesOfSolarFlow } from '../components/cms-solarflow.js';
+import '../components/cms-solar-energy.js';
+import { solarEnergyDevices } from './solar-energy.js';
 import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
 import { isValidName } from './fhem-client.js';
 
@@ -25,6 +27,7 @@ const tags = new Map([
   ['fhem-icon', 'cms-icon'],
   ['fhem-table', 'cms-table'],
   ['fhem-solarflow', 'cms-solarflow'],
+  ['fhem-solar-energy', 'cms-solar-energy'],
   ['fhem-chart', 'cms-chart'],
   ['fhem-calllist', 'cms-calllist'],
   ['fhem-slider', 'cms-slider'],
@@ -34,7 +37,7 @@ const tags = new Map([
   ['fhem-link', 'cms-link'],
 ]);
 const withoutSnapshots = new Set(['fhem-button', 'fhem-clock', 'fhem-chart', 'fhem-link']);
-const groupedSnapshots = new Set(['fhem-html', 'text', 'fhem-table', 'fhem-solarflow']);
+const groupedSnapshots = new Set(['fhem-html', 'text', 'fhem-table', 'fhem-solarflow', 'fhem-solar-energy']);
 
 export function devicesOf(widget) {
   if (widget.type === 'fhem-table') {
@@ -42,6 +45,7 @@ export function devicesOf(widget) {
   }
   if (widget.type === 'fhem-chart' || widget.type === 'fhem-link') return [];
   if (widget.type === 'fhem-solarflow') return devicesOfSolarFlow(widget);
+  if (widget.type === 'fhem-solar-energy') return solarEnergyDevices(widget);
   if (widget.type === 'fhem-html') return widget.devices;
   if (widget.type === 'text') return extractDevices(widget.html || '').slice(0, MAX_FREE_DEVICES);
   return [widget.device];
@@ -67,7 +71,7 @@ export function groupSnapshots(mains, results) {
 }
 
 export function isLiveWidget(widget) {
-  return ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-select', 'fhem-solarflow', 'fhem-calllist'].includes(widget.type)
+  return ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-select', 'fhem-solarflow', 'fhem-solar-energy', 'fhem-calllist'].includes(widget.type)
     || (widget.type === 'text' && devicesOf(widget).length > 0);
 }
 

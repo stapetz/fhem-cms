@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Neues Widget Solar und Energiefluss",
+  "changes": [
+    "Solar und Energiefluss ergaenzt SolarFlow um ein rechteckiges Flussbild, frei benannte Ertragskarten und optionale Gesamtertraege.",
+    "Jedes Reading kann aus einem anderen Device kommen; bis zu acht Ertragskarten und 20 Devices sind konfigurierbar.",
+    "Die responsive Anzeige respektiert alle Seitenthemes und reduzierte Bewegung. Fehlende Werte bleiben unbekannt; bestehende HTML-Widgets werden nicht automatisch ersetzt."
+  ]
+}
