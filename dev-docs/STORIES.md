@@ -489,6 +489,7 @@ Alle Stories sind **Entwurf** und werden vor der Umsetzung besprochen. Gemeinsam
 - [x] Zeitraum (24h, 7d, 30d, 365d) und Granularität (auto, raw, 15m, 1h, 1d) wählbar; Besucher können lokal umschalten.
 - [x] Begrenzung: höchstens 400 Punkte (Aggregation mit Mittel/Min/Max), Zeilen- und Zeitlimits, 30 s Cache, strikte Validierung aller Parameter.
 - [x] Eigenes SVG ohne externe Bibliothek; DbLog-/FileLog-Verläufe und die Erkennung protokollierter Readings laufen begrenzt asynchron in `BlockingCall`-Workern.
+- [x] Ladezustände zeigen einen barrierefrei ausgezeichneten, wiederverwendbaren Spinner mit Unterstützung für reduzierte Bewegung.
 - [x] Der Einrichtungsassistent ergänzt Temperaturdiagramme nur für nachweislich geloggte Temperatur-Readings; DbLog wird bei `auto` vor FileLog gewählt (Refs #134).
 - [ ] Darstellung mit echten DbLog-/FileLog-Daten auf FHEM-Testinstanz prüfen.
 - [ ] Mehrere Reihen je Diagramm (spätere Erweiterung).

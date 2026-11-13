@@ -591,6 +591,9 @@ ein Zeitlimit von 20 Sekunden; das Frontend fragt ausstehende Ergebnisse alle
 500 ms für maximal 25 Sekunden ab. Die Erkennung protokollierter Readings für
 DbLog und FileLog läuft ebenfalls im Worker. Worker erhalten nur validierte
 Abfrageparameter und Device-Namen, keine Zugangsdaten.
+Widget-Ladezustände verwenden den wiederverwendbaren Statushelfer
+`www/fhem-cms/js/widget-status.js`; er stellt Spinner, `aria-busy` und
+`prefers-reduced-motion` gemeinsam bereit.
 Der Einrichtungsassistent ergänzt ein Temperaturdiagramm nur, wenn
 `logreadings` genau das Temperatur-Reading nachweist. Bei `auto` wird DbLog
 bevorzugt und andernfalls FileLog verwendet; die ermittelte Quelle wird im
