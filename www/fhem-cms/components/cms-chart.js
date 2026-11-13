@@ -198,6 +198,7 @@ class FHEMCMSChart extends HTMLElement {
 
   disconnectedCallback() {
     this.requestId += 1;
+    this.readingRequest = (this.readingRequest || 0) + 1;
     window.clearInterval(this.timer);
     this.timer = null;
   }
@@ -368,16 +369,24 @@ class FHEMCMSChart extends HTMLElement {
     if (!isValidName(device)) {
       return;
     }
+    const request = this.readingRequest = (this.readingRequest || 0) + 1;
     hint.textContent = 'Geloggte Readings werden gelesen …';
     error.textContent = '';
+    this.fillReadings([], '');
     try {
       const result = await this.services.logReadings(device, form.elements.source.value);
+      if (request !== this.readingRequest) return;
       this.fillReadings(result.readings, selected);
       hint.textContent = result.readings.length
         ? `Quelle: ${SOURCES[result.source] || result.source}; ${result.readings.length} geloggte Readings gefunden.`
-        : 'Für dieses Device wurden keine geloggten Readings gefunden.';
+        : 'Keine Daten zum Device vorhanden: keine geloggten Readings in der gewählten Quelle.';
+      if (!result.readings.length) {
+        this.fillReadings([], '');
+        error.textContent = 'Keine Daten zum Device vorhanden.';
+      }
     } catch (failure) {
-      this.fillReadings([], selected);
+      if (request !== this.readingRequest) return;
+      this.fillReadings([], '');
       hint.textContent = '';
       error.textContent = failure.message || 'Geloggte Readings konnten nicht gelesen werden';
     }
@@ -388,11 +397,8 @@ class FHEMCMSChart extends HTMLElement {
       const device = await openDevicePicker({ services: this.services, accept: () => true });
       if (device) {
         const form = this.shadowRoot.querySelector('[data-form]');
-        const reading = this.suggestionTracker.isEdited(form.elements.reading)
-          ? form.elements.reading.value
-          : undefined;
         form.elements.device.value = device.name;
-        await this.loadReadings(reading);
+        await this.loadReadings();
       }
     } catch (error) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
@@ -464,6 +470,7 @@ class FHEMCMSChart extends HTMLElement {
   }
 
   closeConfig(saved) {
+    this.readingRequest = (this.readingRequest || 0) + 1;
     const dialog = this.shadowRoot.querySelector('[data-dialog]');
     if (dialog.open) {
       dialog.close();

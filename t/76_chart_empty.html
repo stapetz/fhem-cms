@@ -1,0 +1,60 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Chart no data regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-chart.js';
+const checks = [];
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+};
+const chart = document.createElement('cms-chart');
+let saved = 0;
+chart.services = { history: async () => ({ points: [] }),
+  logReadings: async () => ({ source: 'dblog', readings: [] }),
+  saveWidget: async () => { saved++; } };
+chart.config = { id: 'chart', type: 'fhem-chart', device: 'PV', reading: 'power',
+  grid: { col: 1, row: 2, w: 6, h: 6 } };
+document.body.append(chart);
+try {
+  await chart.openConfig();
+  const form = chart.shadowRoot.querySelector('[data-form]');
+  const error = chart.shadowRoot.querySelector('[data-error]');
+  check(error.textContent === 'Keine Daten zum Device vorhanden.', 'Empty DbLog readings show explicit no-data error');
+  check(form.elements.reading.value === '' && form.elements.reading.options.length === 1,
+    'Previously saved reading cannot hide the absence of logged readings');
+  await chart.saveConfig();
+  check(saved === 0, 'No-data configuration cannot be saved with stale reading');
+  chart.services.logReadings = async () => ({ source: 'filelog', readings: [] });
+  await chart.loadReadings();
+  check(error.textContent === 'Keine Daten zum Device vorhanden.', 'Empty FileLog readings show the same clear message');
+  chart.services.logReadings = async () => { throw new Error('Database unavailable'); };
+  await chart.loadReadings();
+  check(error.textContent === 'Database unavailable', 'Read failure stays distinct from no-data result');
+  chart.services.logReadings = async () => ({ source: 'dblog', readings: ['temperature'] });
+  await chart.loadReadings();
+  check(!error.textContent && form.elements.reading.value === 'temperature', 'Retry with existing logged readings restores selection');
+  chart.draw({ points: [] });
+  check(chart.shadowRoot.querySelector('[data-message]').textContent === 'Keine Werte im gewählten Zeitraum',
+    'Empty history interval is distinct from absence of logging');
+  let finish;
+  chart.services.logReadings = () => new Promise(resolve => { finish = resolve; });
+  const pending = chart.loadReadings('power');
+  check(!form.elements.reading.value, 'Pending discovery removes stale selectable values');
+  chart.services.logReadings = async () => ({ source: 'dblog', readings: [] });
+  await chart.loadReadings();
+  finish({ source: 'dblog', readings: ['power'] });
+  await pending;
+  check(error.textContent === 'Keine Daten zum Device vorhanden.' && !form.elements.reading.value,
+    'Late old result cannot replace current empty-device state');
+  chart.closeConfig(false);
+  result.dataset.result = 'pass';
+  result.textContent = JSON.stringify({ status: 'pass', checks: checks.length, messages: checks });
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = JSON.stringify({ status: 'fail', error: error.stack, checks });
+} finally {
+  chart.remove();
+}
+</script>

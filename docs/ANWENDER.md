@@ -276,6 +276,17 @@ Die Readingauswahl wird neu vorbelegt, auch wenn zuvor manuell ein anderes
 Reading gewählt war. Das gilt für das gemeinsame Device und einzelne Zeilen
 im Mehr-Device-Modus. Eigene Bezeichner bleiben unverändert.
 
+### Diagramme ohne Logdaten (dev, ab 1.11.0-dev)
+
+Findet die Logprüfung für ein Device keine geloggten Readings, erscheint
+**Keine Daten zum Device vorhanden**. Der Diagrammdialog bietet dann keine
+alte Readingauswahl an; im Weg **Gerät hinzufügen** erklärt dieselbe Meldung,
+warum kein Diagramm vorgeschlagen wird. Laufende Prüfungen leeren die Auswahl,
+damit keine veraltete Quelle gespeichert wird. Fehler beim Zugriff auf DbLog
+oder FileLog werden getrennt angezeigt und nicht als „keine Daten“ ausgegeben.
+Bei vorhandener Protokollierung, aber einem leeren gewählten Zeitraum, lautet
+die Diagramm-Rückmeldung weiterhin **Keine Werte im gewählten Zeitraum**.
+
 ### Wert auswählen (dev, ab 1.11.0-dev)
 
 **Bearbeiten → Widget hinzufügen → Wert auswählen** zeigt diskrete FHEM-Set-Listen

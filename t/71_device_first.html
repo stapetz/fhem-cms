@@ -92,6 +92,17 @@ try {
   check(savedWidget.title === 'My own title' && savedWidget.device === 'Thermometer'
     && savedWidget.reading === 'temperature', 'Manual overrides persist through the standard configuration dialog');
   check(saved === 1 && live.pages[0].widgets.length === 0, 'Exactly one draft write leaves live configuration untouched');
+  panel = new Schema5WidgetPanel({ root, controller, services: { ...services,
+    logReadings: async () => ({ source: 'dblog', readings: [] }) },
+    pageId: 'start', token: 'token', deviceFirst: true, onClose() {} });
+  await until(() => document.querySelector('.cms-dp-dialog [data-list] button'));
+  document.querySelector('.cms-dp-dialog [data-list] button').click();
+  await until(() => !root.querySelector('.cms-device-first-choice').disabled);
+  check(root.querySelector('[role="status"]').textContent.includes('Keine Daten zum Device vorhanden'),
+    'Device-first flow explicitly explains absent logged readings');
+  check(![...root.querySelectorAll('.cms-widget-choice')].some(button => button.textContent === 'Diagramm'),
+    'No-data device does not offer a chart');
+  panel.close();
   let releaseList;
   panel = new Schema5WidgetPanel({ root, controller, services: { ...services,
     listAllDevices: () => new Promise(resolve => { releaseList = resolve; }) },

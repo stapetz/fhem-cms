@@ -144,7 +144,7 @@ for (const [name, fixtures] of [
   ['Device-Widgetdialoge schlagen passende Readings und Set-Werte vor',
     [['66_device_suggestions.html', 27]]],
   ['Device-first flow filters capabilities and prefills standard widget dialogs',
-    [['71_device_first.html', 21]]],
+    [['71_device_first.html', 23]]],
   ['Discrete set lists render configurable safe selection controls',
     [['72_selection.html', 15]]],
   ['Table labels follow actual device sources and preserve manual overrides',
@@ -152,6 +152,8 @@ for (const [name, fixtures] of [
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
       ['75_dialog_layout.html?width=852', 51]]],
+  ['Chart configuration distinguishes absent logging from an empty history interval',
+    [['76_chart_empty.html', 9]]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],

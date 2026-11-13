@@ -185,6 +185,9 @@ export class Schema5WidgetPanel {
         String(value).trim() !== '' && Number.isFinite(Number(value)))) {
         try {
           logInfo = await this.#services.logReadings(device.name, 'auto');
+          if (!logInfo.readings.length) {
+            warning = 'Keine Daten zum Device vorhanden: keine geloggten Readings. Diagrammvorschlag nicht verfügbar.';
+          }
         } catch (error) {
           warning = `Verlaufsprüfung fehlgeschlagen: ${error.message || String(error)}. Diagrammvorschlag nicht verfügbar.`;
         }

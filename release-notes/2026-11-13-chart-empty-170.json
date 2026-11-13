@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Klare Diagramm-Rueckmeldung bei fehlenden Logdaten",
+  "changes": [
+    "Diagramm-Konfiguration und Geraetevorschlaege melden fehlende geloggte Readings explizit als Keine Daten zum Device vorhanden.",
+    "Alte Readingauswahlen werden bei leerer Quelle oder laufender Pruefung entfernt; verspaetete Antworten ersetzen keinen neueren Zustand.",
+    "Fehler der Datenquelle und ein leerer ausgewaehlter Zeitraum bleiben unterscheidbar."
+  ]
+}

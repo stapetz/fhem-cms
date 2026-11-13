@@ -180,6 +180,19 @@ sowie Tabellen-Einheiten bei 1440, 390 und 852 Pixeln.
 Der LinkWidget-Drag-/Resize-Test verwendet für die vertikale Bewegung die
 tatsächliche GridStack-Zellenhöhe statt einer angenommenen quadratischen Zelle.
 
+## Diagramm-Leerzustand (dev, Teilumfang Refs #170)
+
+Leere erfolgreiche
+`logReadings`-Antworten ergeben sichtbar „Keine Daten zum Device vorhanden“,
+sowohl im Widgetdialog als auch in der gerätebasierten Vorschlagsliste.
+Während der Readingprüfung und bei Leer-/Fehlerantworten werden frühere
+Auswahlwerte entfernt. Gerätewechsel übernimmt keine alte Readingauswahl.
+Eine Requestkennung verhindert Überschreiben durch verspätete Ergebnisse;
+Close/Disconnect invalidiert laufende Prüfungen. Fehler der Datenquelle
+bleiben Fehler; leere historische Serien bleiben „Keine Werte im gewählten Zeitraum“.
+`t/76_chart_empty.html` und `t/71_device_first.html` prüfen diese Unterscheidung.
+Weitere Diagrammfeatures aus #170 sind nicht enthalten.
+
 ## Dokumentationen synchron halten
 
 Der FHEM-Wiki-Onepager wird als MediaWiki-Quelltext in
