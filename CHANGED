@@ -63,6 +63,15 @@ Administration
   Upload verhindern den Magic-Entwurf.
 - Bestehende Seiten werden nicht nachtraeglich veraendert.
 
+2026-11-13 - 1.11.0-dev: Volvo-Dashboard im freien HTML
+- Gueltiges scroll-behavior wird nicht mehr mit dem alten ausfuehrbaren
+  behavior-Attribut verwechselt.
+- Numerische Inline-Style-Readings und OSM-Koordinaten im Querystring werden
+  bei jeder Anzeige sicher aufgeloest.
+- map-Filter akzeptiert neben key=value auch key:value.
+- Vollstaendiges Volvo-Beispiel mit korrigierter Karten-URL als Backend- und
+  Browserregression aufgenommen.
+
 2026-11-13 - 1.11.0-dev: CSS-Gestaltung und OpenStreetMap im freien HTML
 - CSS url() und @import erlauben gepruefte lokale und HTTPS-Ressourcen.
 - Alle Positionierungsarten und CSS-Keyframe-Animationen sind erlaubt; feste
