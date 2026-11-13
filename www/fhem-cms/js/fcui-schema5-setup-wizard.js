@@ -85,7 +85,7 @@ export function schema5ReadingSuggestions(device) {
   });
 }
 
-export function schema5WidgetSuggestions(device) {
+function schema5BaseWidgetSuggestions(device) {
   if (!device || !isValidName(device.name) || !device.readings
     || typeof device.readings !== 'object' || Array.isArray(device.readings)) return [];
   const readings = device.readings;
@@ -144,7 +144,30 @@ export function schema5WidgetSuggestions(device) {
   return selected.map((suggestion) => ({ ...suggestion, type: 'fhem-value' }));
 }
 
-export function createSchema5MagicPlan(devices) {
+export function schema5TemperatureChartSuggestion(device, logInfo) {
+  if (!device || !isValidName(device.name) || !device.readings
+    || typeof device.readings !== 'object' || Array.isArray(device.readings)
+    || !logInfo || !Array.isArray(logInfo.readings)
+    || !/^(?:dblog|filelog)$/.test(logInfo.source)) return [];
+  const reading = ['temperature', 'measured-temp', 'measuredTemperature', 'temp']
+    .find((name) => Object.hasOwn(device.readings, name) && logInfo.readings.includes(name));
+  if (!reading) return [];
+  const alias = typeof device.alias === 'string' && device.alias.trim()
+    && !/[\x00-\x1f\x7f]/.test(device.alias) ? device.alias.trim() : device.name;
+  return [{
+    type: 'fhem-chart', device: device.name, reading, source: logInfo.source,
+    title: `${alias} — Temperaturverlauf`.slice(0, 64), label: 'Temperaturverlauf', unit: '°C',
+  }];
+}
+
+export function schema5WidgetSuggestions(device, logInfo) {
+  return [
+    ...schema5BaseWidgetSuggestions(device),
+    ...schema5TemperatureChartSuggestion(device, logInfo),
+  ];
+}
+
+export function createSchema5MagicPlan(devices, loggedReadingsByDevice = new Map()) {
   const grouped = groupSchema5DevicesByRoom(devices);
   const childrenByParent = new Map();
   for (const device of devices) {
@@ -163,7 +186,8 @@ export function createSchema5MagicPlan(devices) {
       const selected = child || device;
       resolved.set(selected.name, selected);
     }
-    const suggestions = [...resolved.values()].flatMap(schema5WidgetSuggestions);
+    const suggestions = [...resolved.values()].flatMap((device) =>
+      schema5WidgetSuggestions(device, loggedReadingsByDevice.get(device.name)));
     const temperatures = suggestions.filter((widget) =>
       widget.type === 'fhem-value' && widget.label === 'Temperatur');
     if (temperatures.length > 1) {
@@ -182,7 +206,8 @@ export function createSchema5MagicPlan(devices) {
     const widgets = suggestions
       .sort((a, b) => {
         const rank = (widget) => widget.type === 'fhem-solarflow' ? 0 : widget.type === 'thermostat' ? 1
-          : widget.type === 'fhem-switch' ? 2 : widget.type === 'fhem-table' ? 3 : 4;
+          : widget.type === 'fhem-switch' ? 2 : widget.type === 'fhem-chart' ? 3
+            : widget.type === 'fhem-table' ? 4 : 5;
         return rank(a) - rank(b) || a.device.localeCompare(b.device, 'de');
       }).slice(0, MAGIC_MAX_WIDGETS).map((widget) => ({ ...widget, included: true }));
     return { room, title: room, included: true, widgets, unsupported: [] };
@@ -204,9 +229,10 @@ export function createSchema5MagicPlan(devices) {
   return { pages: candidates, startRoom: candidates[0].room };
 }
 
-export function createSchema5RoomPlan(room, devices, selectedNames) {
+export function createSchema5RoomPlan(room, devices, selectedNames, loggedReadingsByDevice = new Map()) {
   const selected = devices.filter(({ name }) => selectedNames.has(name));
-  const widgets = selected.flatMap(schema5WidgetSuggestions)
+  const widgets = selected.flatMap((device) =>
+    schema5WidgetSuggestions(device, loggedReadingsByDevice.get(device.name)))
     .map((suggestion) => ({ ...suggestion, included: true }));
   const supportedDevices = new Set(widgets.map(({ device }) => device));
   return {
@@ -287,7 +313,6 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
   const widgetIds = new Set(config.pages.flatMap(({ widgets }) => widgets.map(({ id }) => id)));
   const columns = Number(config.settings.gridColumns);
   const scale = columns / 12;
-  const widgetsPerRow = 3;
   const widgetWidth = 4 * scale;
   const widgetHeight = 2 * scale;
   const firstRow = firstFreeRow(config, { widgets: [] });
@@ -298,24 +323,28 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
         title: plan.title.trim(), widgets: [] };
     const included = plan.widgets.filter(({ included }) => included);
     let row = firstRow;
-    let rowHeight = widgetHeight;
+    let col = 1;
+    let rowHeight = 0;
     included.forEach((suggestion, index) => {
-      if (index && index % widgetsPerRow === 0) {
+      const width = suggestion.type === 'fhem-chart' ? columns : widgetWidth;
+      const height = suggestion.type === 'fhem-chart' ? 6 * scale
+        : suggestion.type === 'fhem-table'
+          ? Math.max(2, Math.ceil((suggestion.rows.length + 2) / 2)) * scale
+          : suggestion.type === 'fhem-solarflow' ? 4 * scale : widgetHeight;
+      if (col > 1 && col + width - 1 > columns) {
         row += rowHeight;
-        rowHeight = widgetHeight;
+        col = 1;
+        rowHeight = 0;
       }
-      const height = suggestion.type === 'fhem-table'
-        ? Math.max(2, Math.ceil((suggestion.rows.length + 2) / 2)) * scale
-        : suggestion.type === 'fhem-solarflow' ? 4 * scale : widgetHeight;
       rowHeight = Math.max(rowHeight, height);
       const widget = {
         id: uniqueId(`setup-${pageIndex + 1}-${index + 1}`, widgetIds),
         type: suggestion.type || 'fhem-value',
         title: suggestion.title,
         grid: {
-          col: (index % widgetsPerRow) * widgetWidth + 1,
+          col,
           row,
-          w: widgetWidth,
+          w: width,
           h: height,
         },
       };
@@ -329,13 +358,23 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
         if (widget.type === 'thermostat') widget.readings = { ...suggestion.readings };
         else {
           widget.reading = suggestion.reading;
-          if (widget.type === 'fhem-switch') {
+          if (widget.type === 'fhem-chart') {
+            widget.source = suggestion.source;
+            if (suggestion.unit) widget.unit = suggestion.unit;
+          }
+          else if (widget.type === 'fhem-switch') {
             widget.on = suggestion.on;
             widget.off = suggestion.off;
           } else if (suggestion.unit) widget.unit = suggestion.unit;
         }
       }
       page.widgets.push(widget);
+      col += width;
+      if (col > columns) {
+        row += rowHeight;
+        col = 1;
+        rowHeight = 0;
+      }
     });
     if (!(reuseStart && plan === startPlan)) {
       config.pages.push(page);
@@ -384,6 +423,9 @@ export class Schema5SetupWizard {
   #roomIndex = 0;
   #pages = [];
   #startRoom = '';
+  #loggedReadings = new Map();
+  #temperatureWarnings = [];
+  #temperatureFailures = [];
   #busy = false;
   #saving = false;
   #closed = false;
@@ -448,7 +490,14 @@ export class Schema5SetupWizard {
     try {
       const devices = await this.#client.jsonlist('.*');
       if (this.#suspended || this.#closed) return;
-      const plan = createSchema5MagicPlan(devices);
+      const logs = await this.#loadTemperatureReadings(devices.filter(({ type }) => MAGIC_DEVICE_TYPES.has(type)));
+      if (this.#suspended || this.#closed) return;
+      if (logs.failures.length) {
+        throw new Error(logs.failures.join(' '));
+      }
+      this.#loggedReadings = logs.readings;
+      this.#temperatureWarnings = logs.warnings;
+      const plan = createSchema5MagicPlan(devices, this.#loggedReadings);
       this.#pages = plan.pages;
       this.#startRoom = plan.startRoom;
     } catch (error) {
@@ -461,6 +510,57 @@ export class Schema5SetupWizard {
       this.#busy = false;
     }
     if (!this.#suspended && !this.#closed) await this.#apply();
+  }
+
+  async #loadTemperatureReadings(devices) {
+    const candidates = [...new Map(devices.flatMap((device) => {
+      if (!device || !isValidName(device.name) || !device.readings
+        || typeof device.readings !== 'object' || Array.isArray(device.readings)) return [];
+      const reading = ['temperature', 'measured-temp', 'measuredTemperature', 'temp']
+        .find((name) => Object.hasOwn(device.readings, name));
+      return reading ? [[device.name, { device, reading }]] : [];
+    })).values()];
+    const readings = new Map();
+    const warnings = [];
+    const failures = [];
+    if (!candidates.length) return { readings, warnings, failures };
+    if (typeof this.#client.logReadings !== 'function') {
+      failures.push('Die geloggten Temperatur-Readings konnten mit diesem FHEM-Client nicht geprüft werden.');
+      return { readings, warnings, failures };
+    }
+
+    for (let offset = 0; offset < candidates.length; offset += 4) {
+      const batch = candidates.slice(offset, offset + 4);
+      this.#status.textContent = `Temperaturverläufe werden geprüft (${Math.min(offset + batch.length, candidates.length)}/${candidates.length}) …`;
+      const results = await Promise.all(batch.map(async ({ device, reading }) => {
+        try {
+          const result = await this.#client.logReadings(device.name);
+          if (!result || !/^(?:dblog|filelog)$/.test(result.source)
+            || !Array.isArray(result.readings)) {
+            throw new Error('FHEM lieferte eine ungültige Reading-Liste.');
+          }
+          return { device, reading, result };
+        } catch (error) {
+          return { device, reading, error };
+        }
+      }));
+      if (this.#suspended || this.#closed) return { readings, warnings, failures };
+      for (const { device, reading, result, error } of results) {
+        if (error) {
+          const message = error.message || String(error);
+          const detail = /Kein DbLog-Device|Kein DbLog- oder FileLog-Device/.test(message)
+            ? `${device.name}: keine DbLog-/FileLog-Quelle vorhanden; kein Temperaturverlauf ergänzt.`
+            : `${device.name}: Temperaturverlauf konnte nicht geprüft werden (${message}).`;
+          (detail.includes('keine DbLog-') ? warnings : failures).push(detail);
+          continue;
+        }
+        readings.set(device.name, result);
+        if (!result.readings.includes(reading)) {
+          warnings.push(`${device.name}: ${reading} ist nicht geloggt; kein Temperaturverlauf ergänzt.`);
+        }
+      }
+    }
+    return { readings, warnings, failures };
   }
 
   async #loadDevices() {
@@ -570,18 +670,33 @@ export class Schema5SetupWizard {
           this.#roomIndex += 1;
           this.#renderDevices();
         } else {
-          this.#createPreview();
+          return this.#createPreview();
         }
       }, 'cms-button cms-panel-save'));
     actions.push(button('Abbrechen', () => this.#cancel(), 'cms-button cms-panel-close'));
     this.#render(`Geräte in „${room}“ auswählen`, 'Nicht ausgewählte Geräte werden nicht in die Vorschau aufgenommen.', content, actions);
   }
 
-  #createPreview() {
-    this.#pages = this.#roomNames.map((room) =>
-      createSchema5RoomPlan(room, this.#rooms.get(room) || [], this.#selectedDevices.get(room)));
-    this.#startRoom = this.#pages[0]?.room || '';
-    this.#renderPreview();
+  async #createPreview() {
+    if (this.#busy || this.#closed) return;
+    this.#busy = true;
+    try {
+      const selectedNames = new Set(this.#roomNames.flatMap((room) =>
+        [...(this.#selectedDevices.get(room) || [])]));
+      const selectedDevices = [...new Map([...this.#rooms.values()].flat()
+        .filter(({ name }) => selectedNames.has(name)).map((device) => [device.name, device])).values()];
+      const logs = await this.#loadTemperatureReadings(selectedDevices);
+      if (this.#suspended || this.#closed) return;
+      this.#loggedReadings = logs.readings;
+      this.#temperatureWarnings = logs.warnings;
+      this.#temperatureFailures = logs.failures;
+      this.#pages = this.#roomNames.map((room) =>
+        createSchema5RoomPlan(room, this.#rooms.get(room) || [], this.#selectedDevices.get(room), this.#loggedReadings));
+      this.#startRoom = this.#pages[0]?.room || '';
+      this.#renderPreview();
+    } finally {
+      this.#busy = false;
+    }
   }
 
   #titleConflict(page) {
@@ -629,6 +744,12 @@ export class Schema5SetupWizard {
     });
     startLabel.append(startSelect);
     content.append(startLabel, element('p', 'Die Navigation wird vertikal angeordnet. Widgets auf allen Seiten werden automatisch angeordnet; dabei können sich auch vorhandene Widgetpositionen ändern.'));
+    for (const message of [...this.#temperatureWarnings, ...this.#temperatureFailures]) {
+      const warning = element('p', message);
+      warning.className = 'cms-status';
+      if (this.#temperatureFailures.includes(message)) warning.setAttribute('data-error', '');
+      content.append(warning);
+    }
     for (const page of this.#pages) {
       const section = element('section');
       section.className = 'cms-setup-wizard-page';
@@ -678,7 +799,8 @@ export class Schema5SetupWizard {
         const detail = widget.type === 'thermostat' ? 'Thermostat'
           : widget.type === 'fhem-switch' ? 'Schalter'
             : widget.type === 'fhem-table' ? 'Messwerte'
-              : widget.type === 'fhem-solarflow' ? 'SolarFlow' : `Wert: ${widget.reading}`;
+                : widget.type === 'fhem-solarflow' ? 'SolarFlow'
+                  : widget.type === 'fhem-chart' ? 'Temperaturverlauf' : `Wert: ${widget.reading}`;
         suggestions.append(checkbox(`${widget.title} (${widget.device} · ${detail})`, widget.included, (checked) => {
           widget.included = checked;
         }));

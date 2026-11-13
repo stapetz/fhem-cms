@@ -846,16 +846,40 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     $main::defs{HistLog} = {NAME => 'HistLog', TYPE => 'FileLog', REGEXP => 'Temp:.*', logfile => $logFile};
     %main::FHEMCMS_HISTORY_CACHE = ();
 
+    my @historyJobs;
+    my $failWorkerStart = 0;
+    local *main::BlockingCall = sub {
+        my ($worker, $arg, $finish, $timeout, $abort, $abortArg) = @_;
+        return {pid => 'WAITING:'} if ($failWorkerStart);
+        push(@historyJobs, {
+            worker => $worker, arg => $arg, finish => $finish, timeout => $timeout,
+            abort => $abort, abortArg => $abortArg,
+        });
+        return {pid => scalar(@historyJobs) + 1000};
+    };
+    my $pendingReadings = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Temp'));
+    is($pendingReadings->{status}, 'pending', 'FileLog reading discovery runs in a background worker');
+    is($historyJobs[0]{worker}, 'FHEMCMS_HistoryWorker', 'FileLog discovery uses the managed worker');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
     my $readings = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Temp'));
     is($readings->{source}, 'filelog', 'logreadings falls back to the FileLog');
     is_deeply($readings->{readings}, ['humidity', 'state', 'temperature'], 'logreadings lists the readings logged for the device');
 
+    my $fileHistoryPending = JSON::PP::decode_json(
+        FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'raw'));
+    is($fileHistoryPending->{status}, 'pending', 'FileLog history starts in a background worker');
+    is($historyJobs[-1]{worker}, 'FHEMCMS_HistoryWorker', 'FileLog history uses the managed worker');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[-1]{arg}));
     my $history = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'raw'));
     is($history->{source}, 'filelog', 'history reads the FileLog');
     is(scalar(@{$history->{points}}), 10, 'history returns only the matching numeric rows');
     is($history->{points}[0][1] + 0, 20, 'history keeps the values in time order');
 
     %main::FHEMCMS_HISTORY_CACHE = ();
+    my $bucketedPending = JSON::PP::decode_json(
+        FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', '1h'));
+    is($bucketedPending->{status}, 'pending', 'FileLog aggregation starts in a background worker');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[-1]{arg}));
     my $bucketed = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', '1h'));
     ok(scalar(@{$bucketed->{points}}) <= 3, 'history aggregates into hour buckets');
     my ($min, $max) = (1e9, -1e9);
@@ -875,24 +899,35 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     no warnings 'once';
     local *main::DbLog_Get = sub {
         my ($dbHash, $dbName, $in, $out, @rest) = @_;
+        return '{"data":[]}' if ($out eq 'webchart' && $rest[2] eq 'Temp');
         return '{"data":[{"READING":"power"},{"READING":"bad name"}]}' if ($out eq 'webchart');
         return ({tstamp => POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime(time() - 60)), value => '12.5 W'},
             {tstamp => 'broken', value => '1'});
     };
-    my @historyJobs;
-    local *main::BlockingCall = sub {
-        my ($worker, $arg, $finish, $timeout, $abort, $abortArg) = @_;
-        push(@historyJobs, {
-            worker => $worker, arg => $arg, finish => $finish, timeout => $timeout,
-            abort => $abort, abortArg => $abortArg,
-        });
-        return {pid => scalar(@historyJobs) + 1000};
-    };
     $main::defs{HistDb} = {NAME => 'HistDb', TYPE => 'DbLog'};
     %main::FHEMCMS_HISTORY_CACHE = ();
+    %main::FHEMCMS_HISTORY_JOBS = ();
+    @historyJobs = ();
+    my $fallbackPending = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Temp'));
+    is($fallbackPending->{status}, 'pending', 'DbLog-to-FileLog fallback is checked asynchronously');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
+    my $fallbackReadings = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Temp'));
+    is($fallbackReadings->{source}, 'filelog', 'logreadings falls back to FileLog when DbLog has no data');
+    ok((grep { $_ eq 'temperature' } @{$fallbackReadings->{readings}}),
+        'FileLog fallback preserves its logged readings');
+
+    %main::FHEMCMS_HISTORY_CACHE = ();
+    %main::FHEMCMS_HISTORY_JOBS = ();
+    @historyJobs = ();
+    my $dbReadingsPending = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Meter'));
+    is($dbReadingsPending->{status}, 'pending', 'DbLog reading discovery runs in a background worker');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
     my $dbReadings = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Meter'));
     is($dbReadings->{source}, 'dblog', 'logreadings prefers DbLog');
     is_deeply($dbReadings->{readings}, ['power'], 'logreadings drops invalid reading names from DbLog');
+    @historyJobs = ();
+    %main::FHEMCMS_HISTORY_JOBS = ();
+    %main::FHEMCMS_HISTORY_CACHE = ();
     my $pending = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Meter', 'power', '24h'));
     is($pending->{status}, 'pending', 'DbLog history starts in a background worker');
     is($historyJobs[0]{timeout}, $main::FHEMCMS_HISTORY_JOB_TIMEOUT, 'DbLog worker has a bounded timeout');
@@ -928,6 +963,13 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
         'a completed worker starts the next queued history request');
     FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($_->{arg})) for (@historyJobs[1 .. $#historyJobs]);
     is(scalar(keys %main::FHEMCMS_HISTORY_JOBS), 0, 'completed jobs are removed from the queue');
+
+    %main::FHEMCMS_HISTORY_CACHE = ();
+    %main::FHEMCMS_HISTORY_JOBS = ();
+    $failWorkerStart = 1;
+    like(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Unavailable'),
+        qr/Reading-Erkennung konnte nicht gestartet werden/, 'a failed worker start is returned as an explicit error');
+    is(scalar(keys %main::FHEMCMS_HISTORY_JOBS), 0, 'failed worker starts do not leave stuck jobs');
     delete $main::defs{HistDb};
     delete $main::defs{HistLog};
 }

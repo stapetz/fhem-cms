@@ -583,13 +583,20 @@ Widget-Vorschau und im Schema-5-Device-Einstieg verwendet.
 Beim Entfernen einer Diagrammkomponente werden laufende Verlaufsergebnisse
 verworfen; beim erneuten Verbinden wird der Verlauf neu angefordert. Das
 verhindert die Übernahme verspäteter Antworten nach einem Seitenwechsel.
-DbLog-Verläufe werden in begrenzten `BlockingCall`-Workern abgefragt. Identische
-laufende Anfragen werden zusammengefasst, erfolgreiche und fehlgeschlagene
-Ergebnisse 30 Sekunden zwischengespeichert, und höchstens vier Worker sowie 32
-offene Anfragen gleichzeitig zugelassen. Ein Worker hat ein Zeitlimit von
-20 Sekunden; das Frontend fragt ausstehende Ergebnisse alle 500 ms für maximal
-25 Sekunden ab. FileLog-Verläufe bleiben synchron. Worker erhalten nur die
-validierten Abfrageparameter und den DbLog-Gerätenamen, keine Zugangsdaten.
+DbLog- und FileLog-Verläufe werden in begrenzten `BlockingCall`-Workern
+abgefragt. Identische laufende Anfragen werden zusammengefasst, erfolgreiche
+und fehlgeschlagene Ergebnisse 30 Sekunden zwischengespeichert, und höchstens
+vier Worker sowie 32 offene Anfragen gleichzeitig zugelassen. Ein Worker hat
+ein Zeitlimit von 20 Sekunden; das Frontend fragt ausstehende Ergebnisse alle
+500 ms für maximal 25 Sekunden ab. Die Erkennung protokollierter Readings für
+DbLog und FileLog läuft ebenfalls im Worker. Worker erhalten nur validierte
+Abfrageparameter und Device-Namen, keine Zugangsdaten.
+Der Einrichtungsassistent ergänzt ein Temperaturdiagramm nur, wenn
+`logreadings` genau das Temperatur-Reading nachweist. Bei `auto` wird DbLog
+bevorzugt und andernfalls FileLog verwendet; die ermittelte Quelle wird im
+Diagramm festgehalten. Ein nicht geloggtes Reading erzeugt kein Diagramm.
+Fehler bei der Prüfung werden in der Vorschau sichtbar; Magic speichert bei
+fehlgeschlagener Prüfung keinen Entwurf.
 Beim Verlassen der bestehenden Oberfläche werden ausstehende Snapshots und
 Ereignisse geschlossener WebSockets verworfen; sie dürfen keine Abonnements
 erneut starten. Eine vollständige Umstellung auf den zentralen FCUI-Controller

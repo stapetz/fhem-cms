@@ -65,7 +65,11 @@ try {
   editor = new Schema5Editor({ GridStack, root, controller, browser: window,
     services: { iconUrl: () => '', setCommand: async () => { throw new Error('No device commands'); } },
     client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
-      jsonlist: async () => devices, subscribe() {}, unsubscribe() {} } });
+      jsonlist: async () => devices,
+      logReadings: async (device) => ({
+        source: 'dblog', readings: device === 'Device17' ? ['temperature'] : [],
+      }),
+      subscribe() {}, unsubscribe() {} } });
   await editor.start();
   check(!!root.querySelector('[data-panel="setup"]'), 'first-run wizard opens');
   check(![...root.querySelectorAll('button')].some((entry) => entry.textContent === 'Abbrechen'),
@@ -75,6 +79,7 @@ try {
   button('Weiter');
   for (let i = 0; i < 17; i++) button('Nächster Raum');
   button('Vorschau');
+  await waitFor(() => root.querySelector('.cms-setup-wizard-preview select'));
   const select = root.querySelector('.cms-setup-wizard-preview select');
   select.value = 'Raum 18';
   select.dispatchEvent(new Event('change'));
@@ -90,6 +95,9 @@ try {
   check(state.draft.pages.length === 18, 'one page per room, no duplicate empty start');
   check(state.draft.pages[0].id === 'start', 'chosen room is start');
   check(state.draft.pages[0].widgets[0].type === 'thermostat', 'thermostat on start page');
+  check(state.draft.pages.some((page) => page.widgets.some((widget) => widget.type === 'fhem-chart'
+    && widget.device === 'Device17' && widget.reading === 'temperature' && widget.source === 'dblog')),
+  'logged thermostat temperature gets an explicit-source chart');
   check(state.draft.pages[1].widgets[0].type === 'fhem-switch', 'switch on another page');
   check(location.hash === '#/start', 'chosen start page displayed');
   check(nav.clientWidth + 0.5 >= required.width && nav.clientHeight + 0.5 >= required.height,
@@ -108,14 +116,22 @@ try {
   state = { live, draft: null, token: 'a'.repeat(64), setupIdentity: 'a'.repeat(64) };
   editor = new Schema5Editor({ GridStack, root, controller, browser: window, services: {},
     client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
-      jsonlist: async () => devices, subscribe() {}, unsubscribe() {} } });
+      jsonlist: async () => devices,
+      logReadings: async (device) => ({
+        source: 'dblog', readings: device === 'Device17' ? ['temperature'] : [],
+      }),
+      subscribe() {}, unsubscribe() {} } });
   await editor.start();
   check(!root.querySelector('[data-panel="setup"]'), 'same instance does not prompt again');
   editor.stop();
   state = { ...state, setupIdentity: 'b'.repeat(64) };
   editor = new Schema5Editor({ GridStack, root, controller, browser: window, services: {},
     client: { endpoint: { pathname: '/wizard-test' }, cmsDevice: 'WizardTest',
-      jsonlist: async () => devices, subscribe() {}, unsubscribe() {} } });
+      jsonlist: async () => devices,
+      logReadings: async (device) => ({
+        source: 'dblog', readings: device === 'Device17' ? ['temperature'] : [],
+      }),
+      subscribe() {}, unsubscribe() {} } });
   await editor.start();
   check(!!root.querySelector('[data-panel="setup"]'), 'recreated instance prompts despite same device name');
   button('Magic - auf gut Glück');

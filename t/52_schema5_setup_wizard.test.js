@@ -9,6 +9,7 @@ import {
   groupSchema5DevicesByRoom,
   isSchema5InitialSetup,
   schema5ReadingSuggestions,
+  schema5TemperatureChartSuggestion,
   schema5WidgetSuggestions,
   Schema5SetupWizard,
 } from '../www/fhem-cms/js/fcui-schema5-setup-wizard.js';
@@ -82,6 +83,41 @@ test('setup wizard detects thermostats and switches only with corresponding avai
   assert.ok(schema5WidgetSuggestions({ name: 'Light', readings: { state: 'off' },
     sets: 'on:slider,0,1,100 off:noArg' }).every(({ type }) => type === 'fhem-value'));
   assert.deepEqual(schema5WidgetSuggestions({ name: 'Unknown', readings: { custom: 'x' } }), []);
+});
+
+test('wizard adds only logged temperature charts and prefers the detected source explicitly', () => {
+  const device = { name: 'Thermometer', alias: 'Wohnzimmer', readings: { temperature: '21' } };
+  assert.deepEqual(schema5TemperatureChartSuggestion(device, {
+    source: 'dblog', readings: ['temperature'],
+  }), [{
+    type: 'fhem-chart', device: 'Thermometer', reading: 'temperature', source: 'dblog',
+    title: 'Wohnzimmer — Temperaturverlauf', label: 'Temperaturverlauf', unit: '°C',
+  }]);
+  assert.deepEqual(schema5TemperatureChartSuggestion(device, {
+    source: 'filelog', readings: ['temperature'],
+  })[0].source, 'filelog');
+  assert.deepEqual(schema5TemperatureChartSuggestion(device, {
+    source: 'dblog', readings: ['state'],
+  }), []);
+  assert.deepEqual(schema5TemperatureChartSuggestion(device, null), []);
+
+  const plan = createSchema5RoomPlan('Wohnzimmer', [device], new Set(['Thermometer']),
+    new Map([['Thermometer', { source: 'filelog', readings: ['temperature'] }]]));
+  const config = buildSchema5SetupConfig(initialConfig(), [plan], 'Wohnzimmer');
+  const chart = config.pages[0].widgets[0];
+  assert.deepEqual({ type: chart.type, device: chart.device, reading: chart.reading, source: chart.source, unit: chart.unit },
+    { type: 'fhem-chart', device: 'Thermometer', reading: 'temperature', source: 'filelog', unit: '°C' });
+  assert.deepEqual(chart.grid, { col: 1, row: 2, w: 12, h: 6 });
+  const validation = spawnSync('perl', ['-e', `
+    use strict; use warnings; use JSON::PP ();
+    sub Log3 {}
+    require './FHEM/01_FHEMCMS.pm';
+    local $/;
+    my $config = JSON::PP->new->utf8->decode(<STDIN>);
+    my $error = FHEMCMS_ValidateConfig($config, 5);
+    if (defined $error) { print STDERR $error; exit 1; }
+  `], { input: JSON.stringify(config), encoding: 'utf8' });
+  assert.equal(validation.status, 0, validation.stderr);
 });
 
 test('wizard groups multiple sensor readings into a valid table with enough space', () => {
@@ -344,7 +380,10 @@ test('wizard preview selects a start room, shows widget types and saves only aft
       { name: 'Heat', rooms: ['Wohnzimmer'], readings: { temperature: '21', desiredTemperature: '22' },
         sets: 'desiredTemperature:slider,5,0.5,30' },
     ];
-    new Schema5SetupWizard({ root, controller, client: { jsonlist: async () => devices },
+    new Schema5SetupWizard({ root, controller, client: {
+      jsonlist: async () => devices,
+      logReadings: async () => ({ source: 'dblog', readings: ['temperature'] }),
+    },
       fitNavigation: (candidate) => { fitted += 1; return candidate; },
       onClose: (value) => { outcome = value; } });
     const action = (label) => {
@@ -366,12 +405,15 @@ test('wizard preview selects a start room, shows widget types and saves only aft
     const text = (node) => [node.textContent || '', ...node.children.flatMap(text)];
     assert.ok(text(preview).some((entry) => entry.includes('Thermostat')));
     assert.ok(text(preview).some((entry) => entry.includes('Schalter')));
+    assert.ok(text(preview).some((entry) => entry.includes('Temperaturverlauf')));
     assert.equal(preview.children[3].children[1].children[0].disabled, true, 'selected start title is fixed');
     await action('Als Entwurf übernehmen');
     assert.equal(fitted, 1);
     assert.equal(saved.navigation.orientation, 'vertical');
     assert.equal(saved.pages[0].id, 'start');
     assert.equal(saved.pages[0].widgets[0].type, 'thermostat');
+    assert.equal(saved.pages[0].widgets[1].type, 'fhem-chart');
+    assert.equal(saved.pages[0].widgets[1].source, 'dblog');
     assert.equal(saved.pages[1].widgets[0].type, 'fhem-switch');
     assert.equal(outcome.saved, true);
   } finally {
