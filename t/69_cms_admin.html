@@ -48,8 +48,23 @@ try {
   const openLink = $('#devices a');
   const openStyle = frame.contentWindow.getComputedStyle(openLink);
   check(openLink.classList.contains('cms-button') && openStyle.textDecorationLine === 'none'
-    && openStyle.display === 'inline-flex' && openLink.getBoundingClientRect().height >= 48,
+    && ['flex', 'inline-flex'].includes(openStyle.display) && openLink.getBoundingClientRect().height >= 48,
     'open CMS link uses a touch-sized styled button');
+  for (const width of [760, 360]) {
+    frame.style.width = `${width}px`;
+    const row = openLink.closest('article');
+    const rowStyle = frame.contentWindow.getComputedStyle(row);
+    const rect = openLink.getBoundingClientRect();
+    const labelRect = row.querySelector('label').getBoundingClientRect();
+    const rightEdge = row.getBoundingClientRect().right
+      - parseFloat(rowStyle.paddingRight) - parseFloat(rowStyle.borderRightWidth);
+    check(Math.abs(rect.right - rightEdge) < 1 && rect.left >= labelRect.right
+      && Math.abs((rect.top + rect.bottom) / 2 - (labelRect.top + labelRect.bottom) / 2) < 1,
+    `open CMS button is right-aligned beside selection at ${width}px`);
+    check(openStyle.borderStyle === 'solid' && parseFloat(openStyle.borderWidth) >= 1
+      && openStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' && rect.height >= 48,
+    `open CMS action has visible button border and background at ${width}px`);
+  }
   for (const editorClass of ['cms-schema5-editor', 'cms-editor']) {
     const toolbar = doc.createElement('div');
     toolbar.className = `cms-toolbar ${editorClass}`;

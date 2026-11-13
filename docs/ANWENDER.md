@@ -43,6 +43,7 @@ Die zentrale Verwaltung ist direkt unter `/fhem/fhem-cms/admin.html` erreichbar
 (bei abweichendem FHEMWEB-Pfad entsprechend anpassen). In jedem CMS oeffnet
 **Datei → Globale CMS Administration** dieselbe Seite in einem neuen Tab,
 auch im bisherigen Schema-4-Editor.
+Der Button **CMS oeffnen** steht rechts in der jeweiligen CMS-Zeile.
 
 - CMS-Devices per Checkbox auswaehlen und **Purge + Delete** starten.
 - Der Bestaetigungsdialog nennt alle ausgewaehlten Devices. Erst die Eingabe

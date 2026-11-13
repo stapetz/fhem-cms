@@ -27,7 +27,9 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 Beide Editor-Versionen verlinken sie im Dateimenue mit
 `Globale CMS Administration` (auch Seitentitel). Der Menue-Link nutzt dieselbe
 Buttonformatierung wie die anderen Eintraege; `CMS oeffnen` erscheint auf der
-Verwaltungsseite als Button-Link. `FHEM/lib/FHEMCMS/Admin.pm` registriert
+Verwaltungsseite rechtsbuendig neben Checkbox und Device-Namen als Button-Link
+mit sichtbarem Rahmen, Hintergrund und mindestens 48px Hoehe.
+`FHEM/lib/FHEMCMS/Admin.pm` registriert
 `/fhemcms-admin` als FHEMWEB-Erweiterung; private Verzeichnisse werden nicht
 statisch ausgeliefert. Das Modul muss geladen sein, auch wenn kein CMS mehr existiert.
 
