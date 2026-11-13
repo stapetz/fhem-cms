@@ -2876,7 +2876,9 @@ use FHEMWEB and FHEM permissions.</p>
     fuer die direkte URL; FHEMWEB-Berechtigungen bleiben erforderlich.
     Sie bietet bestaetigte Sammelloeschung (Purge vor Delete) und separat
     die Bereinigung eindeutig zuordenbarer verwaister CMS-Verzeichnisse.
-    FHEMWEB-Rechte und aktivierter CSRF-Schutz sind erforderlich; kein
+    FHEMWEB-Rechte bleiben erforderlich. Die CSRF-Pruefung folgt der
+    FHEMWEB-Einstellung: Bei explizitem <code>csrfToken none</code> entfaellt
+    sie, andernfalls wird ein gueltiger Token verlangt. Kein
     automatisches Backup und kein globales <code>save</code>.</li>
     <li>Entwurf, Veroeffentlichen, Verwerfen, Sicherungen und Bilder werden
     vorzugsweise im CMS-Editor bedient. Die dort verwendeten technischen

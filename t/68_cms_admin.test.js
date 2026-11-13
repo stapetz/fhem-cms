@@ -66,8 +66,15 @@ test('admin client uses FHEMWEB prefix, fresh CSRF and one non-retried destructi
       {items: selected, token: 'a'.repeat(64), confirmation: 'DELETE'});
     globalThis.fetch = async () => { throw new Error('Connection lost'); };
     await assert.rejects(client.remove(selected, 'a'.repeat(64)), /Connection lost/);
-    globalThis.fetch = async () => new Response('');
-    await assert.rejects(client.remove(selected, 'a'.repeat(64)), /CSRF/);
+    let postsWithoutToken = 0;
+    globalThis.fetch = async (url, options) => {
+      if (options.method !== 'POST') return new Response('');
+      postsWithoutToken++;
+      assert.equal(options.body.has('fwcsrf'), false);
+      return Response.json({results: [{name: 'CMS', kind: 'device', ok: true, message: 'Erledigt'}]});
+    };
+    assert.equal((await client.remove(selected, 'a'.repeat(64)))[0].ok, true);
+    assert.equal(postsWithoutToken, 1, 'explicitly disabled CSRF does not block the client');
     globalThis.fetch = async url => String(url).endsWith('?XHR=1')
       ? new Response('', {headers: {'X-FHEM-csrfToken': 'fresh'}})
       : Response.json({results: []});

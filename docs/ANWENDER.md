@@ -67,8 +67,10 @@ Browsercaches.
 - Hoechstens 20 Eintraege pro Vorgang. Ein zwischenzeitlich geaenderter Bestand
   muss neu geladen und bestaetigt werden.
 - Es gelten die FHEMWEB-Berechtigungen fuer `get`, `set`, `delete` und den
-  jeweiligen Device-Namen. Loeschen erfordert einen aktivierten
-  FHEMWEB-CSRF-Token. Die Seite hat keine eigene Anmeldung.
+  jeweiligen Device-Namen. Die CSRF-Pruefung folgt der FHEMWEB-Konfiguration:
+  Bei ausdruecklichem `csrfToken none` ist Loeschen ohne CSRF-Token moeglich;
+  ansonsten ist ein gueltiger Token erforderlich. Die WEB-Einstellung wird
+  nicht automatisch geaendert. Die Seite hat keine eigene Anmeldung.
 
 Die Verwaltung erstellt kein automatisches Backup und fuehrt kein globales
 `save` aus. Die geaenderte FHEM-Konfiguration nach Pruefung bei Bedarf in

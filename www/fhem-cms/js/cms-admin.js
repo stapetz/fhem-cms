@@ -30,9 +30,9 @@ export class CmsAdminClient {
         options);
       if (!tokenResponse.ok) throw new Error(`CSRF-Abfrage: HTTP ${tokenResponse.status}`);
       const token = tokenResponse.headers.get('X-FHEM-csrfToken');
-      if (!token) throw new Error('Löschen erfordert einen aktivierten FHEMWEB-CSRF-Token');
       options.method = 'POST';
-      options.body = new URLSearchParams({ fwcsrf: token, payload: JSON.stringify(payload) });
+      options.body = new URLSearchParams({ payload: JSON.stringify(payload) });
+      if (token) options.body.set('fwcsrf', token);
     }
     const response = await fetch(url, options);
     if (!response.ok) throw new Error(`CMS-Verwaltung: HTTP ${response.status}`);

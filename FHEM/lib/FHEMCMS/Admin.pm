@@ -153,8 +153,9 @@ sub FHEMCMS_AdminEndpoint {
     } elsif ($operation eq 'delete') {
         my ($method) = split(/\s+/, $FW_httpheader[0] // '');
         my $expected = $defs{$FW_wname}{CSRFTOKEN};
-        if ($method ne 'POST' || !defined($expected) || $expected eq ''
-            || ($FW_webArgs{fwcsrf} // '') ne $expected) {
+        my $csrfDisabled = ($attr{$FW_wname}{csrfToken} // '') eq 'none';
+        if ($method ne 'POST' || (!$csrfDisabled && (!defined($expected) || $expected eq ''
+            || ($FW_webArgs{fwcsrf} // '') ne $expected))) {
             $result = {error => 'POST mit gueltigem FHEMWEB-CSRF-Token erforderlich'};
         } elsif (length($FW_webArgs{payload} // '') > 16384) {
             $result = {error => 'Verwaltungsanfrage ist zu gross'};
