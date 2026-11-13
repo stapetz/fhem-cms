@@ -35,6 +35,12 @@ Administration
 - Widgets mit bislang kollidierenden IDs lassen sich zwischen Seiten
   verschieben; Live bleibt bis zur Veroeffentlichung unveraendert.
 
+2026-11-13 - 1.11.0-dev: Tabellen uebernehmen die Themeflaeche
+- Die neue Tabellendarstellung verwendet wieder die aeussere Themeflaeche
+  einschliesslich Liquid-Glass-Transparenz.
+- Spaltenkoepfe bleiben transparent statt eine zusaetzliche Themeflaeche ueber
+  die Tabelle zu legen.
+
 2026-11-13 - 1.11.0-dev: Tabellenbezeichner passend zu den Datenquellen
 - Tabellen ohne eigenen Bezeichner zeigen bei einem Device den Readingnamen,
   bei mehreren Devices Geraetename: Readingname.
@@ -58,6 +64,12 @@ Administration
 - Titel-, Spalten-, Summen- und Einheitenoptionen sowie gespeicherte
   Konfigurationen bleiben erhalten; andere Widgets werden noch nicht
   umgestellt.
+
+2026-11-13 - 1.11.0-dev: SolarFlow zeigt nur das themegerechte Flussbild
+- SolarFlow zeigt wieder ausschliesslich das animierte Diagramm mit Werten in
+  den Stationen, ohne zusaetzliche Wertekacheln.
+- Die aeussere Flaeche folgt dem Seitentheme und seiner Glass-Transparenz;
+  Stationen nutzen nur eine dezente neutrale Ueberlagerung.
 
 2026-11-13 - 1.11.0-dev: SolarFlow im klaren Widget-Design
 - SolarFlow uebernimmt das neue Design mit klarer Kopfzeile, dezenter
@@ -169,6 +181,14 @@ Administration
   Slider und Auswahllisten ein zuordenbares Reading.
 - Die vollstaendige Widgetbibliothek bleibt fuer individuelle Zuordnungen
   verfuegbar.
+
+2026-11-13 - 1.11.0-dev: Uhr und Links im themegerechten Google-Design
+- Uhr und Linkwidget verwenden klare Titel, Systemschrift und dezente
+  transparente Teilflaechen, ohne das Seitentheme zu ersetzen.
+- Der verbindliche Themevertrag erhaelt aktuelle Glass-Transparenz, Blur, Glanz
+  und geerbte Textfarben auch bei laufenden Themewechseln.
+- Digitale und analoge Uhr, Datum, Sekunden, Linkziele, Bilder und gespeicherte
+  Layouts bleiben erhalten.
 
 2026-11-13 - 1.11.0-dev: Klare Diagramm-Rueckmeldung bei fehlenden Logdaten
 - Diagramm-Konfiguration und Geraetevorschlaege melden fehlende geloggte
