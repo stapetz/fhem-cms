@@ -437,7 +437,7 @@ export class FhemClient {
   }
 
   async uploadMagicBackground() {
-    const response = await fetch(new URL('../images/parachute.jpg', import.meta.url),
+    const response = await fetch(new URL('../images/sunnybeach.jpg', import.meta.url),
       { credentials: 'same-origin' });
     if (!response.ok) throw new Error(`Magic-Hintergrund: HTTP ${response.status}`);
     const bytes = new Uint8Array(await response.arrayBuffer());

@@ -698,7 +698,7 @@ die bestaetigten Schritte Geraete laden, Temperaturdaten pruefen (mit
 Teilfortschritt je Batch), Seiten planen, Layout anordnen und Entwurf speichern.
 Erst die Speicherbestaetigung fuellt die letzten Punkte. Die Anzeige besitzt
 ARIA-Fortschrittswerte und beachtet reduzierte Bewegung.
-Magic laedt das mitgelieferte `www/fhem-cms/images/parachute.jpg` ueber den
+Magic laedt das mitgelieferte Strandfoto `www/fhem-cms/images/sunnybeach.jpg` ueber den
 validierten Medienupload genau einmal pro Einrichtung in das jeweilige CMS.
 Der relative `media/<md5>.jpg`-Pfad wird auf allen Magic-Seiten einschliesslich
 Start gespeichert. Die bestehende Medien-Deduplizierung vermeidet doppelte
