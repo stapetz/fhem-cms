@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Editor-Menues und dauerhafte Rasteranzeige",
+  "changes": [
+    "Globale Administration steht unter Bearbeiten; Einfuegen enthaelt Widgets, Geraete und Widget-Vorlagen.",
+    "Automatische Widgetanordnung steht unter Ansicht.",
+    "Rasteranzeige bleibt browserlokal pro CMS auch bei spaeteren Besuchen erhalten."
+  ]
+}

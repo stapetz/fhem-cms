@@ -25,7 +25,7 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.
 Beide Editor-Versionen verlinken sie ausschliesslich nach expliziter Freigabe
-mit `attr <CMS> adminMenu 1` im Dateimenue mit
+mit `attr <CMS> adminMenu 1` im Bearbeiten-Menue mit
 `Globale FHEM-CMS Administration` (auch Seitentitel). Der Menue-Link nutzt dieselbe
 Buttonformatierung wie die anderen Eintraege; `CMS oeffnen` erscheint auf der
 Verwaltungsseite rechtsbuendig neben Checkbox und Device-Namen als Button-Link
@@ -82,7 +82,18 @@ Produktive CMS werden bei Tests nicht geloescht.
 
 ## Gerätebasierte Widgetauswahl (dev, 1.11.0-dev, Refs #185)
 
-Der Schema-5-Editor ergänzt **Bearbeiten → Gerät hinzufügen**, ohne den
+Menues (Refs #189): Datei behaelt Entwurfsaktionen, Sicherungen und Assets;
+Bearbeiten enthaelt Seiteneinstellungen und die unveraendert attributgesteuerte
+globale Administration. Einfuegen enthaelt Widget-/Geraeteauswahl und Vorlagen;
+Ansicht enthaelt Vorschau, Rasteranzeige und automatische Widgetanordnung.
+`grid-preference.js` speichert beide Rasterzustaende in localStorage mit
+FHEMWEB-Pfad und CMS-Device als Schluessel. Beide Editorwege verwenden den Helper;
+eine alte globale Rasterwahl wird nur bei fehlender CMS-spezifischer Wahl gelesen.
+Speicherfehler werden sichtbar gemeldet, keine serverseitige Konfigurationsaenderung.
+Pruefung: `t/77_grid_preference.test.js`, `t/19_schema5_editor.test.js` und
+Browserfixture `t/43_auto_arrange.html`.
+
+Der Schema-5-Editor ergänzt **Einfügen → Gerät hinzufügen**, ohne den
 geräteunabhängigen Bibliotheksweg zu ersetzen. `Schema5WidgetPanel` verwendet
 im Modus `deviceFirst` die gemeinsame Gerätesuche und die reine Funktion
 `deviceWidgetSuggestions`. Sie liefert je tatsächlich passendem Widgettyp

@@ -14,6 +14,7 @@ import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-
 import { createCmsAdminMenuLinks } from './cms-admin-link.js';
 import { Schema5SettingsPreview } from './fcui-schema5-settings-preview.js';
 import { Schema5BlueprintPanel } from './fcui-schema5-blueprints.js';
+import { readGridPreference, writeGridPreference } from './grid-preference.js';
 
 export function createSchema5Editor({ GridStack, root, draftClient, liveClient, services, browser = window }) {
   if (!draftClient || !liveClient || draftClient === liveClient) {
@@ -148,15 +149,17 @@ export class Schema5Editor {
     this.#previewToggle.textContent = 'Vorschau';
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
-    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets,
-      ...createCmsAdminMenuLinks({ adminMenuEnabled })]);
-    this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#addDevice, this.#blueprints, this.#arrange]);
-    this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle]);
+    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets]);
+    this.#menu('Bearbeiten', [this.#page, ...createCmsAdminMenuLinks({ adminMenuEnabled })]);
+    this.#menu('Einfügen', [this.#widgets, this.#addDevice, this.#blueprints]);
+    this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle, this.#arrange]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
     this.#status = document.createElement('p');
     this.#status.className = 'cms-status';
     this.#status.setAttribute('role', 'status');
+    this.#showGrid = readGridPreference(browser, client, (message) => { this.#status.textContent = message; });
+    this.#gridToggle.setAttribute('aria-pressed', String(this.#showGrid));
     this.#content = document.createElement('div');
     this.#content.className = 'cms-schema5-workspace';
     this.#page.addEventListener('click', () => this.#openPage());
@@ -183,6 +186,8 @@ export class Schema5Editor {
     });
     this.#gridToggle.addEventListener('click', () => {
       this.#showGrid = !this.#showGrid;
+      writeGridPreference(this.#browser, this.#client, this.#showGrid,
+        (message) => { this.#status.textContent = message; });
       this.#gridToggle.setAttribute('aria-pressed', this.#showGrid ? 'true' : 'false');
       this.#applyGridGuides();
     });

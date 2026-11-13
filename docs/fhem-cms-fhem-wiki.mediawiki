@@ -196,7 +196,7 @@ Nachweis. Abfragefehler bleiben sichtbar und verhindern die automatische Erstell
 Die folgenden Schritte beschreiben den manuellen Ausbau mit leerer Startseite oder bei einer bestehenden Einrichtung:
 
 # Öffne am CMS-Device '''CMS starten'''.
-# Wähle '''Bearbeiten → Widget hinzufügen → Wert'''.
+# Wähle '''Einfügen → Widget hinzufügen → Wert'''.
 # Suche ein vorhandenes FHEM-Device und wähle dessen gewünschtes Reading.
 # Trage einen Titel und gegebenenfalls eine Einheit ein, beispielsweise „Außentemperatur“ und „°C“.
 # Bestätige mit '''Speichern'''.
@@ -262,7 +262,9 @@ Unter '''Bearbeiten → Seiteneinstellungen''' legst du Theme, Widgetrahmen, glo
 
 Widgettitel lassen sich global links, zentriert oder rechts ausrichten. Ob ein Titel sichtbar ist, bestimmst du weiterhin am einzelnen Widget. Frei formatierte Überschriften im Textinhalt sind davon unabhängig.
 
-'''Bearbeiten → Widgets automatisch anordnen''' rückt die Widgets der aktuellen Seite nach oben und links. Größen und Inhalte bleiben erhalten; die Änderung landet im Entwurf.
+'''Ansicht → Widgets automatisch anordnen''' rückt die Widgets der aktuellen Seite nach oben und links. Größen und Inhalte bleiben erhalten; die Änderung landet im Entwurf.
+
+'''Einfügen''' enthält Widget hinzufügen, Gerät hinzufügen und Widget-Vorlagen. Die freigegebene globale FHEM-CMS Administration steht unter '''Bearbeiten'''. '''Ansicht → Raster anzeigen''' merkt die letzte Auswahl dauerhaft pro CMS im verwendeten Browser, auch für spätere Besuche; auf anderen Geräten gilt die dortige Auswahl.
 
 === Theme-Manager und Hintergrundbilder ===
 
@@ -323,7 +325,7 @@ Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Brows
 
 === Gerät zuerst hinzufügen (dev, ab 1.11.0-dev) ===
 
-Unter '''Bearbeiten → Gerät hinzufügen''' zuerst nach Name, Alias, Typ oder Raum suchen und ein Gerät wählen. Danach werden passende Widgets anhand seiner Readings und Set-Angebote vorgeschlagen; Thermostatkanäle werden berücksichtigt. Ein bloßes Thermometer erhält keinen Thermostat- oder Slider-Vorschlag. '''Textbaustein''' und '''Freies HTML''' stehen immer bereit, '''Diagramm''' nur bei bestätigten geloggten numerischen Readings. Prüfungsfehler bleiben sichtbar; über '''Gerät ändern''' ist eine erneute Prüfung möglich.
+Unter '''Einfügen → Gerät hinzufügen''' zuerst nach Name, Alias, Typ oder Raum suchen und ein Gerät wählen. Danach werden passende Widgets anhand seiner Readings und Set-Angebote vorgeschlagen; Thermostatkanäle werden berücksichtigt. Ein bloßes Thermometer erhält keinen Thermostat- oder Slider-Vorschlag. '''Textbaustein''' und '''Freies HTML''' stehen immer bereit, '''Diagramm''' nur bei bestätigten geloggten numerischen Readings. Prüfungsfehler bleiben sichtbar; über '''Gerät ändern''' ist eine erneute Prüfung möglich.
 
 Nach der Widgetwahl öffnet sich der gewohnte Konfigurationsdialog mit änderbaren Vorgaben. Erst '''Speichern''' schreibt den Entwurf; '''Abbrechen''' kehrt zur Vorschlagsliste zurück. Geräteauswahl und Abbruch speichern oder schalten nichts. '''Widget hinzufügen''' bleibt unverändert verfügbar.
 

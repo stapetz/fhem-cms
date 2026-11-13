@@ -73,7 +73,7 @@ Nach `update all …` hängt das weitere Vorgehen davon ab, was sich geändert h
 Die zentrale Verwaltung ist direkt unter `/fhem/fhem-cms/admin.html` erreichbar
 (bei abweichendem FHEMWEB-Pfad entsprechend anpassen). Erst nach expliziter
 Freigabe mit `attr <CMS-Device> adminMenu 1` oeffnet im Bearbeitungsmodus
-**Datei → Globale FHEM-CMS Administration** dieselbe Seite in einem neuen Tab,
+**Bearbeiten → Globale FHEM-CMS Administration** dieselbe Seite in einem neuen Tab,
 auch im bisherigen Schema-4-Editor.
 Beim Aufruf uebernimmt die Administration das aktuelle CMS-Theme einschliesslich
 Seitenhintergrund und Liquid-Glass-Darstellung. Direktaufrufe ohne diesen
@@ -214,12 +214,15 @@ Geräte lassen sich später im Editor hinzufügen.
 
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
 - **Bearbeiten:** Seiteneinstellungen (Theme, Widget-Rahmen, Titelausrichtung und Rastergröße)
-  sowie Widget hinzufügen (mit Suche) und Widgets automatisch anordnen.
-- **Ansicht:** Vorschau (zeigt die Seite ohne Bearbeitungselemente) und Raster anzeigen.
+  sowie die globale FHEM-CMS Administration, wenn freigegeben.
+- **Einfügen:** Widget hinzufügen (mit Suche), Gerät hinzufügen und Widget-Vorlagen.
+- **Ansicht:** Vorschau, Raster anzeigen und Widgets automatisch anordnen.
+  Die Rasteranzeige wird dauerhaft pro CMS in diesem Browser gespeichert,
+  unabhängig vom Entwurf. Auf anderen Browsern oder Geräten gilt deren eigene Wahl.
 
 ### Gerät zuerst hinzufügen (dev, ab 1.11.0-dev)
 
-**Bearbeiten → Gerät hinzufügen** öffnet die gemeinsame Gerätesuche nach Name,
+**Einfügen → Gerät hinzufügen** öffnet die gemeinsame Gerätesuche nach Name,
 Alias, Typ und Raum. Nach der Auswahl erscheinen nur Widgettypen, für die das
 Gerät passende Readings oder Set-Angebote besitzt. Ein reines Thermometer
 erhält beispielsweise keinen Thermostat- oder Schieberegler-Vorschlag.
@@ -238,7 +241,7 @@ passenden Readings und gegebenenfalls Befehlen. Diese Angaben bleiben änderbar.
 Erst **Speichern** übernimmt das Widget in den Entwurf, nicht in die Live-Seite.
 **Abbrechen** im Widgetdialog kehrt zur Vorschlagsliste zurück; die Geräteauswahl
 oder den gesamten Vorgang abzubrechen speichert und schaltet nichts.
-**Bearbeiten → Widget hinzufügen** bleibt als geräteunabhängiger Weg erhalten.
+**Einfügen → Widget hinzufügen** bleibt als geräteunabhängiger Weg erhalten.
 
 ### Einheitliche Widget-Konfigurationsdialoge (dev, ab 1.11.0-dev)
 
@@ -289,7 +292,7 @@ die Diagramm-Rückmeldung weiterhin **Keine Werte im gewählten Zeitraum**.
 
 ### Wert auswählen (dev, ab 1.11.0-dev)
 
-**Bearbeiten → Widget hinzufügen → Wert auswählen** zeigt diskrete FHEM-Set-Listen
+**Einfügen → Widget hinzufügen → Wert auswählen** zeigt diskrete FHEM-Set-Listen
 wie `mode:auto,eco,boost` als Dropdown oder kompakte Buttons. Auch **Gerät hinzufügen**
 bietet diesen Typ bei passenden Set-Angeboten an. Gerät, Befehl und optionales
 Statusreading werden im gewohnten Dialog gewählt. Eigene Anzeigenamen können
@@ -336,7 +339,7 @@ zwischen Hoch- und Querformat. Die Vorschau zeigt den responsiven Entwurf,
 ohne die gespeicherten Desktoppositionen zu verändern; zum Positionieren und
 Skalieren der Widgets zurück in den Editor wechseln.
 
-Unter **Bearbeiten → Widgets automatisch anordnen** rücken die Widgets der
+Unter **Ansicht → Widgets automatisch anordnen** rücken die Widgets der
 aktuellen Seite kompakt nach oben und links. Ihre bisherige Reihenfolge
 (zeilenweise von links nach rechts, dann von oben nach unten) bleibt erhalten.
 Leicht vertikal versetzte Nachbarn werden dabei als gemeinsame Zeile erkannt,
@@ -803,8 +806,8 @@ Homepage zeigt Live, `?mode=preview` den Entwurf und `?mode=edit` den Editor.
   - *Seit 1.10.0:* DbLog-/FileLog-Verläufe und die Erkennung protokollierter Readings laufen in separaten Hintergrundprozessen. FHEMs Hauptschleife wartet nicht auf die Abfrage; Gerätebedienung und Automatisierungen können weiterlaufen. Identische laufende Anfragen werden zusammengefasst. Höchstens vier Worker arbeiten gleichzeitig; insgesamt sind bis zu 32 laufende oder wartende Aufträge vorgesehen. Ein Worker hat ein Zeitlimit von 20 Sekunden. Ladezustand, Fehler und Zeitüberschreitungen werden angezeigt; ohne verfügbare Hintergrundverarbeitung gibt es einen Fehler statt einer blockierenden Ersatzabfrage. CPU-, Datenbank- und Datenträgerlast entfallen dadurch nicht.
 - **Tabelle:** `Einfügen → Tabelle` zeigt Readings in einer laufend aktualisierten Tabelle. Im Dialog wählen Sie zuerst, ob die Werte aus einem Device (Standard) oder aus mehreren Devices kommen: Bei einem Device wählen Sie es einmal und danach je Zeile nur noch das Reading; bei mehreren Devices wählen Sie je Zeile Device und Reading. Beim Umschalten bleiben die Zeilen erhalten. Optional blendet eine Summenzeile unter der Tabelle die Summe der numerischen Einzelwerte ein (Beschriftung Standard „Summe“, änderbar); die Einheit ist wählbar oder „Automatisch“ (nur wenn alle summierten Werte dieselbe haben); die Beschriftung kann auch ausgeblendet werden, dann steht nur der Wert da. Die Tabellenüberschrift lässt sich ganz ausblenden; die Überschrift der Wertespalte (Standard „Wert“, rechtsbündig) ist änderbar oder einzeln ausblendbar. Die Überschrift der Geräte-/Bezeichnungsspalte ist anpassbar; Readings bleiben intern und werden nicht als eigene Spalte angezeigt. Für jeden Wert können gängige Einheiten wie °C, km, m, %, W oder kWh sowie eine eigene Einheit gewählt werden. Als Name einer Zeile erscheint der FHEM-Alias, sonst der Device-Name; im Feld „Bezeichner“ lässt sich ein eigener Name vergeben.
 - **Freies HTML:** Menü `Einfügen` → `Freies HTML`. Im Dialog tragen Sie eigenen HTML-Code ein und setzen Werte aus FHEM mit Platzhaltern ein, z. B. `{{Wohnzimmer:temperature|round(1)}}`; die Anzeige aktualisiert sich live. Alternativ im FTUI-Stil: `<span device="Wohnzimmer" reading="temperature"></span>`. Mit `data-cms-class` ändern sich Klassen (Farben) je nach Zustand. Skripte, Bilder, Formulare und Ereignis-Attribute sind aus Sicherheitsgründen nicht erlaubt. Die Platzhalter-Hilfe steht im Dialog; ausführlich in [PLATZHALTER.md](PLATZHALTER.md).
-- **Taster:** Menü *Einfügen* → *Taster* (im Schema-5-Editor **Bearbeiten → Widget hinzufügen**). Device wählen und einen Befehl ohne Parameter (z. B. `toggle`, `on`, `up`) festlegen. Standardmäßig erscheint ein Symbol statt des Befehlstexts: Umschaltpfeile für `toggle`, An-/Aus-Symbol für `on`/`off`, sonst ein Tastensymbol. Unter **Darstellung** wählen Sie **Nur Symbol** oder **Symbol + Beschriftung**. Die optionale Beschriftung ersetzt den Befehlstext. Ein Klick in der Ansicht sendet unverändert den Befehl; im Bearbeitungsmodus wird nichts gesendet.
-- **Schalter:** Menü *Einfügen* → *Schalter* (im Schema-5-Editor **Bearbeiten → Widget hinzufügen**). Device, Zustandsreading (meist `state`) und die Befehle für „An“ und „Aus“ wählen. Das Symbol selbst ist die Schaltfläche, ohne zusätzlichen Schieber; An, Aus und unbekannter Zustand sind unterscheidbar. Unter **Darstellung** können Sie zusätzlich Text einblenden (Standard An/Aus/Zustand unbekannt, eigene Beschriftung möglich). In der Ansicht schaltet ein Klick; im Bearbeitungsmodus wird nicht geschaltet.
+- **Taster:** Menü *Einfügen* → *Taster* (im Schema-5-Editor **Einfügen → Widget hinzufügen**). Device wählen und einen Befehl ohne Parameter (z. B. `toggle`, `on`, `up`) festlegen. Standardmäßig erscheint ein Symbol statt des Befehlstexts: Umschaltpfeile für `toggle`, An-/Aus-Symbol für `on`/`off`, sonst ein Tastensymbol. Unter **Darstellung** wählen Sie **Nur Symbol** oder **Symbol + Beschriftung**. Die optionale Beschriftung ersetzt den Befehlstext. Ein Klick in der Ansicht sendet unverändert den Befehl; im Bearbeitungsmodus wird nichts gesendet.
+- **Schalter:** Menü *Einfügen* → *Schalter* (im Schema-5-Editor **Einfügen → Widget hinzufügen**). Device, Zustandsreading (meist `state`) und die Befehle für „An“ und „Aus“ wählen. Das Symbol selbst ist die Schaltfläche, ohne zusätzlichen Schieber; An, Aus und unbekannter Zustand sind unterscheidbar. Unter **Darstellung** können Sie zusätzlich Text einblenden (Standard An/Aus/Zustand unbekannt, eigene Beschriftung möglich). In der Ansicht schaltet ein Klick; im Bearbeitungsmodus wird nicht geschaltet.
 - **Gemeinsame Symboldarstellung:** Auch vorhandene Schalter und Taster verwenden ohne explizite Einstellung **Nur Symbol**; gespeicherte Beschriftungen gehen nicht verloren und lassen sich wieder zuschalten. Widgettitel bleiben unabhängig davon sichtbar bzw. separat ausblendbar. **Icon wählen …** überschreibt das eingebaute Standardsymbol mit einem eigenen Icon. Im Icon-Picker setzt **Standardsymbol** bzw. **Standardsymbol / Vererbung** die Auswahl zurück. Beim Schalter gilt ein eigenes An-Icon auch für Aus, solange kein eigenes Aus-Icon gewählt wurde; ohne eigene Icons gelten die eingebauten Zustandssymbole. Standardsymbole benötigen keine nachinstallierten FHEM-Iconpakete.
 - **Platzhalter suchen:** Im freien HTML (Knopf *Platzhalter suchen und einfügen …*) und im Textbaustein (Knopf `{{ }}`) suchen Sie ein Device und ein Reading und fügen den Wert ein; im Textbaustein lässt sich der Platzhalter per Klick nachträglich ändern und wie normaler Text formatieren (fett, kursiv, unterstrichen, durchgestrichen, Farbe, Hervorhebung). Details in [PLATZHALTER.md](PLATZHALTER.md).
 - **Textbaustein:** WYSIWYG-Editor mit Fett, Kursiv, Unterstrichen, Durchgestrichen, Überschriften, Listen, Ausrichtung, Links, Tabellen und Bildern. Markieren Sie den gewünschten Text und wählen Sie die Formatierung; auch in Safari bleibt die markierte Stelle beim Bedienen der Werkzeugleiste erhalten. Für Textfarbe oder Hervorhebung wählen Sie unter **Farbe** den Farbwert und anschließend **Anwenden**. Bilder (PNG, JPEG, GIF, höchstens 3 MiB) werden hochgeladen oder aus bereits vorhandenen gewählt; ein Klick auf das Bild öffnet Position (links, Mitte, rechts, voll) und Alternativtext. Die Größe ändern Sie am grünen Ziehpunkt unten rechts am Bild: ziehen (das Seitenverhältnis bleibt erhalten, feinste Auflösung 1 % der Textbreite) oder den Ziehpunkt fokussieren und die Pfeiltasten nutzen. Der Text wird beim Einfügen und Speichern bereinigt, Skripte und fremde Bildquellen sind nicht möglich. Alte Markdown-Bausteine werden beim Bearbeiten umgewandelt.
