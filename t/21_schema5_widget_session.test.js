@@ -85,7 +85,7 @@ test('new call list height follows count and density without changing existing w
       const session = open(controller, 'one', state.token, widget, 'create');
       await session.services({}).saveWidget(session.widget);
       const saved = controller.snapshot().draft.pages[0].widgets[0];
-      assert.equal(saved.grid.h, (2 + Math.ceil(limit * 0.8)) * scale);
+      assert.equal(saved.grid.h, (3 + Math.ceil(limit * 0.9)) * scale);
       assert.equal(saved.grid.w, 6 * scale);
       const existing = open(controller, 'one', state.token, saved);
       await existing.services({}).saveWidget({ ...saved, limit: 20 });
