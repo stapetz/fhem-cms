@@ -149,6 +149,23 @@ Schließen oder Entfernen der Tabelle bricht den Picker ab; späte Antworten
 dürfen den Dialog nicht ändern. Service-Refresh wird in
 `t/27_widget_services.test.js`, der Ablauf in `t/73_table_labels.html` geprüft.
 
+## CMS-weite Widget-IDs (dev, Refs #186)
+
+Der bisherige Schema-5-Vertrag prüft IDs je Seite,
+weshalb bestehende Konfigurationen seitenübergreifende Duplikate enthalten können.
+`widget-ids.js` reserviert alle vorhandenen IDs; Bibliothek, Vorlagen und Kopien
+vergeben CMS-weit freie IDs. Seitenkopien erhalten unabhängige Widget-IDs.
+Beim Schreiben eines Entwurfs normalisieren Frontend und Perl übereinstimmend
+nur weitere Vorkommen einer ID mit freien numerischen Suffixen (max. 64 Zeichen).
+Das erste Vorkommen und schon belegte Suffixe bleiben erhalten. Der Lesevertrag
+bleibt kompatibel, liest ohne Schreiben; erst Entwurf/Veröffentlichung persistiert
+die Reparatur. Auch alte Entwürfe werden beim Publish normalisiert, mit bestehendem
+Backup-/Tokenvertrag. Verschieben reserviert eine freie ID, bevor ein vorhandenes
+Duplikat auf derselben Zielseite landen kann. Keine Inhalts-/Rasteränderung;
+interne Seitenlinks referenzieren Seiten und bleiben unverändert.
+`t/74_widget_ids.test.js`, `t/74_widget_ids.t` sowie die bestehenden echten
+Entwurfstransaktions- und Seitenkopietests prüfen diesen Vertrag.
+
 ## Dokumentationen synchron halten
 
 Der FHEM-Wiki-Onepager wird als MediaWiki-Quelltext in

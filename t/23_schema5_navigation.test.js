@@ -267,7 +267,9 @@ test('page duplication preserves widgets and layout in the draft without changin
     const draft = controller.snapshot().draft;
     assert.deepEqual(draft.pages.map(({ id, title }) => [id, title]),
       [['wohnzimmer', 'Wohnzimmer'], ['page2', 'Wohnzimmer (Kopie)']]);
-    assert.deepEqual(draft.pages[1].widgets, config.pages[0].widgets);
+    assert.deepEqual(draft.pages[1].widgets.map((widget, index) =>
+      ({ ...widget, id: config.pages[0].widgets[index].id })), config.pages[0].widgets);
+    assert.notEqual(draft.pages[1].widgets[0].id, draft.pages[0].widgets[0].id);
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
   } finally {
     globalThis.document = previous;

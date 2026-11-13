@@ -240,6 +240,16 @@ Erst **Speichern** übernimmt das Widget in den Entwurf, nicht in die Live-Seite
 oder den gesamten Vorgang abzubrechen speichert und schaltet nichts.
 **Bearbeiten → Widget hinzufügen** bleibt als geräteunabhängiger Weg erhalten.
 
+### Eindeutige Widget-IDs (dev, ab 1.11.0-dev)
+
+Widgets im Schema-5-CMS besitzen seitenübergreifend eindeutige IDs. Auch
+Widget-/Seitenkopien und Vorlagen erhalten eigene IDs. Bereits vorhandene
+Duplikate werden beim nächsten Speichern eines Entwurfs oder Veröffentlichen
+eindeutig gemacht; Inhalte, Raster und Seitenlinks bleiben erhalten.
+Das bloße Laden verändert keine gespeicherten Dateien. Widgets mit bisherigen
+ID-Kollisionen können zwischen Seiten verschoben werden, ohne ein anderes
+Widget zu überschreiben. Die Live-Seite bleibt bis zur Veröffentlichung erhalten.
+
 ### Automatische Tabellenbezeichner (dev, ab 1.11.0-dev)
 
 Ohne eigenen Bezeichner zeigt eine Tabelle mit Werten aus einem einzigen Device
