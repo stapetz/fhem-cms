@@ -29,7 +29,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
         * { box-sizing: border-box; }
         .tile { position: relative; height: 100%; overflow: auto;
           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-          color: inherit; display: flex; flex-direction: column; gap: 14px; padding: 8px; }
+          color: inherit; display: flex; flex-direction: column; gap: 14px; padding: 8px;
+          background: var(--cms-surface, #202e27); border: 1px solid var(--cms-frame, #7f8c84);
+          border-radius: 1.4rem; }
         .tile[data-stale] { opacity: 0.65; }
         .tile[data-stale] .table-card { border-style: dashed; }
         header { display: flex; justify-content: space-between; align-items: center;
@@ -52,8 +54,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         tfoot [data-sum-value] { text-align: right; }
         thead th:last-child { text-align: right; }
         thead[hidden] { display: none; }
-        th { position: sticky; top: -14px; background: var(--cms-surface, #202e27);
-          color: inherit; font-weight: 600; }
+        th { color: inherit; font-weight: 600; }
         tfoot th { background: transparent; }
         td:last-child { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
         .gear, button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);

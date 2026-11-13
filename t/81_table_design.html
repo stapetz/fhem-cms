@@ -83,6 +83,14 @@ try {
     }
   }
   host.data = snapshots('15');
+  for (const opacity of [.12, .88]) {
+    host.style.setProperty('--cms-surface', `rgb(19 34 52 / ${opacity})`);
+    check(getComputedStyle($('[data-tile]')).backgroundColor === `rgba(19, 34, 52, ${opacity})`,
+      `outer surface follows page transparency ${opacity}`);
+    check(getComputedStyle($('[data-head] th')).backgroundColor === 'rgba(0, 0, 0, 0)',
+      `column headings do not add a second theme surface ${opacity}`);
+  }
+  host.style.removeProperty('--cms-surface');
   check($('[data-sum-value]').textContent === '35 W', 'live updates refresh values and sum');
   host.stale = Date.now();
   check(getComputedStyle($('.table-card')).borderStyle === 'dashed', 'stale values remain marked');
