@@ -1299,6 +1299,12 @@ und vergleicht Kachelpositionen/-maße zwischen Editor und Ansicht.
 ## Änderungen, Tests und Pushes
 
 - Vor jedem Push die aktuelle Branch-Version mit `git pull --rebase --autostash` aktualisieren. Bei einem neuen Branch ohne Remote-Tracking-Branch zuerst den passenden Remote-Branch festlegen bzw. abrufen.
+- FHEM-Update-Link und -Befehl erst nach abgeschlossener, erfolgreicher
+  Ueberwachung aller Build-/Test- und Controls-Workflows zum betreffenden Commit
+  ausgeben. Anschliessend die ueber die Update-URL ausgelieferte Controls-Datei
+  und betroffene Dateien auf passenden Stand, Dateigroessen und Verfuegbarkeit
+  pruefen. Bei laufenden/fehlgeschlagenen Workflows oder veralteter Update-Quelle
+  keinen Updatebefehl ausgeben, sondern die ausstehende Pruefung benennen.
 - Für KI-unterstützte Commits den Trailer `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>` ergänzen.
 - **Issue- und Commit-Zuordnung:** Jeder inhaltliche Commit gehört genau zu einem Issue und enthält dessen Referenz `Refs #<Nr>` im Commit-Text. GitHub verknüpft damit Commit und Issue. Bei mehreren Issues in derselben Datei die Änderungen in getrennte, möglichst unabhängige Commits aufteilen (bei Bedarf gezielt hunks stagen); keine Änderung eines noch nicht freigegebenen Issues in einen Commit für ein freigegebenes Issue mischen. Änderungen ohne Issue-Zuordnung werden nicht stillschweigend einem Release zugeschlagen. Ein Issue ist nur releasefähig, wenn alle zu seinem vereinbarten Umfang gehörenden Commits bekannt und bereit sind. Sind Änderungen vermischt oder voneinander abhängig, dürfen sie nicht selektiv veröffentlicht werden: erst Commits/Umfang sauber trennen oder abhängige Issues gemeinsam abnehmen und freigeben. Kann eine sichere Trennung nicht nachgewiesen werden, Release anhalten und mit dem Entwickler klären.
 - Zu Änderungen passende Tests und Syntaxprüfungen ausführen. Für Perl-Module ist mindestens `perl -c` auszuführen; gegebenenfalls benötigte FHEM-Core-Funktionen müssen in Tests geeignet bereitgestellt werden.

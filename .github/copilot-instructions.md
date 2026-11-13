@@ -49,6 +49,12 @@ Details:
 - Vor dem Release automatisch die nächste stabile SemVer-Version anhand des letzten `main`-Stands und des tatsächlichen Releaseumfangs bestimmen: rückwärtsinkompatibel = MAJOR, neue kompatible Funktion = MINOR, nur Fehlerkorrekturen/Dokumentation = PATCH; bei gemischten Änderungen gilt die höchste Stufe. Die Versionsnummer ohne `-dev` in `FHEM/01_FHEMCMS.pm` setzen, die stabile Version in `README.md` aktualisieren und `CHANGED` mit Versionsnummer, Datum, Zusammenfassung und Story-Zeilen der tatsächlich ausgewählten Issues pflegen. Die `controls_fhem-cms.txt` generiert der vorhandene Push-Workflow automatisch; nicht von Hand bearbeiten. Nach erfolgreichem Push nur tatsächlich enthaltene Issues schliessen. Nicht enthaltene Issues bleiben offen in `Ready to publish`. Einzelheiten stehen in `dev-docs/ENTWICKLUNG.md`.
 - Nach einem erfolgreichen Commit und Push nach `dev`, der nach FHEM zu übertragende
   Änderungen enthält, in der Rückmeldung diesen Aktualisierungs-Codeblock anzeigen.
+  Erst anzeigen, wenn die Ueberwachung aller zum Commit gehoerenden Build-/Test-
+  und Controls-Workflows abgeschlossen und erfolgreich ist. Danach die tatsaechlich
+  ueber die Update-URL gelieferte Controls-Datei und die betroffenen Dateien auf
+  passenden Stand, Dateigroessen und Verfuegbarkeit pruefen. Solange Workflows
+  laufen, fehlschlagen oder die Update-Quelle noch veraltet ist, keinen Update-Link
+  und keinen Update-Befehl ausgeben; die offene Pruefung stattdessen klar benennen.
   Bei ausschließlich internen Änderungen, die nicht nach FHEM übertragen werden
   müssen, weder einen Update-Befehl noch einen sonstigen Update-Hinweis geben.
   Für `dev` kein `update add` als festen Schritt aufnehmen.
