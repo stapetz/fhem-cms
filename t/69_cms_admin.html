@@ -19,7 +19,12 @@ const wait = async predicate => {
 };
 try {
   const html = await (await fetch('../www/fhem-cms/admin.html')).text();
-  frame.srcdoc = html.replace('<script type="module" src="js/cms-admin.js"></scr' + 'ipt>', '')
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const assets = [...parsed.querySelectorAll('link[rel="stylesheet"], script[src]')];
+  check(assets.length === 3 && assets.every(asset =>
+    new URL(asset.getAttribute('href') || asset.getAttribute('src'), location.href).searchParams.get('v')),
+  'administration assets use versioned URLs instead of stale cached files');
+  frame.srcdoc = html.replace(/<script type="module" src="js\/cms-admin\.js[^"]*"><\/script>/, '')
     .replace('<title>', `<base href="${new URL('../www/fhem-cms/', location.href)}"><title>`);
   await wait(() => frame.contentDocument?.querySelector('#refresh'));
   const doc = frame.contentDocument;
