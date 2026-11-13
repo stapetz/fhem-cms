@@ -49,6 +49,17 @@ sub execute {
         items => [map { {name => $_, kind => item($value, $_)->{kind}} } @names]});
 }
 create_cms('Keep');
+for my $setting (undef, '0', '1') {
+    if (defined($setting)) { $attr{Keep}{adminMenu} = $setting; }
+    else { delete($attr{Keep}{adminMenu}); }
+    my $settings = JSON::PP->new->decode(FHEMCMS_Get($defs{Keep}, 'Keep', 'layoutformat'));
+    is($settings->{adminMenuEnabled} ? 1 : 0, defined($setting) && $setting eq '1' ? 1 : 0,
+        'admin menu requires explicit device attribute');
+}
+delete($attr{Keep}{adminMenu});
+like(FHEMCMS_Attr('set', 'Keep', 'adminMenu', 'yes'), qr/0 oder 1/, 'invalid menu attribute rejected');
+is(FHEMCMS_Attr('set', 'Keep', 'adminMenu', '1'), undef, 'explicit menu enable accepted');
+is(FHEMCMS_Attr('del', 'Keep', 'adminMenu', undef), undef, 'menu attribute removal accepted');
 create_cms('Remove');
 create_cms('Orphan');
 delete($defs{Orphan});

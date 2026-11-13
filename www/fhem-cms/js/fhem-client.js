@@ -123,6 +123,7 @@ export class FhemClient {
       || (result.schemaVersion !== 4 && result.schemaVersion !== 5)) {
       throw new Error('Unerwartete Antwort für das Layoutformat');
     }
+    this.adminMenuEnabled = result.adminMenuEnabled === true;
     return result.schemaVersion;
   }
 

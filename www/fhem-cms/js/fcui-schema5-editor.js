@@ -11,7 +11,7 @@ import { applySchema5GridItems, arrangeSchema5Widgets, schema5GridItems } from '
 import { DevicePreview } from './device-preview.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-wizard.js';
-import { createCmsAdminLink } from './cms-admin-link.js';
+import { createCmsAdminMenuLinks } from './cms-admin-link.js';
 import { Schema5SettingsPreview } from './fcui-schema5-settings-preview.js';
 import { Schema5BlueprintPanel } from './fcui-schema5-blueprints.js';
 
@@ -28,7 +28,8 @@ export function createSchema5Editor({ GridStack, root, draftClient, liveClient, 
     ...(services === undefined ? createSchema5WidgetServices(draftClient) : services),
     createSettingsPreview: ({ pageId }) => new Schema5SettingsPreview({ browser, pageId }),
   };
-  return new Schema5Editor({ GridStack, root, controller, client: liveClient, services: widgetServices, browser });
+  return new Schema5Editor({ GridStack, root, controller, client: liveClient, services: widgetServices, browser,
+    adminMenuEnabled: draftClient.adminMenuEnabled === true });
 }
 
 export class Schema5Editor {
@@ -69,7 +70,8 @@ export class Schema5Editor {
   #layoutSaving = false;
   #layoutSavePromise = Promise.resolve();
 
-  constructor({ GridStack, root, controller, client, services, browser = window }) {
+  constructor({ GridStack, root, controller, client, services, browser = window,
+    adminMenuEnabled = client?.adminMenuEnabled === true }) {
     if (!GridStack || !root || root.children.length || !controller
       || typeof controller.reload !== 'function' || typeof controller.snapshot !== 'function'
       || typeof controller.publishDraft !== 'function' || typeof controller.discardDraft !== 'function'
@@ -141,7 +143,8 @@ export class Schema5Editor {
     this.#previewToggle.textContent = 'Vorschau';
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
-    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets, createCmsAdminLink()]);
+    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets,
+      ...createCmsAdminMenuLinks({ adminMenuEnabled })]);
     this.#menu('Bearbeiten', [this.#page, this.#widgets, this.#blueprints, this.#arrange]);
     this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle]);
     this.#toolbar.append(this.#mode, this.#reloadButton);

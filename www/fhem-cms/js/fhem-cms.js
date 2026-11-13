@@ -1,6 +1,6 @@
 import { createWidgetElement, dataFor, devicesOf, groupSnapshots, isLiveWidget } from './widget-factory.js';
 import { FhemClient, isValidName } from './fhem-client.js';
-import { createCmsAdminLink } from './cms-admin-link.js';
+import { createCmsAdminMenuLinks } from './cms-admin-link.js';
 import { DevicePreview } from './device-preview.js';
 import { createSchema5WidgetServices, createWidgetServices } from './widget-services.js';
 import { listenForSettingsPreview } from './fcui-schema5-settings-preview.js';
@@ -88,8 +88,9 @@ const SETTINGS_PREVIEW = PREVIEW_MODE && window.parent !== window
   && new URLSearchParams(window.location.search).get('cms-page-settings-preview') === '1';
 
 export class CmsPage {
-  constructor(cmsDevice, shell, statusLine) {
+  constructor(cmsDevice, shell, statusLine, adminMenuEnabled = false) {
     this.client = new FhemClient(cmsDevice);
+    this.client.adminMenuEnabled = adminMenuEnabled === true;
     this.statusLine = statusLine;
     if (!VIEW_MODE) {
       this.statusBox = document.createElement('div');
@@ -222,7 +223,7 @@ export class CmsPage {
       this.menus.push(menu);
       return menu;
     };
-    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton, createCmsAdminLink()]);
+    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton, ...createCmsAdminMenuLinks(this.client)]);
     const editMenu = makeMenu('Bearbeiten', [this.navButton]);
     this.menu = makeMenu('Einfügen', this.menuButtons);
     const viewMenu = makeMenu('Ansicht', [this.gridButton]);
@@ -2116,7 +2117,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const client = new FhemClient(cmsDevice);
     await startCmsDevice(client, () => {
       if (suspended) return;
-      const page = new CmsPage(cmsDevice, shell, card);
+      const page = new CmsPage(cmsDevice, shell, card, client.adminMenuEnabled);
       const started = page.start();
       removeStartupListeners();
       return started;

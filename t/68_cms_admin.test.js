@@ -1,6 +1,18 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { CmsAdminClient, validateInventory } from '../www/fhem-cms/js/cms-admin.js';
+import { createCmsAdminMenuLinks } from '../www/fhem-cms/js/cms-admin-link.js';
+import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
+
+test('admin menu is hidden by default and enabled only by an explicit backend boolean', async () => {
+  const client = new FhemClient('CMS', 'https://example.test/fhem/');
+  for (const enabled of [undefined, false, '1', 1, true]) {
+    client.command = async () => JSON.stringify({ schemaVersion: 5, adminMenuEnabled: enabled });
+    await client.getLayoutFormat();
+    assert.equal(client.adminMenuEnabled, enabled === true);
+    if (enabled !== true) assert.deepEqual(createCmsAdminMenuLinks(client), []);
+  }
+});
 
 const inventory = () => ({ token: 'a'.repeat(64), items: [
   { name: 'CMS', kind: 'device', blocked: null, files: [{ path: 'fhem-cms-data/CMS', directory: true }] },
