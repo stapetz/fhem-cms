@@ -30,13 +30,13 @@ UPD 2026-11-12_11:01:52 7232 www/fhem-cms/js/device-preview.js
 UPD 2026-11-13_07:06:17 2398 www/fhem-cms/js/device-suggestions.js
 UPD 2026-11-13_07:06:17 1309 www/fhem-cms/js/dialog-groups.js
 UPD 2026-11-08_15:33:41 3422 www/fhem-cms/js/fcui-migration-controller.js
-UPD 2026-11-12_10:29:43 21975 www/fhem-cms/js/fcui-migration-preview.js
+UPD 2026-11-13_07:30:54 23747 www/fhem-cms/js/fcui-migration-preview.js
 UPD 2026-11-08_15:33:41 2186 www/fhem-cms/js/fcui-migration-transport.js
 UPD 2026-11-08_10:43:57 111967 www/fhem-cms/js/fcui-runtime.js
 UPD 2026-11-11_13:57:46 1335 www/fhem-cms/js/fcui-schema5-appearance.js
 UPD 2026-11-08_20:31:10 8243 www/fhem-cms/js/fcui-schema5-backup-panel.js
 UPD 2026-11-13_07:06:17 10557 www/fhem-cms/js/fcui-schema5-blueprints.js
-UPD 2026-11-13_07:06:17 15655 www/fhem-cms/js/fcui-schema5-draft.js
+UPD 2026-11-13_07:30:54 15655 www/fhem-cms/js/fcui-schema5-draft.js
 UPD 2026-11-13_07:06:17 33582 www/fhem-cms/js/fcui-schema5-editor.js
 UPD 2026-11-09_07:18:21 4934 www/fhem-cms/js/fcui-schema5-grid-edit.js
 UPD 2026-11-12_17:22:24 12933 www/fhem-cms/js/fcui-schema5-layout.js
@@ -46,7 +46,7 @@ UPD 2026-11-12_16:23:45 5762 www/fhem-cms/js/fcui-schema5-navigation-fit.js
 UPD 2026-11-12_10:29:43 20356 www/fhem-cms/js/fcui-schema5-navigation.js
 UPD 2026-11-11_16:03:40 16862 www/fhem-cms/js/fcui-schema5-page-panel.js
 UPD 2026-11-11_15:37:10 6062 www/fhem-cms/js/fcui-schema5-settings-preview.js
-UPD 2026-11-13_07:06:17 40296 www/fhem-cms/js/fcui-schema5-setup-wizard.js
+UPD 2026-11-13_07:30:54 40734 www/fhem-cms/js/fcui-schema5-setup-wizard.js
 UPD 2026-11-08_15:33:41 1766 www/fhem-cms/js/fcui-schema5-transport.js
 UPD 2026-11-13_07:06:17 11781 www/fhem-cms/js/fcui-schema5-view.js
 UPD 2026-11-12_17:22:24 11195 www/fhem-cms/js/fcui-schema5-widget-panel.js
