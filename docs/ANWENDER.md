@@ -6,7 +6,36 @@
 - FHEMWEB muss laufen. Das CMS nutzt dessen Sitzung, Rechte und CSRF-Schutz; es gibt keine eigene Anmeldung.
 - Ein aktueller Browser mit ES-Modulen, Web Components und `<dialog>`.
 
+### Live-Werte: WebSocket empfohlen, nicht erforderlich
+
+Laden, Speichern und Gerätebefehle laufen über HTTP-Anfragen. Für zeitnahe
+Wertänderungen öffnet das CMS zusätzlich eine eigene WebSocket-Verbindung zum
+FHEMWEB-Inform-Endpunkt: `ws://` bei HTTP, `wss://` bei HTTPS.
+
+**WebSockets sind keine Pflichtvoraussetzung.** Ist die Verbindung nicht nutzbar,
+bleibt das CMS bedienbar und liest Gerätewerte per HTTP-Polling alle 30 Sekunden
+neu ein. WebSocket-Ereignisse lösen ein früheres Nachladen aus; das regelmäßige
+Polling bleibt auch bei bestehender WebSocket-Verbindung aktiv.
+
+Dieses HTTP-Polling ist **nicht FHEMWEB-Longpoll**; einen eigenen Longpoll-Transport
+verwendet das CMS nicht. Eine vorhandene Longpoll-Einstellung allein verlangt
+deshalb keine Umstellung von FHEMWEB: Ohne WebSocket greift das HTTP-Polling.
+
+Für möglichst unmittelbare Aktualisierungen muss ein Reverse Proxy
+WebSocket-Upgrades und langlebige Verbindungen zum FHEMWEB-Endpunkt weiterleiten.
+Im Netzwerkbereich der Browser-Entwicklerwerkzeuge unter **WS** bestätigt
+`101 Switching Protocols` den Verbindungsaufbau. Fehlt die Verbindung,
+Proxy, Anmeldung und Verbindung prüfen; den FHEMWEB-Zugriffsschutz nicht abschalten.
+
 ## Installation
+
+**Empfehlung für zeitnahe Live-Werte:** WebSocket-Verbindungen zum
+FHEMWEB-Inform-Endpunkt ermöglichen und bei einem Reverse Proxy
+WebSocket-Upgrades sowie langlebige Verbindungen weiterleiten.
+Das CMS baut die Verbindung selbst auf; im Browser lässt sie sich unter
+**Netzwerk → WS** prüfen (`101 Switching Protocols`).
+Ohne WebSocket bleibt das CMS mit HTTP-Polling alle 30 Sekunden bedienbar.
+Eine vorhandene FHEMWEB-Longpoll-Einstellung allein erfordert keine Umstellung.
 
 ```text
 update add https://raw.githubusercontent.com/stapetz/fhem-cms/main/controls_fhem-cms.txt
@@ -687,7 +716,7 @@ Homepage zeigt Live, `?mode=preview` den Entwurf und `?mode=edit` den Editor.
 - **Diagramm:** `Einfügen → Diagramm` zeigt den Verlauf eines Readings als Liniendiagramm mit Min-/Max-Band sowie letztem, kleinstem und größtem Wert. Nach Auswahl des Devices bietet der Dialog die Readings an, die tatsächlich geloggt werden. Einheit, Standard-Zeitraum (24 Stunden, 7, 30 oder 365 Tage), Granularität (automatisch, Rohdaten, 15 Minuten, 1 Stunde, 1 Tag) und Datenquelle sind einstellbar; Besucher können Zeitraum und Granularität in der Kachel vorübergehend umschalten. Das Diagramm wird alle 5 Minuten aktualisiert.
   - *Datenquellen:* DbLog (Vorrang) oder FileLog, wie beim TemperatureCollector. Standardmäßig wird das erste passende DbLog- bzw. FileLog-Device verwendet; mit den Attributen `dbLog`, `fileLog` (Device-Name) und `historySource` (`auto`, `dblog`, `filelog`) am CMS-Device lässt sich das festlegen. Beim FileLog muss dessen Regexp das Reading abdecken.
   - *Grenzen:* höchstens 400 Punkte je Diagramm (längere Zeiträume werden zu Mittelwert, Minimum und Maximum zusammengefasst), Ergebnisse werden 30 Sekunden zwischengespeichert. Nur numerische Werte werden dargestellt.
-  - *Hinweis:* DbLog- und FileLog-Verläufe werden im Hintergrund abgefragt, damit FHEM währenddessen bedienbar bleibt. Die Abfragen haben ein Zeitlimit; bei großen Datenmengen kann ein Verlauf daher mit einem Fehler enden.
+  - *Seit 1.10.0:* DbLog-/FileLog-Verläufe und die Erkennung protokollierter Readings laufen in separaten Hintergrundprozessen. FHEMs Hauptschleife wartet nicht auf die Abfrage; Gerätebedienung und Automatisierungen können weiterlaufen. Identische laufende Anfragen werden zusammengefasst. Höchstens vier Worker arbeiten gleichzeitig; insgesamt sind bis zu 32 laufende oder wartende Aufträge vorgesehen. Ein Worker hat ein Zeitlimit von 20 Sekunden. Ladezustand, Fehler und Zeitüberschreitungen werden angezeigt; ohne verfügbare Hintergrundverarbeitung gibt es einen Fehler statt einer blockierenden Ersatzabfrage. CPU-, Datenbank- und Datenträgerlast entfallen dadurch nicht.
 - **Tabelle:** `Einfügen → Tabelle` zeigt Readings in einer laufend aktualisierten Tabelle. Im Dialog wählen Sie zuerst, ob die Werte aus einem Device (Standard) oder aus mehreren Devices kommen: Bei einem Device wählen Sie es einmal und danach je Zeile nur noch das Reading; bei mehreren Devices wählen Sie je Zeile Device und Reading. Beim Umschalten bleiben die Zeilen erhalten. Optional blendet eine Summenzeile unter der Tabelle die Summe der numerischen Einzelwerte ein (Beschriftung Standard „Summe“, änderbar); die Einheit ist wählbar oder „Automatisch“ (nur wenn alle summierten Werte dieselbe haben); die Beschriftung kann auch ausgeblendet werden, dann steht nur der Wert da. Die Tabellenüberschrift lässt sich ganz ausblenden; die Überschrift der Wertespalte (Standard „Wert“, rechtsbündig) ist änderbar oder einzeln ausblendbar. Die Überschrift der Geräte-/Bezeichnungsspalte ist anpassbar; Readings bleiben intern und werden nicht als eigene Spalte angezeigt. Für jeden Wert können gängige Einheiten wie °C, km, m, %, W oder kWh sowie eine eigene Einheit gewählt werden. Als Name einer Zeile erscheint der FHEM-Alias, sonst der Device-Name; im Feld „Bezeichner“ lässt sich ein eigener Name vergeben.
 - **Freies HTML:** Menü `Einfügen` → `Freies HTML`. Im Dialog tragen Sie eigenen HTML-Code ein und setzen Werte aus FHEM mit Platzhaltern ein, z. B. `{{Wohnzimmer:temperature|round(1)}}`; die Anzeige aktualisiert sich live. Alternativ im FTUI-Stil: `<span device="Wohnzimmer" reading="temperature"></span>`. Mit `data-cms-class` ändern sich Klassen (Farben) je nach Zustand. Skripte, Bilder, Formulare und Ereignis-Attribute sind aus Sicherheitsgründen nicht erlaubt. Die Platzhalter-Hilfe steht im Dialog; ausführlich in [PLATZHALTER.md](PLATZHALTER.md).
 - **Taster:** Menü *Einfügen* → *Taster* (im Schema-5-Editor **Bearbeiten → Widget hinzufügen**). Device wählen und einen Befehl ohne Parameter (z. B. `toggle`, `on`, `up`) festlegen. Standardmäßig erscheint ein Symbol statt des Befehlstexts: Umschaltpfeile für `toggle`, An-/Aus-Symbol für `on`/`off`, sonst ein Tastensymbol. Unter **Darstellung** wählen Sie **Nur Symbol** oder **Symbol + Beschriftung**. Die optionale Beschriftung ersetzt den Befehlstext. Ein Klick in der Ansicht sendet unverändert den Befehl; im Bearbeitungsmodus wird nichts gesendet.
@@ -750,7 +779,7 @@ Homepage zeigt Live, `?mode=preview` den Entwurf und `?mode=edit` den Editor.
 | „Konfiguration konnte nicht geladen werden“ | `get <CMS> config` in FHEM prüfen; Rechte auf `fhem-cms-data`; Logfile ansehen. |
 | „Speichern fehlgeschlagen: …“ | Meldung nennt den Validierungsfehler (unbekanntes Feld, doppelte ID, zu lang). |
 | Kachel „Veraltet“ | Verbindung oder Rechte fehlen (HTTP 401/403/5xx). FHEMWEB-Anmeldung und `allowed` prüfen. |
-| Live-Werte kommen nur alle 30 s | WebSocket-Inform ist nicht erreichbar (Proxy ohne WebSocket-Weiterleitung); das CMS fällt auf Polling zurück. |
+| Live-Werte kommen nur alle 30 s | WebSocket-Inform ist nicht nutzbar, etwa bei einem Proxy ohne WebSocket-Weiterleitung. Das CMS bleibt mit HTTP-Polling bedienbar; für schnellere Updates WebSocket-Verbindung im Browser unter **WS** und Proxy prüfen. Das ist kein FHEMWEB-Longpoll-Fallback. |
 | `update` entfernt gelöschte Dateien nicht | Bekanntes FHEM-Verhalten; veraltete Dateien unter `www/fhem-cms/` bei Bedarf von Hand löschen. |
 | Startseite nicht neu erzeugt | Eine Datei ohne Modul-Marker wird nie überschrieben. Datei entfernen und `set <CMS> rebuild` ausführen. |
 
