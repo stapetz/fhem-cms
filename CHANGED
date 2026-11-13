@@ -89,6 +89,14 @@ vorbelegen
 - Freie Felder lassen sich gezielt ergaenzen. Bestehende und manuelle Eingaben
   bleiben erhalten; mehrdeutige Quellen werden nicht willkuerlich ausgewaehlt.
 
+2026-11-13 - 1.11.0-dev: Solar und Energiefluss: kompakt wie der HTML-Entwurf
+- Kompakte Stationsgroessen, drei Ertragskarten nebeneinander bei Desktopbreite
+  und eine schmale Summenleiste folgen jetzt dem freigegebenen HTML-Vorbild.
+- Einheiten stehen im Kartenkopf statt hinter jedem Wert; Abstaende,
+  Zahlenpraezision und semantische Wertfarben entsprechen dem Original.
+- Responsive Umbrueche, Themeunterstuetzung und die bereits abgenommene
+  Reading-Erkennung bleiben erhalten.
+
 2026-11-13 - 1.11.0-dev: Neues Widget Solar und Energiefluss
 - Solar und Energiefluss ergaenzt SolarFlow um ein rechteckiges Flussbild, frei
   benannte Ertragskarten und optionale Gesamtertraege.
