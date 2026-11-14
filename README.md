@@ -4,6 +4,18 @@ Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freie
 
 **Aktuelle stabile Version: 1.10.0**
 
+## VolvoConnect-Widget
+
+Das native Fahrzeugwidget bietet eine Kompaktkachel mit Info-Popup oder eine
+eingebettete Vollansicht mit anpassbaren Detailkarten und Fahrzeugaktionen.
+**Es funktioniert ausschließlich zusammen mit dem
+[VolvoConnect-Modul](https://github.com/stapetz/fhem-modules/tree/main/docs/volvo)
+aus `stapetz/fhem-modules`, nicht als eigenständige Volvo-Anbindung.**
+
+[Bebilderte Widgetanleitung, Modulinstallation und Bedienung im GitHub-Wiki](https://github.com/stapetz/fhem-cms/wiki/VolvoConnect-Widget)
+· [Installations- und Betriebsanleitung des Moduls](https://github.com/stapetz/fhem-modules/blob/main/docs/volvo/DOKUMENTATION.md)
+· [FHEM-Wiki: VolvoConnect](https://wiki.fhem.de/wiki/VolvoConnect)
+
 ## Neu in 1.10.0
 
 - Widgets und Seiten duplizieren, Widgets als Vorlagen mit neuem Zielgerät

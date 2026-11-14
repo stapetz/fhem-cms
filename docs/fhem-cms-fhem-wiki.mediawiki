@@ -358,6 +358,10 @@ Wartungsbefehle für Batteriewechsel, Aufwecken oder Werksreset ergeben keinen T
 |-
 | SolarFlow || Leistungen zwischen PV, Haus, Netz und Batterie sowie optional den Batterieladestand visualisieren.
 |-
+| Solar und Energiefluss || PV, Haus, Batterie und Netz mit optionalen Tages-/Gesamterträgen; nur zugeordnete Messwerte anzeigen.
+|-
+| VolvoConnect || Fahrzeug-Kompaktkachel mit Info-Popup oder eingebettete Vollansicht; ausschließlich zusammen mit dem FHEM-Modul [[VolvoConnect]].
+|-
 | Anrufliste || Anrufe eines <code>FB_CALLLIST</code>-Devices mit wählbaren Spalten anzeigen.
 |-
 | Text || Formatierten Text, Bilder, Links, Tabellen und Live-Platzhalter kombinieren.
@@ -368,6 +372,16 @@ Wartungsbefehle für Batteriewechsel, Aufwecken oder Werksreset ergeben keinen T
 |}
 
 Alle Widgetaufnahmen und Einstellungsdialoge findest du in der [https://github.com/stapetz/fhem-cms/wiki/Widgets bebilderten Widgetübersicht].
+
+=== VolvoConnect: Fahrzeugwidget und Modul ===
+
+'''Das VolvoConnect-Widget funktioniert ausschließlich mit dem FHEM-Modul [[VolvoConnect]] aus [https://github.com/stapetz/fhem-modules/tree/main/docs/volvo stapetz/fhem-modules].''' Es ersetzt weder das Modul noch dessen Volvo-Anmeldung und verbindet sich nicht selbst mit der Volvo-API.
+
+Zuerst das Modul nach der [https://github.com/stapetz/fhem-modules/blob/main/docs/volvo/DOKUMENTATION.md Installations- und Betriebsanleitung] einrichten. Danach unter '''Einfügen → Widget hinzufügen → VolvoConnect''' das zugehörige Device wählen; Readingnamen und Gruppen werden automatisch übernommen. Im Widgetdialog erklärt das Informationssymbol neben dem Modulhinweis die Einrichtung.
+
+Die kleine Kachel zeigt Akkustand, Reichweite und Verbindungsstatus. Das '''Informationssymbol''' öffnet die Fahrzeugdetails, das '''Aktionssymbol''' die verfügbaren Fahrzeugbefehle. Bei ausgeschaltetem '''Zeige Detaildaten im Popup''' erscheinen die Detailkarten direkt im Widget. Im Editor lassen sich Karten über '''Anordnung bearbeiten''' verschieben, skalieren, ein-/ausblenden und automatisch anordnen; einzelne Readings sind ebenfalls schaltbar, ausgenommen die festen Energiewerte und der Verbindungsstatus. '''Übernehmen''' speichert im CMS-Entwurf und lässt das Detailfenster offen. Erst die CMS-Veröffentlichung übernimmt die Änderung in die Liveansicht.
+
+Die [https://github.com/stapetz/fhem-cms/wiki/VolvoConnect-Widget bebilderte GitHub-Wiki-Anleitung] zeigt Kompakt- und Vollansicht und beschreibt Modulinstallation, Widgetbedienung und Grenzen. Fahrzeugaktionen können reale Auswirkungen haben; nur bewusst auslösen. Keine VIN, Zugangsdaten oder Standortdaten veröffentlichen.
 
 === Geräte und Befehle richtig zuordnen ===
 
