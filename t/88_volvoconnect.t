@@ -49,6 +49,13 @@ for my $case (
     ['boolean card size', sub { $_[0]{cardSizes} = {state => {w=>JSON::PP::true,h=>8}}; }],
     ['extra card field', sub { $_[0]{cardSizes} = {state => {w=>4,h=>8,x=>0}}; }],
     ['missing card height', sub { $_[0]{cardSizes} = {state => {w=>4}}; }],
+    ['null card grid', sub { $_[0]{cardGrid} = undef; }],
+    ['invalid card grid columns', sub { $_[0]{cardGrid} = {columns=>13,rowHeight=>16}; }],
+    ['zero card row height', sub { $_[0]{cardGrid} = {columns=>96,rowHeight=>0}; }],
+    ['boolean card row height', sub { $_[0]{cardGrid} = {columns=>96,rowHeight=>JSON::PP::true}; }],
+    ['extra card grid property', sub { $_[0]{cardGrid} = {columns=>96,rowHeight=>16,x=>1}; }],
+    ['wide inherited card', sub { $_[0]{cardGrid} = {columns=>96,rowHeight=>16}; $_[0]{cardSizes}={state=>{w=>97,h=>20}}; }],
+    ['high inherited card', sub { $_[0]{cardGrid} = {columns=>96,rowHeight=>16}; $_[0]{cardSizes}={state=>{w=>96,h=>1001}}; }],
 ) {
     my ($label, $change) = @{$case};
     my $copy = $json->decode($json->encode($config));
@@ -73,4 +80,10 @@ is(FHEMCMS_ValidateBlueprints([{name => 'Car', widget => $widget}]), undef, 'gro
 $widget->{groupOrder} = [];
 $widget->{hiddenGroups} = [];
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'empty preferences accepted');
+for my $columns (12,24,48,96,192) {
+    $widget->{cardGrid} = {columns=>$columns,rowHeight=>1553 / $columns};
+    $widget->{cardSizes} = {state=>{w=>$columns,h=>40},doors=>{w=>1,h=>1}};
+    is(FHEMCMS_ValidateConfig($config, 5), undef, "accepts inherited $columns-column card grid");
+    is(FHEMCMS_ValidateBlueprints([{name=>'Grid',widget=>$widget}]), undef, "blueprint preserves inherited $columns-column grid");
+}
 done_testing();

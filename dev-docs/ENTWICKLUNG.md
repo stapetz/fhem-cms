@@ -73,6 +73,36 @@ das Oeffnen/Speichern ohne Berechnungsoption.
 
 ## VolvoConnect-Nachtrag (dev, 1.16.0-dev, Refs #209)
 
+Korrektur 1.19.1-dev: Bei showDetails:false verwendet der Anordnungsdialog
+die vor dem Oeffnen gemessene Inline-Inhaltsbreite statt des 1100px-Limits.
+Dialograhmen, Padding und die echte vertikale Scrollbar werden ausgeglichen.
+Die Inline-Karten bleiben unveraendert im Hintergrund und werden verborgen;
+Abbrechen/Schliessen rendert wieder die gespeicherte Inline-Ansicht.
+Das Kartenraster erbt settings.gridColumns (12/24/48/96/192) und die reale
+quadratische Zeilenhoehe des Seitenrasters vom Schema5-Widgetdienst.
+Optionales cardGrid:{columns,rowHeight} dokumentiert die Einheiten der
+gespeicherten ganzzahligen cardSizes (w 1..columns, h 1..1000).
+Ohne Metadaten gelten unveraendert die alten 12 Spalten/32px; erst im
+Bearbeitungsentwurf erfolgt die Umrechnung von Breitenanteil und Pixelhoehe.
+Auch ein spaeterer Rasterwechsel behaelt Breitenanteil und physische Hoehe
+bis auf eine neue Rastereinheit bei; kein automatisches Speichern/Migrieren.
+Feine Raster brauchen 0px Trackgap und 8px Kartenrand statt 16px Trackgap,
+sonst passen z.B. 192 Rasterspalten nicht in den Viewport.
+placeVolvoCards setzt Startpositionen plus unveraenderte Spannen explizit,
+ohne CSS-dense-Rueckfuellung vor vorherigen Karten. Automatisches Anordnen
+sortiert erst sichtbar/ausgeblendet, dann nach Groesse; die ausgeblendete
+Endgruppe beginnt unter der Unterkante aller sichtbaren Karten.
+So bleiben vollbreite Karten nach dem Zurueckziehen auch optisch am Anfang.
+Pointertreffer in Rasterluecken verwenden die naechste Karte; eine obere
+Einfuegezone bei scrollTop=0 erlaubt das Einfuegen vor der ersten Karte,
+auch wenn die gezogene vollbreite Karte den normalen Treffer ueberdeckt.
+Liveupdates, Escape/Touchcancel, Drafttoken- und Fehlerverhalten unveraendert.
+Regressionen: reale Fullwidth-Draggesten in Chrome (Maus/Touch) und WebKit,
+96-Spalten-Inlinebreite, 192-Spalten-Popup, alle fuenf Rasterschemata und
+Blueprints, Altkonfiguration/Einheitenwechsel, visuelles Ende ausgeblendeter
+Karten und Erhalt der Rastermetadaten im Konfigurationsdialog.
+Diese Korrektur ersetzt das eigene grobe Popupraster aus 1.19.0-dev.
+
 Erweiterung 1.19.0-dev: Popup-Kacheln erhalten denselben 18px-Eckwinkel wie
 Hauptwidgets innerhalb einer unsichtbaren 48px Touchflaeche. Maus/Pointer,
 Touch und Pfeiltasten aendern Breite/Hoehe; Escape bzw. pointercancel verwirft

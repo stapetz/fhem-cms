@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { volvoGroups, volvoCards, volvoModel, volvoImageUrl, volvoText, volvoValue,
-  volvoGroupOrder, arrangeVolvoCards, validateVolvoGroups, volvoStatusSymbol, volvoLabel } from '../www/fhem-cms/js/volvoconnect.js';
+  volvoGroupOrder, arrangeVolvoCards, placeVolvoCards, validateVolvoGroups, volvoStatusSymbol, volvoLabel } from '../www/fhem-cms/js/volvoconnect.js';
 import { deviceWidgetSuggestions } from '../www/fhem-cms/js/device-widget-suggestions.js';
 import { schema5WidgetSuggestions, createSchema5RoomPlan, buildSchema5SetupConfig } from '../www/fhem-cms/js/fcui-schema5-setup-wizard.js';
 
@@ -30,6 +30,35 @@ test('VolvoConnect omits technical endpoint code rows without changing readings'
   assert.ok(![...model(readings).groups.values()].flat().some(row=>row.key==='code'));
   assert.equal(model(readings).soc,72);
   assert.deepEqual(readings,original);
+});
+
+test('VolvoConnect inherits fine card grids and keeps hidden cards visually below visible cards', () => {
+  for (const columns of [12,24,48,96,192]) {
+    const config = {cardGrid:{columns,rowHeight:1553 / columns},
+      cardSizes:{state:{w:columns,h:40},gallery:{w:columns / 2,h:10},doors:{w:columns / 2,h:8}}};
+    assert.equal(validateVolvoGroups(config),null);
+    const sizes = {...config.cardSizes,statistics:{w:columns / 2,h:9}};
+    const visibility = {hiddenGroups:['state'],showGallery:false};
+    const order = arrangeVolvoCards(['state','gallery','doors','statistics'],sizes,visibility);
+    assert.deepEqual(order,['statistics','doors','state','gallery']);
+    const positions = placeVolvoCards(order,sizes,columns,visibility);
+    const visibleBottom = Math.max(...positions.filter(p=>['statistics','doors'].includes(p.key)).map(p=>p.row+p.h));
+    assert.ok(positions.filter(p=>['state','gallery'].includes(p.key)).every(p=>p.row>=visibleBottom));
+    const restored = placeVolvoCards(['state','statistics','doors','gallery'],sizes,columns,visibility);
+    assert.equal(restored[0].row,0);
+    assert.equal(restored[0].col,0);
+    assert.equal(restored[0].w,columns);
+    for (const a of positions) for (const b of positions) {
+      if (a===b) continue;
+      assert.ok(!(a.col<b.col+b.w && a.col+a.w>b.col && a.row<b.row+b.h && a.row+a.h>b.row));
+    }
+  }
+  for (const cardGrid of [null,[],{columns:13,rowHeight:16},{columns:96,rowHeight:0},
+    {columns:96,rowHeight:Infinity},{columns:96,rowHeight:'16'},{columns:96,rowHeight:16,x:1}]) {
+    assert.match(validateVolvoGroups({cardGrid}), /Ungültiges/);
+  }
+  assert.match(validateVolvoGroups({cardGrid:{columns:96,rowHeight:16},cardSizes:{state:{w:97,h:10}}}), /Ungültige/);
+  assert.match(validateVolvoGroups({cardGrid:{columns:96,rowHeight:16},cardSizes:{state:{w:96,h:1001}}}), /Ungültige/);
 });
 
 test('VolvoConnect groups actual module readings without inventing missing values', () => {

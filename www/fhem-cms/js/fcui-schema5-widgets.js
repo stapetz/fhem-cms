@@ -30,9 +30,12 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     const widget = widgets.get(id);
     const widgetServices = widget.type === 'fhem-link' ? { ...services,
       pages: config.pages.map(({ id, title }) => ({ id, title })) } : services;
-    const element = createWidgetElement(widget, widgetServices, snapshots, true);
+    const vehicleServices = widget.type === 'fhem-volvoconnect' ? {...widgetServices,
+      cardGrid: () => ({columns:Number(config.settings.gridColumns),
+        rowHeight:root.getBoundingClientRect().width / Number(config.settings.gridColumns)})} : widgetServices;
+    const element = createWidgetElement(widget, vehicleServices, snapshots, true);
     if (widget.type === 'fhem-volvoconnect' && editing) {
-      element.services = { ...widgetServices, editing:true,
+      element.services = { ...vehicleServices, editing:true,
         showGrid:editing.showGrid,
         ...(typeof editing.onPopupSettings === 'function'
           ? {savePopupSettings: settings => editing.onPopupSettings(id, settings)} : {}) };
