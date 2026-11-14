@@ -20,7 +20,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.12.2-dev';
+our $FHEMCMS_VERSION = '1.13.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1003,7 +1003,7 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'fhem-select'
                         && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'
                         && !($targetSchema == 5 && ($widget->{type} eq 'fhem-link' || $widget->{type} eq 'fhem-calllist'
-                            || $widget->{type} eq 'fhem-solar-energy'))));
+                            || $widget->{type} eq 'fhem-solar-energy' || $widget->{type} eq 'fhem-volvoconnect'))));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -1032,6 +1032,8 @@ sub FHEMCMS_ValidateConfig {
                     ['title', 'showTitle', 'unit', 'range', 'granularity', 'source']);
             } elsif ($widget->{type} eq 'fhem-calllist') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
+            } elsif ($widget->{type} eq 'fhem-volvoconnect') {
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid'], ['title', 'showTitle', 'showGallery']);
             } elsif ($widget->{type} eq 'fhem-solar-energy') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'sections', 'grid'],
                     ['title', 'showTitle', 'powerUnit', 'energyUnit', 'threshold', 'deriveHome']);
@@ -1156,6 +1158,9 @@ sub FHEMCMS_ValidateConfig {
                             || $column !~ /\A(?:state|party|timestamp|duration|name|number|internal|external|connection)\z/);
                     return 'Doppelte Anruflisten-Spalte' if ($seenColumn{$column}++);
                 }
+            } elsif ($widget->{type} eq 'fhem-volvoconnect') {
+                return 'Ungueltiger Wert fuer showGallery'
+                    if (exists($widget->{showGallery}) && !$isBool->($widget->{showGallery}));
             } elsif ($widget->{type} eq 'fhem-slider') {
                 for my $field ('command', 'reading') {
                     return "Ungueltiger Wert fuer $field" if (!$isName->($widget->{$field}));

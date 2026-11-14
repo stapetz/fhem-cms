@@ -69,6 +69,7 @@ export function deviceWidgetSuggestions(device, devices = [], logInfo = null) {
       mode: 'dropdown' });
   }
   if (device.type === 'FB_CALLLIST') add('fhem-calllist', { device: device.name });
+  if (device.type === 'VolvoConnect') add('fhem-volvoconnect', { device: device.name, showGallery: true });
   if (logInfo && /^(?:dblog|filelog)$/.test(logInfo.source) && Array.isArray(logInfo.readings)) {
     const logged = logInfo.readings.filter((name) => names.includes(name)
       && String(readings[name]).trim() !== '' && Number.isFinite(Number(readings[name])));

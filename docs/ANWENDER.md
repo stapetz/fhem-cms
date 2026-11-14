@@ -471,6 +471,32 @@ HTML-Details, eingebettete Frames und laufende Animationen bleiben dabei
 erhalten. Die Prüfung auf dem eigenen iPhone beziehungsweise als Homescreen-App
 bleibt wichtig, da die Browser-Vorschau Safari nicht vollständig nachbildet.
 
+### VolvoConnect für das Fahrzeug
+
+Unter **Widget hinzufügen → VolvoConnect** oder **Gerät hinzufügen** ein
+Device vom Typ **VolvoConnect** auswählen. Das Widget übernimmt die
+Readingnamen, Einheiten und Gruppen des VolvoConnect-Modul-Dashboards
+automatisch; ein manuelles Mapping ist nicht erforderlich.
+
+Oben stehen Akkustand und Restreichweite mit Ladeinformationen. Darunter
+erscheinen die tatsächlich vorhandenen Modulgruppen, unter anderem Türen,
+Fenster, Diagnose, Statistik, Reifen, Fahrzeugdaten und Standort. Fehlende
+oder nicht unterstützte Werte und leere Gruppen werden nicht angezeigt;
+echte Nullwerte bleiben sichtbar. Die Darstellung verwendet das gewählte
+Theme und wächst auf mobilen Geräten mit dem Inhalt.
+
+Die **Bildergalerie anzeigen**-Option ist standardmäßig eingeschaltet.
+Außen- und Innenansicht erscheinen nur mit entsprechenden Bildreadings;
+zwischen den Bildern kann gewischt oder per Tastatur gescrollt werden.
+Die Galerie lässt sich im Widgetdialog vollständig abschalten. Standortdaten
+verwenden die vorhandene Fahrzeugkarte; dabei werden Kartenkacheln von
+OpenStreetMap geladen. Liveupdates erhalten Galerieposition und Kartenzoom.
+
+Vom Device angebotene Fahrzeugaktionen lassen sich nur im Ansichtsmodus
+und nach einer Bestätigung ausführen. „Befehl gesendet“ bedeutet nicht, dass
+das Fahrzeug den Auftrag bereits abgeschlossen hat; maßgeblich sind die
+zurückkommenden Readings. Vorhandene freie HTML-Widgets bleiben unverändert.
+
 ### Anrufliste für FB_CALLLIST
 
 Im Schema-5-Editor unter **Widget hinzufügen → Anrufliste** ein

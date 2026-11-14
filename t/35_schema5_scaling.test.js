@@ -114,6 +114,8 @@ async function testServer() {
 }
 
 for (const [name, fixtures] of [
+  ['VolvoConnect renders module groups and preserves responsive live vehicle data',
+    [['88_volvoconnect.html', 400]]],
   ['widget titles inherit alignment and compact contents fill their available area',
     [['36_widget_titles.html', 180], ['37_widget_content.html', 600],
       ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],

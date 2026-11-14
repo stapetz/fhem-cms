@@ -507,6 +507,7 @@ class FHEMCMSLink extends HTMLElement {
       'fhem-button': 'Taster', 'fhem-html': 'Freies HTML', 'fhem-clock': 'Uhr / Datum',
       'fhem-icon': 'Status-Symbol', 'fhem-table': 'Tabelle', 'fhem-slider': 'Schieberegler',
       'fhem-chart': 'Diagramm', 'fhem-calllist': 'Anrufliste', 'fhem-solarflow': 'SolarFlow',
+      'fhem-volvoconnect': 'VolvoConnect',
       text: 'Textbaustein', 'fhem-link': 'LinkWidget', navigation: 'Navigation' };
     const label = entry => entry.title || `${names[entry.type] || 'Widget'} (${entry.id})`;
     const comparison = this.$('[data-layout-comparison]');

@@ -21,6 +21,7 @@ const WIDGET_TYPES = [
   ['fhem-calllist', 'Anrufliste', 'a', 6, 6, { device: '', limit: 5, columns: ['state', 'party', 'timestamp', 'duration'] }],
   ['fhem-solarflow', 'SolarFlow', 'f', 5, 14, { readings: {} }],
   ['fhem-solar-energy', 'Solar und Energiefluss', 'e', 12, 12, { readings: {}, sections: [] }],
+  ['fhem-volvoconnect', 'VolvoConnect', 'o', 12, 18, { device: '', showGallery: true }],
   ['text', 'Textbaustein', 'x', 6, 2, { html: '' }],
   ['fhem-link', 'LinkWidget', 'k', 4, 3, { links: [] }],
 ];
