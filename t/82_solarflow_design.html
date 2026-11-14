@@ -1,0 +1,170 @@
+<!doctype html>
+<html data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SolarFlow design regression — Liquid Glass</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<style>
+  body { margin: 0; padding: 16px; }
+  #fixture { max-width: 100%; }
+  #preview { width: min(100%, 560px); margin: 0 auto; }
+  #preview cms-solarflow { display: block; height: 760px; }
+  #result { white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>
+<div id="fixture"></div>
+<div id="preview" class="cms-schema5-grid"><div class="grid-stack-item">
+  <div class="grid-stack-item-content"></div>
+</div></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+import { computeModel, batteryColor } from '../www/fhem-cms/components/cms-solarflow.js';
+
+const output = document.querySelector('#result');
+const fixture = document.querySelector('#fixture');
+const checks = [];
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 40));
+const snapshots = (readings = {}) => new Map([['Demo', [{
+  name: 'Demo', readings: { pv: '1250', home: '800', grid: '200', battery: '250', soc: '65', ...readings },
+}]]]);
+const config = {
+  id: 'solar', type: 'fhem-solarflow', title: 'SolarFlow', unit: 'W', threshold: 10,
+  readings: Object.fromEntries(['pv', 'home', 'grid', 'battery', 'soc']
+    .map(reading => [reading, { device: 'Demo', reading }])),
+  grid: { col: 1, row: 2, w: 6, h: 8 },
+};
+const original = JSON.stringify(config);
+const host = createWidgetElement(config, {}, snapshots(), true);
+fixture.append(host);
+const $ = selector => host.shadowRoot.querySelector(selector);
+try {
+  if (new URLSearchParams(location.search).has('reduced')) {
+    check(matchMedia('(prefers-reduced-motion: reduce)').matches, 'real reduced-motion media query');
+  }
+  for (const theme of ['liquid-glass', 'light', 'dark']) {
+    document.documentElement.dataset.cmsTheme = theme;
+    for (const [width, height] of [[180, 320], [280, 220], [390, 600], [768, 640], [1000, 800], [120, 40]]) {
+      host.style.cssText = `width:${width}px;height:${height}px`;
+      await settle();
+      const tile = $('.tile');
+      check(getComputedStyle(tile).fontFamily.startsWith('system-ui'), `${theme}/${width}: system font`);
+      check(getComputedStyle($('[data-title]')).fontSize === '22.4px',
+        `${theme}/${width}: legible title, not container-shrunk`);
+      check(getComputedStyle($('.flow-card')).borderRadius === '16px'
+        && getComputedStyle($('.flow-card')).backgroundImage.includes('linear-gradient'),
+      `${theme}/${width}: hero surface`);
+      check(getComputedStyle($('.metric')).borderRadius === '14px', `${theme}/${width}: detail surface`);
+      check(tile.scrollWidth <= tile.clientWidth + 1, `${theme}/${width}: no horizontal overflow`);
+      check($('[data-svg]').getBoundingClientRect().top >= $('[data-header]').getBoundingClientRect().bottom,
+        `${theme}/${width}: no title/diagram overlap`);
+      check($('[data-power="pv"]').textContent === '1250W'
+        && $('[data-mode="grid"]').textContent === 'Einspeisung'
+        && $('[data-mode="bat"]').textContent === 'Laden',
+      `${theme}/${width}: readable live values and directions`);
+      check($('[data-charge]').textContent === 'Ladestand: 65 %', `${theme}/${width}: charge text`);
+      check(getComputedStyle($('[data-value="pv"]')).fill === getComputedStyle(tile).color,
+        `${theme}/${width}: graph values inherit theme text color`);
+      check(getComputedStyle($('[data-station="pv"] [data-ring]')).fill !== 'rgb(250, 250, 250)',
+        `${theme}/${width}: no hardcoded white station`);
+      if (height <= 320) {
+        check(tile.scrollHeight > tile.clientHeight, `${theme}/${width}: small tiles scroll vertically`);
+        tile.scrollTop = tile.scrollHeight;
+        const last = $('[data-metric="bat"]').getBoundingClientRect();
+        check(last.bottom <= tile.getBoundingClientRect().bottom + 1,
+          `${theme}/${width}: last battery metric reachable`);
+        tile.scrollTop = 0;
+      }
+    }
+  }
+  const graph = $('[data-station="pv"]');
+  host.data = snapshots({ pv: '1251', home: '801' });
+  check($('[data-station="pv"]') === graph, 'same flow structure preserves SVG nodes and animation');
+  check($('[data-power="pv"]').textContent === '1251W', 'live metric refresh');
+  host.data = snapshots({ pv: '0', home: '800', grid: '-500', battery: '-300', soc: '20' });
+  check($('[data-mode="grid"]').textContent === 'Bezug'
+    && $('[data-mode="bat"]').textContent === 'Entladen', 'negative powers have explicit directions');
+  check($('[data-station="grid"]').dataset.state === 'red'
+    && $('[data-station="bat"]').dataset.state === 'red', 'existing negative state semantics preserved');
+  check([...host.shadowRoot.querySelectorAll('animateMotion')].some(node =>
+    node.getAttribute('keyPoints') === '1;0') || matchMedia('(prefers-reduced-motion: reduce)').matches,
+  'reverse flows still animate backwards');
+  for (const [soc, color, filled] of [[0, '#ef4444', 0], [20, '#ef4444', 1],
+    [30, '#f59e0b', 2], [64, '#f59e0b', 4], [65, '#10b981', 4], [100, '#10b981', 5]]) {
+    host.data = snapshots({ soc: String(soc) });
+    check(batteryColor(soc) === color, `battery palette threshold ${soc}`);
+    check(host.shadowRoot.querySelectorAll('[data-segment]:not([fill="none"])').length === filled,
+      `battery segment count ${soc}`);
+  }
+  host.data = snapshots({ grid: '9', battery: '-9', soc: undefined });
+  check($('[data-mode="grid"]').textContent === 'Inaktiv'
+    && $('[data-mode="bat"]').textContent === 'Inaktiv', 'threshold semantics retained');
+  check($('[data-charge]').textContent === 'Ladestand nicht verfügbar', 'unknown charge remains explicit');
+  host.data = snapshots({ grid: undefined, battery: undefined });
+  check($('[data-mode="grid"]').textContent === 'Wert nicht verfügbar'
+    && $('[data-mode="bat"]').textContent === 'Wert nicht verfügbar', 'unknown values are not idle');
+  host.config = { ...config, readings: { pv: config.readings.pv }, deriveHome: false };
+  check($('[data-metric="grid"]').hidden && $('[data-metric="bat"]').hidden
+    && host.shadowRoot.querySelectorAll('[data-station]').length === 2, 'optional station/card pairs disappear');
+  check($('[data-power="home"]').textContent === '–', 'unverified home power is not invented');
+  const legacy = { ...config, device: 'Demo',
+    readings: { pv: 'pv', home: 'home', grid: 'grid', battery: 'battery', soc: 'soc' } };
+  host.config = legacy;
+  host.data = snapshots();
+  check($('[data-power="pv"]').textContent === '1250W', 'legacy shared-device bindings retained');
+  host.config = { ...config, unit: 'kW' };
+  host.data = snapshots({ pv: '1.25', home: '.8', grid: '.2', battery: '.25' });
+  check($('[data-power="pv"]').textContent === '1250W'
+    && computeModel(host.config, snapshots({ pv: '1.25' })).values.pv === 1250,
+  'kW inputs retain conversion to watts');
+  host.stale = Date.now();
+  check(getComputedStyle($('.flow-card')).borderStyle === 'dashed', 'stale state remains visible');
+  host.stale = null;
+  check(getComputedStyle($('.flow-card')).borderStyle === 'solid', 'reconnect clears stale state');
+  host.config = { ...config, showTitle: false };
+  host.removeAttribute('view-only');
+  await settle();
+  const gear = $('[data-open-config]').getBoundingClientRect();
+  check(gear.width >= 48 && gear.height >= 48, 'configuration target meets touch size');
+  check($('.dashboard').getBoundingClientRect().top >= gear.bottom, 'hidden title reserves configuration space');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  check([...host.shadowRoot.querySelectorAll('animateMotion')].every(node =>
+    node.getAttribute('repeatCount') === (reduced ? '1' : 'indefinite')),
+  'motion preference honored');
+  check(JSON.stringify(config) === original, 'rendering does not mutate configuration');
+  host.remove();
+
+  document.documentElement.dataset.cmsTheme = 'liquid-glass';
+  const grid = document.createElement('div');
+  grid.className = 'grid-stack cms-schema5-grid';
+  grid.style.width = '390px';
+  fixture.append(grid);
+  const layout = { schemaVersion: 5, theme: 'liquid-glass',
+    settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } }, pages: [{ id: 'start', widgets: [config] }] };
+  const mounted = mountSchema5Widgets(GridStack, grid, layout, 'start', document.createElement('nav'), {}, snapshots());
+  await settle();
+  check(getComputedStyle(grid.querySelector('cms-solarflow').parentElement).backdropFilter.includes('blur'),
+    'real Liquid Glass grid applies blur');
+  check(grid.scrollWidth <= grid.clientWidth + 1, 'real glass grid has no horizontal overflow');
+  mounted.destroy();
+  grid.remove();
+  const preview = createWidgetElement(config, {}, snapshots(), true);
+  document.querySelector('#preview .grid-stack-item-content').append(preview);
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks: checks.length, messages: checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = JSON.stringify({ error: error.stack, checks });
+} finally {
+  fixture.replaceChildren();
+  document.documentElement.dataset.cmsTheme = 'liquid-glass';
+}
+</script>
+</html>

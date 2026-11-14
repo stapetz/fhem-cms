@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "SolarFlow im klaren Widget-Design",
+  "changes": [
+    "SolarFlow uebernimmt das neue Design mit klarer Kopfzeile, dezenter Hero-Flaeche und themefaehigen Stationen.",
+    "Lesbare Detail-Karten zeigen Leistungen, Netz-/Batterierichtung und Ladestand; kleine Kacheln scrollen vertikal statt unlesbar zu schrumpfen.",
+    "Datenquellen, Berechnungen, Schwellen, Flussrichtungen und Einstellungen bleiben erhalten; lokale visuelle Pruefung mit Liquid Glass."
+  ]
+}
