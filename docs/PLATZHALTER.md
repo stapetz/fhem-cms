@@ -114,6 +114,33 @@ Sprungmarken `<a href="#slide1">` springen zum `id="slide1"` im selben Widget,
 ohne den CMS-Seitenrouter zu verändern. `:target` markiert dieses widgetlokale
 Ziel auch innerhalb des Shadow DOM. Fehlende Ziele werden sichtbar gemeldet.
 
+### Lokale Fahrzeugkarte mit Live-Standort (dev)
+
+```html
+<div id="volvo-map" data-map="vehicle"
+  data-latitude="{{MeinElch:location_latitude}}"
+  data-longitude="{{MeinElch:location_longitude}}"
+  data-zoom="16" style="width:100%;height:175px"></div>
+```
+
+Die Kartenansicht und Leaflet werden lokal vom CMS geladen, die Kartenkacheln
+weiterhin von `tile.openstreetmap.org`. Die Karte ist **nicht offline** und die
+Kachelanfragen übertragen den dargestellten Kartenbereich an OpenStreetMap.
+Die Quellenangabe bleibt sichtbar. Es werden keine fremden Skripte benötigt;
+die HTML-Skript-/Eventhandler-Sperre bleibt unverändert.
+
+Ein weißes SVG-Auto markiert die Reading-Koordinaten. Bei geändertem Standort
+zentriert sich die Karte auf die neue Position. Unveränderte Readingupdates
+erhalten die Karteninstanz und damit manuell gewählten Zoom/Kartenausschnitt.
+Die Zoomknöpfe und Verschieben per Maus/Touch sind möglich; Mausradzoom ist
+deaktiviert, damit das Dashboard weiter gescrollt werden kann.
+`data-zoom` erlaubt 2–19; Standard 16 zeigt die Straßenumgebung. Jedes
+Karten-Div benötigt eine eindeutige `id` im Widget und eine CSS-Höhe.
+Latitude -90–90 und Longitude -180–180 werden geprüft; fehlende/ungültige
+Werte entfernen die alte Markierung und die Kartenkacheln mit sichtbarer
+Meldung. Die Mercator-Karte deckt die Polregionen nicht vollständig ab.
+Auch Kachel-Ladefehler werden sichtbar gemeldet.
+
 ### Iframes für Grafana, Wetter und Karten (dev)
 
 ```html

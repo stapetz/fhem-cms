@@ -1,6 +1,7 @@
 import { MAX_FREE_DEVICES, checkSource, elementText, extractDevices, lookupValue, placeholderText, renderTemplate, sanitize } from '../js/freehtml.js';
 import { openPlaceholderPicker } from '../js/placeholder-picker.js';
 import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
+import { renderVehicleMaps } from '../js/vehicle-map.js';
 
 const HELP_URL = 'https://github.com/stapetz/fhem-cms/blob/dev/docs/PLATZHALTER.md';
 const EXAMPLE = `<div class="box">
@@ -20,10 +21,15 @@ class FHEMCMSHtml extends HTMLElement {
     this.template = null;
     this.templateSource = null;
     this.fragmentTarget = null;
+    this.vehicleMaps = new Map();
+    this.mapRuntime = null;
+    this.mapLoading = false;
+    this.mapError = '';
   }
 
   connectedCallback() {
     if (this.shadowRoot.childElementCount > 0) {
+      this.render();
       return;
     }
     this.shadowRoot.innerHTML = `
@@ -105,6 +111,7 @@ class FHEMCMSHtml extends HTMLElement {
             <p>CSS verwendet eine Positivliste für Eigenschaften, Funktionen und At-Regeln: moderne Layouts, Animationen, Filter, Variablen, <code>:has()</code> und Attributselektoren sind möglich. Alle Positionierungsarten inklusive <code>fixed</code> bleiben offen, auf die Kachel begrenzt. <code>z-index</code> darf höchstens 100 sein. Unbekannte Regeln und <code>:host</code> werden abgelehnt.</p>
             <p>Bildquellen, Links, Iframes und CSS-Ressourcen (<code>url()</code>, <code>@import</code>) dürfen lokale Pfade oder HTTP-/HTTPS-URLs verwenden. Einzelne URL-Readings werden bei jeder Anzeige geprüft. Iframes haben keine Anbieterbeschränkung, aber eine feste Sandbox ohne Originfreigabe, Popups oder Topnavigation; Anbieter-/Browserregeln können Einbettungen dennoch blockieren. Externe Ressourcen kontaktieren ihre Anbieter; importierte Styles werden nicht rekursiv geprüft. Skripte im eigenen HTML, Eventhandler, Formulare, <code>srcdoc</code> und aktive SVG-Inhalte bleiben gesperrt.</p>
             <p><code>data-value="{{Device:power|int}}"</code> und <code>data-state="{{Device:state}}"</code> setzen sicheren Attributtext für CSS. <code>data-cms-*</code> ist intern reserviert (Ausnahme: <code>data-cms-class</code>). Links auf <code>#id</code> und <code>:target</code> funktionieren innerhalb des Widgets ohne CMS-Seitenwechsel.</p>
+            <p>Lokale Fahrzeugkarte: <code>&lt;div id="fahrzeugkarte" data-map="vehicle" data-latitude="{{MeinElch:location_latitude}}" data-longitude="{{MeinElch:location_longitude}}" data-zoom="16" style="height:175px;width:100%"&gt;&lt;/div&gt;</code>. Weißer Automarker, Live-Zentrierung bei Standortwechsel, Zoom 2–19. Normale Updates erhalten Zoom und Kartenausschnitt. OpenStreetMap-Kacheln werden extern geladen.</p>
             <p>Numerische Inline-Styles wie <code>width:{{MeinElch:state_batteryChargeLevel|int}}%;</code> und Kartenkoordinaten im Querystring unterstützen geprüfte Zahlen mit <code>int</code> oder <code>round(0)</code> bis <code>round(6)</code>. <code>scroll-behavior:smooth</code> ist erlaubt; <code>map(on:An,off:Aus)</code> funktioniert ebenso wie die Schreibweise mit <code>=</code>.</p>
             <p><a href="${HELP_URL}" target="_blank" rel="noopener noreferrer">Ausführliche Beschreibung (PLATZHALTER.md)</a></p>
           </details>
@@ -179,6 +186,14 @@ class FHEMCMSHtml extends HTMLElement {
     return lookupValue(this.groups, device, reading);
   }
 
+  disconnectedCallback() {
+    queueMicrotask(() => {
+      if (this.isConnected) return;
+      for (const controller of this.vehicleMaps.values()) controller.destroy();
+      this.vehicleMaps.clear();
+    });
+  }
+
   render() {
     const content = this.shadowRoot.querySelector('[data-content]');
     if (!content || !this.widgetConfig) {
@@ -189,7 +204,32 @@ class FHEMCMSHtml extends HTMLElement {
       this.template = sanitize(html);
       this.templateSource = html;
     }
-    content.replaceChildren(renderTemplate(this.template, (device, reading) => this.lookup(device, reading)));
+    const rendered = renderTemplate(this.template, (device, reading) => this.lookup(device, reading));
+    const mapHosts = rendered.querySelectorAll('div[data-map="vehicle"]');
+    if (mapHosts.length && !this.mapRuntime) {
+      if (!this.mapLoading && !this.mapError) {
+        this.mapLoading = true;
+        import('../js/fcui-map-runtime.js').then(runtime => {
+          this.mapRuntime = runtime;
+          this.mapLoading = false;
+          if (this.isConnected) this.render();
+        }, error => {
+          console.error('Fahrzeugkarte konnte nicht geladen werden', error);
+          this.mapLoading = false;
+          this.mapError = 'Fahrzeugkarte konnte nicht geladen werden. Bitte Seite neu laden.';
+          if (this.isConnected) this.render();
+        });
+      }
+      for (const host of mapHosts) {
+        const status = document.createElement('span');
+        status.setAttribute('role', 'status');
+        status.textContent = this.mapError || 'Fahrzeugkarte wird geladen …';
+        host.replaceChildren(status);
+      }
+      content.replaceChildren(rendered);
+    } else {
+      this.vehicleMaps = renderVehicleMaps(content, rendered, this.vehicleMaps, this.mapRuntime);
+    }
     if (this.fragmentTarget) {
       [...content.querySelectorAll('[id]')].find(element => element.id === this.fragmentTarget)
         ?.setAttribute('data-cms-fragment-target', '');

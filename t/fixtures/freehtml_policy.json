@@ -58,6 +58,7 @@
     ["https://example.test/\" onload=\"x", false]
   ],
   "html": [
+    ["<div id=\"vehicle\" data-map=\"vehicle\" data-latitude=\"{{Sensor:latitude}}\" data-longitude=\"{{Sensor:longitude}}\" data-zoom=\"16\" style=\"height:175px;width:100%\"></div>", true],
     ["<table><tbody><tr><td style=\"padding: 6px 4px; text-align: right; font-variant-numeric: tabular-nums;\">123</td></tr></tbody></table>", true],
     ["<iframe src=\"http://grafana.local:3000/panel\" width=\"100%\" height=\"300\" loading=\"lazy\"></iframe>", true],
     ["<iframe src=\"/radar/panel\"></iframe>", true],

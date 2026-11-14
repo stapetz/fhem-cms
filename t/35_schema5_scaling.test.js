@@ -153,7 +153,9 @@ for (const [name, fixtures] of [
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
       ['75_dialog_layout.html?width=852', 51]]],
   ['Free HTML permits passive layouts and SVG with validated live image sources',
-    [['78_freehtml.html', 179]]],
+    [['78_freehtml.html', 180]]],
+  ['Local vehicle map preserves zoom and follows live coordinates',
+    [['80_vehicle_map.html', 28]]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],

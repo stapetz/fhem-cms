@@ -33,6 +33,28 @@ const builds = [
     entryPoints: ['node_modules/gridstack/dist/gridstack.min.css'],
     outfile: 'www/fhem-cms/css/fcui-gridstack.css',
   },
+  {
+    ...common,
+    entryPoints: ['fcui/map-runtime.js'],
+    format: 'esm',
+    outfile: 'www/fhem-cms/js/fcui-map-runtime.js',
+  },
+  {
+    ...common,
+    entryPoints: ['node_modules/leaflet/dist/leaflet.css'],
+    loader: { '.png': 'dataurl' },
+    plugins: [{
+      name: 'leaflet-modern-css',
+      setup(builder) {
+        builder.onLoad({ filter: /leaflet\.css$/ }, async ({ path }) => ({
+          contents: (await readFile(path, 'utf8')).replace(/behavior:\s*url\(#default#VML\);/g, ''),
+          loader: 'css',
+          resolveDir: dirname(path),
+        }));
+      },
+    }],
+    outfile: 'www/fhem-cms/css/fcui-map.css',
+  },
 ];
 
 const packages = new Set();
@@ -56,11 +78,11 @@ const notices = [];
 for (const name of [...packages].sort()) {
   const dir = resolve('node_modules', name);
   const manifest = JSON.parse(await readFile(resolve(dir, 'package.json'), 'utf8'));
-  if (!['MIT', 'BSD-3-Clause'].includes(manifest.license)) {
+  if (!['MIT', 'BSD-2-Clause', 'BSD-3-Clause'].includes(manifest.license)) {
     throw new Error(`Review unsupported license for ${name}: ${manifest.license}`);
   }
   const license = await readFile(resolve(dir, 'LICENSE'), 'utf8');
-  notices.push(`${name} ${manifest.version} (${manifest.license})\n\n${license.trim()}`);
+  notices.push(`${name} ${manifest.version} (${manifest.license})\n\n${license.replace(/\r\n/g, '\n').trim()}`);
 }
 outputs.push({
   path: resolve('www/fhem-cms/FCUI-LICENSES.txt'),

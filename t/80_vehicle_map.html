@@ -1,0 +1,97 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Local vehicle map regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+import { checkSource, extractDevices } from '../www/fhem-cms/js/freehtml.js';
+const output = document.querySelector('#result');
+let checks = 0;
+const errors = [];
+window.addEventListener('error', event => errors.push(event.error?.stack || event.message));
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+try {
+  const html = '<div id="vehicle" data-map="vehicle" data-latitude="{{Sensor:latitude}}" data-longitude="{{Sensor:longitude}}" data-zoom="16" style="height:175px;width:100%"></div>';
+  check(checkSource(html) === null, 'safe map placeholder accepted');
+  check(extractDevices(html).includes('Sensor'), 'coordinate bindings participate in live subscriptions');
+  let values = { latitude: '52.5', longitude: '13.4' };
+  const data = () => new Map([['Sensor', [{ name: 'Sensor', readings: values }]]]);
+  const widget = createWidgetElement({ id: 'map', type: 'fhem-html', devices: ['Sensor'], html }, {}, data(), true);
+  widget.style.cssText = 'display:block;width:600px;height:250px';
+  document.body.append(widget);
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => { clearInterval(timer); reject(new Error('Local map runtime did not load')); }, 3000);
+    const timer = setInterval(() => {
+      if (!widget.vehicleMaps.size) return;
+      clearInterval(timer);
+      clearTimeout(timeout);
+      resolve();
+    }, 10);
+  });
+  const controller = widget.vehicleMaps.get('vehicle');
+  if (!controller) throw new Error(errors.join('\n') || widget.shadowRoot.innerHTML);
+  check(controller.instance.getZoom() === 16, 'start zoom exactly 16');
+  check(Math.abs(controller.instance.getCenter().lat - 52.5) < .0001 && Math.abs(controller.instance.getCenter().lng - 13.4) < .0001, 'map starts at live coordinates');
+  check(controller.host.shadowRoot.querySelector('.car path').getAttribute('fill') === 'white', 'white SVG vehicle marker');
+  check(controller.instance.hasLayer(controller.car), 'vehicle marker belongs to actual map layer');
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Zoom button did not change the map')), 2000);
+    controller.instance.once('zoomend', () => { clearTimeout(timeout); resolve(); });
+    controller.host.shadowRoot.querySelector('.leaflet-control-zoom-in').click();
+  });
+  check(controller.instance.getZoom() === 17, 'actual map zoom button works within shadow DOM');
+  check(controller.host.shadowRoot.querySelector('.leaflet-control-attribution a[href*="openstreetmap.org"]'), 'visible OSM attribution');
+  controller.instance.setView([52.51, 13.41], 17, { animate: false });
+  widget.data = data();
+  check(widget.vehicleMaps.get('vehicle') === controller, 'ordinary updates reuse map instance');
+  check(controller.instance.getZoom() === 17, 'user zoom survives ordinary reading update');
+  check(Math.abs(controller.instance.getCenter().lat - 52.51) < .00001, 'user pan survives unchanged coordinate update');
+  values = { latitude: '48.85', longitude: '2.35' };
+  widget.data = data();
+  check(controller.car.getLatLng().lat === 48.85 && controller.car.getLatLng().lng === 2.35, 'marker follows changed vehicle location');
+  check(Math.abs(controller.instance.getCenter().lat - 48.85) < .0001 && controller.instance.getZoom() === 17, 'new coordinates recenter at current zoom');
+  values = { latitude: '', longitude: '2.35' };
+  widget.data = data();
+  check(!controller.instance.hasLayer(controller.car) && !controller.instance.hasLayer(controller.tiles), 'missing location removes stale marker and tiles');
+  check(!controller.status.hidden, 'missing coordinates visibly reported');
+  values = { latitude: '91', longitude: '2.35' };
+  widget.data = data();
+  check(!controller.instance.hasLayer(controller.car), 'latitude outside earth bounds rejected');
+  values = { latitude: '48.85', longitude: '181' };
+  widget.data = data();
+  check(!controller.instance.hasLayer(controller.car), 'longitude outside earth bounds rejected');
+  values = { latitude: '48.85', longitude: '2.35' };
+  widget.data = data();
+  check(controller.instance.hasLayer(controller.car) && controller.status.hidden, 'valid location recovers');
+  controller.tiles.fire('tileerror');
+  check(!controller.status.hidden && controller.status.textContent.includes('Kartenkacheln'), 'tile failures visible');
+  widget.config = { ...widget.widgetConfig, html: html.replace('data-zoom="16"', 'data-zoom="20"') };
+  check(!controller.instance.hasLayer(controller.car) && !controller.status.hidden, 'out of range zoom rejected');
+  widget.config = { ...widget.widgetConfig, html: html.replace('data-zoom="16"', 'data-zoom="15"') };
+  check(controller.instance.getZoom() === 15, 'configured zoom change applied');
+  widget.style.width = '400px';
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  check(controller.instance.getSize().x > 0 && controller.instance.getSize().x < 400, 'responsive map geometry updated');
+  widget.remove();
+  await Promise.resolve();
+  check(widget.vehicleMaps.size === 0, 'removal releases map and resize observer');
+  document.body.append(widget);
+  check(widget.vehicleMaps.size === 1 && widget.vehicleMaps.get('vehicle') !== controller, 'reconnecting safely recreates map');
+  widget.config = { ...widget.widgetConfig, html: '<div data-map="vehicle" style="height:175px"></div>' };
+  check(widget.shadowRoot.querySelector('[data-content] [role=status]')?.textContent.includes('eindeutige id'), 'missing map id is explicitly reported');
+  widget.config = { ...widget.widgetConfig, html: html.replace('id="vehicle"', 'id="missing-location"').replace('{{Sensor:latitude}}', '') };
+  check(!widget.vehicleMaps.get('missing-location').status.hidden, 'invalid initial location displays a warning without crashing');
+  widget.config = { ...widget.widgetConfig, html: html + html };
+  check(widget.vehicleMaps.size === 1 && widget.shadowRoot.querySelector('[data-content] > div:last-child [role=status]'), 'duplicate map ids report a warning without corrupting first map');
+  const restored = widget.vehicleMaps.get('vehicle');
+  restored.host.shadowRoot.querySelector('link').dispatchEvent(new Event('error'));
+  widget.data = data();
+  check(!restored.status.hidden && restored.status.textContent.includes('Kartenformatierung'), 'stylesheet errors persist across live updates');
+  widget.remove();
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack;
+}
+</script>
