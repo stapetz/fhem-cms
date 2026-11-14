@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-14",
+  "version": "1.11.2-dev",
+  "title": "Solarwidget: getrennte und ausgerichtete mobile Stationen",
+  "changes": [
+    "Speicher, Hausverbrauch und Stromnetz erhalten auf schmalen Kacheln 8px Zwischenraum, gleich hohe Rahmen und ausgerichtete Leistungswerte.",
+    "Der Ladestandbalken besitzt einen eigenen Bereich unter der Speicherbeschreibung; automatische iOS-Textvergroesserung wird innerhalb des Widgets begrenzt, Pinch-Zoom bleibt moeglich.",
+    "Refs #203: Stationsgeometrie mit den iPhone-Abnahmewerten in Phone-, Tablet- und Querformatregressionen geprueft; Desktop-Raster und Liveupdates bleiben unveraendert. Erneute echte iPhone-Abnahme erforderlich."
+  ]
+}
