@@ -487,6 +487,15 @@ unverändert sichtbar. Zahlen und Zeitdauern werden nicht als Datum interpretier
 
 ### VolvoConnect für das Fahrzeug
 
+**Dieses Widget arbeitet ausschließlich mit dem FHEM-Modul VolvoConnect aus
+[stapetz/fhem-modules](https://github.com/stapetz/fhem-modules/tree/main/docs/volvo)
+zusammen.** Es ist keine eigenständige Volvo-API-Anbindung und unterstützt keine
+beliebigen anderen Fahrzeugmodule. Das Modul muss in derselben FHEM-Installation
+eingerichtet und bei Volvo angemeldet sein.
+Die [Installation und Bedienung im GitHub-Wiki](https://github.com/stapetz/fhem-cms/wiki/VolvoConnect-Widget#modul-installieren-und-einrichten)
+verlinkt die maßgebliche
+[Installations- und Betriebsanleitung des Moduls](https://github.com/stapetz/fhem-modules/blob/main/docs/volvo/DOKUMENTATION.md).
+
 Unter **Widget hinzufügen → VolvoConnect** oder **Gerät hinzufügen** ein
 Device vom Typ **VolvoConnect** auswählen. Das Widget übernimmt die
 Readingnamen, Einheiten und Gruppen des VolvoConnect-Modul-Dashboards
