@@ -40,6 +40,7 @@ const controller = new Schema5DraftController({
   discard:async () => { throw new Error('Unexpected discard'); },
 });
 const values = {state:'authenticated',state_batteryChargeLevel:'84',fuel_batteryChargeLevel:'84',
+  state_code:'AUTHORIZATION_ERROR',
   state_electricRange:'310',state_electricRange_unit:'km',state_chargingPower:'PROPERTY_NOT_FOUND',
   state_chargingPower_unit:'watts',state_transferLimit:'PROPERTY_NOT_SUPPORTED',
   capabilities_charge_isSupported:'1',statistics_tripMeterManual:'123',
@@ -81,6 +82,22 @@ try {
   check(host().snapshot[0].name === 'Car', 'popup uses actual device readings');
   check(order().slice(0,4).join() === 'state,statistics,vehicle,gallery', 'agreed initial order');
   check(order().length === 15, 'all cards including absent groups remain editable');
+  check(!$('#reading-state_code'), 'technical authorization code is omitted from popup');
+  check(host().shadowRoot.querySelectorAll('[data-resize-card]').length === 15,
+    'every card has the same corner resizing control');
+  check(!$('#top').hasAttribute('data-guides'), 'grid guides initially follow disabled global preference');
+  const gridToggle = document.querySelector('[aria-label="Raster anzeigen"]')
+    || [...document.querySelectorAll('button')].find(button=>button.textContent.trim()==='Raster anzeigen');
+  check(gridToggle, 'global grid preference control exists');
+  gridToggle.click();
+  check($('#top').hasAttribute('data-guides'), 'global grid preference propagates to open arrangement');
+  gridToggle.click();
+  check(!$('#top').hasAttribute('data-guides'), 'turning grid preference off removes popup guides');
+  gridToggle.click();
+  await cancel();
+  await start();
+  check($('#top').hasAttribute('data-guides'), 'opening arrangement inherits enabled grid preference');
+  gridToggle.click();
   check([...host().shadowRoot.querySelectorAll('[data-reading-visibility]')]
     .every(button => button.getBoundingClientRect().height >= 48), 'reading eyes retain 48px touch targets');
   check(!$('#group-state [data-reading-visibility]'), 'energy readings are fixed without individual eyes');
@@ -118,6 +135,22 @@ try {
   check(order()[3] === 'gallery' && !host().pendingVisibility.hiddenGroups.includes('doors'),
     'cancel discards ordering and visibility');
   check(!host().pendingVisibility.hiddenReadings.length, 'cancel discards reading visibility');
+  host().ensureCardSizes();
+  host().setCardSize('state',6,18);
+  const pendingSizes = JSON.stringify(host().pendingSizes);
+  $('[data-auto-arrange]').click();
+  check(JSON.stringify(host().pendingSizes) === pendingSizes && writes === 0,
+    'automatic arrangement keeps all sizes and does not write');
+  check($('#top').hasAttribute('data-sized'), 'manual dimensions activate popup grid');
+  const resize = $('[data-group="state"] [data-resize-card]');
+  resize.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+  check(host().pendingSizes.state.h === 19, 'resize handle supports height keyboard change');
+  $('[data-group="state"] [data-resize-card]').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
+  check(host().pendingSizes.state.w === 7, 'resize handle supports width keyboard change');
+  await cancel();
+  await start();
+  check(!Object.keys(host().pendingSizes).length && !$('#top').hasAttribute('data-sized'),
+    'cancel discards sizes and automatic arrangement');
   host().reorderCard('gallery','statistics',true);
   host().reorderCard('gallery','statistics',true);
   check(order()[1] === 'gallery', 'repeated upper-half hits keep card before target');
@@ -126,10 +159,14 @@ try {
   check(order()[2] === 'gallery', 'repeated lower-half hits keep card after target');
   host().toggleCard('doors');
   host().toggleCard('gallery');
+  host().ensureCardSizes();
+  host().setCardSize('state',6,18);
   fail = true;
   await host().saveArrangement();
   check($('[data-message]').textContent.includes('test storage failure'), 'storage failure visibly reported');
   check(writes === 0 && host().pendingVisibility.showGallery === false, 'failure retains pending visibility without writing');
+  check(host().pendingSizes.state.w === 6 && host().pendingSizes.state.h === 18,
+    'failed save retains pending sizes for retry or cancel');
   fail = false;
   await controller.reload();
   await cancel();
@@ -150,6 +187,11 @@ try {
       const outerScroll = grid.parentElement.scrollTop;
       host().data = snapshot();
       host().startArrangement();
+      host().ensureCardSizes();
+      host().setCardSize('state',6,18);
+      host().setCardSize('gallery',6,14);
+      host().autoArrangeCards();
+      const savedSizes = JSON.stringify(host().pendingSizes);
       host().toggleReading('state_batteryChargeLevel');
       check(!host().pendingVisibility.hiddenReadings.includes('state_batteryChargeLevel'),
         'energy visibility cannot be changed through toggle method');
@@ -159,6 +201,24 @@ try {
       await host().saveArrangement();
       check(writes === 2 && host() === currentHost && $('[data-details]') === dialog && dialog.open,
         'second save uses fresh token without remounting host/dialog');
+      check(JSON.stringify(host().config.cardSizes) === savedSizes
+        && JSON.stringify(state.draft.pages[0].widgets[0].cardSizes) === savedSizes,
+        'card sizes persist through actual editor draft callback');
+      check(!$('[data-resize-card]'), 'apply removes resize controls');
+      check(!$('#top').hasAttribute('data-guides'), 'normal popup never displays editing grid guides');
+      const popupGrid = $('#top');
+      if (popupGrid.getBoundingClientRect().width <= 600) {
+        check(getComputedStyle(popupGrid).display === 'flex', 'mobile saved popup sizes become a single column');
+        check([...popupGrid.children].every(card=>card.clientWidth <= popupGrid.clientWidth
+          && card.querySelector('.card-body').scrollHeight <= card.querySelector('.card-body').clientHeight + 1),
+          'mobile cards show full contents without internal clipping');
+      } else {
+        const energy = $('[data-group="state"]');
+        check(Math.abs(energy.getBoundingClientRect().height - (18*32-16)) < 1,
+          'saved desktop height matches requested grid units exactly');
+        check(Math.abs(energy.getBoundingClientRect().width - (popupGrid.clientWidth-16)/2) < 1,
+          'saved desktop width matches requested six of twelve columns');
+      }
       check(Math.abs(content.scrollTop - Math.min(scroll, content.scrollHeight - content.clientHeight)) <= 1
         && grid.parentElement.scrollTop === outerScroll,
         'saving preserves popup and page scroll');
@@ -206,6 +266,9 @@ try {
       try {
         const readOnly = root.querySelector('cms-volvoconnect');
         readOnly.openDetails();
+        check(JSON.stringify(readOnly.config.cardSizes) === savedSizes
+          && readOnly.$('#top').hasAttribute('data-sized') && !readOnly.$('#top').hasAttribute('data-guides'),
+          'saved dimensions survive full readonly remount without editing guides');
         check(readOnly.$('[data-arrange]').hidden, 'view mode has no arrangement controls');
         readOnly.startArrangement();
         check(!readOnly.pendingCardOrder, 'view mode rejects arrangement method');

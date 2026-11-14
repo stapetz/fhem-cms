@@ -346,6 +346,7 @@ export class Schema5Editor {
     const view = new Schema5View({ GridStack: this.#GridStack, root: grid, status: this.#status,
       config, client: this.#client, services: this.#services, browser: this.#browser,
       editing: this.#previewMode ? undefined : {
+        showGrid: () => this.#showGrid,
         onChange: (pageId, items) => {
           this.#layoutSavePromise = this.#saveLayout(pageId, items);
           return this.#layoutSavePromise;
@@ -366,8 +367,10 @@ export class Schema5Editor {
             const result = await this.#controller.saveWidget(pageId,
               {...structuredClone(widget), groupOrder:[...settings.groupOrder],
                 hiddenGroups:[...settings.hiddenGroups], hiddenReadings:[...(settings.hiddenReadings || [])],
+                cardSizes:structuredClone(settings.cardSizes || {}),
                 showGallery:settings.showGallery}, state.token, 'update');
             Object.assign(widget, {groupOrder:[...settings.groupOrder], hiddenGroups:[...settings.hiddenGroups],
+              cardSizes:structuredClone(settings.cardSizes || {}),
               hiddenReadings:[...(settings.hiddenReadings || [])], showGallery:settings.showGallery});
             state = result;
             if (this.#active && !this.#suspended && generation === this.#generation && this.#view === view) {
@@ -501,6 +504,7 @@ export class Schema5Editor {
       const state = this.#controller.snapshot();
       this.#gridElement.style.setProperty('--cms-grid-columns', String((state.draft || state.live).settings.gridColumns));
       this.#gridElement.classList.toggle('cms-grid-guides', this.#showGrid);
+      for (const widget of this.#gridElement.querySelectorAll('cms-volvoconnect')) widget.updateGridGuides();
     }
   }
 

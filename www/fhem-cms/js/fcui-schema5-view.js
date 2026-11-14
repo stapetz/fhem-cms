@@ -135,6 +135,7 @@ export class Schema5View {
       const services = { ...this.services, openPageModal: (id, size) => this.openModal(id, size) };
       this.view = mountSchema5Widgets(this.GridStack, this.root, this.config, pageId,
         navigation, services, new Map(), this.editing && {
+          showGrid: this.editing.showGrid,
           onChange: (items) => this.editing.onChange(pageId, items),
           onEdit: (id) => this.editing.onEdit(pageId, id),
           onPopupSettings: typeof this.editing.onPopupSettings === 'function'

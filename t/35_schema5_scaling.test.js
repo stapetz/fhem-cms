@@ -221,6 +221,51 @@ for (const [name, fixtures] of [
         if (fixture.startsWith('89_volvoconnect_order.html')) {
           const touch = fixture.includes('touch=1');
           await evaluate('window.popupOrderTest.host().openDetails(); window.popupOrderTest.host().startArrangement()');
+          for (const cancelled of [true,false]) {
+            await evaluate('window.popupOrderTest.$(\'[data-group="state"] [data-resize-card]\').scrollIntoView({block:"center"})');
+            const point = await evaluate(`(() => {
+              const {host,$} = window.popupOrderTest;
+              const r=$('[data-group="state"] [data-resize-card]').getBoundingClientRect();
+              return {x:r.x+r.width/2,y:r.y+r.height/2};
+            })()`);
+            if (touch) await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...point,id:1}]});
+            else {
+              await command('Input.dispatchMouseEvent',{type:'mouseMoved',...point});
+              await command('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});
+            }
+            assert.equal(await evaluate('Boolean(window.popupOrderTest.host().resize)'), true,
+              'real pointer starts corner resize');
+            const before = await evaluate('JSON.stringify(window.popupOrderTest.host().pendingSizes.state)');
+            await evaluate('window.popupOrderTest.host().data=window.popupOrderTest.host().snapshot');
+            assert.equal(await evaluate('Boolean(window.popupOrderTest.host().resize)'), true,
+              'live update preserves active resize');
+            const target = {x:point.x+70,y:point.y-96};
+            if (touch) {
+              await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...target,id:1}]});
+              await command('Input.dispatchTouchEvent',{type:cancelled?'touchCancel':'touchEnd',touchPoints:[]});
+            } else {
+              await command('Input.dispatchMouseEvent',{type:'mouseMoved',...target,button:'left',buttons:1});
+              if (cancelled) {
+                await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+                await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+              }
+              await command('Input.dispatchMouseEvent',{type:'mouseReleased',...target,button:'left',clickCount:1});
+            }
+            assert.equal(await evaluate('Boolean(window.popupOrderTest.host().resize)'), false,
+              'resize releases pointer capture');
+            if (cancelled) assert.equal(await evaluate('Object.keys(window.popupOrderTest.host().pendingSizes).length'),0,
+              'Escape or touch cancel restores sizes before gesture');
+            else assert.notEqual(await evaluate('JSON.stringify(window.popupOrderTest.host().pendingSizes.state)'),before,
+              'actual corner gesture changes card size');
+            assert.equal(await evaluate('window.popupOrderTest.writes()'),0,'resize never writes before apply');
+          }
+          await evaluate('window.popupOrderTest.$(\'[data-group="state"] [data-resize-card]\').focus()');
+          const heightBefore = await evaluate('window.popupOrderTest.host().pendingSizes.state.h');
+          await command('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40});
+          await command('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40});
+          assert.equal(await evaluate('window.popupOrderTest.host().pendingSizes.state.h'),heightBefore+1,
+            'real keyboard resizes focused card corner');
+          await evaluate('window.popupOrderTest.host().cancelArrangement(); window.popupOrderTest.host().startArrangement()');
           const dragGallery = async (cancel = false) => {
             await evaluate('window.popupOrderTest.$(\'[data-group="gallery"] [data-drag-card]\').scrollIntoView({block:"center"})');
             const points = await evaluate(`(() => {

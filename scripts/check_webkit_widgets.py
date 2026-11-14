@@ -36,6 +36,32 @@ def check_popup_order(page):
     )
     assert page.locator("#result").inner_text() == "READY", page.locator("#result").inner_text()
     page.evaluate("window.popupOrderTest.host().openDetails(); window.popupOrderTest.host().startArrangement()")
+    for cancelled in [True, False]:
+        corner = page.locator('cms-volvoconnect [data-group="state"] [data-resize-card]')
+        corner.scroll_into_view_if_needed()
+        source = corner.bounding_box()
+        x, y = source["x"] + source["width"] / 2, source["y"] + source["height"] / 2
+        page.mouse.move(x, y)
+        page.mouse.down()
+        assert page.evaluate("Boolean(window.popupOrderTest.host().resize)"), "corner resize did not start"
+        before = page.evaluate("JSON.stringify(window.popupOrderTest.host().pendingSizes.state)")
+        page.evaluate("window.popupOrderTest.host().data = window.popupOrderTest.host().snapshot")
+        assert page.evaluate("Boolean(window.popupOrderTest.host().resize)"), "live update interrupted resize"
+        page.mouse.move(x + 70, y - 96)
+        if cancelled:
+            page.keyboard.press("Escape")
+        page.mouse.up()
+        assert not page.evaluate("Boolean(window.popupOrderTest.host().resize)"), "resize retained pointer capture"
+        if cancelled:
+            assert page.evaluate("Object.keys(window.popupOrderTest.host().pendingSizes).length") == 0
+        else:
+            assert page.evaluate("JSON.stringify(window.popupOrderTest.host().pendingSizes.state)") != before
+        assert page.evaluate("window.popupOrderTest.writes()") == 0, "resize wrote before apply"
+    page.locator('cms-volvoconnect [data-group="state"] [data-resize-card]').focus()
+    height_before = page.evaluate("window.popupOrderTest.host().pendingSizes.state.h")
+    page.keyboard.press("ArrowDown")
+    assert page.evaluate("window.popupOrderTest.host().pendingSizes.state.h") == height_before + 1
+    page.evaluate("window.popupOrderTest.host().cancelArrangement(); window.popupOrderTest.host().startArrangement()")
     handle = page.locator('cms-volvoconnect [data-group="gallery"] [data-drag-card]')
     handle.scroll_into_view_if_needed()
     source = handle.bounding_box()

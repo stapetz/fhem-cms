@@ -256,6 +256,8 @@ try {
     check($('[data-action-message]').textContent.includes('test failure'), 'action errors are visible');
   } finally { window.confirm = originalConfirm; }
 
+  const rememberedSizes = {state:{w:6,h:18},gallery:{w:6,h:12}};
+  host.config = {...host.config, cardSizes:rememberedSizes};
   await host.openConfig({isNew:true});
   check(!$('[data-details]').open, 'configuration closes details instead of stacking two widget modals');
   check($('[name=showDetails]').checked, 'dialog popup defaults on');
@@ -292,6 +294,8 @@ try {
   await host.saveConfig();
   check(saved.length === 1 && saved[0].showGallery === true, 'configuration preserves gallery preference');
   check(saved[0].showDetails === false, 'inline preference is persisted');
+  check(JSON.stringify(saved[0].cardSizes) === JSON.stringify(rememberedSizes),
+    'main configuration dialog preserves popup card dimensions');
   check(saved[0].device === 'Car' && saved[0].type === widget.type, 'device/type preserved on save');
   check(JSON.stringify(saved[0].grid) === JSON.stringify(widget.grid), 'dialog preserves widget grid');
   check(saved[0].groupOrder[3] === 'gallery' && saved[0].hiddenGroups.length === 0,

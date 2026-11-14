@@ -5,7 +5,7 @@ import { updateWidgetDom } from '../js/widget-dom.js';
 import { renderVehicleMaps } from '../js/vehicle-map.js';
 import { isValidName } from '../js/fhem-client.js';
 import { formatDateDisplay } from '../js/date-display.js';
-import { volvoCards, volvoGroupIcons, volvoGroupOrder, validateVolvoGroups,
+import { volvoCards, volvoGroupIcons, volvoGroupOrder, arrangeVolvoCards, validateVolvoGroups,
   volvoModel, volvoValue } from '../js/volvoconnect.js';
 
 const node = (tag, text, className) => {
@@ -70,6 +70,32 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .badge[data-error] { border-color:var(--cms-danger,#ef4444); }
         .top { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));
           gap:16px; align-items:start; }
+        .top[data-sized] { grid-template-columns:repeat(12,minmax(0,1fr)); grid-auto-rows:16px;
+          grid-auto-flow:row dense; align-items:stretch; }
+        .top[data-sized] > .card { grid-column:span var(--card-w,4); grid-row:span var(--card-h,12);
+          display:flex; flex-direction:column; overflow:hidden; }
+        .top[data-sized] .card-body { min-height:0; flex:1; overflow:auto; }
+        .hero > .card-body { display:flex; flex-direction:column; gap:14px; }
+        .hero > .card-body > * { flex-shrink:0; }
+        .top[data-guides] {
+          background-image:linear-gradient(to right,var(--cms-guide,rgba(128,128,128,.3)) 1px,transparent 1px),
+            linear-gradient(to bottom,var(--cms-guide,rgba(128,128,128,.3)) 1px,transparent 1px);
+          background-size:calc((100% + 16px) / 12) 32px;
+        }
+        .card { position:relative; }
+        .card[data-editing] { padding-bottom:56px; }
+        [data-resize-card] { position:absolute; display:block; margin:0;
+          width:48px; height:48px; min-width:48px; min-height:48px; bottom:0; right:0;
+          background:none; border:0; border-radius:0; padding:0; cursor:nwse-resize; touch-action:none; }
+        [data-resize-card]::after { content:""; position:absolute; width:18px; height:18px;
+          right:7px; bottom:7px; border-right:3px solid var(--cms-accent,#3b82f6);
+          border-bottom:3px solid var(--cms-accent,#3b82f6); opacity:.7; }
+        [data-resizing] { outline:2px solid var(--cms-accent,#3b82f6); }
+        @container (max-width:600px) {
+          .top[data-sized] { display:flex; flex-direction:column; }
+          .top[data-sized] > .card { width:100%; height:auto; overflow:visible; flex-shrink:0; }
+          .top[data-sized] .card-body { overflow:visible; flex:none; }
+        }
         .card { ${detailCardCss} min-width:0; overflow-wrap:anywhere; }
         .card h4 { margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid rgba(128,128,128,.2); font-size:.95rem; }
         .hero-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -171,7 +197,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         <div class="detail-header"><h3 id="volvo-detail-title" data-detail-title></h3>
           <button type="button" data-arrange hidden>Anordnung bearbeiten</button>
           <button type="button" data-close-details aria-label="Fahrzeugdetails schließen" autofocus>✕</button>
-          <div data-arrange-bar hidden><p>Am Griff ziehen. Mit dem Auge Karten ein-/ausblenden. Übernehmen speichert den Entwurf.</p>
+          <div data-arrange-bar hidden><p>Am Griff verschieben, an der Ecke Größe ändern. Mobil einspaltig; Größen gelten für größere Displays. Übernehmen speichert den Entwurf.</p>
+            <button type="button" data-auto-arrange>Automatisch anordnen</button>
             <button type="button" data-reset-arrange>Standardreihenfolge</button>
             <button type="button" data-cancel-arrange>Abbrechen</button>
             <button type="button" data-save-arrange>Übernehmen</button></div>
@@ -275,14 +302,16 @@ shutdown restart</pre>
     this.$('[data-arrange]').addEventListener('click', () => this.startArrangement());
     this.$('[data-cancel-arrange]').addEventListener('click', () => this.cancelArrangement());
     this.$('[data-save-arrange]').addEventListener('click', () => this.saveArrangement());
+    this.$('[data-auto-arrange]').addEventListener('click', () => this.autoArrangeCards());
     this.$('[data-reset-arrange]').addEventListener('click', () => {
-      if (!this.arrangementSaving) { this.pendingCardOrder = volvoGroupOrder(); this.render(); }
+      if (!this.arrangementSaving && !this.drag && !this.resize) { this.pendingCardOrder = volvoGroupOrder(); this.render(); }
     });
     const cancelDetails = event => {
       event.preventDefault();
       event.stopPropagation();
       if (event.repeat) return;
-      if (this.drag) this.finishCardDrag(true);
+      if (this.resize) this.finishCardResize(true);
+      else if (this.drag) this.finishCardDrag(true);
       else if (this.pendingCardOrder) this.cancelArrangement();
       else this.closeDetails();
     };
@@ -312,17 +341,39 @@ shutdown restart</pre>
     });
     const detail = this.$('[data-detail-content]');
     detail.addEventListener('keydown', event => {
+      const resize = event.target.closest('[data-resize-card]');
+      if (resize && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key)) {
+        event.preventDefault();
+        if (!this.pendingCardOrder || this.arrangementSaving || this.drag || this.resize) return;
+        const key = resize.closest('[data-group]').dataset.group;
+        this.ensureCardSizes();
+        const size = this.pendingSizes[key];
+        this.setCardSize(key, size.w + (event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0),
+          size.h + (event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0));
+        this.render();
+        this.$(`[data-group="${key}"] [data-resize-card]`)?.focus({preventScroll:true});
+        return;
+      }
       const handle = event.target.closest('[data-drag-card]');
       if (!handle || !['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key)) return;
       event.preventDefault();
       this.moveCard(handle.closest('[data-group]').dataset.group,
         ['ArrowUp','ArrowLeft'].includes(event.key) ? -1 : 1);
     });
-    detail.addEventListener('pointerdown', event => this.startCardDrag(event));
-    detail.addEventListener('pointermove', event => this.moveCardDrag(event));
-    detail.addEventListener('pointerup', () => this.finishCardDrag(false));
-    detail.addEventListener('pointercancel', () => this.finishCardDrag(true));
-    detail.addEventListener('lostpointercapture', () => this.finishCardDrag(true));
+    detail.addEventListener('pointerdown', event => {
+      if (event.target.closest('[data-resize-card]')) this.startCardResize(event);
+      else this.startCardDrag(event);
+    });
+    detail.addEventListener('pointermove', event => {
+      if (this.resize) this.moveCardResize(event);
+      else this.moveCardDrag(event);
+    });
+    for (const [type,cancelled] of [['pointerup',false],['pointercancel',true],['lostpointercapture',true]]) {
+      detail.addEventListener(type, () => {
+        if (this.resize) this.finishCardResize(cancelled);
+        else this.finishCardDrag(cancelled);
+      });
+    }
     for (const selector of ['[data-detail-content]','[data-inline-content]']) {
       this.$(selector).addEventListener('error', event => {
         if (event.target.localName === 'img') {
@@ -343,9 +394,11 @@ shutdown restart</pre>
   }
 
   clearDetails() {
+    this.finishCardResize(true, false);
     this.finishCardDrag(true, false);
     this.pendingCardOrder = null;
     this.pendingVisibility = null;
+    this.pendingSizes = null;
     for (const controller of this.vehicleMaps.values()) controller.destroy();
     this.vehicleMaps.clear();
     this.$('[data-detail-content]')?.replaceChildren();
@@ -404,7 +457,7 @@ shutdown restart</pre>
   }
 
   toggleCard(key) {
-    if (!this.pendingVisibility || this.arrangementSaving || this.drag) return;
+    if (!this.pendingVisibility || this.arrangementSaving || this.drag || this.resize) return;
     if (key === 'gallery') this.pendingVisibility.showGallery = this.pendingVisibility.showGallery === false;
     else {
       const hidden = new Set(this.pendingVisibility.hiddenGroups);
@@ -416,7 +469,7 @@ shutdown restart</pre>
   }
 
   toggleReading(key) {
-    if (!this.pendingVisibility || this.arrangementSaving || this.drag) return;
+    if (!this.pendingVisibility || this.arrangementSaving || this.drag || this.resize) return;
     if (key === 'state' || key.startsWith('state_')) return;
     const hidden = new Set(this.pendingVisibility.hiddenReadings);
     if (hidden.has(key)) hidden.delete(key); else hidden.add(key);
@@ -446,6 +499,7 @@ shutdown restart</pre>
     if (typeof this.services?.savePopupSettings !== 'function' || this.pendingCardOrder
       || !this.$('[data-details]').open) return;
     this.pendingCardOrder = volvoGroupOrder(this.widgetConfig);
+    this.pendingSizes = structuredClone(this.widgetConfig.cardSizes || {});
     this.pendingVisibility = {showGallery:this.widgetConfig.showGallery !== false,
       hiddenGroups:[...(this.widgetConfig.hiddenGroups || [])],
       hiddenReadings:[...(this.widgetConfig.hiddenReadings || [])]};
@@ -456,18 +510,21 @@ shutdown restart</pre>
 
   cancelArrangement() {
     if (this.arrangementSaving) return;
+    this.finishCardResize(true, false);
     this.finishCardDrag(true, false);
     this.pendingCardOrder = null;
     this.pendingVisibility = null;
+    this.pendingSizes = null;
     this.render();
     this.$('[data-arrange]').focus({preventScroll:true});
   }
 
   async saveArrangement() {
-    if (!this.pendingCardOrder || this.arrangementSaving || this.drag) return;
+    if (!this.pendingCardOrder || this.arrangementSaving || this.drag || this.resize) return;
     const body = this.$('[data-detail-body]');
     const scrollTop = body.scrollTop;
     const settings = {groupOrder:[...this.pendingCardOrder],
+      cardSizes:structuredClone(this.pendingSizes),
       hiddenGroups:[...this.pendingVisibility.hiddenGroups], hiddenReadings:[...this.pendingVisibility.hiddenReadings],
       showGallery:this.pendingVisibility.showGallery};
     this.arrangementSaving = true;
@@ -480,6 +537,7 @@ shutdown restart</pre>
       this.widgetConfig = {...this.widgetConfig, ...settings};
       this.pendingCardOrder = null;
       this.pendingVisibility = null;
+      this.pendingSizes = null;
       message.textContent = 'Anordnung im Entwurf gespeichert. Veröffentlichung erfolgt separat.';
       this.$('[data-arrange]').hidden = false;
       this.$('[data-arrange]').focus({preventScroll:true});
@@ -497,7 +555,7 @@ shutdown restart</pre>
   }
 
   moveCard(key, step) {
-    if (!this.pendingCardOrder || this.arrangementSaving || this.drag) return;
+    if (!this.pendingCardOrder || this.arrangementSaving || this.drag || this.resize) return;
     const visible = [...this.$('[data-detail-content]').querySelector('#top').children].map(card => card.dataset.group);
     const target = visible[visible.indexOf(key) + step];
     if (!target) return;
@@ -523,7 +581,7 @@ shutdown restart</pre>
 
   startCardDrag(event) {
     const handle = event.target.closest('[data-drag-card]');
-    if (!handle || !this.pendingCardOrder || this.arrangementSaving || this.drag
+    if (!handle || !this.pendingCardOrder || this.arrangementSaving || this.drag || this.resize
       || !event.isPrimary || event.button !== 0) return;
     event.preventDefault();
     const card = handle.closest('[data-group]');
@@ -586,6 +644,85 @@ shutdown restart</pre>
     }
   }
 
+  updateGridGuides() {
+    this.$('[data-detail-content] .top')?.toggleAttribute('data-guides',
+      Boolean(this.pendingCardOrder && this.services?.showGrid?.()));
+  }
+
+  ensureCardSizes() {
+    const top = this.$('[data-detail-content] .top');
+    const width = top.getBoundingClientRect().width;
+    for (const card of top.children) {
+      const key = card.dataset.group;
+      if (this.pendingSizes[key]) continue;
+      const rect = card.getBoundingClientRect();
+      this.pendingSizes[key] = {w:width <= 600 ? 4
+        : Math.max(3, Math.min(12, Math.round((rect.width + 16) / (width + 16) * 12))),
+        h:Math.max(6, Math.min(64, Math.ceil((rect.height + 16) / 32)))};
+    }
+  }
+
+  setCardSize(key, w, h) {
+    this.pendingSizes[key] = {w:Math.max(3,Math.min(12,w)),h:Math.max(6,Math.min(64,h))};
+  }
+
+  autoArrangeCards() {
+    if (!this.pendingCardOrder || this.arrangementSaving || this.drag || this.resize) return;
+    this.ensureCardSizes();
+    this.pendingCardOrder = arrangeVolvoCards(this.pendingCardOrder, this.pendingSizes);
+    this.render();
+    this.$('[data-message]').textContent = 'Kacheln platzsparend angeordnet. Größen beibehalten; noch nicht übernommen.';
+  }
+
+  startCardResize(event) {
+    if (!this.pendingCardOrder || this.arrangementSaving || this.drag || this.resize
+      || !event.isPrimary || event.button !== 0) return;
+    event.preventDefault();
+    const card = event.target.closest('[data-group]');
+    const previous = structuredClone(this.pendingSizes);
+    this.ensureCardSizes();
+    const key = card.dataset.group;
+    this.resize = {key, pointer:event.pointerId, x:event.clientX, y:event.clientY,
+      size:{...this.pendingSizes[key]}, previous,
+      step:(this.$('[data-detail-content] .top').getBoundingClientRect().width + 16) / 12};
+    card.toggleAttribute('data-resizing', true);
+    this.applyCardSizes(this.$('[data-detail-content] .top'), this.pendingSizes);
+    this.$('[data-detail-content]').setPointerCapture(event.pointerId);
+  }
+
+  moveCardResize(event) {
+    if (!this.resize || event.pointerId !== this.resize.pointer) return;
+    event.preventDefault();
+    const {key,x,y,size,step} = this.resize;
+    this.setCardSize(key, size.w + Math.round((event.clientX - x) / step),
+      size.h + Math.round((event.clientY - y) / 32));
+    this.applyCardSizes(this.$('[data-detail-content] .top'), this.pendingSizes);
+  }
+
+  finishCardResize(cancelled, render = true) {
+    const resize = this.resize;
+    if (!resize) return;
+    this.resize = null;
+    if (cancelled) this.pendingSizes = resize.previous;
+    const capture = this.$('[data-detail-content]');
+    if (capture.hasPointerCapture(resize.pointer)) capture.releasePointerCapture(resize.pointer);
+    if (render && this.isConnected) {
+      this.render();
+      this.$(`[data-group="${resize.key}"] [data-resize-card]`)?.focus({preventScroll:true});
+      this.$('[data-message]').textContent = cancelled ? 'Größenänderung verworfen.'
+        : 'Kachelgröße geändert. Noch nicht übernommen.';
+    }
+  }
+
+  applyCardSizes(top, sizes) {
+    top.toggleAttribute('data-sized', Object.keys(sizes).length > 0);
+    for (const card of top.children) {
+      const size = sizes[card.dataset.group];
+      card.style.setProperty('--card-w', String(size?.w || 4));
+      card.style.setProperty('--card-h', String(size?.h || 12));
+    }
+  }
+
   set config(value) { this.widgetConfig = value; this.render(); }
   get config() { return this.widgetConfig; }
   set data(value) { this.snapshot = value; this.render(); }
@@ -629,7 +766,7 @@ shutdown restart</pre>
   render() {
     if (!this.widgetConfig || !this.$('[data-content]') || !this.isConnected) return;
     const config = this.widgetConfig;
-    if (this.drag) return;
+    if (this.drag || this.resize) return;
     this.$('[data-arrange]').hidden = typeof this.services?.savePopupSettings !== 'function' || Boolean(this.pendingCardOrder);
     this.$('[data-arrange-bar]').hidden = !this.pendingCardOrder;
     const model = volvoModel(this.snapshot, config.device);
@@ -813,7 +950,11 @@ shutdown restart</pre>
     for (const key of order) {
       const card = [...top.children].find(entry => entry.dataset.group === key);
       if (!card) continue;
+      const body = node('div', undefined, 'card-body');
+      body.append(...card.childNodes);
+      card.append(body);
       if (this.pendingCardOrder) {
+        card.toggleAttribute('data-editing', true);
         const tools = node('div', undefined, 'card-tools');
         tools.id = `tools-${key}`;
         const grip = node('button', '⠿');
@@ -834,9 +975,18 @@ shutdown restart</pre>
           tools.append(eye);
         }
         card.prepend(tools);
+        const resize = node('button');
+        resize.type = 'button';
+        resize.dataset.resizeCard = '';
+        resize.setAttribute('aria-label', `${groupLabels.get(key)} Größe ändern`);
+        resize.title = 'An der Ecke ziehen oder mit den Pfeiltasten die Größe ändern';
+        resize.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown ArrowLeft ArrowRight');
+        card.append(resize);
       }
       top.append(card);
     }
+    this.applyCardSizes(top, this.pendingSizes || this.widgetConfig.cardSizes || {});
+    top.toggleAttribute('data-guides', Boolean(preview && this.services?.showGrid?.()));
     content.append(top);
     const footer = node('footer');
     footer.id = 'footer';
@@ -969,6 +1119,7 @@ shutdown restart</pre>
       showGallery: this.widgetConfig.showGallery !== false, grid: { ...this.widgetConfig.grid },
       groupOrder: volvoGroupOrder(this.widgetConfig),
       hiddenGroups: [...(this.widgetConfig.hiddenGroups || [])],
+      cardSizes: structuredClone(this.widgetConfig.cardSizes || {}),
       hiddenReadings: [...(this.widgetConfig.hiddenReadings || [])] };
     const groupError = validateVolvoGroups(next);
     if (groupError) { this.$('[data-error]').textContent = groupError; return; }

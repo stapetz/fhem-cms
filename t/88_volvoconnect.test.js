@@ -1,11 +1,37 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { volvoGroups, volvoCards, volvoModel, volvoImageUrl, volvoText, volvoValue,
-  volvoGroupOrder, validateVolvoGroups, volvoStatusSymbol, volvoLabel } from '../www/fhem-cms/js/volvoconnect.js';
+  volvoGroupOrder, arrangeVolvoCards, validateVolvoGroups, volvoStatusSymbol, volvoLabel } from '../www/fhem-cms/js/volvoconnect.js';
 import { deviceWidgetSuggestions } from '../www/fhem-cms/js/device-widget-suggestions.js';
 import { schema5WidgetSuggestions, createSchema5RoomPlan, buildSchema5SetupConfig } from '../www/fhem-cms/js/fcui-schema5-setup-wizard.js';
 
 const model = (readings, extra = {}) => volvoModel([{ name: 'Car', readings, ...extra }], 'Car');
+test('VolvoConnect validates card sizes and arranges without altering sizes or input order', () => {
+  const sizes = {state:{w:6,h:10},gallery:{w:12,h:8},doors:{w:3,h:10}};
+  assert.equal(validateVolvoGroups({cardSizes:sizes}), null);
+  assert.equal(validateVolvoGroups({cardSizes:{}}), null);
+  const original = JSON.stringify(sizes);
+  const order = ['gallery','doors','state'];
+  assert.deepEqual(arrangeVolvoCards(order,sizes), ['state','doors','gallery']);
+  assert.deepEqual(order,['gallery','doors','state']);
+  assert.equal(JSON.stringify(sizes),original);
+  for (const cardSizes of [null, [], 'x', {unknown:{w:4,h:8}}, {state:null},
+    {state:{w:2,h:8}},{state:{w:13,h:8}},{state:{w:4,h:3}},{state:{w:4,h:65}},
+    {state:{w:3.5,h:8}},{state:{w:'4',h:8}},{state:{w:4,h:true}},
+    {state:{w:4,h:8,x:0}},{state:{w:4}}]) {
+    assert.match(validateVolvoGroups({cardSizes}), /Ungültige/);
+  }
+});
+
+test('VolvoConnect omits technical endpoint code rows without changing readings', () => {
+  const readings = {state_code:'AUTHORIZATION_ERROR',fuel_code:'OK',statistics_code:'ERROR',
+    state_batteryChargeLevel:'72',state:'authenticated'};
+  const original = {...readings};
+  assert.ok(![...model(readings).groups.values()].flat().some(row=>row.key==='code'));
+  assert.equal(model(readings).soc,72);
+  assert.deepEqual(readings,original);
+});
+
 test('VolvoConnect groups actual module readings without inventing missing values', () => {
   const readings = Object.fromEntries(volvoGroups.map(([key]) => [`${key}_customValue`, 'value']));
   const result = model({ ...readings, state_batteryChargeLevel: '0',

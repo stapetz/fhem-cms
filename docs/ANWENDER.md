@@ -540,6 +540,21 @@ oder aus. Ausgeblendete und noch nicht verfügbare Karten bleiben in dieser
 Bearbeitungsansicht erreichbar; durchgestrichenes Auge und gestrichelter
 Rahmen kennzeichnen ausgeblendete Karten.
 Verschiebegriff und Kartenauge stehen rechtsbündig an jeder Karte.
+An der **unteren rechten Ecke** lässt sich zusätzlich die **Breite und Höhe**
+ändern – mit demselben Eckgriff wie bei den Hauptwidgets, per Maus oder Touch.
+Mit fokussiertem Eckgriff ändern die Pfeiltasten Breite bzw. Höhe.
+**Raster anzeigen** aus dem Menü **Ansicht** gilt auch hier während
+**Anordnung bearbeiten**. Das Popup verwendet dafür zwölf eigene Spalten.
+**Automatisch anordnen** behält die Kachelgrößen und Sichtbarkeit bei und
+ordnet die Karten platzsparend nach Größe mit aufgefüllten Rasterlücken.
+**Standardreihenfolge** stellt nur die Kartenreihenfolge zurück, nicht die Größen.
+Auf kleinen Displays bis 600px Inhaltsbreite stehen die Karten immer
+einspaltig mit vollständigem Inhalt. Die manuellen Größen bleiben für größere
+Displays gespeichert; Größenänderungen am Handy gelten für diese große Ansicht.
+Bei begrenzter Kartenhöhe auf größeren Displays lässt sich der Karteninhalt
+scrollen. Ohne gespeicherte Größen bleibt das bisherige responsive Layout erhalten.
+Größen werden zusammen mit der Anordnung erst durch **Übernehmen** gespeichert;
+**Abbrechen** verwirft beides. Escape verwirft zuerst eine laufende Größenänderung.
 Die einzelnen angezeigten Readings haben im Anordnungsmodus einen
 **Auge-Schalter am Zeilenanfang**, vor der Beschriftung.
 **Ausnahme Energie & Akku:** Alle vorhandenen Werte dieser Karte sind fix
@@ -548,6 +563,8 @@ verschiebbar und als Ganzes ein-/ausblendbar.
 Der Verbindungsstatus bleibt bei vorhandenem Statusreading immer sichtbar,
 auch im Hauptwidget und bei früher gespeicherten Ausblendungen.
 Er besitzt keinen Augenschalter. Letztes Update bleibt einzeln schaltbar.
+Technische **Code**-Zeilen (etwa `state_code: AUTHORIZATION_ERROR`) werden
+nicht im Widget angezeigt. Die Readings im VolvoConnect-Modul bleiben unverändert.
 Ausgeblendete Werte bleiben dort erreichbar und werden abgedimmt gezeigt.
 Die Auswahl bleibt beim Wechsel der Energie-Readingvarianten und bei
 vorübergehend fehlenden Readings erhalten.

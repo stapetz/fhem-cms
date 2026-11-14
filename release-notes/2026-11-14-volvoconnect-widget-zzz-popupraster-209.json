@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-14",
+  "version": "1.19.0-dev",
+  "title": "VolvoConnect: Popup-Kacheln skalieren und automatisch anordnen",
+  "changes": [
+    "Popup-Kacheln lassen sich am gleichen Eckgriff wie Hauptwidgets in Breite und Hoehe veraendern, auch per Touch und Pfeiltasten.",
+    "Raster anzeigen gilt auch beim Bearbeiten der Popup-Anordnung. Automatisch anordnen behaelt die Groessen bei und fuellt Rasterluecken.",
+    "Groessen, Reihenfolge und Sichtbarkeit werden gemeinsam als Entwurf gespeichert; Abbrechen und Escape verwerfen ausstehende Aenderungen.",
+    "Auf kleinen Displays bleiben alle Inhalte einspaltig vollstaendig sichtbar, waehrend Desktopgroessen gespeichert bleiben.",
+    "Technische Code-Zeilen aus API-Antworten werden nicht mehr angezeigt. Refs #209."
+  ]
+}

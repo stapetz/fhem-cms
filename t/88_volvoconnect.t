@@ -37,6 +37,18 @@ for my $case (
     ['non-group reading', sub { $_[0]{hiddenReadings} = ['password']; }],
     ['duplicate hidden reading', sub { $_[0]{hiddenReadings} = ['state_x','state_x']; }],
     ['too many hidden readings', sub { $_[0]{hiddenReadings} = [('state_x') x 1001]; }],
+    ['null card sizes', sub { $_[0]{cardSizes} = undef; }],
+    ['array card sizes', sub { $_[0]{cardSizes} = []; }],
+    ['unknown sized card', sub { $_[0]{cardSizes} = {unknown => {w=>4,h=>8}}; }],
+    ['invalid sized card', sub { $_[0]{cardSizes} = {state => []}; }],
+    ['too narrow card', sub { $_[0]{cardSizes} = {state => {w=>2,h=>8}}; }],
+    ['too wide card', sub { $_[0]{cardSizes} = {state => {w=>13,h=>8}}; }],
+    ['too short card', sub { $_[0]{cardSizes} = {state => {w=>4,h=>3}}; }],
+    ['too high card', sub { $_[0]{cardSizes} = {state => {w=>4,h=>65}}; }],
+    ['fractional card', sub { $_[0]{cardSizes} = {state => {w=>3.5,h=>8}}; }],
+    ['boolean card size', sub { $_[0]{cardSizes} = {state => {w=>JSON::PP::true,h=>8}}; }],
+    ['extra card field', sub { $_[0]{cardSizes} = {state => {w=>4,h=>8,x=>0}}; }],
+    ['missing card height', sub { $_[0]{cardSizes} = {state => {w=>4}}; }],
 ) {
     my ($label, $change) = @{$case};
     my $copy = $json->decode($json->encode($config));
@@ -55,6 +67,7 @@ is(FHEMCMS_ValidateConfig($config, 5), undef, 'compact popup display accepted');
 $widget->{groupOrder} = ['location', 'gallery', 'doors'];
 $widget->{hiddenGroups} = ['state', 'statistics'];
 $widget->{hiddenReadings} = ['state_batteryChargeLevel','vehicle_vin','lastUpdate'];
+$widget->{cardSizes} = {state=>{w=>6,h=>10},gallery=>{w=>12,h=>8}};
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'partial order and hidden groups accepted');
 is(FHEMCMS_ValidateBlueprints([{name => 'Car', widget => $widget}]), undef, 'group preferences survive blueprint validation');
 $widget->{groupOrder} = [];
