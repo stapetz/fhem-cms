@@ -271,18 +271,21 @@ for (const [name, fixtures] of [
           await evaluate('window.popupOrderTest.host().cancelArrangement(); window.popupOrderTest.host().startArrangement()');
           for (const cancelled of [true,false]) {
             await evaluate('window.popupOrderTest.$(\'[data-group="state"] [data-resize-card]\').scrollIntoView({block:"center"})');
+            await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
             const point = await evaluate(`(() => {
               const {host,$} = window.popupOrderTest;
               const r=$('[data-group="state"] [data-resize-card]').getBoundingClientRect();
               return {x:r.x+r.width/2,y:r.y+r.height/2};
             })()`);
+            assert.equal(await evaluate(`Boolean(window.popupOrderTest.host().shadowRoot.elementFromPoint(${point.x},${point.y})
+              ?.closest('[data-resize-card]'))`),true,`${fixture}: resize corner is reachable after scrolling`);
             if (touch) await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...point,id:1}]});
             else {
               await command('Input.dispatchMouseEvent',{type:'mouseMoved',...point});
               await command('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});
             }
             assert.equal(await evaluate('Boolean(window.popupOrderTest.host().resize)'), true,
-              'real pointer starts corner resize');
+              `${fixture}: real ${touch?'touch':'mouse'} starts ${cancelled?'cancelled':'completed'} corner resize`);
             const before = await evaluate('JSON.stringify(window.popupOrderTest.host().pendingSizes.state)');
             const geometryBefore = await evaluate('window.popupOrderTest.geometry()');
             const orderBefore = await evaluate('window.popupOrderTest.host().pendingCardOrder');
