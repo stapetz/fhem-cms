@@ -12,6 +12,16 @@ export const titleVisibilityStyles = `
     height: auto;
     overflow: auto;
   }
+  [data-dialog] form > .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+  [data-dialog] form > .actions [data-delete] {
+    margin-right: auto;
+    border-color: var(--cms-danger-border, #7f3b33);
+  }
   .cms-title-visibility {
     display: flex !important;
     width: fit-content;

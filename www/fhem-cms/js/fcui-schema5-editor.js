@@ -351,16 +351,21 @@ export class Schema5Editor {
           return this.#layoutSavePromise;
         },
         onEdit: (pageId, id) => id === '__nav' ? this.#openNavigation() : this.#openWidgets(id),
-        onPopupOrder: async (pageId, id, order) => {
+        onPopupSettings: async (pageId, id, settings) => {
           if (!this.#active || this.#suspended || generation !== this.#generation
             || this.#view?.current !== pageId) throw new Error('Editorzustand ist veraltet; bitte erneut laden.');
-          const error = validateVolvoGroups({groupOrder:order});
+          if (!settings || typeof settings !== 'object' || typeof settings.showGallery !== 'boolean'
+            || !Array.isArray(settings.groupOrder) || !Array.isArray(settings.hiddenGroups)) {
+            throw new Error('Ungültige VolvoConnect-Karteneinstellungen.');
+          }
+          const error = validateVolvoGroups(settings);
           if (error) throw new Error(error);
           const widget = config.pages.find(page => page.id === pageId)?.widgets.find(widget => widget.id === id);
           if (widget?.type !== 'fhem-volvoconnect') throw new Error('Unbekanntes VolvoConnect-Widget');
           try {
             const result = await this.#controller.saveWidget(pageId,
-              {...structuredClone(widget), groupOrder:[...order]}, state.token, 'update');
+              {...structuredClone(widget), groupOrder:[...settings.groupOrder],
+                hiddenGroups:[...settings.hiddenGroups], showGallery:settings.showGallery}, state.token, 'update');
             await this.#display(result, generation);
           } catch (error) {
             if (this.#active && !this.#suspended && generation === this.#generation) {

@@ -18,6 +18,8 @@ for my $case (
     ['missing device', sub { delete $_[0]{device}; }],
     ['invalid gallery', sub { $_[0]{showGallery} = 'yes'; }],
     ['numeric gallery', sub { $_[0]{showGallery} = 1; }],
+    ['invalid popup', sub { $_[0]{showDetails} = 'yes'; }],
+    ['numeric popup', sub { $_[0]{showDetails} = 0; }],
     ['manual mapping', sub { $_[0]{readings} = {}; }],
     ['unknown group', sub { $_[0]{groupOrder} = ['unknown']; }],
     ['duplicate group', sub { $_[0]{groupOrder} = ['doors', 'doors']; }],
@@ -39,6 +41,11 @@ delete $widget->{showGallery};
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'gallery defaults on when flag omitted');
 $widget->{showGallery} = JSON::PP::false;
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'gallery may be disabled');
+$widget->{showDetails} = JSON::PP::false;
+is(FHEMCMS_ValidateConfig($config, 5), undef, 'full inline detail display accepted');
+is(FHEMCMS_ValidateBlueprints([{name => 'Inline car', widget => $widget}]), undef, 'inline flag survives blueprint validation');
+$widget->{showDetails} = JSON::PP::true;
+is(FHEMCMS_ValidateConfig($config, 5), undef, 'compact popup display accepted');
 $widget->{groupOrder} = ['location', 'gallery', 'doors'];
 $widget->{hiddenGroups} = ['state', 'statistics'];
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'partial order and hidden groups accepted');

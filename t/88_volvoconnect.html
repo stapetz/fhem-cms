@@ -74,12 +74,14 @@ try {
     'info button opens full native modal');
   check($('[data-detail-content]').textContent.includes('01:') === false, 'zero remaining time is not invented');
   check($('[data-detail-content]').textContent.includes('00:00 h'), 'real zero remains visible');
-  check($('[data-detail-content]').textContent.includes('API: Verbunden'), 'API state is translated');
+  check($('.badge').getAttribute('aria-label') === 'API: Verbunden' && $('.badge').textContent === '✓',
+    'API state uses symbol with translated accessible description');
   check($('[data-detail-content]').querySelectorAll('section.card').length >= 14, 'all module scopes appear');
   check(!$('#gallery'), 'missing image readings produce no empty gallery');
   check($('#group-engineDiagnostics').textContent.includes('Bremsflüssigkeitsstand'), 'diagnostics grouping follows module');
   check(!$('#group-brakes').textContent.includes('Bremsflüssigkeitsstand'), 'brake-fluid warning is not duplicated');
   check($('#reading-doors_centralLock .status-icon').textContent === '🔒', 'lock status uses dashboard symbol');
+  check($('#reading-doors_centralLock dd').textContent === '🔒', 'lock has no duplicate visible status text');
   check($('#reading-brakes_brakeFluidLevelWarning .status-icon').textContent === '✓', 'normal fluid status uses dashboard check');
   check($('#reading-state_chargingCurrentLimit .reading-icon').textContent === '⚡', 'reading has semantic label symbol');
   const content = $('[data-content]');
@@ -175,37 +177,36 @@ try {
   host.setAttribute('view-only','');
   const originalConfirm = window.confirm;
   try {
-    window.confirm = () => false;
-    await host.sendAction('unlock');
-    check(commands.length === 0, 'cancelled confirmation never sends command');
-    window.confirm = () => true;
+    window.confirm = () => { throw new Error('vehicle actions need no second confirmation'); };
+    host.closeDetails();
+    host.openActions();
     await host.sendAction('invalid');
     check(commands.length === 0, 'nonallowlisted command is rejected');
     await host.sendAction('lock');
-    check(commands.length === 1 && commands[0].join() === 'Car,lock', 'confirmed action uses normal command service');
+    check(commands.length === 1 && commands[0].join() === 'Car,lock', 'action uses normal command service without confirmation');
     services.setCommand = async () => { throw new Error('test failure'); };
     await host.sendAction('lock');
-    check($('[data-message]').textContent.includes('test failure'), 'action errors are visible');
+    check($('[data-action-message]').textContent.includes('test failure'), 'action errors are visible');
   } finally { window.confirm = originalConfirm; }
 
   await host.openConfig({isNew:true});
   check(!$('[data-details]').open, 'configuration closes details instead of stacking two widget modals');
-  check($('[name=showGallery]').checked, 'dialog gallery defaults on');
+  check($('[name=showDetails]').checked, 'dialog popup defaults on');
   check(!$('[name=readings]'), 'dialog requires no manual reading mapping');
-  check($('[data-group-choices]').children.length === 15, 'all module groups and gallery are configurable even without readings');
-  const doorsChoice = $('[data-group-choice="doors"]');
-  doorsChoice.querySelector('input').click();
-  doorsChoice.querySelector('[data-move="-1"]').click();
-  check($('[data-group-choices]').children[5].dataset.groupChoice === 'doors', 'arrow moves group up');
-  check(!$('[data-group-choice="doors"] input').checked, 'reorder preserves visibility preference');
-  check(host.shadowRoot.activeElement?.dataset.move, 'reorder keeps keyboard focus');
-  $('[name=showGallery]').checked = false;
+  check(!$('[data-group-choices]') && !$('[data-preview-mount]'), 'configuration has no duplicate group list or interactive preview');
+  check([...$('[data-form]').querySelectorAll('input')].slice(0,2).map(i=>i.name).join() === 'title,device',
+    'device assignment directly follows title');
+  check(getComputedStyle($('.config-actions')).justifyContent === 'flex-end', 'dialog actions match standard right alignment');
+  check([...$('.config-actions').children].map(b=>b.textContent).join() === 'Widget löschen,Abbrechen,Speichern',
+    'standard dialog labels and order');
+  $('[name=showDetails]').checked = false;
   await host.saveConfig();
-  check(saved.length === 1 && saved[0].showGallery === false, 'gallery preference is persisted');
+  check(saved.length === 1 && saved[0].showGallery === true, 'configuration preserves gallery preference');
+  check(saved[0].showDetails === false, 'inline preference is persisted');
   check(saved[0].device === 'Car' && saved[0].type === widget.type, 'device/type preserved on save');
   check(JSON.stringify(saved[0].grid) === JSON.stringify(widget.grid), 'dialog preserves widget grid');
-  check(saved[0].groupOrder[5] === 'doors' && saved[0].hiddenGroups.join() === 'doors',
-    'group order and visibility persist together');
+  check(saved[0].groupOrder[3] === 'gallery' && saved[0].hiddenGroups.length === 0,
+    'configuration preserves group preferences');
   const configBefore = JSON.stringify(widget);
   host.config = {...widget, groupOrder:['statistics','doors'], hiddenGroups:['doors','state']};
   host.openDetails();
@@ -220,14 +221,12 @@ try {
   let cancelled = 0;
   host.addEventListener('cms-widget-cancel', () => cancelled++);
   await host.openConfig({isNew:true});
-  $('[data-group-choice="state"] input').click();
-  $('[data-group-choice="doors"] [data-move="1"]').click();
+  $('[name=showDetails]').checked = false;
   $('[data-dialog]').dispatchEvent(new Event('cancel', {cancelable:true}));
   check(!$('[data-dialog]').open && cancelled === 1, 'native Escape cancellation closes new widget session');
   check(saved.length === 1 && JSON.stringify(host.config) === configBefore, 'cancel never persists changed group preferences');
   await host.openConfig();
-  check($('[data-group-choices]').firstElementChild.dataset.groupChoice === 'state'
-    && $('[data-group-choice="state"] input').checked, 'reopening discards unsaved group changes');
+  check($('[name=showDetails]').checked, 'reopening discards unsaved presentation changes');
   host.closeConfig(false);
   host.openDetails();
   values.location_latitude = '0';
@@ -250,13 +249,13 @@ try {
     'live refresh keeps popup open and preserves its scroll');
   check(map.instance.project(map.instance.getCenter()).distanceTo(map.instance.project(centerBefore)) < 1,
     `refresh retains user pan (${JSON.stringify(centerBefore)} -> ${JSON.stringify(map.instance.getCenter())}; size ${JSON.stringify(sizeBefore)} -> ${JSON.stringify(map.instance.getSize())}; host ${map.host.clientHeight})`);
-  services.savePopupOrder = async () => {};
+  services.savePopupSettings = async () => {};
   host.startArrangement();
   host.moveCard('location',-1);
   check(host.vehicleMaps.get('volvo-location') === map && map.instance.getZoom() === 17,
     'popup reordering retains existing map and user zoom');
   host.cancelArrangement();
-  delete services.savePopupOrder;
+  delete services.savePopupSettings;
   delete values.location_latitude;
   host.data = dataFor(widget, snapshots());
   check(!$('#volvo-location') && host.vehicleMaps.size === 0, 'missing coordinate removes map instead of guessing');
@@ -275,6 +274,54 @@ try {
   check(host.vehicleMaps.size === 0 && !$('[data-details]').open, 'reconnect starts with closed popup and no hidden maps');
   host.openDetails();
   check(host.vehicleMaps.size === 1, 'reconnected widget recreates map when popup opens');
+  host.closeDetails();
+  host.config = {...widget, showDetails:false};
+  check(!$('[data-info]') && !$('[data-details]').open, 'inline mode has no info button or automatic popup');
+  check($('[data-inline-content] [data-group=state]') && $('[data-inline-content] [data-group=vehicle]'),
+    'inline mode shows complete vehicle groups');
+  check(!$('[data-inline-content] #actions') && $('[data-open-actions]'), 'actions move out of cards into their own launcher');
+  const inlineMap = host.vehicleMaps.get('inline-volvo-location');
+  inlineMap.instance.setZoom(17,{animate:false});
+  const inlineSoc = $('[data-inline-content] .soc');
+  host.data = dataFor(widget,snapshots());
+  check($('[data-inline-content] .soc') === inlineSoc && host.vehicleMaps.get('inline-volvo-location') === inlineMap
+    && inlineMap.instance.getZoom() === 17, 'inline refresh retains DOM, map and zoom');
+  for (const width of [343,768,1100]) {
+    host.style.width = `${width}px`;
+    await pause();
+    const inline = $('[data-inline-content]');
+    check(inline.scrollWidth <= inline.clientWidth + 1, 'inline cards have no horizontal overflow');
+  }
+  services.savePopupSettings = async () => {};
+  host.render();
+  const inlineOrder = [...$('[data-inline-content] #inline-top').children].map(card=>card.dataset.group).join();
+  $('[data-open-arrangement]').click();
+  check($('[data-details]').open && host.pendingVisibility, 'inline edit opens existing popup arrangement');
+  check(!$('[data-detail-content] [data-card-step]'), 'arrangement has no up/down buttons');
+  host.moveCard('gallery',-1);
+  host.toggleCard('doors');
+  check([...$('[data-inline-content] #inline-top').children].map(card=>card.dataset.group).join() === inlineOrder,
+    'editing in popup leaves inline card layout untouched');
+  check(!host.config.hiddenGroups?.includes('doors'), 'eye changes remain unsaved until apply');
+  host.cancelArrangement();
+  host.closeDetails();
+  await pause();
+  check(host.vehicleMaps.size === 1 && !$('[data-detail-content]').childElementCount,
+    'closing inline editor restores map without delayed native close cleanup destroying it');
+  check(host.shadowRoot.activeElement === $('[data-open-arrangement]'), 'inline arrangement restores launcher focus');
+  delete services.savePopupSettings;
+  host.config = {...widget, showDetails:false, showGallery:false, hiddenGroups:['doors']};
+  check(!$('[data-inline-content] [data-group=doors]') && !$('[data-inline-content] [data-group=gallery]'),
+    'inline display uses the same visibility settings');
+  const originalSave = services.saveWidget;
+  services.saveWidget = async () => { throw new Error('test config save failure'); };
+  await host.openConfig();
+  await host.saveConfig();
+  check($('[data-dialog]').open && $('[data-error]').textContent.includes('test config save failure')
+    && !$('[data-form]').inert, 'failed configuration save stays open, visible and editable');
+  host.closeConfig(false);
+  services.saveWidget = originalSave;
+  host.config = widget;
   host.remove();
   mount.style.width = '100%';
   const gridRoot = document.createElement('div');

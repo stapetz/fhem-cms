@@ -2,7 +2,7 @@
 <html lang="de" data-cms-theme="light">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VolvoConnect popup editor</title>
+<title>VolvoConnect popup arrangement</title>
 <link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
 <link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
 <style>
@@ -46,8 +46,7 @@ const values = {state:'authenticated',state_batteryChargeLevel:'84',fuel_battery
   statistics_unavailable:'property_not_found',doors_centralLock:'LOCKED',
   warnings_lowBeamLeftWarning:'NO_WARNING',windows_frontLeftWindow:'CLOSED',
   engine_engineStatus:'STOPPED',vehicle_descriptions_model:'Demo',
-  vehicle_images_exteriorImageUrl:`${location.origin}/t/media/${'a'.repeat(32)}.png`,
-  vehicle_images_internalImageUrl:`${location.origin}/t/media/${'b'.repeat(32)}.png`};
+  vehicle_images_exteriorImageUrl:`${location.origin}/t/media/${'a'.repeat(32)}.png`};
 const snapshot = () => [{name:'Car',type:'VolvoConnect',readings:{...values},sets:'lock unlock'}];
 const editor = new Schema5Editor({GridStack,root:document.querySelector('#editor'),controller,
   client:{jsonlist:async () => snapshot(),subscribe() {},unsubscribe() {}},
@@ -55,44 +54,60 @@ const editor = new Schema5Editor({GridStack,root:document.querySelector('#editor
   browser:{location:window.location,localStorage:window.localStorage,
     addEventListener:window.addEventListener.bind(window),
     removeEventListener:window.removeEventListener.bind(window),confirm:() => false}});
-const host = () => document.querySelector('cms-volvoconnect');
+const outer = () => document.querySelector('cms-volvoconnect');
+const host = outer;
 const $ = selector => host().shadowRoot.querySelector(selector);
 const order = () => [...$('#top').children].map(card => card.dataset.group);
-const pause = () => new Promise(resolve => setTimeout(resolve,80));
-try {
-  await editor.start();
-  for (let i=0;i<100 && !$('[data-content] .soc');i++) await pause();
+const pause = () => new Promise(resolve => setTimeout(resolve,30));
+const wait = async predicate => {
+  for (let i=0;i<150;i++) { if (predicate()) return; await pause(); }
+  throw new Error('Editor transition timed out');
+};
+const start = async () => {
   host().openDetails();
-  check(!$('[data-arrange]').hidden, 'real editor exposes popup arrangement');
-  check(order().slice(0,4).join() === 'state,statistics,vehicle,gallery', 'agreed initial order');
-  check(!$('#reading-fuel_batteryChargeLevel') && !$('#reading-state_batteryChargeLevel'), 'no duplicate SOC row');
-  check(!$('#reading-state_chargingPower') && !$('#reading-state_transferLimit')
-    && !$('#reading-statistics_unavailable'), 'unavailable properties omitted across groups');
-  check($('#actions button').disabled, 'editor cannot execute vehicle commands');
   host().startArrangement();
-  const original = order().join();
-  check($('[data-drag-card]') && $('[data-card-step]'), 'drag grips and keyboard alternatives visible');
-  host().moveCard('gallery',-1);
-  check(order()[2] === 'gallery' && writes === 0, 'preview does not write');
-  host().data = snapshot();
-  check(order()[2] === 'gallery', 'live data retains unsaved order');
-  host().cancelArrangement();
-  check(order().join() === original && writes === 0, 'cancel restores order without writing');
-  check(!$('[data-drag-card]'), 'cancel removes editing controls');
-  host().startArrangement();
-  host().moveCard('gallery',-1);
-  fail = true;
-  await host().saveArrangement();
-  check($('[data-message]').textContent.includes('test storage failure'), 'storage error is visible');
-  check(host().pendingCardOrder && writes === 0 && !host().arrangementSaving, 'failure retains editable draft order');
-  fail = false;
-  await controller.reload();
+};
+const cancel = async () => {
   host().cancelArrangement();
   host().closeDetails();
+};
+try {
+  await editor.start();
+  await wait(() => outer()?.snapshot);
+  outer().openActions();
+  check($('[data-command]').disabled, 'editor cannot execute vehicle commands');
+  outer().closeActions();
+  await start();
+  check(host().snapshot[0].name === 'Car', 'popup uses actual device readings');
+  check(order().slice(0,4).join() === 'state,statistics,vehicle,gallery', 'agreed initial order');
+  check(order().length === 15, 'all cards including absent groups remain editable');
+  check(!$('#reading-fuel_batteryChargeLevel') && !$('#reading-state_batteryChargeLevel'), 'no duplicate SOC row');
+  check(!$('#reading-state_chargingPower') && !$('#reading-statistics_unavailable'), 'unavailable properties omitted');
+  host().moveCard('gallery',-1);
+  host().toggleCard('doors');
+  check(order()[2] === 'gallery' && writes === 0, 'interactive preview does not write');
+  check(host().pendingVisibility.hiddenGroups.includes('doors'), 'eye toggles pending visibility');
+  check(!host().config.hiddenGroups?.includes('doors'), 'eye leaves stored config untouched');
+  check(!$('[data-card-step]'), 'visible up/down buttons removed');
+  host().data = snapshot();
+  check(order()[2] === 'gallery', 'live data retains unsaved order');
+  await cancel();
+  await start();
+  check(order()[3] === 'gallery' && !host().pendingVisibility.hiddenGroups.includes('doors'),
+    'cancel discards ordering and visibility');
+  host().toggleCard('doors');
+  host().toggleCard('gallery');
+  fail = true;
+  await host().saveArrangement();
+  check($('[data-message]').textContent.includes('test storage failure'), 'storage failure visibly reported');
+  check(writes === 0 && host().pendingVisibility.showGallery === false, 'failure retains pending visibility without writing');
+  fail = false;
+  await controller.reload();
+  await cancel();
   window.popupOrderTest = {
-    host, $, order, check,
-    snapshot: () => structuredClone(state),
-    writes: () => writes,
+    host, $, order, check, start, cancel,
+    save: async () => { await host().saveArrangement(); await wait(() => document.querySelector('.cms-widget-config')); },
+    snapshot: () => structuredClone(state), writes: () => writes,
     finish: async () => {
       check(writes === 1 && publications === 0, 'exactly one draft write and no publication');
       check(JSON.stringify(state.live) === JSON.stringify(initial), 'live config unchanged');
@@ -101,6 +116,10 @@ try {
       await controller.reload();
       check(controller.snapshot().draft.pages[0].widgets[0].groupOrder.includes('gallery'),
         'reload reads persisted order including gallery');
+      check(new Set(state.draft.pages[0].widgets[0].groupOrder).size === volvoGroupOrder().length,
+        'saved order includes all unique cards');
+      check(state.draft.pages[0].widgets[0].showDetails !== false, 'legacy popup default retained');
+      check(state.draft.pages[0].widgets[0].hiddenGroups.includes('doors'), 'eye preference persists with order');
       const {mountSchema5Widgets} = await import('../www/fhem-cms/js/fcui-schema5-widgets.js');
       const root = document.createElement('div');
       root.className = 'grid-stack cms-schema5-grid';
@@ -110,12 +129,11 @@ try {
       try {
         const readOnly = root.querySelector('cms-volvoconnect');
         readOnly.openDetails();
-        check(readOnly.shadowRoot.querySelector('[data-arrange]').hidden, 'view mode has no arrangement controls');
+        check(readOnly.$('[data-arrange]').hidden, 'view mode has no arrangement controls');
         readOnly.startArrangement();
         check(!readOnly.pendingCardOrder, 'view mode rejects arrangement method');
+        check(!readOnly.$('[data-group="doors"]'), 'saved hidden group is absent in view mode');
       } finally { view.destroy(); root.remove(); }
-      check(new Set(state.draft.pages[0].widgets[0].groupOrder).size === volvoGroupOrder().length,
-        'saved order includes all unique cards');
       output.dataset.result = 'pass';
       output.textContent = JSON.stringify({checks});
     },

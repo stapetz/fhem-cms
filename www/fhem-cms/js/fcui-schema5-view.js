@@ -137,8 +137,8 @@ export class Schema5View {
         navigation, services, new Map(), this.editing && {
           onChange: (items) => this.editing.onChange(pageId, items),
           onEdit: (id) => this.editing.onEdit(pageId, id),
-          onPopupOrder: typeof this.editing.onPopupOrder === 'function'
-            ? (id, order) => this.editing.onPopupOrder(pageId, id, order) : undefined,
+          onPopupSettings: typeof this.editing.onPopupSettings === 'function'
+            ? (id, settings) => this.editing.onPopupSettings(pageId, id, settings) : undefined,
           onMove: typeof this.editing.onMove === 'function'
             ? (id) => this.editing.onMove(pageId, id) : undefined,
           onDuplicate: typeof this.editing.onDuplicate === 'function'
