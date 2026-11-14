@@ -23,6 +23,13 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 
 ## Escape und verschachtelte Dialoge (dev, 1.13.1-dev, Refs #208)
 
+Korrektur 1.19.5-dev (Refs #210): Die Kopfmenue-Vorschau zeigt nie
+cms-grid-guides, auch nicht beim Umschalten der Rasterpraeferenz waehrend
+der Vorschau. Die lokale Praeferenz bleibt erhalten und wird bei Rueckkehr
+zur Bearbeitung wieder angewendet. Widget-Bearbeitungsraster unveraendert.
+Regression: t/19_schema5_editor.test.js betaetigt die echten Menuehandler
+und prueft Vorschau, Toggle, Praeferenzerhalt und Rueckkehr zur Bearbeitung.
+
 Der Editor faengt Escape nicht mehr global im Capture-Handler ab.
 Native modale Widgetdialoge erhalten dadurch ihr regulaeres `cancel`-Ereignis.
 Menues und Vorschau behandeln bereits konsumierte Ereignisse nicht erneut;

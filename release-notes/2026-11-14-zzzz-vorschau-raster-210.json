@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-14",
+  "version": "1.19.5-dev",
+  "title": "Kopfmenue-Vorschau immer ohne Bearbeitungsraster",
+  "changes": [
+    "Ansicht -> Vorschau blendet Rasterlinien unabhaengig von der gespeicherten Rasterpraeferenz aus.",
+    "Beim Verlassen der Vorschau gilt wieder die gespeicherte Rasteranzeige. Bearbeitungsbereiche bleiben unveraendert. Refs #210."
+  ]
+}

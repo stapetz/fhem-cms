@@ -507,7 +507,7 @@ export class Schema5Editor {
     if (this.#gridElement) {
       const state = this.#controller.snapshot();
       this.#gridElement.style.setProperty('--cms-grid-columns', String((state.draft || state.live).settings.gridColumns));
-      this.#gridElement.classList.toggle('cms-grid-guides', this.#showGrid);
+      this.#gridElement.classList.toggle('cms-grid-guides', this.#showGrid && !this.#previewMode);
       for (const widget of this.#gridElement.querySelectorAll('cms-volvoconnect')) widget.updateGridGuides();
     }
   }

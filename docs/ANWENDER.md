@@ -225,6 +225,8 @@ Geräte lassen sich später im Editor hinzufügen.
 - **Ansicht:** Vorschau, Raster anzeigen und Widgets automatisch anordnen.
   Die Rasteranzeige wird dauerhaft pro CMS in diesem Browser gespeichert,
   unabhängig vom Entwurf. Auf anderen Browsern oder Geräten gilt deren eigene Wahl.
+  **Vorschau** blendet das Raster immer aus; beim Zurückkehren zur Bearbeitung
+  gilt wieder die gespeicherte Rasteranzeige.
 
 ### Gerät zuerst hinzufügen (dev, ab 1.11.0-dev)
 
