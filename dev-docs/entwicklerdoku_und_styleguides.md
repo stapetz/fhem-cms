@@ -12,6 +12,17 @@ nicht ersetzen.
 
 ---
 
+### Verbindliche Datumsdarstellung
+
+Alle bestehenden und neuen Widgets verwenden an der Praesentationsgrenze
+`formatDateDisplay` aus `www/fhem-cms/js/date-display.js`:
+`TT.MM.JJJJ`, bei Zeitstempeln `TT.MM.JJJJ HH:mm:ss`.
+Zonierte Zeitstempel werden nach `Europe/Berlin` umgerechnet; Datumswerte und
+lokale FHEM-Zeiten ohne Zeitzone behalten ihre Felder. Rohdaten, Bedingungen,
+Filter und Befehle bleiben unveraendert. Ungueltige/mehrdeutige Daten werden
+nicht erraten. Details und reproduzierbare Regressionen:
+[Datumsvertrag](./ENTWICKLUNG.md#verbindliche-datumsdarstellung-aller-widgets).
+
 ## 1. Technologische Kern-Architektur
 
 Das Framework trennt die Steuerungs- und Kommunikationsebene (TypeScript/ES6) strikt von der Darstellungsebene (Web Components via Lit).

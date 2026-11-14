@@ -1,4 +1,5 @@
 import { isValidName } from './fhem-client.js';
+import { formatDateDisplay } from './date-display.js';
 
 export const volvoGroups = [
   ['state', 'Energie & Akku'], ['statistics', 'Statistik'],
@@ -27,6 +28,13 @@ export function volvoGroupOrder(config = {}) {
 }
 
 export function validateVolvoGroups(config) {
+  if (config.hiddenReadings !== undefined && (!Array.isArray(config.hiddenReadings)
+    || config.hiddenReadings.length > 1000
+    || config.hiddenReadings.some(key => !isValidName(key) || (!['state','lastUpdate'].includes(key)
+      && !/^(?:state|statistics|vehicle|location|warnings|doors|windows|engineDiagnostics|capabilities|brakes|workshopDiagnostics|commandAccessibility|commands|tyres)_.+$/.test(key)))
+    || new Set(config.hiddenReadings).size !== config.hiddenReadings.length)) {
+    return 'Ungültige VolvoConnect-Readings in hiddenReadings.';
+  }
   for (const field of ['groupOrder', 'hiddenGroups']) {
     const keys = new Set((field === 'groupOrder' ? volvoCards : volvoGroups).map(([key]) => key));
     if (config[field] === undefined) continue;
@@ -190,7 +198,7 @@ export function volvoLabel(key) {
 }
 
 export function volvoValue(group, key, value, unit = '') {
-  let text = volvoText(value);
+  let text = formatDateDisplay(volvoText(value));
   if (!text) return '';
   if (Object.hasOwn(states, key) && Object.hasOwn(states[key], text)) text = states[key][text];
   else if (group === 'capabilities' && /^(?:0|1|true|false)$/.test(text)) {
@@ -229,12 +237,12 @@ export function volvoModel(snapshot, device) {
     if (group === 'location' && /^(?:address|altitude|heading)$/.test(key)) continue;
     const value = volvoValue(group, key, readings[reading], readings[`${reading}_unit`])
       || (key === 'chargingType' ? '−' : '');
-    if (value) groups.get(group).push({ reading, key, label: volvoLabel(key), value,
+    if (value) groups.get(group).push({ reading, visibilityKey: `${group}_${key}`, key, label: volvoLabel(key), value,
       icon: volvoReadingIcon(group, key), status: volvoStatusSymbol(group, key, readings[reading]) });
   }
   const energy = groups.get('state');
   if (energy.length && !energy.some(entry => entry.key === 'chargingType')) {
-    energy.push({reading:'state_chargingType',key:'chargingType',label:volvoLabel('chargingType'),
+    energy.push({reading:'state_chargingType',visibilityKey:'state_chargingType',key:'chargingType',label:volvoLabel('chargingType'),
       value:'−',icon:volvoReadingIcon('state','chargingType'),status:null});
   }
   const location = groups.get('location');
@@ -245,14 +253,21 @@ export function volvoModel(snapshot, device) {
       primary.value = (prepend ? [secondary.value, primary.value] : [primary.value, secondary.value]).join(' ');
       location.splice(location.indexOf(secondary), 1);
     }
+    const locationOrder = ['road', 'city', 'state', 'country', 'latitude', 'longitude', 'timestamp'];
+    const locationRank = key => locationOrder.includes(key) ? locationOrder.indexOf(key) : locationOrder.length;
+    location.sort((a, b) => locationRank(a.key) - locationRank(b.key));
   }
   const number = (key, limit) => /^-?\d+(?:\.\d+)?$/.test(read(key))
     && Number.isFinite(Number(read(key))) && Math.abs(Number(read(key))) <= limit ? Number(read(key)) : null;
-  const charge = number('state_batteryChargeLevel', 100);
+  const charge = ['state_batteryChargeLevel', 'fuel_batteryChargeLevel']
+    .map(key => number(key, 100)).find(value => value !== null && value >= 0);
+  const rangeReading = ['state_electricRange', 'fuel_distanceToEmptyBattery', 'statistics_distanceToEmptyBattery']
+    .find(key => number(key, Number.MAX_SAFE_INTEGER) !== null && Number(read(key)) >= 0);
   return {
     available: Boolean(item), groups, images, read,
-    soc: charge !== null && charge >= 0 ? charge : null,
-    range: read('state_electricRange') || read('fuel_distanceToEmptyBattery'),
+    soc: charge ?? null,
+    range: rangeReading ? read(rangeReading) : '',
+    rangeUnit: rangeReading ? read(`${rangeReading}_unit`) : '',
     latitude: number('location_latitude', 90), longitude: number('location_longitude', 180),
     actions: volvoActions.filter(([command]) => typeof item?.sets === 'string'
       && item.sets.split(/\s+/).some(entry => entry === command || entry.startsWith(`${command}:`))),

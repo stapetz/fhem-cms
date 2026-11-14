@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shared widget date display</title>
+<style>cms-value,cms-table,cms-html,cms-text,cms-icon,cms-calllist,cms-clock,cms-chart,cms-select { display:block; width:380px; height:240px; }</style>
+<main id="mount"></main><pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+import { formatDateDisplay } from '../www/fhem-cms/js/date-display.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const mount = document.querySelector('#mount');
+const raw = '2026-11-14T23:30:00Z';
+const expected = '15.11.2026 00:30:00';
+const snapshot = [{name:'Demo',readings:{stamp:raw,'1-timestamp':raw,'1-state':'=>','1-name':'Demo'},
+  sets:'mode:date1,date2'}];
+const snapshots = new Map([['Demo',snapshot]]);
+const widgets = [];
+const create = specification => {
+  const config = {id:`w${widgets.length}`,device:'Demo',reading:'stamp',title:'Datum',...specification};
+  const host = createWidgetElement(config,{iconUrl:() => '',history:async () => ({points:[]})},snapshots,true);
+  mount.append(host);
+  widgets.push(host);
+  return host;
+};
+try {
+  const value = create({type:'fhem-value'});
+  check(value.$ === undefined && value.shadowRoot.querySelector('[data-value]').textContent === expected,
+    'value widget formats zoned reading');
+  const table = create({type:'fhem-table',rows:[{device:'Demo',reading:'stamp'}]});
+  check(table.shadowRoot.querySelector('[data-rows]').textContent.includes(expected), 'table formats reading');
+  for (const type of ['fhem-html','text']) {
+    const host = create({type,devices:['Demo'],html:'<p>{{Demo:stamp}}</p>'});
+    check(host.shadowRoot.textContent.includes(expected), `${type} formats placeholders`);
+  }
+  const calls = create({type:'fhem-calllist',limit:5,columns:['timestamp']});
+  check(calls.shadowRoot.querySelector('tbody').textContent.includes(expected), 'calllist formats timestamp');
+  const icon = create({type:'fhem-icon',states:[]});
+  check(icon.shadowRoot.querySelector('[data-state]').textContent.includes(expected), 'icon formats unknown state display');
+  const select = create({type:'fhem-select',command:'mode',mode:'buttons',labels:{date1:raw}});
+  check(select.shadowRoot.querySelector('[data-choices]').textContent.includes(expected), 'select formats label only');
+  check(select.currentCommand().values[0] === 'date1' && select.currentReading() === raw,
+    'select command and selected value retain source data');
+  const clock = create({type:'fhem-clock',style:'date',showDate:true});
+  check(clock.shadowRoot.querySelector('[data-date]').textContent.includes(formatDateDisplay(new Date())),
+    'clock uses common calendar date');
+  const chart = create({type:'fhem-chart',range:'7d'});
+  const now = Math.floor(Date.parse('2026-11-14T12:00:00Z') / 1000);
+  chart.draw({points:[[now-86400*7,1],[now,2]],from:now-86400*7,to:now});
+  check(/\d{2}\.\d{2}\.\d{4}/.test(chart.shadowRoot.querySelector('[data-svg]').textContent),
+    'chart long-range axis includes full German date');
+  value.data = [{name:'Demo',readings:{stamp:'2024-02-29'}}];
+  check(value.shadowRoot.querySelector('[data-value]').textContent === '29.02.2024', 'date-only value preserves day');
+  value.data = [{name:'Demo',readings:{stamp:'2026-02-30'}}];
+  check(value.shadowRoot.querySelector('[data-value]').textContent === '2026-02-30', 'invalid date stays visible as source');
+  check(snapshot[0].readings.stamp === raw, 'display never rewrites readings');
+  for (const host of widgets) host.remove();
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({checks});
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack;
+}
+</script>

@@ -1,5 +1,6 @@
 // Freies HTML mit Platzhaltern (S31): strikte Allowlist, kein Skript, Werte werden nur als Text eingesetzt.
 import { validateCssStructure } from './freehtml-css.js';
+import { formatDateDisplay } from './date-display.js';
 export const MAX_FREE_HTML = 20000;
 export const MAX_FREE_DEVICES = 20;
 
@@ -385,7 +386,7 @@ export function formatValue(found, filters) {
   for (const filter of filters.split('|').map((part) => part.trim()).filter(Boolean)) {
     value = applyFilter(value, filter);
   }
-  return value === '' ? '–' : value;
+  return value === '' ? '–' : formatDateDisplay(value);
 }
 
 export function substitute(text, lookup) {

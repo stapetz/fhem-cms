@@ -73,6 +73,57 @@ das Oeffnen/Speichern ohne Berechnungsoption.
 
 ## VolvoConnect-Nachtrag (dev, 1.16.0-dev, Refs #209)
 
+Nachtrag 1.17.0-dev: Info/Aktion stehen in einer rechts ausgerichteten
+gemeinsamen Werkzeugleiste; die kompakte Ansicht zeigt bei authenticated
+ein kleines gruenes API-Haekchen. Energie-Fallbacks validieren numerische Werte
+und echte Null vor der Auswahl: state_batteryChargeLevel, fuel_batteryChargeLevel;
+state_electricRange, fuel_distanceToEmptyBattery, statistics_distanceToEmptyBattery.
+Die Einheit gehoert immer zum ausgewaehlten Reichweitenreading.
+Standortreihenfolge nach Zusammenfuehren von Strasse/Hausnummer und Ort/PLZ:
+road, city, state, country, latitude, longitude, timestamp.
+
+Optionales hiddenReadings (Default [], max. 1000 eindeutige Readingnamen)
+wird in Konfiguration, Entwurf und Blueprints validiert. Namen sind aus
+normalisierter Anzeigegruppe + Originalschluessel aufgebaut (fuel -> state,
+odometer -> statistics); state und lastUpdate sind separat erlaubt.
+Akkustand/Reichweite in den Summen verwenden state_batteryChargeLevel bzw.
+state_electricRange unabhaengig von der vom Modul gelieferten Variante.
+Reading-Augen bleiben in der Anordnungsansicht erreichbar, auch wenn der
+Wert ausgeblendet ist. Cancel verwirft alle ausstehenden Aenderungen,
+Apply speichert gemeinsam mit Kartenreihenfolge/-sichtbarkeit.
+Ausgeblendete Koordinaten entfernen auch die Karte. Fehlende Readings
+loeschen die gespeicherten Sichtbarkeitseinstellungen nicht.
+
+Apply darf weder Widget noch Editorview neu mounten. onPopupSettings schreibt
+mit dem Token des angezeigten Zustands, aktualisiert erst nach Erfolg die
+vorhandene Widgetkonfiguration und uebernimmt das Ergebnis-Token fuer
+Folgespeicherungen. Kein Nachladen frischer Tokens zum Ueberschreiben
+paralleler Aenderungen. Das offene Popup bleibt bestehen; Bearbeitungsgriffe
+und Augen verschwinden, Fokus geht auf Anordnung bearbeiten. Die Scrollposition
+bleibt bis zur durch die neue Inhaltshoehe gesetzten Grenze erhalten.
+
+### Verbindliche Datumsdarstellung aller Widgets
+
+Bestehende und kuenftige Datumsanzeigen verwenden den gemeinsamen
+Helfer formatDateDisplay aus www/fhem-cms/js/date-display.js.
+Kalenderdatum TT.MM.JJJJ, Zeitstempel TT.MM.JJJJ HH:mm:ss.
+ISO-Daten YYYY-MM-DD duerfen durch Date-Parsing keinen Tagesversatz erhalten.
+Zeitstempel mit Z/UTC-Offset werden inklusive Sommerzeit nach Europe/Berlin
+umgerechnet; FHEM-Zeiten ohne Zeitzone behalten lokale Felder.
+Vierstellige deutsche Kalenderdaten werden ebenfalls validiert/normalisiert.
+Nur vollstaendige, gueltige Kalenderdaten erkennen; Modelljahr, Zahlen,
+Dauern und unbekannte/ungueltige Werte nicht erraten oder korrigieren.
+Formatierung ausschliesslich an der Praesentationsgrenze: niemals Rohreadings,
+Filtereingaben, Bedingungen, Wertvergleiche, Befehle oder gespeicherte
+Konfigurationswerte veraendern. Statischer nutzerdefinierter Text bleibt unangetastet.
+Wert, Tabelle, Text-/HTML-Platzhalter, Anrufliste, Statussymbol,
+Auswahlbeschriftungen, Thermostat-Zusatzwerte und Volvo verwenden denselben Helfer.
+Uhr und Diagramm zeigen Berliner Kalenderdaten; reine Zeitachsen bleiben Uhrzeit.
+Regressionen: t/90_widget_dates.test.js und t/90_widget_dates.html
+(Chrome/WebKit), einschliesslich Sommerzeit und ungueltiger Daten.
+
+### Bisheriger Nachtrag 1.16
+
 Nach erneuter Abstimmung bleibt die Kartenbearbeitung direkt im Detailpopup.
 Keine interaktive Vorschau und keine doppelte Gruppenliste im Konfigurationsdialog.
 Sichtbare Hoch-/Runter-Pfeile entfallen; der fokussierte Griff verarbeitet

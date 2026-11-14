@@ -1,4 +1,5 @@
 import { isValidName } from '../js/fhem-client.js';
+import { formatDateDisplay } from '../js/date-display.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
@@ -33,8 +34,8 @@ function niceNumber(value) {
 function timeLabel(seconds, rangeSeconds) {
   const date = new Date(seconds * 1000);
   return rangeSeconds <= 86400 * 1.5
-    ? date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-    : date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+    ? date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone:'Europe/Berlin' })
+    : formatDateDisplay(date);
 }
 
 function fillSelect(select, options) {

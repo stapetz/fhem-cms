@@ -1,4 +1,5 @@
 import { openDevicePicker } from '../js/device-picker.js';
+import { formatDateDisplay } from '../js/date-display.js';
 import { openIconPicker } from '../js/icon-picker.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 import { actionIconUrl, actionPresentationFields, collectActionPresentation } from '../js/action-presentation.js';
@@ -273,7 +274,7 @@ class FHEMCMSSwitch extends HTMLElement {
     stateText.hidden = !showLabel;
     const raw = this.readingValue();
     const tile = this.shadowRoot.querySelector('[data-tile]');
-    tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''} = ${raw === null ? '–' : raw}`;
+    tile.title = `${this.widgetConfig.device || ''}:${this.widgetConfig.reading || ''} = ${raw === null ? '–' : formatDateDisplay(raw)}`;
     const titleShown = this.widgetConfig.showTitle !== false;
     tile.toggleAttribute('data-has-title', titleShown);
     this.shadowRoot.querySelector('[data-title]').textContent = title;

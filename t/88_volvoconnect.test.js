@@ -42,7 +42,7 @@ test('VolvoConnect matches dashboard location grouping, labels and unit formatti
     location_postcode: '12345', location_city: 'Teststadt', location_address: 'duplicate',
     location_altitude: '10', location_heading: '45',
     capabilities_getEnergyState_chargingPower_isSupported: '0' });
-  assert.deepEqual(result.groups.get('location').map(row => row.value), ['12345 Teststadt', 'Testweg 1']);
+  assert.deepEqual(result.groups.get('location').map(row => row.value), ['Testweg 1', '12345 Teststadt']);
   assert.equal(result.groups.get('capabilities')[0].label, 'Ladeleistung unterstützt');
   assert.equal(volvoValue('state', 'chargingStatus', 'ONGOING'), 'Lädt');
   assert.equal(volvoValue('state', 'chargingStatus', 'STOPPED'), 'Gestoppt');
@@ -50,6 +50,48 @@ test('VolvoConnect matches dashboard location grouping, labels and unit formatti
   assert.equal(volvoValue('state', 'time', '65', 'minutes'), '01:05 h');
   assert.equal(volvoValue('state', 'current', '16', 'ampere'), '16 A');
   assert.equal(volvoValue('capabilities', 'flag', '0'), 'Nein');
+});
+
+test('VolvoConnect supports Keycloak energy aliases, real zero and valid preferred values', () => {
+  const keycloak = model({fuel_batteryChargeLevel:'84',statistics_distanceToEmptyBattery:'310',
+    statistics_distanceToEmptyBattery_unit:'km',state:'authenticated'});
+  assert.equal(keycloak.soc, 84);
+  assert.equal(keycloak.range, '310');
+  assert.equal(keycloak.rangeUnit, 'km');
+  assert.equal(keycloak.groups.get('state').find(row => row.key === 'batteryChargeLevel').visibilityKey,
+    'state_batteryChargeLevel');
+  const zero = model({state_batteryChargeLevel:'0',fuel_batteryChargeLevel:'84',
+    state_electricRange:'0',statistics_distanceToEmptyBattery:'310'});
+  assert.equal(zero.soc, 0);
+  assert.equal(zero.range, '0');
+  const invalid = model({state_batteryChargeLevel:'PROPERTY_NOT_FOUND',fuel_batteryChargeLevel:'84',
+    state_electricRange:'invalid',statistics_distanceToEmptyBattery:'310'});
+  assert.equal(invalid.soc, 84);
+  assert.equal(invalid.range, '310');
+  assert.equal(model({fuel_batteryChargeLevel:'101',statistics_distanceToEmptyBattery:'-1'}).soc, null);
+  assert.equal(model({statistics_distanceToEmptyBattery:'-1'}).range, '');
+});
+
+test('VolvoConnect location order and dates use shared display contract without altering source', () => {
+  const readings = {location_longitude:'10',location_latitude:'50',location_road:'Testweg',
+    location_city:'Teststadt',location_state:'Testland',location_country:'Deutschland',
+    location_timestamp:'2026-11-14T16:30:00Z',vehicle_specifications_firstRegistrationDate:'2024-02-29'};
+  const result = model(readings);
+  assert.deepEqual(result.groups.get('location').map(row => row.key),
+    ['road','city','state','country','latitude','longitude','timestamp']);
+  assert.equal(result.groups.get('location').at(-1).value, '14.11.2026 17:30:00');
+  assert.equal(result.groups.get('vehicle')[0].value, '29.02.2024');
+  assert.equal(readings.location_timestamp, '2026-11-14T16:30:00Z');
+});
+
+test('VolvoConnect hidden readings are optional, unique, bounded and validated', () => {
+  for (const hiddenReadings of [[], ['state_batteryChargeLevel','vehicle_vin','lastUpdate']]) {
+    assert.equal(validateVolvoGroups({hiddenReadings}), null);
+  }
+  for (const hiddenReadings of [null, {}, 'state_batteryChargeLevel', ['state_x','state_x'],
+    ['state_x\n'], ['arbitrary'], ['password'], [null], ['fuel_batteryChargeLevel'], Array(1001).fill('state_x')]) {
+    assert.match(validateVolvoGroups({hiddenReadings}), /Ungültige/);
+  }
 });
 
 test('VolvoConnect rejects unsafe/missing source values and image URLs', () => {
