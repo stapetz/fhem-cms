@@ -95,6 +95,12 @@ try {
   await start();
   check(order()[3] === 'gallery' && !host().pendingVisibility.hiddenGroups.includes('doors'),
     'cancel discards ordering and visibility');
+  host().reorderCard('gallery','statistics',true);
+  host().reorderCard('gallery','statistics',true);
+  check(order()[1] === 'gallery', 'repeated upper-half hits keep card before target');
+  host().reorderCard('gallery','statistics',false);
+  host().reorderCard('gallery','statistics',false);
+  check(order()[2] === 'gallery', 'repeated lower-half hits keep card after target');
   host().toggleCard('doors');
   host().toggleCard('gallery');
   fail = true;

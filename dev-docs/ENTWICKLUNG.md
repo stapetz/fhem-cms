@@ -102,6 +102,14 @@ sichtbare Fehler. Editor/Anordnungsmodus kann keine Fahrzeugbefehle senden.
 Fixture 88 prueft beide Anzeigevarianten, Symboltexte, Footer, Fehler und
 Map-/DOM-Erhalt; Fixture 89 den echten Entwurfspfad fuer Augen und Reihenfolge.
 check_dialog_escape.py prueft Footerreihenfolge/-ausrichtung aller 17 Widgets.
+Nachbesserung 1.16.1-dev: Tab-Umlauf in Detail- und Aktionsmodal bleibt auch
+nach Entfernen der bisherigen Aktionsbuttons im Dokument, einschliesslich
+Fahrzeugkarten-Shadow-DOM. Dragtests verwenden explizite Viewportmasse
+und nach Scrollen neu gemessene, nachweislich sichtbare Zielpunkte.
+Zusaetzlicher Fall mit nur 600px Fensterhoehe gegen verdeckte Zielkarten.
+Die obere/untere Zielhaelfte bestimmt bei Pointerbewegungen vor/nach der
+Zielkarte; bereits passende Einfuegepositionen bleiben unveraendert.
+So fuehren Randscrollen und wiederholte RAF-Treffer nicht zu Umsortierspruengen.
 
 ## VolvoConnect-Popupanordnung (dev, 1.15.0-dev, Refs #209)
 

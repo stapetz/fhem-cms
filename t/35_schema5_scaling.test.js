@@ -117,7 +117,8 @@ for (const [name, fixtures] of [
   ['VolvoConnect renders module groups and preserves responsive live vehicle data',
     [['88_volvoconnect.html', 400]]],
   ['VolvoConnect popup reorders cards by pointer and saves only the editor draft',
-    [['89_volvoconnect_order.html', 20], ['89_volvoconnect_order.html?touch=1', 20]]],
+    [['89_volvoconnect_order.html', 20], ['89_volvoconnect_order.html?height=600', 20],
+      ['89_volvoconnect_order.html?touch=1', 20]]],
   ['widget titles inherit alignment and compact contents fill their available area',
     [['36_widget_titles.html', 180], ['37_widget_content.html', 600],
       ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],
@@ -238,6 +239,16 @@ for (const [name, fixtures] of [
             assert.equal(await evaluate('Boolean(window.popupOrderTest.host().drag)'), true, 'real pointer starts drag');
             await evaluate('window.popupOrderTest.host().data = [{name:"Car",readings:{state_batteryChargeLevel:"85",statistics_tripMeterManual:"124",vehicle_descriptions_model:"Demo",vehicle_images_exteriorImageUrl:location.origin+"/t/media/"+ "a".repeat(32)+".png"}}]');
             assert.equal(await evaluate('Boolean(window.popupOrderTest.host().drag)'), true, 'live update preserves active drag');
+            await evaluate('window.popupOrderTest.$(\'[data-group="statistics"]\').scrollIntoView({block:"nearest"})');
+            points.to = await evaluate(`(() => {
+              const {host,$} = window.popupOrderTest;
+              const card=$('[data-group="statistics"]').getBoundingClientRect();
+              const body=$('[data-detail-body]').getBoundingClientRect();
+              const x=card.x+card.width/2,y=Math.max(card.y+20,body.top+20);
+              if(host().shadowRoot.elementFromPoint(x,y)?.closest('[data-group]')?.dataset.group !== 'statistics')
+                throw new Error('Drag target must be visibly inside statistics card');
+              return {x,y};
+            })()`);
             if (touch) {
               await command('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{...points.to,id:1}]});
               await command('Input.dispatchTouchEvent', {type:cancel ? 'touchCancel' : 'touchEnd',touchPoints:[]});
@@ -519,12 +530,14 @@ for (const [name, fixtures] of [
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture.startsWith('89_volvoconnect_order.html') && fixture.includes('touch=1')
+        fixture.startsWith('89_volvoconnect_order.html')
           ? async command => {
+            const touch = fixture.includes('touch=1');
             await command('Emulation.setDeviceMetricsOverride', {
-              width:393,height:852,deviceScaleFactor:1,mobile:true,
+              width:touch ? 393 : 1440,height:touch ? 852 : fixture.includes('height=600') ? 600 : 1000,
+              deviceScaleFactor:1,mobile:touch,
             });
-            await command('Emulation.setTouchEmulationEnabled', {enabled:true});
+            await command('Emulation.setTouchEmulationEnabled', {enabled:touch});
           }
           : fixture.startsWith('82_solarflow_design.html')
           ? command => command('Emulation.setEmulatedMedia', { features: [{
