@@ -46,7 +46,7 @@ for (const [prefix] of volvoGroups) values[`${prefix}_exampleValue`] = 'Test';
 const snapshots = () => new Map([['Car', [{ name:'Car', type:'VolvoConnect', readings:{...values},
   sets:'lock unlock climate:noArg climate_stop:noArg charge_start charge_stop horn' }]]]);
 const saved = [], commands = [];
-const services = { listAllDevices:async () => [{name:'Car',type:'VolvoConnect',readings:values}],
+const services = { GridStack, listAllDevices:async () => [{name:'Car',type:'VolvoConnect',readings:values}],
   saveWidget:async value => saved.push(value), deleteWidget:async () => {},
   setCommand:async (...args) => commands.push(args) };
 const host = createWidgetElement(widget, services, snapshots(), true);
@@ -258,7 +258,8 @@ try {
 
   const rememberedSizes = {state:{w:6,h:18},gallery:{w:6,h:12}};
   const rememberedGrid = {columns:96,rowHeight:16.125};
-  host.config = {...host.config, cardSizes:rememberedSizes,cardGrid:rememberedGrid};
+  const rememberedPositions = {state:{x:12,y:4},gallery:{x:48,y:32}};
+  host.config = {...host.config, cardSizes:rememberedSizes,cardGrid:rememberedGrid,cardPositions:rememberedPositions};
   await host.openConfig({isNew:true});
   check(!$('[data-details]').open, 'configuration closes details instead of stacking two widget modals');
   check($('[name=showDetails]').checked, 'dialog popup defaults on');
@@ -299,6 +300,8 @@ try {
     'main configuration dialog preserves popup card dimensions');
   check(JSON.stringify(saved[0].cardGrid) === JSON.stringify(rememberedGrid),
     'main configuration dialog preserves inherited grid metadata');
+  check(JSON.stringify(saved[0].cardPositions) === JSON.stringify(rememberedPositions),
+    'main configuration dialog preserves exact free card coordinates');
   check(saved[0].device === 'Car' && saved[0].type === widget.type, 'device/type preserved on save');
   check(JSON.stringify(saved[0].grid) === JSON.stringify(widget.grid), 'dialog preserves widget grid');
   check(saved[0].groupOrder[3] === 'gallery' && saved[0].hiddenGroups.length === 0,

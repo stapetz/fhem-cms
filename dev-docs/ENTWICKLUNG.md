@@ -73,6 +73,34 @@ das Oeffnen/Speichern ohne Berechnungsoption.
 
 ## VolvoConnect-Nachtrag (dev, 1.16.0-dev, Refs #209)
 
+Korrektur 1.19.2-dev: Kartenbewegung verwendet nun dieselbe gebuendelte
+GridStack-Klasse wie die Hauptwidgets, uebergeben vom Rasteradapter als
+Widgetdienst (Float-Engine, margin:0, echter
+Kartenhelper/Platzhalter, Kollisionen und internes Autoscrolling).
+Die eigene Pointer-Treffer-/Einfuegeheuristik und das schwebende Textlabel
+sind entfernt. Optionales cardPositions:{kartenkey:{x,y}} speichert exakte
+nullbasierte Rasterpositionen zusammen mit cardGrid und cardSizes.
+Client und Backend validieren bekannte Keys, Integergrenzen, Abmessungen und
+Ueberlappungsfreiheit, auch bei Blueprints. Alte Konfigurationen bleiben
+unveraendert lesbar. Rasterwechsel rechnen Positionen nur im Entwurf um.
+Mobile Karten bleiben einspaltig mit voller Inhaltshoehe; eine mobile
+Verschiebung aendert die Reihenfolge, nicht die gemerkten Desktopmasse.
+Escape/Touchcancel beendet die native Geste vor dem Neuaufbau und restauriert
+alle verdraengten Positionen. Resize-Abbruch restauriert auch die Reihenfolge.
+Stabile card-frame-Wrapper in Ansicht und Bearbeitung erhalten Karteninstanz
+und Zoom. Speichern bleibt ein tokengepruefter Entwurfsaufruf ohne Remount.
+Der reproduzierbare Build patcht zwei GridStack-14.1-Shadow-Touch-Probleme:
+dd-touch verwendet beim verzoegerten mousedown den registrierten Griff statt
+des inzwischen retargeteten Touch.target; simulierte MouseEvents verwenden
+relatedTarget:null, damit Mousemove die Shadowgrenze zum document passiert.
+Der Build bricht ab, wenn die erwartete Originalstelle nicht eindeutig ist;
+bei Dependency-Updates diese Patches explizit pruefen. Keine node_modules-Edits.
+Regressionen: Fixtures 88/89 mit realem Maus-/Touchdrag, Langdruck,
+Fullwidth-Rueckkehr, freien x/y-Luecken, Escape/Touchcancel, Resize-Abbruch,
+Apply/Wiederoeffnen, Konfigurationsdialog und Readonly-Remount.
+Chrome prueft auch das unveraenderte Hauptwidget-Raster; WebKit alle
+Popup-/Inlinevarianten mit 12/96/192 Spalten.
+
 Korrektur 1.19.1-dev: Bei showDetails:false verwendet der Anordnungsdialog
 die vor dem Oeffnen gemessene Inline-Inhaltsbreite statt des 1100px-Limits.
 Dialograhmen, Padding und die echte vertikale Scrollbar werden ausgeglichen.

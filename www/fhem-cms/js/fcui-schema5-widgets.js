@@ -31,6 +31,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     const widgetServices = widget.type === 'fhem-link' ? { ...services,
       pages: config.pages.map(({ id, title }) => ({ id, title })) } : services;
     const vehicleServices = widget.type === 'fhem-volvoconnect' ? {...widgetServices,
+      GridStack,
       cardGrid: () => ({columns:Number(config.settings.gridColumns),
         rowHeight:root.getBoundingClientRect().width / Number(config.settings.gridColumns)})} : widgetServices;
     const element = createWidgetElement(widget, vehicleServices, snapshots, true);

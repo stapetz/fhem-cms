@@ -544,8 +544,13 @@ Die Dialogaktionen stehen einheitlich in der Fußzeile:
 
 Im geöffneten Popup im **Editmodus → Anordnung bearbeiten** wählen:
 Kacheln am **⠿**-Griff mit Maus oder Touch an die gewünschte Stelle ziehen.
-Die gestrichelte Kachel markiert den Platz, andere Karten rücken nach;
-am oberen/unteren Rand des Inhalts wird beim Ziehen gescrollt.
+Dabei arbeitet dieselbe GridStack-Technik wie beim Verschieben der Hauptwidgets:
+Die ganze Karte folgt dem Griff, die gestrichelte Kachel markiert den Platz,
+und überlappende Karten werden verschoben. Freie Rasterpositionen und Lücken
+bleiben nach **Übernehmen** erhalten. Am oberen/unteren Rand des Inhalts wird
+beim Ziehen gescrollt. Auf Touchgeräten den Griff kurz halten und dann ziehen.
+**Escape** bzw. eine abgebrochene Touchgeste verwirft zuerst nur das laufende
+Verschieben einschließlich der dabei verdrängten Karten.
 Es gibt keine separaten Hoch-/Runter-Schaltflächen; mit fokussiertem Griff
 ist dieselbe Bedienung über die Pfeiltasten möglich.
 Die **Auge-Schalter** blenden einzelne Karten einschließlich Galerie ein

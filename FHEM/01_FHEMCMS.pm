@@ -20,7 +20,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.19.1-dev';
+our $FHEMCMS_VERSION = '1.19.2-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1034,7 +1034,7 @@ sub FHEMCMS_ValidateConfig {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid'],
-                    ['title', 'showTitle', 'showGallery', 'showDetails', 'groupOrder', 'hiddenGroups', 'hiddenReadings', 'cardSizes', 'cardGrid']);
+                    ['title', 'showTitle', 'showGallery', 'showDetails', 'groupOrder', 'hiddenGroups', 'hiddenReadings', 'cardSizes', 'cardGrid', 'cardPositions']);
             } elsif ($widget->{type} eq 'fhem-solar-energy') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'sections', 'grid'],
                     ['title', 'showTitle', 'powerUnit', 'energyUnit', 'threshold', 'deriveHome']);
@@ -1195,6 +1195,31 @@ sub FHEMCMS_ValidateConfig {
                                 || $size->{w} < ($grid ? 1 : 3) || $size->{w} > ($grid ? $grid->{columns} : 12)
                                 || ref($size->{h}) || !defined($size->{h}) || $size->{h} !~ /\A[0-9]+\z/
                                 || $size->{h} < ($grid ? 1 : 6) || $size->{h} > ($grid ? 1000 : 64));
+                    }
+                }
+                if (exists($widget->{cardPositions})) {
+                    my $positions = $widget->{cardPositions};
+                    return 'Ungueltige VolvoConnect-Kartenpositionen'
+                        if (ref($positions) ne 'HASH' || keys(%{$positions}) > 15
+                            || ref($widget->{cardGrid}) ne 'HASH' || ref($widget->{cardSizes}) ne 'HASH');
+                    my @placed;
+                    for my $group (keys %{$positions}) {
+                        my $position = $positions->{$group};
+                        my $size = $widget->{cardSizes}{$group};
+                        return 'Ungueltige VolvoConnect-Kartenposition'
+                            if (ref($size) ne 'HASH' || ref($position) ne 'HASH'
+                                || join(',', sort keys %{$position}) ne 'x,y'
+                                || ref($position->{x}) || !defined($position->{x}) || $position->{x} !~ /\A[0-9]+\z/
+                                || ref($position->{y}) || !defined($position->{y}) || $position->{y} !~ /\A[0-9]+\z/
+                                || $position->{x} + $size->{w} > $widget->{cardGrid}{columns}
+                                || $position->{y} + $size->{h} > 1000);
+                        my $box = {%{$position}, %{$size}};
+                        for my $other (@placed) {
+                            return 'Ueberlappende VolvoConnect-Kartenpositionen'
+                                if ($box->{x} < $other->{x} + $other->{w} && $box->{x} + $box->{w} > $other->{x}
+                                    && $box->{y} < $other->{y} + $other->{h} && $box->{y} + $box->{h} > $other->{y});
+                        }
+                        push @placed, $box;
                     }
                 }
                 return 'Ungueltiger Wert fuer showGallery'

@@ -53,6 +53,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
   connectedCallback() {
     if (this.shadowRoot.childElementCount) { this.render(); return; }
     this.shadowRoot.innerHTML = `
+      <link rel="stylesheet" href="${new URL('../css/fcui-gridstack.css', import.meta.url)}">
       <style>
         :host { display:block; min-width:0; min-height:0; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
         * { box-sizing:border-box; }
@@ -78,8 +79,20 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .top[data-sized] > .card { grid-column-end:span var(--card-w,4); grid-row-end:span var(--card-h,12);
           display:flex; flex-direction:column; overflow:hidden; }
         .top[data-sized] .card-body { min-height:0; flex:1; overflow:auto; }
-        .hero > .card-body { display:flex; flex-direction:column; gap:14px; }
-        .hero > .card-body > * { flex-shrink:0; }
+        .top.grid-stack { display:block; position:relative; }
+        .top.grid-stack > .card { position:absolute; margin:0; padding:0; border:0; background:none; overflow:visible; }
+        .card-frame { display:contents; }
+        .grid-stack .card-frame { position:absolute; inset:8px; ${detailCardCss}
+          background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(59,130,246,.12));
+          border-color:rgba(16,185,129,.35); display:flex; flex-direction:column; min-height:0; padding-bottom:56px; overflow:hidden; }
+        .card-frame .card-body { min-height:0; flex:1; overflow:auto; }
+        .card-frame .card-tools { flex:none; }
+        .grid-stack-placeholder .placeholder-content { position:absolute; inset:8px;
+          border:2px dashed var(--cms-accent,#3b82f6); border-radius:14px; background:rgba(59,130,246,.12); }
+        .top.grid-stack > .ui-draggable-dragging { z-index:10000; }
+        .top.grid-stack > .ui-draggable-dragging .card-frame { box-shadow:1px 4px 6px #0003; opacity:.8; }
+        .hero .card-body { display:flex; flex-direction:column; gap:14px; }
+        .hero .card-body > * { flex-shrink:0; }
         .top[data-guides] {
           background-image:linear-gradient(to right,var(--cms-guide,rgba(128,128,128,.3)) 1px,transparent 1px),
             linear-gradient(to bottom,var(--cms-guide,rgba(128,128,128,.3)) 1px,transparent 1px);
@@ -100,6 +113,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
           .top[data-inherited] { gap:16px; }
           .top[data-inherited] > .card { margin:0; }
           .top[data-sized] .card-body { overflow:visible; flex:none; }
+          .top.grid-stack .card-frame .card-body { overflow:visible; flex:none; }
         }
         .card { ${detailCardCss} min-width:0; overflow-wrap:anywhere; }
         .card h4 { margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid rgba(128,128,128,.2); font-size:.95rem; }
@@ -168,10 +182,6 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         [data-arrange-bar] p { flex:1 1 200px; margin:0; font-size:.86rem; }
         .card-tools { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:6px; margin-bottom:8px; }
         [data-drag-card] { touch-action:none; cursor:grab; }
-        [data-dragging] { outline:2px dashed var(--cms-accent,#3b82f6); opacity:.4; }
-        .drag-preview { position:fixed; z-index:1; pointer-events:none; padding:12px;
-          border:2px solid var(--cms-accent,#3b82f6); border-radius:12px;
-          background:var(--cms-surface,#202e27); max-width:240px; }
         [data-detail-body] { padding:16px; overflow:auto; overscroll-behavior:contain; min-height:0;
           container-type:inline-size; }
         [data-details][data-stale] .detail-header { border-bottom-style:dashed; }
@@ -309,7 +319,9 @@ shutdown restart</pre>
     this.$('[data-save-arrange]').addEventListener('click', () => this.saveArrangement());
     this.$('[data-auto-arrange]').addEventListener('click', () => this.autoArrangeCards());
     this.$('[data-reset-arrange]').addEventListener('click', () => {
-      if (!this.arrangementSaving && !this.drag && !this.resize) { this.pendingCardOrder = volvoGroupOrder(); this.render(); }
+      if (!this.arrangementSaving && !this.drag && !this.resize) {
+        this.pendingCardOrder = volvoGroupOrder(); this.pendingPositions = {}; this.render();
+      }
     });
     const cancelDetails = event => {
       event.preventDefault();
@@ -367,18 +379,18 @@ shutdown restart</pre>
     });
     detail.addEventListener('pointerdown', event => {
       if (event.target.closest('[data-resize-card]')) this.startCardResize(event);
-      else this.startCardDrag(event);
     });
     detail.addEventListener('pointermove', event => {
       if (this.resize) this.moveCardResize(event);
-      else this.moveCardDrag(event);
     });
     for (const [type,cancelled] of [['pointerup',false],['pointercancel',true],['lostpointercapture',true]]) {
       detail.addEventListener(type, () => {
         if (this.resize) this.finishCardResize(cancelled);
-        else this.finishCardDrag(cancelled);
       });
     }
+    detail.addEventListener('touchcancel', () => {
+      if (this.drag) this.finishCardDrag(true);
+    }, true);
     for (const selector of ['[data-detail-content]','[data-inline-content]']) {
       this.$(selector).addEventListener('error', event => {
         if (event.target.localName === 'img') {
@@ -401,10 +413,12 @@ shutdown restart</pre>
   clearDetails() {
     this.finishCardResize(true, false);
     this.finishCardDrag(true, false);
+    this.destroyCardGrid();
     this.pendingCardOrder = null;
     this.pendingVisibility = null;
     this.pendingSizes = null;
     this.pendingGrid = null;
+    this.pendingPositions = null;
     for (const controller of this.vehicleMaps.values()) controller.destroy();
     this.vehicleMaps.clear();
     this.$('[data-detail-content]')?.replaceChildren();
@@ -509,15 +523,12 @@ shutdown restart</pre>
     this.pendingCardOrder = volvoGroupOrder(this.widgetConfig);
     this.pendingSizes = structuredClone(this.widgetConfig.cardSizes || {});
     this.pendingGrid = this.widgetConfig.cardGrid ? {...this.widgetConfig.cardGrid} : null;
+    this.pendingPositions = structuredClone(this.widgetConfig.cardPositions || {});
     this.pendingVisibility = {showGallery:this.widgetConfig.showGallery !== false,
       hiddenGroups:[...(this.widgetConfig.hiddenGroups || [])],
       hiddenReadings:[...(this.widgetConfig.hiddenReadings || [])]};
     this.$('[data-message]').textContent = '';
     this.render();
-    if (Object.keys(this.pendingSizes).length) {
-      this.ensureCardSizes();
-      this.render();
-    }
     this.$('[data-cancel-arrange]').focus({preventScroll:true});
   }
 
@@ -529,6 +540,7 @@ shutdown restart</pre>
     this.pendingVisibility = null;
     this.pendingSizes = null;
     this.pendingGrid = null;
+    this.pendingPositions = null;
     this.render();
     this.$('[data-arrange]').focus({preventScroll:true});
   }
@@ -537,9 +549,11 @@ shutdown restart</pre>
     if (!this.pendingCardOrder || this.arrangementSaving || this.drag || this.resize) return;
     const body = this.$('[data-detail-body]');
     const scrollTop = body.scrollTop;
+    if (this.cardStack) this.captureCardGrid();
     const settings = {groupOrder:[...this.pendingCardOrder],
       cardSizes:structuredClone(this.pendingSizes),
       ...(this.pendingGrid ? {cardGrid:{...this.pendingGrid}} : {}),
+      ...(this.pendingGrid ? {cardPositions:structuredClone(this.pendingPositions)} : {}),
       hiddenGroups:[...this.pendingVisibility.hiddenGroups], hiddenReadings:[...this.pendingVisibility.hiddenReadings],
       showGallery:this.pendingVisibility.showGallery};
     this.arrangementSaving = true;
@@ -554,6 +568,7 @@ shutdown restart</pre>
       this.pendingVisibility = null;
       this.pendingSizes = null;
       this.pendingGrid = null;
+      this.pendingPositions = null;
       message.textContent = 'Anordnung im Entwurf gespeichert. Veröffentlichung erfolgt separat.';
       this.$('[data-arrange]').hidden = false;
       this.$('[data-arrange]').focus({preventScroll:true});
@@ -589,6 +604,8 @@ shutdown restart</pre>
     if (insertion === from) return;
     this.pendingCardOrder.splice(from, 1);
     this.pendingCardOrder.splice(insertion, 0, key);
+    this.pendingPositions = {};
+    this.destroyCardGrid();
     const top = this.$('[data-detail-content]').querySelector('#top');
     const card = [...top.children].find(entry => entry.dataset.group === key);
     const other = [...top.children].find(entry => entry.dataset.group === target);
@@ -596,85 +613,94 @@ shutdown restart</pre>
     this.applyCardSizes(top, this.pendingSizes);
   }
 
-  startCardDrag(event) {
-    const handle = event.target.closest('[data-drag-card]');
-    if (!handle || !this.pendingCardOrder || this.arrangementSaving || this.drag || this.resize
-      || !event.isPrimary || event.button !== 0) return;
-    event.preventDefault();
-    const card = handle.closest('[data-group]');
-    const preview = node('div', card.querySelector('h4').textContent, 'drag-preview');
-    preview.setAttribute('aria-hidden', 'true');
-    this.$('[data-details]').append(preview);
-    this.drag = { handle, card, preview, pointer:event.pointerId, order:[...this.pendingCardOrder],
-      x:event.clientX, y:event.clientY };
-    card.toggleAttribute('data-dragging', true);
-    this.$('[data-detail-content]').setPointerCapture(event.pointerId);
-    handle.focus({ preventScroll:true });
-    const tick = () => {
-      if (!this.drag) return;
-      const {x, y} = this.drag;
-      const body = this.$('[data-detail-body]');
-      const bounds = body.getBoundingClientRect();
-      if (x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom) {
-        if (y < bounds.top + 48) body.scrollTop -= 8;
-        if (y > bounds.bottom - 48) body.scrollTop += 8;
-        this.positionCardDrag();
-      }
-      this.dragFrame = requestAnimationFrame(tick);
-    };
-    this.positionCardDrag();
-    this.dragFrame = requestAnimationFrame(tick);
-  }
-
-  moveCardDrag(event) {
-    if (!this.drag || event.pointerId !== this.drag.pointer) return;
-    event.preventDefault();
-    this.drag.x = event.clientX;
-    this.drag.y = event.clientY;
-    this.positionCardDrag();
-  }
-
-  positionCardDrag() {
-    const {x, y, card, preview} = this.drag;
-    preview.style.left = `${Math.max(0, Math.min(innerWidth - 240, x + 12))}px`;
-    preview.style.top = `${Math.max(0, Math.min(innerHeight - 60, y + 12))}px`;
-    const top = this.$('[data-detail-content] .top');
-    const cards = [...top.children];
-    const body = this.$('[data-detail-body]').getBoundingClientRect();
-    const first = cards.find(entry => entry !== card);
-    if (first && x >= body.left && x <= body.right
-      && y >= body.top && y <= body.top + 48 && this.$('[data-detail-body]').scrollTop === 0) {
-      this.reorderCard(card.dataset.group, first.dataset.group, true);
-      return;
-    }
-    let target = this.shadowRoot.elementFromPoint(x, y)?.closest('#top > [data-group]');
-    if (!target && x >= body.left && x <= body.right && y >= body.top && y <= body.bottom) {
-      target = cards.filter(entry => entry !== card).reduce((nearest, entry) => {
-        const bounds = entry.getBoundingClientRect();
-        const distance = Math.hypot(Math.max(bounds.left - x,0,x - bounds.right),
-          Math.max(bounds.top - y,0,y - bounds.bottom));
-        return !nearest || distance < nearest.distance ? {entry,distance} : nearest;
-      }, null)?.entry;
-    }
-    if (target && target !== card) {
-      const bounds = target.getBoundingClientRect();
-      this.reorderCard(card.dataset.group, target.dataset.group, y < bounds.top + bounds.height / 2);
-    }
-  }
-
   finishCardDrag(cancelled, render = true) {
     const drag = this.drag;
     if (!drag) return;
+    this.cardStack?.off('dragstop');
+    if (cancelled) this.cardStack?.cancelDrag();
+    this.services.GridStack.getDD().draggable(drag.element,'destroy');
     this.drag = null;
-    cancelAnimationFrame(this.dragFrame);
-    if (cancelled) this.pendingCardOrder = drag.order;
-    drag.preview.remove();
-    drag.card.removeAttribute('data-dragging');
-    const capture = this.$('[data-detail-content]');
-    if (capture.hasPointerCapture(drag.pointer)) capture.releasePointerCapture(drag.pointer);
+    this.destroyCardGrid();
+    if (cancelled) {
+      this.pendingCardOrder = drag.order;
+      this.pendingPositions = drag.positions;
+    }
     if (render && this.isConnected) {
       this.render();
-      this.$('[data-detail-content]').querySelector(`[data-group="${drag.card.dataset.group}"] [data-drag-card]`)?.focus({ preventScroll:true });
+      this.$(`[data-details] [data-group="${drag.key}"] [data-drag-card]`)?.focus({ preventScroll:true });
+    }
+  }
+
+  destroyCardGrid() {
+    if (!this.cardStack) return;
+    const stack = this.cardStack;
+    this.cardStack = null;
+    stack.destroy(false);
+  }
+
+  captureCardGrid() {
+    const items = this.cardStack.save(false).sort((a,b)=>(a.y || 0)-(b.y || 0) || (a.x || 0)-(b.x || 0));
+    this.pendingCardOrder = items.map(item=>item.id);
+    if (this.cardStackMobile) {
+      if (this.drag) this.pendingPositions = Object.fromEntries(
+        placeVolvoCards(this.pendingCardOrder,this.pendingSizes,this.pendingGrid.columns,this.pendingVisibility)
+          .map(({key,col,row})=>[key,{x:col,y:row}]));
+      return;
+    }
+    this.pendingPositions = Object.fromEntries(items.map(item=>[item.id,{x:item.x || 0,y:item.y || 0}]));
+  }
+
+  mountCardGrid() {
+    if (!this.pendingCardOrder || this.cardStack) return;
+    const top = this.$('[data-detail-content] .top');
+    this.ensureCardSizes();
+    this.applyCardSizes(top,this.pendingSizes);
+    this.applyGridGuides(top);
+    const grid = this.pendingGrid;
+    const mobile = top.clientWidth <= 600;
+    this.cardStackMobile = mobile;
+    const coordinates = placeVolvoCards(this.pendingCardOrder,this.pendingSizes,grid.columns,
+      this.pendingVisibility,this.pendingPositions);
+    const {GridStack} = this.services;
+    const stack = GridStack.init({column:grid.columns,cellHeight:grid.rowHeight,margin:0,
+      maxRow:1000,minRow:8*grid.columns/12,mode:'float',staticGrid:true,
+      draggable:{handle:'[data-drag-card]'},disableResize:true,
+      resizable:{handles:'se'}},top);
+    this.cardStack = stack;
+    try {
+      let row = 0;
+      for (const position of coordinates) {
+        const card = [...top.children].find(entry=>entry.dataset.group===position.key);
+        const frame = card.querySelector('.card-frame');
+        card.style.removeProperty('grid-column-start');
+        card.style.removeProperty('grid-row-start');
+        const h = mobile ? Math.max(1,Math.ceil((frame.scrollHeight+16)/grid.rowHeight)) : position.h;
+        stack.makeWidget(card,{id:position.key,x:mobile?0:position.col,y:mobile?row:position.row,
+          w:mobile?grid.columns:position.w,h});
+        row += h;
+      }
+      stack.setStatic(false);
+      stack.enableResize(false);
+      stack.on('dragstart',(event,element)=>{
+        this.drag = {element,key:element.dataset.group,order:[...this.pendingCardOrder],
+          positions:structuredClone(this.pendingPositions)};
+        element.querySelector('[data-drag-card]').focus({preventScroll:true});
+      });
+      stack.on('dragstop',()=>{
+        const key = this.drag.key;
+        this.captureCardGrid();
+        this.drag = null;
+        queueMicrotask(()=>{
+          if (!this.isConnected || this.cardStack !== stack) return;
+          this.render();
+          this.$(`[data-details] [data-group="${key}"] [data-drag-card]`)?.focus({preventScroll:true});
+          this.$('[data-message]').textContent = 'Kachel im Raster verschoben. Noch nicht übernommen.';
+        });
+      });
+    } catch (error) {
+      this.destroyCardGrid();
+      this.$('[data-message]').textContent = `Kartenraster konnte nicht gestartet werden: ${error.message}`;
+      throw error;
     }
   }
 
@@ -706,6 +732,9 @@ shutdown restart</pre>
           w:Math.max(1,Math.min(grid.columns,Math.round(size.w / previous.columns * grid.columns))),
           h:Math.max(1,Math.min(1000,Math.round(size.h * previous.rowHeight / grid.rowHeight)))};
       }
+      this.pendingPositions = Object.fromEntries(Object.entries(this.pendingPositions || {}).map(([key,p])=>[key,{
+        x:Math.max(0,Math.min(grid.columns-this.pendingSizes[key].w,Math.round(p.x/previous.columns*grid.columns))),
+        y:Math.max(0,Math.round(p.y*previous.rowHeight/grid.rowHeight))}]));
     }
     this.pendingGrid = {...grid};
     for (const card of top.children) {
@@ -725,12 +754,17 @@ shutdown restart</pre>
     const minHeight = Math.min(1000,Math.ceil(192 / grid.rowHeight));
     this.pendingSizes[key] = {w:Math.max(minWidth,Math.min(grid.columns,w)),
       h:Math.max(minHeight,Math.min(1000,h))};
+    if (this.cardStack && !this.cardStackMobile) {
+      this.cardStack.update(this.$(`[data-details] [data-group="${key}"]`),this.pendingSizes[key]);
+      this.captureCardGrid();
+    }
   }
 
   autoArrangeCards() {
     if (!this.pendingCardOrder || this.arrangementSaving || this.drag || this.resize) return;
     this.ensureCardSizes();
     this.pendingCardOrder = arrangeVolvoCards(this.pendingCardOrder, this.pendingSizes, this.pendingVisibility);
+    this.pendingPositions = {};
     this.render();
     this.$('[data-message]').textContent = 'Kacheln platzsparend angeordnet. Größen beibehalten; noch nicht übernommen.';
   }
@@ -745,7 +779,8 @@ shutdown restart</pre>
     this.ensureCardSizes();
     const key = card.dataset.group;
     this.resize = {key, pointer:event.pointerId, x:event.clientX, y:event.clientY,
-      size:{...this.pendingSizes[key]}, previous, previousGrid,
+      size:{...this.pendingSizes[key]}, previous, previousGrid, positions:structuredClone(this.pendingPositions),
+      order:[...this.pendingCardOrder],
       step:this.$('[data-detail-content] .top').getBoundingClientRect().width / this.pendingGrid.columns,
       rowStep:this.pendingGrid.rowHeight};
     card.toggleAttribute('data-resizing', true);
@@ -769,6 +804,8 @@ shutdown restart</pre>
     if (cancelled) {
       this.pendingSizes = resize.previous;
       this.pendingGrid = resize.previousGrid;
+      this.pendingPositions = resize.positions;
+      this.pendingCardOrder = resize.order;
     }
     const capture = this.$('[data-detail-content]');
     if (capture.hasPointerCapture(resize.pointer)) capture.releasePointerCapture(resize.pointer);
@@ -801,7 +838,10 @@ shutdown restart</pre>
     }
     if (stored && Object.keys(sizes).length) {
       const config = this.pendingVisibility || this.widgetConfig;
-      for (const position of placeVolvoCards([...top.children].map(card => card.dataset.group), effective, grid.columns, config)) {
+      const positions = this.pendingCardOrder ? this.pendingPositions : this.widgetConfig.cardPositions;
+      const scaled = Object.fromEntries(Object.entries(positions || {}).map(([key,p])=>[key,{
+        x:Math.round(p.x/stored.columns*grid.columns),y:Math.round(p.y*stored.rowHeight/grid.rowHeight)}]));
+      for (const position of placeVolvoCards([...top.children].map(card => card.dataset.group), effective, grid.columns, config, scaled)) {
         const card = [...top.children].find(entry => entry.dataset.group === position.key);
         card.style.gridColumnStart = String(position.col + 1);
         card.style.gridRowStart = String(position.row + 1);
@@ -853,6 +893,7 @@ shutdown restart</pre>
     if (!this.widgetConfig || !this.$('[data-content]') || !this.isConnected) return;
     const config = this.widgetConfig;
     if (this.drag || this.resize) return;
+    this.destroyCardGrid();
     this.$('[data-arrange]').hidden = typeof this.services?.savePopupSettings !== 'function' || Boolean(this.pendingCardOrder);
     this.$('[data-arrange-bar]').hidden = !this.pendingCardOrder;
     const dialog = this.$('[data-details]');
@@ -1073,6 +1114,9 @@ shutdown restart</pre>
         resize.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown ArrowLeft ArrowRight');
         card.append(resize);
       }
+      const frame = node('div',undefined,'card-frame');
+      frame.append(...card.childNodes);
+      card.append(frame);
       top.append(card);
     }
     this.applyCardSizes(top, this.pendingSizes || this.widgetConfig.cardSizes || {});
@@ -1123,6 +1167,7 @@ shutdown restart</pre>
       const body = this.$('[data-detail-body]');
       this.$('[data-details]').style.width = `${this.inlineArrangementWidth + 34 + body.offsetWidth - body.clientWidth}px`;
     }
+    this.mountCardGrid();
   }
 
   renderActions(model) {
@@ -1214,6 +1259,7 @@ shutdown restart</pre>
       groupOrder: volvoGroupOrder(this.widgetConfig),
       hiddenGroups: [...(this.widgetConfig.hiddenGroups || [])],
       cardSizes: structuredClone(this.widgetConfig.cardSizes || {}),
+      ...(this.widgetConfig.cardPositions ? {cardPositions:structuredClone(this.widgetConfig.cardPositions)} : {}),
       ...(this.widgetConfig.cardGrid ? {cardGrid:{...this.widgetConfig.cardGrid}} : {}),
       hiddenReadings: [...(this.widgetConfig.hiddenReadings || [])] };
     const groupError = validateVolvoGroups(next);

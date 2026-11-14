@@ -6,6 +6,26 @@ import { deviceWidgetSuggestions } from '../www/fhem-cms/js/device-widget-sugges
 import { schema5WidgetSuggestions, createSchema5RoomPlan, buildSchema5SetupConfig } from '../www/fhem-cms/js/fcui-schema5-setup-wizard.js';
 
 const model = (readings, extra = {}) => volvoModel([{ name: 'Car', readings, ...extra }], 'Car');
+test('VolvoConnect validates and restores free GridStack coordinates without backfilling gaps', () => {
+  for (const columns of [12,24,48,96,192]) {
+    const config={cardGrid:{columns,rowHeight:16},cardSizes:{state:{w:columns/2,h:10},gallery:{w:columns/2,h:12}},
+      cardPositions:{state:{x:columns/2,y:4},gallery:{x:0,y:30}}};
+    assert.equal(validateVolvoGroups(config),null);
+    const input=JSON.stringify(config);
+    const placed=placeVolvoCards(['state','gallery'],config.cardSizes,columns,{},config.cardPositions);
+    assert.deepEqual(placed.map(({col,row})=>({x:col,y:row})),Object.values(config.cardPositions));
+    assert.equal(JSON.stringify(config),input);
+    for (const cardPositions of [null,[],{unknown:{x:0,y:0}},{state:null},{state:{x:0}},
+      {state:{x:-1,y:0}},{state:{x:0,y:-1}},{state:{x:.5,y:0}},{state:{x:'0',y:0}},
+      {state:{x:true,y:0}},{state:{x:0,y:0,z:0}},{state:{x:columns,y:0}},{state:{x:0,y:991}},
+      {state:{x:0,y:0},gallery:{x:0,y:5}}]) {
+      assert.match(validateVolvoGroups({...config,cardPositions}),/VolvoConnect/);
+    }
+    assert.match(validateVolvoGroups({...config,cardGrid:undefined}),/VolvoConnect/);
+    assert.match(validateVolvoGroups({...config,cardSizes:{}}),/VolvoConnect/);
+  }
+});
+
 test('VolvoConnect validates card sizes and arranges without altering sizes or input order', () => {
   const sizes = {state:{w:6,h:10},gallery:{w:12,h:8},doors:{w:3,h:10}};
   assert.equal(validateVolvoGroups({cardSizes:sizes}), null);

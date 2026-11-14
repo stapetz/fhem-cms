@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-14",
+  "version": "1.19.2-dev",
+  "title": "VolvoConnect: Karten mit derselben GridStack-Technik wie Hauptwidgets verschieben",
+  "changes": [
+    "Die echte Karte folgt dem Griff mit Rasterplatzhalter, Kollisionsverhalten und Autoscrolling der Hauptwidgets statt eigener Umsortierheuristik.",
+    "Freie Rasterpositionen und Luecken bleiben beim Uebernehmen, erneuten Oeffnen und Laden erhalten; alte Konfigurationen bleiben lesbar.",
+    "Maus und Touch-Langdruck funktionieren auch im Shadow-DOM. Escape und Touch-Abbruch stellen alle verdraengten Karten wieder her.",
+    "Die mobile Vollinhaltsansicht sowie Groessen, Sichtbarkeit, Rastereinstellungen und getrennte Entwurfsspeicherung bleiben erhalten. Refs #209."
+  ]
+}
