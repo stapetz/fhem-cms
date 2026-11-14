@@ -87,6 +87,18 @@ try {
   outer().openActions();
   check($('[data-command]').disabled, 'editor cannot execute vehicle commands');
   outer().closeActions();
+  host().openDetails();
+  if ($('#top').clientWidth > 600) {
+    check($('#top').hasAttribute('data-float') && !host().config.cardSizes,
+      'unsized existing cards use floating placement without migrating configuration');
+    const cards=[...$('#top').children].map(card=>card.getBoundingClientRect());
+    check(cards.every((a,i)=>cards.slice(i+1).every(b=>
+      a.right<=b.left+1 || b.right<=a.left+1 || a.bottom<=b.top+1 || b.bottom<=a.top+1)),
+      'normal floating cards do not overlap');
+    check(cards.some((card,i)=>cards.slice(0,i).some(other=>
+      card.top>other.top+1 && card.top<other.bottom-1)),
+      'normal floating layout fills space alongside taller cards instead of rigid rows');
+  }
   await start();
   check(host().cardGrid().columns === columns, 'arrangement inherits actual page column setting');
   check(Math.abs(host().cardGrid().rowHeight - document.querySelector('.cms-schema5-grid').gridstack.getCellHeight()) < .1,
@@ -304,7 +316,7 @@ try {
           && card.querySelector('.card-body').scrollHeight <= card.querySelector('.card-body').clientHeight + 1),
           'mobile cards show full contents without internal clipping');
       } else {
-        const energy = $('[data-group="state"]');
+        const energy = $('[data-group="state"] .card-frame');
         check(Math.abs(energy.getBoundingClientRect().height - (host().config.cardSizes.state.h*savedGrid.rowHeight-16)) < 1,
           'saved desktop height matches requested grid units exactly');
         check(Math.abs(energy.getBoundingClientRect().width - (popupGrid.clientWidth/2-16)) < 1,
@@ -317,6 +329,21 @@ try {
       check(!$('#reading-vehicle_descriptions_model'), 'hidden reading disappears after apply');
       check(!host().pendingCardOrder, 'successful apply exits editing');
       host().startArrangement();
+      if (!host().cardStackMobile) {
+        const geometry = host().cardStack.save(false);
+        host().cancelArrangement();
+        const top = $('#top'),bounds = top.getBoundingClientRect();
+        check(top.hasAttribute('data-float'), 'normal card view uses the floating layout too');
+        const differences = [...top.children].map(card=>{
+          const item=geometry.find(entry=>entry.id===card.dataset.group),r=card.getBoundingClientRect();
+          return {key:card.dataset.group,delta:[r.x-bounds.x-item.x*bounds.width/columns,
+            r.y-bounds.y-item.y*savedGrid.rowHeight,r.width-item.w*bounds.width/columns,
+            r.height-item.h*savedGrid.rowHeight]};
+        });
+        check(differences.every(({delta})=>delta.every(value=>Math.abs(value)<1)),
+          `normal and moving modes have identical actual card geometry: ${JSON.stringify(differences)}`);
+        host().startArrangement();
+      }
       const reopeningSize = {...host().pendingSizes.state};
       check(Math.abs(reopeningSize.h * host().pendingGrid.rowHeight
         - host().config.cardSizes.state.h * host().config.cardGrid.rowHeight) <= host().pendingGrid.rowHeight,
