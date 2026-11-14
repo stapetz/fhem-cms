@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-14",
+  "version": "1.18.0-dev",
+  "title": "VolvoConnect: einheitliche Symbole, Fahrzeugtitel und Modulhilfe",
+  "changes": [
+    "Info/Aktion sind gleich grosse rahmenlose Vektorsymbole mit unsichtbarer Touchflaeche; gemeinsamer Standard fuer kuenftige Widgets.",
+    "Detail- und Aktionspopup nennen den konfigurierten Fahrzeugnamen. Alle Karten und Aktionen verwenden die Energie-&-Akku-Optik.",
+    "Readingzeilen mit Not authorized to access this resource. entfallen vollstaendig, auch beim Ladetyp.",
+    "Info am Modulhinweis oeffnet eine reine Hilfe mit Erklaerung, stabiler Installationsquelle und Einrichtungsdokumentation. Escape behaelt den Widgetdialog und ungespeicherte Werte offen. Refs #209."
+  ]
+}

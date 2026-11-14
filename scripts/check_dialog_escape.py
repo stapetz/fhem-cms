@@ -67,6 +67,23 @@ def run(browser, url):
             other = panel.locator(tag)
             other.locator("[data-dialog]").wait_for(state="visible")
             check_dialog_actions(other)
+            if label == "VolvoConnect":
+                other.locator('[name="title"]').fill("Nicht speichern")
+                other.locator("[data-module-info]").click()
+                help_dialog = other.locator("[data-module-help]")
+                help_dialog.wait_for(state="visible")
+                for _ in range(8):
+                    page.keyboard.press("Tab")
+                    assert other.evaluate(
+                        "el => Boolean(el.shadowRoot.activeElement?.closest('[data-module-help]'))"
+                    ), "module help lost keyboard focus"
+                page.keyboard.press("Escape")
+                help_dialog.wait_for(state="hidden")
+                assert other.locator("[data-dialog]").is_visible(), "help Escape closed configuration"
+                assert other.locator('[name="title"]').input_value() == "Nicht speichern"
+                assert other.evaluate(
+                    "el => el.shadowRoot.activeElement.hasAttribute('data-module-info')"
+                ), "module help did not restore info focus"
             if label in ("Thermostat", "Wert-Anzeige"):
                 other.locator("[data-pick-device]").click()
                 nested = other.locator("[data-picker]")

@@ -171,10 +171,13 @@ export const volvoActions = [
   ['charge_stop', 'Laden stoppen'], ['precondition', 'Vorkonditionieren'], ['horn', 'Hupe'],
 ];
 
+const permissionDenied = value => typeof value === 'string'
+  && /^Not authorized to access this resource\.?$/i.test(value.trim());
+
 export function volvoText(value, max = 256) {
   if (!['string', 'number', 'boolean'].includes(typeof value)) return '';
   const text = String(value).trim();
-  return text.length <= max && !/[\u0000-\u001f\u007f]/.test(text)
+  return text.length <= max && !/[\u0000-\u001f\u007f]/.test(text) && !permissionDenied(text)
     && !/^(?:null|undefined|NaN|[+-]?Infinity|ERROR_READING_PROPERTY|PROPERTY_NOT_FOUND|PROPERTY_NOT_SUPPORTED|NOT_SUPPORTED|NOT_AVAILABLE|UNSPECIFIED)$/i.test(text)
     ? text : '';
 }
@@ -225,7 +228,7 @@ export function volvoModel(snapshot, device) {
     return url ? [{ key, label, url }] : [];
   });
   for (const reading of Object.keys(readings).sort()) {
-    if (!isValidName(reading) || /_unit$/.test(reading)
+    if (!isValidName(reading) || permissionDenied(readings[reading]) || /_unit$/.test(reading)
       || /^vehicle_images_(?:exterior|internal)ImageUrl$/.test(reading)) continue;
     const match = /^(state|fuel|capabilities|warnings|brakes|doors|windows|engineDiagnostics|engine|workshopDiagnostics|commandAccessibility|commands|statistics|odometer|tyres|vehicle|location)_(.+)$/.exec(reading);
     if (!match) continue;
@@ -241,7 +244,8 @@ export function volvoModel(snapshot, device) {
       icon: volvoReadingIcon(group, key), status: volvoStatusSymbol(group, key, readings[reading]) });
   }
   const energy = groups.get('state');
-  if (energy.length && !energy.some(entry => entry.key === 'chargingType')) {
+  if (energy.length && !energy.some(entry => entry.key === 'chargingType')
+    && !permissionDenied(readings.state_chargingType) && !permissionDenied(readings.fuel_chargingType)) {
     energy.push({reading:'state_chargingType',visibilityKey:'state_chargingType',key:'chargingType',label:volvoLabel('chargingType'),
       value:'−',icon:volvoReadingIcon('state','chargingType'),status:null});
   }

@@ -157,6 +157,21 @@ test('VolvoConnect omits unsupported properties before formatting units in every
   }
 });
 
+test('VolvoConnect hides authorization failures as whole readings, including charging-type rows', () => {
+  for (const marker of ['Not authorized to access this resource.', 'not authorized to access this resource',
+    ' Not authorized to access this resource. ']) {
+    const readings = Object.fromEntries(volvoGroups.flatMap(([group]) =>
+      [[`${group}_unavailable`,marker], [`${group}_unavailable_unit`,'watts']]));
+    assert.ok([...model(readings).groups.values()].every(rows => !rows.length));
+    assert.equal(volvoText(marker), '');
+    assert.equal(volvoValue('state','chargingPower',marker,'watts'), '');
+    const energy = model({state_batteryChargeLevel:'50', state_chargingType:marker});
+    assert.ok(!energy.groups.get('state').some(row => row.key === 'chargingType'));
+  }
+  assert.equal(model({fuel_batteryChargeLevel:'50'}).soc, 50);
+  assert.ok(model({state_batteryChargeLevel:'50'}).groups.get('state').some(row => row.key === 'chargingType'));
+});
+
 test('VolvoConnect status symbols match module semantics without turning normal numeric zero into a status', () => {
   for (const [group, key, value, icon, tone] of [
     ['warnings', 'lowBeamLeftWarning', 'NO_WARNING', '✓', 'good'],

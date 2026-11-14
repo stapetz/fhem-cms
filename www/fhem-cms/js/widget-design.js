@@ -40,3 +40,43 @@ export const detailCardCss = `
   background: rgba(128,128,128,.08); border: 1px solid rgba(128,128,128,.18);
   border-radius: 14px; padding: 14px;
 `;
+
+export const widgetIconButtonCss = `
+  button.cms-icon-button {
+    display:inline-flex; align-items:center; justify-content:center; flex:none;
+    width:48px; height:48px; min-width:48px; min-height:48px; padding:0;
+    border:0; border-radius:50%; background:transparent; box-shadow:none;
+    color:var(--cms-accent,#3b82f6); cursor:pointer;
+  }
+  button.cms-icon-button svg { display:block; width:28px; height:28px; pointer-events:none; }
+  button.cms-icon-button:hover { color:inherit; }
+  button.cms-icon-button:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+  button.cms-icon-button:disabled { cursor:default; opacity:.5; }
+`;
+
+export function createWidgetIconButton(kind, label) {
+  if (!['info', 'actions'].includes(kind)) throw new Error('Unbekanntes Widgetsymbol');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'cms-icon-button';
+  button.setAttribute('aria-label', label);
+  button.title = label;
+  button.setAttribute('aria-haspopup', 'dialog');
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.7');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  const circle = document.createElementNS(svg.namespaceURI, 'circle');
+  circle.setAttribute('cx', '12');
+  circle.setAttribute('cy', '12');
+  circle.setAttribute('r', '9');
+  const path = document.createElementNS(svg.namespaceURI, 'path');
+  path.setAttribute('d', kind === 'info' ? 'M12 11v6 M12 7.5v.1' : 'M8 16.5l4-9 4 9 M9.5 13.5h5');
+  svg.append(circle, path);
+  button.append(svg);
+  return button;
+}
