@@ -1,4 +1,4 @@
-UPD 2026-11-14_13:48:46 166595 FHEM/01_FHEMCMS.pm
+UPD 2026-11-14_14:05:15 166595 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-13_17:56:27 8880 www/fhem-cms/FCUI-LICENSES.txt
@@ -12,7 +12,7 @@ UPD 2026-11-13_22:11:25 18564 www/fhem-cms/components/cms-icon.js
 UPD 2026-11-14_13:48:46 28973 www/fhem-cms/components/cms-link.js
 UPD 2026-11-14_13:48:46 23273 www/fhem-cms/components/cms-select.js
 UPD 2026-11-13_22:11:25 20155 www/fhem-cms/components/cms-slider.js
-UPD 2026-11-14_13:48:46 26467 www/fhem-cms/components/cms-solar-energy.js
+UPD 2026-11-14_14:05:15 27057 www/fhem-cms/components/cms-solar-energy.js
 UPD 2026-11-14_13:48:46 29878 www/fhem-cms/components/cms-solarflow.js
 UPD 2026-11-13_22:11:25 23834 www/fhem-cms/components/cms-switch.js
 UPD 2026-11-14_13:48:46 30570 www/fhem-cms/components/cms-table.js
