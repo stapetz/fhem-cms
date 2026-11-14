@@ -9,6 +9,9 @@
 |- style="background-color:#FFFFFF"
 | Typ
 | Inoffizielles Modul; Installation aus externer Updatequelle.
+|- style="background-color:#FFFFFF"
+| Aktuelle stabile Version
+| [https://github.com/stapetz/fhem-cms/releases/tag/v1.10.0 1.10.0]
 |- style="background-color:#EFEFFF"
 ! colspan="2" | Details
 |- style="background-color:#FFFFFF"
@@ -94,6 +97,30 @@ FHEM bleibt für Geräte, Automatisierungen, Berechtigungen und die Aufzeichnung
 
 Die Projektanleitung nennt Perl 5.40 als getestete Umgebung, nicht als einzig mögliche Laufzeit. Für die normale Installation brauchst du weder Node.js noch einen eigenen Frontend-Build.
 
+=== Live-Werte: WebSocket empfohlen, nicht erforderlich ===
+
+Das CMS nutzt HTTP-Anfragen zum Laden und Speichern sowie zum Senden von
+Gerätebefehlen. Für zeitnahe Wertänderungen öffnet es zusätzlich eine eigene
+WebSocket-Verbindung zum FHEMWEB-Inform-Endpunkt. Bei HTTPS verwendet es
+<code>wss://</code>, bei HTTP <code>ws://</code>.
+
+'''WebSockets sind keine Pflichtvoraussetzung.''' Ohne nutzbare WebSocket-Verbindung
+bleibt die Oberfläche bedienbar; Gerätewerte werden per HTTP-Polling im
+30-Sekunden-Takt nachgelesen. WebSocket-Ereignisse lösen ein früheres Nachladen
+aus; das regelmäßige Polling bleibt zusätzlich aktiv.
+
+Dieses Polling ist '''nicht das FHEMWEB-Longpoll-Verfahren'''. Das CMS verwendet
+keinen eigenen Longpoll-Transport. Eine vorhandene Longpoll-Einstellung allein
+ist daher kein Grund, FHEMWEB für das CMS umzustellen: Ohne WebSocket arbeitet
+es mit dem beschriebenen HTTP-Polling weiter.
+
+Für möglichst unmittelbare Aktualisierungen muss ein vorgeschalteter Reverse
+Proxy WebSocket-Upgrades und langlebige Verbindungen zum FHEMWEB-Endpunkt
+weiterleiten. Im Browser zeigt der Netzwerkbereich unter '''WS''' bei erfolgreichem
+Verbindungsaufbau den Status <code>101 Switching Protocols</code>. Fehlt diese
+Verbindung, zuerst Proxy, Anmeldung und Verbindung prüfen; nicht den
+FHEMWEB-Zugriffsschutz abschalten.
+
 '''Wichtig: FHEMWEB ist die Sicherheitsgrenze.''' Es gibt keine separate CMS-Anmeldung. Richte Anmeldung, geschützten Transport und passende FHEM-Rechte ein, bevor du die Oberfläche außerhalb eines vertrauenswürdigen Netzes verwendest.
 
 * Eine ausgeblendete Navigation oder eine Seite ohne Editor ist '''keine Zugriffssperre'''.
@@ -106,6 +133,16 @@ Die Projektanleitung nennt Perl 5.40 als getestete Umgebung, nicht als einzig m�
 == Installation ==
 
 Erstelle zunächst eine vollständige Sicherung deiner FHEM-Installation.
+
+'''Empfehlung für Live-Werte:''' Ermögliche WebSocket-Verbindungen zum
+FHEMWEB-Inform-Endpunkt; das CMS baut sie selbst auf. Ein Reverse Proxy muss
+WebSocket-Upgrades und langlebige Verbindungen weiterleiten.
+Nach dem Öffnen des CMS kannst du im Browser unter '''Netzwerk → WS'''
+den Verbindungsaufbau prüfen (<code>101 Switching Protocols</code>).
+'''Keine Pflichtvoraussetzung:''' Ohne WebSocket bleibt das CMS bedienbar
+und liest Gerätewerte alle '''30 Sekunden per HTTP-Polling''' neu ein.
+Dies ist kein FHEMWEB-Longpoll; eine vorhandene Longpoll-Einstellung allein
+muss für das CMS nicht umgestellt werden.
 
 Die folgenden Befehle gibst du in die '''FHEM-Befehlszeile''' ein, nicht in ein Betriebssystemterminal:
 
@@ -564,7 +601,17 @@ Die genannten Logdevices müssen existieren und korrekt eingerichtet sein. Die B
 * Höchstens 400 dargestellte Punkte; größere Mengen werden mit Mittelwert und Min-/Max-Band zusammengefasst.
 * Aktualisierung alle fünf Minuten; Abfragecache 30 Sekunden.
 
-DbLog- und FileLog-Verläufe werden im Hintergrund abgefragt, damit FHEM währenddessen bedienbar bleibt. Die Abfragen haben ein Zeitlimit; bei großen Datenmengen kann ein Verlauf daher mit einem Fehler enden.
+Seit 1.10.0 werden DbLog- und FileLog-Verläufe sowie die Erkennung protokollierter
+Readings in separaten Hintergrundprozessen abgefragt. FHEMs Hauptschleife wartet
+nicht auf die Abfrage; Gerätebedienung und Automatisierungen können weiterlaufen.
+Identische laufende Anfragen werden zusammengefasst. Höchstens vier Worker
+arbeiten gleichzeitig; insgesamt sind bis zu 32 laufende oder wartende Aufträge
+vorgesehen. Ein Worker hat ein Zeitlimit von 20 Sekunden.
+Das Diagramm zeigt einen Ladezustand; Fehler und Zeitüberschreitungen bleiben
+sichtbar. Ohne verfügbare Hintergrundverarbeitung gibt es einen Fehler statt
+einer blockierenden Ersatzabfrage. CPU-, Datenbank- und Datenträgerlast entfallen
+dadurch nicht; bei großen Datenmengen bleiben passende Zeiträume und eine
+effiziente Aufzeichnung wichtig.
 
 == Updates ==
 
