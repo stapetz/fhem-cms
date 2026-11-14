@@ -84,6 +84,11 @@ try {
   check([...host().shadowRoot.querySelectorAll('[data-reading-visibility]')]
     .every(button => button.getBoundingClientRect().height >= 48), 'reading eyes retain 48px touch targets');
   check(!$('#group-state [data-reading-visibility]'), 'energy readings are fixed without individual eyes');
+  check(!$('#identity [data-reading-visibility]') && $('#identity .badge'),
+    'connection status is always shown without an eye in arrangement mode');
+  host().toggleReading('state');
+  check(!host().pendingVisibility.hiddenReadings.includes('state'),
+    'connection status cannot be hidden through toggle method');
   for (const row of host().shadowRoot.querySelectorAll('.row[data-editable]')) {
     const eye = row.querySelector('[data-reading-visibility]');
     check(row.querySelector('dt').firstElementChild === eye && !row.querySelector('dd button'),

@@ -545,7 +545,9 @@ Die einzelnen angezeigten Readings haben im Anordnungsmodus einen
 **Ausnahme Energie & Akku:** Alle vorhandenen Werte dieser Karte sind fix
 sichtbar und besitzen keine einzelnen Augenschalter. Die Karte selbst bleibt
 verschiebbar und als Ganzes ein-/ausblendbar.
-API-Status und letztes Update bleiben einzeln schaltbar.
+Der Verbindungsstatus bleibt bei vorhandenem Statusreading immer sichtbar,
+auch im Hauptwidget und bei früher gespeicherten Ausblendungen.
+Er besitzt keinen Augenschalter. Letztes Update bleibt einzeln schaltbar.
 Ausgeblendete Werte bleiben dort erreichbar und werden abgedimmt gezeigt.
 Die Auswahl bleibt beim Wechsel der Energie-Readingvarianten und bei
 vorübergehend fehlenden Readings erhalten.
