@@ -51,7 +51,7 @@ try {
   check(field(rows[1]).placeholder === 'temperature', 'Replacing second source removes device prefix');
   check(field(rows[0]).value === 'My temperature', 'Source changes do not replace custom labels');
   table.setRowDevice(rows[1], devices[1], 'temperature');
-  rows[1].lastElementChild.click();
+  rows[1].querySelector(':scope > button').click();
   check(table.rowsInDialog().length === 1 && field(rows[0]).placeholder === 'humidity',
     'Removing last foreign source updates remaining automatic labels');
   field(rows[0]).value = '';

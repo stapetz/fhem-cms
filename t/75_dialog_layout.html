@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uniform configuration dialog geometry</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+const checks = [];
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+};
+const services = { listAllDevices: async () => [], listDevices: async () => [], listIcons: async () => [],
+  iconUrl: () => '', history: async () => ({ points: [] }),
+  logReadings: async () => ({ source: 'dblog', readings: [] }) };
+const types = ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-button', 'fhem-clock',
+  'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-select', 'fhem-chart', 'fhem-calllist',
+  'fhem-solarflow', 'text', 'fhem-html', 'fhem-link'];
+try {
+  for (const [index, type] of types.entries()) {
+    const widget = createWidgetElement({ id: `w${index}`, type, rows: [], readings: {}, states: [],
+      devices: [], html: '', links: [], grid: { col: 1, row: 2, w: 4, h: 4 } }, services, new Map(), false);
+    document.body.append(widget);
+    const dialog = widget.shadowRoot.querySelector('[data-dialog]');
+    dialog.showModal();
+    const rect = dialog.getBoundingClientRect();
+    check(Math.abs(rect.width - Math.min(innerWidth * 0.94, 1100)) < 2,
+      `${type}: uniform actual dialog width at ${innerWidth}px`);
+    check(rect.height <= innerHeight * 0.94 + 2, `${type}: height remains within viewport`);
+    check(rect.left >= 0 && rect.right <= innerWidth + 1, `${type}: no viewport overflow`);
+    dialog.close();
+    widget.remove();
+  }
+  const table = createWidgetElement({ id: 'table', type: 'fhem-table', rows: [
+    { device: 'Meter', reading: 'temperature' },
+  ], grid: { col: 1, row: 2, w: 6, h: 6 } }, { ...services,
+    listAllDevices: async () => [{ name: 'Meter', readings: { temperature: '20' } }] }, new Map(), false);
+  document.body.append(table);
+  await table.openConfig();
+  for (const mode of ['single', 'multi']) {
+    table.setMode(mode);
+    const row = table.rowsInDialog()[0];
+    const unit = row.querySelector('.unit-fields').getBoundingClientRect();
+    const label = row.querySelector('[data-row-label]').getBoundingClientRect();
+    const reading = row.querySelector('select').getBoundingClientRect();
+    check(unit.top >= Math.max(label.bottom, reading.bottom), `${mode}: units below primary fields`);
+    check(Math.abs(unit.width - row.getBoundingClientRect().width) < 2, `${mode}: units use full row width`);
+    const dialog = table.shadowRoot.querySelector('[data-dialog]');
+    check(dialog.scrollWidth <= dialog.clientWidth + 2, `${mode}: no horizontal scrolling`);
+  }
+  table.closeConfig(false);
+  table.remove();
+  result.dataset.result = 'pass';
+  result.textContent = JSON.stringify({ status: 'pass', checks: checks.length, messages: checks });
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = JSON.stringify({ status: 'fail', error: error.stack, checks });
+}
+</script>

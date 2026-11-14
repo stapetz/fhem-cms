@@ -4,6 +4,14 @@ export const titleVisibilityField = `
   </label>`;
 
 export const titleVisibilityStyles = `
+  dialog[data-dialog] {
+    box-sizing: border-box;
+    width: min(94vw, 1100px);
+    max-width: 94vw;
+    max-height: 94vh;
+    height: auto;
+    overflow: auto;
+  }
   .cms-title-visibility {
     display: flex !important;
     width: fit-content;
