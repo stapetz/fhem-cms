@@ -26,7 +26,11 @@ class Element {
         },
       };
     }
-    this.classList = { toggle() {} };
+    const classes = new Set();
+    this.classList = {
+      toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); },
+      contains(name) { return classes.has(name); },
+    };
     this.style = {
       *[Symbol.iterator]() {},
       getPropertyValue(name) { return this[name] || ''; },
@@ -372,11 +376,17 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
       .find((node) => node.textContent === 'Vorschau');
     previewButton.fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(content.children[0].classList.contains('cms-grid-guides'), false, 'header-menu preview hides grid guides');
+    assert.equal(preferences.get('fhem-cms:show-grid::'), '1', 'preview preserves editing grid preference');
+    gridToggle.fire('click');
+    gridToggle.fire('click');
+    assert.equal(content.children[0].classList.contains('cms-grid-guides'), false, 'grid toggle cannot display guides during preview');
     const previewWrapper = content.children[0].children[0];
     assert.equal(previewWrapper.children.some?.((c) => c.className === 'cms-widget-tools') ?? previewWrapper.children.filter((c) => c.className === 'cms-widget-tools').length > 0, false, 'preview hides widget tools');
     previewButton.fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(content.children[0].children[0].children.at(-1).className, 'cms-widget-tools');
+    assert.equal(content.children[0].classList.contains('cms-grid-guides'), true, 'leaving preview restores enabled editing guides');
 
     edit.fire('click');
     const pendingPanel = content.children[0];
