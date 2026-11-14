@@ -1,0 +1,129 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Table design pilot regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<style>
+  #fixture { width: min(100%, 900px); }
+  cms-table { width: 100%; height: 320px; }
+</style>
+<div id="fixture"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-table.js';
+
+const checks = [];
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+};
+const settle = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+const fixture = document.querySelector('#fixture');
+const output = document.querySelector('#result');
+const config = {
+  id: 'table-design', type: 'fhem-table', title: 'Messwerte',
+  grid: { col: 1, row: 1, w: 6, h: 8 }, sum: true,
+  rows: [
+    { device: 'Test', reading: 'power', label: 'Leistung', unit: 'W' },
+    { device: 'Other', reading: 'power', label: 'Zweite Quelle', unit: 'W' },
+    { device: 'Test', reading: 'missing', label: 'Nicht vorhanden' },
+  ],
+};
+const snapshots = value => new Map([
+  ['Test', [{ name: 'Test', readings: { power: value } }]],
+  ['Other', [{ name: 'Other', readings: { power: '20' } }]],
+]);
+const original = JSON.stringify(config);
+const host = document.createElement('cms-table');
+host.config = config;
+host.data = snapshots('10');
+host.setAttribute('view-only', '');
+fixture.append(host);
+const $ = selector => host.shadowRoot.querySelector(selector);
+const contrast = (foreground, background) => {
+  const luminance = color => {
+    const components = color.match(/[\d.]+/g).slice(0, 3).map(Number).map(value => {
+      value /= 255;
+      return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+    });
+    return components[0] * .2126 + components[1] * .7152 + components[2] * .0722;
+  };
+  const a = luminance(foreground), b = luminance(background);
+  return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+};
+try {
+  for (const [theme, background, color] of [
+    ['light', 'rgb(250, 250, 250)', 'rgb(23, 33, 29)'],
+    ['dark', 'rgb(23, 33, 29)', 'rgb(237, 244, 239)'],
+  ]) {
+    document.documentElement.dataset.cmsTheme = theme;
+    fixture.style.backgroundColor = background;
+    fixture.style.color = color;
+    for (const width of [180, 280, 390, 768, 900]) {
+      fixture.style.width = `${width}px`;
+      await settle();
+      const tile = $('[data-tile]'), card = $('.table-card');
+      const titleStyle = getComputedStyle($('[data-title]'));
+      check(getComputedStyle(tile).fontFamily.startsWith('system-ui'), `${theme}/${width}: system font`);
+      check(titleStyle.fontSize === '22.4px' && titleStyle.fontWeight === '700',
+        `${theme}/${width}: title follows 1.4rem bold specification`);
+      check(getComputedStyle($('table')).fontSize === '13.76px', `${theme}/${width}: readable .86rem rows`);
+      check(getComputedStyle(card).borderRadius === '14px' && getComputedStyle(card).padding === '14px',
+        `${theme}/${width}: detail card specification`);
+      check(tile.scrollWidth <= tile.clientWidth + 1 && card.scrollWidth <= card.clientWidth + 1,
+        `${theme}/${width}: no horizontal overflow`);
+      check($('[data-sum-value]').textContent === '30 W', `${theme}/${width}: sum and units unchanged`);
+      check($('[data-rows] tr:last-child td:last-child').textContent === '–',
+        `${theme}/${width}: missing reading remains explicit`);
+      check(getComputedStyle($('[data-rows] td:last-child')).textAlign === 'right',
+        `${theme}/${width}: values remain right aligned`);
+      const base = background.match(/\d+/g).map(Number);
+      const blended = `rgb(${base.map(value => Math.round(128 * .08 + value * .92)).join(',')})`;
+      check(contrast(getComputedStyle($('[data-rows] td')).color, blended) >= 4.5,
+        `${theme}/${width}: text contrast on neutral detail surface`);
+    }
+  }
+  host.data = snapshots('15');
+  check($('[data-sum-value]').textContent === '35 W', 'live updates refresh values and sum');
+  host.stale = Date.now();
+  check(getComputedStyle($('.table-card')).borderStyle === 'dashed', 'stale values remain marked');
+  host.stale = null;
+  check(getComputedStyle($('.table-card')).borderStyle === 'solid', 'reconnection clears stale marker');
+  host.config = { ...config, title: 'SehrLangerTitelOhneTrennzeichen'.repeat(4),
+    rows: Array.from({ length: 40 }, () => ({
+      device: 'Test', reading: 'power', label: 'SehrLangerBezeichnerOhneTrennzeichen'.repeat(3), unit: 'W',
+    })) };
+  fixture.style.width = '280px';
+  host.style.height = '240px';
+  await settle();
+  check($('.table-card').scrollHeight > $('.table-card').clientHeight, 'many rows scroll vertically');
+  check($('.table-card').scrollWidth <= $('.table-card').clientWidth + 1,
+    'long unbroken labels do not overflow horizontally');
+  $('.table-card').scrollTop = $('.table-card').scrollHeight;
+  check($('.table-card').scrollTop > 0, 'last rows remain reachable');
+  for (const alignment of ['left', 'center', 'right']) {
+    host.style.setProperty('--cms-widget-title-align', alignment);
+    check(getComputedStyle($('[data-title]')).textAlign === alignment, `${alignment}: title preference retained`);
+  }
+  host.config = { ...config, showTitle: false, hideHeader: true, hideSumLabel: true,
+    sumUnit: '', hideValueLabel: true };
+  check($('[data-header]').hidden && $('[data-head]').hidden, 'title and column heading visibility retained');
+  check($('[data-sum-label]').textContent === '' && $('[data-sum-value]').textContent === '35',
+    'hidden sum label and explicitly empty unit retained');
+  host.removeAttribute('view-only');
+  await settle();
+  const gear = $('[data-open-config]').getBoundingClientRect();
+  check(gear.width >= 48 && gear.height >= 48, 'configuration target is at least 48px');
+  check($('.table-card').getBoundingClientRect().top >= gear.bottom,
+    'configuration control does not overlap content when title is hidden');
+  host.config = config;
+  await settle();
+  check($('.table-card').getBoundingClientRect().top >= $('[data-open-config]').getBoundingClientRect().bottom,
+    'configuration control does not overlap content when title is visible');
+  check(JSON.stringify(config) === original, 'rendering does not mutate saved configuration');
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks: checks.length, messages: checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = JSON.stringify({ error: error.stack, checks });
+}
+</script>

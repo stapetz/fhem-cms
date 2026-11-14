@@ -149,6 +149,8 @@ for (const [name, fixtures] of [
     [['72_selection.html', 15]]],
   ['Table labels follow actual device sources and preserve manual overrides',
     [['73_table_labels.html', 27]]],
+  ['Table design uses neutral cards and preserves responsive live readings',
+    [['81_table_design.html', 104]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
       ['75_dialog_layout.html?width=852', 51]]],

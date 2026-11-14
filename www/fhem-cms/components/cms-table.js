@@ -27,25 +27,42 @@ class FHEMCMSReadingsTable extends HTMLElement {
         [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; height: 100%; overflow: auto; container-type: size; border: 1px solid var(--cms-frame, #7f8c84);
-          border-radius: 1.2rem; background: var(--cms-surface, #202e27); padding: 0.6rem; }
-        .tile[data-stale] { opacity: 0.65; border-style: dashed; }
-        header { padding: 0.1rem 2rem 0.4rem 0.2rem; }
+        .tile { position: relative; height: 100%; overflow: auto;
+          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          color: inherit; display: flex; flex-direction: column; gap: 14px; padding: 8px; }
+        .tile[data-stale] { opacity: 0.65; }
+        .tile[data-stale] .table-card { border-style: dashed; }
+        header { display: flex; justify-content: space-between; align-items: center;
+          padding: 0 48px 8px 0; border-bottom: 1px solid rgba(128,128,128,.25); }
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 1.05rem; font-weight: 400; }
-        h3[data-title] { font-size: max(6px, min(8cqh, 4cqw)); }
+        h3[data-title] { color: inherit; font-size: 1.4rem; font-weight: 700;
+          overflow-wrap: anywhere; }
         header[hidden] { display: none; }
-        table { width: 100%; border-collapse: collapse; font-size: clamp(0.65rem, 3cqh, 0.9rem); }
-        th, td { padding: 0.25rem 0.4rem; border-bottom: 1px solid var(--cms-border-subtle, #3a4d42); text-align: left; overflow-wrap: anywhere; }
-        tfoot th { position: static; text-align: left; border-top: 2px solid var(--cms-frame, #7f8c84); color: var(--cms-text, inherit); font-weight: 700; }
-        tfoot th[data-sum-value] { text-align: right; }
+        .table-card { flex: 1; min-height: 4rem; overflow: auto;
+          background: rgba(128,128,128,.08); border: 1px solid rgba(128,128,128,.18);
+          border-radius: 14px; padding: 14px; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: .86rem; }
+        th, td { padding: 8px 0; border-bottom: 1px solid rgba(128,128,128,.1);
+          text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+        th:first-child, td:first-child { padding-right: 14px; }
+        thead th { border-bottom-color: rgba(128,128,128,.2); }
+        tbody tr:last-child td { border-bottom: 0; }
+        tfoot th, tfoot td { position: static; text-align: left; border-top: 1px solid rgba(128,128,128,.25);
+          border-bottom: 0; color: inherit; font-weight: 700; }
+        tfoot [data-sum-value] { text-align: right; }
         thead th:last-child { text-align: right; }
-        th:last-child, td:last-child { padding-right: 2rem; }
         thead[hidden] { display: none; }
-        th { position: sticky; top: 0; background: var(--cms-surface, #202e27); color: var(--cms-muted-strong, #c4d0c8); font-weight: 500; }
-        td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+        th { position: sticky; top: -14px; background: var(--cms-surface, #202e27);
+          color: inherit; font-weight: 600; }
+        tfoot th { background: transparent; }
+        td:last-child { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
         .gear, button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.3rem 0.55rem; }
-        .gear { position: absolute; top: 0.25rem; right: 0.3rem; z-index: 2; padding: 0 0.35em; }
+        .gear { position: absolute; top: 8px; right: 8px; z-index: 2;
+          min-width: 48px; min-height: 48px; }
+        :host(:not([view-only])) header { min-height: 56px; }
+        :host(:not([view-only])) .tile:has(header[hidden]) { padding-top: 64px; }
+        :host([view-only]) header { padding-right: 0; }
         button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         :host([view-only]) [data-open-config] { display: none; }
         dialog { width: min(94vw, 38rem); max-height: 94vh; overflow: auto; padding: 1.25rem;
@@ -84,11 +101,13 @@ class FHEMCMSReadingsTable extends HTMLElement {
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Tabelle konfigurieren">⚙</button>
-        <table>
-          <thead data-head><tr><th data-device-heading>Bezeichner</th><th data-value-heading>Wert</th></tr></thead>
-          <tbody data-rows></tbody>
-          <tfoot data-sum hidden><tr><th data-sum-label>Summe</th><th data-sum-value></th></tr></tfoot>
-        </table>
+        <div class="table-card">
+          <table>
+            <thead data-head><tr><th scope="col" data-device-heading>Bezeichner</th><th scope="col" data-value-heading>Wert</th></tr></thead>
+            <tbody data-rows></tbody>
+            <tfoot data-sum hidden><tr><th scope="row" data-sum-label>Summe</th><td data-sum-value></td></tr></tfoot>
+          </table>
+        </div>
       </article>
       <dialog data-dialog aria-labelledby="table-dialog-title">
         <form method="dialog" data-form novalidate>
