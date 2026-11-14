@@ -317,6 +317,8 @@ Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Brows
 
 == Widgetübersicht ==
 
+'''Widget-IDs (dev):''' Schema-5-Widgets besitzen CMS-weit eindeutige IDs, auch nach Widget-/Seitenkopien und Vorlagenübernahme. Bestehende Duplikate werden beim nächsten Entwurfsspeichern oder Veröffentlichen eindeutig gemacht, ohne Inhalte, Raster oder Seitenlinks zu verlieren. Lesen allein verändert keine Dateien. Bisher kollidierende Widgets können zwischen Seiten verschoben werden; die Live-Konfiguration bleibt bis zur Veröffentlichung erhalten.
+
 === Gerät zuerst hinzufügen (dev, ab 1.11.0-dev) ===
 
 Unter '''Bearbeiten → Gerät hinzufügen''' zuerst nach Name, Alias, Typ oder Raum suchen und ein Gerät wählen. Danach werden passende Widgets anhand seiner Readings und Set-Angebote vorgeschlagen; Thermostatkanäle werden berücksichtigt. Ein bloßes Thermometer erhält keinen Thermostat- oder Slider-Vorschlag. '''Textbaustein''' und '''Freies HTML''' stehen immer bereit, '''Diagramm''' nur bei bestätigten geloggten numerischen Readings. Prüfungsfehler bleiben sichtbar; über '''Gerät ändern''' ist eine erneute Prüfung möglich.

@@ -4,6 +4,7 @@ import { createWidgetElement } from './widget-factory.js';
 import { openDevicePicker } from './device-picker.js';
 import { deviceWidgetSuggestions } from './device-widget-suggestions.js';
 import { isValidName } from './fhem-client.js';
+import { widgetIds } from './widget-ids.js';
 
 const WIDGET_TYPES = [
   ['thermostat', 'Thermostat', 't', 4, 2, { device: '', readings: { actual: '', target: '' } }],
@@ -216,7 +217,7 @@ export class Schema5WidgetPanel {
     const page = config.pages.find((entry) => entry.id === this.#page);
     if (page.widgets.length >= 200) throw new Error('Die Seite enthält bereits 200 Widgets');
     const [, , prefix, w, h, fields] = specification;
-    const ids = new Set(page.widgets.map((widget) => widget.id));
+    const ids = widgetIds(config);
     let number = 1;
     while (ids.has(`${prefix}${number}`)) number += 1;
     const row = Math.max(Number(config.navigation.grid.row) + Number(config.navigation.grid.h),

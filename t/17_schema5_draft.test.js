@@ -541,10 +541,9 @@ test('page management preserves content and rejects stale or destructive operati
     const duplicate = await editor.saveWidget('start', {
       ...initial.pages[0].widgets[0], grid: { col: 1, row: 4, w: 4, h: 2 },
     }, moved.token, 'create');
-    assert.throws(() => editor.moveWidget('second', 'start', 'text',
-      { col: 1, row: 2, w: 4, h: 2 }, duplicate.token), /Widget-ID/);
-    assert.deepEqual(editor.snapshot(), duplicate, 'duplicate destination does not remove either widget');
-    const unique = await editor.deleteWidget('start', 'text', duplicate.token);
+    assert.equal(duplicate.draft.pages[0].widgets[1].id, 'text-2',
+      'new widget ID does not collide with a widget on another page');
+    const unique = await editor.deleteWidget('start', 'text-2', duplicate.token);
     assert.throws(() => editor.deleteEmptyPage('second', unique.token), /enthält Widgets/);
     const renamed = await editor.renamePage('second', 'Handbuch', unique.token);
     const reordered = await editor.reorderPages(['second', 'start'], renamed.token);

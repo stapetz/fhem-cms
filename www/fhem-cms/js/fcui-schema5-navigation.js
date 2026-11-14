@@ -1,3 +1,5 @@
+import { uniqueWidgetId } from './widget-ids.js';
+
 function element(tag, text) {
   const result = document.createElement(tag);
   if (text !== undefined) result.textContent = text;
@@ -319,6 +321,8 @@ export class Schema5NavigationPanel {
         const page = structuredClone(row.page);
         page.id = file;
         page.title = title;
+        const widgetIds = new Set(this.#rows.flatMap((entry) => entry.page.widgets.map((widget) => widget.id)));
+        for (const widget of page.widgets) widget.id = uniqueWidgetId(widget.id, widgetIds);
         this.#rows.splice(index + 1, 0, {
           page, file, title, label: '', width: row.width, height: row.height, show: row.show,
         });

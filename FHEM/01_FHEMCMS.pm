@@ -2239,12 +2239,39 @@ sub FHEMCMS_ReadVersion5State {
         token => $token, setupIdentity => $setupIdentity}, undef);
 }
 
+sub FHEMCMS_NormalizeWidgetIds {
+    my ($config) = @_;
+    my $copy = JSON::PP->new->decode(JSON::PP->new->encode($config));
+    my (%reserved, %seen);
+    for my $page (@{$copy->{pages}}) {
+        $reserved{$_->{id}} = 1 for @{$page->{widgets}};
+    }
+    for my $page (@{$copy->{pages}}) {
+        for my $widget (@{$page->{widgets}}) {
+            my $id = $widget->{id};
+            if ($seen{$id}) {
+                my $number = 2;
+                my $candidate;
+                do {
+                    my $suffix = '-' . $number++;
+                    $candidate = substr($id, 0, 64 - length($suffix)) . $suffix;
+                } while ($reserved{$candidate});
+                $widget->{id} = $candidate;
+                $reserved{$candidate} = 1;
+            }
+            $seen{$widget->{id}} = 1;
+        }
+    }
+    return $copy;
+}
+
 sub FHEMCMS_WriteVersion5Draft {
     my ($dataDir, $config, $expectedToken) = @_;
     return 'Ungueltige Zustandskennung'
         if (!defined($expectedToken) || ref($expectedToken) || $expectedToken !~ /\A[0-9a-f]{64}\z/);
     my $error = FHEMCMS_ValidateConfig($config, 5);
     return "Entwurf ist ungueltig: $error" if (defined($error));
+    $config = FHEMCMS_NormalizeWidgetIds($config);
     my $encoded = JSON::PP->new->utf8->canonical->pretty->encode($config);
     return 'Konfiguration ist zu gross' if (length($encoded) > $FHEMCMS_MAX_CONFIG_BYTES);
     my ($state, $stateError) = FHEMCMS_ReadVersion5State($dataDir);
@@ -2306,6 +2333,11 @@ sub FHEMCMS_PublishVersion5Draft {
     return (undef, $draftError) if (defined($draftError));
     my $readToken = sha256_hex(length($live) . ':' . $live . '1:' . length($draft) . ':' . $draft);
     return (undef, 'Zustand ist veraltet; bitte erneut laden') if ($readToken ne $expectedToken);
+    my $normalized = FHEMCMS_NormalizeWidgetIds($state->{draft});
+    my $canonical = JSON::PP->new->utf8->canonical;
+    $draft = $canonical->pretty->encode($normalized)
+        if ($canonical->encode($normalized) ne $canonical->encode($state->{draft}));
+    return (undef, 'Konfiguration ist zu gross') if (length($draft) > $FHEMCMS_MAX_CONFIG_BYTES);
     my $tmp = File::Spec->catfile($dataDir, 'config.json.v5.tmp');
     my $out;
     return (undef, "Temporaere Datei konnte nicht angelegt werden: $!")
@@ -2727,6 +2759,7 @@ sub FHEMCMS_WriteConfig {
     my $error = FHEMCMS_ValidateConfig($config);
     return $error if (defined($error));
 
+    $config = FHEMCMS_NormalizeWidgetIds($config) if ($config->{schemaVersion} == 5);
     my $text = JSON::PP->new->utf8->canonical->pretty->encode($config);
     return 'Konfiguration ist zu gross' if (length($text) > $FHEMCMS_MAX_CONFIG_BYTES);
 

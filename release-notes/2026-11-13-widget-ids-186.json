@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "CMS-weite Widget-IDs und sichere Seitenverschiebung",
+  "changes": [
+    "Schema-5-Widgets erhalten ueber alle Seiten eindeutige IDs, auch bei neuen Widgets, Vorlagen und Seitenkopien.",
+    "Bestehende doppelte IDs werden beim Entwurfsschreiben und Veroeffentlichen verlustfrei eindeutig gemacht, nicht beim blossen Lesen.",
+    "Widgets mit bislang kollidierenden IDs lassen sich zwischen Seiten verschieben; Live bleibt bis zur Veroeffentlichung unveraendert."
+  ]
+}

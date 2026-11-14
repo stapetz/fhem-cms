@@ -1,5 +1,6 @@
 import { applySchema5GridItems, reflowSchema5Widget, schema5GridItems } from './fcui-schema5-layout.js';
 import { fitLinkWidget } from './link-widget.js';
+import { normalizeWidgetIds, uniqueWidgetId, widgetIds } from './widget-ids.js';
 
 export class WidgetLayoutError extends Error {}
 
@@ -117,8 +118,8 @@ export class Schema5DraftController {
   }
 
   saveDraft(config, expectedToken) {
-    const candidate = structuredClone(config);
-    validateConfig(candidate);
+    validateConfig(config);
+    const candidate = normalizeWidgetIds(config);
     return this.#change('save', candidate, expectedToken);
   }
 
@@ -155,9 +156,12 @@ export class Schema5DraftController {
     const before = [{ id: '__nav', type: 'navigation', title: 'Navigation', grid: candidate.navigation.grid },
       ...page.widgets.map(({ id, type, title, grid }) => ({ id, type, title: title || '', grid }))];
     let copy = structuredClone(widget);
+    if (action === 'create' && widgetIds(candidate).has(copy.id)) {
+      copy.id = uniqueWidgetId(copy.id, widgetIds(candidate));
+    }
     if (widget.type === 'fhem-link') {
       try {
-        copy = fitLinkWidget(widget, Number(candidate.settings.gridColumns), candidate.pages,
+        copy = fitLinkWidget(copy, Number(candidate.settings.gridColumns), candidate.pages,
           action === 'update' ? page.widgets[index] : null);
       } catch (error) {
         throw new WidgetLayoutError(error.message, { cause: error });
@@ -232,7 +236,7 @@ export class Schema5DraftController {
     if (page.widgets.length >= 200) throw new Error('Die Seite enthält bereits 200 Widgets');
     if (!widget || typeof widget !== 'object' || Array.isArray(widget)
       || typeof widget.id !== 'string' || !widget.grid) throw new Error('Ungültige Widget-Vorlage');
-    const ids = new Set(page.widgets.map((entry) => entry.id));
+    const ids = widgetIds(candidate);
     let copy = structuredClone(widget);
     copy.id = uniqueCopyId(copy.id, ids);
     const columns = Number(candidate.settings.gridColumns);
@@ -313,8 +317,8 @@ export class Schema5DraftController {
     if (sourceId === targetId) throw new Error('Zielseite muss verschieden sein');
     const index = source.widgets.findIndex((widget) => widget.id === widgetId);
     if (index < 0) throw new Error('Unbekanntes Widget');
-    if (target.widgets.some((widget) => widget.id === widgetId)) throw new Error('Widget-ID ist auf der Zielseite vorhanden');
     const widget = source.widgets.splice(index, 1)[0];
+    if (widgetIds(candidate).has(widget.id)) widget.id = uniqueWidgetId(widget.id, widgetIds(candidate));
     widget.grid = structuredClone(grid);
     target.widgets.push(widget);
     return this.saveDraft(candidate, expectedToken);
@@ -345,7 +349,7 @@ export class Schema5DraftController {
       if (action === 'save') await this.#transport.save(structuredClone(candidate), before.token);
       else await this.#transport[action](before.token);
       const after = await this.#read();
-      const expectedLive = action === 'publish' ? before.draft : before.live;
+      const expectedLive = action === 'publish' ? normalizeWidgetIds(before.draft) : before.live;
       const expectedDraft = action === 'save' ? candidate : null;
       if (!sameConfig(after.live, expectedLive) || !sameConfig(after.draft, expectedDraft)) {
         throw new Error('Zustand nach der Entwurfsaktion geändert; bitte erneut laden');

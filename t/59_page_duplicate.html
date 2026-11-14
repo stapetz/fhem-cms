@@ -44,8 +44,10 @@ try {
   check(writes === 1 && closed, 'save creates draft and closes');
   check(state.draft.pages[1].id !== 'start', 'copy has an independent page id');
   check(state.draft.pages[1].title === 'Start (Kopie)', 'copy has a recognizable title');
-  check(JSON.stringify(state.draft.pages[1].widgets) === JSON.stringify(live.pages[0].widgets),
+  check(JSON.stringify(state.draft.pages[1].widgets.map((widget, index) =>
+    ({ ...widget, id: live.pages[0].widgets[index].id }))) === JSON.stringify(live.pages[0].widgets),
     'copy retains widgets and geometry');
+  check(state.draft.pages[1].widgets[0].id !== live.pages[0].widgets[0].id, 'page copy has independent widget IDs');
   check(live.pages.length === 1, 'live page remains unchanged');
   const many = structuredClone(live);
   many.pages = Array.from({ length: 50 }, (_, index) => ({
