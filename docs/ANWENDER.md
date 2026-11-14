@@ -526,6 +526,8 @@ schließt nur die Hilfe; der Widgetdialog und ungespeicherte Eingaben bleiben er
 Bei ausgeschalteter Option erscheinen alle freigegebenen Karten direkt im
 Widget, ohne Informationssymbol. Die vorhandene Rastergröße bleibt erhalten
 und kann bei Bedarf im Editor vergrößert werden.
+In dieser Vollansicht stehen Fahrzeugbezeichnung, Verbindungsstatus und
+Aktionssymbol gemeinsam in einer Kopfzeile; eine zusätzliche Symbolzeile entfällt.
 Die Dialogaktionen stehen einheitlich in der Fußzeile:
 **Widget löschen** links, **Abbrechen** und **Speichern** rechts.
 

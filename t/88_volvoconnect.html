@@ -379,6 +379,15 @@ try {
   check($('[data-inline-content] [data-group=state]') && $('[data-inline-content] [data-group=vehicle]'),
     'inline mode shows complete vehicle groups');
   check(!$('[data-inline-content] #actions') && $('[data-open-actions]'), 'actions move out of cards into their own launcher');
+  check($('[data-content]').hidden && $('[data-inline-content] .identity [data-open-actions]')
+    && !$('[data-inline-content] .badge'), 'inline header contains launchers and only one connection indicator');
+  const checkInlineHeader = () => {
+    const connected=$('[data-inline-content] .connected').getBoundingClientRect();
+    const actions=$('[data-inline-content] [data-open-actions]').getBoundingClientRect();
+    check(Math.abs(connected.y+connected.height/2-actions.y-actions.height/2)<1,
+      'inline connection and action symbols share the same center line');
+  };
+  checkInlineHeader();
   const inlineMap = host.vehicleMaps.get('inline-volvo-location');
   inlineMap.instance.setZoom(17,{animate:false});
   const inlineSoc = $('[data-inline-content] .soc');
@@ -390,6 +399,7 @@ try {
     await pause();
     const inline = $('[data-inline-content]');
     check(inline.scrollWidth <= inline.clientWidth + 1, 'inline cards have no horizontal overflow');
+    checkInlineHeader();
   }
   services.savePopupSettings = async () => {};
   host.render();
