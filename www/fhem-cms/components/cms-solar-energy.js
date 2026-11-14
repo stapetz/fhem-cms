@@ -101,13 +101,10 @@ class FHEMCMSSolarEnergy extends HTMLElement {
           .node strong { font-size: clamp(.85rem, 5cqi, 1.4rem); }
           .node .label, .node small { font-size: .65rem; }
           .node:not(.pv) { align-self: stretch; display: flex; flex-direction: column; padding-bottom: 18px; }
-          .node:not(.pv) .label { min-height: 2.6em; display: flex; align-items: center; justify-content: center; }
+          .node:not(.pv) .label { min-height: 3.9em; display: flex; align-items: center; justify-content: center; }
           .node:not(.pv) small { min-height: 2.6em; margin-top: auto; }
           progress { position: absolute; bottom: 8px; left: 3px; width: calc(100% - 6px); margin: 0; }
           .tile header { flex-wrap: wrap; }
-        }
-        @container (max-width: 320px) {
-          .node:not(.pv) .label { min-height: 3.9em; }
         }
         button, input, select { font: inherit; color: inherit; border: 1px solid var(--cms-border,#43564a);
           background: var(--cms-surface-raised,#2a3b32); border-radius: .5rem; padding: .4rem .6rem; }

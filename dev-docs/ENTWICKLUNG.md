@@ -56,8 +56,8 @@ Im nativen Solar-und-Energiefluss-Widget fehlte zwischen den drei unteren
 Stationen ein Mindestabstand; zentrierte, unterschiedlich hohe Stationen
 erzeugten versetzte Rahmen. Bis 600px Inhaltsbreite trennen nun 8px die
 Stationen, alle drei Rahmen fuellen dieselbe Rasterzeile. Gemeinsame
-Beschriftungshoehen richten die Leistungswerte aus; bis 320px sind drei
-Textzeilen vorgesehen. Der Batteriebalken besitzt einen eigenen reservierten
+Beschriftungshoehen fuer drei Textzeilen richten die Leistungswerte auch bei
+unterschiedlichen System-/Emoji-Schriften aus. Der Batteriebalken besitzt einen eigenen reservierten
 Bereich, ohne die Rahmenhoehe allein zu vergroessern.
 `text-size-adjust: 100%` einschliesslich WebKit-Praefix stabilisiert nur in
 diesem Widget die automatische Textanpassung; Pinch-Zoom bleibt moeglich.

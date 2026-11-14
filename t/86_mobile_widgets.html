@@ -143,6 +143,18 @@ try {
   shell.style.width = '393px';
   root.gridstack.onResize();
   await pause(200);
+  for (const font of ['Arial, sans-serif', 'Georgia, serif', 'monospace']) {
+    const labels = ['bat', 'home', 'grid'].map(key => $energy(`[data-station="${key}"] .label`));
+    labels.forEach(label => { label.style.fontFamily = font; });
+    await pause();
+    const powers = ['bat', 'home', 'grid'].map(key => $energy(`[data-power="${key}"]`).getBoundingClientRect());
+    check(powers.every(box => Math.abs(box.top - powers[0].top) < 1),
+      `${font}: station power alignment tolerates different font metrics`);
+    check(labels.every(label => label.scrollHeight <= label.clientHeight + 1),
+      `${font}: wrapped station labels fit their shared reserved height`);
+    labels.forEach(label => { label.style.removeProperty('font-family'); });
+  }
+  await pause();
   const htmlHost = root.querySelector('cms-html');
   const content = htmlHost.shadowRoot.querySelector('[data-content]');
   const dashboard = content.querySelector('#dashboard');
