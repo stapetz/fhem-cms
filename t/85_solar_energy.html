@@ -190,7 +190,7 @@ try {
     host.config = { ...widget, readings: { pv: core.pv }, deriveHome };
     mounted.update(snapshots(), null);
     check($('[data-power="home"]').hidden, 'unassigned home has no numerical display even with legacy derivation');
-    check($('[data-note="home"]').textContent === 'Kein Reading zugeordnet', 'unassigned home is explained');
+    check($('[data-note="home"]').textContent === '', 'unassigned home stays blank without explanatory text');
     check([...host.shadowRoot.querySelectorAll('.energy')].every(line => line.hasAttribute('hidden')),
       'unknown home does not invent solar flows');
     check($('.bat').hidden && $('.grid').hidden && $('progress').hidden,

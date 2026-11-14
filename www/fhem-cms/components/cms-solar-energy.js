@@ -262,7 +262,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
       station.dataset.state = value !== null && value < 0 ? 'negative' : 'neutral';
       const note = this.$(`[data-note="${key}"]`);
       if (key === 'pv') note.textContent = config.readings?.hour ? `Std: ${energy(config.readings.hour, 2)} ${energyUnit}` : '';
-      if (key === 'home') note.textContent = config.readings?.home ? 'Gesamtlast aktuell' : 'Kein Reading zugeordnet';
+      if (key === 'home') note.textContent = config.readings?.home ? 'Gesamtlast aktuell' : '';
       if (key === 'bat') {
         station.querySelector('.label').textContent = `🔋 Speicher${config.readings?.soc ? ` (${model.soc === null ? '–' : format(model.soc, 0)}%)` : ''}`;
         note.textContent = '− Entladen / + Laden';
