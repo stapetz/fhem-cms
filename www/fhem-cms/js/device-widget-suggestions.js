@@ -3,7 +3,7 @@ import { schema5WidgetSuggestions } from './fcui-schema5-setup-wizard.js';
 import { suggestedReading } from './device-suggestions.js';
 import { sliderCommands } from './slider-commands.js';
 import { parseDiscreteSetCommands } from './select-commands.js';
-import { solarEnergySuggestions } from './solar-energy-suggestions.js';
+import { solarEnergySuggestions, solarPowerReadings } from './solar-energy-suggestions.js';
 
 export function deviceWidgetSuggestions(device, devices = [], logInfo = null) {
   if (!device || !isValidName(device.name) || !Array.isArray(devices)) {
@@ -29,11 +29,17 @@ export function deviceWidgetSuggestions(device, devices = [], logInfo = null) {
         const { type, label, ...fields } = suggestion;
         add(type, fields);
       }
-      for (const candidate of candidates) {
-        const solar = solarEnergySuggestions([candidate, ...devices.filter(entry => entry.name !== candidate.name)], candidate.name);
-        if (solar.readings.pv && !result.has('fhem-solar-energy')) {
-          add('fhem-solar-energy', { readings: solar.readings, sections: solar.sections });
-        }
+    }
+    if (solarPowerReadings(candidate, true).length) {
+      const solar = solarEnergySuggestions([candidate, ...devices.filter(entry => entry.name !== candidate.name)], candidate.name);
+      if (!result.has('fhem-solarflow')) {
+        const readings = Object.fromEntries(['pv', 'home', 'grid', 'battery', 'soc']
+          .filter(key => solar.readings[key]).map(key => [key, solar.readings[key]]));
+        add('fhem-solarflow', { device: candidate.name, readings, deriveHome: false });
+      }
+      if (!result.has('fhem-solar-energy')) {
+        add('fhem-solar-energy', { readings: solar.readings, sections: solar.sections,
+          ...(!solarPowerReadings(candidate).length ? { deriveHome: false } : {}) });
       }
     }
   }

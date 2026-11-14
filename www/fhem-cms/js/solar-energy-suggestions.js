@@ -8,8 +8,18 @@ const POWER_READINGS = {
   soc: ['battery_remain_capacity', 'batterySOC', 'battery_soc', 'stateOfCharge', 'soc'],
 };
 const PERIODS = { hour: 'Hour', day: 'Day', month: 'Month', previousMonth: 'MonthLast', year: 'Year' };
+const METER_POWER_READINGS = ['power', 'powerActual', 'currentPower', 'activePower',
+  'active_power', 'apower', 'act_power', 'ENERGY_Power'];
 const source = (device, reading) => ({ device: device.name, reading });
 const namesOf = device => Object.keys(device?.readings || {}).filter(isValidName);
+
+export function solarPowerReadings(device, includeMeters = false) {
+  const names = namesOf(device);
+  const pv = names.filter(name => POWER_READINGS.pv.includes(name));
+  if (pv.length || !includeMeters) return pv;
+  return names.filter(name => METER_POWER_READINGS.includes(name)
+    || /^(?:power_?\d+|(?:channel|relay|emeter)_\d+_power|switch_\d+_apower)$/.test(name));
+}
 
 function uniqueReading(device, aliases) {
   const matches = namesOf(device).filter(name => aliases.includes(name));
@@ -34,6 +44,11 @@ function yieldGroups(device) {
 }
 
 export function suggestedSolarSource(device, key, label) {
+  if (!device || !isValidName(device.name)) return null;
+  if (key === 'pv') {
+    const matches = solarPowerReadings(device, true);
+    return matches.length === 1 ? source(device, matches[0]) : null;
+  }
   if (POWER_READINGS[key]) return uniqueReading(device, POWER_READINGS[key]);
   if (key === 'status') return uniqueReading(device, ['state']);
   const base = label === undefined ? 'EnergyTotal' : `Energy${label}`;
@@ -42,7 +57,7 @@ export function suggestedSolarSource(device, key, label) {
 
 export function solarEnergySuggestions(devices, preferredDevice) {
   const valid = devices.filter(device => device && isValidName(device.name));
-  const candidates = valid.filter(device => namesOf(device).some(name => POWER_READINGS.pv.includes(name)));
+  const candidates = valid.filter(device => solarPowerReadings(device).length);
   const anchor = preferredDevice ? valid.find(device => device.name === preferredDevice)
     : candidates.length === 1 ? candidates[0] : null;
   if (!anchor) return { readings: {}, sections: [], ambiguous: candidates.length > 1 };

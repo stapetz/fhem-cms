@@ -21,6 +21,36 @@ verbindlich. Insbesondere bleiben bestehende Daten und die beiden
 [Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) erhalten; Codebeispiele des
 Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherung.
 
+## Solarwidgets fuer Leistungsmesser (dev, 1.12.0-dev, Refs #205)
+
+Die geraetebasierte Widgetauswahl bietet SolarFlow und Solar und Energiefluss
+auch fuer Shelly-/MQTT-Geraete und Messsteckdosen beliebigen Typs an.
+Gemeinsam erkannte Leistungsnamen: `power`, `powerActual`, `currentPower`,
+`activePower`, `active_power`, `apower`, `act_power`, `ENERGY_Power`,
+`power0`/`power_0` (auch andere Kanalnummern), `channel_N_power`,
+`relay_N_power`, `emeter_N_power` und `switch_N_apower`.
+Hauptgeraete beruecksichtigen vorhandene Kanaele. Bei mehreren Leistungsreadings
+bleibt die PV-Zuordnung leer, bis der Benutzer das Reading selbst auswaehlt.
+SolarFlow verwendet keine alphabetisch erste Ersatzzuordnung mehr.
+Explizite PV-Readings haben Vorrang, auch ausserhalb von SolaxModbus.
+
+Allgemeine Verbrauchsmessungen sind nicht automatisch Solaranlagen:
+Nur die ausdrueckliche Device-/Solarwidgetauswahl macht ein solches Reading
+zum PV-Vorschlag. Unbeaufsichtigte Solarerkennung und Einrichtungsassistent
+verwenden weiterhin ausschliesslich eindeutige PV-spezifische Namen.
+Energiezaehler, Stromstaerke, Spannung und Leistungsfaktor allein reichen nicht;
+das mehrdeutige `consumption` wird nicht als Leistung geraten.
+Bei Messsteckdosen bleibt die Hausverbrauchsberechnung standardmaessig aus.
+Keine Einheitenumrechnung oder Vorzeichenumkehr aus dem Geraetetyp ableiten;
+Einheit und Zuordnung im Standarddialog pruefen. Bestehende Konfigurationen
+werden nicht migriert oder automatisch geaendert.
+
+Tests: `node --test t/70_device_first.test.js t/85_solar_energy_suggestions.test.js
+t/52_schema5_setup_wizard.test.js t/85_solar_energy.test.js` sowie Fixture
+`t/71_device_first.html` im Chrome- und WebKit-Runner.
+Erwartet: beide Solarwidgets speichern das bestaetigte Leistungsreading,
+mehrdeutige Kanaele erzwingen eine Auswahl, ohne Bestaetigung kein Schreiben.
+
 ## Mobile Widgethoehen und Liveupdates (dev, 1.11.1-dev, Refs #203)
 
 Touchgeraete und die mobile Geraetevorschau verwenden fuer alle 16 Widgettypen

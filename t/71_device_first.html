@@ -20,6 +20,9 @@ const devices = [
   { name: 'Thermometer', alias: 'Kitchen', type: 'LaCrosse',
     readings: { temperature: '21.5', humidity: '60', state: 'T: 21.5 H: 60' }, sets: 'replaceBatteryForSec' },
   { name: 'Light', readings: { state: 'off', pct: '20' }, sets: 'on:noArg off:noArg pct:slider,0,1,100' },
+  { name: 'ShellyBalcony', type: 'MQTT2_DEVICE',
+    readings: { aenergy_total: '12', apower: '320', voltage: '230' } },
+  { name: 'MultiMeter', type: 'Shelly', readings: { power_0: '100', power_1: '200', voltage: '230' } },
 ];
 const live = { schemaVersion: 5, theme: 'dark', settings: { gridColumns: 12, layoutMode: 'grid' },
   navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } },
@@ -103,6 +106,58 @@ try {
   check(![...root.querySelectorAll('.cms-widget-choice')].some(button => button.textContent === 'Diagramm'),
     'No-data device does not offer a chart');
   panel.close();
+  for (const [label, tag] of [['SolarFlow', 'cms-solarflow'], ['Solar und Energiefluss', 'cms-solar-energy']]) {
+    panel = new Schema5WidgetPanel({ root, controller, services,
+      pageId: 'start', token: 'token', deviceFirst: true, onClose() {} });
+    await until(() => document.querySelector('.cms-dp-dialog [data-list] button'));
+    const picker = document.querySelector('.cms-dp-dialog');
+    picker.querySelector('[data-search]').value = 'ShellyBalcony';
+    picker.querySelector('[data-search]').dispatchEvent(new Event('input'));
+    picker.querySelector('[data-list] button').click();
+    await until(() => !root.querySelector('.cms-device-first-choice').disabled);
+    const choice = [...root.querySelectorAll('.cms-widget-choice')].find(button => button.textContent === label);
+    check(Boolean(choice), `${label}: measuring plug offers a solar widget`);
+    choice.click();
+    await until(() => root.querySelector(tag)?.shadowRoot.querySelector('[data-dialog]').open);
+    const solar = root.querySelector(tag);
+    await until(() => tag === 'cms-solarflow' || !solar.shadowRoot.querySelector('[data-save]').disabled);
+    check(solar.config.readings.pv.device === 'ShellyBalcony' && solar.config.readings.pv.reading === 'apower',
+      `${label}: chosen meter and power reading reach the actual standard dialog`);
+    const form = solar.shadowRoot.querySelector('[data-form]');
+    check(!form.elements.deriveHome.checked, `${label}: a measuring plug does not invent a house load`);
+    const before = saved;
+    form.requestSubmit();
+    await until(() => saved === before + 1 && !root.querySelector(tag));
+    check(savedWidget.readings.pv.reading === 'apower' && savedWidget.deriveHome === false,
+      `${label}: confirmed sources persist through normal token-bound creation`);
+    panel.close();
+  }
+  panel = new Schema5WidgetPanel({ root, controller, services,
+    pageId: 'start', token: 'token', deviceFirst: true, onClose() {} });
+  await until(() => document.querySelector('.cms-dp-dialog [data-list] button'));
+  const multiPicker = document.querySelector('.cms-dp-dialog');
+  multiPicker.querySelector('[data-search]').value = 'MultiMeter';
+  multiPicker.querySelector('[data-search]').dispatchEvent(new Event('input'));
+  multiPicker.querySelector('[data-list] button').click();
+  await until(() => !root.querySelector('.cms-device-first-choice').disabled);
+  [...root.querySelectorAll('.cms-widget-choice')].find(button => button.textContent === 'SolarFlow').click();
+  await until(() => root.querySelector('cms-solarflow')?.shadowRoot.querySelector('[data-dialog]').open);
+  const multiSolar = root.querySelector('cms-solarflow');
+  const multiForm = multiSolar.shadowRoot.querySelector('[data-form]');
+  check(multiForm.elements['device-single'].value === 'MultiMeter'
+    && multiForm.elements['reading-pv'].value === '', 'multiple power channels require an explicit PV-reading choice');
+  const beforeMultiSave = saved;
+  multiForm.requestSubmit();
+  await new Promise(resolve => setTimeout(resolve, 30));
+  check(saved === beforeMultiSave && multiSolar.shadowRoot.querySelector('[data-error]').textContent.includes('PV'),
+    'ambiguous meter cannot be saved with an arbitrary reading');
+  multiForm.elements['reading-pv'].value = 'power_1';
+  multiForm.requestSubmit();
+  await until(() => saved === beforeMultiSave + 1 && !root.querySelector('cms-solarflow'));
+  check(savedWidget.device === 'MultiMeter' && savedWidget.readings.pv === 'power_1',
+    'manual choice of a meter channel persists');
+  panel.close();
+  const confirmedWrites = saved;
   let releaseList;
   panel = new Schema5WidgetPanel({ root, controller, services: { ...services,
     listAllDevices: () => new Promise(resolve => { releaseList = resolve; }) },
@@ -124,7 +179,7 @@ try {
   check(!root.childElementCount, 'Pending history discovery can be canceled without waiting');
   releaseLogs({ source: 'dblog', readings: ['temperature'] });
   await new Promise(resolve => setTimeout(resolve, 20));
-  check(!root.childElementCount && saved === 1, 'Late history result does not modify a canceled panel or draft');
+  check(!root.childElementCount && saved === confirmedWrites, 'Late history result does not modify a canceled panel or draft');
   result.dataset.result = 'pass';
   result.textContent = JSON.stringify({ status: 'pass', checks: checks.length, messages: checks });
 } catch (error) {

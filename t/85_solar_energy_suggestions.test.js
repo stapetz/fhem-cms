@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { solarEnergySuggestions, suggestedSolarSource } from '../www/fhem-cms/js/solar-energy-suggestions.js';
+import { solarEnergySuggestions, suggestedSolarSource, solarPowerReadings } from '../www/fhem-cms/js/solar-energy-suggestions.js';
 import { deviceWidgetSuggestions } from '../www/fhem-cms/js/device-widget-suggestions.js';
 
 const plant = { name: 'Plant', type: 'dummy', readings: {
@@ -59,9 +59,46 @@ test('ambiguous aliases, unrelated power, unsafe names and unsupported units are
   assert.deepEqual(suggestion.readings, {});
   assert.deepEqual(suggestion.sections, []);
   assert.deepEqual(solarEnergySuggestions([{ ...plant, name: 'Bad;Name' }]).readings, {});
-  assert.equal(suggestedSolarSource({ name: 'Sensor', readings: { power: '10' } }, 'pv'), null);
+  assert.deepEqual(suggestedSolarSource({ name: 'Sensor', readings: { power: '10' } }, 'pv'),
+    { device: 'Sensor', reading: 'power' });
   assert.equal(Object.hasOwn(solarEnergySuggestions([plant]), 'powerUnit'), false);
   const many = { name: 'PV', readings: { pv_total_power: '1',
     ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`EnergyRoof${i}`, '1'])) } };
   assert.equal(solarEnergySuggestions([many]).sections.length, 8);
+});
+
+test('meter readings become PV sources only after an explicit device choice, never during discovery', () => {
+  for (const reading of ['power', 'powerActual', 'currentPower', 'activePower', 'active_power',
+    'apower', 'act_power', 'ENERGY_Power', 'power_0', 'power1', 'channel_0_power',
+    'relay_0_power', 'switch_0_apower', 'emeter_1_power']) {
+    const meter = { name: 'Balcony', type: 'Unknown', readings: { [reading]: '0', energy: '12', voltage: '230' } };
+    assert.deepEqual(solarPowerReadings(meter), [], reading);
+    assert.deepEqual(solarEnergySuggestions([meter]).readings, {}, reading);
+    assert.deepEqual(solarEnergySuggestions([meter], meter.name).readings.pv,
+      { device: 'Balcony', reading }, reading);
+    const choices = deviceWidgetSuggestions(meter);
+    for (const type of ['fhem-solarflow', 'fhem-solar-energy']) {
+      assert.deepEqual(choices.get(type).readings.pv, { device: 'Balcony', reading }, type);
+      assert.equal(choices.get(type).deriveHome, false, 'a measuring plug does not prove a house load');
+    }
+  }
+});
+
+test('multiple meter channels remain selectable but are not assigned arbitrarily', () => {
+  const meter = { name: 'Shelly', type: 'MQTT2_DEVICE', readings: {
+    power_0: '100', power_1: '200', powerFactor: '0.9', voltage: '230', energy: '5' } };
+  assert.equal(suggestedSolarSource(meter, 'pv'), null);
+  for (const type of ['fhem-solarflow', 'fhem-solar-energy']) {
+    assert.equal(deviceWidgetSuggestions(meter).has(type), true);
+    assert.equal(deviceWidgetSuggestions(meter).get(type).readings.pv, undefined);
+  }
+  assert.deepEqual(suggestedSolarSource({ ...meter, readings: { ...meter.readings, pvPower: '250' } }, 'pv'),
+    { device: 'Shelly', reading: 'pvPower' }, 'a specific PV reading takes precedence over meter channels');
+  for (const reading of ['energy', 'current', 'voltage', 'powerFactor', 'powerLimit', 'consumption',
+    'power;set', 'power\\n']) {
+    const choices = deviceWidgetSuggestions({ name: 'NotPower', readings: { [reading]: '10' } });
+    assert.equal(choices.has('fhem-solarflow'), false, reading);
+    assert.equal(choices.has('fhem-solar-energy'), false, reading);
+  }
+  assert.equal(suggestedSolarSource({ name: 'Bad;Device', readings: { power: '1' } }, 'pv'), null);
 });

@@ -59,6 +59,15 @@ test('shared slider detection preserves signed ranges and rejects malformed or u
   }
 });
 
+test('power-meter channels on parent devices offer both solar widget types', () => {
+  const parent = { name: 'Plug', type: 'Unknown', readings: {} };
+  const channel = { name: 'Plug_Meter', parent: parent.name, readings: { apower: '300' } };
+  for (const type of ['fhem-solarflow', 'fhem-solar-energy']) {
+    const choice = deviceWidgetSuggestions(parent, [parent, channel]).get(type);
+    assert.deepEqual(choice.readings.pv, { device: channel.name, reading: 'apower' });
+  }
+});
+
 test('discrete set lists offer selection controls without inventing slider capabilities', () => {
   const choices = deviceWidgetSuggestions({ name: 'Mode', readings: { mode: 'eco' },
     sets: 'mode:auto,eco,boost desired:slider,5,0.5,30' });
