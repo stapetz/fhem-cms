@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-14",
+  "version": "1.13.1-dev",
+  "title": "Dialoge per Escape schliessen",
+  "changes": [
+    "Der Editor blockiert Escape nicht mehr vor nativen Widgetdialogen. Auch SolarFlow laesst sich damit wieder abbrechen.",
+    "Verschachtelte Dialoge und Vorschauen schliessen nur die oberste Ebene; Fokus und vorhandene Speicherschutzmechanismen bleiben erhalten.",
+    "Refs #208: alle 17 Widgettypen und verschachtelte Dialogablaeufe in Chrome und WebKit mit echten Tastendruecken geprueft."
+  ]
+}

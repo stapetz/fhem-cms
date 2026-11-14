@@ -224,6 +224,12 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     rotate.fire('click');
     assert.equal(iframe.style.width, '720px', 'desktop resolutions can also be rotated');
     assert.equal(iframe.style.height, '1280px');
+    iframe.contentDocument.dispatch('keydown', {
+      key: 'Escape', composedPath: () => [{ matches: (selector) => selector === 'dialog:modal' }],
+    });
+    assert.equal(deviceSelect.value, 'desktop-1280', 'a modal inside the iframe handles Escape first');
+    iframe.contentDocument.dispatch('keydown', { key: 'Escape', defaultPrevented: true });
+    assert.equal(deviceSelect.value, 'desktop-1280', 'a consumed Escape does not close the preview');
     let prevented = false;
     iframe.contentDocument.dispatch('keydown', { key: 'Escape', preventDefault() { prevented = true; } });
     assert.ok(prevented, 'Escape from inside the preview iframe is handled');
@@ -263,9 +269,11 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     editMenu.open = true;
     editMenu.fire('toggle');
     assert.equal(fileMenu.open, false);
-    editMenu.fire('keydown', { key: 'Escape' });
+    let menuEscapePrevented = false;
+    editMenu.fire('keydown', { key: 'Escape', preventDefault() { menuEscapePrevented = true; } });
     assert.equal(editMenu.open, false);
     assert.equal(editMenu.children[0].focused, true);
+    assert.ok(menuEscapePrevented, 'closing the menu consumes Escape before the preview can close');
     const [edit, mode, publish, discard, reload] = toolbar.children;
     assert.equal(mode.textContent, 'Live');
     assert.equal(edit.disabled, false);

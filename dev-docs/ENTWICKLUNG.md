@@ -21,6 +21,23 @@ verbindlich. Insbesondere bleiben bestehende Daten und die beiden
 [Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) erhalten; Codebeispiele des
 Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherung.
 
+## Escape und verschachtelte Dialoge (dev, 1.13.1-dev, Refs #208)
+
+Der Editor faengt Escape nicht mehr global im Capture-Handler ab.
+Native modale Widgetdialoge erhalten dadurch ihr regulaeres `cancel`-Ereignis.
+Menues und Vorschau behandeln bereits konsumierte Ereignisse nicht erneut;
+bei verschachtelten Pickern schliesst nur die oberste Ebene.
+Abbrechen, Fokus-Rueckgabe und vorhandener Dirty-/Busy-Schutz bleiben erhalten.
+Audit: Widgetdialoge, Device-/Icon-/Platzhalter-Picker, Assetmanager, Bildeditor,
+Editor-Panels, Seitenmodal, Admin und Legacy. Die responsive Navigation ist
+kein Dialog und behaelt ihr eigenes Verhalten.
+
+Regressionen: `node --test t/19_schema5_editor.test.js` und optional
+`python scripts/check_dialog_escape.py` (Playwright mit Chrome und WebKit).
+Fixture 87 prueft echte Escape-Tastendruecke fuer alle 17 Widgettypen,
+verschachtelte Picker, Fokus, Dirty-/Busy-Schutz und iframe-Vorschau.
+Asset-/Admin-/Legacy-Dialoge wurden im Code auditiert, nicht einzeln im Browser.
+
 ## Unbekannter Hausverbrauch und SolarFlow-Bildausschnitt (dev, 1.12.1-dev, Refs #206)
 
 Nachbesserung 1.12.2-dev: Ohne Hausverbrauchsreading bleibt auch der

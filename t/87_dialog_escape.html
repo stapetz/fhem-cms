@@ -1,0 +1,38 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Escape dialog regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<main class="cms-shell"><section id="editor"></section></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+
+try {
+  const live = { schemaVersion: 5, theme: 'light', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'one', title: 'Start', widgets: [] }] };
+  window.writes = 0;
+  window.confirmClose = false;
+  const controller = new Schema5DraftController({
+    read: async () => ({ live, draft: null, token: 'a'.repeat(64) }),
+    save: async () => { window.writes++; }, publish: async () => {}, discard: async () => {},
+  });
+  const browser = { location: window.location, localStorage: window.localStorage,
+    addEventListener: window.addEventListener.bind(window),
+    removeEventListener: window.removeEventListener.bind(window), confirm: () => window.confirmClose };
+  const editor = new Schema5Editor({ GridStack, root: document.querySelector('#editor'), controller, browser,
+    services: {
+      listAllDevices: async () => [{ name: 'Solar', alias: 'Solar', type: 'dummy', room: '', readings: {} }],
+      listDevices: async () => [], iconUrl: () => '',
+      pickAsset: () => new Promise(resolve => { window.releasePicker = resolve; }),
+    },
+    client: { jsonlist: async () => [], subscribe() {}, unsubscribe() {} } });
+  await editor.start();
+  document.querySelector('#result').textContent = 'READY';
+} catch (error) {
+  document.querySelector('#result').textContent = error.stack;
+}
+</script>
