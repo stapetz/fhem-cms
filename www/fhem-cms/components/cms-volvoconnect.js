@@ -1,6 +1,6 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
-import { widgetDesignCss, detailCardCss } from '../js/widget-design.js';
+import { widgetDesignCss, detailCardCss, widgetIconButtonCss, createWidgetIconButton } from '../js/widget-design.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
 import { renderVehicleMaps } from '../js/vehicle-map.js';
 import { isValidName } from '../js/fhem-client.js';
@@ -26,11 +26,12 @@ const wrapDialogFocus = event => {
     }
   };
   visit(event.currentTarget);
+  if (!targets.length) return;
   const active = event.composedPath()[0];
-  if (event.shiftKey ? active === targets[0] : active === targets.at(-1)) {
-    event.preventDefault();
-    (event.shiftKey ? targets.at(-1) : targets[0])?.focus({preventScroll:true});
-  }
+  const index = targets.indexOf(active);
+  const next = event.shiftKey ? (index <= 0 ? targets.length - 1 : index - 1) : (index + 1) % targets.length;
+  event.preventDefault();
+  targets[next].focus({preventScroll:true});
 };
 
 class FHEMCMSVolvoConnect extends HTMLElement {
@@ -75,9 +76,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .hero-heading h4 { border:0; padding:0; }
         .hero-tools { display:flex; align-items:center; gap:6px; margin-left:auto; }
         .connected { color:var(--cms-success,#10b981); font-size:.9rem; }
-        [data-info] { flex:none; font-size:1.3rem; }
-        .hero { background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(59,130,246,.12));
-          border-color:rgba(16,185,129,.35); display:flex; flex-direction:column; gap:14px; }
+        .hero { display:flex; flex-direction:column; gap:14px; }
         .hero h4 { margin:0; }
         .summary { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px; }
         .soc { color:#10b981; font-size:clamp(2rem,7cqi,2.8rem); font-weight:800; line-height:1.1; }
@@ -95,7 +94,6 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .status-icon[data-tone=warning] { color:var(--cms-warning,#f59e0b); }
         [data-reading-concealed] { opacity:.5; }
         [data-reading-visibility] { padding:2px 6px; margin-left:6px; }
-        .gallery { background:radial-gradient(circle at 50% 65%,rgba(16,185,129,.12),rgba(128,128,128,.07) 75%); }
         .slides { display:flex; width:100%; min-width:0; overflow-x:auto;
           scroll-snap-type:x mandatory; scrollbar-width:thin; }
         figure { flex:0 0 100%; width:100%; min-width:0; margin:0; scroll-snap-align:start; text-align:center; }
@@ -112,6 +110,12 @@ class FHEMCMSVolvoConnect extends HTMLElement {
           border:1px solid var(--cms-border,#43564a); border-radius:.5rem; padding:.45rem .65rem; }
         button { cursor:pointer; }
         button:disabled { cursor:default; opacity:.5; }
+        button[data-command] { ${detailCardCss} min-height:64px; text-align:left; font-weight:650; }
+        .card,button[data-command] {
+          background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(59,130,246,.12));
+          border-color:rgba(16,185,129,.35);
+        }
+        ${widgetIconButtonCss}
         :host([view-only]) [data-open-config] { display:none; }
         dialog { width:min(94vw,36rem); max-height:94vh; overflow:auto; padding:1.25rem;
           background:var(--cms-surface,#202e27); color:var(--cms-text,#edf4ef);
@@ -143,6 +147,14 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .check { display:flex; align-items:center; gap:.4rem; }
         .device { display:flex; gap:.4rem; } .device input { min-width:0; flex:1; }
         .error { color:var(--cms-danger,#ffb4a8); }
+        .module-note { display:flex; align-items:center; gap:8px; margin:0; }
+        .module-note p { flex:1; margin:0; }
+        [data-module-help] { width:min(94vw,44rem);
+          -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+        .module-help-body { line-height:1.5; }
+        .module-help-body pre { padding:12px; border-radius:10px; background:rgba(128,128,128,.1);
+          white-space:pre-wrap; overflow-wrap:anywhere; font-size:.85rem; }
+        .module-help-body a { color:var(--cms-accent,#3b82f6); overflow-wrap:anywhere; }
         [data-error]:empty,[data-message]:empty { display:none; }
         @container (max-width:400px) { .tile { padding:10px; } .card { padding:12px; } }
       </style>
@@ -152,8 +164,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         <div data-content></div>
         <div data-inline-content hidden></div>
       </article>
-      <dialog data-details aria-label="VolvoConnect Fahrzeugdetails">
-        <div class="detail-header"><h3>VolvoConnect · Fahrzeugdetails</h3>
+      <dialog data-details aria-labelledby="volvo-detail-title">
+        <div class="detail-header"><h3 id="volvo-detail-title" data-detail-title></h3>
           <button type="button" data-arrange hidden>Anordnung bearbeiten</button>
           <button type="button" data-close-details aria-label="Fahrzeugdetails schließen" autofocus>✕</button>
           <div data-arrange-bar hidden><p>Am Griff ziehen. Mit dem Auge Karten ein-/ausblenden. Übernehmen speichert den Entwurf.</p>
@@ -163,8 +175,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         </div>
         <div data-detail-body><div data-detail-content></div><p data-message role="status"></p></div>
       </dialog>
-      <dialog data-actions-dialog aria-label="VolvoConnect Aktionen">
-        <div class="detail-header"><h3>Fahrzeugaktionen</h3>
+      <dialog data-actions-dialog aria-labelledby="volvo-actions-title">
+        <div class="detail-header"><h3 id="volvo-actions-title" data-actions-title></h3>
           <button type="button" data-close-actions aria-label="Fahrzeugaktionen schließen" autofocus>✕</button></div>
         <div data-actions-content></div><p data-action-message role="status"></p>
       </dialog>
@@ -177,14 +189,64 @@ class FHEMCMSVolvoConnect extends HTMLElement {
               <button type="button" data-pick>Wählen …</button></span></label>
             ${titleVisibilityField}
             <label class="check"><input type="checkbox" name="showDetails">Zeige Detaildaten im Popup</label>
-            <p>Readings und Gruppen werden direkt aus dem VolvoConnect-Modul übernommen. Kein Mapping erforderlich.</p>
+            <div class="module-note"><p>Readings und Gruppen werden direkt aus dem VolvoConnect-Modul übernommen. Kein Mapping erforderlich.</p>
+              <span data-module-help-launcher></span></div>
           </div></details>
           <p>Reihenfolge der Karten und Sichtbarkeit von Karten und Readings lassen sich direkt im Detailpopup über „Anordnung bearbeiten“ ändern.</p>
           <p data-error class="error" role="alert"></p>
           <div class="actions config-actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit" data-save>Speichern</button></div>
         </form>
+      </dialog>
+      <dialog data-module-help aria-labelledby="volvo-module-help-title">
+        <div class="detail-header"><h3 id="volvo-module-help-title">VolvoConnect-Modul für FHEM</h3>
+          <button type="button" data-close-module-help aria-label="Modulhilfe schließen" autofocus>✕</button></div>
+        <div class="module-help-body">
+          <p>VolvoConnect ist ein Community-Modul für FHEM, kein Produkt von Volvo Cars.
+            Es verbindet ein FHEM-Device mit den offiziellen Volvo Cars APIs und liest je nach
+            Fahrzeug und Berechtigung Energie-, Fahrzeug-, Diagnose- und Standortdaten.
+            Außerdem bietet es ausgewählte Fahrzeugbefehle. Dieses CMS-Widget zeigt dessen
+            Readings an; es ersetzt weder das Modul noch die Anmeldung bei Volvo.</p>
+          <h4>Installation in FHEM</h4>
+          <p>Zuerst die FHEM-Installation sichern. Die folgenden Befehle nacheinander in der
+            FHEM-Eingabezeile ausführen. Die stabile Updatequelle verwendet eine Controls-Datei,
+            nicht die Moduldatei direkt:</p>
+          <pre>update add https://raw.githubusercontent.com/stapetz/fhem-modules/main/controls_volvo.txt
+update all https://raw.githubusercontent.com/stapetz/fhem-modules/main/controls_volvo.txt
+shutdown restart</pre>
+          <p>Nach dem Neustart ein Device anlegen (Beispielname):</p>
+          <pre>define Volvo1 VolvoConnect</pre>
+          <h4>Volvo-Zugang einrichten</h4>
+          <p>Im Volvo Cars Developer Portal eine Anwendung mit passenden API-Berechtigungen
+            einrichten. VIN, Client-ID, Client-Secret, VCC API Key und die exakt passende
+            Redirect-URI anschließend am FHEM-Device nach der Moduldokumentation konfigurieren.
+            Mit <code>set Volvo1 reauth</code> die Anmeldung starten, den angebotenen Volvo-Login
+            öffnen und den erhaltenen Autorisierungscode mit
+            <code>set Volvo1 authCode &lt;Autorisierungscode&gt;</code> übergeben.
+            Zusätzliche Datenbereiche werden über die <code>scope_*</code>-Attribute aktiviert.</p>
+          <p>Zugangsdaten, Autorisierungscodes und Tokens niemals veröffentlichen oder hier eingeben.
+            Der verfügbare Datenumfang hängt von Fahrzeug, Region und Volvo-Berechtigungen ab.</p>
+          <p><a href="https://github.com/stapetz/fhem-modules/blob/main/docs/volvo/DOKUMENTATION.md"
+            target="_blank" rel="noopener noreferrer">Vollständige Installations- und Betriebsanleitung</a>
+            · <a href="https://developer.volvocars.com/" target="_blank" rel="noopener noreferrer">Volvo Cars Developer Portal</a></p>
+          <p>Danach im Widget das angelegte VolvoConnect-Device auswählen.
+            Dieses Hilfefenster führt keine Installation oder Fahrzeugbefehle aus.</p>
+        </div>
       </dialog>`;
+    const moduleInfo = createWidgetIconButton('info', 'Informationen und Installation des VolvoConnect-Moduls');
+    moduleInfo.dataset.moduleInfo = '';
+    this.$('[data-module-help-launcher]').append(moduleInfo);
+    moduleInfo.addEventListener('click', () => this.openModuleHelp());
+    this.$('[data-close-module-help]').addEventListener('click', () => this.closeModuleHelp());
+    this.$('[data-module-help]').addEventListener('cancel', event => {
+      event.preventDefault(); event.stopPropagation(); this.closeModuleHelp();
+    });
+    this.$('[data-module-help]').addEventListener('keydown', event => {
+      wrapDialogFocus(event);
+      if (event.key === 'Escape') {
+        event.preventDefault(); event.stopPropagation(); this.closeModuleHelp();
+      }
+    });
     this.$('[data-open-config]').addEventListener('click', () => this.openConfig());
     this.$('[data-pick]').addEventListener('click', () => this.pickDevice());
     this.$('[name=device]').addEventListener('click', () => this.pickDevice());
@@ -272,6 +334,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
 
   disconnectedCallback() {
     this.revision++;
+    this.closeModuleHelp(false);
     this.closeDetails(false);
     this.closeActions(false);
   }
@@ -308,6 +371,20 @@ class FHEMCMSVolvoConnect extends HTMLElement {
   }
 
   $(selector) { return this.shadowRoot.querySelector(selector); }
+
+  openModuleHelp() {
+    if (!this.$('[data-dialog]').open || this.$('[data-module-help]').open || this.configBusy) return;
+    this.$('[data-module-help]').showModal();
+  }
+
+  closeModuleHelp(restoreFocus = true) {
+    const help = this.$('[data-module-help]');
+    if (!help?.open) return;
+    help.close();
+    if (restoreFocus && this.isConnected && this.$('[data-dialog]').open) {
+      this.$('[data-module-info]').focus({preventScroll:true});
+    }
+  }
 
   openActions() {
     if (this.$('[data-actions-dialog]').open) return;
@@ -549,6 +626,9 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     this.$('[data-arrange-bar]').hidden = !this.pendingCardOrder;
     const model = volvoModel(this.snapshot, config.device);
     const title = config.showTitle === false ? '' : config.title || '';
+    const vehicleName = config.title || config.device || 'VolvoConnect';
+    this.$('[data-detail-title]').textContent = `${vehicleName} - Fahrzeugdetails`;
+    this.$('[data-actions-title]').textContent = `${vehicleName} - Fahrzeugaktionen`;
     this.$('[data-title]').textContent = title;
     this.$('[data-header]').hidden = !title;
     const compact = node('div');
@@ -563,19 +643,13 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       connected.title = 'API: Verbunden';
       tools.append(connected);
     }
-    const info = node('button', 'ⓘ');
-    info.type = 'button';
+    const info = createWidgetIconButton('info', 'VolvoConnect Fahrzeugdetails öffnen');
     info.dataset.info = '';
-    info.setAttribute('aria-label', 'VolvoConnect Fahrzeugdetails öffnen');
-    info.setAttribute('aria-haspopup', 'dialog');
     info.setAttribute('aria-expanded', String(this.$('[data-details]').open));
     if (config.showDetails !== false) tools.append(info);
     if (model.actions.length) {
-      const actions = node('button', 'Ⓐ');
-      actions.type = 'button';
+      const actions = createWidgetIconButton('actions', 'Fahrzeugaktionen öffnen');
       actions.dataset.openActions = '';
-      actions.setAttribute('aria-label', 'Fahrzeugaktionen öffnen');
-      actions.setAttribute('aria-haspopup', 'dialog');
       tools.append(actions);
     }
     heading.append(tools);
@@ -921,6 +995,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
 
   closeConfig(saved) {
     if (this.configBusy && !saved) return;
+    this.closeModuleHelp(false);
     this.revision++;
     this.$('[data-dialog]').close();
     if (!saved && this.isNew) this.dispatchEvent(new CustomEvent('cms-widget-cancel', { bubbles: true }));

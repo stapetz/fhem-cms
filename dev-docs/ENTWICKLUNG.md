@@ -73,6 +73,26 @@ das Oeffnen/Speichern ohne Berechnungsoption.
 
 ## VolvoConnect-Nachtrag (dev, 1.16.0-dev, Refs #209)
 
+Nachtrag 1.18.0-dev: Gemeinsame rahmenlose SVG-Launcher fuer Info/Aktionen
+aus widget-design.js (28px Symbol, gleiche Kreis-/Konturgeometrie,
+unsichtbare 48px Touchflaeche, aria-label und focus-visible).
+Verbindlicher Standard fuer kuenftige Widgets im fuehrenden Styleguide.
+Popupueberschriften verwenden title || device || VolvoConnect plus
+" - Fahrzeugdetails"/" - Fahrzeugaktionen", unabhaengig von showTitle.
+Alle Volvo-Karten einschliesslich Galerie und Aktionsbuttons verwenden
+dieselbe Verlauf-/Rahmen-/Radiusdarstellung wie Energie & Akku.
+Not authorized to access this resource. wird vor Einheiten/Gruppierung als
+nicht darstellbarer Wert entfernt. Auch der Ladetyp erhaelt in diesem Fall
+keinen synthetischen Ersatzstrich.
+Der Modulhinweis im Widgetdialog oeffnet ein rein informatives natives Modal:
+stabile controls_volvo.txt auf main, update add/all, Neustart, define,
+Verweis auf vollstaendige Modul-/OAuth-Dokumentation und Geheimnisschutz.
+Keine Installation/API-Aufrufe durch die Hilfe. Escape schliesst nur die Hilfe,
+behaelt ungespeicherte Eingaben und stellt Fokus auf den Info-Launcher zurueck.
+Tabnavigation wird explizit innerhalb des aktiven Modals weitergeschaltet,
+weil Safari je nach Einstellung Links beim nativen Tab-Durchlauf ueberspringt.
+Regressionen: Fixture 88, Modelltest 88, check_dialog_escape.py in Chrome/WebKit.
+
 Nachtrag 1.17.0-dev: Info/Aktion stehen in einer rechts ausgerichteten
 gemeinsamen Werkzeugleiste; die kompakte Ansicht zeigt bei authenticated
 ein kleines gruenes API-Haekchen. Energie-Fallbacks validieren numerische Werte

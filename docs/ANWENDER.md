@@ -517,12 +517,24 @@ des Fensters. Schließen per **✕**, **Escape** oder Klick außerhalb des Popup
 danach kehrt der Fokus zum Informationssymbol zurück.
 Informations- und Aktionssymbol stehen nebeneinander rechts. Ein kleines
 grünes Häkchen zeigt auch auf der Hauptkachel die verbundene API an.
+Beide Symbole sind gleich große, rahmenlose Grafiken mit ausreichend großer
+unsichtbarer Touchfläche. Popupüberschriften zeigen den konfigurierten
+Fahrzeugnamen (ersatzweise den Devicenamen), gefolgt von
+**- Fahrzeugdetails** bzw. **- Fahrzeugaktionen**.
+Alle Detailkarten und Aktionskacheln verwenden dieselbe Darstellung wie
+**Energie & Akku**. API-Fehlermeldungen wie
+`Not authorized to access this resource.` erscheinen nicht als Readingzeilen.
 Die Hauptkachel berücksichtigt neben `state_batteryChargeLevel` und
 `state_electricRange` auch `fuel_batteryChargeLevel`,
 `fuel_distanceToEmptyBattery` und `statistics_distanceToEmptyBattery`,
 wie sie unter anderem bei Keycloak-Geräten vorhanden sind.
 
 Im Widgetdialog steht die **Device-Zuordnung direkt unter dem Titel**.
+Das **ⓘ neben dem Modulhinweis** erklärt das VolvoConnect-Modul, seine
+Installation über die stabile FHEM-Updatequelle und die anschließende
+Einrichtung des Volvo-Zugangs. Die vollständige Moduldokumentation ist verlinkt.
+Die Hilfe führt keine Installation oder Befehle aus. **✕** oder **Escape**
+schließt nur die Hilfe; der Widgetdialog und ungespeicherte Eingaben bleiben erhalten.
 **Zeige Detaildaten im Popup** ist standardmäßig eingeschaltet.
 Bei ausgeschalteter Option erscheinen alle freigegebenen Karten direkt im
 Widget, ohne Informationssymbol. Die vorhandene Rastergröße bleibt erhalten

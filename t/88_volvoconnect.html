@@ -75,10 +75,33 @@ try {
   const toolbar = $('.hero-tools').getBoundingClientRect();
   const heading = $('.hero-heading').getBoundingClientRect();
   check(Math.abs(toolbar.right - heading.right) <= 1, 'compact toolbar is right-aligned');
+  for (const button of [$('[data-info]'), $('[data-open-actions]')]) {
+    const style = getComputedStyle(button);
+    check(style.borderWidth === '0px' && style.backgroundColor === 'rgba(0, 0, 0, 0)' && style.boxShadow === 'none',
+      'launchers are graphical symbols without square backgrounds or frames');
+    check(button.querySelector('svg')?.getAttribute('viewBox') === '0 0 24 24', 'launcher uses shared vector icon');
+    check(button.querySelector('svg').getAttribute('aria-hidden') === 'true'
+      && button.getAttribute('aria-label'), 'icon is decorative and button has accessible label');
+    check(button.getBoundingClientRect().width === 48 && button.getBoundingClientRect().height === 48,
+      'frameless icons preserve invisible 48px touch targets');
+  }
+  check(getComputedStyle($('[data-info] svg')).width === getComputedStyle($('[data-open-actions] svg')).width
+    && getComputedStyle($('[data-info] svg')).height === getComputedStyle($('[data-open-actions] svg')).height
+    && $('[data-info] svg').getAttribute('stroke-width') === $('[data-open-actions] svg').getAttribute('stroke-width'),
+    'info and actions have equal icon size and stroke style');
   $('[data-info]').focus();
   $('[data-info]').click();
   check($('[data-details]').open && $('[data-info]').getAttribute('aria-expanded') === 'true',
     'info button opens full native modal');
+  check($('[data-detail-title]').textContent === 'VolvoConnect - Fahrzeugdetails',
+    'details heading uses configured vehicle name');
+  host.config = {...widget,title:'Demo-Elch',showTitle:false};
+  check($('[data-detail-title]').textContent === 'Demo-Elch - Fahrzeugdetails'
+    && $('[data-actions-title]').textContent === 'Demo-Elch - Fahrzeugaktionen',
+    'both modal headings use vehicle title even with hidden main heading');
+  host.config = {...widget,title:''};
+  check($('[data-detail-title]').textContent === 'Car - Fahrzeugdetails', 'missing title falls back to device name');
+  host.config = widget;
   check($('[data-detail-content]').textContent.includes('01:') === false, 'zero remaining time is not invented');
   check($('[data-detail-content]').textContent.includes('00:00 h'), 'real zero remains visible');
   check($('.badge').getAttribute('aria-label') === 'API: Verbunden' && $('.badge').textContent === '✓',
@@ -155,6 +178,10 @@ try {
         const bounds = card.getBoundingClientRect();
         check(bounds.left >= bodyBounds.left && bounds.right <= bodyBounds.right + 1,
           `${theme}/${width}: detail card stays within popup width`);
+        check(getComputedStyle(card).backgroundImage === getComputedStyle($('#group-state')).backgroundImage
+          && getComputedStyle(card).border === getComputedStyle($('#group-state')).border
+          && getComputedStyle(card).borderRadius === getComputedStyle($('#group-state')).borderRadius,
+          `${theme}/${width}: every card including gallery matches energy card surface`);
       }
       for (const button of $('[data-detail-content]').querySelectorAll('button')) {
         check(button.getBoundingClientRect().height >= 48, 'popup actions retain touch height');
@@ -186,6 +213,11 @@ try {
   check(!$('.soc') && !$('.range') && !$('[data-detail-content] .card'), 'missing readings leave no fake values or empty groups');
   host.data = [{name:'Car',readings:{state_batteryChargeLevel:'ERROR_READING_PROPERTY'}}];
   check(!$('[data-detail-content] .card'), 'unavailable property is not rendered as a vehicle value');
+  host.data = [{name:'Car',readings:{state_batteryChargeLevel:'30',
+    state_chargingType:'Not authorized to access this resource.',
+    statistics_customValue:'Not authorized to access this resource.',statistics_customValue_unit:'km'}}];
+  check(!$('#reading-state_chargingType') && !$('#reading-statistics_customValue')
+    && !$('[data-detail-content]').textContent.includes('Not authorized'), 'authorization failures omit whole rows');
   values.statistics_customValue = '<img src=x onerror=alert(1)>';
   host.data = dataFor(widget, snapshots());
   check($('#group-statistics').textContent.includes('<img src=x'), 'untrusted reading remains plain text');
@@ -200,6 +232,13 @@ try {
     window.confirm = () => { throw new Error('vehicle actions need no second confirmation'); };
     host.closeDetails();
     host.openActions();
+    check($('[data-actions-title]').textContent === 'VolvoConnect - Fahrzeugaktionen', 'actions heading uses vehicle name');
+    for (const button of $('[data-actions-content]').querySelectorAll('[data-command]')) {
+      check(getComputedStyle(button).backgroundImage === getComputedStyle($('#compact-energy')).backgroundImage
+        && getComputedStyle(button).border === getComputedStyle($('#compact-energy')).border
+        && getComputedStyle(button).borderRadius === getComputedStyle($('#compact-energy')).borderRadius,
+        'action tiles match the energy card surface');
+    }
     await host.sendAction('invalid');
     check(commands.length === 0, 'nonallowlisted command is rejected');
     await host.sendAction('lock');
@@ -214,6 +253,28 @@ try {
   check($('[name=showDetails]').checked, 'dialog popup defaults on');
   check(!$('[name=readings]'), 'dialog requires no manual reading mapping');
   check(!$('[data-group-choices]') && !$('[data-preview-mount]'), 'configuration has no duplicate group list or interactive preview');
+  $('[name=title]').value = 'Ungespeicherter Fahrzeugname';
+  $('[data-module-info]').click();
+  check($('[data-module-help]').open && $('[data-dialog]').open, 'module info opens modal above configuration');
+  check((getComputedStyle($('[data-module-help]')).backdropFilter
+    || getComputedStyle($('[data-module-help]')).webkitBackdropFilter) === 'blur(12px)',
+    'module help blurs underlying widget configuration for legibility');
+  check($('[data-module-info]').querySelector('svg') && $('[data-module-info]').classList.contains('cms-icon-button'),
+    'module help uses the same reusable info icon');
+  check($('[data-module-help]').textContent.includes('Community-Modul')
+    && $('[data-module-help]').textContent.includes('define Volvo1 VolvoConnect'), 'help explains module and device creation');
+  check($('[data-module-help] pre').textContent.includes('/main/controls_volvo.txt')
+    && $('[data-module-help] pre').textContent.includes('update all')
+    && $('[data-module-help] pre').textContent.includes('shutdown restart'), 'help shows complete stable controls installation');
+  check($('[data-module-help] a').getAttribute('rel') === 'noopener noreferrer', 'external module documentation is safely linked');
+  $('[data-close-module-help]').click();
+  check(!$('[data-module-help]').open && $('[data-dialog]').open
+    && $('[name=title]').value === 'Ungespeicherter Fahrzeugname', 'help close preserves unsaved configuration');
+  check(host.shadowRoot.activeElement === $('[data-module-info]'), 'help close returns focus to info icon');
+  $('[data-module-info]').click();
+  $('[data-module-help]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  check(!$('[data-module-help]').open && $('[data-dialog]').open, 'help Escape leaves widget configuration open');
+  $('[name=title]').value = widget.title;
   check([...$('[data-form]').querySelectorAll('input')].slice(0,2).map(i=>i.name).join() === 'title,device',
     'device assignment directly follows title');
   check(getComputedStyle($('.config-actions')).justifyContent === 'flex-end', 'dialog actions match standard right alignment');

@@ -23,6 +23,17 @@ Filter und Befehle bleiben unveraendert. Ungueltige/mehrdeutige Daten werden
 nicht erraten. Details und reproduzierbare Regressionen:
 [Datumsvertrag](./ENTWICKLUNG.md#verbindliche-datumsdarstellung-aller-widgets).
 
+### Einheitliche Info-/Aktionssymbole
+
+Bestehende und kuenftige Widget-Launcher fuer Information und Aktionen verwenden
+`createWidgetIconButton(kind, label)` (`info`/`actions`) und `widgetIconButtonCss`
+aus `www/fhem-cms/js/widget-design.js`. Keine Unicode-Ersatzzeichen oder eigenen
+Knopfrahmen: identische SVG-Kreisgeometrie, 28px Symbol, 1.7px Kontur, transparente
+48x48px Touchflaeche ohne Hintergrund/Rahmen/Schatten. `aria-label`, Tooltip,
+`aria-haspopup="dialog"` und sichtbarer Tastaturfokus bleiben Pflicht.
+Hover aendert nur die Symbolfarbe. Das SVG ist dekorativ/aria-hidden.
+Die gemeinsamen Styles nach allgemeinen Buttonstyles einbinden.
+
 ## 1. Technologische Kern-Architektur
 
 Das Framework trennt die Steuerungs- und Kommunikationsebene (TypeScript/ES6) strikt von der Darstellungsebene (Web Components via Lit).
