@@ -13,6 +13,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 CASES = [
     ("88_volvoconnect.html", 1400, 1000, False),
     ("89_volvoconnect_order.html", 1400, 1000, False),
+    ("89_volvoconnect_order.html", 1400, 600, False),
     ("89_volvoconnect_order.html", 393, 852, True),
     ("89_volvoconnect_order.html", 834, 1194, True),
     ("71_device_first.html", 1400, 1000, False),
@@ -41,6 +42,9 @@ def check_popup_order(page):
     page.mouse.move(source["x"] + source["width"] / 2, source["y"] + source["height"] / 2)
     page.mouse.down()
     assert page.evaluate("Boolean(window.popupOrderTest.host().drag)")
+    page.locator('cms-volvoconnect [data-group="statistics"]').scroll_into_view_if_needed()
+    target = page.locator('cms-volvoconnect [data-group="statistics"]').bounding_box()
+    body = page.locator("cms-volvoconnect [data-detail-body]").bounding_box()
     page.mouse.move(target["x"] + target["width"] / 2, max(target["y"] + 20, body["y"] + 50))
     page.mouse.up()
     assert page.evaluate("window.popupOrderTest.order()[1]") == "gallery", "mouse drag did not reorder"

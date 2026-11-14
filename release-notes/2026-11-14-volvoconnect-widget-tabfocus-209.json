@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-14",
+  "version": "1.16.1-dev",
+  "title": "VolvoConnect: Popup-Bedienung abschliessend abgesichert",
+  "changes": [
+    "Enthaelt die neuen Kartenaugen, Symbolanzeigen, Inline-/Popup-Umschaltung, separaten Fahrzeugaktionen und gemeinsamen Dialogfusszeilen aus 1.16.0-dev.",
+    "Der Tastaturfokus laeuft in Detail- und Aktionsmodal zuverlaessig innerhalb des Fensters um, auch mit verschachtelter Fahrzeugkarte.",
+    "Ziehen ordnet anhand der getroffenen Zielhaelfte stabil vor oder hinter der Kachel ein, auch beim Randscrollen. Tests pruefen sichtbare Ziele und kurze Desktopfenster. Refs #209."
+  ]
+}

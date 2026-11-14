@@ -14,6 +14,24 @@ const node = (tag, text, className) => {
   return element;
 };
 
+const wrapDialogFocus = event => {
+  if (event.key !== 'Tab' || event.defaultPrevented) return;
+  const targets = [];
+  const visit = root => {
+    for (const element of root.children) {
+      if (element.tabIndex >= 0 && !element.disabled && !element.closest('[inert]')
+        && element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden') targets.push(element);
+      visit(element.shadowRoot || element);
+    }
+  };
+  visit(event.currentTarget);
+  const active = event.composedPath()[0];
+  if (event.shiftKey ? active === targets[0] : active === targets.at(-1)) {
+    event.preventDefault();
+    (event.shiftKey ? targets.at(-1) : targets[0])?.focus({preventScroll:true});
+  }
+};
+
 class FHEMCMSVolvoConnect extends HTMLElement {
   constructor() {
     super();
@@ -178,6 +196,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     this.$('[data-actions-dialog]').addEventListener('cancel', event => {
       event.preventDefault(); this.closeActions();
     });
+    this.$('[data-actions-dialog]').addEventListener('keydown', wrapDialogFocus);
     this.$('[data-actions-content]').addEventListener('click', event => {
       const button = event.target.closest('[data-command]');
       if (button) this.sendAction(button.dataset.command);
@@ -199,6 +218,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     };
     this.$('[data-details]').addEventListener('cancel', cancelDetails);
     this.$('[data-details]').addEventListener('keydown', event => {
+      wrapDialogFocus(event);
       if (event.key === 'Escape' && !event.defaultPrevented) cancelDetails(event);
     });
     this.$('[data-details]').addEventListener('close', () => {
@@ -365,14 +385,17 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     this.$('[data-message]').textContent = `${new Map(volvoCards).get(key)} verschoben. Noch nicht übernommen.`;
   }
 
-  reorderCard(key, target) {
+  reorderCard(key, target, before) {
     const from = this.pendingCardOrder.indexOf(key), to = this.pendingCardOrder.indexOf(target);
+    before ??= from > to;
+    const insertion = to + (before ? 0 : 1) - (from < to ? 1 : 0);
+    if (insertion === from) return;
     this.pendingCardOrder.splice(from, 1);
-    this.pendingCardOrder.splice(to, 0, key);
+    this.pendingCardOrder.splice(insertion, 0, key);
     const top = this.$('[data-detail-content]').querySelector('#top');
     const card = [...top.children].find(entry => entry.dataset.group === key);
     const other = [...top.children].find(entry => entry.dataset.group === target);
-    top.insertBefore(card, from < to ? other.nextSibling : other);
+    top.insertBefore(card, before ? other : other.nextSibling);
   }
 
   startCardDrag(event) {
@@ -418,7 +441,10 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     preview.style.left = `${Math.max(0, Math.min(innerWidth - 240, x + 12))}px`;
     preview.style.top = `${Math.max(0, Math.min(innerHeight - 60, y + 12))}px`;
     const target = this.shadowRoot.elementFromPoint(x, y)?.closest('#top > [data-group]');
-    if (target && target !== card) this.reorderCard(card.dataset.group, target.dataset.group);
+    if (target && target !== card) {
+      const bounds = target.getBoundingClientRect();
+      this.reorderCard(card.dataset.group, target.dataset.group, y < bounds.top + bounds.height / 2);
+    }
   }
 
   finishCardDrag(cancelled, render = true) {
