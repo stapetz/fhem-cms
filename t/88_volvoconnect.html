@@ -94,7 +94,7 @@ try {
   values.vehicle_images_internalImageUrl = `${location.origin}/t/media/${'b'.repeat(32)}.png`;
   host.data = dataFor(widget, snapshots());
   check($('#gallery img') && $('#gallery').querySelectorAll('img').length === 2, 'gallery defaults on with both views');
-  check($('#group-state').nextElementSibling === $('#gallery'), 'gallery stays beside the energy overview');
+  check($('#group-vehicle').nextElementSibling === $('#gallery'), 'gallery follows vehicle information in default order');
   const slides = $('.slides'), image = slides.querySelector('img');
   slides.scrollLeft = 100;
   const scroll = slides.scrollLeft;
@@ -137,6 +137,14 @@ try {
       for (const button of $('[data-detail-content]').querySelectorAll('button')) {
         check(button.getBoundingClientRect().height >= 48, 'popup actions retain touch height');
       }
+      const gridCards = [...$('#top').children];
+      const cardWidth = gridCards[0].getBoundingClientRect().width;
+      check(gridCards.every(card => Math.abs(card.getBoundingClientRect().width - cardWidth) < 1),
+        'gallery and module cards have equal responsive widths');
+      check(getComputedStyle($('#top')).alignItems === 'start', 'short cards are not stretched to row height');
+      check(Math.abs($('#gallery figure').getBoundingClientRect().width - $('.slides').clientWidth) < 1,
+        'gallery frame fits exactly one image into its width');
+      check(getComputedStyle($('#gallery img')).objectFit === 'contain', 'gallery fits full image without cover cropping');
       check($('[data-content]').getBoundingClientRect().height <= 300, 'compact overview remains a small block');
       for (const button of host.shadowRoot.querySelectorAll('.tile button')) {
         if (button.getBoundingClientRect().height) check(button.getBoundingClientRect().height >= 48, '48px touch actions');
@@ -184,11 +192,11 @@ try {
   check(!$('[data-details]').open, 'configuration closes details instead of stacking two widget modals');
   check($('[name=showGallery]').checked, 'dialog gallery defaults on');
   check(!$('[name=readings]'), 'dialog requires no manual reading mapping');
-  check($('[data-group-choices]').children.length === 14, 'all module groups are configurable even without readings');
+  check($('[data-group-choices]').children.length === 15, 'all module groups and gallery are configurable even without readings');
   const doorsChoice = $('[data-group-choice="doors"]');
   doorsChoice.querySelector('input').click();
   doorsChoice.querySelector('[data-move="-1"]').click();
-  check($('[data-group-choices]').children[3].dataset.groupChoice === 'doors', 'arrow moves group up');
+  check($('[data-group-choices]').children[5].dataset.groupChoice === 'doors', 'arrow moves group up');
   check(!$('[data-group-choice="doors"] input').checked, 'reorder preserves visibility preference');
   check(host.shadowRoot.activeElement?.dataset.move, 'reorder keeps keyboard focus');
   $('[name=showGallery]').checked = false;
@@ -196,7 +204,7 @@ try {
   check(saved.length === 1 && saved[0].showGallery === false, 'gallery preference is persisted');
   check(saved[0].device === 'Car' && saved[0].type === widget.type, 'device/type preserved on save');
   check(JSON.stringify(saved[0].grid) === JSON.stringify(widget.grid), 'dialog preserves widget grid');
-  check(saved[0].groupOrder[3] === 'doors' && saved[0].hiddenGroups.join() === 'doors',
+  check(saved[0].groupOrder[5] === 'doors' && saved[0].hiddenGroups.join() === 'doors',
     'group order and visibility persist together');
   const configBefore = JSON.stringify(widget);
   host.config = {...widget, groupOrder:['statistics','doors'], hiddenGroups:['doors','state']};
@@ -242,6 +250,13 @@ try {
     'live refresh keeps popup open and preserves its scroll');
   check(map.instance.project(map.instance.getCenter()).distanceTo(map.instance.project(centerBefore)) < 1,
     `refresh retains user pan (${JSON.stringify(centerBefore)} -> ${JSON.stringify(map.instance.getCenter())}; size ${JSON.stringify(sizeBefore)} -> ${JSON.stringify(map.instance.getSize())}; host ${map.host.clientHeight})`);
+  services.savePopupOrder = async () => {};
+  host.startArrangement();
+  host.moveCard('location',-1);
+  check(host.vehicleMaps.get('volvo-location') === map && map.instance.getZoom() === 17,
+    'popup reordering retains existing map and user zoom');
+  host.cancelArrangement();
+  delete services.savePopupOrder;
   delete values.location_latitude;
   host.data = dataFor(widget, snapshots());
   check(!$('#volvo-location') && host.vehicleMaps.size === 0, 'missing coordinate removes map instead of guessing');

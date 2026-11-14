@@ -12,6 +12,9 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CASES = [
     ("88_volvoconnect.html", 1400, 1000, False),
+    ("89_volvoconnect_order.html", 1400, 1000, False),
+    ("89_volvoconnect_order.html", 393, 852, True),
+    ("89_volvoconnect_order.html", 834, 1194, True),
     ("71_device_first.html", 1400, 1000, False),
     ("45_solarflow_sizing.html", 1400, 1000, False),
     ("85_solar_energy.html", 1400, 1000, False),
@@ -22,6 +25,37 @@ CASES = [
     ("86_mobile_widgets.html?mode=preview&cms-device=mobile&width=852&landscape=1", 852, 393, False),
     ("86_mobile_widgets.html?mode=touch-test", 1400, 1000, True),
 ]
+
+
+def check_popup_order(page):
+    page.wait_for_function(
+        "document.querySelector('#result').dataset.ready || document.querySelector('#result').dataset.result"
+    )
+    assert page.locator("#result").inner_text() == "READY", page.locator("#result").inner_text()
+    page.evaluate("window.popupOrderTest.host().openDetails(); window.popupOrderTest.host().startArrangement()")
+    handle = page.locator('cms-volvoconnect [data-group="gallery"] [data-drag-card]')
+    handle.scroll_into_view_if_needed()
+    source = handle.bounding_box()
+    target = page.locator('cms-volvoconnect [data-group="statistics"]').bounding_box()
+    body = page.locator("cms-volvoconnect [data-detail-body]").bounding_box()
+    page.mouse.move(source["x"] + source["width"] / 2, source["y"] + source["height"] / 2)
+    page.mouse.down()
+    assert page.evaluate("Boolean(window.popupOrderTest.host().drag)")
+    page.mouse.move(target["x"] + target["width"] / 2, max(target["y"] + 20, body["y"] + 50))
+    page.mouse.up()
+    assert page.evaluate("window.popupOrderTest.order()[1]") == "gallery", "mouse drag did not reorder"
+    assert page.evaluate("window.popupOrderTest.writes()") == 0, "drag wrote a draft"
+    page.keyboard.press("Escape")
+    assert page.evaluate("window.popupOrderTest.order()[1]") == "statistics", "Escape did not cancel"
+    assert page.locator("cms-volvoconnect [data-details]").is_visible()
+    page.evaluate("window.popupOrderTest.host().startArrangement()")
+    page.locator('cms-volvoconnect [data-group="gallery"] [data-card-step="-1"]').focus()
+    page.keyboard.press("Enter")
+    assert page.evaluate("window.popupOrderTest.order()[2]") == "gallery", "keyboard did not reorder"
+    page.evaluate("window.popupOrderTest.host().saveArrangement()")
+    page.wait_for_function("""window.popupOrderTest.writes() === 1
+        && !document.querySelector('cms-volvoconnect').shadowRoot.querySelector('[data-details]').open""")
+    page.evaluate("window.popupOrderTest.finish()")
 
 
 def main():
@@ -42,6 +76,8 @@ def main():
                     try:
                         page = context.new_page()
                         page.goto(f"http://127.0.0.1:{server.server_port}/t/{fixture}")
+                        if fixture.startswith("89_volvoconnect_order.html"):
+                            check_popup_order(page)
                         page.wait_for_function(
                             "document.querySelector('#result').dataset.result", timeout=90000
                         )

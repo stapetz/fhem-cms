@@ -116,6 +116,8 @@ async function testServer() {
 for (const [name, fixtures] of [
   ['VolvoConnect renders module groups and preserves responsive live vehicle data',
     [['88_volvoconnect.html', 400]]],
+  ['VolvoConnect popup reorders cards by pointer and saves only the editor draft',
+    [['89_volvoconnect_order.html', 20], ['89_volvoconnect_order.html?touch=1', 20]]],
   ['widget titles inherit alignment and compact contents fill their available area',
     [['36_widget_titles.html', 180], ['37_widget_content.html', 600],
       ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],
@@ -200,7 +202,8 @@ for (const [name, fixtures] of [
   try {
     for (const [fixture, minimum] of fixtures) {
       const interact = !['49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
-        '63_responsive_edges.html', '65_widget_dialogs.html', '88_volvoconnect.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
+        '63_responsive_edges.html', '65_widget_dialogs.html', '88_volvoconnect.html',
+        '89_volvoconnect_order.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
           assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
@@ -214,6 +217,68 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
+        if (fixture.startsWith('89_volvoconnect_order.html')) {
+          const touch = fixture.includes('touch=1');
+          await evaluate('window.popupOrderTest.host().openDetails(); window.popupOrderTest.host().startArrangement()');
+          const dragGallery = async (cancel = false) => {
+            await evaluate('window.popupOrderTest.$(\'[data-group="gallery"] [data-drag-card]\').scrollIntoView({block:"center"})');
+            const points = await evaluate(`(() => {
+              const {$} = window.popupOrderTest;
+              const a=$('[data-group="gallery"] [data-drag-card]').getBoundingClientRect();
+              const b=$('[data-group="statistics"]').getBoundingClientRect();
+              const body=$('[data-detail-body]').getBoundingClientRect();
+              return {from:{x:a.x+a.width/2,y:a.y+a.height/2},
+                to:{x:b.x+b.width/2,y:Math.max(b.y+20,body.top+50)}};
+            })()`);
+            if (touch) await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...points.from,id:1}]});
+            else {
+              await command('Input.dispatchMouseEvent', {type:'mouseMoved',...points.from});
+              await command('Input.dispatchMouseEvent', {type:'mousePressed',...points.from,button:'left',clickCount:1});
+            }
+            assert.equal(await evaluate('Boolean(window.popupOrderTest.host().drag)'), true, 'real pointer starts drag');
+            await evaluate('window.popupOrderTest.host().data = [{name:"Car",readings:{state_batteryChargeLevel:"85",statistics_tripMeterManual:"124",vehicle_descriptions_model:"Demo",vehicle_images_exteriorImageUrl:location.origin+"/t/media/"+ "a".repeat(32)+".png"}}]');
+            assert.equal(await evaluate('Boolean(window.popupOrderTest.host().drag)'), true, 'live update preserves active drag');
+            if (touch) {
+              await command('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{...points.to,id:1}]});
+              await command('Input.dispatchTouchEvent', {type:cancel ? 'touchCancel' : 'touchEnd',touchPoints:[]});
+            } else {
+              await command('Input.dispatchMouseEvent', {type:'mouseMoved',...points.to,button:'left',buttons:1});
+              if (cancel) {
+                await command('Input.dispatchKeyEvent', {type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+                await command('Input.dispatchKeyEvent', {type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+              }
+              await command('Input.dispatchMouseEvent', {type:'mouseReleased',...points.to,button:'left',clickCount:1});
+            }
+            if (cancel) {
+              assert.equal(await evaluate('window.popupOrderTest.order()[1]'), 'statistics',
+                'cancelled pointer gesture restores prior order');
+              assert.equal(await evaluate('Boolean(window.popupOrderTest.host().pendingCardOrder)'), true,
+                'cancelled drag leaves arrangement editor open');
+              return;
+            }
+            assert.equal(await evaluate('window.popupOrderTest.order()[1]'), 'gallery', 'pointer moves gallery to target slot');
+            assert.equal(await evaluate('window.popupOrderTest.host().drag === null'), true, 'drop releases capture/preview');
+          };
+          await dragGallery(true);
+          await dragGallery();
+          assert.equal(await evaluate('window.popupOrderTest.writes()'), 0, 'drag never writes');
+          await command('Input.dispatchKeyEvent', {type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+          await command('Input.dispatchKeyEvent', {type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+          assert.equal(await evaluate('window.popupOrderTest.order()[1]'), 'statistics', 'Escape cancels unsaved arrangement');
+          assert.equal(await evaluate('window.popupOrderTest.$("[data-details]").open'), true, 'Escape leaves details open');
+          await evaluate('window.popupOrderTest.host().startArrangement()');
+          await evaluate('window.popupOrderTest.$(\'[data-group="gallery"] [data-card-step="-1"]\').focus()');
+          await command('Input.dispatchKeyEvent', {type:'keyDown',key:'Enter',code:'Enter',text:'\r',windowsVirtualKeyCode:13});
+          await command('Input.dispatchKeyEvent', {type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+          assert.equal(await evaluate('window.popupOrderTest.order()[2]'), 'gallery', 'real keyboard moves card');
+          await evaluate('window.popupOrderTest.host().cancelArrangement(); window.popupOrderTest.host().startArrangement()');
+          await dragGallery();
+          await evaluate('window.popupOrderTest.host().saveArrangement()');
+          assert.equal(await evaluate('window.popupOrderTest.snapshot().draft.pages[0].widgets[0].groupOrder[1]'),
+            'gallery', 'editor callback persists exact dropped order');
+          await evaluate('window.popupOrderTest.finish()');
+          return;
+        }
         if (fixture === '88_volvoconnect.html') {
           await evaluate(`(() => {
             const {host,mount} = window.volvoPopupRegression;
@@ -442,7 +507,14 @@ for (const [name, fixtures] of [
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture.startsWith('82_solarflow_design.html')
+        fixture.startsWith('89_volvoconnect_order.html') && fixture.includes('touch=1')
+          ? async command => {
+            await command('Emulation.setDeviceMetricsOverride', {
+              width:393,height:852,deviceScaleFactor:1,mobile:true,
+            });
+            await command('Emulation.setTouchEmulationEnabled', {enabled:true});
+          }
+          : fixture.startsWith('82_solarflow_design.html')
           ? command => command('Emulation.setEmulatedMedia', { features: [{
             name: 'prefers-reduced-motion', value: fixture.includes('reduced=1') ? 'reduce' : 'no-preference',
           }] })

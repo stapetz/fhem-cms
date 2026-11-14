@@ -4,7 +4,7 @@ import { widgetDesignCss, detailCardCss } from '../js/widget-design.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
 import { renderVehicleMaps } from '../js/vehicle-map.js';
 import { isValidName } from '../js/fhem-client.js';
-import { volvoGroups, volvoGroupIcons, volvoGroupOrder, validateVolvoGroups,
+import { volvoCards, volvoGroupIcons, volvoGroupOrder, validateVolvoGroups,
   volvoModel, volvoValue } from '../js/volvoconnect.js';
 
 const node = (tag, text, className) => {
@@ -48,7 +48,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .badge { background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.35);
           border-radius:20px; padding:4px 12px; font-size:.8rem; }
         .badge[data-error] { border-color:var(--cms-danger,#ef4444); }
-        .top { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr)); gap:16px; }
+        .top { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));
+          gap:16px; align-items:start; }
         .card { ${detailCardCss} min-width:0; overflow-wrap:anywhere; }
         .card h4 { margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid rgba(128,128,128,.2); font-size:.95rem; }
         .hero-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -72,9 +73,10 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .status-icon[data-tone=good] { color:var(--cms-success,#10b981); }
         .status-icon[data-tone=warning] { color:var(--cms-warning,#f59e0b); }
         .gallery { background:radial-gradient(circle at 50% 65%,rgba(16,185,129,.12),rgba(128,128,128,.07) 75%); }
-        .slides { display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:thin; }
-        figure { flex:0 0 100%; min-width:0; margin:0; scroll-snap-align:start; text-align:center; }
-        figure img { display:block; width:100%; height:180px; object-fit:contain; }
+        .slides { display:flex; width:100%; min-width:0; overflow-x:auto;
+          scroll-snap-type:x mandatory; scrollbar-width:thin; }
+        figure { flex:0 0 100%; width:100%; min-width:0; margin:0; scroll-snap-align:start; text-align:center; }
+        figure img { display:block; width:100%; max-width:100%; height:180px; object-fit:contain; object-position:center; }
         figcaption { font-size:.8rem; opacity:.75; margin-top:6px; }
         .map { height:175px; margin-bottom:10px; border-radius:10px; overflow:hidden; }
         .actions { display:flex; flex-wrap:wrap; gap:8px; }
@@ -97,6 +99,16 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .detail-header { display:flex; align-items:center; justify-content:space-between; gap:12px;
           padding:12px 16px; border-bottom:1px solid rgba(128,128,128,.25); flex:none; }
         .detail-header h3 { margin:0; overflow-wrap:anywhere; }
+        .detail-header { flex-wrap:wrap; }
+        .detail-header h3 { flex:1; }
+        [data-arrange-bar] { width:100%; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+        [data-arrange-bar] p { flex:1 1 200px; margin:0; font-size:.86rem; }
+        .card-tools { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:8px; }
+        [data-drag-card] { touch-action:none; cursor:grab; }
+        [data-dragging] { outline:2px dashed var(--cms-accent,#3b82f6); opacity:.4; }
+        .drag-preview { position:fixed; z-index:1; pointer-events:none; padding:12px;
+          border:2px solid var(--cms-accent,#3b82f6); border-radius:12px;
+          background:var(--cms-surface,#202e27); max-width:240px; }
         [data-detail-body] { padding:16px; overflow:auto; overscroll-behavior:contain; min-height:0;
           container-type:inline-size; }
         [data-details][data-stale] .detail-header { border-bottom-style:dashed; }
@@ -121,7 +133,13 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       </article>
       <dialog data-details aria-label="VolvoConnect Fahrzeugdetails">
         <div class="detail-header"><h3>VolvoConnect · Fahrzeugdetails</h3>
-          <button type="button" data-close-details aria-label="Fahrzeugdetails schließen" autofocus>✕</button></div>
+          <button type="button" data-arrange hidden>Anordnung bearbeiten</button>
+          <button type="button" data-close-details aria-label="Fahrzeugdetails schließen" autofocus>✕</button>
+          <div data-arrange-bar hidden><p>Am Griff ziehen oder mit ↑ / ↓ sortieren. Übernehmen speichert den Entwurf.</p>
+            <button type="button" data-reset-arrange>Standardreihenfolge</button>
+            <button type="button" data-cancel-arrange>Abbrechen</button>
+            <button type="button" data-save-arrange>Übernehmen</button></div>
+        </div>
         <div data-detail-body><div data-detail-content></div><p data-message role="status"></p></div>
       </dialog>
       <dialog data-dialog aria-label="VolvoConnect konfigurieren">
@@ -141,7 +159,6 @@ class FHEMCMSVolvoConnect extends HTMLElement {
             <label>VolvoConnect-Device<span class="device"><input name="device" readonly required>
               <button type="button" data-pick>Wählen …</button></span></label>
             <p>Readings und Gruppen werden direkt aus dem VolvoConnect-Modul übernommen. Kein Mapping erforderlich.</p>
-            <label class="check"><input type="checkbox" name="showGallery">Bildergalerie anzeigen</label>
           </div></details>
           <p data-error class="error" role="alert"></p>
           <div class="actions"><button type="button" data-delete>Entfernen</button>
@@ -159,7 +176,24 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       if (event.target.closest('[data-info]')) this.openDetails();
     });
     this.$('[data-close-details]').addEventListener('click', () => this.closeDetails());
-    this.$('[data-details]').addEventListener('cancel', event => { event.preventDefault(); this.closeDetails(); });
+    this.$('[data-arrange]').addEventListener('click', () => this.startArrangement());
+    this.$('[data-cancel-arrange]').addEventListener('click', () => this.cancelArrangement());
+    this.$('[data-reset-arrange]').addEventListener('click', () => {
+      if (!this.arrangementSaving) { this.pendingCardOrder = volvoGroupOrder(); this.render(); }
+    });
+    this.$('[data-save-arrange]').addEventListener('click', () => this.saveArrangement());
+    const cancelDetails = event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.repeat) return;
+      if (this.drag) this.finishCardDrag(true);
+      else if (this.pendingCardOrder) this.cancelArrangement();
+      else this.closeDetails();
+    };
+    this.$('[data-details]').addEventListener('cancel', cancelDetails);
+    this.$('[data-details]').addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !event.defaultPrevented) cancelDetails(event);
+    });
     this.$('[data-details]').addEventListener('close', () => {
       if (!this.$('[data-details]').open) this.clearDetails();
     });
@@ -171,9 +205,17 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         || event.clientY < bounds.top || event.clientY > bounds.bottom) this.closeDetails();
     });
     this.$('[data-detail-content]').addEventListener('click', event => {
+      const move = event.target.closest('[data-card-step]');
+      if (move) this.moveCard(move.closest('[data-group]').dataset.group, Number(move.dataset.cardStep));
       const button = event.target.closest('button[data-command]');
       if (button) this.sendAction(button.dataset.command);
     });
+    const detail = this.$('[data-detail-content]');
+    detail.addEventListener('pointerdown', event => this.startCardDrag(event));
+    detail.addEventListener('pointermove', event => this.moveCardDrag(event));
+    detail.addEventListener('pointerup', () => this.finishCardDrag(false));
+    detail.addEventListener('pointercancel', () => this.finishCardDrag(true));
+    detail.addEventListener('lostpointercapture', () => this.finishCardDrag(true));
     this.$('[data-detail-content]').addEventListener('error', event => {
       if (event.target.localName === 'img') {
         this.failedImages.add(event.target.src);
@@ -190,6 +232,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
   }
 
   clearDetails() {
+    this.finishCardDrag(true, false);
+    this.pendingCardOrder = null;
     for (const controller of this.vehicleMaps.values()) controller.destroy();
     this.vehicleMaps.clear();
     this.$('[data-detail-content]')?.replaceChildren();
@@ -206,6 +250,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
   }
 
   closeDetails(restoreFocus = true) {
+    if (this.arrangementSaving && this.isConnected) return;
     const dialog = this.$('[data-details]');
     const wasOpen = dialog?.open;
     if (wasOpen) dialog.close();
@@ -214,6 +259,131 @@ class FHEMCMSVolvoConnect extends HTMLElement {
   }
 
   $(selector) { return this.shadowRoot.querySelector(selector); }
+
+  startArrangement() {
+    if (typeof this.services?.savePopupOrder !== 'function' || this.pendingCardOrder) return;
+    this.pendingCardOrder = volvoGroupOrder(this.widgetConfig);
+    this.$('[data-message]').textContent = '';
+    this.render();
+    this.$('[data-cancel-arrange]').focus({ preventScroll:true });
+  }
+
+  cancelArrangement() {
+    if (this.arrangementSaving) return;
+    this.finishCardDrag(true, false);
+    this.pendingCardOrder = null;
+    this.render();
+    this.$('[data-arrange]').focus({ preventScroll:true });
+  }
+
+  async saveArrangement() {
+    if (!this.pendingCardOrder || this.arrangementSaving || this.drag) return;
+    const order = [...this.pendingCardOrder];
+    this.arrangementSaving = true;
+    for (const selector of ['[data-arrange-bar]', '[data-detail-content]']) this.$(selector).inert = true;
+    this.$('[data-close-details]').disabled = true;
+    const message = this.$('[data-message]');
+    message.textContent = 'Anordnung wird als Entwurf gespeichert …';
+    try {
+      await this.services.savePopupOrder(order);
+      this.widgetConfig = { ...this.widgetConfig, groupOrder:order };
+      this.pendingCardOrder = null;
+      message.textContent = 'Anordnung im Entwurf gespeichert. Veröffentlichung erfolgt separat.';
+    } catch (error) {
+      message.textContent = `Anordnung nicht gespeichert: ${error.message}`;
+    } finally {
+      this.arrangementSaving = false;
+      for (const selector of ['[data-arrange-bar]', '[data-detail-content]']) this.$(selector).inert = false;
+      this.$('[data-close-details]').disabled = false;
+      if (this.isConnected) this.render();
+    }
+  }
+
+  moveCard(key, step) {
+    if (!this.pendingCardOrder || this.arrangementSaving) return;
+    const visible = [...this.$('#top').children].map(card => card.dataset.group);
+    const target = visible[visible.indexOf(key) + step];
+    if (!target) return;
+    this.reorderCard(key, target);
+    this.render();
+    const card = this.$(`[data-group="${key}"]`);
+    (card.querySelector(`[data-card-step="${step}"]:not(:disabled)`)
+      || card.querySelector('[data-drag-card]')).focus({ preventScroll:true });
+    this.$('[data-message]').textContent = `${new Map(volvoCards).get(key)} verschoben. Noch nicht übernommen.`;
+  }
+
+  reorderCard(key, target) {
+    const from = this.pendingCardOrder.indexOf(key), to = this.pendingCardOrder.indexOf(target);
+    this.pendingCardOrder.splice(from, 1);
+    this.pendingCardOrder.splice(to, 0, key);
+    const top = this.$('#top');
+    const card = [...top.children].find(entry => entry.dataset.group === key);
+    const other = [...top.children].find(entry => entry.dataset.group === target);
+    top.insertBefore(card, from < to ? other.nextSibling : other);
+  }
+
+  startCardDrag(event) {
+    const handle = event.target.closest('[data-drag-card]');
+    if (!handle || !this.pendingCardOrder || this.arrangementSaving || this.drag
+      || !event.isPrimary || event.button !== 0) return;
+    event.preventDefault();
+    const card = handle.closest('[data-group]');
+    const preview = node('div', card.querySelector('h4').textContent, 'drag-preview');
+    preview.setAttribute('aria-hidden', 'true');
+    this.$('[data-details]').append(preview);
+    this.drag = { handle, card, preview, pointer:event.pointerId, order:[...this.pendingCardOrder],
+      x:event.clientX, y:event.clientY };
+    card.toggleAttribute('data-dragging', true);
+    this.$('[data-detail-content]').setPointerCapture(event.pointerId);
+    handle.focus({ preventScroll:true });
+    const tick = () => {
+      if (!this.drag) return;
+      const {x, y} = this.drag;
+      const body = this.$('[data-detail-body]');
+      const bounds = body.getBoundingClientRect();
+      if (x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom) {
+        if (y < bounds.top + 48) body.scrollTop -= 8;
+        if (y > bounds.bottom - 48) body.scrollTop += 8;
+        this.positionCardDrag();
+      }
+      this.dragFrame = requestAnimationFrame(tick);
+    };
+    this.positionCardDrag();
+    this.dragFrame = requestAnimationFrame(tick);
+  }
+
+  moveCardDrag(event) {
+    if (!this.drag || event.pointerId !== this.drag.pointer) return;
+    event.preventDefault();
+    this.drag.x = event.clientX;
+    this.drag.y = event.clientY;
+    this.positionCardDrag();
+  }
+
+  positionCardDrag() {
+    const {x, y, card, preview} = this.drag;
+    preview.style.left = `${Math.max(0, Math.min(innerWidth - 240, x + 12))}px`;
+    preview.style.top = `${Math.max(0, Math.min(innerHeight - 60, y + 12))}px`;
+    const target = this.shadowRoot.elementFromPoint(x, y)?.closest('#top > [data-group]');
+    if (target && target !== card) this.reorderCard(card.dataset.group, target.dataset.group);
+  }
+
+  finishCardDrag(cancelled, render = true) {
+    const drag = this.drag;
+    if (!drag) return;
+    this.drag = null;
+    cancelAnimationFrame(this.dragFrame);
+    if (cancelled) this.pendingCardOrder = drag.order;
+    drag.preview.remove();
+    drag.card.removeAttribute('data-dragging');
+    const capture = this.$('[data-detail-content]');
+    if (capture.hasPointerCapture(drag.pointer)) capture.releasePointerCapture(drag.pointer);
+    if (render && this.isConnected) {
+      this.render();
+      this.$(`[data-group="${drag.card.dataset.group}"] [data-drag-card]`)?.focus({ preventScroll:true });
+    }
+  }
+
   set config(value) { this.widgetConfig = value; this.render(); }
   get config() { return this.widgetConfig; }
   set data(value) { this.snapshot = value; this.render(); }
@@ -249,6 +419,9 @@ class FHEMCMSVolvoConnect extends HTMLElement {
   render() {
     if (!this.widgetConfig || !this.$('[data-content]') || !this.isConnected) return;
     const config = this.widgetConfig;
+    if (this.drag) return;
+    this.$('[data-arrange]').hidden = typeof this.services?.savePopupOrder !== 'function' || Boolean(this.pendingCardOrder);
+    this.$('[data-arrange-bar]').hidden = !this.pendingCardOrder;
     const model = volvoModel(this.snapshot, config.device);
     const title = config.showTitle === false ? '' : config.title || '';
     this.$('[data-title]').textContent = title;
@@ -303,8 +476,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       bar.append(fill);
       hero.append(bar);
     }
-    if (!compact) hero.append(this.rows(model.groups.get('state').filter(entry => !['state_batteryChargeLevel',
-      'state_electricRange', 'fuel_distanceToEmptyBattery'].includes(entry.reading))));
+    if (!compact) hero.append(this.rows(model.groups.get('state').filter(entry =>
+      !['batteryChargeLevel', 'electricRange', 'distanceToEmptyBattery'].includes(entry.key))));
     return hero;
   }
 
@@ -331,9 +504,10 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     content.append(identity);
     const top = node('div', undefined, 'top');
     top.id = 'top';
-    const groupLabels = new Map(volvoGroups);
+    const groupLabels = new Map(volvoCards);
     const hidden = new Set(config.hiddenGroups || []);
-    for (const key of volvoGroupOrder(config)) {
+    for (const key of this.pendingCardOrder || volvoGroupOrder(config)) {
+      if (key === 'gallery') continue;
       if (hidden.has(key)) continue;
       const entries = model.groups.get(key);
       if (!entries.length) continue;
@@ -357,6 +531,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     if (config.showGallery !== false && model.images.length) {
       const gallery = node('section', undefined, 'card gallery');
       gallery.id = 'gallery';
+      gallery.dataset.group = 'gallery';
       gallery.append(node('h4', model.images.length > 1 ? 'Ansicht · zum Wechseln wischen' : 'Ansicht'));
       const slides = node('div', undefined, 'slides');
       slides.setAttribute('tabindex', '0');
@@ -375,9 +550,32 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         slides.append(figure);
       }
       gallery.append(slides);
-      const energy = top.querySelector('[data-group="state"]');
-      if (energy) energy.after(gallery);
-      else top.prepend(gallery);
+      top.append(gallery);
+    }
+    const order = this.pendingCardOrder || volvoGroupOrder(config);
+    const visible = order.filter(key => [...top.children].some(card => card.dataset.group === key));
+    for (const key of order) {
+      const card = [...top.children].find(entry => entry.dataset.group === key);
+      if (!card) continue;
+      if (this.pendingCardOrder) {
+        const tools = node('div', undefined, 'card-tools');
+        tools.id = `tools-${key}`;
+        const grip = node('button', '⠿');
+        grip.type = 'button';
+        grip.dataset.dragCard = '';
+        grip.setAttribute('aria-label', `${groupLabels.get(key)} verschieben`);
+        tools.append(grip);
+        for (const [step, text] of [[-1, '↑'], [1, '↓']]) {
+          const button = node('button', text);
+          button.type = 'button';
+          button.dataset.cardStep = String(step);
+          button.disabled = visible.indexOf(key) + step < 0 || visible.indexOf(key) + step >= visible.length;
+          button.setAttribute('aria-label', `${groupLabels.get(key)} ${step < 0 ? 'nach oben' : 'nach unten'}`);
+          tools.append(button);
+        }
+        card.prepend(tools);
+      }
+      top.append(card);
     }
     content.append(top);
     if (model.actions.length) {
@@ -389,7 +587,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         const button = node('button', label);
         button.type = 'button';
         button.dataset.command = command;
-        button.disabled = !this.hasAttribute('view-only') || this.busy;
+        button.disabled = !this.hasAttribute('view-only') || Boolean(this.services?.savePopupOrder)
+          || Boolean(this.pendingCardOrder) || this.busy;
         buttons.append(button);
       }
       actions.append(buttons);
@@ -429,7 +628,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
   }
 
   async sendAction(command) {
-    if (!this.hasAttribute('view-only') || this.busy) return;
+    if (!this.hasAttribute('view-only') || this.services?.savePopupOrder || this.pendingCardOrder || this.busy) return;
     const action = volvoModel(this.snapshot, this.widgetConfig.device).actions.find(([key]) => key === command);
     if (!action || !window.confirm(`VolvoConnect: „${action[1]}“ am Fahrzeug ausführen?`)) return;
     this.busy = true;
@@ -452,9 +651,9 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     form.elements.title.value = this.widgetConfig.title || '';
     form.elements.showTitle.checked = this.widgetConfig.showTitle !== false;
     form.elements.device.value = this.widgetConfig.device || '';
-    form.elements.showGallery.checked = this.widgetConfig.showGallery !== false;
     this.groupChoices = volvoGroupOrder(this.widgetConfig).map(key => ({
-      key, visible: !(this.widgetConfig.hiddenGroups || []).includes(key),
+      key, visible: key === 'gallery' ? this.widgetConfig.showGallery !== false
+        : !(this.widgetConfig.hiddenGroups || []).includes(key),
     }));
     this.renderGroupChoices();
     this.$('[data-delete]').hidden = isNew;
@@ -496,7 +695,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     const next = { id: this.widgetConfig.id, type: 'fhem-volvoconnect', device,
       showGallery: form.elements.showGallery.checked, grid: { ...this.widgetConfig.grid },
       groupOrder: this.groupChoices.map(group => group.key),
-      hiddenGroups: this.groupChoices.filter(group => !group.visible).map(group => group.key) };
+      hiddenGroups: this.groupChoices.filter(group => !group.visible && group.key !== 'gallery').map(group => group.key) };
     const groupError = validateVolvoGroups(next);
     if (groupError) { this.$('[data-error]').textContent = groupError; return; }
     if (title) next.title = title;
@@ -518,7 +717,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
   }
 
   renderGroupChoices(focusKey, direction) {
-    const labels = new Map(volvoGroups);
+    const labels = new Map(volvoCards);
     const content = this.$('[data-group-choices]');
     content.replaceChildren();
     for (const [index, choice] of this.groupChoices.entries()) {
@@ -527,6 +726,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       const label = node('label');
       const checkbox = node('input');
       checkbox.type = 'checkbox';
+      if (choice.key === 'gallery') checkbox.name = 'showGallery';
       checkbox.checked = choice.visible;
       checkbox.addEventListener('change', () => { choice.visible = checkbox.checked; });
       label.append(checkbox, document.createTextNode(`${volvoGroupIcons[choice.key]} ${labels.get(choice.key)}`));

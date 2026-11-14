@@ -20,7 +20,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.14.0-dev';
+our $FHEMCMS_VERSION = '1.15.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1165,12 +1165,13 @@ sub FHEMCMS_ValidateConfig {
                 for my $field ('groupOrder', 'hiddenGroups') {
                     next if (!exists($widget->{$field}));
                     return "Ungueltige VolvoConnect-Gruppen in $field"
-                        if (ref($widget->{$field}) ne 'ARRAY' || @{$widget->{$field}} > 14);
+                        if (ref($widget->{$field}) ne 'ARRAY' || @{$widget->{$field}} > ($field eq 'groupOrder' ? 15 : 14));
                     my %seenGroup;
                     for my $group (@{$widget->{$field}}) {
                         return "Ungueltige VolvoConnect-Gruppe in $field"
                             if (ref($group) || !defined($group)
-                                || $group !~ /\A(?:state|capabilities|warnings|brakes|doors|windows|engineDiagnostics|workshopDiagnostics|commandAccessibility|commands|statistics|tyres|vehicle|location)\z/);
+                                || ($group !~ /\A(?:state|capabilities|warnings|brakes|doors|windows|engineDiagnostics|workshopDiagnostics|commandAccessibility|commands|statistics|tyres|vehicle|location)\z/
+                                    && !($field eq 'groupOrder' && $group eq 'gallery')));
                         return "Doppelte VolvoConnect-Gruppe in $field" if ($seenGroup{$group}++);
                     }
                 }

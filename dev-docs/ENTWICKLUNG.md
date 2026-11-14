@@ -71,6 +71,40 @@ der verfuegbaren Diagrammhoehe, ohne Stations-/Titelueberlauf.
 Chrome-Runner und `python scripts/check_webkit_widgets.py` pruefen auch
 das Oeffnen/Speichern ohne Berechnungsoption.
 
+## VolvoConnect-Popupanordnung (dev, 1.15.0-dev, Refs #209)
+
+Standard: state, statistics, vehicle, gallery, location, warnings, doors,
+windows, engineDiagnostics, capabilities, brakes, workshopDiagnostics,
+commandAccessibility, commands, tyres. Gespeicherte Teil-/Vollreihenfolgen
+bleiben erhalten; ohne gallery wird diese hinter vehicle einsortiert.
+`groupOrder` akzeptiert jetzt 15 eindeutige Kartenschluessel einschliesslich
+gallery, `hiddenGroups` weiterhin nur die 14 Modulgruppen.
+Die Galeriesichtbarkeit bleibt in `showGallery`, auch im Konfigurationsdialog.
+PROPERTY_NOT_FOUND/PROPERTY_NOT_SUPPORTED werden vor Einheitenformatierung
+zentral ausgefiltert. Energiezeilen filtern den Akkustand anhand des
+normalisierten Schluessels, auch fuer fuel_batteryChargeLevel.
+
+Gleich breite responsive Spalten mit align-items:start statt gestreckter
+Karten; Galerieframes sind exakt eine Scrollportbreite, Bilder contain.
+Popup-Anordnung nur ueber den expliziten Editor-Service savePopupOrder;
+Ansicht, Vorschau und normale Widgetfactory geben keinen Schreibzugriff.
+Schema5Editor schreibt ueber saveWidget mit dem Token des angezeigten
+Zustands ausschliesslich den Entwurf und baut nach Erfolg die Ansicht neu auf.
+Fehler lassen die Anordnung sichtbar und bieten erneutes Laden im Editor an.
+Kein direkter Konfigurations- oder Fahrzeugbefehl aus den Verschiebegriffen.
+
+Drag via Pointer Events mit Capture auf dem stabilen Inhaltscontainer,
+nicht auf der verschobenen Karte; sonst verliert Chrome Capture beim
+DOM-Verschieben. Liveupdates werden waehrend eines aktiven Drags verzögert
+und nach Drop mit den letzten Daten gerendert. Platzhalter, Dragvorschau,
+Randscrollen und Tastaturpfeile; Abbrechen/Escape ohne Schreibzugriff.
+Escape wird lokal im Detaildialog konsumiert: erst Drag, dann Anordnung,
+dann Popup abbrechen. Dies verhindert native Doppelbehandlung nach Captureverlust.
+Kein neues Paket und keine frei gespeicherten Rasterkoordinaten.
+Fixture 89 prueft die echte Editor-/Entwurfsanbindung, Fehler, Abbruch,
+Liveupdates, Maus-/Touchdrag und Tastatur; Fixture 88 prueft Geometrie,
+Galerie und die bestehenden Popup-/Kartenfunktionen.
+
 ## VolvoConnect-Fahrzeugwidget (dev, 1.14.0-dev, Refs #207)
 
 Schema 5: `fhem-volvoconnect` / `cms-volvoconnect` mit `device` und optionalem
