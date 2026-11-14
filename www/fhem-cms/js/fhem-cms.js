@@ -1,6 +1,7 @@
 import { createWidgetElement, dataFor, devicesOf, groupSnapshots, isLiveWidget } from './widget-factory.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { createCmsAdminMenuLinks } from './cms-admin-link.js';
+import { readGridPreference, writeGridPreference } from './grid-preference.js';
 import { DevicePreview } from './device-preview.js';
 import { createSchema5WidgetServices, createWidgetServices } from './widget-services.js';
 import { listenForSettingsPreview } from './fcui-schema5-settings-preview.js';
@@ -75,7 +76,6 @@ function layoutPreview(mode, columns) {
 
 const THEMES = [['dark', 'Forest Green'], ['light', 'Hell']];
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
-const GUIDE_KEY = 'fhem-cms-show-grid';
 const DEFAULT_NAV_GRID = { col: 1, row: 1, w: 48, h: 1 };
 
 // Ohne Parameter zeigt die Seite nur die fertige Homepage. ?mode=edit startet die Bearbeitung.
@@ -151,7 +151,8 @@ export class CmsPage {
       + 'Live und Entwurf werden getrennt gesichert und umgestellt; Positionen danach manuell anpassen.';
     this.upgradeNotice.append(this.upgradeMessage, this.migrationButton);
     this.purgeButton = this.button('Daten löschen …', () => this.showPurgeDialog());
-    this.showGrid = !VIEW_MODE && window.localStorage.getItem(GUIDE_KEY) === '1';
+    this.showGrid = !VIEW_MODE && readGridPreference(window, this.client,
+      (message) => { this.statusLine.textContent = message; });
     this.gridButton = this.button('Raster anzeigen', () => this.toggleGuides());
     this.gridButton.classList.add('cms-grid-toggle');
     this.gridButton.setAttribute('aria-pressed', String(this.showGrid));
@@ -224,8 +225,8 @@ export class CmsPage {
       this.menus.push(menu);
       return menu;
     };
-    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton, ...createCmsAdminMenuLinks(this.client)]);
-    const editMenu = makeMenu('Bearbeiten', [this.navButton]);
+    const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton]);
+    const editMenu = makeMenu('Bearbeiten', [this.navButton, ...createCmsAdminMenuLinks(this.client)]);
     this.menu = makeMenu('Einfügen', this.menuButtons);
     const viewMenu = makeMenu('Ansicht', [this.gridButton]);
     document.addEventListener('click', (event) => {
@@ -1374,7 +1375,8 @@ export class CmsPage {
 
   toggleGuides() {
     this.showGrid = !this.showGrid;
-    window.localStorage.setItem(GUIDE_KEY, this.showGrid ? '1' : '0');
+    writeGridPreference(window, this.client, this.showGrid,
+      (message) => { this.statusLine.textContent = message; });
     this.gridButton.setAttribute('aria-pressed', String(this.showGrid));
     this.syncGuides();
   }

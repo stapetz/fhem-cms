@@ -61,7 +61,7 @@ try {
     await start();
     const action = find('Widgets automatisch anordnen');
     const menu = action.closest('details');
-    check(menu.querySelector('summary').textContent === 'Bearbeiten', 'action belongs to Edit menu');
+    check(menu.querySelector('summary').textContent === 'Ansicht', 'action belongs to View menu');
     menu.querySelector('summary').click();
     action.click();
     check(!menu.open, 'menu closes after action');

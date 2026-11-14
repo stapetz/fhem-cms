@@ -151,7 +151,10 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const listeners = new Map();
     let reloads = 0;
     let confirmed = false;
+    const preferences = new Map([['fhem-cms:show-grid::', '1']]);
     const browser = {
+      localStorage: { getItem: key => preferences.get(key) ?? null,
+        setItem: (key, value) => preferences.set(key, value) },
       location: { href: 'https://example.test/?mode=edit#/a', hash: '#/a', reload() { reloads += 1; } },
       confirm() { return confirmed; },
       addEventListener(name, callback) {
@@ -233,13 +236,22 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const [, , content] = root.children;
     const toolbar = { children: toolbarControls(root.children[0]) };
     assert.equal(root.children[0].className, 'cms-toolbar');
-    const [fileMenu, editMenu, viewMenu] = root.children[0].children;
+    const [fileMenu, editMenu, insertMenu, viewMenu] = root.children[0].children;
     assert.ok(!fileMenu.children[1].children.some(item => item.textContent === 'Globale FHEM-CMS Administration'),
       'administration entry is absent without explicit CMS opt-in');
-    assert.deepEqual([fileMenu, editMenu, viewMenu].map((menu) => menu.children[0].textContent),
-      ['Datei', 'Bearbeiten', 'Ansicht']);
+    assert.deepEqual([fileMenu, editMenu, insertMenu, viewMenu].map((menu) => menu.children[0].textContent),
+      ['Datei', 'Bearbeiten', 'Einfügen', 'Ansicht']);
     assert.equal(editMenu.children[1].children[0].textContent, 'Seiteneinstellungen');
-    assert.deepEqual(viewMenu.children[1].children.map((item) => item.textContent), ['Vorschau', 'Raster anzeigen']);
+    assert.deepEqual(insertMenu.children[1].children.map((item) => item.textContent),
+      ['Widget hinzufügen', 'Gerät hinzufügen', 'Widget-Vorlagen']);
+    assert.deepEqual(viewMenu.children[1].children.map((item) => item.textContent),
+      ['Vorschau', 'Raster anzeigen', 'Widgets automatisch anordnen']);
+    const gridToggle = viewMenu.children[1].children[1];
+    assert.equal(gridToggle.getAttribute('aria-pressed'), 'true', 'previous visit restores grid preference');
+    gridToggle.fire('click');
+    assert.equal(preferences.get('fhem-cms:show-grid::'), '0');
+    gridToggle.fire('click');
+    assert.equal(preferences.get('fhem-cms:show-grid::'), '1');
     const assetButton = fileMenu.children[1].children.find(item => item.textContent === 'Assetmanager');
     assert.ok(assetButton, 'File menu exposes shared Assetmanager');
     const setupButton = fileMenu.children[1].children.find(item => item.textContent === 'Einrichtungsassistent');
@@ -390,6 +402,8 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
       GridStack, root: waitingRoot, controller: waitingController, client, services: {}, browser,
     });
     const starting = waitingEditor.start();
+    assert.equal(waitingRoot.children[0].children[3].children[1].children[1].getAttribute('aria-pressed'),
+      'true', 'new editor restores saved preference');
     browser.dispatch('pagehide');
     rejectRead(new Error('Verbindung verloren'));
     await starting;
@@ -504,7 +518,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     const root = new Element('section');
     editor = new Schema5Editor({ GridStack, root, controller, client, services: {}, browser, adminMenuEnabled: true });
     await editor.start();
-    assert.ok(root.children[0].children[0].children[1].children.some(item =>
+    assert.ok(root.children[0].children[1].children[1].children.some(item =>
       item.textContent === 'Globale FHEM-CMS Administration'), 'explicit CMS opt-in shows administration entry');
     const [, status, content] = root.children;
     const toolbar = { children: toolbarControls(root.children[0]) };
