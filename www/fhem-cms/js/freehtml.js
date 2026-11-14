@@ -29,6 +29,36 @@ export function isSafeMapUrl(value) {
     && /^https:\/\/(?:www\.)?openstreetmap\.org\/export\/embed\.html(?:\?[A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/.test(value);
 }
 
+const NUMERIC_PLACEHOLDER = /\{\{\s*([A-Za-z0-9_.-]+):(@?[A-Za-z0-9_.-]+)((?:\s*\|\s*(?:int|round\([0-6]\)))*)\s*\}\}/g;
+
+function numericTemplate(text) {
+  return text.replace(NUMERIC_PLACEHOLDER, '0');
+}
+
+function isSafeMapTemplate(value) {
+  const query = value.indexOf('?');
+  return query >= 0 && !value.slice(0, query).includes('{{')
+    && isSafeMapUrl(numericTemplate(value)) && !/[{}]/.test(numericTemplate(value));
+}
+
+function resolveNumericTemplate(text, lookup, coordinate = false) {
+  let valid = true;
+  const value = text.replace(NUMERIC_PLACEHOLDER, (_match, device, reading, filters) => {
+    const raw = lookup(device, reading);
+    if (raw === null || raw === undefined || !/^-?[0-9]+(?:\.[0-9]+)?$/.test(String(raw))) {
+      valid = false;
+      return '';
+    }
+    const number = Number(raw);
+    if (!Number.isFinite(number) || (coordinate && Math.abs(number) > (/latitude/i.test(reading) ? 90 : 180))) {
+      valid = false;
+      return '';
+    }
+    return formatValue(raw, filters);
+  });
+  return valid ? value : null;
+}
+
 function extraAttributeAllowed(tag, name, value) {
   name = name.toLowerCase();
   if (name === 'id') return /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value);
@@ -38,7 +68,7 @@ function extraAttributeAllowed(tag, name, value) {
   }
   if (tag === 'a' && name === 'target') return value === '_blank' || value === '_self';
   if (tag === 'img' && name === 'alt') return value.length <= 200;
-  if (tag === 'iframe' && name === 'src') return isSafeMapUrl(value);
+  if (tag === 'iframe' && name === 'src') return isSafeMapUrl(value) || isSafeMapTemplate(value);
   if (tag === 'iframe' && name === 'loading') return value === 'lazy' || value === 'eager';
   if (tag === 'iframe' && name === 'frameborder') return value === '0';
   if (tag === 'iframe' && name === 'scrolling') return value === 'yes' || value === 'no' || value === 'auto';
@@ -61,11 +91,12 @@ const CONDITION = new RegExp(`^\\s*(${NAME}):(${READING})\\s*(>=|<=|!=|=|>|<)\\s
 const DEVICE_ATTR = /^[A-Za-z0-9_.-]{1,64}$/;
 const READING_ATTR = /^@?[A-Za-z0-9_.-]{1,64}$/;
 const FILTER_ATTR = /^\s*(?:[a-z]+(?:\([^()|{}"<>]{0,80}\))?(?:\s*\|\s*[a-z]+(?:\([^()|{}"<>]{0,80}\))?)*)?\s*$/;
-const FORBIDDEN_CSS = /expression|behavior|binding|javascript:|[<>\\]/i;
+const FORBIDDEN_CSS = /expression\s*\(|(?:^|[;{])\s*(?:behavior|-moz-binding)\s*:|javascript:|[<>\\]/i;
 
 export function isSafeCss(text) {
   if (typeof text !== 'string') return false;
-  const css = text.replace(/\/\*[\s\S]*?\*\//g, '');
+  const css = numericTemplate(text.replace(/\/\*[\s\S]*?\*\//g, ''));
+  if (css.includes('{{')) return false;
   if (/\/\*|\*\//.test(css) || FORBIDDEN_CSS.test(css)) return false;
   let valid = true;
   const withoutUrls = css.replace(/url\s*\(\s*(?:"([^"]*)"|'([^']*)'|([^()\s"']+))\s*\)/gi,
@@ -104,6 +135,9 @@ export function checkSource(html) {
     }
     for (const attribute of element.attributes) {
       const name = attribute.name;
+      if (tag === 'iframe' && name === 'src' && !extraAttributeAllowed(tag, name, attribute.value)) {
+        return 'Die Karte benötigt https://openstreetmap.org/export/embed.html mit Koordinaten im Querystring.';
+      }
       if (!['class', 'style', 'title', 'colspan', 'rowspan', 'data-cms-class', 'device', 'reading', 'filter'].includes(name)
         && !extraAttributeAllowed(tag, name, attribute.value)) {
         return `Das Attribut „${name}“ ist nicht erlaubt (Element <${tag}>)`;
@@ -134,7 +168,7 @@ export function checkSource(html) {
     if (element.hasAttribute('device') !== element.hasAttribute('reading')) {
       return `Die Attribute device und reading gehören zusammen (Element <${tag}>)`;
     }
-    if (tag === 'style' && !isSafeCss(element.textContent)) {
+    if (tag === 'style' && (!isSafeCss(element.textContent) || element.textContent.includes('{{'))) {
       return 'Das <style>-Element enthält unsichere oder ungültige CSS-Angaben. Ressourcen müssen lokale Pfade oder HTTPS-URLs verwenden.';
     }
   }
@@ -183,7 +217,7 @@ function cleanChildren(source, target) {
         if (name === 'class' && /^[A-Za-z0-9_\- ]{0,200}$/.test(value)) {
           element.setAttribute('class', value);
         } else if (name === 'style' && isSafeCss(value)) {
-          element.setAttribute('style', value);
+          element.setAttribute(value.includes('{{') ? 'data-cms-style-template' : 'style', value);
         } else if (name === 'title') {
           element.setAttribute('title', value.slice(0, 200));
         } else if ((name === 'colspan' || name === 'rowspan') && /^[1-9][0-9]?$/.test(value)) {
@@ -197,12 +231,13 @@ function cleanChildren(source, target) {
         } else if (name === 'data-cms-class') {
           element.setAttribute(name, value.split(';').filter((part) => CONDITION.test(part)).join(';'));
         } else if (extraAttributeAllowed(tag, name, value)) {
-          element.setAttribute(URL_PLACEHOLDER.test(value) && (name === 'src' || name === 'href')
+          element.setAttribute((URL_PLACEHOLDER.test(value) || (tag === 'iframe' && value.includes('{{')))
+            && (name === 'src' || name === 'href')
             ? `data-cms-url-${name}` : name, value);
         }
       }
       if (node.localName === 'style') {
-        element.textContent = isSafeCss(node.textContent) ? node.textContent : '';
+        element.textContent = isSafeCss(node.textContent) && !node.textContent.includes('{{') ? node.textContent : '';
       } else if (tag !== 'iframe') {
         cleanChildren(node, element);
       }
@@ -249,7 +284,7 @@ function applyFilter(value, filter) {
       return value === '' ? value : value + argument;
     case 'map': {
       for (const pair of splitArguments(argument)) {
-        const index = pair.indexOf('=');
+        const index = pair.search(/[=:]/);
         if (index > 0 && pair.slice(0, index).trim() === value) {
           return pair.slice(index + 1).trim();
         }
@@ -383,11 +418,22 @@ export function renderTemplate(template, lookup) {
       element.classList.toggle(className, actual !== null && actual !== undefined && compare(String(actual), operator, expected));
     }
   }
-  for (const element of container.querySelectorAll('img[src], a[href], img[data-cms-url-src], a[data-cms-url-href]')) {
-    const attribute = element.localName === 'img' ? 'src' : 'href';
+  for (const element of container.querySelectorAll('[data-cms-style-template]')) {
+    const style = resolveNumericTemplate(element.getAttribute('data-cms-style-template'), lookup);
+    if (style !== null && isSafeCss(style)) element.setAttribute('style', style);
+    else {
+      const warning = document.createElement('span');
+      warning.textContent = 'Ungültiger oder fehlender numerischer Wert im Style-Reading';
+      warning.setAttribute('role', 'status');
+      element.after(warning);
+    }
+  }
+  for (const element of container.querySelectorAll('img[src], a[href], img[data-cms-url-src], a[data-cms-url-href], iframe[data-cms-url-src]')) {
+    const attribute = element.localName === 'a' ? 'href' : 'src';
     const original = element.getAttribute(`data-cms-url-${attribute}`) ?? element.getAttribute(attribute);
-    const value = URL_PLACEHOLDER.test(original) ? substitute(original, lookup) : original;
-    if (isSafeHtmlUrl(value)) element.setAttribute(attribute, value);
+    const value = element.localName === 'iframe' ? resolveNumericTemplate(original, lookup, true)
+      : URL_PLACEHOLDER.test(original) ? substitute(original, lookup) : original;
+    if (element.localName === 'iframe' ? value !== null && isSafeMapUrl(value) : isSafeHtmlUrl(value)) element.setAttribute(attribute, value);
     else {
       element.removeAttribute(attribute);
       element.setAttribute('title', 'Ungültige oder fehlende URL im Reading');

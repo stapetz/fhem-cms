@@ -543,6 +543,14 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
         grid => {col => 1, row => 1, w => 3, h => 2}}]}]};
     is(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html accepts safe html');
     my $w = $hcfg->{pages}[0]{widgets}[0];
+    {
+        open(my $dashboard, '<:encoding(UTF-8)', 't/fixtures/volvo_dashboard.html') or die $!;
+        local $/;
+        $w->{html} = <$dashboard>;
+        $w->{devices} = ['MeinElch'];
+        is(FHEMCMS_ValidateConfig($hcfg), undef, 'reported Volvo dashboard validates with corrected map URL');
+        $w->{devices} = ['Temp'];
+    }
     $w->{html} = '<span data-cms-class="Temp:temperature>25:hot; Lamp:state=on:an">x</span>';
     is(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html accepts conditions');
     for my $good ('<span device="Temp" reading="temperature"></span>', '<td device="Temp" reading="@alias" filter="round(1)|suffix( C)">-</td>',
@@ -569,6 +577,10 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
         '<iframe src="https://openstreetmap.org.evil.test/export/embed.html"></iframe>',
         '<iframe src="https://openstreetmap.org/export/embed.html" srcdoc="x"></iframe>',
         '<iframe src="https://openstreetmap.org/export/embed.html" sandbox="allow-same-origin"></iframe>',
+        '<iframe src="https://openstreetmap.org{{Temp:latitude}}%2C{{Temp:longitude}}"></iframe>',
+        '<div style="width:{{Temp:state|prefix(1)}}%"></div>',
+        '<div style="behavior:url(https://example.test/x)"></div>',
+        '<style>.x{-moz-binding:url(https://example.test/x)}</style>',
         '<svg onload="x()"></svg>', '<svg><use href="https://example.test/x.svg"/></svg>',
         '<svg><animate attributeName="href"/></svg>', '<svg><path fill="url(https://example.test/x)"/></svg>',
         '<img src="//example.test/x">', '<img src="data:image/svg+xml,x">', '<img src="{{Temp:image|prefix(javascript:)}}">',

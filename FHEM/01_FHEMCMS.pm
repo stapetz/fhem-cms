@@ -1395,7 +1395,8 @@ sub FHEMCMS_FreeHtmlCss {
     $css =~ s/&amp;/&/g;
     return 0 if ($css =~ /&(?:\#[0-9]+|\#x[0-9a-f]+|[a-z]+);/i);
     $css =~ s{/\*.*?\*/}{}gs;
-    return 0 if ($css =~ m{/\*|\*/|expression|behavior|binding|javascript:|[<>\\]}i);
+    $css =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)))*\s*\}\}}{0}g;
+    return 0 if ($css =~ m~/\*|\*/|\{\{|expression\s*\(|(?:\A|[;{])\s*(?:behavior|-moz-binding)\s*:|javascript:|[<>\\]~i);
     my $valid = 1;
     $css =~ s{url\s*\(\s*(?:"([^"]*)"|'([^']*)'|([^()\s"']+))\s*\)}{
         my $url = defined($1) ? $1 : defined($2) ? $2 : $3;
@@ -1423,6 +1424,8 @@ sub FHEMCMS_FreeHtmlExtraAttribute {
     return $value =~ /\A[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?\z/
         if (($tag eq 'img' || $tag eq 'svg' || $tag eq 'iframe') && ($name eq 'width' || $name eq 'height'));
     if ($tag eq 'iframe' && $name eq 'src') {
+        $value =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)))*\s*\}\}}{0}g
+            if ($value =~ m{\Ahttps://(?:www\.)?openstreetmap\.org/export/embed\.html\?});
         return FHEMCMS_FreeHtmlUrl($value)
             && $value =~ m{\Ahttps://(?:www\.)?openstreetmap\.org/export/embed\.html(?:\?[A-Za-z0-9._~:/?#\@!\$&'()*+,;=%-]*)?\z};
     }
@@ -1486,7 +1489,7 @@ sub FHEMCMS_ValidateFreeHtml {
     $stripped =~ s/<\/?[A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9-]*\s*=\s*"[^"]*")*\s*\/?>//g;
     return 'unvollstaendiges oder ungueltiges Element' if ($stripped =~ /</);
     while ($html =~ m{<style(?:\s[^>]*)?>(.*?)</style>}gis) {
-        return 'Ungueltiges style-Element' if (!FHEMCMS_FreeHtmlCss($1));
+        return 'Ungueltiges style-Element' if ($1 =~ /\{\{/ || !FHEMCMS_FreeHtmlCss($1));
     }
     return undef;
 }

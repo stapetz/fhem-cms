@@ -122,6 +122,45 @@ try {
   const badge = animated.shadowRoot.querySelector('.badge').getBoundingClientRect();
   check(badge.left >= bounds.left && badge.right <= bounds.right, 'fixed badge remains in widget rather than viewport');
   animated.remove();
+  const dashboard = await (await fetch('fixtures/volvo_dashboard.html')).text();
+  check(checkSource(dashboard) === null, 'complete reported Volvo dashboard validates with corrected map source');
+  const values = {
+    state_batteryChargeLevel: '72.9', authStatus: 'authenticated', state_chargingStatus: 'CHARGING',
+    location_latitude: '52.5', location_longitude: '13.4', vehicle_images_exteriorImageUrl: 'media/exterior.jpg',
+    vehicle_images_internalImageUrl: 'media/interior.jpg',
+  };
+  const dashboardTemplate = sanitize(dashboard);
+  const draw = () => renderTemplate(dashboardTemplate, (_device, reading) => values[reading] ?? '1');
+  const dash = draw();
+  check(dash.querySelector('.vd-bar-fill').style.width === '72%', 'numeric style placeholder sets battery width');
+  check(dash.querySelector('.vd-badge-ok').textContent === 'API: Verbunden', 'colon-delimited mapping renders');
+  check(dash.textContent.includes('Lädt'), 'Unicode charging mapping renders');
+  check(dash.querySelector('iframe').getAttribute('src').includes('marker=52.5%2C13.4'), 'numeric coordinate placeholders resolve');
+  check(!dashboardTemplate.querySelector('iframe').hasAttribute('src'), 'pending map template cannot load');
+  check(dash.querySelectorAll('img[src]').length === 2, 'both reading images resolve');
+  values.state_batteryChargeLevel = '33';
+  check(draw().querySelector('.vd-bar-fill').style.width === '33%', 'battery bar updates from latest reading');
+  values.state_batteryChargeLevel = '1;position:fixed';
+  check(!draw().querySelector('.vd-bar-fill').hasAttribute('style'), 'CSS injection in numeric reading blocked');
+  check(draw().querySelector('[role="status"]'), 'invalid numeric style reading reported');
+  for (const coordinate of ['91', '', '0&other=1', 'NaN']) {
+    values.location_latitude = coordinate;
+    check(!draw().querySelector('iframe').hasAttribute('src'), 'invalid latitude cannot load a map');
+  }
+  values.location_latitude = '52.5';
+  values.location_longitude = '181';
+  check(!draw().querySelector('iframe').hasAttribute('src'), 'longitude outside earth bounds blocked');
+  check(checkSource('<iframe src="https://openstreetmap.org{{MeinElch:location_latitude}}%2C{{MeinElch:location_longitude}}"></iframe>') !== null, 'malformed original map URL rejected');
+  check(isSafeCss('scroll-behavior:smooth;filter:drop-shadow(0 12px 18px rgba(0,0,0,.35))'), 'scroll-behavior is not legacy behavior');
+  check(!isSafeCss('behavior:url(https://example.test/x)'), 'legacy executable behavior still blocked');
+  check(!isSafeCss('-moz-binding:url(https://example.test/x)'), 'legacy executable binding still blocked');
+  check(checkSource('<div style="width:{{Temp:state|prefix(1)}}%"></div>') !== null, 'non-numeric style filter rejected');
+  dash.querySelector('iframe').remove();
+  dash.querySelectorAll('img').forEach(img => img.removeAttribute('src'));
+  document.body.append(dash);
+  check(getComputedStyle(dash.querySelector('.vd-slider')).scrollBehavior === 'smooth', 'full reported stylesheet survives sanitizer and applies');
+  check(getComputedStyle(dash.querySelector('.vd-top-grid')).display === 'grid', 'full dashboard layout is preserved');
+  dash.remove();
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });
 } catch (error) {
