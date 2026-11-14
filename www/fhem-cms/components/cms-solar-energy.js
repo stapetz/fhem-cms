@@ -15,9 +15,9 @@ const node = (tag, text, className) => {
   return element;
 };
 const EDGES = [
-  ['pv', 'home', 'M450 0V100'], ['pv', 'bat', 'M450 0Q450 65 150 100'],
-  ['pv', 'grid', 'M450 0Q450 65 750 100'], ['bat', 'home', 'M150 100H450'],
-  ['home', 'grid', 'M450 100H750'], ['grid', 'bat', 'M750 100Q450 40 150 100'],
+  ['pv', 'home', 'M450 95V225'], ['pv', 'bat', 'M450 155Q150 155 150 215'],
+  ['pv', 'grid', 'M450 155Q750 155 750 215'], ['bat', 'home', 'M240 265H360'],
+  ['home', 'grid', 'M540 265H660'], ['grid', 'bat', 'M750 155H150'],
 ];
 const format = (value, digits = 1) => value === null ? '–'
   : value.toLocaleString('de-DE', { maximumFractionDigits: digits });
@@ -45,7 +45,9 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         h3, p { margin: 0; }
         [hidden] { display: none !important; }
         ${widgetDesignCss}
-        .tile { container-type: inline-size; }
+        .tile { container-type: inline-size; padding: 16px; line-height: 1.3; }
+        .tile > * { flex-shrink: 0; }
+        .tile header h3[data-title] { line-height: 1.3; }
         .tile[data-stale] { opacity: .65; border-style: dashed; }
         header { flex-wrap: wrap; }
         .badge { padding: 3px 10px; border-radius: 20px; font-size: .8rem; font-weight: 600;
@@ -62,12 +64,10 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .grid { grid-column: 3; grid-row: 3; --station-color: #8b5cf6; }
         .node strong { display: block; font-size: 1.4rem; margin: 3px 0; color: var(--station-color); }
         .node small { display: block; font-size: .74rem; opacity: .78; }
-        .node .label { font-size: .74rem; text-transform: uppercase; opacity: .8; }
-        .paths { grid-column: 1 / -1; grid-row: 2; width: 100%; height: 80px; pointer-events: none; }
-        .paths.cross { grid-row: 3; height: 100%; }
-        @container (max-width: 600px) { .paths.cross { visibility: hidden; } }
-        .wire { fill: none; stroke: rgba(128,128,128,.22); stroke-width: 2; }
-        .energy { fill: none; stroke: #f59e0b; stroke-width: 3; stroke-dasharray: 8 10;
+        .node .label { display: block; font-size: .74rem; text-transform: uppercase; opacity: .8; }
+        .paths { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+        .wire { fill: none; stroke: rgba(128,128,128,.22); stroke-width: 3; stroke-linecap: round; }
+        .energy { fill: none; stroke: #f59e0b; stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 8 10;
           animation: energy-flow 1.1s linear infinite; }
         .energy[data-source="bat"] { stroke: #10b981; }
         .energy[data-source="grid"] { stroke: #ef4444; }
@@ -77,10 +77,10 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         progress { display: block; width: 100%; height: 5px; margin-top: 5px; accent-color: #10b981; }
         .sections { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,200px),1fr)); gap: 12px; }
         .yield { ${detailCardCss} min-width: 0; border-radius: 12px; padding: 12px; }
-        .yield h4 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+        .yield h4 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0;
           margin: 0 0 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,.2);
           overflow-wrap: anywhere; }
-        .yield h4 small { font-size: .8em; opacity: .7; }
+        .yield h4 small { font-size: .8em; opacity: .7; white-space: nowrap; }
         .yield dl { margin: 0; display: grid; gap: 5px; }
         .yield .row { display: flex; justify-content: space-between; gap: 8px; font-size: .86rem;
           border-bottom: 1px solid rgba(128,128,128,.1); padding: 2px 0; overflow-wrap: anywhere; }
@@ -93,6 +93,13 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .total span { display: block; opacity: .8; font-size: .74rem; text-transform: uppercase; }
         .total strong { display: block; font-size: 1.25rem; margin-top: 2px; color: #f59e0b; }
         .total:last-child { border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.12); }
+        @container (max-width: 600px) {
+          .flow { padding: 12px 4px; grid-template-rows: auto 60px auto; }
+          .node { padding: 8px 3px; }
+          .node strong { font-size: clamp(.85rem, 5cqi, 1.4rem); }
+          .node .label, .node small { font-size: .65rem; }
+          .tile header { flex-wrap: wrap; }
+        }
         button, input, select { font: inherit; color: inherit; border: 1px solid var(--cms-border,#43564a);
           background: var(--cms-surface-raised,#2a3b32); border-radius: .5rem; padding: .4rem .6rem; }
         button { cursor: pointer; min-height: 48px; }
@@ -119,16 +126,9 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         <button type="button" data-open-config aria-label="Solar und Energiefluss konfigurieren">⚙</button>
         <header><h3 data-title></h3><span class="badge" data-system hidden></span></header>
         <div class="flow" data-flow>
-          <svg class="paths" viewBox="0 0 900 100" preserveAspectRatio="none" aria-hidden="true">
-            ${EDGES.slice(0, 3).map(([a, b, d]) => `<g data-edge="${a}-${b}"><path class="wire" d="${d}"/>
+          <svg class="paths" viewBox="0 0 900 320" preserveAspectRatio="none" aria-hidden="true">
+            ${EDGES.map(([a, b, d]) => `<g data-edge="${a}-${b}"><path class="wire" d="${d}"/>
               <path class="energy" d="${d}" hidden/></g>`).join('')}
-          </svg>
-          <svg class="paths cross" viewBox="0 0 900 100" preserveAspectRatio="none" aria-hidden="true">
-            ${EDGES.slice(3).map(([a, b]) => {
-    const d = a === 'grid' ? 'M750 0H150' : a === 'bat' ? 'M260 50H340' : 'M560 50H640';
-    return `<g data-edge="${a}-${b}"><path class="wire" d="${d}"/>
-              <path class="energy" d="${d}" hidden/></g>`;
-  }).join('')}
           </svg>
           ${[['pv', '☀️ PV Erzeugung'], ['bat', '🔋 Speicher'], ['home', '🏠 Hausverbrauch'], ['grid', '⚡ Stromnetz']]
     .map(([key, label]) => `<div class="node ${key}" data-station="${key}"><span class="label">${label}</span>
@@ -208,9 +208,11 @@ class FHEMCMSSolarEnergy extends HTMLElement {
       const note = this.$(`[data-note="${key}"]`);
       if (key === 'pv') note.textContent = config.readings?.hour ? `Std: ${energy(config.readings.hour, 2)} ${energyUnit}` : '';
       if (key === 'home') note.textContent = 'Gesamtlast aktuell';
-      if (key === 'bat') note.textContent = `${model.soc === null ? '–' : format(model.soc, 0)} % · ${
-        value === null ? 'Unbekannt' : value < 0 ? 'Entladen' : value > 0 ? 'Laden' : 'Inaktiv'}`;
-      if (key === 'grid') note.textContent = value === null ? 'Unbekannt' : value < 0 ? 'Bezug' : value > 0 ? 'Einspeisung' : 'Inaktiv';
+      if (key === 'bat') {
+        station.querySelector('.label').textContent = `🔋 Speicher${config.readings?.soc ? ` (${model.soc === null ? '–' : format(model.soc, 0)}%)` : ''}`;
+        note.textContent = '− Entladen / + Laden';
+      }
+      if (key === 'grid') note.textContent = '+ Einspeisung / − Bezug';
     }
     const progress = this.$('progress');
     progress.hidden = model.soc === null;
@@ -225,13 +227,16 @@ class FHEMCMSSolarEnergy extends HTMLElement {
       const reverse = model.flows[`${b}>${a}`] || 0;
       const line = group.querySelector('.energy');
       line.toggleAttribute('hidden', Math.max(forward, reverse) < Math.max(1, config.threshold ?? 10));
+      group.querySelector('.wire').toggleAttribute('hidden', a === 'grid' && b === 'bat' && line.hasAttribute('hidden'));
       line.toggleAttribute('data-reverse', reverse > forward);
       line.dataset.source = reverse > forward ? b : a;
     }
     const sections = this.$('[data-sections]');
     sections.replaceChildren(...(config.sections || []).map(section => {
       const card = node('section', undefined, 'yield');
-      const heading = node('h4', `${section.label} (${energyUnit})`);
+      const emoji = { dach: '🏠', garage: '🚗', gartenhaus: '🏡' }[section.label.toLocaleLowerCase('de-DE')];
+      const heading = node('h4');
+      heading.append(node('span', `${emoji ? `${emoji} ` : ''}${section.label} (${energyUnit})`));
       if (section.readings.total) heading.append(node('small', `∑ ${energy(section.readings.total, 0)}`));
       card.append(heading);
       const list = node('dl');
