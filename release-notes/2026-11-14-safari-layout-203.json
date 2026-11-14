@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-14",
+  "version": "1.11.3-dev",
+  "title": "Safari-Layout und Solarverbindungen an Stationsraendern",
+  "changes": [
+    "Solarstationen erhalten auch auf dem Desktop gleiche Rahmenhoehen; die native Safari-Mindesthoehe des Ladestandbalkens wird durch eine einheitliche Darstellung ersetzt.",
+    "Stromflusslinien folgen den gemessenen Stationsraendern und enden ausserhalb der Boxen. Netz-Speicher verlaeuft unter den Stationen; Liveupdates erhalten SVG und Animationen.",
+    "Diagramm-SVG und Wertanzeige vermeiden WebKit-spezifische Ueberlaeufe. Alle 16 Widgettypen sowie Solarverbindungen sind in Chrome und WebKit geprueft.",
+    "Refs #203: iPhone-Darstellung beibehalten, abschliessende Desktop-Safari-Abnahme erforderlich."
+  ]
+}

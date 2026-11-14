@@ -16,6 +16,30 @@ const output = document.querySelector('#result');
 let checks = 0;
 const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
 const pause = (ms = 50) => new Promise(resolve => setTimeout(resolve, ms));
+function checkFlowGeometry(host, label) {
+  const shadow = host.shadowRoot;
+  const boxes = [...shadow.querySelectorAll('.node:not([hidden])')].map(node => node.getBoundingClientRect());
+  for (const group of shadow.querySelectorAll('[data-edge]')) {
+    if (getComputedStyle(group).display === 'none') continue;
+    const path = group.querySelector('.wire');
+    const matrix = path.getScreenCTM();
+    const length = path.getTotalLength();
+    check(length > 0, `${label}: ${group.dataset.edge} has a measured connection`);
+    const count = Math.ceil(length / 2) + 1;
+    const points = Array.from({ length: count }, (_, index) =>
+      path.getPointAtLength(index * length / (count - 1)).matrixTransform(matrix));
+    check(points.every(point => boxes.every(box => point.x <= box.left || point.x >= box.right
+      || point.y <= box.top || point.y >= box.bottom)),
+    `${label}: ${group.dataset.edge} stays outside every station`);
+    const keys = group.dataset.edge.split('-');
+    check([points[0], points.at(-1)].every((point, index) => {
+      const box = shadow.querySelector(`[data-station="${keys[index]}"]`).getBoundingClientRect();
+      const distance = Math.hypot(Math.max(box.left - point.x, 0, point.x - box.right),
+        Math.max(box.top - point.y, 0, point.y - box.bottom));
+      return distance >= 1 && distance <= 3;
+    }), `${label}: ${group.dataset.edge} ends at the actual station borders`);
+  }
+}
 const root = document.querySelector('#grid');
 const source = (device, reading) => ({ device, reading });
 const core = { pv: source('PV', 'power'), home: source('Home', 'load'),
@@ -101,9 +125,7 @@ try {
     check(host.clientWidth <= width, `${width}: actual widget width follows raster`);
     check(root.scrollWidth <= root.clientWidth + 1 && $('.tile').scrollWidth <= $('.tile').clientWidth + 1,
       `${width}: responsive solar layout without horizontal overflow`);
-    check($('[data-edge="pv-bat"] path').getAttribute('d') === 'M450 155Q150 155 150 215'
-      && $('[data-edge="pv-grid"] path').getAttribute('d') === 'M450 155Q750 155 750 215',
-    `${width}: PV curves use the original outward-then-downward control points`);
+    checkFlowGeometry(host, width);
     const cards = [...host.shadowRoot.querySelectorAll('.yield')].map(e => e.getBoundingClientRect());
     check(width > 390 || cards[1].top > cards[0].top,
       `${width}: narrow yield cards stack vertically: ${JSON.stringify(cards.map(r => [r.x,r.y,r.width,r.height]))}; host ${host.clientWidth}`);
@@ -111,13 +133,16 @@ try {
       check(cards.every(card => Math.abs(card.top - cards[0].top) < 1),
         'reference desktop width: all three yield cards in one row, not two plus one');
       check(cards.every(card => card.height <= 210), 'yield cards retain compact original height');
-      check($('.flow').clientHeight <= 310 && $('.node').getBoundingClientRect().width <= 181,
-        'flow and stations retain original 300px/180px proportions');
-      check(Math.abs($('.home').getBoundingClientRect().height - 89) <= 2
-        && Math.abs($('.grid').getBoundingClientRect().height - 89) <= 2
-        && Math.abs($('.bat').getBoundingClientRect().height - 99) <= 2,
-      `desktop station heights match measured original 89/89/99px boxes: ${
-        ['.home', '.grid', '.bat'].map(selector => $(selector).getBoundingClientRect().height)}`);
+      const firstRows = [...host.shadowRoot.querySelectorAll('.yield .row:first-child')].map(e => e.getBoundingClientRect());
+      check(firstRows.every(row => Math.abs(row.top - firstRows[0].top) < 1),
+        'desktop yield rows align even when the heading total wraps');
+      check($('.flow').clientHeight <= 370 && $('.node').getBoundingClientRect().width <= 181,
+        'flow remains compact with room for labels and border-to-border connections');
+      const lower = ['bat', 'home', 'grid'].map(key => $(`.${key}`).getBoundingClientRect());
+      check(lower.every(box => Math.abs(box.top - lower[0].top) < 1
+        && Math.abs(box.bottom - lower[0].bottom) < 1), 'desktop station frames align across browsers');
+      check($('progress').getBoundingClientRect().height <= 5,
+        'native Safari progress appearance cannot inflate the battery station');
       check($('.totals').clientHeight <= 90, 'summary stays in original compact strip');
       check($('[data-sections] h4').textContent.includes('(kWh)')
         && !$('.yield dd').textContent.includes('kWh') && $('.yield dd').textContent === '1.23',
@@ -145,6 +170,7 @@ try {
         `${width}: grid content has no hidden overflow or scrollbar`);
       const bottom = $('[data-totals]').getBoundingClientRect().bottom;
       const frame = tile.getBoundingClientRect();
+      checkFlowGeometry(host, `mobile ${width}`);
       check(bottom <= frame.bottom && frame.bottom - bottom <= 18,
         `${width}: all totals visible without empty space below`);
       if (width <= 390) {
@@ -281,7 +307,7 @@ try {
   host.config = widget;
   output.dataset.result = 'pass'; output.textContent = JSON.stringify({ checks });
 } catch (error) {
-  output.dataset.result = 'fail'; output.textContent = error.stack;
+  output.dataset.result = 'fail'; output.textContent = `${error.message}\n${error.stack}`;
 } finally {
   document.documentElement.dataset.cmsTheme = 'liquid-glass';
   setLiquidAppearance(document.documentElement, { liquidIntensity: 47, liquidTransparency: 12 });
