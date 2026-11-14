@@ -23,6 +23,10 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 
 ## Unbekannter Hausverbrauch und SolarFlow-Bildausschnitt (dev, 1.12.1-dev, Refs #206)
 
+Nachbesserung 1.12.2-dev: Ohne Hausverbrauchsreading bleibt auch der
+Hinweisbereich leer; kein Text "Kein Reading zugeordnet". Fixture 85 prueft
+die leere Anzeige fuer fehlende und alte Berechnungseinstellungen.
+
 Beide Solarwidgets verwenden ausschliesslich zugeordnete Messwerte fuer den
 Hausverbrauch. Ohne Reading bleibt der Wert `null` und seine Wertanzeige
 ausgeblendet; bei zugeordnetem, aber fehlendem/ungueltigem Messwert bleibt

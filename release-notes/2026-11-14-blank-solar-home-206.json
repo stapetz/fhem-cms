@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-14",
+  "version": "1.12.2-dev",
+  "title": "Solarwidgets: unzugeordneter Hausverbrauch bleibt leer",
+  "changes": [
+    "Ohne Hausverbrauchsreading bleibt auch der Hinweisbereich leer. Der Text Kein Reading zugeordnet entfaellt.",
+    "Refs #206: echte Messwerte bleiben erhalten; Leeranzeige in Chrome und WebKit geprueft."
+  ]
+}
