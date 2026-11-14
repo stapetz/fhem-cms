@@ -35,9 +35,10 @@ class FHEMCMSLink extends HTMLElement {
       <style>
         :host { display:block; min-width:0; min-height:0; }
         * { box-sizing:border-box; }
-        .tile { height:100%; min-height:0; overflow:hidden; padding:8px; gap:14px;
+        .tile { height:var(--cms-widget-height,100%); min-height:0;
+          overflow:var(--cms-widget-overflow,hidden); padding:8px; gap:14px;
           border:1px solid var(--cms-frame,#7f8c84); border-radius:1.4rem; background:var(--cms-surface,#202e27);
-          display:flex; flex-direction:column; container-type:size; color:inherit;
+          display:flex; flex-direction:column; container-type:var(--cms-widget-containment,size); color:inherit;
           font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
         header { flex:none; padding:0 0 8px; display:flex; align-items:center;
           gap:8px; border-bottom:1px solid rgba(128,128,128,.25); }
@@ -46,7 +47,7 @@ class FHEMCMSLink extends HTMLElement {
           color:inherit; overflow-wrap:anywhere;
           text-align:var(--cms-widget-title-align,left); }
         .links { flex:1; min-height:0; display:grid; gap:8px; grid-template-columns:repeat(12,minmax(0,1fr)); }
-        .link-tile { position:relative; min-width:0; min-height:0; overflow:hidden; display:flex; flex-direction:column;
+        .link-tile { position:relative; min-width:0; min-height:var(--cms-widget-link-height,0); overflow:hidden; display:flex; flex-direction:column;
           border:1px solid rgba(128,128,128,.18); border-radius:14px; color:inherit;
           background:rgba(128,128,128,.08); text-decoration:none; container-type:size; }
         .link-tile:hover { border-color:currentColor; }

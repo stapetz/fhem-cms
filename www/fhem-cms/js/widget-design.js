@@ -1,7 +1,9 @@
 export const widgetDesignCss = `
   .tile {
     position: relative; display: flex; flex-direction: column; gap: 14px;
-    height: 100%; min-width: 0; min-height: 0; padding: 8px; overflow: auto;
+    height: var(--cms-widget-height, 100%); min-width: 0; min-height: 0;
+    padding: 8px; overflow: var(--cms-widget-overflow, auto);
+    container-type: var(--cms-widget-containment, size);
     border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
     background: var(--cms-surface, #202e27); color: inherit;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

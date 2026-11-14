@@ -3,6 +3,7 @@ import { openPlaceholderPicker } from '../js/placeholder-picker.js';
 import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
 import { renderVehicleMaps } from '../js/vehicle-map.js';
 import { widgetDesignCss } from '../js/widget-design.js';
+import { updateWidgetDom } from '../js/widget-dom.js';
 
 const HELP_URL = 'https://github.com/stapetz/fhem-cms/blob/dev/docs/PLATZHALTER.md';
 const EXAMPLE = `<div class="box">
@@ -81,7 +82,8 @@ class FHEMCMSHtml extends HTMLElement {
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { margin: 0; color: var(--cms-danger, #ffb4a8); min-height: 1.2em; }
         ${widgetDesignCss}
-        .tile .content { height: auto; min-height: 0; flex: 1; padding: 0; }
+        .tile .content { height: auto; min-height: 0; flex: 1; padding: 0;
+          overflow: var(--cms-widget-overflow, auto); }
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>
@@ -203,6 +205,7 @@ class FHEMCMSHtml extends HTMLElement {
       return;
     }
     const html = this.widgetConfig.html || '';
+    const preserveState = this.templateSource === html;
     if (this.templateSource !== html) {
       this.template = sanitize(html);
       this.templateSource = html;
@@ -229,9 +232,9 @@ class FHEMCMSHtml extends HTMLElement {
         status.textContent = this.mapError || 'Fahrzeugkarte wird geladen …';
         host.replaceChildren(status);
       }
-      content.replaceChildren(rendered);
+      updateWidgetDom(content, rendered, preserveState);
     } else {
-      this.vehicleMaps = renderVehicleMaps(content, rendered, this.vehicleMaps, this.mapRuntime);
+      this.vehicleMaps = renderVehicleMaps(content, rendered, this.vehicleMaps, this.mapRuntime, preserveState);
     }
     if (this.fragmentTarget) {
       [...content.querySelectorAll('[id]')].find(element => element.id === this.fragmentTarget)

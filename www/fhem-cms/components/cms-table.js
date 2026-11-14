@@ -2,6 +2,7 @@ import { openDevicePicker } from '../js/device-picker.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
+import { updateWidgetDom } from '../js/widget-dom.js';
 
 const MAX_ROWS = 40;
 
@@ -27,7 +28,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; height: 100%; overflow: auto;
+        .tile { position: relative; height: var(--cms-widget-height, 100%); overflow: var(--cms-widget-overflow, auto);
           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
           color: inherit; display: flex; flex-direction: column; gap: 14px; padding: 8px;
           background: var(--cms-surface, #202e27); border: 1px solid var(--cms-frame, #7f8c84);
@@ -578,7 +579,8 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const numbers = [];
     const units = new Set();
     const multipleDevices = new Set((this.widgetConfig.rows || []).map((row) => row.device)).size > 1;
-    body.replaceChildren(...(this.widgetConfig.rows || []).map((row) => {
+    const nextRows = document.createDocumentFragment();
+    nextRows.append(...(this.widgetConfig.rows || []).map((row) => {
       const tr = document.createElement('tr');
       const deviceCell = document.createElement('td');
       const valueCell = document.createElement('td');
@@ -594,6 +596,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
       tr.append(deviceCell, valueCell);
       return tr;
     }));
+    updateWidgetDom(body, nextRows);
     const foot = this.shadowRoot.querySelector('[data-sum]');
     foot.hidden = this.widgetConfig.sum !== true;
     this.shadowRoot.querySelector('[data-sum-label]').textContent = this.widgetConfig.hideSumLabel === true

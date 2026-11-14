@@ -1,5 +1,6 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { widgetDesignCss } from '../js/widget-design.js';
+import { updateWidgetDom } from '../js/widget-dom.js';
 import { isValidName } from '../js/fhem-client.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 
@@ -254,13 +255,16 @@ class FHEMCMSCallList extends HTMLElement {
     const columns = this.widgetConfig.columns || DEFAULT_COLUMNS;
     const rows = callRows(this.snapshot, this.widgetConfig.device, this.widgetConfig.limit ?? 5);
     const head = this.shadowRoot.querySelector('[data-head]');
-    head.replaceChildren(...columns.map(column => {
+    const nextHead = document.createDocumentFragment();
+    nextHead.append(...columns.map(column => {
       const th = document.createElement('th');
       th.scope = 'col';
       th.textContent = LABELS.get(column) || column;
       return th;
     }));
-    this.shadowRoot.querySelector('[data-rows]').replaceChildren(...rows.map(row => {
+    updateWidgetDom(head, nextHead);
+    const nextRows = document.createDocumentFragment();
+    nextRows.append(...rows.map(row => {
       const tr = document.createElement('tr');
       for (const column of columns) {
         const td = document.createElement('td');
@@ -279,6 +283,7 @@ class FHEMCMSCallList extends HTMLElement {
       }
       return tr;
     }));
+    updateWidgetDom(this.shadowRoot.querySelector('[data-rows]'), nextRows);
     this.shadowRoot.querySelector('[data-table]').hidden = rows.length === 0;
     const readings = Array.isArray(this.snapshot)
       ? this.snapshot.find(entry => entry.name === this.widgetConfig.device)?.readings : null;

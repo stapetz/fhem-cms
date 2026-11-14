@@ -20,8 +20,9 @@ class FHEMCMSClock extends HTMLElement {
         [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
-        .tile { position: relative; display: flex; flex-direction: column; gap: 14px; height: 100%;
-          overflow: auto; container-type: size; border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
+        .tile { position: relative; display: flex; flex-direction: column; gap: 14px; height: var(--cms-widget-height, 100%);
+          overflow: var(--cms-widget-overflow, auto); container-type: var(--cms-widget-containment, size);
+          border: 1px solid var(--cms-frame, #7f8c84); border-radius: 1.4rem;
           background: var(--cms-surface, #202e27); padding: 8px; color: inherit;
           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; text-align: center; }
         header { flex: none; display: flex; align-items: center; padding: 0 48px 8px 0;
@@ -37,7 +38,7 @@ class FHEMCMSClock extends HTMLElement {
         .content[data-time-only] .time { font-size: max(12px, min(72cqh, 22cqw)); }
         .date { color: inherit; font-size: .86rem; opacity: .72; overflow-wrap: anywhere; max-width: 100%; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-        .face { position: relative; width: min(65cqh, 62cqw); aspect-ratio: 1;
+        .face { position: relative; width: min(65cqh, 62cqw); aspect-ratio: 1; overflow: clip;
           border: 2px solid rgba(128,128,128,.25);
           background: rgba(128,128,128,.08); border-radius: 50%; }
         .content[data-time-only] .face { width: min(92cqh, 80cqw); }

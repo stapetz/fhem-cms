@@ -218,7 +218,7 @@ class FHEMCMSThermostat extends HTMLElement {
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
         ${widgetDesignCss}
-        .tile .body { height: auto; min-height: 100%; flex: 1; gap: 14px; font-size: 1rem; }
+        .tile .body { height: auto; min-height: var(--cms-widget-body-min-height, 100%); flex: 1; gap: 14px; font-size: 1rem; }
         .tile .boxes { margin: 0; padding: 0; gap: 14px;
           grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
           flex: none; align-content: start; }

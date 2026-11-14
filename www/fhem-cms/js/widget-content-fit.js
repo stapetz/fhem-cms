@@ -6,11 +6,14 @@ export const widgetHierarchyCss = `
 
 export const fittedContentCss = `
   ${widgetHierarchyCss}
-  .main { position: relative; flex: 1 0 48px; display: flex; align-items: safe center;
-    justify-content: safe center; min-width: 0; min-height: 48px; padding: 0; }
-  [data-fit-content] { flex: none; width: max-content; max-width: none; }
+  .main { position: relative; flex: 1 0 var(--cms-widget-main-basis, 48px); display: flex; align-items: safe center;
+    justify-content: safe center; min-width: 0; min-height: var(--cms-widget-main-height, 48px); padding: 0; }
+  [data-fit-content] { flex: none; width: max-content; max-width: var(--cms-widget-fit-width, none); }
   .fit-row { display: inline-flex; align-items: center; gap: 0.14em; }
-  .tile .main { overflow: auto; }
+  .tile [data-fit-content] :is(.fit-row, .value, .label, .state) {
+    min-width: 0; white-space: var(--cms-widget-fit-white-space, nowrap); overflow-wrap: anywhere;
+  }
+  .tile .main { overflow: var(--cms-widget-overflow, auto); }
 `;
 
 export function fitWidgetContent(host) {
@@ -37,10 +40,13 @@ export function fitWidgetContent(host) {
     if (!natural.width || !natural.height) return;
     let size = Math.max(12, 16 * Math.min(available.width / natural.width, available.height / natural.height) * 0.98);
     area.style.fontSize = `${size}px`;
-    const actual = content.getBoundingClientRect();
-    const correction = Math.min(1, available.width / actual.width, available.height / actual.height);
-    if (correction < 1) {
-      size = Math.max(12, size * correction);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const actual = content.getBoundingClientRect();
+      const correction = Math.min(1,
+        available.width / Math.max(actual.width, area.scrollWidth),
+        available.height / Math.max(actual.height, area.scrollHeight));
+      if (correction >= 1 || size <= 12) break;
+      size = Math.max(12, size * correction * 0.98);
       area.style.fontSize = `${size}px`;
     }
   };
