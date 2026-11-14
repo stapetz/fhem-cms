@@ -1,4 +1,4 @@
-UPD 2026-11-14_19:51:06 169122 FHEM/01_FHEMCMS.pm
+UPD 2026-11-14_20:04:53 170261 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-13_17:56:27 8880 www/fhem-cms/FCUI-LICENSES.txt
@@ -19,7 +19,7 @@ UPD 2026-11-14_19:11:25 30648 www/fhem-cms/components/cms-table.js
 UPD 2026-11-14_13:48:46 10410 www/fhem-cms/components/cms-text.js
 UPD 2026-11-14_19:11:25 39395 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-14_19:11:25 25831 www/fhem-cms/components/cms-value.js
-UPD 2026-11-14_19:51:06 50970 www/fhem-cms/components/cms-volvoconnect.js
+UPD 2026-11-14_20:04:53 58658 www/fhem-cms/components/cms-volvoconnect.js
 UPD 2026-11-13_10:06:04 2220 www/fhem-cms/css/cms-admin.css
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
 UPD 2026-11-13_17:56:27 15580 www/fhem-cms/css/fcui-map.css
@@ -50,7 +50,7 @@ UPD 2026-11-11_13:57:46 1335 www/fhem-cms/js/fcui-schema5-appearance.js
 UPD 2026-11-08_20:31:10 8243 www/fhem-cms/js/fcui-schema5-backup-panel.js
 UPD 2026-11-13_07:06:17 10557 www/fhem-cms/js/fcui-schema5-blueprints.js
 UPD 2026-11-13_15:12:09 15844 www/fhem-cms/js/fcui-schema5-draft.js
-UPD 2026-11-14_19:11:25 36611 www/fhem-cms/js/fcui-schema5-editor.js
+UPD 2026-11-14_20:04:53 36897 www/fhem-cms/js/fcui-schema5-editor.js
 UPD 2026-11-09_07:18:21 4934 www/fhem-cms/js/fcui-schema5-grid-edit.js
 UPD 2026-11-12_17:22:24 12933 www/fhem-cms/js/fcui-schema5-layout.js
 UPD 2026-11-12_10:29:43 5548 www/fhem-cms/js/fcui-schema5-live.js
@@ -61,10 +61,10 @@ UPD 2026-11-11_16:03:40 16862 www/fhem-cms/js/fcui-schema5-page-panel.js
 UPD 2026-11-11_15:37:10 6062 www/fhem-cms/js/fcui-schema5-settings-preview.js
 UPD 2026-11-14_16:43:29 43235 www/fhem-cms/js/fcui-schema5-setup-wizard.js
 UPD 2026-11-08_15:33:41 1766 www/fhem-cms/js/fcui-schema5-transport.js
-UPD 2026-11-14_18:16:49 11955 www/fhem-cms/js/fcui-schema5-view.js
+UPD 2026-11-14_20:04:53 11998 www/fhem-cms/js/fcui-schema5-view.js
 UPD 2026-11-14_16:43:29 15633 www/fhem-cms/js/fcui-schema5-widget-panel.js
 UPD 2026-11-13_22:11:25 4819 www/fhem-cms/js/fcui-schema5-widget-session.js
-UPD 2026-11-14_18:16:49 7089 www/fhem-cms/js/fcui-schema5-widgets.js
+UPD 2026-11-14_20:04:53 7124 www/fhem-cms/js/fcui-schema5-widgets.js
 UPD 2026-11-13_09:56:15 22418 www/fhem-cms/js/fhem-client.js
 UPD 2026-11-13_15:48:11 81247 www/fhem-cms/js/fhem-cms.js
 UPD 2026-11-13_17:29:56 6027 www/fhem-cms/js/freehtml-css.js
@@ -83,7 +83,7 @@ UPD 2026-11-14_14:54:44 4869 www/fhem-cms/js/solar-energy.js
 UPD 2026-11-13_07:06:17 909 www/fhem-cms/js/status-colors.js
 UPD 2026-11-13_07:06:17 2441 www/fhem-cms/js/unit-input.js
 UPD 2026-11-14_16:12:23 5507 www/fhem-cms/js/vehicle-map.js
-UPD 2026-11-14_19:22:36 16604 www/fhem-cms/js/volvoconnect.js
+UPD 2026-11-14_20:04:53 17455 www/fhem-cms/js/volvoconnect.js
 UPD 2026-11-14_13:48:46 3111 www/fhem-cms/js/widget-content-fit.js
 UPD 2026-11-14_19:22:36 4019 www/fhem-cms/js/widget-design.js
 UPD 2026-11-14_13:48:46 1914 www/fhem-cms/js/widget-dom.js
