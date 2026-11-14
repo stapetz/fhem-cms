@@ -368,10 +368,12 @@ export class Schema5Editor {
               {...structuredClone(widget), groupOrder:[...settings.groupOrder],
                 hiddenGroups:[...settings.hiddenGroups], hiddenReadings:[...(settings.hiddenReadings || [])],
                 cardSizes:structuredClone(settings.cardSizes || {}),
+                ...(settings.cardPositions ? {cardPositions:structuredClone(settings.cardPositions)} : {}),
                 ...(settings.cardGrid ? {cardGrid:structuredClone(settings.cardGrid)} : {}),
                 showGallery:settings.showGallery}, state.token, 'update');
             Object.assign(widget, {groupOrder:[...settings.groupOrder], hiddenGroups:[...settings.hiddenGroups],
               cardSizes:structuredClone(settings.cardSizes || {}),
+              ...(settings.cardPositions ? {cardPositions:structuredClone(settings.cardPositions)} : {}),
               ...(settings.cardGrid ? {cardGrid:structuredClone(settings.cardGrid)} : {}),
               hiddenReadings:[...(settings.hiddenReadings || [])], showGallery:settings.showGallery});
             state = result;

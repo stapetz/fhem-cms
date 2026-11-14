@@ -14,6 +14,22 @@ const common = {
   legalComments: 'inline',
   write: false,
   metafile: true,
+  plugins: [{
+    name: 'gridstack-shadow-touch',
+    setup(builder) {
+      builder.onLoad({filter:/gridstack\/dist\/(?:dd-touch|utils)\.js$/}, async ({path}) => {
+        const source = await readFile(path,'utf8');
+        const touch = path.endsWith('/dd-touch.js');
+        const before = touch ? "simulateMouseEvent(e, 'mousedown');" : 'relatedTarget: e.target';
+        if (source.split(before).length !== 2) throw new Error('Review GridStack shadow touch compatibility patch');
+        // A delayed Touch.target is retargeted to the shadow host; keep the registered handle.
+        // A relatedTarget identical to target also prevents composed events crossing that boundary.
+        return {contents:source.replace(before,touch
+          ? "Utils.simulateMouseEvent(e.changedTouches[0], 'mousedown', target);" : 'relatedTarget: null'),
+          loader:'js',resolveDir:dirname(path)};
+      });
+    },
+  }],
 };
 const builds = [
   {

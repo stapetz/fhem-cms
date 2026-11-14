@@ -85,5 +85,18 @@ for my $columns (12,24,48,96,192) {
     $widget->{cardSizes} = {state=>{w=>$columns,h=>40},doors=>{w=>1,h=>1}};
     is(FHEMCMS_ValidateConfig($config, 5), undef, "accepts inherited $columns-column card grid");
     is(FHEMCMS_ValidateBlueprints([{name=>'Grid',widget=>$widget}]), undef, "blueprint preserves inherited $columns-column grid");
+    $widget->{cardPositions} = {state=>{x=>0,y=>3},doors=>{x=>0,y=>50}};
+    is(FHEMCMS_ValidateConfig($config,5),undef,"accepts exact $columns-column card positions with gaps");
+    is(FHEMCMS_ValidateBlueprints([{name=>'Positions',widget=>$widget}]),undef,"blueprint preserves $columns-column coordinates");
+    for my $positions (undef,[],{unknown=>{x=>0,y=>0}},{state=>undef},{state=>{x=>0}},
+        {state=>{x=>-1,y=>0}},{state=>{x=>0,y=>-1}},{state=>{x=>0.5,y=>0}},
+        {state=>{x=>JSON::PP::true,y=>0}},{state=>{x=>0,y=>0,z=>0}},
+        {state=>{x=>1,y=>0}},{state=>{x=>0,y=>961}},
+        {state=>{x=>0,y=>0},doors=>{x=>0,y=>3}}) {
+        my $copy=$json->decode($json->encode($config));
+        $copy->{pages}[0]{widgets}[0]{cardPositions}=$positions;
+        ok(defined(FHEMCMS_ValidateConfig($copy,5)),"rejects invalid $columns-column card positions");
+    }
+    delete $widget->{cardPositions};
 }
 done_testing();

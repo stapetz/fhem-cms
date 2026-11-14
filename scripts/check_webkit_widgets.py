@@ -37,17 +37,13 @@ def check_popup_order(page):
         "document.querySelector('#result').dataset.ready || document.querySelector('#result').dataset.result"
     )
     assert page.locator("#result").inner_text() == "READY", page.locator("#result").inner_text()
-    page.evaluate("window.popupOrderTest.host().openDetails(); window.popupOrderTest.host().startArrangement()")
-    page.evaluate("""() => {
-        const {host}=window.popupOrderTest,h=host();h.ensureCardSizes();
-        h.setCardSize('state',h.pendingGrid.columns,Math.ceil(400/h.pendingGrid.rowHeight));
-        h.reorderCard('state','statistics',false);h.render();
-    }""")
+    page.evaluate("window.popupOrderTest.host().openDetails(); window.popupOrderTest.prepareFullWidth()")
     handle = page.locator('cms-volvoconnect [data-details] [data-group="state"] [data-drag-card]')
     handle.scroll_into_view_if_needed()
     source = handle.bounding_box()
     page.mouse.move(source["x"] + source["width"] / 2, source["y"] + source["height"] / 2)
     page.mouse.down()
+    page.mouse.move(source["x"] + source["width"] / 2 + 20, source["y"] + source["height"] / 2)
     assert page.evaluate("Boolean(window.popupOrderTest.host().drag)")
     target = page.evaluate("""() => {
         const {$}=window.popupOrderTest,b=$('[data-detail-body]');b.scrollTop=0;
@@ -68,6 +64,8 @@ def check_popup_order(page):
         page.mouse.down()
         assert page.evaluate("Boolean(window.popupOrderTest.host().resize)"), "corner resize did not start"
         before = page.evaluate("JSON.stringify(window.popupOrderTest.host().pendingSizes.state)")
+        geometry_before = page.evaluate("window.popupOrderTest.geometry()")
+        order_before = page.evaluate("window.popupOrderTest.host().pendingCardOrder")
         page.evaluate("window.popupOrderTest.host().data = window.popupOrderTest.host().snapshot")
         assert page.evaluate("Boolean(window.popupOrderTest.host().resize)"), "live update interrupted resize"
         page.mouse.move(x + 70, y - 96)
@@ -76,7 +74,9 @@ def check_popup_order(page):
         page.mouse.up()
         assert not page.evaluate("Boolean(window.popupOrderTest.host().resize)"), "resize retained pointer capture"
         if cancelled:
-            assert page.evaluate("Object.keys(window.popupOrderTest.host().pendingSizes).length") == 0
+            assert page.evaluate("JSON.stringify(window.popupOrderTest.host().pendingSizes.state)") == before
+            assert page.evaluate("window.popupOrderTest.geometry()") == geometry_before
+            assert page.evaluate("window.popupOrderTest.host().pendingCardOrder") == order_before
         else:
             assert page.evaluate("JSON.stringify(window.popupOrderTest.host().pendingSizes.state)") != before
         assert page.evaluate("window.popupOrderTest.writes()") == 0, "resize wrote before apply"
@@ -85,32 +85,81 @@ def check_popup_order(page):
     page.keyboard.press("ArrowDown")
     assert page.evaluate("window.popupOrderTest.host().pendingSizes.state.h") == height_before + 1
     page.evaluate("window.popupOrderTest.host().cancelArrangement(); window.popupOrderTest.host().startArrangement()")
-    handle = page.locator('cms-volvoconnect [data-details] [data-group="gallery"] [data-drag-card]')
-    handle.scroll_into_view_if_needed()
-    source = handle.bounding_box()
-    target = page.locator('cms-volvoconnect [data-details] [data-group="statistics"]').bounding_box()
-    body = page.locator("cms-volvoconnect [data-detail-body]").bounding_box()
-    page.mouse.move(source["x"] + source["width"] / 2, source["y"] + source["height"] / 2)
-    page.mouse.down()
-    assert page.evaluate("Boolean(window.popupOrderTest.host().drag)")
-    page.locator('cms-volvoconnect [data-details] [data-group="statistics"]').scroll_into_view_if_needed()
-    target = page.locator('cms-volvoconnect [data-details] [data-group="statistics"]').bounding_box()
-    body = page.locator("cms-volvoconnect [data-detail-body]").bounding_box()
-    page.mouse.move(target["x"] + target["width"] / 2, max(target["y"] + 20, body["y"] + 50))
-    page.mouse.up()
-    assert page.evaluate("window.popupOrderTest.order()[1]") == "gallery", "mouse drag did not reorder"
+    dropped = None
+    for cancelled in [True, False]:
+        units = page.evaluate("window.popupOrderTest.prepareFreeDrag()")
+        before = page.evaluate("window.popupOrderTest.geometry()")
+        handle = page.locator('cms-volvoconnect [data-details] [data-group="gallery"] [data-drag-card]')
+        handle.scroll_into_view_if_needed()
+        source = handle.bounding_box()
+        x, y = source["x"] + source["width"] / 2, source["y"] + source["height"] / 2
+        page.mouse.move(x, y)
+        page.mouse.down()
+        page.mouse.move(x + 20, y)
+        assert page.evaluate("Boolean(window.popupOrderTest.host().drag)")
+        assert page.locator("cms-volvoconnect .grid-stack-placeholder .placeholder-content").count() == 1
+        page.evaluate("window.popupOrderTest.host().data=window.popupOrderTest.host().snapshot")
+        assert page.evaluate("Boolean(window.popupOrderTest.host().drag)"), "live update interrupted drag"
+        target = {"x": x + 20 + units["dx"] * units["colWidth"], "y": y + units["dy"] * units["rowHeight"]}
+        if units["mobile"]:
+            target = page.evaluate("""() => {
+                const b=window.popupOrderTest.$('[data-detail-body]');b.scrollTop=0;
+                const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+10};
+            }""")
+        page.mouse.move(target["x"], target["y"])
+        if cancelled and not units["mobile"]:
+            edge = page.evaluate("""() => {
+                const b=window.popupOrderTest.$('[data-detail-body]'),r=b.getBoundingClientRect();
+                return {x:r.x+r.width/2,y:r.bottom-5,scroll:b.scrollTop};
+            }""")
+            page.mouse.move(edge["x"], edge["y"])
+            page.wait_for_function(
+                "before => window.popupOrderTest.$('[data-detail-body]').scrollTop > before",
+                arg=edge["scroll"],
+            )
+        if cancelled:
+            page.keyboard.press("Escape")
+        page.mouse.up()
+        if cancelled:
+            assert page.evaluate("window.popupOrderTest.geometry()") == before, "Escape did not restore exact geometry"
+        else:
+            if units["mobile"]:
+                assert page.evaluate("window.popupOrderTest.order()[0]") == "gallery"
+            else:
+                assert page.evaluate("window.popupOrderTest.host().pendingPositions.gallery") == {"x": units["dx"], "y": units["dy"]}
+            dropped = page.evaluate("window.popupOrderTest.geometry()")
     assert page.evaluate("window.popupOrderTest.writes()") == 0, "drag wrote a draft"
     page.keyboard.press("Escape")
-    assert page.evaluate("window.popupOrderTest.order()[1]") == "statistics", "Escape did not cancel"
+    assert not page.evaluate("Boolean(window.popupOrderTest.host().pendingCardOrder)"), "Escape did not cancel"
     assert page.locator("cms-volvoconnect [data-details]").is_visible()
     page.evaluate("window.popupOrderTest.host().startArrangement()")
     page.locator('cms-volvoconnect [data-details] [data-group="gallery"] [data-drag-card]').focus()
     page.keyboard.press("ArrowUp")
     assert page.evaluate("window.popupOrderTest.order()[2]") == "gallery", "keyboard did not reorder"
+    units = page.evaluate("window.popupOrderTest.prepareFreeDrag()")
+    handle = page.locator('cms-volvoconnect [data-details] [data-group="gallery"] [data-drag-card]')
+    handle.scroll_into_view_if_needed()
+    source = handle.bounding_box()
+    x, y = source["x"] + source["width"] / 2, source["y"] + source["height"] / 2
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x + 20, y)
+    target = {"x": x + 20 + units["dx"] * units["colWidth"], "y": y + units["dy"] * units["rowHeight"]}
+    if units["mobile"]:
+        target = page.evaluate("""() => {
+            const b=window.popupOrderTest.$('[data-detail-body]');b.scrollTop=0;
+            const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+10};
+        }""")
+    page.mouse.move(target["x"], target["y"])
+    page.mouse.up()
+    page.wait_for_function("!window.popupOrderTest.host().drag")
     page.evaluate('window.popupOrderTest.host().toggleCard("doors"); window.popupOrderTest.host().saveArrangement()')
     page.wait_for_function("""window.popupOrderTest.writes() === 1
         && document.querySelector('cms-volvoconnect').shadowRoot.querySelector('[data-details]').open
         && !window.popupOrderTest.host().pendingCardOrder""")
+    page.evaluate("window.popupOrderTest.host().startArrangement()")
+    assert page.evaluate("window.popupOrderTest.geometry()") == dropped, "free layout was lost on Apply/reopening"
+    page.evaluate("window.popupOrderTest.host().cancelArrangement()")
     page.evaluate("window.popupOrderTest.finish()")
 
 

@@ -201,8 +201,8 @@ try {
   }
   await cancel();
   await start();
-  check(!Object.keys(host().pendingSizes).length && !$('#top').hasAttribute('data-sized'),
-    'cancel discards sizes and automatic arrangement');
+  check(!host().config.cardSizes && host().cardStack?.el === $('#top'),
+    'cancel discards sizes and automatic arrangement; next edit measures its GridStack baseline');
   host().reorderCard('gallery','statistics',true);
   host().reorderCard('gallery','statistics',true);
   check(order()[1] === 'gallery', 'repeated upper-half hits keep card before target');
@@ -227,6 +227,34 @@ try {
     host, $, order, check, start, cancel,
     save: async () => { await host().saveArrangement(); await wait(() => document.querySelector('.cms-widget-config')); },
     snapshot: () => structuredClone(state), writes: () => writes,
+    geometry: () => host().cardStack.save(false).map(({id,x=0,y=0,w,h})=>({id,x,y,w,h})).sort((a,b)=>a.id.localeCompare(b.id)),
+    prepareFreeDrag: () => {
+      host().cancelArrangement();
+      host().startArrangement();
+      const h=host(),grid=h.pendingGrid;
+      check(h.cardStack instanceof GridStack, 'popup uses exactly the main widget GridStack constructor');
+      check(h.cardStack.opts.mode === document.querySelector('.cms-schema5-grid').gridstack.opts.mode
+        && h.cardStack.opts.margin === 0, 'same float engine and gap mechanics as main grid');
+      const order=[...h.pendingCardOrder], step=Math.ceil(280/grid.rowHeight);
+      h.pendingSizes=Object.fromEntries(order.map(key=>[key,{w:grid.columns/3,h:step}]));
+      h.pendingPositions=Object.fromEntries(order.map((key,i)=>[key,{x:0,y:(i+2)*step}]));
+      h.pendingPositions.gallery={x:0,y:0};
+      h.pendingCardOrder=h.cardStackMobile ? ['state','gallery',...order.filter(key=>!['state','gallery'].includes(key))]
+        : ['gallery',...order.filter(key=>key!=='gallery')];
+      h.render();
+      $('[data-detail-body]').scrollTop=0;
+      const mobile=h.cardStackMobile;
+      return {colWidth:$('#top').clientWidth/grid.columns,rowHeight:grid.rowHeight,
+        mobile,dx:mobile?0:grid.columns/3,dy:mobile?h.cardStack.save(false).find(n=>n.id==='gallery').h:Math.ceil(140/grid.rowHeight)};
+    },
+    prepareFullWidth: () => {
+      host().cancelArrangement();host().startArrangement();
+      const h=host(),g=h.pendingGrid,order=['statistics','state',...h.pendingCardOrder.filter(key=>!['statistics','state'].includes(key))],height=Math.ceil(224/g.rowHeight);
+      h.pendingCardOrder=order;
+      h.pendingSizes=Object.fromEntries(order.map(key=>[key,{w:g.columns,h:height}]));
+      h.pendingPositions=Object.fromEntries(order.map((key,i)=>[key,{x:0,y:i*height}]));
+      h.render();
+    },
     finish: async () => {
       check(writes === 1 && publications === 0, 'exactly one draft write and no publication');
       const currentHost = host();
@@ -253,6 +281,7 @@ try {
       $('[data-reading-visibility="statistics_tripMeterManual"]').click();
       const scroll = content.scrollTop;
       await host().saveArrangement();
+      const savedPositions = structuredClone(host().config.cardPositions);
       check(writes === 2 && host() === currentHost && $('[data-details]') === dialog && dialog.open,
         'second save uses fresh token without remounting host/dialog');
       check(JSON.stringify(host().config.cardSizes) === savedSizes
@@ -260,6 +289,12 @@ try {
         'card sizes persist through actual editor draft callback');
       check(JSON.stringify(host().config.cardGrid) === JSON.stringify(savedGrid)
         && host().config.cardGrid.columns === columns, 'inherited grid units persist with sizes');
+      check(JSON.stringify(state.draft.pages[0].widgets[0].cardPositions) === JSON.stringify(savedPositions),
+        'exact coordinates persist through actual editor draft callback');
+      check([...$('#top').children].every(card=>{
+        const p=savedPositions[card.dataset.group];
+        return !p || (card.style.gridColumnStart === String(p.x+1) && card.style.gridRowStart === String(p.y+1));
+      }), 'saved display honors exact coordinates without dense backfilling');
       check(!$('[data-resize-card]'), 'apply removes resize controls');
       check(!$('#top').hasAttribute('data-guides'), 'normal popup never displays editing grid guides');
       const popupGrid = $('#top');
@@ -331,6 +366,11 @@ try {
           && readOnly.$('#top').hasAttribute('data-sized') && !readOnly.$('#top').hasAttribute('data-guides'),
           'saved dimensions survive full readonly remount without editing guides');
         check(readOnly.$('[data-arrange]').hidden, 'view mode has no arrangement controls');
+        check(JSON.stringify(readOnly.config.cardPositions) === JSON.stringify(savedPositions)
+          && [...readOnly.$('#top').children].every(card=>{
+            const p=savedPositions[card.dataset.group];
+            return !p || (card.style.gridColumnStart === String(p.x+1) && card.style.gridRowStart === String(p.y+1));
+          }), 'exact free coordinates survive full readonly remount');
         readOnly.startArrangement();
         check(!readOnly.pendingCardOrder, 'view mode rejects arrangement method');
         check(!readOnly.$('[data-group="doors"]'), 'saved hidden group is absent in view mode');

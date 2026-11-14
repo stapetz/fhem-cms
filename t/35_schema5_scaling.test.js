@@ -221,36 +221,48 @@ for (const [name, fixtures] of [
         assert.equal(failure, null, failure);
         if (fixture.startsWith('89_volvoconnect_order.html')) {
           const touch = fixture.includes('touch=1');
-          await evaluate('window.popupOrderTest.host().openDetails(); window.popupOrderTest.host().startArrangement()');
-          await evaluate(`(() => {
-            const {host}=window.popupOrderTest, h=host();
-            h.ensureCardSizes();
-            h.setCardSize('state',h.pendingGrid.columns,Math.ceil(400/h.pendingGrid.rowHeight));
-            h.reorderCard('state','statistics',false); h.render();
-          })()`);
-          assert.equal(await evaluate('window.popupOrderTest.order()[0]'),'statistics','full-width energy can move below statistics');
+          await evaluate('window.popupOrderTest.host().openDetails(); window.popupOrderTest.prepareFullWidth()');
           await evaluate('window.popupOrderTest.$(\'[data-group="state"] [data-drag-card]\').scrollIntoView({block:"center"})');
           const fullWidthDrag = await evaluate(`(() => {
             const {$}=window.popupOrderTest,r=$('[data-group="state"] [data-drag-card]').getBoundingClientRect();
             return {x:r.x+r.width/2,y:r.y+r.height/2};
           })()`);
-          if (touch) await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...fullWidthDrag,id:1}]});
-          else {
-            await command('Input.dispatchMouseEvent',{type:'mouseMoved',...fullWidthDrag});
-            await command('Input.dispatchMouseEvent',{type:'mousePressed',...fullWidthDrag,button:'left',clickCount:1});
-          }
-          assert.equal(await evaluate('Boolean(window.popupOrderTest.host().drag)'),true,'full-width card starts real drag');
+          const beginDrag = async point => {
+            if (touch) {
+              await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...point,id:1}]});
+              await new Promise(resolve=>setTimeout(resolve,350));
+              await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x+20,y:point.y,id:1}]});
+            } else {
+              await command('Input.dispatchMouseEvent',{type:'mouseMoved',...point});
+              await command('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});
+              await command('Input.dispatchMouseEvent',{type:'mouseMoved',x:point.x+20,y:point.y,button:'left',buttons:1});
+            }
+            assert.equal(await evaluate('Boolean(window.popupOrderTest.host().drag)'),true,'GridStack starts drag after movement threshold');
+            assert.equal(await evaluate('Boolean(window.popupOrderTest.$(".grid-stack-placeholder .placeholder-content"))'),true,
+              'same real GridStack placeholder as main widgets');
+          };
+          const moveDrag = async point => {
+            if (touch) await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...point,id:1}]});
+            else await command('Input.dispatchMouseEvent',{type:'mouseMoved',...point,button:'left',buttons:1});
+          };
+          const endDrag = async (point,cancel=false) => {
+            if (touch) await command('Input.dispatchTouchEvent',{type:cancel?'touchCancel':'touchEnd',touchPoints:[]});
+            else {
+              if (cancel) {
+                await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+                await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+              }
+              await command('Input.dispatchMouseEvent',{type:'mouseReleased',...point,button:'left',clickCount:1});
+            }
+            await new Promise(resolve=>setTimeout(resolve,60));
+          };
+          await beginDrag(fullWidthDrag);
           const topDrop = await evaluate(`(() => {
             const {$}=window.popupOrderTest,b=$('[data-detail-body]');b.scrollTop=0;
             const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+10};
           })()`);
-          if (touch) {
-            await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...topDrop,id:1}]});
-            await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-          } else {
-            await command('Input.dispatchMouseEvent',{type:'mouseMoved',...topDrop,button:'left',buttons:1});
-            await command('Input.dispatchMouseEvent',{type:'mouseReleased',...topDrop,button:'left',clickCount:1});
-          }
+          await moveDrag(topDrop);
+          await endDrag(topDrop);
           assert.equal(await evaluate('window.popupOrderTest.order()[0]'),'state',
             'full-width energy returns to first position with real drag');
           assert.equal(await evaluate(`(() => {const {$}=window.popupOrderTest,c=$('[data-group="state"]');
@@ -272,6 +284,8 @@ for (const [name, fixtures] of [
             assert.equal(await evaluate('Boolean(window.popupOrderTest.host().resize)'), true,
               'real pointer starts corner resize');
             const before = await evaluate('JSON.stringify(window.popupOrderTest.host().pendingSizes.state)');
+            const geometryBefore = await evaluate('window.popupOrderTest.geometry()');
+            const orderBefore = await evaluate('window.popupOrderTest.host().pendingCardOrder');
             await evaluate('window.popupOrderTest.host().data=window.popupOrderTest.host().snapshot');
             assert.equal(await evaluate('Boolean(window.popupOrderTest.host().resize)'), true,
               'live update preserves active resize');
@@ -289,10 +303,16 @@ for (const [name, fixtures] of [
             }
             assert.equal(await evaluate('Boolean(window.popupOrderTest.host().resize)'), false,
               'resize releases pointer capture');
-            if (cancelled) assert.equal(await evaluate('Object.keys(window.popupOrderTest.host().pendingSizes).length'),0,
+            if (cancelled) assert.equal(await evaluate('JSON.stringify(window.popupOrderTest.host().pendingSizes.state)'),before,
               'Escape or touch cancel restores sizes before gesture');
             else assert.notEqual(await evaluate('JSON.stringify(window.popupOrderTest.host().pendingSizes.state)'),before,
               'actual corner gesture changes card size');
+            if (cancelled) {
+              assert.deepEqual(await evaluate('window.popupOrderTest.geometry()'),geometryBefore,
+                'cancelled resize restores displaced card positions');
+              assert.deepEqual(await evaluate('window.popupOrderTest.host().pendingCardOrder'),orderBefore,
+                'cancelled resize restores card order');
+            }
             assert.equal(await evaluate('window.popupOrderTest.writes()'),0,'resize never writes before apply');
           }
           await evaluate('window.popupOrderTest.$(\'[data-group="state"] [data-resize-card]\').focus()');
@@ -302,61 +322,56 @@ for (const [name, fixtures] of [
           assert.equal(await evaluate('window.popupOrderTest.host().pendingSizes.state.h'),heightBefore+1,
             'real keyboard resizes focused card corner');
           await evaluate('window.popupOrderTest.host().cancelArrangement(); window.popupOrderTest.host().startArrangement()');
+          let droppedGeometry;
           const dragGallery = async (cancel = false) => {
+            const units = await evaluate('window.popupOrderTest.prepareFreeDrag()');
+            const before = await evaluate('window.popupOrderTest.geometry()');
             await evaluate('window.popupOrderTest.$(\'[data-group="gallery"] [data-drag-card]\').scrollIntoView({block:"center"})');
             const points = await evaluate(`(() => {
               const {$} = window.popupOrderTest;
               const a=$('[data-group="gallery"] [data-drag-card]').getBoundingClientRect();
-              const b=$('[data-group="statistics"]').getBoundingClientRect();
-              const body=$('[data-detail-body]').getBoundingClientRect();
-              return {from:{x:a.x+a.width/2,y:a.y+a.height/2},
-                to:{x:b.x+b.width/2,y:Math.max(b.y+20,body.top+50)}};
+              return {from:{x:a.x+a.width/2,y:a.y+a.height/2}};
             })()`);
-            if (touch) await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...points.from,id:1}]});
-            else {
-              await command('Input.dispatchMouseEvent', {type:'mouseMoved',...points.from});
-              await command('Input.dispatchMouseEvent', {type:'mousePressed',...points.from,button:'left',clickCount:1});
-            }
-            assert.equal(await evaluate('Boolean(window.popupOrderTest.host().drag)'), true, 'real pointer starts drag');
-            await evaluate('window.popupOrderTest.host().data = [{name:"Car",readings:{state_batteryChargeLevel:"85",statistics_tripMeterManual:"124",vehicle_descriptions_model:"Demo",vehicle_images_exteriorImageUrl:location.origin+"/t/media/"+ "a".repeat(32)+".png"}}]');
+            await beginDrag(points.from);
+            await evaluate('(() => {const h=window.popupOrderTest.host(),data=structuredClone(h.snapshot); data[0].readings.state_batteryChargeLevel="85"; h.data=data;})()');
             assert.equal(await evaluate('Boolean(window.popupOrderTest.host().drag)'), true, 'live update preserves active drag');
-            await evaluate('window.popupOrderTest.$(\'[data-group="statistics"]\').scrollIntoView({block:"nearest"})');
-            points.to = await evaluate(`(() => {
-              const {host,$} = window.popupOrderTest;
-              const card=$('[data-group="statistics"]').getBoundingClientRect();
-              const body=$('[data-detail-body]').getBoundingClientRect();
-              const x=card.x+card.width/2,y=Math.max(card.y+20,body.top+20);
-              if(host().shadowRoot.elementFromPoint(x,y)?.closest('[data-group]')?.dataset.group !== 'statistics')
-                throw new Error('Drag target must be visibly inside statistics card');
-              return {x,y};
+            points.to={x:points.from.x+20+units.dx*units.colWidth,y:points.from.y+units.dy*units.rowHeight};
+            if (units.mobile) points.to=await evaluate(`(() => {
+              const b=window.popupOrderTest.$('[data-detail-body]');b.scrollTop=0;
+              const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+10};
             })()`);
-            if (touch) {
-              await command('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{...points.to,id:1}]});
-              await command('Input.dispatchTouchEvent', {type:cancel ? 'touchCancel' : 'touchEnd',touchPoints:[]});
-            } else {
-              await command('Input.dispatchMouseEvent', {type:'mouseMoved',...points.to,button:'left',buttons:1});
-              if (cancel) {
-                await command('Input.dispatchKeyEvent', {type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
-                await command('Input.dispatchKeyEvent', {type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
-              }
-              await command('Input.dispatchMouseEvent', {type:'mouseReleased',...points.to,button:'left',clickCount:1});
+            await moveDrag(points.to);
+            if (cancel && !units.mobile) {
+              const edge = await evaluate(`(() => {
+                const b=window.popupOrderTest.$('[data-detail-body]'),r=b.getBoundingClientRect();
+                return {x:r.x+r.width/2,y:r.bottom-5,scroll:b.scrollTop};
+              })()`);
+              await moveDrag({x:edge.x,y:edge.y});
+              await new Promise(resolve=>setTimeout(resolve,200));
+              assert.ok(await evaluate('window.popupOrderTest.$("[data-detail-body]").scrollTop') > edge.scroll,
+                'native GridStack autoscrolls inside the popup at its lower edge');
             }
+            await endDrag(points.to,cancel);
             if (cancel) {
-              assert.equal(await evaluate('window.popupOrderTest.order()[1]'), 'statistics',
-                'cancelled pointer gesture restores prior order');
+              assert.deepEqual(await evaluate('window.popupOrderTest.geometry()'),before,
+                'Escape/touchcancel restores every displaced card coordinate');
               assert.equal(await evaluate('Boolean(window.popupOrderTest.host().pendingCardOrder)'), true,
                 'cancelled drag leaves arrangement editor open');
               return;
             }
-            assert.equal(await evaluate('window.popupOrderTest.order()[1]'), 'gallery', 'pointer moves gallery to target slot');
-            assert.equal(await evaluate('window.popupOrderTest.host().drag === null'), true, 'drop releases capture/preview');
+            const position = await evaluate('window.popupOrderTest.host().pendingPositions.gallery');
+            if (units.mobile) assert.equal(await evaluate('window.popupOrderTest.host().pendingCardOrder[0]'),
+              'gallery','mobile full-content cards use GridStack collisions for reordering');
+            else assert.deepEqual(position,{x:units.dx,y:units.dy},'free drop snaps to exact x/y instead of reordering');
+            droppedGeometry=await evaluate('window.popupOrderTest.geometry()');
+            assert.equal(await evaluate('Boolean(window.popupOrderTest.host().drag)'), false, 'drop releases drag');
           };
           await dragGallery(true);
           await dragGallery();
           assert.equal(await evaluate('window.popupOrderTest.writes()'), 0, 'drag never writes');
           await command('Input.dispatchKeyEvent', {type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
           await command('Input.dispatchKeyEvent', {type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
-          assert.equal(await evaluate('window.popupOrderTest.order()[1]'), 'statistics', 'Escape cancels unsaved arrangement');
+          assert.equal(await evaluate('Boolean(window.popupOrderTest.host().pendingCardOrder)'), false, 'Escape cancels unsaved arrangement');
           assert.equal(await evaluate('window.popupOrderTest.$("[data-details]").open'), true, 'Escape leaves details open');
           await evaluate('window.popupOrderTest.host().startArrangement()');
           await evaluate('window.popupOrderTest.$(\'[data-group="gallery"] [data-drag-card]\').focus()');
@@ -367,8 +382,12 @@ for (const [name, fixtures] of [
           await dragGallery();
           await evaluate('window.popupOrderTest.host().toggleCard("doors")');
           await evaluate('window.popupOrderTest.host().saveArrangement()');
-          assert.equal(await evaluate('window.popupOrderTest.snapshot().draft.pages[0].widgets[0].groupOrder[1]'),
-            'gallery', 'editor callback persists exact dropped order');
+          const saved=await evaluate('window.popupOrderTest.snapshot().draft.pages[0].widgets[0]');
+          if (!touch) assert.deepEqual(saved.cardPositions.gallery,
+            (({x,y})=>({x,y}))(droppedGeometry.find(item=>item.id==='gallery')), 'editor persists exact free position');
+          await evaluate('window.popupOrderTest.host().startArrangement()');
+          assert.deepEqual(await evaluate('window.popupOrderTest.geometry()'),droppedGeometry,'all free coordinates survive Apply and reopening');
+          await evaluate('window.popupOrderTest.host().cancelArrangement()');
           await evaluate('window.popupOrderTest.finish()');
           return;
         }

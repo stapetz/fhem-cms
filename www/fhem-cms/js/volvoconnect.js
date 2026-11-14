@@ -28,6 +28,25 @@ export function volvoGroupOrder(config = {}) {
 }
 
 export function validateVolvoGroups(config) {
+  if (config.cardPositions !== undefined) {
+    const positions = config.cardPositions;
+    const keys = new Set(volvoCards.map(([key]) => key));
+    if (!config.cardGrid || !positions || typeof positions !== 'object' || Array.isArray(positions)
+      || Object.keys(positions).length > keys.size
+      || Object.entries(positions).some(([key,p]) => !keys.has(key) || !p || typeof p !== 'object'
+        || Array.isArray(p) || Object.keys(p).sort().join() !== 'x,y'
+        || !Number.isInteger(p.x) || p.x < 0 || p.x >= config.cardGrid.columns
+        || !Number.isInteger(p.y) || p.y < 0 || p.y > 999
+        || !config.cardSizes?.[key] || p.x + config.cardSizes[key].w > config.cardGrid.columns
+        || p.y + config.cardSizes[key].h > 1000)) {
+      return 'Ungültige VolvoConnect-Kartenpositionen.';
+    }
+    const placed = Object.entries(positions).map(([key,p])=>({...p,...config.cardSizes[key]}));
+    if (placed.some((a,i)=>placed.slice(i+1).some(b=>
+      a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y))) {
+      return 'Überlappende VolvoConnect-Kartenpositionen.';
+    }
+  }
   if (config.cardGrid !== undefined && (!config.cardGrid || typeof config.cardGrid !== 'object'
     || Array.isArray(config.cardGrid) || Object.keys(config.cardGrid).sort().join() !== 'columns,rowHeight'
     || ![12,24,48,96,192].includes(config.cardGrid.columns)
@@ -76,13 +95,17 @@ export function arrangeVolvoCards(order, sizes, config = {}) {
     || (sizes[b]?.h || 6) - (sizes[a]?.h || 6) || (sizes[b]?.w || 4) - (sizes[a]?.w || 4));
 }
 
-export function placeVolvoCards(order, sizes, columns, config = {}) {
+export function placeVolvoCards(order, sizes, columns, config = {}, positions = {}) {
   const hidden = key => key === 'gallery' ? config.showGallery === false : config.hiddenGroups?.includes(key);
   const placed = [];
   let row = 0, col = 0;
   for (const [index,key] of order.entries()) {
     const {w,h} = sizes[key];
-    if (hidden(key) && (index === 0 || !hidden(order[index - 1])) && order.slice(index).every(hidden)) {
+    if (positions[key]) {
+      col = Math.min(columns-w, positions[key].x);
+      row = positions[key].y;
+    }
+    if (!positions[key] && hidden(key) && (index === 0 || !hidden(order[index - 1])) && order.slice(index).every(hidden)) {
       row = Math.max(row, ...placed.map(entry => entry.row + entry.h));
       col = 0;
     }
