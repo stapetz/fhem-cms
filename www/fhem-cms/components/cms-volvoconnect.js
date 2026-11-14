@@ -93,7 +93,10 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .status-icon[data-tone=good] { color:var(--cms-success,#10b981); }
         .status-icon[data-tone=warning] { color:var(--cms-warning,#f59e0b); }
         [data-reading-concealed] { opacity:.5; }
-        [data-reading-visibility] { padding:2px 6px; margin-left:6px; }
+        [data-reading-visibility] { flex:none; padding:2px 6px; margin:0 6px 0 0; }
+        .row[data-editable] { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,45%); align-items:center; }
+        .row[data-editable] dt { display:flex; align-items:center; min-width:0; }
+        .row[data-editable] dd { justify-self:end; }
         .slides { display:flex; width:100%; min-width:0; overflow-x:auto;
           scroll-snap-type:x mandatory; scrollbar-width:thin; }
         figure { flex:0 0 100%; width:100%; min-width:0; margin:0; scroll-snap-align:start; text-align:center; }
@@ -132,7 +135,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .detail-header h3 { flex:1; }
         [data-arrange-bar] { width:100%; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
         [data-arrange-bar] p { flex:1 1 200px; margin:0; font-size:.86rem; }
-        .card-tools { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:8px; }
+        .card-tools { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:6px; margin-bottom:8px; }
         [data-drag-card] { touch-action:none; cursor:grab; }
         [data-dragging] { outline:2px dashed var(--cms-accent,#3b82f6); opacity:.4; }
         .drag-preview { position:fixed; z-index:1; pointer-events:none; padding:12px;
@@ -414,6 +417,7 @@ shutdown restart</pre>
 
   toggleReading(key) {
     if (!this.pendingVisibility || this.arrangementSaving || this.drag) return;
+    if (key.startsWith('state_')) return;
     const hidden = new Set(this.pendingVisibility.hiddenReadings);
     if (hidden.has(key)) hidden.delete(key); else hidden.add(key);
     this.pendingVisibility.hiddenReadings = [...hidden];
@@ -423,6 +427,7 @@ shutdown restart</pre>
   }
 
   readingVisible(key, compact = false) {
+    if (key?.startsWith('state_')) return true;
     return !(compact ? this.widgetConfig : this.pendingVisibility || this.widgetConfig).hiddenReadings?.includes(key);
   }
 
@@ -590,18 +595,22 @@ shutdown restart</pre>
     }
   }
 
-  rows(entries) {
+  rows(entries, fixed = false) {
     const list = node('dl');
     for (const entry of entries) {
       const visible = this.readingVisible(entry.visibilityKey);
       if (!visible && !this.pendingCardOrder) continue;
       const row = node('div', undefined, 'row');
+      row.toggleAttribute('data-editable', Boolean(this.pendingCardOrder) && !fixed);
       row.toggleAttribute('data-reading-concealed', !visible);
       row.id = `reading-${entry.reading}`;
       const label = node('dt');
+      if (this.pendingCardOrder && !fixed) label.append(this.readingEye(entry.visibilityKey, entry.label));
+      const caption = node('span');
       const icon = node('span', entry.icon, 'reading-icon');
       icon.setAttribute('aria-hidden', 'true');
-      label.append(icon, document.createTextNode(entry.label));
+      caption.append(icon, document.createTextNode(entry.label));
+      label.append(caption);
       const value = node('dd');
       if (entry.status) {
         const status = node('span', entry.status.icon, 'status-icon');
@@ -611,7 +620,6 @@ shutdown restart</pre>
         status.title = entry.value;
         value.append(status);
       } else value.append(document.createTextNode(entry.value));
-      if (this.pendingCardOrder) value.append(this.readingEye(entry.visibilityKey, entry.label));
       row.append(label, value);
       list.append(row);
     }
@@ -688,43 +696,35 @@ shutdown restart</pre>
     hero.id = compact ? 'compact-energy' : 'energy';
     if (!compact) hero.append(node('h4', '🔋 Energie & Akku'));
     const summary = node('div', undefined, 'summary');
-    const preview = !compact && Boolean(this.pendingCardOrder);
-    const socVisible = this.readingVisible('state_batteryChargeLevel', compact);
-    const rangeVisible = this.readingVisible('state_electricRange', compact);
-    if (model.soc !== null && (socVisible || preview)) {
+    if (model.soc !== null) {
       const soc = node('div');
-      soc.toggleAttribute('data-reading-concealed', !socVisible);
       const label = node('small', 'Akkustand');
       label.style.display = 'block';
       soc.append(label, node('strong', `${model.soc}%`, 'soc'));
-      if (preview) soc.append(this.readingEye('state_batteryChargeLevel', 'Akkustand'));
       summary.append(soc);
     }
-    if (model.range && (rangeVisible || preview)) {
+    if (model.range) {
       const range = node('div', undefined, 'range');
-      range.toggleAttribute('data-reading-concealed', !rangeVisible);
       range.append(node('small', 'Restreichweite'),
         document.createTextNode(volvoValue('state', 'electricRange', model.range,
           model.rangeUnit)));
-      if (preview) range.append(this.readingEye('state_electricRange', 'Restreichweite'));
       summary.append(range);
     }
     if (summary.childElementCount) hero.append(summary);
-    if (model.soc !== null && (socVisible || preview)) {
+    if (model.soc !== null) {
       const bar = node('div', undefined, 'charge');
       bar.setAttribute('role', 'meter');
       bar.setAttribute('aria-label', 'Akkustand');
       bar.setAttribute('aria-valuemin', '0');
       bar.setAttribute('aria-valuemax', '100');
       bar.setAttribute('aria-valuenow', String(model.soc));
-      bar.toggleAttribute('data-reading-concealed', !socVisible);
       const fill = node('div');
       fill.style.width = `${model.soc}%`;
       bar.append(fill);
       hero.append(bar);
     }
     if (!compact) hero.append(this.rows(model.groups.get('state').filter(entry =>
-      !['batteryChargeLevel', 'electricRange', 'distanceToEmptyBattery'].includes(entry.key))));
+      !['batteryChargeLevel', 'electricRange', 'distanceToEmptyBattery'].includes(entry.key)), true));
     return hero;
   }
 
@@ -752,8 +752,8 @@ shutdown restart</pre>
       badge.title = badge.getAttribute('aria-label');
       badge.toggleAttribute('data-error', /^(?:error|auth_required)$/.test(api));
       badge.toggleAttribute('data-reading-concealed', !this.readingVisible('state'));
-      identity.append(badge);
       if (preview) identity.append(this.readingEye('state', 'API-Status'));
+      identity.append(badge);
     }
     content.append(identity);
     const top = node('div', undefined, 'top');
@@ -846,7 +846,7 @@ shutdown restart</pre>
     if (updated && (preview || this.readingVisible('lastUpdate'))) {
       const stamp = node('span', `Letztes Update: ${formatDateDisplay(updated)}`);
       stamp.toggleAttribute('data-reading-concealed', !this.readingVisible('lastUpdate'));
-      if (preview) stamp.append(this.readingEye('lastUpdate', 'Letztes Update'));
+      if (preview) stamp.prepend(this.readingEye('lastUpdate', 'Letztes Update'));
       footer.append(stamp);
     }
     content.append(footer);
