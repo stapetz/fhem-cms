@@ -11,6 +11,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CASES = [
+    ("88_volvoconnect.html", 1400, 1000, False),
     ("71_device_first.html", 1400, 1000, False),
     ("45_solarflow_sizing.html", 1400, 1000, False),
     ("85_solar_energy.html", 1400, 1000, False),

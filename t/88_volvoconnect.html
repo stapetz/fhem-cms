@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="de" data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VolvoConnect — natives Fahrzeugwidget</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<style>
+body { margin:0; padding:16px; }
+.cms-shell { margin:0; }
+cms-volvoconnect { width:100%; --cms-widget-height:auto; --cms-widget-containment:inline-size; }
+#result { white-space:pre-wrap; }
+</style>
+<div class="cms-shell"><div id="mount"></div></div><pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement, dataFor, devicesOf, isLiveWidget } from '../www/fhem-cms/js/widget-factory.js';
+import { volvoGroups } from '../www/fhem-cms/js/volvoconnect.js';
+import { blueprintDevices, remapBlueprintDevice } from '../www/fhem-cms/js/fcui-schema5-blueprints.js';
+import { setLiquidAppearance } from '../www/fhem-cms/js/fcui-schema5-appearance.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const pause = () => new Promise(resolve => setTimeout(resolve, 60));
+const mount = document.querySelector('#mount');
+const widget = { id:'car', type:'fhem-volvoconnect', title:'VolvoConnect',
+  device:'Car', grid:{ col:1, row:2, w:12, h:18 } };
+const values = {
+  state:'authenticated', vehicle_descriptions_model:'Volvo EX40', vehicle_modelYear:'2027',
+  vehicle_externalColour:'Crystal White Pearl', state_batteryChargeLevel:'83',
+  state_batteryChargeLevel_unit:'percentage', state_electricRange:'320', state_electricRange_unit:'km',
+  state_chargingStatus:'DONE', state_chargingType:'NONE', state_chargerConnectionStatus:'DISCONNECTED',
+  state_chargingCurrentLimit:'32', state_chargingCurrentLimit_unit:'ampere',
+  state_targetBatteryChargeLevel:'100', state_targetBatteryChargeLevel_unit:'percentage',
+  state_estimatedChargingTimeToTargetBatteryChargeLevel:'0',
+  state_estimatedChargingTimeToTargetBatteryChargeLevel_unit:'minutes',
+  odometer_odometer:'1459', odometer_odometer_unit:'km',
+  engine_engineStatus:'STOPPED', doors_centralLock:'LOCKED', windows_frontLeftWindow:'CLOSED',
+  brakes_brakeFluidLevelWarning:'NO_WARNING', workshopDiagnostics_washerFluidLevelWarning:'NO_WARNING',
+  lastUpdate:'2026-11-14 16:00:00',
+};
+for (const [prefix] of volvoGroups) values[`${prefix}_exampleValue`] = 'Test';
+const snapshots = () => new Map([['Car', [{ name:'Car', type:'VolvoConnect', readings:{...values},
+  sets:'lock unlock climate:noArg climate_stop:noArg charge_start charge_stop horn' }]]]);
+const saved = [], commands = [];
+const services = { listAllDevices:async () => [{name:'Car',type:'VolvoConnect',readings:values}],
+  saveWidget:async value => saved.push(value), deleteWidget:async () => {},
+  setCommand:async (...args) => commands.push(args) };
+const host = createWidgetElement(widget, services, snapshots(), true);
+mount.append(host);
+const $ = selector => host.shadowRoot.querySelector(selector);
+try {
+  await pause();
+  check(host.localName === 'cms-volvoconnect', 'factory creates native VolvoConnect');
+  check(isLiveWidget(widget), 'widget subscribes to live updates');
+  check(devicesOf(widget).join() === 'Car', 'only selected vehicle is subscribed');
+  check(dataFor(widget, snapshots())[0].name === 'Car', 'single-device snapshot is supplied');
+  check(blueprintDevices(widget).join() === 'Car', 'blueprint detects vehicle');
+  check(remapBlueprintDevice(widget, 'Car', 'Other').device === 'Other', 'blueprint remaps only vehicle');
+  check($('.soc').textContent === '83%', 'battery charge hero matches module reading');
+  check($('.range').textContent.includes('320 km'), 'range hero uses module unit');
+  check($('[role=meter]').getAttribute('aria-valuenow') === '83', 'battery meter matches value');
+  check($('[data-content]').textContent.includes('01:') === false, 'zero remaining time is not invented');
+  check($('[data-content]').textContent.includes('00:00 h'), 'real zero remains visible');
+  check($('[data-content]').textContent.includes('API: Verbunden'), 'API state is translated');
+  check($('[data-content]').querySelectorAll('section.card').length >= 14, 'all module scopes appear');
+  check(!$('#gallery'), 'missing image readings produce no empty gallery');
+  check($('#group-engineDiagnostics').textContent.includes('Bremsflüssigkeitsstand'), 'diagnostics grouping follows module');
+  check(!$('#group-brakes').textContent.includes('Bremsflüssigkeitsstand'), 'brake-fluid warning is not duplicated');
+  const content = $('[data-content]');
+  const socNode = $('.soc');
+  content.scrollTop = 30;
+  values.state_batteryChargeLevel = '84';
+  host.data = dataFor(widget, snapshots());
+  check($('.soc') === socNode && socNode.textContent === '84%', 'live values update without replacing nodes');
+  check($('[data-content]') === content, 'content root remains stable');
+
+  values.vehicle_images_exteriorImageUrl = `${location.origin}/t/media/${'a'.repeat(32)}.png`;
+  values.vehicle_images_internalImageUrl = `${location.origin}/t/media/${'b'.repeat(32)}.png`;
+  host.data = dataFor(widget, snapshots());
+  check($('#gallery img') && $('#gallery').querySelectorAll('img').length === 2, 'gallery defaults on with both views');
+  const slides = $('.slides'), image = slides.querySelector('img');
+  slides.scrollLeft = 100;
+  const scroll = slides.scrollLeft;
+  host.data = dataFor(widget, snapshots());
+  check($('.slides') === slides && $('.slides img') === image, 'refresh retains gallery and image nodes');
+  check(slides.scrollLeft === scroll, 'refresh does not reset gallery scroll');
+  image.dispatchEvent(new Event('error'));
+  host.data = dataFor(widget, snapshots());
+  check($('.slides img').hidden && $('.slides figcaption').textContent.includes('nicht geladen'),
+    'image load errors stay visible across refreshes');
+  host.config = {...widget, showGallery:false};
+  check(!$('#gallery'), 'gallery switch disables images');
+  host.config = widget;
+  check(Boolean($('#gallery')), 'gallery can be enabled again');
+  for (const theme of ['light','dark','liquid-glass']) {
+    document.documentElement.dataset.cmsTheme = theme;
+    for (const width of [280,343,393,600,834,1200]) {
+      mount.style.width = `${width}px`;
+      await pause();
+      const tile = $('[data-tile]');
+      check(tile.scrollWidth <= tile.clientWidth + 1, `${theme}/${width}: no horizontal tile overflow`);
+      check(tile.scrollHeight <= tile.clientHeight + 1, `${theme}/${width}: content-driven mobile height`);
+      for (const section of host.shadowRoot.querySelectorAll('section.card')) {
+        const box = section.getBoundingClientRect(), outer = tile.getBoundingClientRect();
+        check(box.left >= outer.left && box.right <= outer.right + 1, `${theme}/${width}: cards fit tile`);
+      }
+      for (const button of host.shadowRoot.querySelectorAll('.tile button')) {
+        if (button.getBoundingClientRect().height) check(button.getBoundingClientRect().height >= 48, '48px touch actions');
+      }
+    }
+  }
+  setLiquidAppearance(document.querySelector('.cms-shell'), {liquidIntensity:40, liquidTransparency:70});
+  check(getComputedStyle($('[data-tile]')).backgroundColor !== 'rgb(32, 46, 39)', 'theme surface token is used');
+
+  host.data = [{name:'Car',readings:{state_batteryChargeLevel:'0',state_electricRange:'0',state_electricRange_unit:'km'}}];
+  check($('.soc').textContent === '0%', 'real zero SOC is shown');
+  check($('.range').textContent.includes('0 km'), 'real zero range is shown');
+  host.data = [{name:'Car',readings:{}}];
+  check(!$('.soc') && !$('.range') && !$('.card'), 'missing readings leave no fake values or empty groups');
+  host.data = [{name:'Car',readings:{state_batteryChargeLevel:'ERROR_READING_PROPERTY'}}];
+  check(!$('.card'), 'unavailable property is not rendered as a vehicle value');
+  values.statistics_customValue = '<img src=x onerror=alert(1)>';
+  host.data = dataFor(widget, snapshots());
+  check($('#group-statistics').textContent.includes('<img src=x'), 'untrusted reading remains plain text');
+  check(!$('#group-statistics img'), 'reading cannot inject markup');
+
+  host.removeAttribute('view-only');
+  await host.sendAction('unlock');
+  check(commands.length === 0, 'editor cannot send vehicle commands');
+  host.setAttribute('view-only','');
+  const originalConfirm = window.confirm;
+  try {
+    window.confirm = () => false;
+    await host.sendAction('unlock');
+    check(commands.length === 0, 'cancelled confirmation never sends command');
+    window.confirm = () => true;
+    await host.sendAction('invalid');
+    check(commands.length === 0, 'nonallowlisted command is rejected');
+    await host.sendAction('lock');
+    check(commands.length === 1 && commands[0].join() === 'Car,lock', 'confirmed action uses normal command service');
+    services.setCommand = async () => { throw new Error('test failure'); };
+    await host.sendAction('lock');
+    check($('[data-message]').textContent.includes('test failure'), 'action errors are visible');
+  } finally { window.confirm = originalConfirm; }
+
+  await host.openConfig({isNew:true});
+  check($('[name=showGallery]').checked, 'dialog gallery defaults on');
+  check(!$('[name=readings]'), 'dialog requires no manual reading mapping');
+  $('[name=showGallery]').checked = false;
+  await host.saveConfig();
+  check(saved.length === 1 && saved[0].showGallery === false, 'gallery preference is persisted');
+  check(saved[0].device === 'Car' && saved[0].type === widget.type, 'device/type preserved on save');
+  check(JSON.stringify(saved[0].grid) === JSON.stringify(widget.grid), 'dialog preserves widget grid');
+  let cancelled = 0;
+  host.addEventListener('cms-widget-cancel', () => cancelled++);
+  await host.openConfig({isNew:true});
+  $('[data-dialog]').dispatchEvent(new Event('cancel', {cancelable:true}));
+  check(!$('[data-dialog]').open && cancelled === 1, 'native Escape cancellation closes new widget session');
+  values.location_latitude = '0';
+  values.location_longitude = '0';
+  host.data = dataFor(widget, snapshots());
+  for (let i=0; i<100 && !host.vehicleMaps.size; i++) await pause();
+  const map = host.vehicleMaps.get('volvo-location');
+  check(Boolean(map), 'existing native map runtime renders actual coordinates');
+  check(map.car.getLatLng().lat === 0 && map.car.getLatLng().lng === 0, 'real zero coordinates are retained');
+  map.instance.setView([0.01,0.01],17,{animate:false});
+  const centerBefore = map.instance.getCenter();
+  const sizeBefore = map.instance.getSize();
+  check(sizeBefore.y === 175, 'map initializes at card height before external CSS arrives');
+  host.data = dataFor(widget, snapshots());
+  check(host.vehicleMaps.get('volvo-location') === map && map.instance.getZoom() === 17,
+    'refresh retains map instance and user zoom');
+  check(map.instance.project(map.instance.getCenter()).distanceTo(map.instance.project(centerBefore)) < 1,
+    `refresh retains user pan (${JSON.stringify(centerBefore)} -> ${JSON.stringify(map.instance.getCenter())}; size ${JSON.stringify(sizeBefore)} -> ${JSON.stringify(map.instance.getSize())}; host ${map.host.clientHeight})`);
+  delete values.location_latitude;
+  host.data = dataFor(widget, snapshots());
+  check(!$('#volvo-location') && host.vehicleMaps.size === 0, 'missing coordinate removes map instead of guessing');
+  values.location_latitude = '0';
+  host.data = dataFor(widget, snapshots());
+  check(host.vehicleMaps.size === 1, 'valid position recreates map');
+  host.remove();
+  check(host.vehicleMaps.size === 0, 'disconnect releases map resources');
+  mount.append(host);
+  check(host.vehicleMaps.size === 1, 'reconnect safely recreates map');
+  host.remove();
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({checks});
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = `${error.message}\n${error.stack}`;
+  console.error(error);
+}
+</script>

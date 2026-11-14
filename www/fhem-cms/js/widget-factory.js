@@ -14,6 +14,7 @@ import '../components/cms-chart.js';
 import '../components/cms-calllist.js';
 import { devicesOfSolarFlow } from '../components/cms-solarflow.js';
 import '../components/cms-solar-energy.js';
+import '../components/cms-volvoconnect.js';
 import { solarEnergyDevices } from './solar-energy.js';
 import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
 import { isValidName } from './fhem-client.js';
@@ -28,6 +29,7 @@ const tags = new Map([
   ['fhem-table', 'cms-table'],
   ['fhem-solarflow', 'cms-solarflow'],
   ['fhem-solar-energy', 'cms-solar-energy'],
+  ['fhem-volvoconnect', 'cms-volvoconnect'],
   ['fhem-chart', 'cms-chart'],
   ['fhem-calllist', 'cms-calllist'],
   ['fhem-slider', 'cms-slider'],
@@ -71,7 +73,7 @@ export function groupSnapshots(mains, results) {
 }
 
 export function isLiveWidget(widget) {
-  return ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-select', 'fhem-solarflow', 'fhem-solar-energy', 'fhem-calllist'].includes(widget.type)
+  return ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-select', 'fhem-solarflow', 'fhem-solar-energy', 'fhem-calllist', 'fhem-volvoconnect'].includes(widget.type)
     || (widget.type === 'text' && devicesOf(widget).length > 0);
 }
 

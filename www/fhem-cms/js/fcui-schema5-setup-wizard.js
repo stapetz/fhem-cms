@@ -2,7 +2,7 @@ import { isValidName } from './fhem-client.js';
 import { arrangeSchema5Widgets } from './fcui-schema5-layout.js';
 import { READING_PRESETS, suggestedReading } from './device-suggestions.js';
 import { solarPowerReadings, suggestedSolarSource } from './solar-energy-suggestions.js';
-const MAGIC_DEVICE_TYPES = new Set(['CUL_HM', 'MAX', 'LaCrosse', 'Shelly', 'IT', 'MQTT2_DEVICE', 'MQTT_DEVICE', 'SolaxModbus']);
+const MAGIC_DEVICE_TYPES = new Set(['CUL_HM', 'MAX', 'LaCrosse', 'Shelly', 'IT', 'MQTT2_DEVICE', 'MQTT_DEVICE', 'SolaxModbus', 'VolvoConnect']);
 const MAGIC_MAX_ROOMS = 8;
 const MAGIC_MAX_WIDGETS = 8;
 const MAGIC_TECHNICAL_ROOMS = new Set([
@@ -89,6 +89,12 @@ function schema5BaseWidgetSuggestions(device) {
   if (!device || !isValidName(device.name) || !device.readings
     || typeof device.readings !== 'object' || Array.isArray(device.readings)) return [];
   const readings = device.readings;
+  if (device.type === 'VolvoConnect') {
+    const alias = typeof device.alias === 'string' && device.alias.trim()
+      && !/[\x00-\x1f\x7f]/.test(device.alias) ? device.alias.trim() : device.name;
+    return [{ type: 'fhem-volvoconnect', device: device.name, title: alias.slice(0, 64),
+      label: 'VolvoConnect', showGallery: true }];
+  }
   if (solarPowerReadings(device).length === 1) {
     const alias = typeof device.alias === 'string' && device.alias.trim()
       && !/[\x00-\x1f\x7f]/.test(device.alias) ? device.alias.trim() : device.name;
@@ -333,8 +339,8 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
     let col = 1;
     let rowHeight = 0;
     included.forEach((suggestion, index) => {
-      const width = suggestion.type === 'fhem-chart' ? columns : widgetWidth;
-      const height = suggestion.type === 'fhem-chart' ? 6 * scale
+      const width = ['fhem-chart', 'fhem-volvoconnect'].includes(suggestion.type) ? columns : widgetWidth;
+      const height = suggestion.type === 'fhem-volvoconnect' ? 18 * scale : suggestion.type === 'fhem-chart' ? 6 * scale
         : suggestion.type === 'fhem-table'
           ? Math.max(2, Math.ceil((suggestion.rows.length + 2) / 2)) * scale
           : suggestion.type === 'fhem-solarflow' ? 4 * scale : widgetHeight;
@@ -355,7 +361,11 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
           h: height,
         },
       };
-      if (widget.type === 'fhem-table') widget.rows = structuredClone(suggestion.rows);
+      if (widget.type === 'fhem-volvoconnect') {
+        widget.device = suggestion.device;
+        widget.showGallery = true;
+      }
+      else if (widget.type === 'fhem-table') widget.rows = structuredClone(suggestion.rows);
       else if (widget.type === 'fhem-solarflow') {
         widget.readings = structuredClone(suggestion.readings);
         widget.deriveHome = false;
@@ -856,7 +866,8 @@ export class Schema5SetupWizard {
         const detail = widget.type === 'thermostat' ? 'Thermostat'
           : widget.type === 'fhem-switch' ? 'Schalter'
             : widget.type === 'fhem-table' ? 'Messwerte'
-                : widget.type === 'fhem-solarflow' ? 'SolarFlow'
+                : widget.type === 'fhem-volvoconnect' ? 'VolvoConnect'
+                  : widget.type === 'fhem-solarflow' ? 'SolarFlow'
                   : widget.type === 'fhem-chart' ? 'Temperaturverlauf' : `Wert: ${widget.reading}`;
         suggestions.append(checkbox(`${widget.title} (${widget.device} · ${detail})`, widget.included, (checked) => {
           widget.included = checked;

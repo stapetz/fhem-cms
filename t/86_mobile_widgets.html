@@ -60,6 +60,7 @@ const specs = [
       [key, source(key === 'pv' ? 'power' : key)])),
     sections: ['Dach', 'Garage', 'Gartenhaus'].map(label => ({ label, readings:
       Object.fromEntries(['total', 'hour', 'day', 'month', 'previousMonth', 'year'].map(key => [key, source(key)])) })) },
+  { type: 'fhem-volvoconnect', device: 'Demo', showGallery: true },
 ];
 const config = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
   navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } },
@@ -70,7 +71,11 @@ const original = JSON.stringify(config);
 const values = { state: 'on', temperature: '21.5', desiredTemperature: '22', pct: '40', mode: 'eco',
   power: '2056.5', home: '861.5', grid: '590', battery: '607', soc: '95',
   total: '12456.78', hour: '1.23', day: '12.3', month: '123.4', previousMonth: '456.7', year: '1234.5',
-  '1-state': '=>', '1-name': 'Demo', '1-timestamp': '14.11.26 12:00', '1-duration': '00:01' };
+  '1-state': '=>', '1-name': 'Demo', '1-timestamp': '14.11.26 12:00', '1-duration': '00:01',
+  state_batteryChargeLevel: '83', state_electricRange: '320', state_electricRange_unit: 'km',
+  state_targetBatteryChargeLevel: '100', state_targetBatteryChargeLevel_unit: 'percentage',
+  state_chargingStatus: 'DONE', vehicle_descriptions_model: 'Volvo EX40', statistics_tripMeterManual: '785.7',
+  engine_engineStatus: 'STOPPED', doors_centralLock: 'LOCKED', tyres_frontLeft: 'NO_WARNING' };
 let requests = 0, inform;
 const client = { jsonlist: async () => {
   requests++;
@@ -84,7 +89,7 @@ try {
   await view.start();
   check(root.hasAttribute('data-mobile-layout'), 'uses the actual mobile preview/touch path');
   const hosts = [...root.querySelectorAll('.grid-stack-item-content > *')].filter(e => e.shadowRoot);
-  check(hosts.length === 16, 'all sixteen widget types are mounted');
+  check(hosts.length === 17, 'all seventeen widget types are mounted');
   const energy = root.querySelector('cms-solar-energy');
   const $energy = selector => energy.shadowRoot.querySelector(selector);
   for (const width of [280, 343, 375, 393, 430, 600, 744, 834, 1024, 1366]) {

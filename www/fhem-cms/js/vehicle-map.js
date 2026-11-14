@@ -20,7 +20,7 @@ class VehicleMap {
         .car svg{width:25px;height:25px}
         [role=status]{position:absolute;bottom:26px;left:8px;right:8px;z-index:1000;background:#fff;color:#8b1d1d;padding:4px 8px;font:12px sans-serif}
         [hidden]{display:none}
-      </style><div class="map" aria-label="Fahrzeugstandort"></div><div role="status" hidden></div>`;
+      </style><div class="map" style="height:100%;width:100%;overflow:hidden" aria-label="Fahrzeugstandort"></div><div role="status" hidden></div>`;
     this.status = shadow.querySelector('[role=status]');
     this.instance = map(shadow.querySelector('.map'), { scrollWheelZoom: false, attributionControl: true });
     this.tiles = tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {

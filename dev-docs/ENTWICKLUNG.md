@@ -54,6 +54,42 @@ der verfuegbaren Diagrammhoehe, ohne Stations-/Titelueberlauf.
 Chrome-Runner und `python scripts/check_webkit_widgets.py` pruefen auch
 das Oeffnen/Speichern ohne Berechnungsoption.
 
+## VolvoConnect-Fahrzeugwidget (dev, 1.13.0-dev, Refs #207)
+
+Schema 5: `fhem-volvoconnect` / `cms-volvoconnect` mit `device` und optionalem
+booleschem `showGallery` (Default true), neben den gemeinsamen Widgetfeldern.
+Eine Device-Auswahl ersetzt manuelles Readingmapping. Widgetauswahl,
+Device-first, Einrichtungsassistent, Live-Snapshots und Blueprints sind verdrahtet.
+Keine Aenderung oder Ersetzung vorhandener HTML-Widgets oder gespeicherter Seiten.
+
+Quelle fuer Namen, Gruppen und Einheiten ist `FHEM/50_VolvoConnect.pm` im
+Repository stapetz/fhem-modules, insbesondere BuildDashboard/PrettyLabel/PrettyValue.
+Die 14 Scope-Gruppen bleiben erhalten: state/fuel, capabilities, warnings,
+brakes, doors, windows, engineDiagnostics/engine, workshopDiagnostics,
+commandAccessibility, commands, statistics/odometer, tyres, vehicle, location.
+Bremsfluessigkeit und Wischwasser stehen wie im Modul unter Diagnose.
+Adressbestandteile werden zusammengefasst, Bild- und Unitreadings nicht als
+eigene Zeilen dupliziert. Neue Schluessel in vorhandenen Gruppen erscheinen
+mit lesbaren Fallbacklabels. Nur vorhandene skalare Werte, keine Ersatznullen;
+Leer-/Unavailable-Properties entfallen, echte Nullwerte bleiben sichtbar.
+
+Gestaltung: Hero fuer Akkustand, Ziel und Reichweite sowie wischbare Galerie,
+angelehnt an das freie HTML-Widget auf Auto und gemeinsame Theme-/Detailkarten.
+Nur HTTP(S)-Bildadressen ohne eingebettete Zugangsdaten, Fehler sichtbar.
+Galerie im Dialog an-/abschaltbar, standardmaessig an. Standort nutzt den
+vorhandenen lokalen Kartenrenderer; Initialhoehe inline stabilisiert, damit
+WebKit nicht vor geladenem Karten-CSS eine falsche Groesse/Panposition merkt.
+Liveupdates erhalten Galerie, Scroll und Karteninstanz/Zoom.
+Nur vom Device angebotene feste Dashboard-Aktionen erscheinen, nur in der
+Ansicht ausfuehrbar und erst nach ausdruecklicher Bestaetigung. Keine freie
+Befehlseingabe, kein Versand beim Konfigurieren, Fehler als Statusmeldung.
+
+Tests: `node --test t/88_volvoconnect.test.js`, `prove t/88_volvoconnect.t`,
+Fixture 88 im vorhandenen Chrome-Runner sowie WebKit-Runner. Fixture 86
+umfasst jetzt alle 17 Widgettypen. Modelle/Schema/Blueprints, reale Null,
+fehlende/ungueltige Werte, Galerieoption/Fehler/Liveupdates, Kartenlebenszyklus,
+Aktionsbestaetigung/Fehler und mobile Darstellung in drei Themes sind abgedeckt.
+
 ## Solarwidgets fuer Leistungsmesser (dev, 1.12.0-dev, Refs #205)
 
 Die geraetebasierte Widgetauswahl bietet SolarFlow und Solar und Energiefluss

@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-14",
+  "version": "1.13.0-dev",
+  "title": "VolvoConnect als natives Fahrzeugwidget",
+  "changes": [
+    "Neues Schema-5-Widget VolvoConnect mit Device-Auswahl ohne Readingmapping, abgestimmt auf Gruppen und Werte des Modul-Dashboards.",
+    "Akkustand, Ladeinformationen und Reichweite im Stil der Auto-HTML-Vorlage; Fahrzeugdaten erscheinen nur bei vorhandenen Modulwerten, echte Nullwerte bleiben sichtbar.",
+    "Wischbare Bildergalerie standardmaessig aktiv und abschaltbar. Standortkarte, Fahrzeugaktionen mit Bestaetigung und sichtbare Fehlermeldungen integriert.",
+    "Liveupdates erhalten Galerieposition und Kartenzoom; mobile Inhalte skalieren mit allen 17 Widgettypen. Widgetauswahl, Device-first, Assistent und Blueprints unterstuetzt.",
+    "Refs #207: Modelle, Servervalidierung und responsive Darstellung in Chrome und WebKit geprueft."
+  ]
+}
