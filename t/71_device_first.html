@@ -124,7 +124,7 @@ try {
     check(solar.config.readings.pv.device === 'ShellyBalcony' && solar.config.readings.pv.reading === 'apower',
       `${label}: chosen meter and power reading reach the actual standard dialog`);
     const form = solar.shadowRoot.querySelector('[data-form]');
-    check(!form.elements.deriveHome.checked, `${label}: a measuring plug does not invent a house load`);
+    check(!form.elements.deriveHome, `${label}: dialog cannot enable an invented house load`);
     const before = saved;
     form.requestSubmit();
     await until(() => saved === before + 1 && !root.querySelector(tag));

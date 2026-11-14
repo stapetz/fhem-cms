@@ -24,8 +24,23 @@ try {
   check(conservative.values.pv === 1250 && conservative.values.bat === 250, 'known readings are shown');
   check(conservative.values.home === null, 'unknown home consumption is not inferred');
   check(conservative.edges.every((edge) => edge.power === 0), 'unknown flows are not guessed');
-  check(computeModel({ ...unverified, deriveHome: true }, data).values.home === 1000,
-    'existing home calculation remains available');
+  check(computeModel({ ...unverified, deriveHome: true }, data).values.home === null,
+    'legacy calculation flag cannot invent a home consumption value');
+  const pvOnly = createWidgetElement({ id: 'pv-only', type: 'fhem-solarflow', title: 'Nur Gartenhaus',
+    device: 'Test', readings: { pv: 'pv' }, deriveHome: true }, {}, data, true);
+  pvOnly.style.cssText = 'width:405px;height:357px';
+  fixture.append(pvOnly);
+  await settle();
+  const pvRoot = pvOnly.shadowRoot;
+  const area = pvRoot.querySelector('.flow-card').getBoundingClientRect();
+  const rings = [...pvRoot.querySelectorAll('[data-ring]')].map(ring => ring.getBoundingClientRect());
+  const top = Math.min(...rings.map(box => box.top)), bottom = Math.max(...rings.map(box => box.bottom));
+  check((bottom - top) / area.height >= .9 && area.bottom - bottom < area.height * .05,
+    'PV-only diagram fills at least 90% of height with no unused lower canvas');
+  check(top >= area.top && bottom <= area.bottom, 'fitted stations remain within available area');
+  check(pvRoot.querySelector('[data-value="home"]').hasAttribute('hidden')
+    && !pvRoot.querySelector('animateMotion'), 'legacy PV-only widget shows neither invented consumption nor flow');
+  pvOnly.remove();
   for (const viewOnly of [false, true]) {
     const config = { id: 'solar', type: 'fhem-solarflow', title: 'SolarFlow Leistung und Ladestand', showTitle: true,
       readings: Object.fromEntries(['pv', 'home', 'grid', 'battery', 'soc'].map((reading) => [reading, { device: 'Test', reading }])) };
@@ -113,8 +128,7 @@ try {
   }, data, false);
   fixture.append(editorHost);
   await editorHost.openConfig();
-  const derive = editorHost.shadowRoot.querySelector('[name="deriveHome"]');
-  check(!derive.checked, 'conservative mode is visible in the editor');
+  check(!editorHost.shadowRoot.querySelector('[name="deriveHome"]'), 'editor cannot enable invented home readings');
   await editorHost.saveConfig();
   check(saved.deriveHome === false, 'editing preserves conservative mode');
   editorHost.remove();

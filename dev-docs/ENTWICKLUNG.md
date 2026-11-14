@@ -21,6 +21,35 @@ verbindlich. Insbesondere bleiben bestehende Daten und die beiden
 [Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) erhalten; Codebeispiele des
 Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherung.
 
+## Unbekannter Hausverbrauch und SolarFlow-Bildausschnitt (dev, 1.12.1-dev, Refs #206)
+
+Beide Solarwidgets verwenden ausschliesslich zugeordnete Messwerte fuer den
+Hausverbrauch. Ohne Reading bleibt der Wert `null` und seine Wertanzeige
+ausgeblendet; bei zugeordnetem, aber fehlendem/ungueltigem Messwert bleibt
+die Unbekannt-Markierung. Ein echter Messwert 0 bleibt sichtbar.
+Die bisherige Hausverbrauchsberechnung ist entfernt, auch bei gespeicherten
+Konfigurationen mit `deriveHome: true` oder ohne Flag. Das veraltete Feld
+bleibt fuer bestehende Konfigurationen server-/clientseitig lesbar; Dialoge
+bieten keine Berechnung mehr an und speichern `deriveHome: false`.
+Keine automatische Aenderung gespeicherter Seiten. Vorhandene explizite
+Hausverbrauchsreadings und Einheitenumrechnungen bleiben erhalten.
+Unbekannte Leistungsbilanzen erzeugen keine animierten Ersatz-Stromfluesse.
+
+SolarFlow berechnet den SVG-Bildausschnitt aus sichtbaren Stationsringen
+und Verbindungsgeometrien mit 8 SVG-Einheiten Sicherheitsabstand.
+Die Grafik bleibt proportional; bei reinen PV-/Hausstationen entfaellt die
+leere untere Haelfte des bisherigen festen 400x375-Bildausschnitts.
+Keine Aenderung der gespeicherten Kachelmasse oder der Pfadgeometrien.
+Gleiche Topologie behaelt SVG-Knoten und Animationen bei Liveupdates.
+
+Regressionen: beide Modelle mit alten/neuen Device-Zuordnungen und
+`deriveHome` fehlt/false/true, unbekannter/echter Null-Hausverbrauch,
+Fixtures 45/82/85 und alle 16 mobilen Widgettypen in Fixture 86.
+Der 405x357px-Abnahmefall mit zwei Stationen nutzt mindestens 90 Prozent
+der verfuegbaren Diagrammhoehe, ohne Stations-/Titelueberlauf.
+Chrome-Runner und `python scripts/check_webkit_widgets.py` pruefen auch
+das Oeffnen/Speichern ohne Berechnungsoption.
+
 ## Solarwidgets fuer Leistungsmesser (dev, 1.12.0-dev, Refs #205)
 
 Die geraetebasierte Widgetauswahl bietet SolarFlow und Solar und Energiefluss

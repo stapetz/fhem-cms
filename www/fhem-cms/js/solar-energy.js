@@ -76,10 +76,6 @@ export function solarEnergyModel(config, snapshots) {
   if (values.pv !== null) values.pv = Math.max(0, values.pv);
   const missingSupply = [['grid', 'grid'], ['battery', 'bat']]
     .some(([key, value]) => config.readings?.[key] && values[value] === null);
-  if (!config.readings?.home && config.deriveHome !== false && values.pv !== null && !missingSupply) {
-    const home = values.pv - (values.grid || 0) - (values.bat || 0);
-    values.home = Number.isFinite(home) ? Math.max(0, home) : null;
-  }
   if (values.home !== null) values.home = Math.max(0, values.home);
   const flows = values.pv === null || values.home === null || missingSupply ? {} : computeFlows(values);
   const soc = read('soc');

@@ -168,7 +168,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
             <label>Einheit der Leistungs-Readings<select name="powerUnit"><option>W</option><option>kW</option></select></label>
             <label>Einheit der Ertrags-Readings<select name="energyUnit"><option>kWh</option><option>Wh</option><option>MWh</option></select></label>
             <label>Schwellwert in Watt<input name="threshold" type="number" min="0" max="1000" step="1"></label>
-            <label class="check"><input name="deriveHome" type="checkbox">Fehlenden Hausverbrauch berechnen</label>
+            <p class="hint">Ohne Hausverbrauchsreading bleibt der Hausverbrauch unbekannt; er wird nicht berechnet.</p>
           </div></details>
           <details class="config-group" open><summary>Datenquellen</summary><div class="config-group-fields">
             <p class="hint">Jede Zuordnung darf ein anderes Device verwenden (höchstens 20).
@@ -258,10 +258,11 @@ class FHEMCMSSolarEnergy extends HTMLElement {
       const station = this.$(`[data-station="${key}"]`);
       station.hidden = ['grid', 'bat'].includes(key) && !config.readings?.[sourceKey];
       this.$(`[data-power="${key}"]`).textContent = `${compact(value, ['pv', 'home'].includes(key) ? 1 : 0)} W`;
+      this.$(`[data-power="${key}"]`).hidden = !config.readings?.[sourceKey];
       station.dataset.state = value !== null && value < 0 ? 'negative' : 'neutral';
       const note = this.$(`[data-note="${key}"]`);
       if (key === 'pv') note.textContent = config.readings?.hour ? `Std: ${energy(config.readings.hour, 2)} ${energyUnit}` : '';
-      if (key === 'home') note.textContent = 'Gesamtlast aktuell';
+      if (key === 'home') note.textContent = config.readings?.home ? 'Gesamtlast aktuell' : 'Kein Reading zugeordnet';
       if (key === 'bat') {
         station.querySelector('.label').textContent = `🔋 Speicher${config.readings?.soc ? ` (${model.soc === null ? '–' : format(model.soc, 0)}%)` : ''}`;
         note.textContent = '− Entladen / + Laden';
@@ -441,7 +442,6 @@ class FHEMCMSSolarEnergy extends HTMLElement {
     form.elements.powerUnit.value = config.powerUnit || 'W';
     form.elements.energyUnit.value = config.energyUnit || 'kWh';
     form.elements.threshold.value = config.threshold ?? 10;
-    form.elements.deriveHome.checked = config.deriveHome !== false;
     this.$('[data-delete]').hidden = isNew;
     this.error('');
     this.$('[data-detection]').textContent = '';
@@ -481,7 +481,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         label: section.querySelector('[data-section-label]').value.trim(), readings: collect(section),
       })),
       powerUnit: form.elements.powerUnit.value, energyUnit: form.elements.energyUnit.value,
-      threshold: Number(form.elements.threshold.value), deriveHome: form.elements.deriveHome.checked,
+      threshold: Number(form.elements.threshold.value), deriveHome: false,
     };
     const title = form.elements.title.value.trim();
     if (title) next.title = title;
