@@ -73,6 +73,13 @@ das Oeffnen/Speichern ohne Berechnungsoption.
 
 ## VolvoConnect-Nachtrag (dev, 1.16.0-dev, Refs #209)
 
+Korrektur 1.18.2-dev: Auch der Verbindungsstatus state ist fix sichtbar.
+Kein Auge im Popup; readingVisible ignoriert alte Ausblendungen in Popup
+und Hauptwidget, toggleReading kann state nicht ausblenden.
+Fehlendes Statusreading bleibt ohne erfundene Statusanzeige.
+Fixture 88/89 sichern Alt-Konfiguration, feste Anzeige und fehlendes Auge ab.
+Dies ersetzt die separate Schaltbarkeit des API-Status aus 1.18.1-dev.
+
 Korrektur 1.18.1-dev: Reading-Augen stehen am Anfang von dt vor Icon/Label.
 Editierbare Zeilen verwenden ein festes Zweispaltenraster, damit wechselnde
 Wertlaengen keine versetzten Augen erzeugen. Kartenwerkzeuge rechtsbuendig.

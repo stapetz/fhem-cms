@@ -101,7 +101,10 @@ try {
     'both modal headings use vehicle title even with hidden main heading');
   host.config = {...widget,title:''};
   check($('[data-detail-title]').textContent === 'Car - Fahrzeugdetails', 'missing title falls back to device name');
-  host.config = {...widget,hiddenReadings:['state_batteryChargeLevel','state_electricRange','state_chargingCurrentLimit']};
+  host.config = {...widget,hiddenReadings:['state','state_batteryChargeLevel','state_electricRange','state_chargingCurrentLimit']};
+  check($('#identity .badge') && !$('#identity .badge').hasAttribute('data-reading-concealed')
+    && $('#compact-energy .connected'),
+    'legacy hidden status preference cannot conceal popup or compact connection status');
   check($('.soc') && $('.range') && $('[role=meter]') && $('#reading-state_chargingCurrentLimit'),
     'legacy hidden energy preferences cannot conceal fixed energy readings');
   check(!$('.soc').closest('[data-reading-concealed]') && !$('#reading-state_chargingCurrentLimit').hasAttribute('data-reading-concealed'),

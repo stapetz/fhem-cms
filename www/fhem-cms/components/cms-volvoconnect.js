@@ -417,7 +417,7 @@ shutdown restart</pre>
 
   toggleReading(key) {
     if (!this.pendingVisibility || this.arrangementSaving || this.drag) return;
-    if (key.startsWith('state_')) return;
+    if (key === 'state' || key.startsWith('state_')) return;
     const hidden = new Set(this.pendingVisibility.hiddenReadings);
     if (hidden.has(key)) hidden.delete(key); else hidden.add(key);
     this.pendingVisibility.hiddenReadings = [...hidden];
@@ -427,7 +427,7 @@ shutdown restart</pre>
   }
 
   readingVisible(key, compact = false) {
-    if (key?.startsWith('state_')) return true;
+    if (key === 'state' || key?.startsWith('state_')) return true;
     return !(compact ? this.widgetConfig : this.pendingVisibility || this.widgetConfig).hiddenReadings?.includes(key);
   }
 
@@ -745,14 +745,12 @@ shutdown restart</pre>
     if (subtitle) names.append(node('small', subtitle));
     identity.append(names);
     const api = model.read('state');
-    if (api && (preview || this.readingVisible('state'))) {
+    if (api) {
       const badge = node('span', api === 'authenticated' ? '✓' : '⚠', 'badge');
       badge.setAttribute('role', 'img');
       badge.setAttribute('aria-label', `API: ${volvoValue('', 'state', api)}`);
       badge.title = badge.getAttribute('aria-label');
       badge.toggleAttribute('data-error', /^(?:error|auth_required)$/.test(api));
-      badge.toggleAttribute('data-reading-concealed', !this.readingVisible('state'));
-      if (preview) identity.append(this.readingEye('state', 'API-Status'));
       identity.append(badge);
     }
     content.append(identity);
