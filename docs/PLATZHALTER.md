@@ -90,9 +90,29 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 ## Erlaubter Code
 
 - Elemente: `div span p h1 h2 h3 h4 strong b em i u small br hr ul ol li table thead tbody tr th td style`
-- Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class device reading filter`
+- Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class device reading filter`, außerdem `id`, passive `data-*`-/ARIA-Attribute, `role` und passende Link-/Bild-/SVG-Attribute.
 - `title` darf Platzhalter enthalten.
-- **Nicht erlaubt:** `script`, `iframe`, Bilder, Formulare, Ereignis-Attribute (`onclick` …), Links, Kommentare, `url()`, `@import`, `position: fixed`. Eine Verletzung zeigt der Dialog beim Speichern als Fehler.
+- **Zusätzlich erlaubt auf dev:** HTML-Kommentare, passive Struktur wie `section`, `figure`, `details/summary`, `pre/code`, Links und Bilder sowie statisches SVG mit Formen, Pfaden, Text und lokalen Verläufen. Flex-/Grid-Layout und Farben bleiben möglich.
+- **Nicht erlaubt:** `script`, `iframe`, Formulare, Ereignis-Attribute (`onclick` …), aktive SVG-Elemente (`foreignObject`, `use`, Animationen), CSS-Netzwerkzugriffe, `@import`, `position: fixed/sticky`. Eine Verletzung zeigt der Dialog beim Speichern als Fehler. SVG-Füllungen dürfen `url(#lokaleId)` nutzen, CSS-`url()` bleibt gesperrt.
+
+### Bilder und Links aus Readings (dev)
+
+```html
+<img src="{{MeinElch:vehicle_images_exteriorImageUrl}}" alt="Fahrzeug" width="100%">
+<a href="https://example.org/" target="_blank">Informationen</a>
+```
+
+`src` und `href` akzeptieren lokale Pfade oder HTTPS-URLs. Ein einzelner
+ungefilterter Platzhalter als gesamter Attributwert wird bei jeder Anzeige
+aufgelöst und anschließend als URL geprüft. Fehlende oder ungültige Werte
+werden nicht geladen; ein sichtbarer Hinweis erscheint. Mischungen aus
+URL-Text und Platzhaltern oder Filtern sind nicht erlaubt. Platzhalter in
+normalem Text bleiben reine Textwerte, kein HTML.
+
+Externe Bilder verursachen Netzwerkanfragen an den Bildanbieter, übertragen
+aber keinen Seiten-Referrer. Neue Tabs erhalten keinen Zugriff auf den
+öffnenden CMS-Tab. `javascript:`, `data:`, protokollrelative URLs (`//...`)
+und eingebettete ausführbare Inhalte bleiben gesperrt.
 - Höchstens 20 000 Zeichen.
 
 ## Häufige Fragen

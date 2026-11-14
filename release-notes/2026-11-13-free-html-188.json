@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Mehr passive Gestaltung im freien HTML",
+  "changes": [
+    "Freies HTML erlaubt Kommentare, weitere Strukturelemente, sichere Links und Bilder sowie statisches SVG.",
+    "Bild- und Linkquellen aus einzelnen Reading-Platzhaltern werden bei jeder Aktualisierung als lokale oder HTTPS-URL geprueft.",
+    "Skripte, Ereignisattribute, aktive SVG-Inhalte und CSS-Netzwerkzugriffe bleiben gesperrt; KI-Integration ist nicht enthalten."
+  ]
+}

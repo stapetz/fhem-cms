@@ -3,7 +3,47 @@ export const MAX_FREE_HTML = 20000;
 export const MAX_FREE_DEVICES = 20;
 
 const TAGS = new Set(['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'strong', 'b', 'em', 'i', 'u', 'small', 'br', 'hr',
-  'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'style']);
+  'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'style',
+  'h5', 'h6', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'figure', 'figcaption',
+  'details', 'summary', 'dl', 'dt', 'dd', 'pre', 'code', 'blockquote', 'sub', 'sup', 'mark',
+  'caption', 'tfoot', 'a', 'img', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line',
+  'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'title', 'desc']);
+const SVG_TAGS = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
+  'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'title', 'desc']);
+const SVG_ATTRIBUTES = new Set(['viewbox', 'preserveaspectratio', 'd', 'x', 'y', 'x1', 'y1', 'x2', 'y2',
+  'cx', 'cy', 'r', 'rx', 'ry', 'dx', 'dy', 'points', 'transform', 'fill', 'stroke', 'stroke-width',
+  'fill-rule', 'fill-opacity', 'stroke-opacity', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray',
+  'stroke-dashoffset', 'opacity', 'text-anchor', 'dominant-baseline', 'font-size', 'font-weight',
+  'offset', 'stop-color', 'stop-opacity', 'gradientunits', 'gradienttransform', 'spreadmethod']);
+const URL_PLACEHOLDER = /^\{\{\s*[A-Za-z0-9_.-]+:@?[A-Za-z0-9_.-]+\s*\}\}$/;
+const HTTPS_URL = /^https:\/\/[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?(?:[/?#][A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/;
+const LOCAL_URL = /^(?:\/?(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*|\.\.\/\.\.\/fhemcms-assets\/[A-Za-z0-9_.-]+\/[0-9a-f]{32})(?:[?#][A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/;
+
+export function isSafeHtmlUrl(value) {
+  return typeof value === 'string' && value.length <= 2000
+    && (HTTPS_URL.test(value) || LOCAL_URL.test(value) || /^#[A-Za-z0-9_/-]{1,64}$/.test(value));
+}
+
+function extraAttributeAllowed(tag, name, value) {
+  name = name.toLowerCase();
+  if (name === 'id') return /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value);
+  if (/^(?:aria-[a-z-]+|data-[a-z0-9-]+|role)$/.test(name)) return value.length <= 200;
+  if ((name === 'href' && tag === 'a') || (name === 'src' && tag === 'img')) {
+    return URL_PLACEHOLDER.test(value) || isSafeHtmlUrl(value);
+  }
+  if (tag === 'a' && name === 'target') return value === '_blank' || value === '_self';
+  if (tag === 'img' && name === 'alt') return value.length <= 200;
+  if ((tag === 'img' || tag === 'svg') && (name === 'width' || name === 'height')) {
+    return /^[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?$/.test(value);
+  }
+  if (tag === 'svg' && name === 'xmlns') return value === 'http://www.w3.org/2000/svg';
+  if (SVG_TAGS.has(tag) && SVG_ATTRIBUTES.has(name)) {
+    return value.length <= 4000 && !/[<>&\\{}]/.test(value)
+      && (!/url\s*\(/i.test(value) || /^url\(#[A-Za-z][A-Za-z0-9_-]{0,63}\)$/.test(value))
+      && !/@import|expression|behavior|binding|javascript:/i.test(value);
+  }
+  return false;
+}
 const NAME = '[A-Za-z0-9_.-]+';
 const READING = '@?[A-Za-z0-9_.-]+';
 const CLASS_NAME = /^[A-Za-z0-9_-]{1,40}$/;
@@ -29,15 +69,19 @@ export function checkSource(html) {
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(html)) {
     return 'Der Code enthält Steuerzeichen';
   }
+  if (/<(?:!|\?)/.test(html.replace(/<!--(?:(?!-->).)*-->/gs, ''))) {
+    return 'Unvollständige Kommentare oder Sonderkonstrukte sind nicht erlaubt';
+  }
   const doc = new DOMParser().parseFromString(`<body>${html}`, 'text/html');
   for (const element of doc.body.querySelectorAll('*')) {
-    const tag = element.localName;
+    const tag = element.localName.toLowerCase();
     if (!TAGS.has(tag)) {
       return `Das Element <${tag}> ist nicht erlaubt`;
     }
     for (const attribute of element.attributes) {
       const name = attribute.name;
-      if (!['class', 'style', 'title', 'colspan', 'rowspan', 'data-cms-class', 'device', 'reading', 'filter'].includes(name)) {
+      if (!['class', 'style', 'title', 'colspan', 'rowspan', 'data-cms-class', 'device', 'reading', 'filter'].includes(name)
+        && !extraAttributeAllowed(tag, name, attribute.value)) {
         return `Das Attribut „${name}“ ist nicht erlaubt (Element <${tag}>)`;
       }
       if (name === 'style' && !isSafeCss(attribute.value)) {
@@ -99,8 +143,12 @@ function cleanChildren(source, target) {
   for (const node of source.childNodes) {
     if (node.nodeType === Node.TEXT_NODE) {
       target.append(document.createTextNode(node.nodeValue));
-    } else if (node.nodeType === Node.ELEMENT_NODE && TAGS.has(node.localName)) {
-      const element = document.createElement(node.localName);
+    } else if (node.nodeType === Node.ELEMENT_NODE && TAGS.has(node.localName.toLowerCase())) {
+      const tag = node.localName.toLowerCase();
+      const element = node.namespaceURI === 'http://www.w3.org/2000/svg'
+        ? document.createElementNS(node.namespaceURI, node.localName) : document.createElement(tag);
+      if (tag === 'a') element.setAttribute('rel', 'noopener noreferrer');
+      if (tag === 'img') element.setAttribute('referrerpolicy', 'no-referrer');
       for (const attribute of node.attributes) {
         const { name, value } = attribute;
         if (name === 'class' && /^[A-Za-z0-9_\- ]{0,200}$/.test(value)) {
@@ -119,6 +167,9 @@ function cleanChildren(source, target) {
           element.setAttribute(name, value);
         } else if (name === 'data-cms-class') {
           element.setAttribute(name, value.split(';').filter((part) => CONDITION.test(part)).join(';'));
+        } else if (extraAttributeAllowed(tag, name, value)) {
+          element.setAttribute(URL_PLACEHOLDER.test(value) && (name === 'src' || name === 'href')
+            ? `data-cms-url-${name}` : name, value);
         }
       }
       if (node.localName === 'style') {
@@ -301,6 +352,20 @@ export function renderTemplate(template, lookup) {
       const [, device, reading, operator, expected, className] = condition;
       const actual = lookup(device, reading);
       element.classList.toggle(className, actual !== null && actual !== undefined && compare(String(actual), operator, expected));
+    }
+  }
+  for (const element of container.querySelectorAll('img[src], a[href], img[data-cms-url-src], a[data-cms-url-href]')) {
+    const attribute = element.localName === 'img' ? 'src' : 'href';
+    const original = element.getAttribute(`data-cms-url-${attribute}`) ?? element.getAttribute(attribute);
+    const value = URL_PLACEHOLDER.test(original) ? substitute(original, lookup) : original;
+    if (isSafeHtmlUrl(value)) element.setAttribute(attribute, value);
+    else {
+      element.removeAttribute(attribute);
+      element.setAttribute('title', 'Ungültige oder fehlende URL im Reading');
+      const warning = document.createElement('span');
+      warning.textContent = 'Ungültige oder fehlende URL im Reading';
+      warning.setAttribute('role', 'status');
+      element.after(warning);
     }
   }
   return container;

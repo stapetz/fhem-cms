@@ -1,0 +1,92 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Passive free HTML and live image regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { checkSource, extractDevices, renderTemplate, sanitize } from '../www/fhem-cms/js/freehtml.js';
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (value, message) => { if (!value) throw new Error(message); checks++; };
+try {
+  const solar = `<div style="font-family: system-ui, -apple-system, sans-serif; color: inherit; display: flex; flex-direction: column; gap: 14px;">
+    <!-- Kopfzeile -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(128,128,128,0.25); padding-bottom: 8px;">
+      <strong style="font-size: 1.1em;">☀️ Solaranlage Übersicht</strong>
+      <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 600;">Status: {{virtualSolar:state|default(unbekannt)}}</span>
+    </div>
+    <!-- Aktuelle Leistungswerte -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+      <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 10px; text-align: center;">
+        <div style="font-size: 0.8em; opacity: 0.8;">☀️ PV Erzeugung</div>
+        <div style="font-size: 1.25em; font-weight: 700; color: #f59e0b; margin: 4px 0;">{{virtualSolar:pv_total_power|round(1)|suffix( W)}}</div>
+        <div style="font-size: 0.75em; opacity: 0.75;">Std: {{virtualSolar:statEnergyTotalHour|round(2)|suffix( kWh)}}</div>
+      </div>
+    </div>
+    <!-- Ertragstabelle -->
+    <div style="background: rgba(128, 128, 128, 0.08); border-radius: 10px; padding: 10px; overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.88em; text-align: right;">
+        <thead><tr style="border-bottom: 1px solid rgba(128,128,128,0.25); opacity: 0.8;"><th style="text-align: left; padding: 6px 4px;">Anlagenteil</th><th style="padding: 6px 4px;">Stunde</th></tr></thead>
+        <tbody><tr style="border-bottom: 1px solid rgba(128,128,128,0.12);"><td style="text-align: left; padding: 6px 4px; font-weight: 600;">🏠 Dach</td><td style="padding: 6px 4px;">{{virtualSolar:statEnergyDachHour|round(2)}}</td></tr></tbody>
+      </table>
+    </div>
+  </div>`;
+  check(checkSource(solar) === null, 'reported commented solar layout is accepted');
+  const renderedSolar = renderTemplate(sanitize(solar), (_device, reading) => reading === 'state' ? 'on' : '12.345');
+  check(renderedSolar.textContent.includes('12.3 W'), 'solar readings and filters still render');
+  check(renderedSolar.querySelector('[style*="display: grid"]'), 'grid layout survives');
+  check(renderedSolar.querySelector('table td').textContent.includes('Dach'), 'table content survives');
+  const image = '<img src="{{MeinElch:vehicle_images_exteriorImageUrl}}" alt="Fahrzeug" width="100%">';
+  check(checkSource(image) === null, 'requested live image syntax is accepted');
+  check(extractDevices(image).join() === 'MeinElch', 'image-only reading source is subscribed');
+  const template = sanitize(image);
+  check(!template.querySelector('img').hasAttribute('src'), 'unresolved source cannot initiate a request');
+  for (const value of ['media/car.jpg', '/fhem/fhem-cms/CMS/media/car.jpg', 'https://example.test/car.jpg?a=1&b=2']) {
+    const result = renderTemplate(template, () => value);
+    check(result.querySelector('img').getAttribute('src') === value, 'safe live URL is applied: ' + value);
+    check(result.querySelector('img').getAttribute('referrerpolicy') === 'no-referrer', 'external image does not expose page URL');
+  }
+  for (const value of ['javascript:alert(1)', 'data:image/svg+xml,<svg/>', '//example.test/car.jpg', '', '" onerror="alert(1)']) {
+    const result = renderTemplate(template, () => value);
+    check(!result.querySelector('img').hasAttribute('src'), 'unsafe live URL blocked');
+    check(result.querySelector('[role="status"]'), 'invalid live URL explicitly reported');
+  }
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="pv"><stop offset="0%" stop-color="#ff0"/></linearGradient></defs><path d="M0 0 L10 10" fill="url(#pv)"/><text x="5" y="20">{{virtualSolar:state}}</text></svg>';
+  check(checkSource(svg) === null, 'static SVG with local gradient is accepted');
+  const renderedSvg = renderTemplate(sanitize(svg), () => 'on');
+  check(renderedSvg.querySelector('path').namespaceURI === 'http://www.w3.org/2000/svg', 'SVG namespace preserved');
+  check(renderedSvg.querySelector('linearGradient'), 'SVG mixed-case tag preserved');
+  check(renderedSvg.querySelector('svg').getAttribute('viewBox') === '0 0 100 100', 'SVG mixed-case attribute preserved');
+  check(renderedSvg.querySelector('text').textContent === 'on', 'SVG text receives readings');
+  check(checkSource('<details id="more"><summary>Details</summary><figure><figcaption>PV</figcaption></figure></details>') === null, 'passive structure is allowed');
+  const link = renderTemplate(sanitize('<a href="https://example.test/" target="_blank">Link</a>'), () => '');
+  check(link.querySelector('a').getAttribute('rel') === 'noopener noreferrer', 'links cannot control opener');
+  for (const bad of [
+    '<script>alert(1)<\/script>', '<img src="javascript:x">', '<img src="media/x.jpg" onerror="x()">',
+    '<iframe src="https://example.test/"></iframe>', '<svg onload="x()"></svg>',
+    '<svg><foreignObject><p>active</p></foreignObject></svg>', '<svg><use href="x"/></svg>',
+    '<svg><animate attributeName="href"/></svg>', '<svg><path fill="url(https://example.test/x)"/></svg>',
+    '<img src="{{MeinElch:image|prefix(javascript:)}}">', '<div style="background:url(x)">x</div>', '<!' + '-- unfinished',
+  ]) check(checkSource(bad) !== null, 'active or malformed source rejected: ' + bad);
+  const unsafe = renderTemplate(sanitize('<svg onload="x()"><script>x()<\/script><circle r="4"/></svg><img src="javascript:x" onerror="x()">'), () => '');
+  check(!unsafe.querySelector('script, [onload], [onerror], img[src]'), 'sanitizer independently blocks active input');
+  const snapshots = value => new Map([['MeinElch', [{ name: 'MeinElch',
+    readings: { vehicle_images_exteriorImageUrl: value } }]]]);
+  const host = createWidgetElement({ id: 'car', type: 'fhem-html', html: image, devices: ['MeinElch'] },
+    {}, snapshots('media/car.jpg'), true);
+  document.body.append(host);
+  check(host.shadowRoot.querySelector('img').getAttribute('src') === 'media/car.jpg', 'real widget renders image reading');
+  host.data = snapshots('javascript:alert(1)');
+  check(!host.shadowRoot.querySelector('img').hasAttribute('src'), 'real widget clears previous image on unsafe update');
+  check(host.shadowRoot.querySelector('[data-content] [role="status"]'), 'real widget displays invalid source warning');
+  host.data = snapshots('media/new.jpg');
+  check(host.shadowRoot.querySelector('img').getAttribute('src') === 'media/new.jpg', 'real widget recovers with next safe update');
+  check(!host.shadowRoot.querySelector('[data-content] [role="status"]'), 'real widget clears stale warning');
+  host.remove();
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack;
+}
+</script>

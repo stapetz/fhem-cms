@@ -1382,6 +1382,29 @@ sub FHEMCMS_ValidateLinks {
     return undef;
 }
 
+sub FHEMCMS_FreeHtmlExtraAttribute {
+    my ($tag, $name, $value) = @_;
+    return $value =~ /\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/ if ($name eq 'id');
+    return length($value) <= 200 if ($name =~ /\A(?:aria-[a-z-]+|data-[a-z0-9-]+|role)\z/);
+    if (($tag eq 'a' && $name eq 'href') || ($tag eq 'img' && $name eq 'src')) {
+        return 1 if ($value =~ /\A\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+\s*\}\}\z/);
+        $value =~ s/&amp;/&/g;
+        return length($value) <= 2000 && $value =~ m{\A(?:https://[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?(?:[/?#][A-Za-z0-9._~:/?#\@!\$&'()*+,;=%-]*)?|(?:/?(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*|\.\./\.\./fhemcms-assets/[A-Za-z0-9_.-]+/[0-9a-f]{32})(?:[?#][A-Za-z0-9._~:/?#\@!\$&'()*+,;=%-]*)?|\#[A-Za-z0-9_/-]{1,64})\z};
+    }
+    return $value eq '_blank' || $value eq '_self' if ($tag eq 'a' && $name eq 'target');
+    return length($value) <= 200 if ($tag eq 'img' && $name eq 'alt');
+    return $value =~ /\A[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?\z/
+        if (($tag eq 'img' || $tag eq 'svg') && ($name eq 'width' || $name eq 'height'));
+    return $value eq 'http://www.w3.org/2000/svg' if ($tag eq 'svg' && $name eq 'xmlns');
+    if ($tag =~ /\A(?:svg|g|path|rect|circle|ellipse|line|polyline|polygon|text|tspan|defs|lineargradient|radialgradient|stop|title|desc)\z/
+        && $name =~ /\A(?:viewbox|preserveaspectratio|d|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|points|transform|fill|stroke|stroke-width|fill-rule|fill-opacity|stroke-opacity|stroke-linecap|stroke-linejoin|stroke-dasharray|stroke-dashoffset|opacity|text-anchor|dominant-baseline|font-size|font-weight|offset|stop-color|stop-opacity|gradientunits|gradienttransform|spreadmethod)\z/) {
+        return length($value) <= 4000 && $value !~ /[<>&\\{}]/
+            && ($value !~ /url\s*\(/i || $value =~ /\Aurl\(\#[A-Za-z][A-Za-z0-9_-]{0,63}\)\z/)
+            && $value !~ /\@import|expression|behavior|binding|javascript:/i;
+    }
+    return 0;
+}
+
 sub FHEMCMS_ValidateFreeHtml {
     my ($html) = @_;
     return 'kein Text' if (ref($html) || !defined($html));
@@ -1389,12 +1412,14 @@ sub FHEMCMS_ValidateFreeHtml {
     return 'enthaelt Steuerzeichen' if ($html =~ /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
 
     my %tags = map { $_ => 1 } qw(div span p h1 h2 h3 h4 strong b em i u small br hr ul ol li
-        table thead tbody tr th td style);
+        table thead tbody tr th td style h5 h6 section article header footer main aside nav figure figcaption
+        details summary dl dt dd pre code blockquote sub sup mark caption tfoot a img svg g path rect circle
+        ellipse line polyline polygon text tspan defs lineargradient radialgradient stop title desc);
     my %attrs = map { $_ => 1 } qw(class style title colspan rowspan data-cms-class device reading filter);
     my $badCss = qr{\@import|url\s*\(|expression|behavior|binding|javascript:|position\s*:\s*(?:fixed|sticky)|\\}i;
 
-    # Kommentare, CDATA und Verarbeitungsanweisungen gibt es nicht.
-    return 'Kommentare und Sonderkonstrukte sind nicht erlaubt' if ($html =~ /<(?:!|\?)/);
+    $html =~ s/<!--(?:(?!-->).)*-->//gs;
+    return 'Unvollstaendige Kommentare oder Sonderkonstrukte sind nicht erlaubt' if ($html =~ /<(?:!|\?)/);
 
     my $rest = $html;
     while ($rest =~ /<(\/?)([A-Za-z][A-Za-z0-9]*)((?:\s+[A-Za-z][A-Za-z0-9-]*\s*=\s*"[^"]*")*)\s*(\/?)>/g) {
@@ -1404,7 +1429,8 @@ sub FHEMCMS_ValidateFreeHtml {
         my %seen;
         while ($attrText =~ /\s+([A-Za-z][A-Za-z0-9-]*)\s*=\s*"([^"]*)"/g) {
             my ($name, $value) = (lc($1), $2);
-            return "Attribut '$name' nicht erlaubt" if (!$attrs{$name});
+            return "Attribut '$name' nicht erlaubt"
+                if (!$attrs{$name} && !FHEMCMS_FreeHtmlExtraAttribute($tag, $name, $value));
             $seen{$name} = 1;
             return 'Ungueltiges style-Attribut' if ($name eq 'style' && $value =~ $badCss);
             return 'Ungueltiges class-Attribut' if ($name eq 'class' && $value !~ /\A[A-Za-z0-9_ -]{0,200}\z/);
