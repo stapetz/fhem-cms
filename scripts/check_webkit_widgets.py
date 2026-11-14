@@ -11,6 +11,8 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CASES = [
+    ("90_widget_dates.html", 1400, 1000, False),
+    ("58_calllist.html", 1400, 1000, False),
     ("88_volvoconnect.html", 1400, 1000, False),
     ("89_volvoconnect_order.html", 1400, 1000, False),
     ("89_volvoconnect_order.html", 1400, 600, False),
@@ -58,7 +60,8 @@ def check_popup_order(page):
     assert page.evaluate("window.popupOrderTest.order()[2]") == "gallery", "keyboard did not reorder"
     page.evaluate('window.popupOrderTest.host().toggleCard("doors"); window.popupOrderTest.host().saveArrangement()')
     page.wait_for_function("""window.popupOrderTest.writes() === 1
-        && !document.querySelector('cms-volvoconnect').shadowRoot.querySelector('[data-details]').open""")
+        && document.querySelector('cms-volvoconnect').shadowRoot.querySelector('[data-details]').open
+        && !window.popupOrderTest.host().pendingCardOrder""")
     page.evaluate("window.popupOrderTest.finish()")
 
 

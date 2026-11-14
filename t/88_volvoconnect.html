@@ -68,6 +68,13 @@ try {
   check(!$('[data-details]').open && !$('[data-detail-content]').childElementCount,
     'closed popup does not build hidden detail resources');
   check($('[data-info]').getAttribute('aria-haspopup') === 'dialog', 'info button announces a popup');
+  check($('[data-info]').parentElement === $('[data-open-actions]').parentElement
+    && $('[data-info]').nextElementSibling === $('[data-open-actions]'), 'info and actions sit adjacent in right toolbar');
+  check($('.connected').textContent === '✓' && $('.connected').getAttribute('aria-label') === 'API: Verbunden',
+    'compact tile shows accessible connected check');
+  const toolbar = $('.hero-tools').getBoundingClientRect();
+  const heading = $('.hero-heading').getBoundingClientRect();
+  check(Math.abs(toolbar.right - heading.right) <= 1, 'compact toolbar is right-aligned');
   $('[data-info]').focus();
   $('[data-info]').click();
   check($('[data-details]').open && $('[data-info]').getAttribute('aria-expanded') === 'true',
@@ -76,6 +83,19 @@ try {
   check($('[data-detail-content]').textContent.includes('00:00 h'), 'real zero remains visible');
   check($('.badge').getAttribute('aria-label') === 'API: Verbunden' && $('.badge').textContent === '✓',
     'API state uses symbol with translated accessible description');
+  check($('#footer').textContent.includes('14.11.2026 16:00:00'), 'last update is German date/time');
+  const legacyEnergy = {...values};
+  delete values.state_batteryChargeLevel;
+  delete values.state_electricRange;
+  values.fuel_batteryChargeLevel = '84';
+  values.statistics_distanceToEmptyBattery = '310';
+  values.statistics_distanceToEmptyBattery_unit = 'km';
+  host.data = dataFor(widget,snapshots());
+  check($('.soc').textContent === '84%' && $('.range').textContent.includes('310 km'),
+    'Keycloak fuel/statistics readings appear in compact tile');
+  for (const key of Object.keys(values)) delete values[key];
+  Object.assign(values,legacyEnergy);
+  host.data = dataFor(widget,snapshots());
   check($('[data-detail-content]').querySelectorAll('section.card').length >= 14, 'all module scopes appear');
   check(!$('#gallery'), 'missing image readings produce no empty gallery');
   check($('#group-engineDiagnostics').textContent.includes('Bremsflüssigkeitsstand'), 'diagnostics grouping follows module');

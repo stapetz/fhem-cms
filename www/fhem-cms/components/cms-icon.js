@@ -1,4 +1,5 @@
 import { openDevicePicker } from '../js/device-picker.js';
+import { formatDateDisplay } from '../js/date-display.js';
 import { openIconPicker } from '../js/icon-picker.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
@@ -359,6 +360,7 @@ class FHEMCMSIcon extends HTMLElement {
     title.parentElement.hidden = this.widgetConfig.showTitle === false;
     const current = (this.snapshot || []).find((item) => item.readings?.[this.widgetConfig.reading] !== undefined);
     const readingValue = current ? String(current.readings[this.widgetConfig.reading]) : '';
+    const displayValue = formatDateDisplay(readingValue);
     const mapping = (this.widgetConfig.states || []).find((item) => item.value === readingValue);
     const icon = this.shadowRoot.querySelector('[data-icon]');
     const state = this.shadowRoot.querySelector('[data-state]');
@@ -366,13 +368,13 @@ class FHEMCMSIcon extends HTMLElement {
       icon.hidden = false;
       icon.style.setProperty('--icon-url', `url("${this.services.iconUrl(mapping.icon)}")`);
       icon.style.setProperty('--state-color', mapping.color);
-      state.textContent = readingValue || '–';
-      icon.setAttribute('aria-label', readingValue);
-      icon.title = readingValue;
-      this.shadowRoot.querySelector('[data-accessible]').textContent = `${title.textContent}, ${readingValue}`;
+      state.textContent = displayValue || '–';
+      icon.setAttribute('aria-label', displayValue);
+      icon.title = displayValue;
+      this.shadowRoot.querySelector('[data-accessible]').textContent = `${title.textContent}, ${displayValue}`;
     } else {
       icon.hidden = true;
-      const unknown = readingValue ? `Unbekannt: ${readingValue}` : 'Zustand unbekannt';
+      const unknown = readingValue ? `Unbekannt: ${displayValue}` : 'Zustand unbekannt';
       state.textContent = unknown;
       this.shadowRoot.querySelector('[data-accessible]').textContent =
         `${title.textContent}, ${unknown}`;

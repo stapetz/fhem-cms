@@ -31,6 +31,12 @@ for my $case (
     ['too many groups', sub { $_[0]{groupOrder} = [('state') x 16]; }],
     ['gallery hidden separately', sub { $_[0]{hiddenGroups} = ['gallery']; }],
     ['duplicate gallery', sub { $_[0]{groupOrder} = ['gallery','gallery']; }],
+    ['null hidden readings', sub { $_[0]{hiddenReadings} = undef; }],
+    ['non-list hidden readings', sub { $_[0]{hiddenReadings} = {}; }],
+    ['unsafe hidden reading', sub { $_[0]{hiddenReadings} = ["state_x\n"]; }],
+    ['non-group reading', sub { $_[0]{hiddenReadings} = ['password']; }],
+    ['duplicate hidden reading', sub { $_[0]{hiddenReadings} = ['state_x','state_x']; }],
+    ['too many hidden readings', sub { $_[0]{hiddenReadings} = [('state_x') x 1001]; }],
 ) {
     my ($label, $change) = @{$case};
     my $copy = $json->decode($json->encode($config));
@@ -48,6 +54,7 @@ $widget->{showDetails} = JSON::PP::true;
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'compact popup display accepted');
 $widget->{groupOrder} = ['location', 'gallery', 'doors'];
 $widget->{hiddenGroups} = ['state', 'statistics'];
+$widget->{hiddenReadings} = ['state_batteryChargeLevel','vehicle_vin','lastUpdate'];
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'partial order and hidden groups accepted');
 is(FHEMCMS_ValidateBlueprints([{name => 'Car', widget => $widget}]), undef, 'group preferences survive blueprint validation');
 $widget->{groupOrder} = [];

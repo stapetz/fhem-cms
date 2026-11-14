@@ -2,6 +2,7 @@ import { openDevicePicker } from '../js/device-picker.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
 import { isValidName } from '../js/fhem-client.js';
+import { formatDateDisplay } from '../js/date-display.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 
 const COLUMNS = [
@@ -103,6 +104,7 @@ class FHEMCMSCallList extends HTMLElement {
           background: rgba(128,128,128,.08); border-spacing: 0; border-collapse: separate; }
         .tile th, .tile td { padding: 6px 8px; border-bottom: 1px solid rgba(128,128,128,.1); }
         .tile th { color: inherit; font-weight: 700; }
+        .tile th[data-column=state] { width:3.5rem; }
       </style>
       <article class="tile" data-tile>
         <button type="button" class="gear" data-open-config aria-label="Anrufliste konfigurieren">⚙</button>
@@ -259,6 +261,7 @@ class FHEMCMSCallList extends HTMLElement {
     nextHead.append(...columns.map(column => {
       const th = document.createElement('th');
       th.scope = 'col';
+      th.dataset.column = column;
       th.textContent = LABELS.get(column) || column;
       return th;
     }));
@@ -277,7 +280,7 @@ class FHEMCMSCallList extends HTMLElement {
         } else if (column === 'party') {
           td.textContent = row.name && row.name !== '-' ? row.name : (row.number || '–');
         } else {
-          td.textContent = row[column] || '–';
+          td.textContent = formatDateDisplay(row[column]) || '–';
         }
         tr.append(td);
       }

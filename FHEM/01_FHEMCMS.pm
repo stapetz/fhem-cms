@@ -20,7 +20,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.16.1-dev';
+our $FHEMCMS_VERSION = '1.17.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1034,7 +1034,7 @@ sub FHEMCMS_ValidateConfig {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid'],
-                    ['title', 'showTitle', 'showGallery', 'showDetails', 'groupOrder', 'hiddenGroups']);
+                    ['title', 'showTitle', 'showGallery', 'showDetails', 'groupOrder', 'hiddenGroups', 'hiddenReadings']);
             } elsif ($widget->{type} eq 'fhem-solar-energy') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'sections', 'grid'],
                     ['title', 'showTitle', 'powerUnit', 'energyUnit', 'threshold', 'deriveHome']);
@@ -1160,6 +1160,17 @@ sub FHEMCMS_ValidateConfig {
                     return 'Doppelte Anruflisten-Spalte' if ($seenColumn{$column}++);
                 }
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
+                if (exists($widget->{hiddenReadings})) {
+                    return 'Ungueltige VolvoConnect-Readings in hiddenReadings'
+                        if (ref($widget->{hiddenReadings}) ne 'ARRAY' || @{$widget->{hiddenReadings}} > 1000);
+                    my %seenReading;
+                    for my $reading (@{$widget->{hiddenReadings}}) {
+                        return 'Ungueltiges VolvoConnect-Reading in hiddenReadings'
+                            if (!$isName->($reading)
+                                || ($reading ne 'lastUpdate' && $reading ne 'state' && $reading !~ /\A(?:state|statistics|vehicle|location|warnings|doors|windows|engineDiagnostics|capabilities|brakes|workshopDiagnostics|commandAccessibility|commands|tyres)_.+\z/)
+                                || $seenReading{$reading}++);
+                    }
+                }
                 return 'Ungueltiger Wert fuer showGallery'
                     if (exists($widget->{showGallery}) && !$isBool->($widget->{showGallery}));
                 return 'Ungueltiger Wert fuer showDetails'

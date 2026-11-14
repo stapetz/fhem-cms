@@ -1,4 +1,5 @@
 import { isValidName } from '../js/fhem-client.js';
+import { formatDateDisplay } from '../js/date-display.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
 import { openDevicePicker } from '../js/device-picker.js';
@@ -208,7 +209,7 @@ class FHEMCMSSelect extends HTMLElement {
   }
 
   optionLabel(value) {
-    return labelFor(value, this.widgetConfig?.labels);
+    return formatDateDisplay(labelFor(value, this.widgetConfig?.labels));
   }
 
   render() {

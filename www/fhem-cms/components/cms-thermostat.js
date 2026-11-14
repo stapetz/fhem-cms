@@ -1,4 +1,5 @@
 import { isValidName } from '../js/fhem-client.js';
+import { formatDateDisplay } from '../js/date-display.js';
 import { widgetDesignCss, detailCardCss } from '../js/widget-design.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
@@ -506,7 +507,7 @@ class FHEMCMSThermostat extends HTMLElement {
 
   renderOptional(selector, label, value, readingName) {
     const element = this.shadowRoot.querySelector(selector);
-    element.textContent = readingName && value !== undefined && value !== '' ? `${label}: ${value}` : '';
+    element.textContent = readingName && value !== undefined && value !== '' ? `${label}: ${formatDateDisplay(value)}` : '';
   }
 
   setStatus(message, isError = false) {

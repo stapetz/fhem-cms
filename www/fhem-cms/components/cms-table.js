@@ -3,6 +3,7 @@ import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
+import { formatDateDisplay } from '../js/date-display.js';
 
 const MAX_ROWS = 40;
 
@@ -592,7 +593,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         numbers.push(number);
         units.add(row.unit || '');
       }
-      valueCell.textContent = item ? `${item.readings[row.reading]}${row.unit ? ` ${row.unit}` : ''}` : '–';
+      valueCell.textContent = item ? `${formatDateDisplay(item.readings[row.reading])}${row.unit ? ` ${row.unit}` : ''}` : '–';
       tr.append(deviceCell, valueCell);
       return tr;
     }));

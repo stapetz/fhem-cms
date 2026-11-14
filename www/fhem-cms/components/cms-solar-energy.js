@@ -1,4 +1,5 @@
 import { openDevicePicker } from '../js/device-picker.js';
+import { formatDateDisplay } from '../js/date-display.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { widgetDesignCss, detailCardCss } from '../js/widget-design.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
@@ -250,7 +251,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
     this.$('[data-title]').hidden = config.showTitle === false;
     const badge = this.$('[data-system]');
     badge.hidden = !config.readings?.status;
-    badge.textContent = `System: ${model.status || '–'}`;
+    badge.textContent = `System: ${formatDateDisplay(model.status) || '–'}`;
     const energyUnit = config.energyUnit || 'kWh';
     const energy = (source, digits) => compact(solarNumber(source, this.snapshot), digits);
     for (const [key, value] of Object.entries(model.values)) {

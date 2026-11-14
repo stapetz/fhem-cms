@@ -33,8 +33,8 @@ const controller = new Schema5DraftController({
     check(token === state.token, 'save uses current token');
     if (fail) throw new Error('test storage failure');
     state.draft = structuredClone(candidate);
-    state.token = 'b'.repeat(64);
     writes++;
+    state.token = (writes + 10).toString(16).repeat(64);
   },
   publish:async () => { publications++; throw new Error('Unexpected publication'); },
   discard:async () => { throw new Error('Unexpected discard'); },
@@ -81,12 +81,16 @@ try {
   check(host().snapshot[0].name === 'Car', 'popup uses actual device readings');
   check(order().slice(0,4).join() === 'state,statistics,vehicle,gallery', 'agreed initial order');
   check(order().length === 15, 'all cards including absent groups remain editable');
+  check([...host().shadowRoot.querySelectorAll('[data-reading-visibility]')]
+    .every(button => button.getBoundingClientRect().height >= 48), 'reading eyes retain 48px touch targets');
   check(!$('#reading-fuel_batteryChargeLevel') && !$('#reading-state_batteryChargeLevel'), 'no duplicate SOC row');
   check(!$('#reading-state_chargingPower') && !$('#reading-statistics_unavailable'), 'unavailable properties omitted');
   host().moveCard('gallery',-1);
   host().toggleCard('doors');
+  $('[data-reading-visibility="state_chargingType"]').click();
   check(order()[2] === 'gallery' && writes === 0, 'interactive preview does not write');
   check(host().pendingVisibility.hiddenGroups.includes('doors'), 'eye toggles pending visibility');
+  check(host().pendingVisibility.hiddenReadings.includes('state_chargingType'), 'reading eye toggles pending visibility');
   check(!host().config.hiddenGroups?.includes('doors'), 'eye leaves stored config untouched');
   check(!$('[data-card-step]'), 'visible up/down buttons removed');
   host().data = snapshot();
@@ -95,6 +99,7 @@ try {
   await start();
   check(order()[3] === 'gallery' && !host().pendingVisibility.hiddenGroups.includes('doors'),
     'cancel discards ordering and visibility');
+  check(!host().pendingVisibility.hiddenReadings.length, 'cancel discards reading visibility');
   host().reorderCard('gallery','statistics',true);
   host().reorderCard('gallery','statistics',true);
   check(order()[1] === 'gallery', 'repeated upper-half hits keep card before target');
@@ -116,6 +121,45 @@ try {
     snapshot: () => structuredClone(state), writes: () => writes,
     finish: async () => {
       check(writes === 1 && publications === 0, 'exactly one draft write and no publication');
+      const currentHost = host();
+      const dialog = $('[data-details]');
+      check(dialog.open && !host().pendingCardOrder, 'apply keeps existing popup open and exits arrangement');
+      check(!$('[data-drag-card]') && !$('[data-reading-visibility]') && !$('[data-card-visibility]'),
+        'apply hides all editing controls');
+      check(host().shadowRoot.activeElement === $('[data-arrange]'), 'apply leaves focus on visible arrangement button');
+      const content = $('[data-detail-body]');
+      const grid = document.querySelector('.cms-schema5-grid');
+      const outerScroll = grid.parentElement.scrollTop;
+      const soc = $('#energy .soc') || $('[data-detail-content] .soc');
+      host().data = snapshot();
+      host().startArrangement();
+      $('[data-reading-visibility="state_batteryChargeLevel"]').click();
+      $('[data-reading-visibility="state_electricRange"]').click();
+      $('[data-reading-visibility="state_chargingType"]').click();
+      $('[data-reading-visibility="statistics_tripMeterManual"]').click();
+      const scroll = content.scrollTop;
+      await host().saveArrangement();
+      check(writes === 2 && host() === currentHost && $('[data-details]') === dialog && dialog.open,
+        'second save uses fresh token without remounting host/dialog');
+      check(Math.abs(content.scrollTop - Math.min(scroll, content.scrollHeight - content.clientHeight)) <= 1
+        && grid.parentElement.scrollTop === outerScroll,
+        'saving preserves popup and page scroll');
+      check(!$('.soc') && !$('[role=meter]'), 'hidden battery removes compact and detailed charge and meter');
+      check(!$('.range'), 'hidden range removes compact and detailed range');
+      check(!$('#reading-state_chargingType'), 'hidden reading disappears after apply');
+      check(!soc.isConnected && !host().pendingCardOrder, 'successful apply renders saved visibility');
+      host().startArrangement();
+      check($('[data-reading-visibility="state_batteryChargeLevel"]').getAttribute('aria-pressed') === 'false',
+        'hidden summary remains editable');
+      check($('[data-reading-visibility="state_chargingType"]').getAttribute('aria-pressed') === 'false',
+        'hidden reading remains editable');
+      host().toggleReading('state_batteryChargeLevel');
+      host().cancelArrangement();
+      check(!$('.soc'), 'cancel restores saved reading preference');
+      host().data = [{name:'Car',readings:{}}];
+      check(host().config.hiddenReadings.includes('statistics_tripMeterManual'), 'missing reading retains hidden preference');
+      host().data = snapshot();
+      check(!$('#reading-statistics_tripMeterManual'), 'returning reading keeps saved visibility');
       check(JSON.stringify(state.live) === JSON.stringify(initial), 'live config unchanged');
       check(JSON.stringify(state.draft.pages[0].widgets[0].grid) ===
         JSON.stringify(initial.pages[0].widgets[0].grid), 'outer grid unchanged');
@@ -126,6 +170,17 @@ try {
         'saved order includes all unique cards');
       check(state.draft.pages[0].widgets[0].showDetails !== false, 'legacy popup default retained');
       check(state.draft.pages[0].widgets[0].hiddenGroups.includes('doors'), 'eye preference persists with order');
+      check(controller.snapshot().draft.pages[0].widgets[0].hiddenReadings.includes('state_chargingType'),
+        'reading preference survives controller reload');
+      let staleRejected = false;
+      await controller.saveWidget('one',{...state.draft.pages[0].widgets[0], title:'Other edit'}, state.token,'update');
+      host().startArrangement();
+      await host().saveArrangement();
+      staleRejected = $('[data-message]').textContent.includes('veraltet');
+      check(staleRejected && host().pendingCardOrder && dialog.open,
+        'concurrent change is rejected, not overwritten with a fetched token');
+      host().cancelArrangement();
+      host().closeDetails();
       const {mountSchema5Widgets} = await import('../www/fhem-cms/js/fcui-schema5-widgets.js');
       const root = document.createElement('div');
       root.className = 'grid-stack cms-schema5-grid';
@@ -139,6 +194,8 @@ try {
         readOnly.startArrangement();
         check(!readOnly.pendingCardOrder, 'view mode rejects arrangement method');
         check(!readOnly.$('[data-group="doors"]'), 'saved hidden group is absent in view mode');
+        check(!readOnly.$('.soc') && !readOnly.$('#reading-state_chargingType'),
+          'saved hidden readings are absent after a full view remount');
       } finally { view.destroy(); root.remove(); }
       output.dataset.result = 'pass';
       output.textContent = JSON.stringify({checks});

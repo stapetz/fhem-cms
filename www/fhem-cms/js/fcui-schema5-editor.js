@@ -352,7 +352,7 @@ export class Schema5Editor {
         },
         onEdit: (pageId, id) => id === '__nav' ? this.#openNavigation() : this.#openWidgets(id),
         onPopupSettings: async (pageId, id, settings) => {
-          if (!this.#active || this.#suspended || generation !== this.#generation
+          if (!this.#active || this.#suspended || generation !== this.#generation || this.#view !== view
             || this.#view?.current !== pageId) throw new Error('Editorzustand ist veraltet; bitte erneut laden.');
           if (!settings || typeof settings !== 'object' || typeof settings.showGallery !== 'boolean'
             || !Array.isArray(settings.groupOrder) || !Array.isArray(settings.hiddenGroups)) {
@@ -365,8 +365,15 @@ export class Schema5Editor {
           try {
             const result = await this.#controller.saveWidget(pageId,
               {...structuredClone(widget), groupOrder:[...settings.groupOrder],
-                hiddenGroups:[...settings.hiddenGroups], showGallery:settings.showGallery}, state.token, 'update');
-            await this.#display(result, generation);
+                hiddenGroups:[...settings.hiddenGroups], hiddenReadings:[...(settings.hiddenReadings || [])],
+                showGallery:settings.showGallery}, state.token, 'update');
+            Object.assign(widget, {groupOrder:[...settings.groupOrder], hiddenGroups:[...settings.hiddenGroups],
+              hiddenReadings:[...(settings.hiddenReadings || [])], showGallery:settings.showGallery});
+            state = result;
+            if (this.#active && !this.#suspended && generation === this.#generation && this.#view === view) {
+              this.#mode.textContent = 'Entwurf';
+              this.#setActions(true, true);
+            }
           } catch (error) {
             if (this.#active && !this.#suspended && generation === this.#generation) {
               this.#setActions(false, false);

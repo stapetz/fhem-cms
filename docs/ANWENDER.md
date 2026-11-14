@@ -471,6 +471,18 @@ HTML-Details, eingebettete Frames und laufende Animationen bleiben dabei
 erhalten. Die Prüfung auf dem eigenen iPhone beziehungsweise als Homescreen-App
 bleibt wichtig, da die Browser-Vorschau Safari nicht vollständig nachbildet.
 
+### Datumsanzeigen in Widgets
+
+Datumswerte erscheinen als **TT.MM.JJJJ**, Zeitstempel als
+**TT.MM.JJJJ HH:mm:ss**. Zeitstempel mit `Z` oder UTC-Offset werden nach
+**Europe/Berlin** umgerechnet (inklusive Sommerzeit). Reine Datumswerte und
+lokale FHEM-Zeiten ohne Zeitzone behalten ihren Kalendertag bzw. ihre Uhrzeit.
+Das gilt auch für Reading-Platzhalter in Text und freiem HTML.
+Rohreadings, Bedingungen, Wertzuordnungen und gesendete Befehle bleiben unverändert;
+selbst geschriebener statischer HTML-Text wird nicht umformatiert.
+Ungültige oder nicht eindeutig erkennbare Datumswerte bleiben zur Diagnose
+unverändert sichtbar. Zahlen und Zeitdauern werden nicht als Datum interpretiert.
+
 ### VolvoConnect für das Fahrzeug
 
 Unter **Widget hinzufügen → VolvoConnect** oder **Gerät hinzufügen** ein
@@ -490,6 +502,12 @@ werden nicht angezeigt; echte Nullwerte bleiben sichtbar. Das Popup
 verwendet das gewählte Theme und scrollt auf kleinen Bildschirmen innerhalb
 des Fensters. Schließen per **✕**, **Escape** oder Klick außerhalb des Popups;
 danach kehrt der Fokus zum Informationssymbol zurück.
+Informations- und Aktionssymbol stehen nebeneinander rechts. Ein kleines
+grünes Häkchen zeigt auch auf der Hauptkachel die verbundene API an.
+Die Hauptkachel berücksichtigt neben `state_batteryChargeLevel` und
+`state_electricRange` auch `fuel_batteryChargeLevel`,
+`fuel_distanceToEmptyBattery` und `statistics_distanceToEmptyBattery`,
+wie sie unter anderem bei Keycloak-Geräten vorhanden sind.
 
 Im Widgetdialog steht die **Device-Zuordnung direkt unter dem Titel**.
 **Zeige Detaildaten im Popup** ist standardmäßig eingeschaltet.
@@ -509,8 +527,14 @@ Die **Auge-Schalter** blenden einzelne Karten einschließlich Galerie ein
 oder aus. Ausgeblendete und noch nicht verfügbare Karten bleiben in dieser
 Bearbeitungsansicht erreichbar; durchgestrichenes Auge und gestrichelter
 Rahmen kennzeichnen ausgeblendete Karten.
-**Übernehmen** speichert Reihenfolge und Sichtbarkeit im CMS-Entwurf und
-schließt das Popup; die normale Veröffentlichung bleibt separat.
+Auch die einzelnen angezeigten Readings haben im Anordnungsmodus einen
+**Auge-Schalter**, einschließlich Akkustand, Reichweite und letztem Update.
+Ausgeblendete Werte bleiben dort erreichbar und werden abgedimmt gezeigt.
+Die Auswahl bleibt beim Wechsel der Energie-Readingvarianten und bei
+vorübergehend fehlenden Readings erhalten.
+**Übernehmen** speichert Reihenfolge und Sichtbarkeit im CMS-Entwurf,
+lässt das Popup offen und blendet die Bearbeitungswerkzeuge wieder aus.
+Die normale Veröffentlichung bleibt separat.
 **Abbrechen** verwirft die Vorschau. Escape bricht zuerst einen laufenden
 Ziehvorgang, danach die Anordnungsbearbeitung ab und schließt erst dann das Popup.
 Im Ansichts-/Vorschaumodus gibt es keine Verschiebegriffe.
@@ -519,8 +543,11 @@ Editmodus diese Bearbeitungsansicht als Popup. Die Karten auf der Seite
 werden dabei nicht live umsortiert. Eine doppelte Gruppenliste oder
 interaktive Vorschau im Konfigurationsdialog gibt es nicht.
 Die kompakte Batterie-/Reichweitenanzeige bleibt unabhängig von den
-Gruppeneinstellungen sichtbar. Einzelne Readings lassen sich noch nicht
-separat ausblenden.
+Gruppeneinstellungen sichtbar; ihre einzelnen Werte folgen aber denselben
+Reading-Schaltern wie im Popup. Ein ausgeblendeter Akkustand entfernt auch
+den Ladebalken. Ausgeblendete Koordinaten verbergen zusätzlich die Karte.
+Im Standort stehen Straße, Ort, Bundesland, Land, Breitengrad und Längengrad
+in dieser Reihenfolge, danach der Positionszeitpunkt.
 
 Die Standardreihenfolge ist Energie & Akku, Statistik, Fahrzeuginformationen,
 Galerie, Standort, Licht, Türen, Fenster, Diagnose und die übrigen Gruppen.

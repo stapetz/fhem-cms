@@ -1,4 +1,5 @@
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
+import { formatDateDisplay } from '../js/date-display.js';
 
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
@@ -264,7 +265,7 @@ class FHEMCMSValue extends HTMLElement {
       return;
     }
     const raw = this.readingValue();
-    value.textContent = raw === null || raw === '' ? '–' : raw;
+    value.textContent = raw === null || raw === '' ? '–' : formatDateDisplay(raw);
     this.shadowRoot.querySelector('[data-unit]').textContent =
       raw !== null && raw !== '' && this.widgetConfig.unit ? this.widgetConfig.unit : '';
     const tile = this.shadowRoot.querySelector('[data-tile]');

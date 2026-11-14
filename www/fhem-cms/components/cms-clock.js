@@ -1,4 +1,5 @@
 import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
+import { formatDateDisplay } from '../js/date-display.js';
 
 const STYLES = ['digital', 'date', 'analog'];
 
@@ -261,23 +262,25 @@ class FHEMCMSClock extends HTMLElement {
       hour: '2-digit',
       minute: '2-digit',
       ...(config.showSeconds === true ? { second: '2-digit' } : {}),
-      hourCycle: 'h23'
+      hourCycle: 'h23',
+      timeZone: 'Europe/Berlin'
     }).format(now);
     if (config.style !== 'analog') {
       this.shadowRoot.querySelector('[data-time]').textContent = timeText;
     }
     const parts = [];
     if (config.showWeekday) {
-      parts.push(new Intl.DateTimeFormat('de-DE', { weekday: 'long' }).format(now));
+      parts.push(new Intl.DateTimeFormat('de-DE', { weekday: 'long', timeZone:'Europe/Berlin' }).format(now));
     }
     if (config.showDate || config.style === 'date') {
-      parts.push(new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(now));
+      parts.push(formatDateDisplay(now));
     }
     this.shadowRoot.querySelector('[data-date]').textContent = parts.join(', ');
     this.shadowRoot.querySelector('[data-clock-label]').textContent = `Uhrzeit ${timeText}${parts.length ? `, ${parts.join(', ')}` : ''}`;
     const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
     const minute = now.getMinutes() + seconds / 60;
-    const hour = (now.getHours() % 12) + minute / 60;
+    const hour = (Number(new Intl.DateTimeFormat('de-DE', {hour:'2-digit',hourCycle:'h23',
+      timeZone:'Europe/Berlin'}).format(now)) % 12) + minute / 60;
     this.shadowRoot.querySelector('[data-hour]').style.setProperty('--angle', `${hour * 30}deg`);
     this.shadowRoot.querySelector('[data-minute]').style.setProperty('--angle', `${minute * 6}deg`);
     this.shadowRoot.querySelector('[data-second]').style.setProperty('--angle', `${seconds * 6}deg`);

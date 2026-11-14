@@ -4,6 +4,7 @@ import { widgetDesignCss, detailCardCss } from '../js/widget-design.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
 import { renderVehicleMaps } from '../js/vehicle-map.js';
 import { isValidName } from '../js/fhem-client.js';
+import { formatDateDisplay } from '../js/date-display.js';
 import { volvoCards, volvoGroupIcons, volvoGroupOrder, validateVolvoGroups,
   volvoModel, volvoValue } from '../js/volvoconnect.js';
 
@@ -72,6 +73,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .card h4 { margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid rgba(128,128,128,.2); font-size:.95rem; }
         .hero-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
         .hero-heading h4 { border:0; padding:0; }
+        .hero-tools { display:flex; align-items:center; gap:6px; margin-left:auto; }
+        .connected { color:var(--cms-success,#10b981); font-size:.9rem; }
         [data-info] { flex:none; font-size:1.3rem; }
         .hero { background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(59,130,246,.12));
           border-color:rgba(16,185,129,.35); display:flex; flex-direction:column; gap:14px; }
@@ -90,6 +93,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .reading-icon,.status-icon { display:inline-block; min-width:1.4em; text-align:center; margin-right:4px; }
         .status-icon[data-tone=good] { color:var(--cms-success,#10b981); }
         .status-icon[data-tone=warning] { color:var(--cms-warning,#f59e0b); }
+        [data-reading-concealed] { opacity:.5; }
+        [data-reading-visibility] { padding:2px 6px; margin-left:6px; }
         .gallery { background:radial-gradient(circle at 50% 65%,rgba(16,185,129,.12),rgba(128,128,128,.07) 75%); }
         .slides { display:flex; width:100%; min-width:0; overflow-x:auto;
           scroll-snap-type:x mandatory; scrollbar-width:thin; }
@@ -174,7 +179,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
             <label class="check"><input type="checkbox" name="showDetails">Zeige Detaildaten im Popup</label>
             <p>Readings und Gruppen werden direkt aus dem VolvoConnect-Modul übernommen. Kein Mapping erforderlich.</p>
           </div></details>
-          <p>Reihenfolge und Sichtbarkeit der Karten lassen sich direkt im Detailpopup über „Anordnung bearbeiten“ ändern.</p>
+          <p>Reihenfolge der Karten und Sichtbarkeit von Karten und Readings lassen sich direkt im Detailpopup über „Anordnung bearbeiten“ ändern.</p>
           <p data-error class="error" role="alert"></p>
           <div class="actions config-actions"><button type="button" class="danger" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit" data-save>Speichern</button></div>
@@ -235,6 +240,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         || event.clientY < bounds.top || event.clientY > bounds.bottom) this.closeDetails();
     });
     this.$('[data-detail-content]').addEventListener('click', event => {
+      const reading = event.target.closest('[data-reading-visibility]');
+      if (reading) this.toggleReading(reading.dataset.readingVisibility);
       const visibility = event.target.closest('[data-card-visibility]');
       if (visibility) this.toggleCard(visibility.closest('[data-group]').dataset.group);
     });
@@ -328,12 +335,38 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     this.$('[data-detail-content]').querySelector(`[data-group="${key}"] [data-card-visibility]`)?.focus({preventScroll:true});
   }
 
+  toggleReading(key) {
+    if (!this.pendingVisibility || this.arrangementSaving || this.drag) return;
+    const hidden = new Set(this.pendingVisibility.hiddenReadings);
+    if (hidden.has(key)) hidden.delete(key); else hidden.add(key);
+    this.pendingVisibility.hiddenReadings = [...hidden];
+    this.render();
+    Array.from(this.$('[data-detail-content]').querySelectorAll('[data-reading-visibility]'))
+      .find(button => button.dataset.readingVisibility === key)?.focus({preventScroll:true});
+  }
+
+  readingVisible(key, compact = false) {
+    return !(compact ? this.widgetConfig : this.pendingVisibility || this.widgetConfig).hiddenReadings?.includes(key);
+  }
+
+  readingEye(key, label) {
+    const eye = node('button', '👁');
+    eye.type = 'button';
+    eye.dataset.readingVisibility = key;
+    const visible = this.readingVisible(key);
+    eye.setAttribute('aria-label', `${label} ${visible ? 'ausblenden' : 'einblenden'}`);
+    eye.setAttribute('aria-pressed', String(visible));
+    if (!visible) eye.style.textDecoration = 'line-through';
+    return eye;
+  }
+
   startArrangement() {
     if (typeof this.services?.savePopupSettings !== 'function' || this.pendingCardOrder
       || !this.$('[data-details]').open) return;
     this.pendingCardOrder = volvoGroupOrder(this.widgetConfig);
     this.pendingVisibility = {showGallery:this.widgetConfig.showGallery !== false,
-      hiddenGroups:[...(this.widgetConfig.hiddenGroups || [])]};
+      hiddenGroups:[...(this.widgetConfig.hiddenGroups || [])],
+      hiddenReadings:[...(this.widgetConfig.hiddenReadings || [])]};
     this.$('[data-message]').textContent = '';
     this.render();
     this.$('[data-cancel-arrange]').focus({preventScroll:true});
@@ -350,8 +383,11 @@ class FHEMCMSVolvoConnect extends HTMLElement {
 
   async saveArrangement() {
     if (!this.pendingCardOrder || this.arrangementSaving || this.drag) return;
+    const body = this.$('[data-detail-body]');
+    const scrollTop = body.scrollTop;
     const settings = {groupOrder:[...this.pendingCardOrder],
-      hiddenGroups:[...this.pendingVisibility.hiddenGroups], showGallery:this.pendingVisibility.showGallery};
+      hiddenGroups:[...this.pendingVisibility.hiddenGroups], hiddenReadings:[...this.pendingVisibility.hiddenReadings],
+      showGallery:this.pendingVisibility.showGallery};
     this.arrangementSaving = true;
     for (const selector of ['[data-arrange-bar]','[data-detail-content]']) this.$(selector).inert = true;
     this.$('[data-close-details]').disabled = true;
@@ -363,13 +399,18 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       this.pendingCardOrder = null;
       this.pendingVisibility = null;
       message.textContent = 'Anordnung im Entwurf gespeichert. Veröffentlichung erfolgt separat.';
+      this.$('[data-arrange]').hidden = false;
+      this.$('[data-arrange]').focus({preventScroll:true});
     } catch (error) {
       message.textContent = `Anordnung nicht gespeichert: ${error.message}`;
     } finally {
       this.arrangementSaving = false;
       for (const selector of ['[data-arrange-bar]','[data-detail-content]']) this.$(selector).inert = false;
       this.$('[data-close-details]').disabled = false;
-      if (this.isConnected) this.render();
+      if (this.isConnected) {
+        this.render();
+        body.scrollTop = scrollTop;
+      }
     }
   }
 
@@ -475,7 +516,10 @@ class FHEMCMSVolvoConnect extends HTMLElement {
   rows(entries) {
     const list = node('dl');
     for (const entry of entries) {
+      const visible = this.readingVisible(entry.visibilityKey);
+      if (!visible && !this.pendingCardOrder) continue;
       const row = node('div', undefined, 'row');
+      row.toggleAttribute('data-reading-concealed', !visible);
       row.id = `reading-${entry.reading}`;
       const label = node('dt');
       const icon = node('span', entry.icon, 'reading-icon');
@@ -490,6 +534,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         status.title = entry.value;
         value.append(status);
       } else value.append(document.createTextNode(entry.value));
+      if (this.pendingCardOrder) value.append(this.readingEye(entry.visibilityKey, entry.label));
       row.append(label, value);
       list.append(row);
     }
@@ -510,21 +555,30 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     const hero = this.energyCard(model, true);
     const heading = node('div', undefined, 'hero-heading');
     heading.append(node('h4', '🔋 Batterie & Reichweite'));
+    const tools = node('div', undefined, 'hero-tools');
+    if (model.read('state') === 'authenticated' && this.readingVisible('state', true)) {
+      const connected = node('span', '✓', 'connected');
+      connected.setAttribute('role', 'img');
+      connected.setAttribute('aria-label', 'API: Verbunden');
+      connected.title = 'API: Verbunden';
+      tools.append(connected);
+    }
     const info = node('button', 'ⓘ');
     info.type = 'button';
     info.dataset.info = '';
     info.setAttribute('aria-label', 'VolvoConnect Fahrzeugdetails öffnen');
     info.setAttribute('aria-haspopup', 'dialog');
     info.setAttribute('aria-expanded', String(this.$('[data-details]').open));
-    if (config.showDetails !== false) heading.append(info);
+    if (config.showDetails !== false) tools.append(info);
     if (model.actions.length) {
       const actions = node('button', 'Ⓐ');
       actions.type = 'button';
       actions.dataset.openActions = '';
       actions.setAttribute('aria-label', 'Fahrzeugaktionen öffnen');
       actions.setAttribute('aria-haspopup', 'dialog');
-      heading.append(actions);
+      tools.append(actions);
     }
+    heading.append(tools);
     if (config.showDetails !== false) {
       hero.prepend(heading);
       compact.append(hero);
@@ -534,7 +588,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         const arrange = node('button', 'Anordnung bearbeiten');
         arrange.type = 'button';
         arrange.dataset.openArrangement = '';
-        heading.append(arrange);
+        heading.prepend(arrange);
       }
       compact.append(heading);
     }
@@ -560,28 +614,36 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     hero.id = compact ? 'compact-energy' : 'energy';
     if (!compact) hero.append(node('h4', '🔋 Energie & Akku'));
     const summary = node('div', undefined, 'summary');
-    if (model.soc !== null) {
+    const preview = !compact && Boolean(this.pendingCardOrder);
+    const socVisible = this.readingVisible('state_batteryChargeLevel', compact);
+    const rangeVisible = this.readingVisible('state_electricRange', compact);
+    if (model.soc !== null && (socVisible || preview)) {
       const soc = node('div');
+      soc.toggleAttribute('data-reading-concealed', !socVisible);
       const label = node('small', 'Akkustand');
       label.style.display = 'block';
       soc.append(label, node('strong', `${model.soc}%`, 'soc'));
+      if (preview) soc.append(this.readingEye('state_batteryChargeLevel', 'Akkustand'));
       summary.append(soc);
     }
-    if (model.range) {
+    if (model.range && (rangeVisible || preview)) {
       const range = node('div', undefined, 'range');
+      range.toggleAttribute('data-reading-concealed', !rangeVisible);
       range.append(node('small', 'Restreichweite'),
         document.createTextNode(volvoValue('state', 'electricRange', model.range,
-          model.read('state_electricRange_unit') || model.read('fuel_distanceToEmptyBattery_unit'))));
+          model.rangeUnit)));
+      if (preview) range.append(this.readingEye('state_electricRange', 'Restreichweite'));
       summary.append(range);
     }
     if (summary.childElementCount) hero.append(summary);
-    if (model.soc !== null) {
+    if (model.soc !== null && (socVisible || preview)) {
       const bar = node('div', undefined, 'charge');
       bar.setAttribute('role', 'meter');
       bar.setAttribute('aria-label', 'Akkustand');
       bar.setAttribute('aria-valuemin', '0');
       bar.setAttribute('aria-valuemax', '100');
       bar.setAttribute('aria-valuenow', String(model.soc));
+      bar.toggleAttribute('data-reading-concealed', !socVisible);
       const fill = node('div');
       fill.style.width = `${model.soc}%`;
       bar.append(fill);
@@ -602,19 +664,22 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     const identity = node('div', undefined, 'identity');
     identity.id = 'identity';
     const names = node('div');
-    const modelName = model.read('vehicle_descriptions_model');
+    const modelName = this.readingVisible('vehicle_descriptions_model') ? model.read('vehicle_descriptions_model') : '';
     if (modelName) names.append(node('h4', modelName));
-    const subtitle = ['vehicle_externalColour', 'vehicle_modelYear'].map(model.read).filter(Boolean).join(' · ');
+    const subtitle = ['vehicle_externalColour', 'vehicle_modelYear']
+      .filter(key => this.readingVisible(key)).map(model.read).filter(Boolean).join(' · ');
     if (subtitle) names.append(node('small', subtitle));
     identity.append(names);
     const api = model.read('state');
-    if (api) {
+    if (api && (preview || this.readingVisible('state'))) {
       const badge = node('span', api === 'authenticated' ? '✓' : '⚠', 'badge');
       badge.setAttribute('role', 'img');
       badge.setAttribute('aria-label', `API: ${volvoValue('', 'state', api)}`);
       badge.title = badge.getAttribute('aria-label');
       badge.toggleAttribute('data-error', /^(?:error|auth_required)$/.test(api));
+      badge.toggleAttribute('data-reading-concealed', !this.readingVisible('state'));
       identity.append(badge);
+      if (preview) identity.append(this.readingEye('state', 'API-Status'));
     }
     content.append(identity);
     const top = node('div', undefined, 'top');
@@ -632,7 +697,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       card.toggleAttribute('data-concealed', hidden.has(key));
       if (key !== 'state') {
         card.append(node('h4', `${volvoGroupIcons[key]} ${groupLabels.get(key)}`));
-        if (key === 'location' && model.latitude !== null && model.longitude !== null) {
+        if (key === 'location' && model.latitude !== null && model.longitude !== null
+          && this.readingVisible('location_latitude') && this.readingVisible('location_longitude')) {
           const map = node('div', undefined, 'map');
           map.id = 'volvo-location';
           map.dataset.map = 'vehicle';
@@ -703,7 +769,12 @@ class FHEMCMSVolvoConnect extends HTMLElement {
     const footer = node('footer');
     footer.id = 'footer';
     const updated = model.read('lastUpdate');
-    if (updated) footer.append(node('span', `Letztes Update: ${updated}`));
+    if (updated && (preview || this.readingVisible('lastUpdate'))) {
+      const stamp = node('span', `Letztes Update: ${formatDateDisplay(updated)}`);
+      stamp.toggleAttribute('data-reading-concealed', !this.readingVisible('lastUpdate'));
+      if (preview) stamp.append(this.readingEye('lastUpdate', 'Letztes Update'));
+      footer.append(stamp);
+    }
     content.append(footer);
     if (!model.available) content.append(node('p', 'Keine Fahrzeugdaten verfügbar.'));
     if (this.widgetConfig.showDetails === false && !this.$('[data-details]').open) {
@@ -825,7 +896,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       showDetails: form.elements.showDetails.checked,
       showGallery: this.widgetConfig.showGallery !== false, grid: { ...this.widgetConfig.grid },
       groupOrder: volvoGroupOrder(this.widgetConfig),
-      hiddenGroups: [...(this.widgetConfig.hiddenGroups || [])] };
+      hiddenGroups: [...(this.widgetConfig.hiddenGroups || [])],
+      hiddenReadings: [...(this.widgetConfig.hiddenReadings || [])] };
     const groupError = validateVolvoGroups(next);
     if (groupError) { this.$('[data-error]').textContent = groupError; return; }
     if (title) next.title = title;

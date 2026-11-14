@@ -56,6 +56,8 @@ try {
     [`${n}-timestamp`]: '01.01.2026 12:00', [`${n}-duration`]: '00:01:00',
   });
   widget.data = [{ name: 'Calls', readings: regularReadings }];
+  check($('[data-rows]').children[0].children[2].textContent === '01.01.2026 12:00:00',
+    'call timestamps use full German date/time including seconds');
   for (const limit of [1, 5, 20]) {
     widget.config = { ...config, limit };
     widget.style.width = '360px';
