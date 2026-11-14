@@ -5,7 +5,7 @@ const PROPERTIES = new Set(`display box-sizing width height min-width max-width 
   border-top-left-radius border-top-right-radius border-bottom-left-radius border-bottom-right-radius border-collapse border-spacing
   outline outline-width outline-style outline-color outline-offset background background-color background-image
   background-size background-position background-repeat background-clip background-origin background-blend-mode
-  color opacity font font-family font-size font-weight font-style font-variant line-height letter-spacing word-spacing
+  color opacity font font-family font-size font-weight font-style font-variant font-variant-numeric line-height letter-spacing word-spacing
   text-align text-decoration text-decoration-color text-decoration-style text-transform text-overflow text-shadow
   white-space word-break overflow-wrap vertical-align list-style list-style-type list-style-position
   display grid grid-template grid-template-columns grid-template-rows grid-template-areas grid-auto-columns grid-auto-rows

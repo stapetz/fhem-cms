@@ -162,6 +162,11 @@ try {
   check(getComputedStyle(dash.querySelector('.vd-top-grid')).display === 'grid', 'full dashboard layout is preserved');
   dash.remove();
   const policy = await (await fetch('fixtures/freehtml_policy.json')).json();
+  const numericTable = createWidgetElement({ id: 'numeric-table', type: 'fhem-html', devices: [],
+    html: '<table><tbody><tr><td style="padding: 6px 4px; text-align: right; font-variant-numeric: tabular-nums;">123</td></tr></tbody></table>' }, {}, new Map(), true);
+  document.body.append(numericTable);
+  check(getComputedStyle(numericTable.shadowRoot.querySelector('td')).fontVariantNumeric === 'tabular-nums', 'existing table numeric typography survives sanitizing and rendering');
+  numericTable.remove();
   for (const [source, expected] of policy.css) check(isSafeCss(source) === expected, 'CSS positive policy: ' + source);
   for (const [source, expected] of policy.html) check((checkSource(source) === null) === expected, 'HTML positive policy: ' + source);
   const states = '<style>[data-value^="-"]{color:red}[data-state="on"]{font-weight:700}</style><div data-value="{{Sensor:power|int}}" data-state="{{Sensor:state}}">{{Sensor:state}}</div>';
