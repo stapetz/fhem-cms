@@ -19,6 +19,14 @@ for my $case (
     ['invalid gallery', sub { $_[0]{showGallery} = 'yes'; }],
     ['numeric gallery', sub { $_[0]{showGallery} = 1; }],
     ['manual mapping', sub { $_[0]{readings} = {}; }],
+    ['unknown group', sub { $_[0]{groupOrder} = ['unknown']; }],
+    ['duplicate group', sub { $_[0]{groupOrder} = ['doors', 'doors']; }],
+    ['invalid order container', sub { $_[0]{groupOrder} = {}; }],
+    ['null order', sub { $_[0]{groupOrder} = undef; }],
+    ['unsafe group', sub { $_[0]{hiddenGroups} = ["doors\n"]; }],
+    ['duplicate hidden group', sub { $_[0]{hiddenGroups} = ['state', 'state']; }],
+    ['invalid hidden container', sub { $_[0]{hiddenGroups} = 'state'; }],
+    ['too many groups', sub { $_[0]{groupOrder} = [('state') x 15]; }],
 ) {
     my ($label, $change) = @{$case};
     my $copy = $json->decode($json->encode($config));
@@ -29,4 +37,11 @@ delete $widget->{showGallery};
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'gallery defaults on when flag omitted');
 $widget->{showGallery} = JSON::PP::false;
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'gallery may be disabled');
+$widget->{groupOrder} = ['location', 'doors'];
+$widget->{hiddenGroups} = ['state', 'statistics'];
+is(FHEMCMS_ValidateConfig($config, 5), undef, 'partial order and hidden groups accepted');
+is(FHEMCMS_ValidateBlueprints([{name => 'Car', widget => $widget}]), undef, 'group preferences survive blueprint validation');
+$widget->{groupOrder} = [];
+$widget->{hiddenGroups} = [];
+is(FHEMCMS_ValidateConfig($config, 5), undef, 'empty preferences accepted');
 done_testing();

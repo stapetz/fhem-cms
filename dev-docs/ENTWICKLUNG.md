@@ -71,10 +71,15 @@ der verfuegbaren Diagrammhoehe, ohne Stations-/Titelueberlauf.
 Chrome-Runner und `python scripts/check_webkit_widgets.py` pruefen auch
 das Oeffnen/Speichern ohne Berechnungsoption.
 
-## VolvoConnect-Fahrzeugwidget (dev, 1.13.0-dev, Refs #207)
+## VolvoConnect-Fahrzeugwidget (dev, 1.14.0-dev, Refs #207)
 
 Schema 5: `fhem-volvoconnect` / `cms-volvoconnect` mit `device` und optionalem
 booleschem `showGallery` (Default true), neben den gemeinsamen Widgetfeldern.
+Seit 1.14.0-dev zusaetzlich optionale `groupOrder` und `hiddenGroups`:
+Listen mit hoechstens 14 eindeutigen, erlaubten Gruppenschluesseln.
+Fehlende Einstellungen bedeuten alle Gruppen in Modulreihenfolge;
+bei Teilreihenfolgen werden fehlende Gruppen in Modulreihenfolge angehaengt.
+Frontend und Server pruefen denselben Vertrag, auch fuer Blueprints.
 Eine Device-Auswahl ersetzt manuelles Readingmapping. Widgetauswahl,
 Device-first, Einrichtungsassistent, Live-Snapshots und Blueprints sind verdrahtet.
 Keine Aenderung oder Ersetzung vorhandener HTML-Widgets oder gespeicherter Seiten.
@@ -90,13 +95,30 @@ eigene Zeilen dupliziert. Neue Schluessel in vorhandenen Gruppen erscheinen
 mit lesbaren Fallbacklabels. Nur vorhandene skalare Werte, keine Ersatznullen;
 Leer-/Unavailable-Properties entfallen, echte Nullwerte bleiben sichtbar.
 
-Gestaltung: Hero fuer Akkustand, Ziel und Reichweite sowie wischbare Galerie,
+Gestaltung: kompakte Batterie-/Reichweitenkachel mit Informationssymbol.
+Die vollstaendige Ansicht erscheint erst im nativen modalen Detaildialog:
+Hero fuer Akkustand, Ziel und Reichweite sowie wischbare Galerie,
 angelehnt an das freie HTML-Widget auf Auto und gemeinsame Theme-/Detailkarten.
+Reading- und Zustandssymbole folgen den Modulsemantiken; Textwerte bleiben
+lesbar erhalten, normale numerische Null ist kein negativer Status.
+Alle 14 Modulgruppen lassen sich im Widgetdialog an-/abschalten und mit
+Touch-/Tastatur-tauglichen Pfeiltasten sortieren. Aenderungen erst mit Speichern;
+einzelne Reading-Schalter sind ausdruecklich zurueckgestellt.
+Die Energiegruppe betrifft nur das Popup, nicht die kompakte Kachel.
+Neue Widgets: 4x4 Standardrasterzellen, vorhandene Raster bleiben unveraendert.
+Erster Widget-Popup-Prototyp ohne neue allgemeine Popup-Abstraktion.
+Native Top-Layer-Darstellung, viewportbegrenzt und innen scrollbar;
+Themeflaeche und 12px-Backdrop-Blur halten darunter
+liegende Texte auch bei transparenter Flaeche unlesbar und das Popup lesbar.
+Escape, Schliessen-Schaltflaeche und Backdrop schliessen nur dieses Popup.
+Fokus geht ohne Seitenscroll zum Informationssymbol zurueck.
 Nur HTTP(S)-Bildadressen ohne eingebettete Zugangsdaten, Fehler sichtbar.
 Galerie im Dialog an-/abschaltbar, standardmaessig an. Standort nutzt den
 vorhandenen lokalen Kartenrenderer; Initialhoehe inline stabilisiert, damit
 WebKit nicht vor geladenem Karten-CSS eine falsche Groesse/Panposition merkt.
-Liveupdates erhalten Galerie, Scroll und Karteninstanz/Zoom.
+Galerie/Karte werden nur bei geoeffnetem Popup aufgebaut; Schliessen und
+Disconnect geben Karten und Detail-DOM frei. Liveupdates erhalten das
+offene Popup, Galerie, Scroll und Karteninstanz/Zoom.
 Nur vom Device angebotene feste Dashboard-Aktionen erscheinen, nur in der
 Ansicht ausfuehrbar und erst nach ausdruecklicher Bestaetigung. Keine freie
 Befehlseingabe, kein Versand beim Konfigurieren, Fehler als Statusmeldung.
@@ -106,6 +128,9 @@ Fixture 88 im vorhandenen Chrome-Runner sowie WebKit-Runner. Fixture 86
 umfasst jetzt alle 17 Widgettypen. Modelle/Schema/Blueprints, reale Null,
 fehlende/ungueltige Werte, Galerieoption/Fehler/Liveupdates, Kartenlebenszyklus,
 Aktionsbestaetigung/Fehler und mobile Darstellung in drei Themes sind abgedeckt.
+Zusaetzlich Gruppenvalidierung/-reihenfolge/-sichtbarkeit, kompakte Darstellung
+und Popupgrenzen in Desktop-/iPhone-/iPad-WebKit. Der Chrome-Runner prueft
+echtes Enter/Tab/Escape, Fokuseinschluss, Backdrop und erhaltene Seitenscrollposition.
 
 ## Solarwidgets fuer Leistungsmesser (dev, 1.12.0-dev, Refs #205)
 

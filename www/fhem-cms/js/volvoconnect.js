@@ -9,6 +9,66 @@ export const volvoGroups = [
   ['vehicle', 'Allgemeine Fahrzeuginformationen'], ['location', 'Fahrzeugstandort'],
 ];
 
+export const volvoGroupIcons = {
+  state: '🔋', capabilities: '✓', warnings: '💡', brakes: '🛑', doors: '🔒',
+  windows: '▣', engineDiagnostics: '⚙', workshopDiagnostics: '🔧',
+  commandAccessibility: '⚡', commands: '▶', statistics: '📊', tyres: '◉',
+  vehicle: '🚙', location: '📍',
+};
+
+export function volvoGroupOrder(config = {}) {
+  const keys = volvoGroups.map(([key]) => key);
+  const order = config.groupOrder || [];
+  return [...order, ...keys.filter(key => !order.includes(key))];
+}
+
+export function validateVolvoGroups(config) {
+  const keys = new Set(volvoGroups.map(([key]) => key));
+  for (const field of ['groupOrder', 'hiddenGroups']) {
+    if (config[field] === undefined) continue;
+    const values = config[field];
+    if (!Array.isArray(values) || values.length > keys.size
+      || values.some(key => !keys.has(key)) || new Set(values).size !== values.length) {
+      return `Ungültige VolvoConnect-Gruppen in ${field}.`;
+    }
+  }
+  return null;
+}
+
+export function volvoReadingIcon(group, key) {
+  if (/battery|chargeLevel/i.test(key)) return '🔋';
+  if (/time|timestamp|hours/i.test(key)) return '◷';
+  if (/charg|electric|energy/i.test(key)) return '⚡';
+  if (/range|distance|odometer|tripMeter/i.test(key)) return '🛣';
+  if (/speed/i.test(key)) return '◴';
+  if (/fuel/i.test(key)) return '⛽';
+  return volvoGroupIcons[group];
+}
+
+export function volvoStatusSymbol(group, key, value) {
+  const text = volvoText(value);
+  if (text === 'NO_WARNING' || text === 'OK'
+    || (group === 'capabilities' && /^(?:1|true)$/.test(text)) || text === 'AVAILABLE') {
+    return { icon: '✓', tone: 'good' };
+  }
+  if (/^(?:LOCKED|CLOSED)$/.test(text)) return { icon: '🔒', tone: 'good' };
+  if (/^(?:UNLOCKED|OPEN)$/.test(text)) return { icon: '🔓', tone: 'warning' };
+  if (/WARNING|VERY_LOW|LOW_PRESSURE|HIGH_PRESSURE|TOO_LOW|TOO_HIGH|ERROR/.test(text)) {
+    return { icon: '⚠', tone: 'warning' };
+  }
+  if (key === 'engineStatus' && /^(?:RUNNING|STOPPED)$/.test(text)) {
+    return { icon: text === 'RUNNING' ? '▶' : '⏻', tone: 'neutral' };
+  }
+  if (/^(?:CONNECTED|DISCONNECTED)$/.test(text)) {
+    return { icon: '🔌', tone: text === 'CONNECTED' ? 'good' : 'neutral' };
+  }
+  if (/^(?:CHARGING|ONGOING|PROVIDING_POWER)$/.test(text)) return { icon: '⚡', tone: 'good' };
+  if (/^(?:NONE|NO_POWER_AVAILABLE|UNAVAILABLE|0|false)$/.test(text)
+    && (group === 'capabilities' || !/^(?:0|false)$/.test(text))) return { icon: '−', tone: 'neutral' };
+  if (/^(?:IDLE|STOPPED|DONE)$/.test(text)) return { icon: '⏸', tone: 'neutral' };
+  return null;
+}
+
 const labels = {
   batteryChargeLevel: 'Akkustand', chargerConnectionStatus: 'Ladekabel',
   chargerPowerStatus: 'Ladeleistung-Status', chargingCurrentLimit: 'Lade-Stromlimit',
@@ -146,7 +206,8 @@ export function volvoModel(snapshot, device) {
       || reading === 'brakes_brakeFluidLevelWarning') group = 'engineDiagnostics';
     if (group === 'location' && /^(?:address|altitude|heading)$/.test(key)) continue;
     const value = volvoValue(group, key, readings[reading], readings[`${reading}_unit`]);
-    if (value) groups.get(group).push({ reading, key, label: volvoLabel(key), value });
+    if (value) groups.get(group).push({ reading, key, label: volvoLabel(key), value,
+      icon: volvoReadingIcon(group, key), status: volvoStatusSymbol(group, key, readings[reading]) });
   }
   const location = groups.get('location');
   for (const [main, extra, prepend] of [['road', 'house_number', false], ['city', 'postcode', true]]) {
