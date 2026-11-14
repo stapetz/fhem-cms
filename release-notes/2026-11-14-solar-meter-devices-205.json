@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-14",
+  "version": "1.12.0-dev",
+  "title": "Solarwidgets auch fuer Shelly und Messsteckdosen",
+  "changes": [
+    "Geraetebasierte Widgetauswahl bietet SolarFlow und Solar und Energiefluss fuer erkannte Leistungsmesser beliebigen Typs und deren Kanaele an.",
+    "Eindeutige Leistungsreadings werden nach ausdruecklicher Auswahl vorgeschlagen; mehrere Kanaele erfordern eine manuelle PV-Zuordnung statt einer alphabetischen Ersatzwahl.",
+    "Allgemeine Verbrauchsmessungen werden nicht automatisch als Solaranlagen eingerichtet. Einheiten, Vorzeichen und bestaetigtes Speichern bleiben im Standarddialog.",
+    "Refs #205: Erkennung, beide Standarddialoge, Speichern und mehrdeutige Kanalwahl in Node-, Chrome- und WebKit-Tests abgesichert."
+  ]
+}

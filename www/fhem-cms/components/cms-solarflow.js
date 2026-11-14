@@ -1,5 +1,6 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
+import { suggestedSolarSource } from '../js/solar-energy-suggestions.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MAX_POWER = 3000;
@@ -379,8 +380,9 @@ class FHEMCMSSolarFlow extends HTMLElement {
     const names = Object.keys(device?.readings || {}).sort();
     const all = selected && !names.includes(selected) ? [selected, ...names] : names;
     const required = READING_FIELDS.find((field) => field.key === key).required;
-    select.replaceChildren(...(required ? [] : [new Option('– nicht verwenden –', '')]), ...all.map((name) => new Option(name, name)));
-    select.value = selected || (required && deviceName ? (names[0] || '') : '');
+    select.replaceChildren(new Option(required ? '– PV-Reading wählen –' : '– nicht verwenden –', ''),
+      ...all.map((name) => new Option(name, name)));
+    select.value = selected || (required ? suggestedSolarSource(device, key)?.reading || '' : '');
     select.disabled = !deviceName;
   }
 

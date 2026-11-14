@@ -1,6 +1,7 @@
 import { isValidName } from './fhem-client.js';
 import { arrangeSchema5Widgets } from './fcui-schema5-layout.js';
 import { READING_PRESETS, suggestedReading } from './device-suggestions.js';
+import { solarPowerReadings, suggestedSolarSource } from './solar-energy-suggestions.js';
 const MAGIC_DEVICE_TYPES = new Set(['CUL_HM', 'MAX', 'LaCrosse', 'Shelly', 'IT', 'MQTT2_DEVICE', 'MQTT_DEVICE', 'SolaxModbus']);
 const MAGIC_MAX_ROOMS = 8;
 const MAGIC_MAX_WIDGETS = 8;
@@ -88,12 +89,13 @@ function schema5BaseWidgetSuggestions(device) {
   if (!device || !isValidName(device.name) || !device.readings
     || typeof device.readings !== 'object' || Array.isArray(device.readings)) return [];
   const readings = device.readings;
-  if (device.type === 'SolaxModbus' && Object.hasOwn(readings, 'pv_total_power')) {
+  if (solarPowerReadings(device).length === 1) {
     const alias = typeof device.alias === 'string' && device.alias.trim()
       && !/[\x00-\x1f\x7f]/.test(device.alias) ? device.alias.trim() : device.name;
-    const fields = { pv: { device: device.name, reading: 'pv_total_power' } };
-    for (const [field, reading] of [['battery', 'batteryPower'], ['soc', 'batterySOC']]) {
-      if (Object.hasOwn(readings, reading)) fields[field] = { device: device.name, reading };
+    const fields = { pv: suggestedSolarSource(device, 'pv') };
+    for (const field of ['battery', 'soc']) {
+      const source = suggestedSolarSource(device, field);
+      if (source) fields[field] = source;
     }
     return [{ type: 'fhem-solarflow', device: device.name, title: alias.slice(0, 64),
       label: 'SolarFlow', readings: fields, deriveHome: false }];

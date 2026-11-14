@@ -189,6 +189,7 @@ test('wizard maps SolaxModbus total PV and battery without guessing unknown grid
     battery: { device: 'Solar', reading: 'batteryPower' },
     soc: { device: 'Solar', reading: 'batterySOC' },
   });
+
   assert.equal(widget.deriveHome, false);
   assert.equal(widget.grid.h, 4);
   assert.deepEqual(schema5WidgetSuggestions({ ...solar, readings: { pv1Power: '600' } }), []);
@@ -203,6 +204,18 @@ test('wizard maps SolaxModbus total PV and battery without guessing unknown grid
   `], { input: JSON.stringify(config), encoding: 'utf8' });
   assert.equal(validation.status, 0, validation.stderr);
   assert.doesNotThrow(() => arrangeSchema5SetupPages(config));
+});
+
+test('wizard recognizes explicit PV capability across device types but never reinterprets ordinary meters', () => {
+  for (const type of ['dummy', 'Shelly', 'MQTT2_DEVICE', 'Unknown']) {
+    const pv = { name: 'Balcony', type, readings: { pvPower: '120', battery_power: '10', battery_soc: '50' } };
+    const widget = schema5WidgetSuggestions(pv).find(entry => entry.type === 'fhem-solarflow');
+    assert.deepEqual(widget.readings.pv, { device: 'Balcony', reading: 'pvPower' });
+    assert.equal(widget.readings.battery.reading, 'battery_power');
+    assert.equal(widget.readings.soc.reading, 'battery_soc');
+    assert.equal(schema5WidgetSuggestions({ ...pv, readings: { power: '120' } })
+      .some(entry => entry.type === 'fhem-solarflow'), false);
+  }
 });
 
 test('wizard ignores invalid humidity rather than interpreting battery-coded sensor values as humidity', () => {
