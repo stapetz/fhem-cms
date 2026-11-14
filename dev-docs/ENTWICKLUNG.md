@@ -51,6 +51,23 @@ Fokus, Animation, Frame-Dokument, Details und aktualisierte Werte.
 Die echte Safari-/iPhone-/Homescreen-Abnahme bleibt erforderlich; ein
 Chrome-Ergebnis beweist nicht die Ursache jedes gemeldeten Safari-Sprungs.
 
+Nachbesserung der iPhone-Abnahme (1.11.2-dev, weiterhin #203):
+Im nativen Solar-und-Energiefluss-Widget fehlte zwischen den drei unteren
+Stationen ein Mindestabstand; zentrierte, unterschiedlich hohe Stationen
+erzeugten versetzte Rahmen. Bis 600px Inhaltsbreite trennen nun 8px die
+Stationen, alle drei Rahmen fuellen dieselbe Rasterzeile. Gemeinsame
+Beschriftungshoehen richten die Leistungswerte aus; bis 320px sind drei
+Textzeilen vorgesehen. Der Batteriebalken besitzt einen eigenen reservierten
+Bereich, ohne die Rahmenhoehe allein zu vergroessern.
+`text-size-adjust: 100%` einschliesslich WebKit-Praefix stabilisiert nur in
+diesem Widget die automatische Textanpassung; Pinch-Zoom bleibt moeglich.
+Die automatische iOS-Textvergroesserung ist damit vorsorglich begrenzt, aber
+nicht als alleinige Ursache des gemeldeten Geraeteunterschieds nachgewiesen.
+Die Fixtures 85 und 86 messen jetzt Stationsabstaende, gemeinsame Ober-/
+Unterkanten, Leistungszeilen und Balkenfreiheit, auch mit den Werten des
+Abnahmescreenshots. Desktop-Proportionen und Liveupdate-Verhalten bleiben
+unveraendert. Erneute echte iPhone-Abnahme erforderlich.
+
 ## Widget-Design: Tabellenpilot (dev, 1.11.0-dev, Refs #196)
 
 Die optischen Vorgaben aus `google_prompt_fuer_widgets.md` ersetzen im

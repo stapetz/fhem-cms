@@ -147,6 +147,17 @@ try {
       const frame = tile.getBoundingClientRect();
       check(bottom <= frame.bottom && frame.bottom - bottom <= 18,
         `${width}: all totals visible without empty space below`);
+      if (width <= 390) {
+        const stations = ['bat', 'home', 'grid'].map(key => $(`[data-station="${key}"]`).getBoundingClientRect());
+        check(stations[1].left - stations[0].right >= 7.5 && stations[2].left - stations[1].right >= 7.5,
+          `${width}: lower station frames have at least 8px of separation`);
+        check(stations.every(box => Math.abs(box.top - stations[0].top) < 1
+          && Math.abs(box.bottom - stations[0].bottom) < 1),
+        `${width}: battery, home and grid share the same top and bottom edges`);
+        const powers = ['bat', 'home', 'grid'].map(key => $(`[data-power="${key}"]`).getBoundingClientRect());
+        check(powers.every(box => Math.abs(box.top - powers[0].top) < 1),
+          `${width}: lower station values align despite differently wrapped labels`);
+      }
     }
     root.removeAttribute('data-mobile-layout');
   await host.openConfig();

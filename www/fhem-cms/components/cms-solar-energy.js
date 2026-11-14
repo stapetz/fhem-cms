@@ -41,7 +41,8 @@ class FHEMCMSSolarEnergy extends HTMLElement {
     if (this.shadowRoot.childElementCount) return;
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; min-width: 0; min-height: 0; }
+        :host { display: block; min-width: 0; min-height: 0;
+          -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         * { box-sizing: border-box; }
         h3, p { margin: 0; }
         [hidden] { display: none !important; }
@@ -95,11 +96,18 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .total strong { display: block; font-size: 1.25rem; margin-top: 2px; color: #f59e0b; }
         .total:last-child { border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.12); }
         @container (max-width: 600px) {
-          .flow { padding: 12px 4px; grid-template-rows: auto 60px auto; }
+          .flow { padding: 12px 4px; grid-template-rows: auto 60px auto; column-gap: 8px; }
           .node { padding: 8px 3px; }
           .node strong { font-size: clamp(.85rem, 5cqi, 1.4rem); }
           .node .label, .node small { font-size: .65rem; }
+          .node:not(.pv) { align-self: stretch; display: flex; flex-direction: column; padding-bottom: 18px; }
+          .node:not(.pv) .label { min-height: 2.6em; display: flex; align-items: center; justify-content: center; }
+          .node:not(.pv) small { min-height: 2.6em; margin-top: auto; }
+          progress { position: absolute; bottom: 8px; left: 3px; width: calc(100% - 6px); margin: 0; }
           .tile header { flex-wrap: wrap; }
+        }
+        @container (max-width: 320px) {
+          .node:not(.pv) .label { min-height: 3.9em; }
         }
         button, input, select { font: inherit; color: inherit; border: 1px solid var(--cms-border,#43564a);
           background: var(--cms-surface-raised,#2a3b32); border-radius: .5rem; padding: .4rem .6rem; }

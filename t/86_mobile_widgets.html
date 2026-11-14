@@ -68,7 +68,7 @@ const config = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 
   })) }, { id: 'second', title: 'Zweite Seite', widgets: [] }] };
 const original = JSON.stringify(config);
 const values = { state: 'on', temperature: '21.5', desiredTemperature: '22', pct: '40', mode: 'eco',
-  power: '2500', home: '1000', grid: '1000', battery: '500', soc: '65',
+  power: '2056.5', home: '861.5', grid: '590', battery: '607', soc: '95',
   total: '12456.78', hour: '1.23', day: '12.3', month: '123.4', previousMonth: '456.7', year: '1234.5',
   '1-state': '=>', '1-name': 'Demo', '1-timestamp': '14.11.26 12:00', '1-duration': '00:01' };
 let requests = 0, inform;
@@ -122,6 +122,23 @@ try {
     }
     check($energy('[data-totals]').getBoundingClientRect().bottom <= $energy('.tile').getBoundingClientRect().bottom,
       `${width}: solar totals are fully visible`);
+    if ($energy('.tile').clientWidth - 32 <= 600) {
+      const stations = ['bat', 'home', 'grid'].map(key => $energy(`[data-station="${key}"]`).getBoundingClientRect());
+      check(stations[1].left - stations[0].right >= 7.5 && stations[2].left - stations[1].right >= 7.5,
+        `${width}: solar station frames remain separated in the actual mobile raster`);
+      check(stations.every(box => Math.abs(box.top - stations[0].top) < 1
+        && Math.abs(box.bottom - stations[0].bottom) < 1),
+      `${width}: all three lower solar frames share top and bottom edges`);
+      const powers = ['bat', 'home', 'grid'].map(key => $energy(`[data-power="${key}"]`).getBoundingClientRect());
+      check(powers.every(box => Math.abs(box.top - powers[0].top) < 1),
+        `${width}: screenshot power values align across stations`);
+      check(powers.every((box, i) => box.left >= stations[i].left && box.right <= stations[i].right),
+        `${width}: screenshot power values stay inside their station`);
+      const progress = $energy('progress').getBoundingClientRect();
+      const note = $energy('[data-note="bat"]').getBoundingClientRect();
+      check(progress.top >= note.bottom && progress.bottom < stations[0].bottom,
+        `${width}: battery charge bar never overlaps its explanation or frame`);
+    }
   }
   shell.style.width = '393px';
   root.gridstack.onResize();
