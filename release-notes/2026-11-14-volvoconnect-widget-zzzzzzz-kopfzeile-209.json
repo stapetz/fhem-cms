@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-14",
+  "version": "1.19.4-dev",
+  "title": "VolvoConnect: platzsparende gemeinsame Kopfzeile in der Vollansicht",
+  "changes": [
+    "Verbindungsstatus und Aktionssymbol stehen neben der Fahrzeugbezeichnung auf gleicher Hoehe statt in getrennten Zeilen.",
+    "Zusaetzliche Symbolzeile und doppelter Verbindungsstatus entfallen. Kompaktkachel und Detailpopups bleiben unveraendert. Refs #209."
+  ]
+}

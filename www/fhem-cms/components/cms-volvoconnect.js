@@ -318,7 +318,7 @@ shutdown restart</pre>
     this.$('[data-dialog]').addEventListener('cancel', event => { event.preventDefault(); this.closeConfig(false); });
     this.$('[data-form]').addEventListener('submit', event => { event.preventDefault(); this.saveConfig(); });
     this.$('[data-delete]').addEventListener('click', () => this.deleteWidget());
-    this.$('[data-content]').addEventListener('click', event => {
+    this.$('[data-tile]').addEventListener('click', event => {
       if (event.target.closest('[data-info]')) this.openDetails();
       if (event.target.closest('[data-open-actions]')) this.openActions();
       if (event.target.closest('[data-open-arrangement]')) { this.openDetails(); this.startArrangement(); }
@@ -994,8 +994,8 @@ shutdown restart</pre>
         arrange.dataset.openArrangement = '';
         heading.prepend(arrange);
       }
-      compact.append(heading);
     }
+    this.$('[data-content]').hidden = config.showDetails === false;
     updateWidgetDom(this.$('[data-content]'), compact);
     const inline = this.$('[data-inline-content]');
     inline.hidden = config.showDetails !== false || this.$('[data-details]').open;
@@ -1006,7 +1006,7 @@ shutdown restart</pre>
     }
     if (this.$('[data-actions-dialog]').open) this.renderActions(model);
     if (config.showDetails === false) {
-      this.renderDetails(model);
+      this.renderDetails(model, this.$('[data-details]').open ? null : heading);
       return;
     }
     if (!this.$('[data-details]').open) return;
@@ -1050,7 +1050,7 @@ shutdown restart</pre>
     return hero;
   }
 
-  renderDetails(model) {
+  renderDetails(model, inlineHeading) {
     const config = {...this.widgetConfig, ...this.pendingVisibility};
     const preview = Boolean(this.pendingCardOrder);
     const content = node('div');
@@ -1067,7 +1067,9 @@ shutdown restart</pre>
     if (subtitle) names.append(node('small', subtitle));
     identity.append(names);
     const api = model.read('state');
-    if (api) {
+    if (inlineHeading) {
+      identity.append(inlineHeading);
+    } else if (api) {
       const badge = node('span', api === 'authenticated' ? '✓' : '⚠', 'badge');
       badge.setAttribute('role', 'img');
       badge.setAttribute('aria-label', `API: ${volvoValue('', 'state', api)}`);

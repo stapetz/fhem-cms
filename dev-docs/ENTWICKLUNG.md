@@ -73,6 +73,15 @@ das Oeffnen/Speichern ohne Berechnungsoption.
 
 ## VolvoConnect-Nachtrag (dev, 1.16.0-dev, Refs #209)
 
+Korrektur 1.19.4-dev: In der eingebetteten Vollansicht stehen Fahrzeugname,
+Verbindungsstatus und Aktionssymbol in einer gemeinsamen Identity-Kopfzeile.
+Die separate Launcherzeile und der doppelte API-Badge entfallen. Kompaktkachel
+und echte Detail-/Bearbeitungspopups bleiben unveraendert. Launcher-Delegation
+erfolgt am Widgetartikel; Fokus-Rueckgabe und Anordnung bearbeiten bleiben erhalten.
+Fixture 88 prueft Symbolmittelpunkte bei 343/768/1100px sowie fehlende
+zusaetzliche Kopfzeile und doppelten Status. Chrome und WebKit pruefen
+Aktionen, Inline-Anordnung, Abbrechen und Rueckfokus weiterhin real.
+
 Korrektur 1.19.3-dev: Auch die normale Kartenansicht verwendet die freie
 Float-Platzierung mit placeVolvoCards statt starrer CSS-Grid-Zeilen.
 Absolute Rasterboxen und derselbe 8px-Innenrahmen entsprechen den sichtbaren
