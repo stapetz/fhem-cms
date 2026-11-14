@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="de" data-cms-theme="light">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VolvoConnect popup editor</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<style>
+body { margin:0; }
+.grid-stack-animate,.grid-stack-animate .grid-stack-item { transition:none !important; }
+#result { white-space:pre-wrap; }
+</style>
+<main class="cms-shell"><section id="editor"></section></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { volvoGroupOrder } from '../www/fhem-cms/js/volvoconnect.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const initial = { schemaVersion:5, theme:'light', settings:{layoutMode:'grid',gridColumns:12},
+  navigation:{orientation:'horizontal',grid:{col:1,row:1,w:12,h:1}},
+  pages:[{id:'one',title:'Auto',widgets:[{id:'car',type:'fhem-volvoconnect',device:'Car',
+    title:'VolvoConnect',grid:{col:1,row:2,w:4,h:4}}]}] };
+let state = {live:structuredClone(initial),draft:null,token:'a'.repeat(64)};
+let writes = 0, publications = 0, fail = false;
+const controller = new Schema5DraftController({
+  read:async () => structuredClone(state),
+  save:async (candidate,token) => {
+    check(token === state.token, 'save uses current token');
+    if (fail) throw new Error('test storage failure');
+    state.draft = structuredClone(candidate);
+    state.token = 'b'.repeat(64);
+    writes++;
+  },
+  publish:async () => { publications++; throw new Error('Unexpected publication'); },
+  discard:async () => { throw new Error('Unexpected discard'); },
+});
+const values = {state:'authenticated',state_batteryChargeLevel:'84',fuel_batteryChargeLevel:'84',
+  state_electricRange:'310',state_electricRange_unit:'km',state_chargingPower:'PROPERTY_NOT_FOUND',
+  state_chargingPower_unit:'watts',state_transferLimit:'PROPERTY_NOT_SUPPORTED',
+  capabilities_charge_isSupported:'1',statistics_tripMeterManual:'123',
+  statistics_unavailable:'property_not_found',doors_centralLock:'LOCKED',
+  warnings_lowBeamLeftWarning:'NO_WARNING',windows_frontLeftWindow:'CLOSED',
+  engine_engineStatus:'STOPPED',vehicle_descriptions_model:'Demo',
+  vehicle_images_exteriorImageUrl:`${location.origin}/t/media/${'a'.repeat(32)}.png`,
+  vehicle_images_internalImageUrl:`${location.origin}/t/media/${'b'.repeat(32)}.png`};
+const snapshot = () => [{name:'Car',type:'VolvoConnect',readings:{...values},sets:'lock unlock'}];
+const editor = new Schema5Editor({GridStack,root:document.querySelector('#editor'),controller,
+  client:{jsonlist:async () => snapshot(),subscribe() {},unsubscribe() {}},
+  services:{listAllDevices:async () => snapshot()},
+  browser:{location:window.location,localStorage:window.localStorage,
+    addEventListener:window.addEventListener.bind(window),
+    removeEventListener:window.removeEventListener.bind(window),confirm:() => false}});
+const host = () => document.querySelector('cms-volvoconnect');
+const $ = selector => host().shadowRoot.querySelector(selector);
+const order = () => [...$('#top').children].map(card => card.dataset.group);
+const pause = () => new Promise(resolve => setTimeout(resolve,80));
+try {
+  await editor.start();
+  for (let i=0;i<100 && !$('[data-content] .soc');i++) await pause();
+  host().openDetails();
+  check(!$('[data-arrange]').hidden, 'real editor exposes popup arrangement');
+  check(order().slice(0,4).join() === 'state,statistics,vehicle,gallery', 'agreed initial order');
+  check(!$('#reading-fuel_batteryChargeLevel') && !$('#reading-state_batteryChargeLevel'), 'no duplicate SOC row');
+  check(!$('#reading-state_chargingPower') && !$('#reading-state_transferLimit')
+    && !$('#reading-statistics_unavailable'), 'unavailable properties omitted across groups');
+  check($('#actions button').disabled, 'editor cannot execute vehicle commands');
+  host().startArrangement();
+  const original = order().join();
+  check($('[data-drag-card]') && $('[data-card-step]'), 'drag grips and keyboard alternatives visible');
+  host().moveCard('gallery',-1);
+  check(order()[2] === 'gallery' && writes === 0, 'preview does not write');
+  host().data = snapshot();
+  check(order()[2] === 'gallery', 'live data retains unsaved order');
+  host().cancelArrangement();
+  check(order().join() === original && writes === 0, 'cancel restores order without writing');
+  check(!$('[data-drag-card]'), 'cancel removes editing controls');
+  host().startArrangement();
+  host().moveCard('gallery',-1);
+  fail = true;
+  await host().saveArrangement();
+  check($('[data-message]').textContent.includes('test storage failure'), 'storage error is visible');
+  check(host().pendingCardOrder && writes === 0 && !host().arrangementSaving, 'failure retains editable draft order');
+  fail = false;
+  await controller.reload();
+  host().cancelArrangement();
+  host().closeDetails();
+  window.popupOrderTest = {
+    host, $, order, check,
+    snapshot: () => structuredClone(state),
+    writes: () => writes,
+    finish: async () => {
+      check(writes === 1 && publications === 0, 'exactly one draft write and no publication');
+      check(JSON.stringify(state.live) === JSON.stringify(initial), 'live config unchanged');
+      check(JSON.stringify(state.draft.pages[0].widgets[0].grid) ===
+        JSON.stringify(initial.pages[0].widgets[0].grid), 'outer grid unchanged');
+      await controller.reload();
+      check(controller.snapshot().draft.pages[0].widgets[0].groupOrder.includes('gallery'),
+        'reload reads persisted order including gallery');
+      const {mountSchema5Widgets} = await import('../www/fhem-cms/js/fcui-schema5-widgets.js');
+      const root = document.createElement('div');
+      root.className = 'grid-stack cms-schema5-grid';
+      document.body.append(root);
+      const view = mountSchema5Widgets(GridStack,root,state.draft,'one',document.createElement('nav'),{},
+        new Map([['Car',snapshot()]]));
+      try {
+        const readOnly = root.querySelector('cms-volvoconnect');
+        readOnly.openDetails();
+        check(readOnly.shadowRoot.querySelector('[data-arrange]').hidden, 'view mode has no arrangement controls');
+        readOnly.startArrangement();
+        check(!readOnly.pendingCardOrder, 'view mode rejects arrangement method');
+      } finally { view.destroy(); root.remove(); }
+      check(new Set(state.draft.pages[0].widgets[0].groupOrder).size === volvoGroupOrder().length,
+        'saved order includes all unique cards');
+      output.dataset.result = 'pass';
+      output.textContent = JSON.stringify({checks});
+    },
+  };
+  output.dataset.ready = 'true';
+  output.textContent = 'READY';
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = `${error.message}\n${error.stack}`;
+}
+</script>

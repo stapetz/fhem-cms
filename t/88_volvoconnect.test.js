@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { volvoGroups, volvoModel, volvoImageUrl, volvoText, volvoValue,
+import { volvoGroups, volvoCards, volvoModel, volvoImageUrl, volvoText, volvoValue,
   volvoGroupOrder, validateVolvoGroups, volvoStatusSymbol } from '../www/fhem-cms/js/volvoconnect.js';
 import { deviceWidgetSuggestions } from '../www/fhem-cms/js/device-widget-suggestions.js';
 import { schema5WidgetSuggestions, createSchema5RoomPlan, buildSchema5SetupConfig } from '../www/fhem-cms/js/fcui-schema5-setup-wizard.js';
@@ -53,7 +53,8 @@ test('VolvoConnect matches dashboard location grouping, labels and unit formatti
 });
 
 test('VolvoConnect rejects unsafe/missing source values and image URLs', () => {
-  for (const value of [undefined, null, {}, [], '', Infinity, 'NaN', 'ERROR_READING_PROPERTY', 'not_supported', 'x\nz', 'x'.repeat(257)]) {
+  for (const value of [undefined, null, {}, [], '', Infinity, 'NaN', 'ERROR_READING_PROPERTY',
+    'PROPERTY_NOT_FOUND', 'property_not_supported', 'not_supported', 'x\nz', 'x'.repeat(257)]) {
     assert.equal(volvoText(value), '');
   }
   for (const url of ['javascript:alert(1)', 'data:image/svg+xml,test', '//evil.invalid/test',
@@ -86,19 +87,31 @@ test('VolvoConnect is available device-first and produces schema-5 setup without
 });
 
 test('VolvoConnect group settings are optional, partial, unique and restricted to module groups', () => {
-  const keys = volvoGroups.map(([key]) => key);
+  const keys = volvoCards.map(([key]) => key);
   assert.deepEqual(volvoGroupOrder(), keys);
   const config = { groupOrder: ['location', 'doors'], hiddenGroups: ['state'] };
   const original = JSON.stringify(config);
   assert.equal(validateVolvoGroups(config), null);
   assert.deepEqual(volvoGroupOrder(config), ['location', 'doors', ...keys.filter(key => !['location', 'doors'].includes(key))]);
   assert.equal(JSON.stringify(config), original);
-  assert.equal(validateVolvoGroups({ hiddenGroups: keys }), null);
+  assert.equal(validateVolvoGroups({ hiddenGroups: volvoGroups.map(([key]) => key) }), null);
+  assert.equal(validateVolvoGroups({ groupOrder: keys }), null);
+  assert.match(validateVolvoGroups({ hiddenGroups:['gallery'] }), /Ungültige/);
+  assert.equal(volvoGroupOrder({groupOrder:volvoGroups.map(([key]) => key)}).indexOf('gallery'), 3);
   for (const field of ['groupOrder', 'hiddenGroups']) {
-    for (const value of [null, {}, 'state', ['unknown'], ['doors', 'doors'], ['state\n'], [null], Array(15).fill('doors')]) {
+    for (const value of [null, {}, 'state', ['unknown'], ['doors', 'doors'], ['state\n'], [null], Array(16).fill('doors')]) {
       assert.match(validateVolvoGroups({ [field]: value }), /Ungültige/);
     }
     assert.equal(validateVolvoGroups({ [field]: [] }), null);
+  }
+});
+
+test('VolvoConnect omits unsupported properties before formatting units in every group', () => {
+  for (const marker of ['PROPERTY_NOT_FOUND','property_not_supported','ERROR_READING_PROPERTY']) {
+    const readings = Object.fromEntries(volvoGroups.flatMap(([group]) =>
+      [[`${group}_unavailable`,marker], [`${group}_unavailable_unit`,'watts']]));
+    assert.ok([...model(readings).groups.values()].every(rows => !rows.length));
+    assert.equal(volvoValue('state','chargingPower',marker,'watts'), '');
   }
 });
 

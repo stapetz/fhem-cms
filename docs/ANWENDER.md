@@ -489,10 +489,31 @@ des Fensters. Schließen per **✕**, **Escape** oder Klick außerhalb des Popup
 danach kehrt der Fokus zum Informationssymbol zurück.
 
 Im Widgetdialog unter **Modulgruppen im Popup** können alle 14 Gruppen
-ein-/ausgeschaltet und mit **↑ / ↓** umgeordnet werden. Die Einstellungen
+und die Galerie ein-/ausgeschaltet und mit **↑ / ↓** umgeordnet werden. Die Einstellungen
 werden erst beim Speichern übernommen. Die kompakte Batterie-/Reichweitenanzeige
 bleibt unabhängig von den Popupgruppen sichtbar. Einzelne Readings lassen
 sich derzeit noch nicht separat ausblenden.
+Alternativ im geöffneten Popup im **Editmodus → Anordnung bearbeiten** wählen:
+Kacheln am **⠿**-Griff mit Maus oder Touch an die gewünschte Stelle ziehen.
+Die gestrichelte Kachel markiert den Platz, andere Karten rücken nach;
+am oberen/unteren Rand des Inhalts wird beim Ziehen gescrollt.
+**↑ / ↓** bieten dieselbe Funktion per Tastatur.
+**Übernehmen** speichert ausschließlich die Reihenfolge im CMS-Entwurf und
+schließt das Popup; die normale Veröffentlichung bleibt separat.
+**Abbrechen** verwirft die Vorschau. Escape bricht zuerst einen laufenden
+Ziehvorgang, danach die Anordnungsbearbeitung ab und schließt erst dann das Popup.
+Im Ansichts-/Vorschaumodus gibt es keine Verschiebegriffe.
+
+Die Standardreihenfolge ist Energie & Akku, Statistik, Fahrzeuginformationen,
+Galerie, Standort, Licht, Türen, Fenster, Diagnose und die übrigen Gruppen.
+Eigene gespeicherte Reihenfolgen bleiben bestehen; im Anordnungsmodus setzt
+**Standardreihenfolge** die Vorschau auf diese Vorgabe zurück.
+Die Galerie hat dieselbe Breite wie die übrigen Karten. Auf breiten Bildschirmen
+stehen drei gleich breite Spalten nebeneinander; auf kleineren entsprechend
+weniger. Kurze Karten werden nicht auf die Höhe langer Nachbarkarten gestreckt.
+`PROPERTY_NOT_FOUND` und `PROPERTY_NOT_SUPPORTED` werden in allen Gruppen
+als fehlende Werte behandelt; ihre gesamten Zeilen entfallen.
+Der Akkustand wird nicht zusätzlich als Tabellenzeile wiederholt.
 Neue Widgets starten im Standardraster mit 4 × 4 Zellen. Vorhandene
 Rastergrößen und HTML-Widgets werden nicht automatisch verändert; eine
 bisher große VolvoConnect-Kachel lässt sich im Editor kleiner ziehen.

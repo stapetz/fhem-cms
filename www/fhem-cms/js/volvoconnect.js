@@ -1,30 +1,34 @@
 import { isValidName } from './fhem-client.js';
 
 export const volvoGroups = [
-  ['state', 'Energie & Akku'], ['capabilities', 'Fähigkeiten'], ['warnings', 'Licht'],
-  ['brakes', 'Bremsen'], ['doors', 'Türen & Verriegelung'], ['windows', 'Fenster'],
-  ['engineDiagnostics', 'Diagnose'], ['workshopDiagnostics', 'Werkstattdiagnose'],
-  ['commandAccessibility', 'Befehlsverfügbarkeit'], ['commands', 'Fahrzeugbefehle'],
-  ['statistics', 'Statistik'], ['tyres', 'Reifen'],
+  ['state', 'Energie & Akku'], ['statistics', 'Statistik'],
   ['vehicle', 'Allgemeine Fahrzeuginformationen'], ['location', 'Fahrzeugstandort'],
+  ['warnings', 'Licht'], ['doors', 'Türen & Verriegelung'], ['windows', 'Fenster'],
+  ['engineDiagnostics', 'Diagnose'], ['capabilities', 'Fähigkeiten'],
+  ['brakes', 'Bremsen'], ['workshopDiagnostics', 'Werkstattdiagnose'],
+  ['commandAccessibility', 'Befehlsverfügbarkeit'], ['commands', 'Fahrzeugbefehle'],
+  ['tyres', 'Reifen'],
 ];
+export const volvoCards = [...volvoGroups.slice(0, 3), ['gallery', 'Bildergalerie'], ...volvoGroups.slice(3)];
 
 export const volvoGroupIcons = {
   state: '🔋', capabilities: '✓', warnings: '💡', brakes: '🛑', doors: '🔒',
   windows: '▣', engineDiagnostics: '⚙', workshopDiagnostics: '🔧',
   commandAccessibility: '⚡', commands: '▶', statistics: '📊', tyres: '◉',
-  vehicle: '🚙', location: '📍',
+  vehicle: '🚙', location: '📍', gallery: '▧',
 };
 
 export function volvoGroupOrder(config = {}) {
-  const keys = volvoGroups.map(([key]) => key);
+  const keys = volvoCards.map(([key]) => key);
   const order = config.groupOrder || [];
-  return [...order, ...keys.filter(key => !order.includes(key))];
+  const result = [...order, ...keys.filter(key => !order.includes(key) && key !== 'gallery')];
+  if (!result.includes('gallery')) result.splice(result.indexOf('vehicle') + 1, 0, 'gallery');
+  return result;
 }
 
 export function validateVolvoGroups(config) {
-  const keys = new Set(volvoGroups.map(([key]) => key));
   for (const field of ['groupOrder', 'hiddenGroups']) {
+    const keys = new Set((field === 'groupOrder' ? volvoCards : volvoGroups).map(([key]) => key));
     if (config[field] === undefined) continue;
     const values = config[field];
     if (!Array.isArray(values) || values.length > keys.size
@@ -147,7 +151,7 @@ export function volvoText(value, max = 256) {
   if (!['string', 'number', 'boolean'].includes(typeof value)) return '';
   const text = String(value).trim();
   return text.length <= max && !/[\u0000-\u001f\u007f]/.test(text)
-    && !/^(?:null|undefined|NaN|[+-]?Infinity|ERROR_READING_PROPERTY|NOT_SUPPORTED|NOT_AVAILABLE|UNSPECIFIED)$/i.test(text)
+    && !/^(?:null|undefined|NaN|[+-]?Infinity|ERROR_READING_PROPERTY|PROPERTY_NOT_FOUND|PROPERTY_NOT_SUPPORTED|NOT_SUPPORTED|NOT_AVAILABLE|UNSPECIFIED)$/i.test(text)
     ? text : '';
 }
 

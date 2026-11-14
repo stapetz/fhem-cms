@@ -15,6 +15,7 @@ import { createCmsAdminMenuLinks } from './cms-admin-link.js';
 import { Schema5SettingsPreview } from './fcui-schema5-settings-preview.js';
 import { Schema5BlueprintPanel } from './fcui-schema5-blueprints.js';
 import { readGridPreference, writeGridPreference } from './grid-preference.js';
+import { validateVolvoGroups } from './volvoconnect.js';
 
 export function createSchema5Editor({ GridStack, root, draftClient, liveClient, services, browser = window }) {
   if (!draftClient || !liveClient || draftClient === liveClient) {
@@ -350,6 +351,27 @@ export class Schema5Editor {
           return this.#layoutSavePromise;
         },
         onEdit: (pageId, id) => id === '__nav' ? this.#openNavigation() : this.#openWidgets(id),
+        onPopupOrder: async (pageId, id, order) => {
+          if (!this.#active || this.#suspended || generation !== this.#generation
+            || this.#view?.current !== pageId) throw new Error('Editorzustand ist veraltet; bitte erneut laden.');
+          const error = validateVolvoGroups({groupOrder:order});
+          if (error) throw new Error(error);
+          const widget = config.pages.find(page => page.id === pageId)?.widgets.find(widget => widget.id === id);
+          if (widget?.type !== 'fhem-volvoconnect') throw new Error('Unbekanntes VolvoConnect-Widget');
+          try {
+            const result = await this.#controller.saveWidget(pageId,
+              {...structuredClone(widget), groupOrder:[...order]}, state.token, 'update');
+            await this.#display(result, generation);
+          } catch (error) {
+            if (this.#active && !this.#suspended && generation === this.#generation) {
+              this.#setActions(false, false);
+              this.#reloadButton.hidden = false;
+              this.#status.setAttribute('data-error', '');
+              this.#status.textContent = `Anordnung nicht gespeichert: ${error.message}. Bitte Zustand erneut laden.`;
+            }
+            throw error;
+          }
+        },
         onMove: (pageId, id) => this.#openMove(id),
         onDuplicate: (pageId, id) => this.#duplicateWidget(pageId, id),
         onSaveBlueprint: (pageId, id) => this.#saveWidgetBlueprint(pageId, id),
