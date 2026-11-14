@@ -93,7 +93,26 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 - Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class device reading filter`, außerdem `id`, passive `data-*`-/ARIA-Attribute, `role` und passende Link-/Bild-/SVG-Attribute.
 - `title` darf Platzhalter enthalten.
 - **Zusätzlich erlaubt auf dev:** HTML-Kommentare, passive Struktur wie `section`, `figure`, `details/summary`, `pre/code`, Links und Bilder sowie statisches SVG mit Formen, Pfaden, Text und lokalen Verläufen. Flex-/Grid-Layout und Farben bleiben möglich.
-- **Nicht erlaubt:** `script`, `iframe`, Formulare, Ereignis-Attribute (`onclick` …), aktive SVG-Elemente (`foreignObject`, `use`, Animationen), CSS-Netzwerkzugriffe, `@import`, `position: fixed/sticky`. Eine Verletzung zeigt der Dialog beim Speichern als Fehler. SVG-Füllungen dürfen `url(#lokaleId)` nutzen, CSS-`url()` bleibt gesperrt.
+- **CSS auf dev:** `position: relative/absolute/fixed/sticky` und `@keyframes` sind möglich. Feste Elemente bleiben innerhalb der Kachel. `url()` und `@import` erlauben lokale Pfade oder HTTPS-Ressourcen; SVG-Füllungen dürfen `url(#lokaleId)` nutzen. CSS-Kommentare werden vor der Prüfung berücksichtigt; unsichere URL-Schemata und verschleierte ausführbare Angaben bleiben gesperrt.
+- **Nicht erlaubt:** `script`, Formulare, Ereignis-Attribute (`onclick` …), aktive SVG-Elemente (`foreignObject`, `use`, SVG-Animationselemente), beliebige Iframes, `javascript:`, `data:` und CSS-Escapes. Eine Verletzung zeigt der Dialog beim Speichern als Fehler.
+
+### OpenStreetMap-Karte (dev)
+
+```html
+<iframe
+  src="https://www.openstreetmap.org/export/embed.html?bbox=1%2C2%2C3%2C4&amp;layer=mapnik"
+  width="100%" height="300" frameborder="0" title="Standort"></iframe>
+```
+
+Verwende den **HTML-Einbettungscode** aus OpenStreetMap, nicht die normale
+Karten-Startseite. Erlaubt sind ausschließlich HTTPS-URLs auf
+`openstreetmap.org` oder `www.openstreetmap.org` mit `/export/embed.html`.
+Die Anzeige setzt eine Sandbox mit `allow-scripts`, ohne Originfreigabe,
+Popups oder Navigation des CMS-Tabs, sowie `referrerpolicy="no-referrer"`.
+`srcdoc`, Eventhandler und eigene Sandbox-/Berechtigungsfreigaben sind gesperrt.
+Die Karte und externe CSS-Ressourcen kontaktieren ihre Anbieter; importierte
+Stylesheets sind externe Inhalte und ihre weiteren Ressourcen werden nicht
+vom CMS-Sanitizer geprüft.
 
 ### Bilder und Links aus Readings (dev)
 

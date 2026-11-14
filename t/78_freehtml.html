@@ -3,7 +3,7 @@
 <title>Passive free HTML and live image regression</title>
 <pre id="result">RUNNING</pre>
 <script type="module">
-import { checkSource, extractDevices, renderTemplate, sanitize } from '../www/fhem-cms/js/freehtml.js';
+import { checkSource, extractDevices, isSafeCss, renderTemplate, sanitize } from '../www/fhem-cms/js/freehtml.js';
 import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
 const output = document.querySelector('#result');
 let checks = 0;
@@ -66,7 +66,7 @@ try {
     '<iframe src="https://example.test/"></iframe>', '<svg onload="x()"></svg>',
     '<svg><foreignObject><p>active</p></foreignObject></svg>', '<svg><use href="x"/></svg>',
     '<svg><animate attributeName="href"/></svg>', '<svg><path fill="url(https://example.test/x)"/></svg>',
-    '<img src="{{MeinElch:image|prefix(javascript:)}}">', '<div style="background:url(x)">x</div>', '<!' + '-- unfinished',
+    '<img src="{{MeinElch:image|prefix(javascript:)}}">', '<div style="background:url(javascript:x)">x</div>', '<!' + '-- unfinished',
   ]) check(checkSource(bad) !== null, 'active or malformed source rejected: ' + bad);
   const unsafe = renderTemplate(sanitize('<svg onload="x()"><script>x()<\/script><circle r="4"/></svg><img src="javascript:x" onerror="x()">'), () => '');
   check(!unsafe.querySelector('script, [onload], [onerror], img[src]'), 'sanitizer independently blocks active input');
@@ -83,6 +83,45 @@ try {
   check(host.shadowRoot.querySelector('img').getAttribute('src') === 'media/new.jpg', 'real widget recovers with next safe update');
   check(!host.shadowRoot.querySelector('[data-content] [role="status"]'), 'real widget clears stale warning');
   host.remove();
+  for (const css of [
+    '.badge{position:relative}.overlay{position:absolute}',
+    '@keyframes flow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}.flow{animation:flow 1s infinite}',
+    '.badge{position:fixed}.header{position:sticky}',
+    '.image{background:url(media/pv.png)}',
+    '.image{background:url("https://example.test/pv.png?a=1&b=2")}',
+    '@import "https://example.test/theme.css";',
+    '@import url("https://example.test/theme.css") screen;',
+    '.flow{fill:url(#pv)}',
+  ]) check(isSafeCss(css), 'requested safe CSS accepted: ' + css);
+  for (const css of [
+    '.image{background:url(javascript:x)}', '@import "http://example.test/theme.css";',
+    '.image{background:url(//example.test/x)}', '.image{background:url(data:image/svg+xml,x)}',
+    '.image{background:u/**/rl(jav/**/ascript:x)}', '@import;', '.x{background:url("unterminated)}',
+    '.image{background:u\\72l(x)}', '.x{color:expression(alert(1))}', '/* unfinished',
+  ]) check(!isSafeCss(css), 'unsafe or malformed CSS rejected: ' + css);
+  const mapUrl = 'https://www.openstreetmap.org/export/embed.html?bbox=1%2C2%2C3%2C4&layer=mapnik';
+  const mapHtml = `<iframe src="${mapUrl}" width="100%" height="300" frameborder="0" loading="lazy" title="Standort"></iframe>`;
+  check(checkSource(mapHtml) === null, 'OpenStreetMap embed accepted');
+  const map = renderTemplate(sanitize(mapHtml), () => '').querySelector('iframe');
+  check(map.getAttribute('src') === mapUrl, 'map source preserved');
+  check(map.getAttribute('sandbox') === 'allow-scripts', 'map cannot navigate parent, open popups or access origin storage');
+  check(map.getAttribute('referrerpolicy') === 'no-referrer', 'map receives no page referrer');
+  check(map.getAttribute('width') === '100%' && map.getAttribute('height') === '300', 'map dimensions preserved');
+  for (const bad of [
+    '<iframe src="https://openstreetmap.org.evil.test/export/embed.html"></iframe>',
+    '<iframe src="https://openstreetmap.org/export/embed.html" srcdoc="active"></iframe>',
+    '<iframe src="https://openstreetmap.org/export/embed.html" sandbox="allow-same-origin"></iframe>',
+    '<iframe src="https://openstreetmap.org/export/embed.html" onload="x()"></iframe>',
+  ]) check(checkSource(bad) !== null, 'untrusted map options rejected');
+  const animationHtml = '<style>@keyframes flow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}.flow{animation:flow 1s linear infinite}.badge{position:fixed;top:5px;left:5px}</style><svg viewBox="0 0 100 100"><path class="flow" d="M0 0 L100 100" stroke="#fff"/></svg><div class="badge">Badge</div>';
+  const animated = createWidgetElement({ id: 'pv', type: 'fhem-html', html: animationHtml, devices: [] }, {}, new Map(), true);
+  animated.style.cssText = 'width:300px;height:200px;margin-left:100px;display:block';
+  document.body.append(animated);
+  check(getComputedStyle(animated.shadowRoot.querySelector('.flow')).animationName === 'flow', 'SVG CSS animation survives rendering');
+  const bounds = animated.getBoundingClientRect();
+  const badge = animated.shadowRoot.querySelector('.badge').getBoundingClientRect();
+  check(badge.left >= bounds.left && badge.right <= bounds.right, 'fixed badge remains in widget rather than viewport');
+  animated.remove();
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });
 } catch (error) {

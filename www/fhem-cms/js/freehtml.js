@@ -7,7 +7,7 @@ const TAGS = new Set(['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'strong', 'b',
   'h5', 'h6', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'figure', 'figcaption',
   'details', 'summary', 'dl', 'dt', 'dd', 'pre', 'code', 'blockquote', 'sub', 'sup', 'mark',
   'caption', 'tfoot', 'a', 'img', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line',
-  'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'title', 'desc']);
+  'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'title', 'desc', 'iframe']);
 const SVG_TAGS = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
   'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'title', 'desc']);
 const SVG_ATTRIBUTES = new Set(['viewbox', 'preserveaspectratio', 'd', 'x', 'y', 'x1', 'y1', 'x2', 'y2',
@@ -24,6 +24,11 @@ export function isSafeHtmlUrl(value) {
     && (HTTPS_URL.test(value) || LOCAL_URL.test(value) || /^#[A-Za-z0-9_/-]{1,64}$/.test(value));
 }
 
+export function isSafeMapUrl(value) {
+  return isSafeHtmlUrl(value)
+    && /^https:\/\/(?:www\.)?openstreetmap\.org\/export\/embed\.html(?:\?[A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/.test(value);
+}
+
 function extraAttributeAllowed(tag, name, value) {
   name = name.toLowerCase();
   if (name === 'id') return /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value);
@@ -33,7 +38,11 @@ function extraAttributeAllowed(tag, name, value) {
   }
   if (tag === 'a' && name === 'target') return value === '_blank' || value === '_self';
   if (tag === 'img' && name === 'alt') return value.length <= 200;
-  if ((tag === 'img' || tag === 'svg') && (name === 'width' || name === 'height')) {
+  if (tag === 'iframe' && name === 'src') return isSafeMapUrl(value);
+  if (tag === 'iframe' && name === 'loading') return value === 'lazy' || value === 'eager';
+  if (tag === 'iframe' && name === 'frameborder') return value === '0';
+  if (tag === 'iframe' && name === 'scrolling') return value === 'yes' || value === 'no' || value === 'auto';
+  if ((tag === 'img' || tag === 'svg' || tag === 'iframe') && (name === 'width' || name === 'height')) {
     return /^[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?$/.test(value);
   }
   if (tag === 'svg' && name === 'xmlns') return value === 'http://www.w3.org/2000/svg';
@@ -52,10 +61,25 @@ const CONDITION = new RegExp(`^\\s*(${NAME}):(${READING})\\s*(>=|<=|!=|=|>|<)\\s
 const DEVICE_ATTR = /^[A-Za-z0-9_.-]{1,64}$/;
 const READING_ATTR = /^@?[A-Za-z0-9_.-]{1,64}$/;
 const FILTER_ATTR = /^\s*(?:[a-z]+(?:\([^()|{}"<>]{0,80}\))?(?:\s*\|\s*[a-z]+(?:\([^()|{}"<>]{0,80}\))?)*)?\s*$/;
-const FORBIDDEN_CSS = /@import|url\s*\(|expression|behavior|binding|javascript:|position\s*:\s*(?:fixed|sticky)|[<>\\]/i;
+const FORBIDDEN_CSS = /expression|behavior|binding|javascript:|[<>\\]/i;
 
 export function isSafeCss(text) {
-  return typeof text === 'string' && !FORBIDDEN_CSS.test(text);
+  if (typeof text !== 'string') return false;
+  const css = text.replace(/\/\*[\s\S]*?\*\//g, '');
+  if (/\/\*|\*\//.test(css) || FORBIDDEN_CSS.test(css)) return false;
+  let valid = true;
+  const withoutUrls = css.replace(/url\s*\(\s*(?:"([^"]*)"|'([^']*)'|([^()\s"']+))\s*\)/gi,
+    (_match, doubleQuoted, singleQuoted, bare) => {
+      if (!isSafeHtmlUrl(doubleQuoted ?? singleQuoted ?? bare)) valid = false;
+      return '"cms-validated-resource"';
+    });
+  const withoutImports = withoutUrls.replace(/@import\s+(?:"([^"]*)"|'([^']*)')/gi,
+    (_match, doubleQuoted, singleQuoted) => {
+      const url = doubleQuoted ?? singleQuoted;
+      if (url !== 'cms-validated-resource' && !isSafeHtmlUrl(url)) valid = false;
+      return '';
+    });
+  return valid && !/url\s*\(|@import/i.test(withoutImports);
 }
 
 // Prüft den Quelltext auf Dinge, die die Bereinigung ohnehin entfernt; so bekommt der Autor eine klare Meldung statt stiller Verluste.
@@ -85,7 +109,7 @@ export function checkSource(html) {
         return `Das Attribut „${name}“ ist nicht erlaubt (Element <${tag}>)`;
       }
       if (name === 'style' && !isSafeCss(attribute.value)) {
-        return 'Das style-Attribut enthält nicht erlaubte Angaben (url(), @import, position: fixed, …)';
+        return 'Das style-Attribut enthält unsichere oder ungültige CSS-Angaben. Ressourcen müssen lokale Pfade oder HTTPS-URLs verwenden.';
       }
       if (name === 'class' && !/^[A-Za-z0-9_\- ]{0,200}$/.test(attribute.value)) {
         return 'Das class-Attribut enthält ungültige Zeichen';
@@ -111,7 +135,7 @@ export function checkSource(html) {
       return `Die Attribute device und reading gehören zusammen (Element <${tag}>)`;
     }
     if (tag === 'style' && !isSafeCss(element.textContent)) {
-      return 'Das <style>-Element enthält nicht erlaubte Angaben (url(), @import, position: fixed, …)';
+      return 'Das <style>-Element enthält unsichere oder ungültige CSS-Angaben. Ressourcen müssen lokale Pfade oder HTTPS-URLs verwenden.';
     }
   }
   return null;
@@ -149,6 +173,11 @@ function cleanChildren(source, target) {
         ? document.createElementNS(node.namespaceURI, node.localName) : document.createElement(tag);
       if (tag === 'a') element.setAttribute('rel', 'noopener noreferrer');
       if (tag === 'img') element.setAttribute('referrerpolicy', 'no-referrer');
+      if (tag === 'iframe') {
+        element.setAttribute('sandbox', 'allow-scripts');
+        element.setAttribute('referrerpolicy', 'no-referrer');
+        element.setAttribute('loading', 'lazy');
+      }
       for (const attribute of node.attributes) {
         const { name, value } = attribute;
         if (name === 'class' && /^[A-Za-z0-9_\- ]{0,200}$/.test(value)) {
@@ -174,7 +203,7 @@ function cleanChildren(source, target) {
       }
       if (node.localName === 'style') {
         element.textContent = isSafeCss(node.textContent) ? node.textContent : '';
-      } else {
+      } else if (tag !== 'iframe') {
         cleanChildren(node, element);
       }
       target.append(element);
