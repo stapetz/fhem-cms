@@ -169,6 +169,12 @@ for (const [name, fixtures] of [
     [['78_freehtml.html', 180]]],
   ['Local vehicle map preserves zoom and follows live coordinates',
     [['80_vehicle_map.html', 28]]],
+  ['All mobile widget types grow with content and retain scrolling during live updates', [
+    ['86_mobile_widgets.html?mode=preview&cms-device=mobile&width=393', 2000],
+    ['86_mobile_widgets.html?mode=preview&cms-device=mobile&width=834', 2000],
+    ['86_mobile_widgets.html?mode=preview&cms-device=mobile&width=852&landscape=1', 2000],
+    ['86_mobile_widgets.html?mode=touch-test', 2000],
+  ]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],
@@ -396,12 +402,16 @@ for (const [name, fixtures] of [
           ? command => command('Emulation.setEmulatedMedia', { features: [{
             name: 'prefers-reduced-motion', value: fixture.includes('reduced=1') ? 'reduce' : 'no-preference',
           }] })
-          : fixture.startsWith('85_solar_energy.html')
+          : fixture.startsWith('85_solar_energy.html') || fixture.startsWith('86_mobile_widgets.html')
           ? async command => {
+            const mobile = fixture.startsWith('86_mobile_widgets.html');
             await command('Emulation.setDeviceMetricsOverride', {
-              width: Number(new URLSearchParams(fixture.split('?')[1]).get('width') || 1440),
-              height: 1000, deviceScaleFactor: 1, mobile: false,
+              width: Number(new URLSearchParams(fixture.split('?')[1]).get('width') || (mobile ? 393 : 1440)),
+              height: fixture.includes('landscape=1') ? 393 : 1000, deviceScaleFactor: 1, mobile,
             });
+            if (fixture.endsWith('?mode=touch-test')) {
+              await command('Emulation.setTouchEmulationEnabled', { enabled: true });
+            }
             await command('Emulation.setEmulatedMedia', { features: [{
               name: 'prefers-reduced-motion', value: fixture.includes('reduced=1') ? 'reduce' : 'no-preference',
             }] });

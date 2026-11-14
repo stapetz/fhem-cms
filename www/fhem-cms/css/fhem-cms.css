@@ -284,6 +284,16 @@ body:has(.cms-schema5-grid) {
 }
 
 .cms-schema5-grid[data-responsive][data-mobile-layout] {
+  --cms-widget-height: auto;
+  --cms-widget-overflow: visible;
+  --cms-widget-containment: inline-size;
+  --cms-widget-body-min-height: 0px;
+  --cms-widget-main-height: clamp(48px, 30cqi, 160px);
+  --cms-widget-main-basis: auto;
+  --cms-widget-fit-width: 100%;
+  --cms-widget-fit-white-space: normal;
+  --cms-widget-flow-ratio: 400 / 375;
+  --cms-widget-link-height: 48px;
   display: flex;
   flex-wrap: wrap;
   gap: var(--cms-view-gap);
@@ -305,23 +315,15 @@ body:has(.cms-schema5-grid) {
 }
 
 .cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item::before {
-  content: "";
-  display: block;
-  padding-top: var(--cms-widget-padding, 0px);
+  display: none;
 }
 
 .cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item > .grid-stack-item-content {
   inset: 0 !important;
-}
-
-.cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item:has(cms-solar-energy)::before {
-  display: none;
-}
-.cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item:has(cms-solar-energy) > .grid-stack-item-content {
-  position: relative;
+  position: relative !important;
   overflow: visible;
 }
-.cms-schema5-grid[data-responsive][data-mobile-layout] cms-solar-energy {
+.cms-schema5-grid[data-responsive][data-mobile-layout] > .grid-stack-item > .grid-stack-item-content > * {
   height: auto;
 }
 

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="de" data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile widget sizing and live scroll regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<style>
+  .cms-shell { margin: 0; }
+  .grid-stack-animate, .grid-stack-animate .grid-stack-item { transition: none !important; }
+  #result { white-space: pre-wrap; }
+</style>
+<main class="cms-shell"><div class="cms-schema5-workspace"><div id="grid" class="grid-stack cms-schema5-grid"></div></div></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { Schema5View } from '../www/fhem-cms/js/fcui-schema5-view.js';
+import { updateWidgetDom } from '../www/fhem-cms/js/widget-dom.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const pause = (ms = 80) => new Promise(resolve => setTimeout(resolve, ms));
+const root = document.querySelector('#grid');
+const shell = root.closest('.cms-shell');
+const image = `media/${'a'.repeat(32)}.png`;
+const source = reading => ({ device: 'Demo', reading });
+const html = `<div id="dashboard">
+  <style>@keyframes pulse { to { opacity:.5 } } .pulse { animation:pulse 5s infinite alternate }</style>
+  <div class="pulse">Live-Dashboard</div><span id="reading">{{Demo:temperature}}</span>
+  <a id="focus" href="#/start">Details</a>
+  <div id="inner" style="height:80px;overflow:auto"><div style="height:240px">Bewusst scrollbarer Inhalt</div></div>
+  <img id="photo" src="${image}" alt="Test" style="width:48px;height:48px">
+  <iframe id="embedded" src="${image}" title="Lokale Einbettung" style="width:100%;height:80px"></iframe>
+  <details id="details"><summary>Weitere Werte</summary><p>{{Demo:power}}</p></details>
+  </div>`;
+const specs = [
+  { type: 'thermostat', device: 'Demo', readings: { actual: 'temperature', target: 'desiredTemperature' } },
+  { type: 'fhem-value', device: 'Demo', reading: 'temperature', unit: '°C' },
+  { type: 'fhem-switch', device: 'Demo', reading: 'state', on: 'on', off: 'off',
+    label: 'Lichtsteuerung im gesamten Wohnbereich und auf der Terrasse' },
+  { type: 'fhem-button', device: 'Demo', command: 'on',
+    label: 'Beleuchtung im gesamten Wohnbereich und auf der Terrasse schalten' },
+  { type: 'fhem-icon', device: 'Demo', reading: 'state', states: [{ value: 'on', icon: 'demo' }] },
+  { type: 'fhem-slider', device: 'Demo', command: 'pct', reading: 'pct' },
+  { type: 'fhem-select', device: 'Demo', command: 'mode', reading: 'mode', mode: 'dropdown' },
+  { type: 'fhem-chart', device: 'Demo', reading: 'temperature' },
+  { type: 'fhem-calllist', device: 'Demo', limit: 5, columns: ['state', 'party', 'timestamp', 'duration'] },
+  { type: 'text', html: '<p>Messwert {{Demo:temperature}} °C</p>'.repeat(12) },
+  { type: 'fhem-html', devices: ['Demo'], html },
+  { type: 'fhem-table', rows: Array.from({ length: 10 }, (_, i) =>
+    ({ device: 'Demo', reading: 'power', label: `Leistung ${i}`, unit: 'W' })) },
+  { type: 'fhem-clock', style: 'analog', showDate: true, showWeekday: true },
+  { type: 'fhem-link', links: [{ id: 'one', kind: 'internal', page: 'second', text: 'Zur zweiten Seite',
+    textPosition: 'above', showText: true, target: 'self', grid: { col: 1, row: 1, w: 6, h: 3 } }] },
+  { type: 'fhem-solarflow', device: 'Demo',
+    readings: { pv: 'power', home: 'home', grid: 'grid', battery: 'battery', soc: 'soc' } },
+  { type: 'fhem-solar-energy', readings: Object.fromEntries(
+    ['pv', 'home', 'grid', 'battery', 'soc', 'day', 'month', 'year', 'total'].map(key =>
+      [key, source(key === 'pv' ? 'power' : key)])),
+    sections: ['Dach', 'Garage', 'Gartenhaus'].map(label => ({ label, readings:
+      Object.fromEntries(['total', 'hour', 'day', 'month', 'previousMonth', 'year'].map(key => [key, source(key)])) })) },
+];
+const config = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+  navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } },
+  pages: [{ id: 'start', title: 'Start', widgets: specs.map((spec, i) => ({ ...spec,
+    id: `w${i}`, title: `Widget ${spec.type}`, grid: { col: 1 + i % 2 * 6, row: 2 + Math.floor(i / 2) * 3, w: 6, h: 3 },
+  })) }, { id: 'second', title: 'Zweite Seite', widgets: [] }] };
+const original = JSON.stringify(config);
+const values = { state: 'on', temperature: '21.5', desiredTemperature: '22', pct: '40', mode: 'eco',
+  power: '2500', home: '1000', grid: '1000', battery: '500', soc: '65',
+  total: '12456.78', hour: '1.23', day: '12.3', month: '123.4', previousMonth: '456.7', year: '1234.5',
+  '1-state': '=>', '1-name': 'Demo', '1-timestamp': '14.11.26 12:00', '1-duration': '00:01' };
+let requests = 0, inform;
+const client = { jsonlist: async () => {
+  requests++;
+  return [{ name: 'Demo', readings: { ...values },
+    sets: 'on:noArg off:noArg pct:slider,0,1,100 mode:eco,comfort desiredTemperature:5,10,20,22,25,30' }];
+}, subscribe(names, update) { inform = update; }, unsubscribe() {} };
+const view = new Schema5View({ GridStack, root, config, status: document.createElement('p'), client,
+  services: { iconUrl: () => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E',
+    history: async () => ({ points: [] }), setCommand: async () => {} } });
+try {
+  await view.start();
+  check(root.hasAttribute('data-mobile-layout'), 'uses the actual mobile preview/touch path');
+  const hosts = [...root.querySelectorAll('.grid-stack-item-content > *')].filter(e => e.shadowRoot);
+  check(hosts.length === 16, 'all sixteen widget types are mounted');
+  const energy = root.querySelector('cms-solar-energy');
+  const $energy = selector => energy.shadowRoot.querySelector(selector);
+  for (const width of [280, 343, 375, 393, 430, 600, 744, 834, 1024, 1366]) {
+    shell.style.width = `${width}px`;
+    root.gridstack.onResize();
+    await pause(180);
+    check(root.scrollWidth <= root.clientWidth + 1, `${width}: no horizontal page overflow`);
+    const boxes = [];
+    for (const host of hosts) {
+      const tile = host.shadowRoot.querySelector('.tile');
+      const content = host.parentElement;
+      const label = `${width}/${host.localName}`;
+      check(host.clientWidth > 0 && host.clientWidth <= width, `${label}: raster width respected`);
+      check(tile.scrollHeight <= tile.clientHeight + 1,
+        `${label}: no vertical tile scrollbar (${tile.scrollHeight}/${tile.clientHeight}); ${JSON.stringify([...tile.querySelectorAll('header,.content,.face,.date,.sr-only')].map(e => ({class:e.className,y:e.getBoundingClientRect().y,height:e.getBoundingClientRect().height,scroll:e.scrollHeight})))}`);
+      check(tile.scrollWidth <= tile.clientWidth + 1, `${label}: no horizontal tile overflow`);
+      check(content.scrollHeight <= content.clientHeight + 1, `${label}: wrapper grows with the content`);
+      check(tile.getBoundingClientRect().bottom <= content.getBoundingClientRect().bottom + 1,
+        `${label}: complete frame remains inside the widget`);
+      for (const selector of ['.main', '[data-content]', '[data-body]']) {
+        const area = host.shadowRoot.querySelector(`.tile ${selector}`);
+        if (area) check(area.scrollHeight <= area.clientHeight + 1,
+          `${label}: ${selector} does not introduce a nested vertical scroller (${area.scrollHeight}/${area.clientHeight}; font ${getComputedStyle(area).fontSize}; content ${area.firstElementChild?.getBoundingClientRect().height})`);
+      }
+      for (const control of host.shadowRoot.querySelectorAll('.tile button,.tile select,.tile input[type="range"],.link-tile')) {
+        if (control.getBoundingClientRect().height) check(control.getBoundingClientRect().height >= 47.5,
+          `${label}: controls retain their 48px touch height`);
+      }
+      boxes.push(host.closest('.grid-stack-item').getBoundingClientRect());
+    }
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i], b = boxes[j];
+      check(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1,
+        `${width}: widget rows never overlap`);
+    }
+    check($energy('[data-totals]').getBoundingClientRect().bottom <= $energy('.tile').getBoundingClientRect().bottom,
+      `${width}: solar totals are fully visible`);
+  }
+  shell.style.width = '393px';
+  root.gridstack.onResize();
+  await pause(200);
+  const htmlHost = root.querySelector('cms-html');
+  const content = htmlHost.shadowRoot.querySelector('[data-content]');
+  const dashboard = content.querySelector('#dashboard');
+  const embedded = content.querySelector('iframe');
+  const frameDocument = embedded.contentDocument;
+  const photo = content.querySelector('img');
+  const animation = content.querySelector('.pulse').getAnimations()[0];
+  const details = content.querySelector('details');
+  details.open = true;
+  const inner = content.querySelector('#inner');
+  inner.scrollTop = 100;
+  const link = content.querySelector('#focus');
+  link.focus({ preventScroll: true });
+  scrollTo(0, htmlHost.getBoundingClientRect().top + scrollY - 80);
+  await pause();
+  const position = scrollY;
+  check(position > 0 && inner.scrollTop > 0, 'page and intentional HTML scroller are both scrolled');
+  const card = $energy('.yield');
+  const total = $energy('.total');
+  const tableRow = root.querySelector('cms-table').shadowRoot.querySelector('tbody tr');
+  const callRow = root.querySelector('cms-calllist').shadowRoot.querySelector('tbody tr');
+  const dropdown = root.querySelector('cms-select').shadowRoot.querySelector('[data-selection]');
+  const paragraph = root.querySelector('cms-text').shadowRoot.querySelector('[data-body] p');
+  for (let i = 0; i < 8; i++) {
+    values.temperature = `${22 + i}.5`;
+    values.day = `${13 + i}.3`;
+    values.mode = i % 2 ? 'eco' : 'comfort';
+    await view.live.refresh();
+    await pause();
+    check(Math.abs(scrollY - position) <= 1, 'poll/live refresh retains document scroll position');
+    check(inner.scrollTop === 100, 'intentional inner scroll position is retained');
+    check(content.querySelector('#dashboard') === dashboard && embedded.contentDocument === frameDocument
+      && content.querySelector('iframe') === embedded && content.querySelector('img') === photo,
+    'HTML subtree, iframe document and image stay connected');
+    check(content.querySelector('.pulse').getAnimations()[0] === animation, 'CSS animation is not restarted');
+    check(htmlHost.shadowRoot.activeElement === link && details.open, 'focus and expanded HTML details survive');
+    check(content.querySelector('#reading').textContent === values.temperature, 'HTML readings still update');
+    check($energy('.yield') === card && $energy('.total') === total, 'solar cards/totals retain their DOM identity');
+    check($energy('.total strong').textContent.includes(values.day), 'solar totals still update');
+    check(root.querySelector('cms-table').shadowRoot.querySelector('tbody tr') === tableRow
+      && root.querySelector('cms-calllist').shadowRoot.querySelector('tbody tr') === callRow,
+    'table/list rows remain connected');
+    check(root.querySelector('cms-select').shadowRoot.querySelector('[data-selection]') === dropdown
+      && dropdown.value === values.mode, 'dropdown identity and current selection survive');
+    check(root.querySelector('cms-text').shadowRoot.querySelector('[data-body] p') === paragraph
+      && paragraph.textContent.includes(values.temperature), 'live rich text updates in place');
+  }
+  const beforeInform = requests;
+  inform();
+  await pause(450);
+  check(requests > beforeInform && Math.abs(scrollY - position) <= 1, 'actual debounced device event also preserves scrolling');
+  dropdown.focus({ preventScroll: true });
+  await view.live.refresh();
+  check(dropdown.getRootNode().activeElement === dropdown, 'native selection retains focus across updates');
+  const probe = document.createElement('div');
+  probe.innerHTML = '<div id="first">A</div><svg><text x="1">alt</text></svg><div id="last">B</div>';
+  const first = probe.firstChild, last = probe.lastChild;
+  const next = document.createElement('div');
+  next.innerHTML = '<div id="last">neu</div><svg><text x="2">neu</text></svg><div id="first">A</div>';
+  updateWidgetDom(probe, next);
+  check(probe.firstChild === last && probe.lastChild === first, 'keyed structural changes preserve reusable elements');
+  check(probe.querySelector('svg').namespaceURI === 'http://www.w3.org/2000/svg'
+    && probe.querySelector('text').getAttribute('x') === '2', 'SVG attributes and namespaces remain correct');
+  next.innerHTML = '<p>Changed configuration</p>';
+  updateWidgetDom(probe, next);
+  check(probe.children.length === 1 && probe.firstChild.localName === 'p', 'removed/retyped template elements are cleaned up');
+  root.removeAttribute('data-mobile-layout');
+  shell.style.width = '1400px';
+  root.gridstack.onResize();
+  await pause(200);
+  for (const host of hosts) {
+    check(getComputedStyle(host.shadowRoot.querySelector('.tile')).height !== 'auto'
+      && host.clientHeight === host.parentElement.clientHeight, `${host.localName}: desktop raster height restored`);
+  }
+  check(JSON.stringify(config) === original, 'all responsive changes leave saved raster and configuration byte-identical');
+  view.stop();
+  check(root.children.length === 0, 'view and live subscriptions cleanly stop');
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  view.stop();
+  output.dataset.result = 'fail';
+  output.textContent = error.stack;
+}
+</script>
+</html>

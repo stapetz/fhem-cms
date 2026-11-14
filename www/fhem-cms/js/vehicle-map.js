@@ -1,3 +1,5 @@
+import { updateWidgetDom } from './widget-dom.js';
+
 const selector = 'div[data-map="vehicle"]';
 const coordinate = (value, limit) => typeof value === 'string' && /^-?[0-9]+(?:\.[0-9]+)?$/.test(value)
   && Number.isFinite(Number(value)) && Math.abs(Number(value)) <= limit ? Number(value) : null;
@@ -77,7 +79,7 @@ class VehicleMap {
   }
 }
 
-export function renderVehicleMaps(content, rendered, existing, runtime) {
+export function renderVehicleMaps(content, rendered, existing, runtime, preserveState = true) {
   const next = new Map();
   const ids = new Set();
   const hosts = [...rendered.querySelectorAll(selector)].filter(host => {
@@ -91,19 +93,23 @@ export function renderVehicleMaps(content, rendered, existing, runtime) {
     ids.add(host.id);
     return true;
   });
-  for (const host of hosts) {
-    const controller = existing.get(host.id);
-    if (!controller) continue;
-    for (const attr of [...controller.host.attributes]) controller.host.removeAttribute(attr.name);
-    for (const attr of host.attributes) controller.host.setAttribute(attr.name, attr.value);
-    host.replaceWith(controller.host);
-  }
-  content.replaceChildren(rendered);
+  updateWidgetDom(content, rendered, preserveState);
   for (const source of hosts) {
-    const host = content.querySelector(selector + `[id="${source.id}"]`);
+    let host = content.querySelector(selector + `[id="${source.id}"]`);
     if (next.has(host.id)) continue;
     let controller = existing.get(host.id);
-    if (!controller) controller = new VehicleMap(host, runtime);
+    if (controller && controller.host !== host) {
+      controller.destroy();
+      controller = null;
+    }
+    if (!controller) {
+      if (host.shadowRoot) {
+        const fresh = host.cloneNode(true);
+        host.replaceWith(fresh);
+        host = fresh;
+      }
+      controller = new VehicleMap(host, runtime);
+    }
     controller.update(controller.host);
     next.set(controller.host.id, controller);
   }

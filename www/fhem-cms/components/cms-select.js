@@ -1,5 +1,6 @@
 import { isValidName } from '../js/fhem-client.js';
 import { widgetDesignCss } from '../js/widget-design.js';
+import { updateWidgetDom } from '../js/widget-dom.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { createManualFieldTracker } from '../js/device-suggestions.js';
@@ -224,7 +225,7 @@ class FHEMCMSSelect extends HTMLElement {
 
     const mode = this.widgetConfig.mode === 'buttons' ? 'buttons' : 'dropdown';
     choices.dataset.mode = mode;
-    choices.replaceChildren();
+    const nextChoices = document.createDocumentFragment();
     const enabled = this.hasAttribute('view-only') && typeof this.services?.setCommand === 'function'
       && Boolean(command) && this.staleSince === null && !this.pending;
     if (mode === 'buttons') {
@@ -238,7 +239,7 @@ class FHEMCMSSelect extends HTMLElement {
         button.textContent = this.optionLabel(value);
         button.setAttribute('aria-pressed', String(value === selected));
         button.disabled = !enabled;
-        choices.append(button);
+        nextChoices.append(button);
       }
     } else {
       choices.removeAttribute('role');
@@ -258,8 +259,11 @@ class FHEMCMSSelect extends HTMLElement {
       }
       select.value = selected;
       select.disabled = !enabled;
-      choices.append(select);
+      nextChoices.append(select);
     }
+    updateWidgetDom(choices, nextChoices);
+    const dropdown = choices.querySelector('select');
+    if (dropdown) dropdown.value = selected;
 
     const title = this.widgetConfig.showTitle === false ? ''
       : this.widgetConfig.title || this.widgetConfig.device || 'Auswahl';

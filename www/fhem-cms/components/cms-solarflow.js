@@ -152,7 +152,8 @@ class FHEMCMSSolarFlow extends HTMLElement {
         :host { display: block; min-width: 0; min-height: 0; }
         * { box-sizing: border-box; }
         .tile { position: relative; display: flex; flex-direction: column; gap: 14px;
-          height: 100%; overflow: auto; container-type: size; padding: 8px;
+          height: var(--cms-widget-height, 100%); overflow: var(--cms-widget-overflow, auto);
+          container-type: var(--cms-widget-containment, size); padding: 8px;
           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: inherit;
           background: var(--cms-surface, #202e27); border: 1px solid var(--cms-frame, #7f8c84);
           border-radius: 1.4rem; }
@@ -163,7 +164,8 @@ class FHEMCMSSolarFlow extends HTMLElement {
         h3[data-title] { font-size: 1.4rem; font-weight: 700; color: inherit;
           white-space: normal; overflow-wrap: anywhere; }
         header[hidden] { display: none; }
-        .flow-card { flex: 1 0 160px; min-height: 160px; min-width: 0; position: relative; }
+        .flow-card { flex: 1 0 160px; min-height: 160px; min-width: 0; position: relative;
+          aspect-ratio: var(--cms-widget-flow-ratio, auto); }
         svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
         .link { fill: none; stroke-linecap: round; stroke: rgba(128,128,128,.3); stroke-width: 6; }
         .dot { fill: #f59e0b; stroke: var(--cms-text, #edf4ef); stroke-width: 0.4; }

@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-14",
+  "version": "1.11.1-dev",
+  "title": "Mobile Widgets: Inhaltshoehen und stabile Liveupdates",
+  "changes": [
+    "Alle 16 Widgettypen verwenden auf Touchgeraeten und in der mobilen Vorschau passende Inhaltshoehen statt interner Kachel-Scrollbars; gespeicherte Desktop-Raster bleiben unveraendert.",
+    "HTML, Text, Solar-Ertragskarten, Summen, Tabellen, Anruflisten und Wertauswahl aktualisieren bestehende Elemente statt ganze Inhalte zu ersetzen; Fokus, Scrollbereiche, Frames, Karten und Animationen bleiben erhalten.",
+    "Textanpassung beruecksichtigt tatsaechlichen Ueberlauf; gedrehte Markierungen der Analoguhr vergroessern den Scrollbereich nicht mehr.",
+    "Refs #203: Phone-/Tablet- und Liveupdate-Regressionen im Chrome-Runner; echte Safari-/iPhone-Abnahme weiterhin erforderlich."
+  ]
+}

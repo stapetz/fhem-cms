@@ -433,9 +433,14 @@ Bis einschließlich 600 Pixel Inhaltsbreite ordnen Homepage und Vorschau die
 Widgets automatisch in Leserichtung mit Zeilenumbruch an, auch beim Drehen eines
 Smartphones. Im Hochformat nutzen Widgets dabei die gesamte verfügbare Breite;
 im kurzen Querformat erhalten sie mindestens 40 Prozent, damit Inhalte lesbar
-bleiben. Die Höhe folgt dem gespeicherten Seitenverhältnis, mindestens jedoch
-6 rem (bei Standardschrift 96 Pixel). Gespeicherte Rasterpositionen werden
-dabei nicht verändert; der Editor bleibt immer beim exakten Raster.
+bleiben. Auf Touchgeräten und in der mobilen Vorschau wächst die Höhe bei allen
+Widgettypen mit dem Inhalt: Titel, Werte, Solar-Ertragskarten und Summen bleiben
+sichtbar, statt innerhalb der Kachel scrollen zu müssen. Bewusst scrollbare
+Tabellen/Listen und eigene HTML-Scrollbereiche sind davon ausgenommen.
+Im schmalen Desktopbrowser folgt die Höhe weiterhin dem gespeicherten
+Seitenverhältnis, mindestens jedoch 6 rem (bei Standardschrift 96 Pixel).
+Gespeicherte Rasterpositionen werden dabei nicht verändert; der Editor bleibt
+immer beim exakten Raster.
 Auf Geräten mit primär grober Zeigereingabe und in der Smartphone-/Tablet-Vorschau
 wird das Ansichts-Raster bei Bedarf an die Breite angepasst, damit es auch im
 Querformat nicht horizontal scrollt. Auf breiteren Ansichten bleibt dabei die
@@ -473,6 +478,11 @@ Zum Prüfen der Umbrüche dort die Geräte-Vorschau verwenden.
 Die mobile Ansicht funktioniert auch beim Start über ein iPhone-Homescreen-Icon.
 Nach dem Drehen bleiben die Kachelabstände erhalten; das Navigationsmenü wird
 anhand des tatsächlich verfügbaren Platzes erneut geprüft.
+Liveupdates ändern bestehende Inhalte, ohne ganze HTML-Dashboards oder
+Solar-Ertragskarten neu aufzubauen. Scrollposition, Fokus, aufgeklappte
+HTML-Details, eingebettete Frames und laufende Animationen bleiben dabei
+erhalten. Die Prüfung auf dem eigenen iPhone beziehungsweise als Homescreen-App
+bleibt wichtig, da die Browser-Vorschau Safari nicht vollständig nachbildet.
 
 ### Anrufliste für FB_CALLLIST
 

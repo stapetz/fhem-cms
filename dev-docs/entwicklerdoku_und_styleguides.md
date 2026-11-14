@@ -664,6 +664,19 @@ weiterhin prüfen. Dialogfunktionen und vorhandene Benutzerfarben bleiben
 erhalten. Jede Umstellung prüft Phone-, Tablet- und Desktop-Kachelgrößen,
 beide Themes, Liveupdates und unveränderte gespeicherte Konfigurationen.
 
+**Mobile Ausnahme (Refs #203):** Auf Touchgeraeten und in der mobilen Vorschau
+bestimmt der Inhalt die Kachelhoehe, nicht das Desktop-Seitenverhaeltnis.
+Nur die Breite wird begrenzt (`container-type: inline-size`), Titel und
+Inhaltsbloecke bleiben im normalen Fluss. Keine internen Kachel-Scrollbars
+als Ersatz fuer responsive Inhalte; bewusst scrollbare Tabellen/Listen oder
+selbst verfasste HTML-Bereiche bleiben moeglich. Touchziele behalten mindestens
+48px Hoehe. Gespeicherte Desktop-Raster und der Editor bleiben unveraendert.
+Reine Liveupdates veraendern nur Werte/Attribute im bestehenden DOM:
+keine unnoetigen Neuaufbauten von Karten oder HTML-Bereichen und keine
+Scroll-/Fokus-Ruecksetzung. Eingebettete Frames, Karten, Animationen und
+aufgeklappte Details bleiben erhalten. Pruefung aller 16 Widgettypen mit
+`t/86_mobile_widgets.html`, anschliessend echte Safari-Geraeteabnahme.
+
 #### Themevertrag für alle bestehenden und künftigen Widgets (Refs #198)
 
 **Google-Styles immer unter Beachtung des tatsächlichen Seitenthemes übernehmen.**

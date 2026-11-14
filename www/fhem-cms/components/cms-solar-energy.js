@@ -1,6 +1,7 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { widgetDesignCss, detailCardCss } from '../js/widget-design.js';
+import { updateWidgetDom } from '../js/widget-dom.js';
 import { createManualFieldTracker } from '../js/device-suggestions.js';
 import { solarEnergySuggestions, suggestedSolarSource } from '../js/solar-energy-suggestions.js';
 import {
@@ -232,7 +233,8 @@ class FHEMCMSSolarEnergy extends HTMLElement {
       line.dataset.source = reverse > forward ? b : a;
     }
     const sections = this.$('[data-sections]');
-    sections.replaceChildren(...(config.sections || []).map(section => {
+    const nextSections = node('div');
+    nextSections.append(...(config.sections || []).map(section => {
       const card = node('section', undefined, 'yield');
       const emoji = { dach: '🏠', garage: '🚗', gartenhaus: '🏡' }[section.label.toLocaleLowerCase('de-DE')];
       const heading = node('h4');
@@ -249,13 +251,16 @@ class FHEMCMSSolarEnergy extends HTMLElement {
       card.append(list);
       return card;
     }));
+    updateWidgetDom(sections, nextSections);
     const totals = this.$('[data-totals]');
-    totals.replaceChildren(...[['day', 'Heute Gesamt'], ['month', 'Monat Gesamt'], ['year', 'Jahr Gesamt'], ['total', 'Gesamt seit Start']]
+    const nextTotals = node('div');
+    nextTotals.append(...[['day', 'Heute Gesamt'], ['month', 'Monat Gesamt'], ['year', 'Jahr Gesamt'], ['total', 'Gesamt seit Start']]
       .filter(([key]) => config.readings?.[key]).map(([key, label]) => {
         const box = node('div', undefined, 'total');
         box.append(node('span', label), node('strong', `${energy(config.readings[key], key === 'day' ? 2 : key === 'month' ? 1 : 0)} ${energyUnit}`));
         return box;
       }));
+    updateWidgetDom(totals, nextTotals);
     totals.hidden = !totals.children.length;
   }
 

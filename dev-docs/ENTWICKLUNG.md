@@ -21,6 +21,36 @@ verbindlich. Insbesondere bleiben bestehende Daten und die beiden
 [Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) erhalten; Codebeispiele des
 Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherung.
 
+## Mobile Widgethoehen und Liveupdates (dev, 1.11.1-dev, Refs #203)
+
+Touchgeraete und die mobile Geraetevorschau verwenden fuer alle 16 Widgettypen
+inhaltshohe Kacheln statt aus dem Desktop-Seitenverhaeltnis abgeleiteter fester
+Hoehen. Die gemeinsame Huelle verwendet dort nur Breitencontainment:
+Titel, Werte und mehrteilige Inhalte bleiben lesbar und vergroessern die
+Kachel, statt eine interne Scrollbar zu erzeugen. SolarFlow behaelt ein
+passendes Diagrammverhaeltnis; Linkziele bleiben mindestens 48px hoch.
+Bewusst scrollbare selbst verfasste HTML-Bereiche bleiben unveraendert.
+Desktop und Editor verwenden weiter das gespeicherte Raster. Keine Migration,
+kein Schreiben von Seiten oder Konfigurationen durch die Groessenanpassung.
+
+HTML, Text, Solar-Ertragskarten/Summen, Tabellen, Anruflisten und Wertauswahl
+gleichen ihre Inhalte ueber `js/widget-dom.js` im bestehenden DOM ab.
+Unveraenderte Attribute werden nicht neu gesetzt; Textwerte werden gezielt
+aktualisiert. HTML-Frames, Bilder, CSS-Animationen, Karteninstanzen, Fokus,
+Scrollbereiche und aufgeklappte Details bleiben bei reinen Readingupdates
+erhalten. Eine geaenderte HTML-Konfiguration darf weiterhin Struktur und
+anfaenglichen Details-Zustand aendern. Sanitizer, Binding-Aufloesung und
+Polling-/Inform-Zyklen bleiben unveraendert.
+
+Regression: `t/86_mobile_widgets.html` im vorhandenen Chrome-Runner
+`node --test t/35_schema5_scaling.test.js`: alle 16 Typen bei 280 bis 1366px,
+keine Ueberlaeufe/Ueberlappungen, Mindest-Touchhoehen, Desktop-Rueckkehr und
+unveraenderte Konfiguration. Wiederholte echte Live-Controller-Refreshs und
+ein Inform-Ereignis pruefen Dokument-/HTML-Scrollposition, DOM-Identitaet,
+Fokus, Animation, Frame-Dokument, Details und aktualisierte Werte.
+Die echte Safari-/iPhone-/Homescreen-Abnahme bleibt erforderlich; ein
+Chrome-Ergebnis beweist nicht die Ursache jedes gemeldeten Safari-Sprungs.
+
 ## Widget-Design: Tabellenpilot (dev, 1.11.0-dev, Refs #196)
 
 Die optischen Vorgaben aus `google_prompt_fuer_widgets.md` ersetzen im
@@ -664,10 +694,14 @@ prüfen `t/10_schema5_layout.test.js` unveränderte Inhalte/Größen, Verkleiner
 ohne Hochziehen und Grenzfehler; `t/17_schema5_draft.test.js` prüft das gemeinsame
 Speichern und erneute Lesen über echte isolierte Perl-Dateitransaktionen.
 Bei Überlauf bleiben Entwurf und Live bytegenau erhalten.
-CSS verwendet das gespeicherte Seitenverhältnis mit 6 rem Mindesthöhe;
+Die responsive Nicht-Touch-Ansicht verwendet das gespeicherte Seitenverhältnis mit 6 rem Mindesthöhe;
 ein inneres Pseudoelement mit prozentualem Padding reserviert die vollständige
 Höhe im Flex-Fluss. Das vermeidet den bekannten iPhone-Homescreen-Fehler
 mit überlappenden Zeilen bei einem direkten `aspect-ratio` am Rasterelement.
+Touchansicht und mobile Vorschau verwenden seit #203 stattdessen den normalen
+Inhaltsfluss mit automatisch wachsender Hoehe fuer alle Widgettypen. Diese
+Regel bleibt auch nach Rotation aktiv; weder Hoehencontainment noch absolute
+Inhaltspositionierung duerfen die tatsaechliche Inhaltshoehe unterdruecken.
 `data-responsive` und die abgeleiteten CSS-Variablen sind reine Darstellung,
 kein Konfigurationsformat. Größenänderungen und Vorschau-Rotation benötigen
 keinen Remount, keine neuen Live-Abfragen und keine Konfigurationsschreibaufrufe.
