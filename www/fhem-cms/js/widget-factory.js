@@ -8,6 +8,7 @@ import '../components/cms-clock.js';
 import '../components/cms-icon.js';
 import '../components/cms-table.js';
 import '../components/cms-slider.js';
+import '../components/cms-select.js';
 import '../components/cms-link.js';
 import '../components/cms-chart.js';
 import '../components/cms-calllist.js';
@@ -27,6 +28,7 @@ const tags = new Map([
   ['fhem-chart', 'cms-chart'],
   ['fhem-calllist', 'cms-calllist'],
   ['fhem-slider', 'cms-slider'],
+  ['fhem-select', 'cms-select'],
   ['fhem-html', 'cms-html'],
   ['text', 'cms-text'],
   ['fhem-link', 'cms-link'],
@@ -65,7 +67,7 @@ export function groupSnapshots(mains, results) {
 }
 
 export function isLiveWidget(widget) {
-  return ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-solarflow', 'fhem-calllist'].includes(widget.type)
+  return ['thermostat', 'fhem-value', 'fhem-switch', 'fhem-html', 'fhem-icon', 'fhem-table', 'fhem-slider', 'fhem-select', 'fhem-solarflow', 'fhem-calllist'].includes(widget.type)
     || (widget.type === 'text' && devicesOf(widget).length > 0);
 }
 

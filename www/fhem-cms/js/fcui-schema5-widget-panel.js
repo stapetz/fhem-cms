@@ -15,6 +15,7 @@ const WIDGET_TYPES = [
   ['fhem-icon', 'Status-Symbol', 'i', 2, 4, { device: '', reading: '', states: [] }],
   ['fhem-table', 'Tabelle', 'r', 6, 8, { rows: [] }],
   ['fhem-slider', 'Schieberegler', 'l', 4, 6, { device: '', command: '', reading: '' }],
+  ['fhem-select', 'Wert auswählen', 'q', 4, 4, { device: '', command: '', reading: '', mode: 'dropdown' }],
   ['fhem-chart', 'Diagramm', 'g', 6, 10, { device: '', reading: '' }],
   ['fhem-calllist', 'Anrufliste', 'a', 6, 6, { device: '', limit: 5, columns: ['state', 'party', 'timestamp', 'duration'] }],
   ['fhem-solarflow', 'SolarFlow', 'f', 5, 14, { readings: {} }],

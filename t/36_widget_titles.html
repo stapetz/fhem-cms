@@ -21,6 +21,8 @@ try {
     { type: 'fhem-clock', style: 'digital' },
     { type: 'fhem-icon', device: 'Test', reading: 'state', states: [] },
     { type: 'fhem-slider', device: 'Test', reading: 'pct', command: 'pct' },
+    { type: 'fhem-select', device: 'Test', command: 'mode', reading: 'mode', mode: 'buttons',
+      labels: { eco: 'Sparbetrieb' } },
     { type: 'fhem-table', rows: [{ device: 'Test', reading: 'state' }] },
     { type: 'fhem-chart', device: 'Test', reading: 'state' },
     { type: 'fhem-solarflow', readings: { pv: { device: 'Test', reading: 'power' } } },
@@ -33,7 +35,7 @@ try {
   }));
   const root = document.querySelector('#grid');
   const data = new Map([['Test', [{ name: 'Test', readings: { state: 'on', temperature: '21',
-    desiredTemperature: '22', pct: '40', power: '100' }, sets: 'desiredTemperature pct:slider,0,1,100' }]]]);
+    desiredTemperature: '22', pct: '40', power: '100', mode: 'eco' }, sets: 'desiredTemperature pct:slider,0,1,100 mode:auto,eco' }]]]);
   const services = { iconUrl: () => '', history: async () => ({ points: [] }) };
   const contentAlignment = new Map();
   document.documentElement.dataset.cmsTheme = 'liquid-glass';

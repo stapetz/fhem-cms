@@ -178,6 +178,7 @@ export class CmsPage {
       this.button('Status-Symbol', () => this.addWidget('fhem-icon')),
       this.button('Tabelle', () => this.addWidget('fhem-table')),
       this.button('Schieberegler', () => this.addWidget('fhem-slider')),
+      this.button('Wert auswählen', () => this.addWidget('fhem-select')),
       this.button('Diagramm', () => this.addWidget('fhem-chart')),
       this.button('SolarFlow', () => this.addWidget('fhem-solarflow')),
       this.button('Textbaustein', () => this.addWidget('text'))
@@ -1765,9 +1766,9 @@ export class CmsPage {
   }
 
   addWidget(type) {
-    const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-switch': 's', 'fhem-slider': 'l', 'fhem-button': 'b', 'fhem-html': 'h', 'fhem-clock': 'c', 'fhem-icon': 'i', 'fhem-table': 'r', 'fhem-chart': 'g', 'fhem-solarflow': 'f' }[type] || 't';
+    const prefix = { text: 'x', 'fhem-value': 'v', 'fhem-switch': 's', 'fhem-slider': 'l', 'fhem-select': 'q', 'fhem-button': 'b', 'fhem-html': 'h', 'fhem-clock': 'c', 'fhem-icon': 'i', 'fhem-table': 'r', 'fhem-chart': 'g', 'fhem-solarflow': 'f' }[type] || 't';
     const id = this.uniqueId(prefix, new Set(this.page.widgets.map((widget) => widget.id)));
-    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 }, 'fhem-clock': { w: 12, h: 4 }, 'fhem-icon': { w: 6, h: 4 }, 'fhem-table': { w: 24, h: 8 }, 'fhem-slider': { w: 16, h: 6 }, 'fhem-chart': { w: 24, h: 10 }, 'fhem-solarflow': { w: 20, h: 14 } }[type] || { w: 16, h: 2 };
+    const size = { text: { w: 24, h: 2 }, 'fhem-value': { w: 12, h: 2 }, 'fhem-switch': { w: 12, h: 2 }, 'fhem-button': { w: 12, h: 2 }, 'fhem-html': { w: 16, h: 3 }, 'fhem-clock': { w: 12, h: 4 }, 'fhem-icon': { w: 6, h: 4 }, 'fhem-table': { w: 24, h: 8 }, 'fhem-slider': { w: 16, h: 6 }, 'fhem-select': { w: 16, h: 5 }, 'fhem-chart': { w: 24, h: 10 }, 'fhem-solarflow': { w: 20, h: 14 } }[type] || { w: 16, h: 2 };
     const grid = { col: 1, row: this.nextFreeRow(), ...size };
     let widget = { id, type, device: '', readings: { actual: '', target: '' }, grid };
     if (type === 'text') {
@@ -1788,6 +1789,8 @@ export class CmsPage {
       widget = { id, type, rows: [], grid };
     } else if (type === 'fhem-slider') {
       widget = { id, type, device: '', command: '', reading: '', grid };
+    } else if (type === 'fhem-select') {
+      widget = { id, type, device: '', command: '', reading: '', mode: 'dropdown', grid };
     } else if (type === 'fhem-solarflow') {
       widget = { id, type, readings: {}, grid };
     } else if (type === 'fhem-chart') {
