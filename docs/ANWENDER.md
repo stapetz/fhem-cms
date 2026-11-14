@@ -478,19 +478,33 @@ Device vom Typ **VolvoConnect** auswählen. Das Widget übernimmt die
 Readingnamen, Einheiten und Gruppen des VolvoConnect-Modul-Dashboards
 automatisch; ein manuelles Mapping ist nicht erforderlich.
 
-Oben stehen Akkustand und Restreichweite mit Ladeinformationen. Darunter
-erscheinen die tatsächlich vorhandenen Modulgruppen, unter anderem Türen,
-Fenster, Diagnose, Statistik, Reifen, Fahrzeugdaten und Standort. Fehlende
-oder nicht unterstützte Werte und leere Gruppen werden nicht angezeigt;
-echte Nullwerte bleiben sichtbar. Die Darstellung verwendet das gewählte
-Theme und wächst auf mobilen Geräten mit dem Inhalt.
+Die kompakte Kachel zeigt nur Akkustand und Restreichweite. Das
+**Informationssymbol ⓘ** öffnet die vollständige Fahrzeugansicht als Popup,
+mit Ladeinformationen, Galerie und tatsächlich vorhandenen Modulgruppen.
+Symbole kennzeichnen Readings und Zustände wie verriegelte Türen oder
+Warnungen. Fehlende oder nicht unterstützte Werte und leere Gruppen
+werden nicht angezeigt; echte Nullwerte bleiben sichtbar. Das Popup
+verwendet das gewählte Theme und scrollt auf kleinen Bildschirmen innerhalb
+des Fensters. Schließen per **✕**, **Escape** oder Klick außerhalb des Popups;
+danach kehrt der Fokus zum Informationssymbol zurück.
+
+Im Widgetdialog unter **Modulgruppen im Popup** können alle 14 Gruppen
+ein-/ausgeschaltet und mit **↑ / ↓** umgeordnet werden. Die Einstellungen
+werden erst beim Speichern übernommen. Die kompakte Batterie-/Reichweitenanzeige
+bleibt unabhängig von den Popupgruppen sichtbar. Einzelne Readings lassen
+sich derzeit noch nicht separat ausblenden.
+Neue Widgets starten im Standardraster mit 4 × 4 Zellen. Vorhandene
+Rastergrößen und HTML-Widgets werden nicht automatisch verändert; eine
+bisher große VolvoConnect-Kachel lässt sich im Editor kleiner ziehen.
 
 Die **Bildergalerie anzeigen**-Option ist standardmäßig eingeschaltet.
 Außen- und Innenansicht erscheinen nur mit entsprechenden Bildreadings;
 zwischen den Bildern kann gewischt oder per Tastatur gescrollt werden.
 Die Galerie lässt sich im Widgetdialog vollständig abschalten. Standortdaten
 verwenden die vorhandene Fahrzeugkarte; dabei werden Kartenkacheln von
-OpenStreetMap geladen. Liveupdates erhalten Galerieposition und Kartenzoom.
+OpenStreetMap geladen. Bilder und Karte werden erst im geöffneten Popup
+aufgebaut. Liveupdates erhalten das offene Popup, seine Scrollposition,
+Galerieposition und Kartenzoom; beim Schließen wird die Karte freigegeben.
 
 Vom Device angebotene Fahrzeugaktionen lassen sich nur im Ansichtsmodus
 und nach einer Bestätigung ausführen. „Befehl gesendet“ bedeutet nicht, dass

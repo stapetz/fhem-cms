@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { volvoGroups, volvoModel, volvoImageUrl, volvoText, volvoValue } from '../www/fhem-cms/js/volvoconnect.js';
+import { volvoGroups, volvoModel, volvoImageUrl, volvoText, volvoValue,
+  volvoGroupOrder, validateVolvoGroups, volvoStatusSymbol } from '../www/fhem-cms/js/volvoconnect.js';
 import { deviceWidgetSuggestions } from '../www/fhem-cms/js/device-widget-suggestions.js';
 import { schema5WidgetSuggestions, createSchema5RoomPlan, buildSchema5SetupConfig } from '../www/fhem-cms/js/fcui-schema5-setup-wizard.js';
 
@@ -78,7 +79,45 @@ test('VolvoConnect is available device-first and produces schema-5 setup without
   const widget = result.pages.flatMap(page => page.widgets).find(entry => entry.type === 'fhem-volvoconnect');
   assert.equal(widget.device, 'Car');
   assert.equal(widget.showGallery, true);
-  assert.equal(widget.grid.w, 12);
+  assert.equal(widget.grid.w, 4);
+  assert.equal(widget.grid.h, 4);
   assert.equal(widget.readings, undefined);
   assert.equal(widget.reading, undefined);
+});
+
+test('VolvoConnect group settings are optional, partial, unique and restricted to module groups', () => {
+  const keys = volvoGroups.map(([key]) => key);
+  assert.deepEqual(volvoGroupOrder(), keys);
+  const config = { groupOrder: ['location', 'doors'], hiddenGroups: ['state'] };
+  const original = JSON.stringify(config);
+  assert.equal(validateVolvoGroups(config), null);
+  assert.deepEqual(volvoGroupOrder(config), ['location', 'doors', ...keys.filter(key => !['location', 'doors'].includes(key))]);
+  assert.equal(JSON.stringify(config), original);
+  assert.equal(validateVolvoGroups({ hiddenGroups: keys }), null);
+  for (const field of ['groupOrder', 'hiddenGroups']) {
+    for (const value of [null, {}, 'state', ['unknown'], ['doors', 'doors'], ['state\n'], [null], Array(15).fill('doors')]) {
+      assert.match(validateVolvoGroups({ [field]: value }), /Ungültige/);
+    }
+    assert.equal(validateVolvoGroups({ [field]: [] }), null);
+  }
+});
+
+test('VolvoConnect status symbols match module semantics without turning normal numeric zero into a status', () => {
+  for (const [group, key, value, icon, tone] of [
+    ['warnings', 'lowBeamLeftWarning', 'NO_WARNING', '✓', 'good'],
+    ['warnings', 'lowBeamLeftWarning', 'WARNING', '⚠', 'warning'],
+    ['tyres', 'frontLeft', 'LOW_PRESSURE', '⚠', 'warning'],
+    ['doors', 'centralLock', 'LOCKED', '🔒', 'good'],
+    ['doors', 'frontLeftDoor', 'OPEN', '🔓', 'warning'],
+    ['state', 'chargerConnectionStatus', 'CONNECTED', '🔌', 'good'],
+    ['state', 'chargerConnectionStatus', 'DISCONNECTED', '🔌', 'neutral'],
+    ['state', 'chargingStatus', 'ONGOING', '⚡', 'good'],
+    ['capabilities', 'feature_isSupported', '0', '−', 'neutral'],
+  ]) assert.deepEqual(volvoStatusSymbol(group, key, value), { icon, tone });
+  assert.equal(volvoStatusSymbol('statistics', 'tripMeterManual', '0'), null);
+  assert.equal(volvoStatusSymbol('engineDiagnostics', 'engineStatus', 'UNKNOWN'), null);
+  const rows = model({doors_centralLock: 'LOCKED', state_batteryChargeLevel:'0'}).groups;
+  assert.equal(rows.get('doors')[0].icon, '🔒');
+  assert.equal(rows.get('doors')[0].status.icon, '🔒');
+  assert.equal(rows.get('state')[0].icon, '🔋');
 });

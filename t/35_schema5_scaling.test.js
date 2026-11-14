@@ -198,7 +198,7 @@ for (const [name, fixtures] of [
   try {
     for (const [fixture, minimum] of fixtures) {
       const interact = !['49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
-        '63_responsive_edges.html', '65_widget_dialogs.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
+        '63_responsive_edges.html', '65_widget_dialogs.html', '88_volvoconnect.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
           assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
@@ -212,6 +212,48 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
+        if (fixture === '88_volvoconnect.html') {
+          await evaluate(`(() => {
+            const {host,mount} = window.volvoPopupRegression;
+            mount.style.width = '343px';
+            mount.style.marginTop = '600px';
+            document.body.style.minHeight = '2400px';
+            mount.append(host);
+            host.shadowRoot.querySelector('[data-info]').focus({preventScroll:true});
+            window.scrollTo(0,450);
+            window.volvoPopupRegression.scroll = window.scrollY;
+          })()`);
+          const key = async (key, code, windowsVirtualKeyCode, text) => {
+            await command('Input.dispatchKeyEvent', {type:'keyDown', key, code, windowsVirtualKeyCode,
+              ...(text ? {text,unmodifiedText:text} : {})});
+            await command('Input.dispatchKeyEvent', {type:'keyUp', key, code, windowsVirtualKeyCode});
+          };
+          const open = () => evaluate('window.volvoPopupRegression.host.shadowRoot.querySelector("[data-details]").open');
+          await key('Enter','Enter',13,'\r');
+          assert.equal(await open(), true, 'Enter on info opens the detail modal');
+          for (let index = 0; index < 12; index++) {
+            await key('Tab','Tab',9);
+            assert.equal(await evaluate(`Boolean(window.volvoPopupRegression.host.shadowRoot
+              .activeElement?.closest('[data-details]'))`), true, 'modal traps keyboard focus');
+          }
+          await key('Escape','Escape',27);
+          assert.equal(await open(), false, 'real Escape closes the full popup');
+          assert.equal(await evaluate(`window.volvoPopupRegression.host.shadowRoot.activeElement
+            .hasAttribute('data-info')`), true, 'Escape restores focus to info');
+          assert.equal(await evaluate('window.scrollY === window.volvoPopupRegression.scroll'), true,
+            'Escape never jumps to the page start');
+          await key('Enter','Enter',13,'\r');
+          assert.equal(await open(), true, 'popup reopens using restored focus');
+          await command('Input.dispatchMouseEvent', {type:'mousePressed',x:1,y:1,button:'left',clickCount:1});
+          await command('Input.dispatchMouseEvent', {type:'mouseReleased',x:1,y:1,button:'left',clickCount:1});
+          assert.equal(await open(), false, 'real backdrop click closes the popup');
+          await key('Enter','Enter',13,'\r');
+          await evaluate(`window.volvoPopupRegression.host.shadowRoot.querySelector('[data-close-details]').focus()`);
+          await key('Enter','Enter',13,'\r');
+          assert.equal(await open(), false, 'close button works from the keyboard');
+          await evaluate('window.volvoPopupRegression.host.remove()');
+          return;
+        }
         if (fixture === '63_responsive_edges.html') {
           for (const [width, height, mobile, left, right, bottom] of [
             [768, 900, false, 0, 0, 0], [1000, 900, false, 0, 0, 0],

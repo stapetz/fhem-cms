@@ -20,7 +20,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.13.1-dev';
+our $FHEMCMS_VERSION = '1.14.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1033,7 +1033,8 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-calllist') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid'], ['title', 'showTitle', 'showGallery']);
+                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid'],
+                    ['title', 'showTitle', 'showGallery', 'groupOrder', 'hiddenGroups']);
             } elsif ($widget->{type} eq 'fhem-solar-energy') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'sections', 'grid'],
                     ['title', 'showTitle', 'powerUnit', 'energyUnit', 'threshold', 'deriveHome']);
@@ -1161,6 +1162,18 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
                 return 'Ungueltiger Wert fuer showGallery'
                     if (exists($widget->{showGallery}) && !$isBool->($widget->{showGallery}));
+                for my $field ('groupOrder', 'hiddenGroups') {
+                    next if (!exists($widget->{$field}));
+                    return "Ungueltige VolvoConnect-Gruppen in $field"
+                        if (ref($widget->{$field}) ne 'ARRAY' || @{$widget->{$field}} > 14);
+                    my %seenGroup;
+                    for my $group (@{$widget->{$field}}) {
+                        return "Ungueltige VolvoConnect-Gruppe in $field"
+                            if (ref($group) || !defined($group)
+                                || $group !~ /\A(?:state|capabilities|warnings|brakes|doors|windows|engineDiagnostics|workshopDiagnostics|commandAccessibility|commands|statistics|tyres|vehicle|location)\z/);
+                        return "Doppelte VolvoConnect-Gruppe in $field" if ($seenGroup{$group}++);
+                    }
+                }
             } elsif ($widget->{type} eq 'fhem-slider') {
                 for my $field ('command', 'reading') {
                     return "Ungueltiger Wert fuer $field" if (!$isName->($widget->{$field}));

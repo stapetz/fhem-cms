@@ -339,8 +339,8 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
     let col = 1;
     let rowHeight = 0;
     included.forEach((suggestion, index) => {
-      const width = ['fhem-chart', 'fhem-volvoconnect'].includes(suggestion.type) ? columns : widgetWidth;
-      const height = suggestion.type === 'fhem-volvoconnect' ? 18 * scale : suggestion.type === 'fhem-chart' ? 6 * scale
+      const width = suggestion.type === 'fhem-chart' ? columns : widgetWidth;
+      const height = suggestion.type === 'fhem-volvoconnect' ? 4 * scale : suggestion.type === 'fhem-chart' ? 6 * scale
         : suggestion.type === 'fhem-table'
           ? Math.max(2, Math.ceil((suggestion.rows.length + 2) / 2)) * scale
           : suggestion.type === 'fhem-solarflow' ? 4 * scale : widgetHeight;
