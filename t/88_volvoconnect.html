@@ -388,6 +388,12 @@ try {
       'inline connection and action symbols share the same center line');
   };
   checkInlineHeader();
+  const inlineError = structuredClone(host.snapshot);
+  inlineError[0].readings.state = 'auth_required';
+  host.data = inlineError;
+  check($('[data-inline-content] .hero-tools .badge[data-error]')
+    && !$('[data-inline-content] .connected'), 'inline header retains authentication errors instead of connected status');
+  host.data = dataFor(widget,snapshots());
   const inlineMap = host.vehicleMaps.get('inline-volvo-location');
   inlineMap.instance.setZoom(17,{animate:false});
   const inlineSoc = $('[data-inline-content] .soc');

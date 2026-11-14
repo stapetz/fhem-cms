@@ -1069,13 +1069,14 @@ shutdown restart</pre>
     const api = model.read('state');
     if (inlineHeading) {
       identity.append(inlineHeading);
-    } else if (api) {
+    }
+    if (api && (!inlineHeading || api !== 'authenticated')) {
       const badge = node('span', api === 'authenticated' ? '✓' : '⚠', 'badge');
       badge.setAttribute('role', 'img');
       badge.setAttribute('aria-label', `API: ${volvoValue('', 'state', api)}`);
       badge.title = badge.getAttribute('aria-label');
       badge.toggleAttribute('data-error', /^(?:error|auth_required)$/.test(api));
-      identity.append(badge);
+      (inlineHeading?.querySelector('.hero-tools') || identity).append(badge);
     }
     content.append(identity);
     const top = node('div', undefined, 'top');
