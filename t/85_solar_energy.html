@@ -186,6 +186,26 @@ try {
       }
     }
     root.removeAttribute('data-mobile-layout');
+  for (const deriveHome of [undefined, false, true]) {
+    host.config = { ...widget, readings: { pv: core.pv }, deriveHome };
+    mounted.update(snapshots(), null);
+    check($('[data-power="home"]').hidden, 'unassigned home has no numerical display even with legacy derivation');
+    check($('[data-note="home"]').textContent === 'Kein Reading zugeordnet', 'unassigned home is explained');
+    check([...host.shadowRoot.querySelectorAll('.energy')].every(line => line.hasAttribute('hidden')),
+      'unknown home does not invent solar flows');
+    check($('.bat').hidden && $('.grid').hidden && $('progress').hidden,
+      'unassigned optional measurements do not show zero values or a charge bar');
+  }
+  host.config = widget;
+  const missingHome = snapshots();
+  missingHome.get('Home')[0].readings.load = undefined;
+  host.data = missingHome;
+  check(!$('[data-power="home"]').hidden && $('[data-power="home"]').textContent.includes('–'),
+    'assigned unavailable home reading remains unknown');
+  missingHome.get('Home')[0].readings.load = '0';
+  host.data = missingHome;
+  check($('[data-power="home"]').textContent === '0.0 W', 'assigned real zero remains visible');
+  mounted.update(snapshots(), null);
   await host.openConfig();
   check($('[data-dialog]').getBoundingClientRect().width <= innerWidth
     && $('[data-dialog]').scrollWidth <= $('[data-dialog]').clientWidth + 1,

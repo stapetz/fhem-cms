@@ -109,13 +109,12 @@ export const computeModel = (config, snapshots) => {
   const grid = read('grid', scale);
   const bat = read('battery', scale);
   const soc = read('soc');
-  let home = read('home', scale);
-  if (home === null && pv !== null && config.deriveHome !== false) {
-    home = Math.max(0, pv - (grid || 0) - (bat || 0));
-  }
+  const home = read('home', scale);
   const values = { pv: pv === null ? null : Math.max(0, pv), home: home === null ? null : Math.max(0, home), grid, bat };
   const threshold = Number.isFinite(config.threshold) ? config.threshold : DEFAULT_THRESHOLD;
-  const flows = config.deriveHome === false && home === null ? {} : computeFlows(values);
+  const missingSupply = [['grid', grid], ['battery', bat]]
+    .some(([key, value]) => sourceOf(config, key) && value === null);
+  const flows = pv === null || home === null || missingSupply ? {} : computeFlows(values);
   const visible = { pv: true, home: true, grid: Boolean(sourceOf(config, 'grid')), bat: Boolean(sourceOf(config, 'battery')) };
   const edges = EDGES.filter((edge) => visible[edge.a] && visible[edge.b]).map((edge) => {
     const forward = flows[`${edge.a}>${edge.b}`] || 0;
@@ -255,7 +254,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
               <label>Einheit der Leistungs-Readings
                 <select name="unit"><option value="W">Watt (W)</option><option value="kW">Kilowatt (kW)</option></select></label>
               <label>Schwellwert „inaktiv“ in Watt<input name="threshold" type="number" min="0" max="1000" step="1"></label>
-              <label class="check"><input type="checkbox" name="deriveHome"> Fehlenden Hausverbrauch aus den übrigen Werten berechnen</label>
+              <p class="hint">Ohne Hausverbrauchsreading bleibt der Hausverbrauch unbekannt; er wird nicht berechnet.</p>
               <p class="hint">Netz: Bezug negativ, Einspeisung positiv. Batterie: Laden positiv, Entladen negativ. Ohne Netz- oder Batterie-Reading entfällt die jeweilige Station. Das Widget liest nur und sendet keine FHEM-Befehle.</p>
             </div>
           </details>
@@ -315,7 +314,6 @@ class FHEMCMSSolarFlow extends HTMLElement {
     const config = this.widgetConfig;
     form.elements.title.value = config.title || '';
     form.elements.showTitle.checked = config.showTitle !== false;
-    form.elements.deriveHome.checked = config.deriveHome !== false;
     form.elements.unit.value = config.unit === 'kW' ? 'kW' : 'W';
     form.elements.threshold.value = Number.isFinite(config.threshold) ? config.threshold : DEFAULT_THRESHOLD;
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
@@ -447,9 +445,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
     if (!form.elements.showTitle.checked) {
       next.showTitle = false;
     }
-    if (!form.elements.deriveHome.checked) {
-      next.deriveHome = false;
-    }
+    next.deriveHome = false;
     try {
       await this.services.saveWidget(next);
       this.closeConfig(true);
@@ -517,6 +513,23 @@ class FHEMCMSSolarFlow extends HTMLElement {
     svg.innerHTML = `${links}${['pv', 'home', 'grid', 'bat'].map(station).join('')}`;
   }
 
+  fitDiagram() {
+    if (!this.isConnected) return;
+    const svg = this.shadowRoot.querySelector('[data-svg]');
+    const bounds = [...svg.querySelectorAll('.link, [data-ring]')].map(element => {
+      const box = element.getBBox();
+      const station = element.closest('[data-station]')?.dataset.station;
+      const offset = station ? STATIONS[station] : { x: 0, y: 0 };
+      return { x: box.x + offset.x, y: box.y + offset.y, width: box.width, height: box.height };
+    });
+    const left = Math.min(...bounds.map(box => box.x)) - 8;
+    const top = Math.min(...bounds.map(box => box.y)) - 8;
+    const right = Math.max(...bounds.map(box => box.x + box.width)) + 8;
+    const bottom = Math.max(...bounds.map(box => box.y + box.height)) + 8;
+    const viewBox = `${left} ${top} ${right - left} ${bottom - top}`;
+    if (svg.getAttribute('viewBox') !== viewBox) svg.setAttribute('viewBox', viewBox);
+  }
+
   render() {
     if (!this.widgetConfig || !this.shadowRoot.querySelector('[data-svg]')) {
       return;
@@ -530,11 +543,13 @@ class FHEMCMSSolarFlow extends HTMLElement {
       this.structureKey = key;
       this.buildStructure(model);
     }
+    this.fitDiagram();
     const root = this.shadowRoot;
     for (const station of ['pv', 'home', 'grid', 'bat']) {
       const text = root.querySelector(`[data-value="${station}"]`);
       if (text) {
         text.textContent = formatPower(model.values[station]);
+        text.toggleAttribute('hidden', !sourceOf(this.widgetConfig, station === 'bat' ? 'battery' : station));
       }
     }
     const { grid, bat } = model.values;

@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-14",
+  "version": "1.12.1-dev",
+  "title": "Solarwidgets: kein erfundener Hausverbrauch und passender Bildausschnitt",
+  "changes": [
+    "Ohne Hausverbrauchsreading zeigen beide Solarwidgets keinen Verbrauchswert. Die bisherige Ersatzberechnung entfaellt auch bei alten Einstellungen; echte Messwerte einschliesslich Null bleiben erhalten.",
+    "Fehlende Leistungswerte bleiben unbekannt und erzeugen keine erfundenen Stromfluesse. Die Berechnungsoption entfaellt aus den Dialogen.",
+    "SolarFlow nutzt einen Bildausschnitt passend zu sichtbaren Stationen und Verbindungen statt unnoetigem Leerraum unter reinen PV-/Hausstationen.",
+    "Refs #206: Modelle, Dialoge, Liveupdates und Diagrammausnutzung in Chrome und WebKit geprueft."
+  ]
+}

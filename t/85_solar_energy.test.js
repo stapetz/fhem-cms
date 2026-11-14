@@ -4,6 +4,7 @@ import { test } from 'node:test';
 globalThis.HTMLElement = class {};
 globalThis.customElements = { get() { return true; } };
 const { validateSolarEnergy, solarEnergyDevices, solarEnergyModel, solarNumber } = await import('../www/fhem-cms/js/solar-energy.js');
+const { computeModel } = await import('../www/fhem-cms/components/cms-solarflow.js');
 const source = (device, reading) => ({ device, reading });
 const config = { readings: { pv: source('PV', 'power'), home: source('Home', 'load'),
   grid: source('Grid', 'power'), battery: source('Battery', 'power'), soc: source('Battery', 'soc') },
@@ -42,14 +43,15 @@ test('solar energy uses real power directions and never invents activity for mis
   assert.equal(solarNumber(source('PV', 'power'), data({ PV: { power: '1,25' } })), 1.25);
   assert.equal(JSON.stringify(config), original);
 });
-test('solar energy handles kW, explicit home calculation, thresholds and clamped SoC', () => {
+test('solar energy handles kW and clamped SoC without inventing home consumption', () => {
   const candidate = { readings: { pv: source('PV', 'power'), soc: source('PV', 'soc') }, sections: [],
     powerUnit: 'kW' };
   const snapshot = data({ PV: { power: '1.5', soc: '150' } });
   assert.equal(solarEnergyModel(candidate, snapshot).values.pv, 1500);
-  assert.equal(solarEnergyModel(candidate, snapshot).values.home, 1500);
+  assert.equal(solarEnergyModel(candidate, snapshot).values.home, null);
   assert.equal(solarEnergyModel(candidate, snapshot).soc, 100);
   assert.equal(solarEnergyModel({ ...candidate, deriveHome: false }, snapshot).values.home, null);
+  assert.equal(solarEnergyModel({ ...candidate, deriveHome: true }, snapshot).values.home, null);
 });
 test('solar energy does not derive flows from power values that overflow during conversion', () => {
   for (const key of ['grid', 'battery']) {
@@ -64,4 +66,32 @@ test('solar energy does not derive flows from power values that overflow during 
   const model = solarEnergyModel(candidate, data({ PV: { power: '1e308' }, Grid: { power: '-1e308' } }));
   assert.equal(model.values.home, null);
   assert.deepEqual(model.flows, {});
+});
+
+test('both solar models require an assigned, available home reading even with legacy derivation enabled', () => {
+  for (const modelOf of [solarEnergyModel, computeModel]) {
+    for (const deriveHome of [undefined, false, true]) {
+      for (const legacy of [false, true]) {
+        if (legacy && modelOf === solarEnergyModel) continue;
+        const candidate = { device: 'PV', deriveHome, sections: [],
+          readings: legacy ? { pv: 'power' } : { pv: source('PV', 'power') } };
+        const original = JSON.stringify(candidate);
+        const snapshot = data({ PV: { power: '123', load: '45' } });
+        const missing = modelOf(candidate, snapshot);
+        assert.equal(missing.values.home, null);
+        if (missing.edges) assert.ok(missing.edges.every(edge => edge.power === 0));
+        else assert.deepEqual(missing.flows, {});
+        candidate.readings.home = legacy ? 'load' : source('PV', 'load');
+        assert.equal(modelOf(candidate, snapshot).values.home, 45, 'assigned home reading is not overwritten');
+        for (const value of [undefined, '', 'unknown']) {
+          snapshot.get('PV')[0].readings.load = value;
+          assert.equal(modelOf(candidate, snapshot).values.home, null, 'unavailable home never falls back to PV');
+        }
+        snapshot.get('PV')[0].readings.load = '0';
+        assert.equal(modelOf(candidate, snapshot).values.home, 0, 'a real zero is still a valid reading');
+        delete candidate.readings.home;
+        assert.equal(JSON.stringify(candidate), original);
+      }
+    }
+  }
 });

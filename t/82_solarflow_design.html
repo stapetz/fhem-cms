@@ -115,7 +115,27 @@ try {
   host.config = { ...config, readings: { pv: config.readings.pv }, deriveHome: false };
   check(!$('[data-station="grid"]') && !$('[data-station="bat"]')
     && host.shadowRoot.querySelectorAll('[data-station]').length === 2, 'optional stations disappear');
-  check($('[data-value="home"]').textContent === '–', 'unverified home power is not invented');
+  check($('[data-value="home"]').hasAttribute('hidden'), 'unassigned home has no value display');
+  host.style.cssText = 'width:405px;height:357px';
+  for (const deriveHome of [undefined, false, true]) {
+    host.config = { ...config, readings: { pv: config.readings.pv }, deriveHome };
+    host.data = snapshots();
+    await settle();
+    check($('[data-value="home"]').hasAttribute('hidden'), 'legacy settings cannot show PV as home consumption');
+    check(!host.shadowRoot.querySelector('animateMotion'), 'unknown home consumption has no invented flow');
+    const area = $('.flow-card').getBoundingClientRect();
+    const rings = [...host.shadowRoot.querySelectorAll('[data-ring]')].map(ring => ring.getBoundingClientRect());
+    const top = Math.min(...rings.map(box => box.top)), bottom = Math.max(...rings.map(box => box.bottom));
+    check(top >= area.top && bottom <= area.bottom, 'fitted PV-only diagram stays within the card');
+    check((bottom - top) / area.height >= .9 && area.bottom - bottom < area.height * .05,
+      'PV and home stations fill at least 90% of available height without unused lower canvas');
+  }
+  host.config = config;
+  host.data = snapshots({ home: undefined });
+  check(!$('[data-value="home"]').hasAttribute('hidden') && $('[data-value="home"]').textContent === '–',
+    'assigned but missing home data stays unknown instead of being calculated');
+  host.data = snapshots({ home: '0' });
+  check($('[data-value="home"]').textContent === '0W', 'real zero consumption remains visible');
   const legacy = { ...config, device: 'Demo',
     readings: { pv: 'pv', home: 'home', grid: 'grid', battery: 'battery', soc: 'soc' } };
   host.config = legacy;
@@ -171,7 +191,7 @@ try {
   output.textContent = JSON.stringify({ checks: checks.length, messages: checks });
 } catch (error) {
   output.dataset.result = 'fail';
-  output.textContent = JSON.stringify({ error: error.stack, checks });
+  output.textContent = JSON.stringify({ error: `${error.message}\n${error.stack}`, checks });
 } finally {
   fixture.replaceChildren();
   document.documentElement.dataset.cmsTheme = 'liquid-glass';
