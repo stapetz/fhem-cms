@@ -237,7 +237,7 @@ try {
 } catch (error) {
   view.stop();
   output.dataset.result = 'fail';
-  output.textContent = error.stack;
+  output.textContent = `${error.message}\n${error.stack}`;
 }
 </script>
 </html>

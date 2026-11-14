@@ -16,9 +16,8 @@ const node = (tag, text, className) => {
   return element;
 };
 const EDGES = [
-  ['pv', 'home', 'M450 95V225'], ['pv', 'bat', 'M450 155Q150 155 150 215'],
-  ['pv', 'grid', 'M450 155Q750 155 750 215'], ['bat', 'home', 'M240 265H360'],
-  ['home', 'grid', 'M540 265H660'], ['grid', 'bat', 'M750 155H150'],
+  ['pv', 'home'], ['pv', 'bat'], ['pv', 'grid'],
+  ['bat', 'home'], ['home', 'grid'], ['grid', 'bat'],
 ];
 const format = (value, digits = 1) => value === null ? '–'
   : value.toLocaleString('de-DE', { maximumFractionDigits: digits });
@@ -38,7 +37,15 @@ class FHEMCMSSolarEnergy extends HTMLElement {
   }
 
   connectedCallback() {
-    if (this.shadowRoot.childElementCount) return;
+    if (!this.flowObserver) {
+      this.flowObserver = new ResizeObserver(() => this.layoutFlows());
+    }
+    this.flowObserver.observe(this);
+    if (this.shadowRoot.childElementCount) {
+      for (const element of this.shadowRoot.querySelectorAll('.flow, .node')) this.flowObserver.observe(element);
+      this.layoutFlows();
+      return;
+    }
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; min-width: 0; min-height: 0;
@@ -56,7 +63,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
           color: #10b981; background: rgba(16,185,129,.16); border: 1px solid rgba(16,185,129,.35); }
         .flow { ${detailCardCss} display: grid; grid-template-columns: repeat(3,minmax(0,1fr));
           grid-template-rows: auto 80px auto; position: relative; flex: none;
-          align-items: center; justify-items: center; padding: 16px 10px; }
+          align-items: center; justify-items: center; padding: 16px 10px 28px; column-gap: 8px; }
         .node { min-width: 0; width: 100%; max-width: 180px; padding: 10px 12px; border: 1.5px solid var(--station-color);
           border-radius: 12px; text-align: center; position: relative; z-index: 1;
           background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
@@ -67,6 +74,9 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .node strong { display: block; font-size: 1.4rem; margin: 3px 0; color: var(--station-color); }
         .node small { display: block; font-size: .74rem; opacity: .78; }
         .node .label { display: block; font-size: .74rem; text-transform: uppercase; opacity: .8; }
+        .node:not(.pv) { align-self: stretch; display: flex; flex-direction: column; padding-bottom: 20px; }
+        .node:not(.pv) .label { min-height: 2.6em; display: flex; align-items: center; justify-content: center; }
+        .node:not(.pv) small { min-height: 2.6em; margin-top: auto; }
         .paths { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
         .wire { fill: none; stroke: rgba(128,128,128,.22); stroke-width: 3; stroke-linecap: round; }
         .energy { fill: none; stroke: #f59e0b; stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 8 10;
@@ -76,14 +86,21 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .energy[data-reverse] { animation-direction: reverse; }
         @keyframes energy-flow { to { stroke-dashoffset: -18; } }
         @media (prefers-reduced-motion: reduce) { .energy { animation: none; } }
-        progress { display: block; width: 100%; height: 5px; margin-top: 5px; accent-color: #10b981; }
+        progress { appearance: none; -webkit-appearance: none; display: block; height: 5px;
+          position: absolute; bottom: 8px; left: 12px; width: calc(100% - 24px); margin: 0;
+          border: 0; border-radius: 3px; overflow: hidden; background: rgba(128,128,128,.22); }
+        progress::-webkit-progress-bar { background: rgba(128,128,128,.22); border-radius: 3px; }
+        progress::-webkit-progress-value { background: #10b981; border-radius: 3px; }
+        progress::-moz-progress-bar { background: #10b981; border-radius: 3px; }
         .sections { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,200px),1fr)); gap: 12px; }
-        .yield { ${detailCardCss} min-width: 0; border-radius: 12px; padding: 12px; }
+        .yield { ${detailCardCss} min-width: 0; border-radius: 12px; padding: 12px;
+          display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0; }
         .yield h4 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0;
+          align-content: start;
           margin: 0 0 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,.2);
           overflow-wrap: anywhere; }
         .yield h4 small { font-size: .8em; opacity: .7; white-space: nowrap; }
-        .yield dl { margin: 0; display: grid; gap: 5px; }
+        .yield dl { margin: 0; display: grid; gap: 5px; align-content: start; }
         .yield .row { display: flex; justify-content: space-between; gap: 8px; font-size: .86rem;
           border-bottom: 1px solid rgba(128,128,128,.1); padding: 2px 0; overflow-wrap: anywhere; }
         .yield .row:last-child { border: 0; }
@@ -96,11 +113,11 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .total strong { display: block; font-size: 1.25rem; margin-top: 2px; color: #f59e0b; }
         .total:last-child { border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.12); }
         @container (max-width: 600px) {
-          .flow { padding: 12px 4px; grid-template-rows: auto 60px auto; column-gap: 8px; }
+          .flow { padding: 12px 4px 28px; grid-template-rows: auto 60px auto; }
           .node { padding: 8px 3px; }
           .node strong { font-size: clamp(.85rem, 5cqi, 1.4rem); }
           .node .label, .node small { font-size: .65rem; }
-          .node:not(.pv) { align-self: stretch; display: flex; flex-direction: column; padding-bottom: 18px; }
+          .node:not(.pv) { padding-bottom: 18px; }
           .node:not(.pv) .label { min-height: 3.9em; display: flex; align-items: center; justify-content: center; }
           .node:not(.pv) small { min-height: 2.6em; margin-top: auto; }
           progress { position: absolute; bottom: 8px; left: 3px; width: calc(100% - 6px); margin: 0; }
@@ -132,9 +149,9 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         <button type="button" data-open-config aria-label="Solar und Energiefluss konfigurieren">⚙</button>
         <header><h3 data-title></h3><span class="badge" data-system hidden></span></header>
         <div class="flow" data-flow>
-          <svg class="paths" viewBox="0 0 900 320" preserveAspectRatio="none" aria-hidden="true">
-            ${EDGES.map(([a, b, d]) => `<g data-edge="${a}-${b}"><path class="wire" d="${d}"/>
-              <path class="energy" d="${d}" hidden/></g>`).join('')}
+          <svg class="paths" preserveAspectRatio="none" aria-hidden="true">
+            ${EDGES.map(([a, b]) => `<g data-edge="${a}-${b}"><path class="wire"/>
+              <path class="energy" hidden/></g>`).join('')}
           </svg>
           ${[['pv', '☀️ PV Erzeugung'], ['bat', '🔋 Speicher'], ['home', '🏠 Hausverbrauch'], ['grid', '⚡ Stromnetz']]
     .map(([key, label]) => `<div class="node ${key}" data-station="${key}"><span class="label">${label}</span>
@@ -170,6 +187,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
             <button type="button" data-cancel>Abbrechen</button><button type="submit" data-save>Speichern</button></div>
         </form>
       </dialog>`;
+    for (const element of this.shadowRoot.querySelectorAll('.flow, .node')) this.flowObserver.observe(element);
     this.$('[data-open-config]').addEventListener('click', () => this.openConfig());
     this.$('[data-cancel]').addEventListener('click', () => this.closeConfig(false));
     this.$('[data-dialog]').addEventListener('cancel', event => { event.preventDefault(); this.closeConfig(false); });
@@ -191,8 +209,38 @@ class FHEMCMSSolarEnergy extends HTMLElement {
   get config() { return this.widgetConfig; }
   set data(value) { this.snapshot = value; this.render(); }
   set stale(value) { this.$('.tile')?.toggleAttribute('data-stale', value !== null); }
-  disconnectedCallback() { this.dialogRevision++; }
+  disconnectedCallback() { this.dialogRevision++; this.flowObserver?.disconnect(); this.flowObserver = null; }
   error(message) { this.$('[data-error]').textContent = message; }
+
+  layoutFlows() {
+    const svg = this.$('.paths');
+    if (!svg || !this.isConnected) return;
+    const frame = svg.getBoundingClientRect();
+    if (!frame.width || !frame.height) return;
+    const stations = Object.fromEntries(['pv', 'bat', 'home', 'grid'].map(key => {
+      const box = this.$(`[data-station="${key}"]`).getBoundingClientRect();
+      return [key, { x: (box.left + box.right) / 2 - frame.left,
+        y: (box.top + box.bottom) / 2 - frame.top, left: box.left - frame.left,
+        right: box.right - frame.left, top: box.top - frame.top, bottom: box.bottom - frame.top }];
+    }));
+    svg.setAttribute('viewBox', `0 0 ${frame.width} ${frame.height}`);
+    for (const [a, b] of EDGES) {
+      const start = stations[a], end = stations[b];
+      let path;
+      if (a === 'pv') {
+        const from = start.bottom + 2, to = end.top - 2, middle = (from + to) / 2;
+        path = `M${start.x} ${from}C${start.x} ${middle} ${end.x} ${middle} ${end.x} ${to}`;
+      } else if (a === 'grid' && b === 'bat') {
+        const bottom = Math.max(start.bottom, end.bottom) + 14;
+        path = `M${start.x} ${start.bottom + 2}V${bottom}H${end.x}V${end.bottom + 2}`;
+      } else {
+        path = `M${start.right + 2} ${start.y}L${end.left - 2} ${end.y}`;
+      }
+      for (const line of this.$(`[data-edge="${a}-${b}"]`).children) {
+        if (line.getAttribute('d') !== path) line.setAttribute('d', path);
+      }
+    }
+  }
 
   render() {
     if (!this.config || !this.$('[data-flow]')) return;

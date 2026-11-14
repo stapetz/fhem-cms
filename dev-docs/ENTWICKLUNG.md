@@ -68,6 +68,38 @@ Unterkanten, Leistungszeilen und Balkenfreiheit, auch mit den Werten des
 Abnahmescreenshots. Desktop-Proportionen und Liveupdate-Verhalten bleiben
 unveraendert. Erneute echte iPhone-Abnahme erforderlich.
 
+Weitere Safari-Abnahme (1.11.3-dev, Refs #203):
+iPhone im Browser und als Startbildschirm-Element wurde bestaetigt.
+Desktop-Safari benoetigt ebenfalls gemeinsame Stationshoehen und
+Beschriftungsbereiche. WebKit gab dem nativen `progress` trotz `height: 5px`
+eine tatsaechliche Hoehe von 21px; explizite Progress-Darstellung beseitigt
+die Abweichung und die mobile Ueberlappung. Stationsabstaende gelten jetzt
+auch auf dem Desktop. SVG-Verbindungen werden per ResizeObserver aus den
+tatsaechlichen Stationsraendern bestimmt, mit 2px Freiraum fuer Linienkappen.
+Netz-Speicher verlaeuft unterhalb der unteren Stationen statt durch Boxen.
+Werteupdates erhalten dieselben SVG-Knoten und Animationen.
+Die Stationshoehen ersetzen bewusst die bisherigen 89/99px-Referenzhoehen;
+gespeicherte Raster bleiben unveraendert.
+
+Die WebKit-Pruefung aller 16 Widgettypen fand ausserdem einen
+SVG-Prozenthoehen-Ueberlauf im Diagramm und zu knappe Zeilenhoehen der
+Wertanzeige. Das Diagramm bindet sein SVG absolut an die Plotflaeche;
+Wertezeilen reservieren auch fuer WebKit-Systemschrift genuegend Hoehe.
+Keine Aenderung eigener HTML-Inhalte oder gespeicherter Zuordnungen.
+
+Reproduzierbare Safari-Engine-Pruefung:
+`python -m pip install playwright==1.48.0` und
+`PLAYWRIGHT_SKIP_BROWSER_GC=1 python -m playwright install webkit`
+in einer separaten Test-venv (WebKit 18.0, kompatibel mit macOS 13).
+Dann `python scripts/check_webkit_widgets.py`: Fixtures 85/86 in Desktop-,
+Phone-, Tablet-, Querformat-/Touch-Kontexten. Erwartet: jeder Lauf `pass`,
+keine internen mobilen Scrollbars, alle Linienpunkte ausserhalb der Stationen,
+Endpunkte 1 bis 3px vor dem zugehoerigen Rahmen. Neuere macOS-Systeme koennen
+einen passenden aktuellen Playwright/WebKit-Stand in ihrer Test-venv verwenden.
+Der direkte Zugriff auf die laufende Safari-App war nicht autorisiert;
+die automatisierte WebKit-Pruefung ersetzt nicht die abschliessende Abnahme
+im tatsaechlichen Safari-Fenster.
+
 ## Widget-Design: Tabellenpilot (dev, 1.11.0-dev, Refs #196)
 
 Die optischen Vorgaben aus `google_prompt_fuer_widgets.md` ersetzen im
