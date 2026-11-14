@@ -11,7 +11,7 @@
 | Inoffizielles Modul; Installation aus externer Updatequelle.
 |- style="background-color:#FFFFFF"
 | Aktuelle stabile Version
-| [https://github.com/stapetz/fhem-cms/releases/tag/v1.10.0 1.10.0]
+| [https://github.com/stapetz/fhem-cms/releases/tag/v1.11.0 1.11.0]
 |- style="background-color:#EFEFFF"
 ! colspan="2" | Details
 |- style="background-color:#FFFFFF"
@@ -33,7 +33,9 @@
 
 '''fhem-cms''' ergänzt FHEM um eine frei gestaltbare Bedienoberfläche im Browser. Du kombinierst Gerätewerte, Bedienelemente, Texte, Bilder und Links auf eigenen Seiten. Das Layout erstellst du grafisch, ohne dafür eine komplette HTML-Oberfläche programmieren zu müssen.
 
-Dieser Artikel beschreibt den stabilen Funktionsstand '''1.10.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+Dieser Artikel beschreibt den stabilen Funktionsstand '''1.11.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+
+'''Neu in 1.11.0:''' VolvoConnect-Fahrzeugwidget mit Kompakt-/Vollansicht und anpassbaren Detailkarten, Solar und Energiefluss mit Ertragskarten, einheitliches Widgetdesign, bessere Safari-/Mobilansicht, Geräte zuerst hinzufügen, diskrete Set-Auswahl, breite Dialoge und geprüfte HTML/SVG/CSS-Einbettungen. Die Vorschau zeigt kein Bearbeitungsraster; Liveupdates erhalten die Scrollposition. Das Fahrzeugwidget setzt ausschließlich das Modul [[VolvoConnect]] voraus; siehe die [https://github.com/stapetz/fhem-cms/wiki/VolvoConnect-Widget bebilderte Anleitung mit Modulinstallation].
 
 '''Seit Version 1.10.0:''' Die zentrale Seite
 <code>/fhem/fhem-cms/admin.html</code> listet CMS-Devices und getrennt davon
@@ -319,11 +321,11 @@ Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Brows
 
 == Widgetübersicht ==
 
-'''Konfigurationsdialoge (dev):''' Alle Widgettypen verwenden dieselbe Desktopbreite bis 1100 Pixel, auf kleinen Bildschirmen responsiv. Die Höhe folgt dem Inhalt; lange Formulare bleiben scrollbar. Geräte- und Medienauswahldialoge behalten eigene Größen. Tabellen-Einheiten und Vorschläge stehen über die volle Breite in einer eigenen Zeile unter den übrigen Feldern, im Ein- und Mehr-Device-Modus.
+'''Konfigurationsdialoge (ab 1.11.0):''' Alle Widgettypen verwenden dieselbe Desktopbreite bis 1100 Pixel, auf kleinen Bildschirmen responsiv. Die Höhe folgt dem Inhalt; lange Formulare bleiben scrollbar. Geräte- und Medienauswahldialoge behalten eigene Größen. Tabellen-Einheiten und Vorschläge stehen über die volle Breite in einer eigenen Zeile unter den übrigen Feldern, im Ein- und Mehr-Device-Modus.
 
-'''Widget-IDs (dev):''' Schema-5-Widgets besitzen CMS-weit eindeutige IDs, auch nach Widget-/Seitenkopien und Vorlagenübernahme. Bestehende Duplikate werden beim nächsten Entwurfsspeichern oder Veröffentlichen eindeutig gemacht, ohne Inhalte, Raster oder Seitenlinks zu verlieren. Lesen allein verändert keine Dateien. Bisher kollidierende Widgets können zwischen Seiten verschoben werden; die Live-Konfiguration bleibt bis zur Veröffentlichung erhalten.
+'''Widget-IDs (ab 1.11.0):''' Schema-5-Widgets besitzen CMS-weit eindeutige IDs, auch nach Widget-/Seitenkopien und Vorlagenübernahme. Bestehende Duplikate werden beim nächsten Entwurfsspeichern oder Veröffentlichen eindeutig gemacht, ohne Inhalte, Raster oder Seitenlinks zu verlieren. Lesen allein verändert keine Dateien. Bisher kollidierende Widgets können zwischen Seiten verschoben werden; die Live-Konfiguration bleibt bis zur Veröffentlichung erhalten.
 
-=== Gerät zuerst hinzufügen (dev, ab 1.11.0-dev) ===
+=== Gerät zuerst hinzufügen (ab 1.11.0) ===
 
 Unter '''Einfügen → Gerät hinzufügen''' zuerst nach Name, Alias, Typ oder Raum suchen und ein Gerät wählen. Danach werden passende Widgets anhand seiner Readings und Set-Angebote vorgeschlagen; Thermostatkanäle werden berücksichtigt. Ein bloßes Thermometer erhält keinen Thermostat- oder Slider-Vorschlag. '''Textbaustein''' und '''Freies HTML''' stehen immer bereit, '''Diagramm''' nur bei bestätigten geloggten numerischen Readings. Prüfungsfehler bleiben sichtbar; über '''Gerät ändern''' ist eine erneute Prüfung möglich.
 
@@ -333,7 +335,7 @@ Wartungsbefehle für Batteriewechsel, Aufwecken oder Werksreset ergeben keinen T
 
 === Verfügbare Widgets ===
 
-'''Neu auf dev, ab 1.11.0-dev:''' '''Wert auswählen''' zeigt diskrete Set-Angebote wie <code>mode:auto,eco,boost</code> als Dropdown oder kompakte Buttons. Optionale Anzeigenamen machen technische Werte lesbar, etwa „Sparbetrieb“ für <code>eco</code>; gesendet bleibt der technische Wert. Gerät, Befehl und optionales Statusreading lassen sich im Standarddialog einstellen. Der Typ erscheint auch bei '''Gerät hinzufügen''', wenn passende Set-Wertelisten vorhanden sind. Slider- und Freitextdeklarationen sind keine diskreten Listen. Nur in der Ansicht werden aktuell angebotene Befehle/Werte gesendet; während einer Anfrage sind die Bedienelemente gesperrt, Fehler bleiben sichtbar. Im Editor wird nicht geschaltet.
+'''Neu ab 1.11.0:''' '''Wert auswählen''' zeigt diskrete Set-Angebote wie <code>mode:auto,eco,boost</code> als Dropdown oder kompakte Buttons. Optionale Anzeigenamen machen technische Werte lesbar, etwa „Sparbetrieb“ für <code>eco</code>; gesendet bleibt der technische Wert. Gerät, Befehl und optionales Statusreading lassen sich im Standarddialog einstellen. Der Typ erscheint auch bei '''Gerät hinzufügen''', wenn passende Set-Wertelisten vorhanden sind. Slider- und Freitextdeklarationen sind keine diskreten Listen. Nur in der Ansicht werden aktuell angebotene Befehle/Werte gesendet; während einer Anfrage sind die Bedienelemente gesperrt, Fehler bleiben sichtbar. Im Editor wird nicht geschaltet.
 
 {| class="wikitable"
 ! Widget !! Aufgabe und wichtige Hinweise
@@ -351,6 +353,8 @@ Wartungsbefehle für Batteriewechsel, Aufwecken oder Werksreset ergeben keinen T
 | Taster || Einen angebotenen Befehl ohne Parameter auslösen, etwa <code>toggle</code>; Standardsymbol passend zum Befehl.
 |-
 | Schieberegler || Einen Set-Befehl mit Sliderdeklaration bedienen; Bereich und Schrittweite vom Device.
+|-
+| Wert auswählen || Diskrete Set-Werte als Dropdown oder kompakte Buttons mit optionalen Anzeigenamen bedienen.
 |-
 | Tabelle || Mehrere Readings mit eigenen Bezeichnern, Einheiten, Überschriften und optionaler Summe.
 |-
@@ -385,9 +389,9 @@ Die [https://github.com/stapetz/fhem-cms/wiki/VolvoConnect-Widget bebilderte Git
 
 === Geräte und Befehle richtig zuordnen ===
 
-'''Devicewechsel in Tabellen (dev):''' Die Geräteauswahl lädt die Readings frisch aus FHEM und belegt das Reading neu vor, statt die vorherige manuelle Auswahl zu übernehmen. Dies gilt für das gemeinsame Device sowie einzelne Mehr-Device-Zeilen. Eigene Bezeichner bleiben erhalten; Abbrechen speichert nichts.
+'''Devicewechsel in Tabellen (ab 1.11.0):''' Die Geräteauswahl lädt die Readings frisch aus FHEM und belegt das Reading neu vor, statt die vorherige manuelle Auswahl zu übernehmen. Dies gilt für das gemeinsame Device sowie einzelne Mehr-Device-Zeilen. Eigene Bezeichner bleiben erhalten; Abbrechen speichert nichts.
 
-'''Automatische Tabellenbezeichner (dev, ab 1.11.0-dev):''' Ohne eigene Beschriftung wird bei Werten aus einem Device der Readingname angezeigt, bei mehreren Devices '''Gerätename: Readingname''' (nicht der Alias). Maßgeblich sind die tatsächlichen Quellen, nicht der Dialogmodus. Der leere Bezeichner zeigt die Vorgabe als Platzhalter und passt sie bei Quellen-/Readingwechsel sowie Hinzufügen/Entfernen an. Eigene Bezeichner bleiben beim Speichern und Neuladen erhalten. Das Leeren des Feldes aktiviert wieder die automatische Beschriftung.
+'''Automatische Tabellenbezeichner (ab 1.11.0):''' Ohne eigene Beschriftung wird bei Werten aus einem Device der Readingname angezeigt, bei mehreren Devices '''Gerätename: Readingname''' (nicht der Alias). Maßgeblich sind die tatsächlichen Quellen, nicht der Dialogmodus. Der leere Bezeichner zeigt die Vorgabe als Platzhalter und passt sie bei Quellen-/Readingwechsel sowie Hinzufügen/Entfernen an. Eigene Bezeichner bleiben beim Speichern und Neuladen erhalten. Das Leeren des Feldes aktiviert wieder die automatische Beschriftung.
 
 Nach einem Gerätewechsel prüfst du die neu angebotenen Readings und Set-Befehle. Beim Thermostat richten sich Solltemperaturbereich und Betriebsarten nach dem ausgewählten Gerät; gegebenenfalls werden dessen Kanäle berücksichtigt.
 
@@ -529,7 +533,7 @@ Freies HTML unterstützt Platzhalter und alternativ Elemente mit <code>device</c
 <span device="Garten" reading="humidity" filter="int|suffix( %)"></span></nowiki>
 </pre>
 
-Erlaubtes HTML wird gegen Positivlisten geprüft und bereinigt. Auf dev sind Kommentare, passive Struktur, Flex/Grid, sichere Links/Bilder, statisches SVG und Iframes erlaubt. CSS hat eine Positivliste für Eigenschaften, Funktionen und At-Regeln; moderne Selektoren (<code>:hover</code>, <code>:has()</code>, Attributselektoren), Variablen, Gradienten, Filter und Animationen bleiben möglich. Alle Positionierungsarten inklusive fixed bleiben auf die Kachel begrenzt; <code>z-index</code> maximal 100 (nur ganze Zahlen/auto). Unbekannte CSS-Eigenschaften, <code>:host</code>, Skripte im eigenen HTML, Eventhandler, Formulare und aktive SVG-Inhalte bleiben gesperrt.
+Erlaubtes HTML wird gegen Positivlisten geprüft und bereinigt. Seit 1.11.0 sind Kommentare, passive Struktur, Flex/Grid, sichere Links/Bilder, statisches SVG und Iframes erlaubt. CSS hat eine Positivliste für Eigenschaften, Funktionen und At-Regeln; moderne Selektoren (<code>:hover</code>, <code>:has()</code>, Attributselektoren), Variablen, Gradienten, Filter und Animationen bleiben möglich. Alle Positionierungsarten inklusive fixed bleiben auf die Kachel begrenzt; <code>z-index</code> maximal 100 (nur ganze Zahlen/auto). Unbekannte CSS-Eigenschaften, <code>:host</code>, Skripte im eigenen HTML, Eventhandler, Formulare und aktive SVG-Inhalte bleiben gesperrt.
 
 Iframes haben keine Anbieter-/Hostliste: beliebige HTTP-/HTTPS-Ziele und relative Pfade, auch als einzelner URL-Reading-Platzhalter. Alle Frames erhalten die feste Sandbox <code>allow-scripts</code> ohne Originfreigabe, Popups oder Topnavigation, ohne Seiten-Referrer. Anbieter-/Browserregeln wie X-Frame-Options, CSP, Mixed Content oder benötigte Storage-Rechte können Einbettungen weiterhin blockieren. Für OpenStreetMap den HTML-Einbettungscode mit <code>/export/embed.html</code> verwenden. CSS-<code>url()</code> und <code>@import</code> bleiben mit lokalen/HTTP-/HTTPS-URLs offen; importierte Inhalte und ihre weiteren Ressourcen werden nicht durch Positivliste/z-index-Prüfung geprüft. Nur vertrauenswürdige Styles verwenden.
 
@@ -541,7 +545,7 @@ Numerische Reading-Platzhalter sind in Inline-Styles möglich, etwa <code>style=
 
 Bildquellen und Links dürfen lokale Pfade oder HTTP-/HTTPS-URLs sein. Ein einzelner ungefilterter Reading-Platzhalter als gesamter <code>src</code>- oder <code>href</code>-Wert wird bei jeder Anzeige aufgelöst und erneut geprüft. Ungültige oder fehlende URLs erzeugen einen sichtbaren Hinweis statt einer Anfrage. Externe Bilder kontaktieren ihren Anbieter ohne Seiten-Referrer; Links in neuen Tabs dürfen den CMS-Tab nicht steuern. Keine <code>javascript:</code>-, <code>data:</code>- oder protokollrelativen URLs.
 
-=== Lokale Fahrzeugkarte (dev) ===
+=== Lokale Fahrzeugkarte (ab 1.11.0) ===
 
 <pre><nowiki><div id="volvo-map" data-map="vehicle" data-latitude="{{MeinElch:location_latitude}}" data-longitude="{{MeinElch:location_longitude}}" data-zoom="16" style="width:100%;height:175px"></div></nowiki></pre>
 

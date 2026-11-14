@@ -95,8 +95,8 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 - SVG: `svg g path rect circle ellipse line polyline polygon text tspan defs linearGradient radialGradient stop title desc`; außerdem `<style>`.
 - Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class device reading filter`, außerdem `id`, passive `data-*`-/ARIA-Attribute, `role` und passende Link-/Bild-/SVG-Attribute.
 - `title`, `alt`, ARIA-Attribute und `data-*` dürfen Live-Platzhalter enthalten. Sie werden als Attributtext gesetzt, niemals als HTML. `data-cms-*` ist intern reserviert; die dokumentierte Ausnahme `data-cms-class` bleibt erhalten.
-- **Zusätzlich erlaubt auf dev:** HTML-Kommentare, passive Struktur wie `section`, `figure`, `details/summary`, `pre/code`, Links und Bilder sowie statisches SVG mit Formen, Pfaden, Text und lokalen Verläufen. Flex-/Grid-Layout und Farben bleiben möglich.
-- **CSS-Positivliste auf dev:** Layout-/Größen-/Abstands-/Typografie-/Farb-/Rahmen-Eigenschaften, Flex/Grid, Positionierung, Scrollen, Animationen/Transitions, Filter/Backdrop-Filter, Schatten, Transformationen und SVG-Paintwerte sind erlaubt. Unbekannte Eigenschaften, Funktionen und At-Regeln werden abgelehnt. CSS-Variablen (`--name`, `var()`), `calc/min/max/clamp`, Gradienten und `drop-shadow()` bleiben möglich. Regeln unterstützen `@media`, `@supports`, `@container`, `@layer`, `@keyframes` und wie ausdrücklich freigegeben `@import`. Die genaue Eigenschafts-/Funktionsliste steht in [freehtml-css.js](../www/fhem-cms/js/freehtml-css.js).
+- **Zusätzlich erlaubt ab 1.11.0:** HTML-Kommentare, passive Struktur wie `section`, `figure`, `details/summary`, `pre/code`, Links und Bilder sowie statisches SVG mit Formen, Pfaden, Text und lokalen Verläufen. Flex-/Grid-Layout und Farben bleiben möglich.
+- **CSS-Positivliste ab 1.11.0:** Layout-/Größen-/Abstands-/Typografie-/Farb-/Rahmen-Eigenschaften, Flex/Grid, Positionierung, Scrollen, Animationen/Transitions, Filter/Backdrop-Filter, Schatten, Transformationen und SVG-Paintwerte sind erlaubt. Unbekannte Eigenschaften, Funktionen und At-Regeln werden abgelehnt. CSS-Variablen (`--name`, `var()`), `calc/min/max/clamp`, Gradienten und `drop-shadow()` bleiben möglich. Regeln unterstützen `@media`, `@supports`, `@container`, `@layer`, `@keyframes` und wie ausdrücklich freigegeben `@import`. Die genaue Eigenschafts-/Funktionsliste steht in [freehtml-css.js](../www/fhem-cms/js/freehtml-css.js).
 - **Layoutschutz:** `position: relative/absolute/fixed/sticky` bleibt erlaubt; feste Elemente bleiben innerhalb der Kachel. `z-index` akzeptiert `auto` oder ganze Zahlen bis **100**, keine Variablen/Formeln. Selektoren `:hover`, `:has(...)` und Attributselektoren funktionieren; `:host`/`:host-context` sind im eigenen CSS gesperrt. `url()` und `@import` erlauben lokale Pfade oder HTTP-/HTTPS-Ressourcen; SVG-Füllungen dürfen `url(#lokaleId)` nutzen.
 - **Nicht erlaubt:** `script`, Formulare, Ereignis-Attribute (`onclick` …), aktive SVG-Elemente (`foreignObject`, `use`, SVG-Animationselemente), `javascript:`, `data:`, `srcdoc`, eigene Sandbox-/Berechtigungsfreigaben und CSS-Escapes. Ungültiger Code zeigt einen Fehler beim Speichern.
 
@@ -114,7 +114,7 @@ Sprungmarken `<a href="#slide1">` springen zum `id="slide1"` im selben Widget,
 ohne den CMS-Seitenrouter zu verändern. `:target` markiert dieses widgetlokale
 Ziel auch innerhalb des Shadow DOM. Fehlende Ziele werden sichtbar gemeldet.
 
-### Lokale Fahrzeugkarte mit Live-Standort (dev)
+### Lokale Fahrzeugkarte mit Live-Standort (ab 1.11.0)
 
 ```html
 <div id="volvo-map" data-map="vehicle"
@@ -141,7 +141,7 @@ Werte entfernen die alte Markierung und die Kartenkacheln mit sichtbarer
 Meldung. Die Mercator-Karte deckt die Polregionen nicht vollständig ab.
 Auch Kachel-Ladefehler werden sichtbar gemeldet.
 
-### Iframes für Grafana, Wetter und Karten (dev)
+### Iframes für Grafana, Wetter und Karten (ab 1.11.0)
 
 ```html
 <iframe src="http://grafana.local:3000/d-solo/panel" width="100%" height="300"></iframe>
@@ -157,7 +157,7 @@ bleiben gesperrt. Das eingebettete Angebot kann durch `X-Frame-Options`, CSP,
 Mixed-Content-Regeln oder benötigte Origin-/Storage-Rechte trotzdem blockiert
 werden; der Sanitizer umgeht diese Browser-/Anbieterregeln nicht.
 
-### OpenStreetMap-Karte (dev)
+### OpenStreetMap-Karte (ab 1.11.0)
 
 ```html
 <iframe
@@ -199,7 +199,7 @@ wird. Beliebiger Readingtext wird nicht als CSS eingesetzt; ungültige Werte
 erzeugen einen Hinweis. Platzhalter in `<style>`-Blöcken bleiben gesperrt.
 `scroll-behavior:smooth` ist erlaubt; das alte ausführbare `behavior:` nicht.
 
-### Bilder und Links aus Readings (dev)
+### Bilder und Links aus Readings (ab 1.11.0)
 
 ```html
 <img src="{{MeinElch:vehicle_images_exteriorImageUrl}}" alt="Fahrzeug" width="100%">

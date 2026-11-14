@@ -2,7 +2,38 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
-**Aktuelle stabile Version: 1.10.0**
+**Aktuelle stabile Version: 1.11.0**
+
+## Neu in 1.11.0
+
+- Natives VolvoConnect-Widget mit Kompakt-/Vollansicht, Info- und Aktionspopup,
+  Galerie, Reading-Sichtbarkeit sowie verschiebbaren und skalierbaren Detailkarten.
+  Voraussetzung ist das VolvoConnect-Modul; Anleitung und Screenshots siehe unten.
+- Neues Widget **Solar und Energiefluss** mit optionalen Ertragskarten.
+  Beide Solarwidgets unterstützen auch passende Leistungsmesser und zeigen
+  keinen erfundenen Hausverbrauch.
+- Einheitliches, themegerechtes Widgetdesign; bessere mobile Skalierung,
+  Safari-Darstellung und stabile Scrollposition bei Liveupdates.
+- Geräte zuerst auswählen und passende Widgets vorschlagen lassen;
+  **Wert auswählen** für diskrete Set-Listen als Dropdown oder Buttonleiste.
+- Einheitlich breite Widgetdialoge, übersichtliche Tabelleneinheiten,
+  automatische Bezeichner und CMS-weit eindeutige Widget-IDs.
+- Freies HTML mit geprüfter HTML/SVG/CSS-Positivliste, sicheren Einbettungen
+  und lokaler Live-Fahrzeugkarte; keine freie Skriptausführung.
+- Neu geordnete Menüs, gemerkte Bearbeitungsraster, rasterfreie Vorschau,
+  einheitliches Escape-Verhalten und deutsche Datumsdarstellung.
+
+## VolvoConnect-Widget
+
+Das native Fahrzeugwidget bietet eine Kompaktkachel mit Info-Popup oder eine
+eingebettete Vollansicht mit anpassbaren Detailkarten und Fahrzeugaktionen.
+**Es funktioniert ausschließlich zusammen mit dem
+[VolvoConnect-Modul](https://github.com/stapetz/fhem-modules/tree/main/docs/volvo)
+aus `stapetz/fhem-modules`, nicht als eigenständige Volvo-Anbindung.**
+
+[Bebilderte Widgetanleitung, Modulinstallation und Bedienung im GitHub-Wiki](https://github.com/stapetz/fhem-cms/wiki/VolvoConnect-Widget)
+· [Installations- und Betriebsanleitung des Moduls](https://github.com/stapetz/fhem-modules/blob/main/docs/volvo/DOKUMENTATION.md)
+· [FHEM-Wiki: VolvoConnect](https://wiki.fhem.de/wiki/VolvoConnect)
 
 ## Neu in 1.10.0
 

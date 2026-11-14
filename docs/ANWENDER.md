@@ -174,7 +174,7 @@ Reading angezeigt und beim erneuten Bearbeiten übernommen. Details stehen
 unter [Platzhalter](./PLATZHALTER.md#platzhalter-suchen-statt-tippen).
 
 Beim **SolarFlow** bleibt der sichtbare Titel oberhalb des Diagramms frei.
-Auf `dev` verwendet es das neue transparente Design mit themefähigen
+Seit 1.11.0 verwendet es das neue transparente Design mit themefähigen
 Stationen und der Außenfläche des Seitenthemes einschließlich Glass-Transparenz.
 Es zeigt ausschließlich das animierte Flussdiagramm mit Leistungen und Ladestand
 in den Stationen, keine zusätzlichen Wertekacheln. Nicht konfigurierte
@@ -226,7 +226,7 @@ Geräte lassen sich später im Editor hinzufügen.
   **Vorschau** blendet das Raster immer aus; beim Zurückkehren zur Bearbeitung
   gilt wieder die gespeicherte Rasteranzeige.
 
-### Gerät zuerst hinzufügen (dev, ab 1.11.0-dev)
+### Gerät zuerst hinzufügen (ab 1.11.0)
 
 **Einfügen → Gerät hinzufügen** öffnet die gemeinsame Gerätesuche nach Name,
 Alias, Typ und Raum. Nach der Auswahl erscheinen nur Widgettypen, für die das
@@ -249,7 +249,7 @@ Erst **Speichern** übernimmt das Widget in den Entwurf, nicht in die Live-Seite
 oder den gesamten Vorgang abzubrechen speichert und schaltet nichts.
 **Einfügen → Widget hinzufügen** bleibt als geräteunabhängiger Weg erhalten.
 
-### Einheitliche Widget-Konfigurationsdialoge (dev, ab 1.11.0-dev)
+### Einheitliche Widget-Konfigurationsdialoge (ab 1.11.0)
 
 Widget-Konfigurationsdialoge sind auf dem Desktop bis **1100 Pixel** breit.
 Alle Widgettypen nutzen dieselbe Größenregel; auf kleinen Bildschirmen passt
@@ -259,7 +259,7 @@ behalten ihre auf die jeweilige Aufgabe abgestimmten Größen.
 In Tabellen stehen Einheit und Vorschläge in einer eigenen Zeile über die
 volle Breite unter Device, Bezeichner und Reading – auch im Ein-Device-Modus.
 
-### Eindeutige Widget-IDs (dev, ab 1.11.0-dev)
+### Eindeutige Widget-IDs (ab 1.11.0)
 
 Widgets im Schema-5-CMS besitzen seitenübergreifend eindeutige IDs. Auch
 Widget-/Seitenkopien und Vorlagen erhalten eigene IDs. Bereits vorhandene
@@ -269,7 +269,7 @@ Das bloße Laden verändert keine gespeicherten Dateien. Widgets mit bisherigen
 ID-Kollisionen können zwischen Seiten verschoben werden, ohne ein anderes
 Widget zu überschreiben. Die Live-Seite bleibt bis zur Veröffentlichung erhalten.
 
-### Automatische Tabellenbezeichner (dev, ab 1.11.0-dev)
+### Automatische Tabellenbezeichner (ab 1.11.0)
 
 Ohne eigenen Bezeichner zeigt eine Tabelle mit Werten aus einem einzigen Device
 jeweils den **Readingnamen**. Bei mehreren tatsächlichen Quellen erscheint
@@ -285,7 +285,7 @@ Die Readingauswahl wird neu vorbelegt, auch wenn zuvor manuell ein anderes
 Reading gewählt war. Das gilt für das gemeinsame Device und einzelne Zeilen
 im Mehr-Device-Modus. Eigene Bezeichner bleiben unverändert.
 
-### Wert auswählen (dev, ab 1.11.0-dev)
+### Wert auswählen (ab 1.11.0)
 
 **Einfügen → Widget hinzufügen → Wert auswählen** zeigt diskrete FHEM-Set-Listen
 wie `mode:auto,eco,boost` als Dropdown oder kompakte Buttons. Auch **Gerät hinzufügen**
@@ -1008,8 +1008,8 @@ Homepage zeigt Live, `?mode=preview` den Entwurf und `?mode=edit` den Editor.
 - **Seite einrichten:** `Datei › Seite einrichten …` öffnet einen Dialog mit seitenübergreifenden Einstellungen: **Theme** (Forest Green/Hell; ersetzt die früheren Einträge im Menü „Ansicht“) und **Rahmen am Widget anzeigen** (ja/nein). Dazu kommt die **Positionierung** (mit Vorschau je Modus): **Raster** (feste Zellen, Überlappendes rutscht nach unten), **Fluss** (Reihenfolge links nach rechts mit automatischem Umbruch), **Spalten/Masonry** (lückenlos von oben nach unten) und **Frei** (beliebig platzieren, Überlappung erlaubt). Die **Rastergröße** (12/24/48 Spalten) bestimmt die Schrittweite beim Verschieben und Skalieren; bei „Frei“ gilt immer 48. Beim Wechsel werden alle Seiten umgerechnet, die Positionen bleiben im 48er-Raster gespeichert. Die Einstellungen gelten für alle Seiten und werden im Entwurf gespeichert (`theme`, `settings.showFrames`, `settings.layoutMode` = `grid`/`flow`/`masonry`/`free`, `settings.gridColumns` = 12/24/48).
 - **Werkzeugleiste und Meldungen:** Die Leiste ist eine Menüleiste wie in klassischen Programmen mit den Menüs **Datei** (Seite einrichten …, Vorschau, Veröffentlichen, Entwurf verwerfen, Backups …, Daten löschen …), **Bearbeiten** (Navigation bearbeiten …), **Einfügen** (Thermostat-Kachel, Wert-Anzeige, Schalter, Taster, Freies HTML, Uhr / Datum, Status-Symbol, Tabelle, Schieberegler, Diagramm, SolarFlow, Textbaustein) und **Ansicht** (Raster anzeigen, mit Häkchen) (sie schwebt oben links in Blau über der Seite, auf gleicher Höhe wie die Geräte-Auswahl rechts, und gehört nicht zum Inhaltsraster; Kacheln lassen sich bis ganz nach oben schieben). Meldungen (z. B. „Layout gespeichert“, Hinweis auf einen unveröffentlichten Entwurf) erscheinen als rotes Ausrufezeichen oben rechts; ein Klick darauf öffnet eine kleine Box mit den Meldungen (Klick daneben oder Esc schließt sie). Im Ansichtsmodus erscheinen nur akute Fehler.
 - **Raster anzeigen:** Im Menü Ansicht blendet „Raster anzeigen“ das Raster des Seiteninhalts als Gitterlinien ein oder aus (wird im Browser gemerkt). Es erscheint nur im Bearbeitungsmodus und folgt der gewählten Rastergröße.
-- **HTML-Livegestaltung (dev):** Numerische Inline-Styles wie `width:{{MeinElch:state_batteryChargeLevel|int}}%;` aktualisieren sich live. `data-value="{{Device:power|int}}"` und `data-state="{{Device:state}}"` ermöglichen CSS-Attributselektoren mit sicheren Textwerten. Sprungmarken `#id` und `:target` wirken innerhalb desselben Widgets, ohne CMS-Seitenwechsel. OpenStreetMap unterstützt numerische Koordinaten im Querystring von `/export/embed.html`, nicht direkt hinter der Domain. Ungültige Werte zeigen Hinweise; `map` akzeptiert `key=value` und `key:value`. Beispiele und Grenzen in [PLATZHALTER.md](PLATZHALTER.md).
-- **Lokale Fahrzeugkarte (dev):** Ein HTML-Div mit `id`, `data-map="vehicle"`, `data-latitude`, `data-longitude`, `data-zoom="16"` und fester CSS-Höhe zeigt eine lokal bereitgestellte interaktive Karte mit weißem Automarker. Koordinaten dürfen Reading-Platzhalter sein. Standortwechsel zentrieren die Karte; normale Updates erhalten den selbst gewählten Zoom und Kartenausschnitt. OpenStreetMap-Kacheln bleiben externe Inhalte, die angefragten Kartenbereiche werden an den Anbieter übertragen. Beispiel in [PLATZHALTER.md](PLATZHALTER.md).
+- **HTML-Livegestaltung (ab 1.11.0):** Numerische Inline-Styles wie `width:{{MeinElch:state_batteryChargeLevel|int}}%;` aktualisieren sich live. `data-value="{{Device:power|int}}"` und `data-state="{{Device:state}}"` ermöglichen CSS-Attributselektoren mit sicheren Textwerten. Sprungmarken `#id` und `:target` wirken innerhalb desselben Widgets, ohne CMS-Seitenwechsel. OpenStreetMap unterstützt numerische Koordinaten im Querystring von `/export/embed.html`, nicht direkt hinter der Domain. Ungültige Werte zeigen Hinweise; `map` akzeptiert `key=value` und `key:value`. Beispiele und Grenzen in [PLATZHALTER.md](PLATZHALTER.md).
+- **Lokale Fahrzeugkarte (ab 1.11.0):** Ein HTML-Div mit `id`, `data-map="vehicle"`, `data-latitude`, `data-longitude`, `data-zoom="16"` und fester CSS-Höhe zeigt eine lokal bereitgestellte interaktive Karte mit weißem Automarker. Koordinaten dürfen Reading-Platzhalter sein. Standortwechsel zentrieren die Karte; normale Updates erhalten den selbst gewählten Zoom und Kartenausschnitt. OpenStreetMap-Kacheln bleiben externe Inhalte, die angefragten Kartenbereiche werden an den Anbieter übertragen. Beispiel in [PLATZHALTER.md](PLATZHALTER.md).
 - **Wiederherstellen per Modul:** `set <CMS> restore` bietet die 20 neuesten Backups als Auswahlliste an.
 - **Entwurf und Veröffentlichen:** Änderungen im Bearbeitungsmodus landen in einem Entwurf. „Zeige Homepage“ zeigt weiter den bisherigen Live-Stand. `Veröffentlichen` übernimmt den Entwurf als Live-Stand, `Entwurf verwerfen` löscht ihn. Es gibt einen gemeinsamen Entwurf pro Device. Speichert ein anderer Bearbeiter zwischenzeitlich, wird ein veralteter Speicherversuch abgelehnt, statt den neueren Stand zu überschreiben. Lade dann den aktuellen Stand neu und übernimm deine Änderungen erneut. Eine Bearbeitungssperre oder Anzeige, wer gerade bearbeitet, gibt es nicht.
 - **Backups:** Jede Veröffentlichung sichert den bisherigen Live-Stand als Backup. `Backups` zeigt die Liste; ein Klick stellt den Live-Stand nach Bestätigung wieder her (der aktuelle Live-Stand wird vorher gesichert). Ein offener Entwurf bleibt dabei unverändert.
