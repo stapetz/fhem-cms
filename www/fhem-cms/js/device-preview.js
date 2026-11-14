@@ -52,7 +52,8 @@ export class DevicePreview {
     this.rotated = false;
     this.onResize = () => this.fit();
     this.onKey = (event) => {
-      if (event.key === 'Escape' && this.deviceId) {
+      if (event.key === 'Escape' && this.deviceId && !event.defaultPrevented
+        && !event.composedPath?.().some(node => node.matches?.('dialog:modal'))) {
         event.preventDefault();
         this.select('');
       }

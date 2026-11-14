@@ -215,7 +215,8 @@ export class Schema5Editor {
       if (menu.open) this.#closeMenus(menu);
     });
     menu.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && menu.open) {
+        event.preventDefault();
         menu.open = false;
         summary.focus();
       }
@@ -248,14 +249,6 @@ export class Schema5Editor {
       event.preventDefault();
       const close = container.querySelector('.cms-panel-close');
       if (close && !close.disabled) close.click();
-    });
-    container.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape') return;
-      const close = container.querySelector('.cms-panel-close');
-      if (close && !close.disabled) {
-        event.preventDefault();
-        close.click();
-      }
     });
     container.showModal();
     return container;
