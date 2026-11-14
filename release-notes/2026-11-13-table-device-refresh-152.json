@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Tabellenreadings beim Devicewechsel neu laden",
+  "changes": [
+    "Die Deviceauswahl in Tabellen laedt aktuelle Readings aus FHEM statt aus dem Editorcache.",
+    "Gemeinsamer und zeilenweiser Devicewechsel belegen das Reading neu vor; eigene Bezeichner bleiben erhalten.",
+    "Abbruch und verspaetete Antworten veraendern keinen gespeicherten Entwurf."
+  ]
+}

@@ -15,6 +15,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     this.devices = [];
     this.mode = 'single';
     this.isNew = false;
+    this.pickerAbort = new AbortController();
   }
 
   connectedCallback() {
@@ -197,6 +198,8 @@ class FHEMCMSReadingsTable extends HTMLElement {
   }
 
   async openConfig({ isNew = false } = {}) {
+    this.pickerAbort.abort();
+    this.pickerAbort = new AbortController();
     this.isNew = isNew;
     this.suggestionTracker.reset();
     const form = this.shadowRoot.querySelector('[data-form]');
@@ -289,21 +292,21 @@ class FHEMCMSReadingsTable extends HTMLElement {
     for (const row of this.rowsInDialog()) {
       const select = row.querySelector('select');
       const currentDevice = row.querySelector('.device input').value;
-      const keepCurrent = this.suggestionTracker.isEdited(select)
-        || (preserveExisting && currentDevice === name && device?.readings?.[select.value] !== undefined);
+      const keepCurrent = preserveExisting && currentDevice === name
+        && device?.readings?.[select.value] !== undefined;
       this.setRowDevice(row, device, keepCurrent ? select.value : undefined);
     }
   }
 
   async pickSingleDevice() {
     try {
-      const device = await openDevicePicker({ services: this.services });
+      const device = await openDevicePicker({ signal: this.pickerAbort.signal, services: {
+        ...this.services, listAllDevices: () => this.services.listAllDevices({ refresh: true }),
+      } });
       if (!device) {
         return;
       }
-      if (!this.devices.some((item) => item.name === device.name)) {
-        this.devices = [...this.devices, device];
-      }
+      this.devices = [...this.devices.filter((item) => item.name !== device.name), device];
       const form = this.shadowRoot.querySelector('[data-form]');
       form.elements.deviceSingle.value = device.name;
       this.showAlias(device.name);
@@ -376,14 +379,12 @@ class FHEMCMSReadingsTable extends HTMLElement {
     });
     const pickRowDevice = async () => {
       try {
-        const device = await openDevicePicker({ services: this.services });
-        if (device) {
-          if (!this.devices.some((item) => item.name === device.name)) {
-            this.devices = [...this.devices, device];
-          }
-          const select = row.querySelector('select');
-          const selectedReading = this.suggestionTracker.isEdited(select) ? select.value : undefined;
-          this.setRowDevice(row, device, selectedReading);
+        const device = await openDevicePicker({ signal: this.pickerAbort.signal, services: {
+          ...this.services, listAllDevices: () => this.services.listAllDevices({ refresh: true }),
+        } });
+        if (device && row.isConnected) {
+          this.devices = [...this.devices.filter((item) => item.name !== device.name), device];
+          this.setRowDevice(row, device);
         }
       } catch (error) {
         this.shadowRoot.querySelector('[data-error]').textContent = `Device-Auswahl fehlgeschlagen: ${error.message}`;
@@ -528,6 +529,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
   }
 
   closeConfig(saved) {
+    this.pickerAbort.abort();
     const dialog = this.shadowRoot.querySelector('[data-dialog]');
     if (dialog.open) {
       dialog.close();
@@ -535,6 +537,10 @@ class FHEMCMSReadingsTable extends HTMLElement {
     if (!saved && this.isNew) {
       this.dispatchEvent(new CustomEvent('cms-widget-cancel', { bubbles: true }));
     }
+  }
+
+  disconnectedCallback() {
+    this.pickerAbort.abort();
   }
 
   render() {

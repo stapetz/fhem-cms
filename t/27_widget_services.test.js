@@ -47,3 +47,23 @@ test('shared widget services preserve client arguments and allow retry after fai
   ]);
   assert.throws(() => createWidgetServices({ client }), /Vollständige/);
 });
+
+test('device refresh bypasses cache and propagates failures instead of serving stale readings', async () => {
+  let reads = 0;
+  let fail = false;
+  const services = createSchema5WidgetServices({
+    async jsonlist() {
+      reads++;
+      if (fail) throw new Error('refresh failed');
+      return [{ name: 'Sensor', readings: { temperature: String(reads) } }];
+    },
+  });
+  assert.equal((await services.listAllDevices())[0].readings.temperature, '1');
+  assert.equal((await services.listAllDevices())[0].readings.temperature, '1');
+  assert.equal((await services.listAllDevices({ refresh: true }))[0].readings.temperature, '2');
+  assert.equal((await services.listAllDevices())[0].readings.temperature, '2');
+  fail = true;
+  await assert.rejects(services.listAllDevices({ refresh: true }), /refresh failed/);
+  fail = false;
+  assert.equal((await services.listAllDevices({ refresh: true }))[0].readings.temperature, '4');
+});
