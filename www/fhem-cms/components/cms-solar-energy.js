@@ -21,6 +21,8 @@ const EDGES = [
 ];
 const format = (value, digits = 1) => value === null ? '–'
   : value.toLocaleString('de-DE', { maximumFractionDigits: digits });
+const compact = (value, digits) => value === null ? '–'
+  : value.toLocaleString('en-US', { useGrouping: false, minimumFractionDigits: digits, maximumFractionDigits: digits });
 
 class FHEMCMSSolarEnergy extends HTMLElement {
   constructor() {
@@ -43,24 +45,27 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         h3, p { margin: 0; }
         [hidden] { display: none !important; }
         ${widgetDesignCss}
+        .tile { container-type: inline-size; }
         .tile[data-stale] { opacity: .65; border-style: dashed; }
         header { flex-wrap: wrap; }
-        .badge { padding: 4px 12px; border-radius: 20px; font-size: .8rem;
-          background: rgba(128,128,128,.08); border: 1px solid rgba(128,128,128,.18); }
+        .badge { padding: 3px 10px; border-radius: 20px; font-size: .8rem; font-weight: 600;
+          color: #10b981; background: rgba(16,185,129,.16); border: 1px solid rgba(16,185,129,.35); }
         .flow { ${detailCardCss} display: grid; grid-template-columns: repeat(3,minmax(0,1fr));
-          grid-template-rows: auto 90px auto; gap: 8px; position: relative; flex: none; }
-        .node { min-width: 0; padding: 10px 6px; border: 1px solid var(--station-color);
+          grid-template-rows: auto 80px auto; position: relative; flex: none;
+          align-items: center; justify-items: center; padding: 16px 10px; }
+        .node { min-width: 0; width: 100%; max-width: 180px; padding: 10px 12px; border: 1.5px solid var(--station-color);
           border-radius: 12px; text-align: center; position: relative; z-index: 1;
           background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
         .pv { grid-column: 2; grid-row: 1; --station-color: #f59e0b; }
         .bat { grid-column: 1; grid-row: 3; --station-color: #10b981; }
         .home { grid-column: 2; grid-row: 3; --station-color: #3b82f6; }
         .grid { grid-column: 3; grid-row: 3; --station-color: #8b5cf6; }
-        .node[data-state="negative"] { --station-color: #ef4444; }
-        .node strong { display: block; font-size: 1.4rem; margin: 4px 0; }
-        .node small { display: block; font-size: .75rem; opacity: .72; }
-        .node .label { font-size: .86rem; }
-        .paths { grid-column: 1 / -1; grid-row: 2; width: 100%; height: 90px; pointer-events: none; }
+        .node strong { display: block; font-size: 1.4rem; margin: 3px 0; color: var(--station-color); }
+        .node small { display: block; font-size: .74rem; opacity: .78; }
+        .node .label { font-size: .74rem; text-transform: uppercase; opacity: .8; }
+        .paths { grid-column: 1 / -1; grid-row: 2; width: 100%; height: 80px; pointer-events: none; }
+        .paths.cross { grid-row: 3; height: 100%; }
+        @container (max-width: 600px) { .paths.cross { visibility: hidden; } }
         .wire { fill: none; stroke: rgba(128,128,128,.22); stroke-width: 2; }
         .energy { fill: none; stroke: #f59e0b; stroke-width: 3; stroke-dasharray: 8 10;
           animation: energy-flow 1.1s linear infinite; }
@@ -69,22 +74,25 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .energy[data-reverse] { animation-direction: reverse; }
         @keyframes energy-flow { to { stroke-dashoffset: -18; } }
         @media (prefers-reduced-motion: reduce) { .energy { animation: none; } }
-        progress { display: block; width: 100%; height: 8px; margin-top: 6px; accent-color: #10b981; }
-        .sections { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,240px),1fr)); gap: 14px; }
-        .yield { ${detailCardCss} min-width: 0; }
+        progress { display: block; width: 100%; height: 5px; margin-top: 5px; accent-color: #10b981; }
+        .sections { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,200px),1fr)); gap: 12px; }
+        .yield { ${detailCardCss} min-width: 0; border-radius: 12px; padding: 12px; }
         .yield h4 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
-          margin: 0 0 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(128,128,128,.2);
+          margin: 0 0 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,.2);
           overflow-wrap: anywhere; }
-        .yield h4 small { font-weight: 400; opacity: .72; }
-        .yield dl { margin: 0; }
+        .yield h4 small { font-size: .8em; opacity: .7; }
+        .yield dl { margin: 0; display: grid; gap: 5px; }
         .yield .row { display: flex; justify-content: space-between; gap: 8px; font-size: .86rem;
-          border-bottom: 1px solid rgba(128,128,128,.1); padding: 5px 0; overflow-wrap: anywhere; }
+          border-bottom: 1px solid rgba(128,128,128,.1); padding: 2px 0; overflow-wrap: anywhere; }
+        .yield .row:last-child { border: 0; }
+        dt { opacity: .75; }
         dd { margin: 0; font-weight: 700; text-align: right; }
         .totals { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,140px),1fr)); gap: 10px;
-          padding: 10px; border-radius: 14px; border: 1px solid rgba(245,158,11,.3); background: rgba(245,158,11,.1); }
-        .total { padding: 8px; border-radius: 10px; background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
-        .total span { display: block; opacity: .72; font-size: .75rem; }
-        .total strong { display: block; font-size: 1.25rem; margin-top: 4px; }
+          padding: 10px; border-radius: 12px; border: 1px solid rgba(245,158,11,.3); background: rgba(245,158,11,.1); text-align: center; }
+        .total { padding: 8px 4px; border-radius: 8px; background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
+        .total span { display: block; opacity: .8; font-size: .74rem; text-transform: uppercase; }
+        .total strong { display: block; font-size: 1.25rem; margin-top: 2px; color: #f59e0b; }
+        .total:last-child { border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.12); }
         button, input, select { font: inherit; color: inherit; border: 1px solid var(--cms-border,#43564a);
           background: var(--cms-surface-raised,#2a3b32); border-radius: .5rem; padding: .4rem .6rem; }
         button { cursor: pointer; min-height: 48px; }
@@ -112,8 +120,15 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         <header><h3 data-title></h3><span class="badge" data-system hidden></span></header>
         <div class="flow" data-flow>
           <svg class="paths" viewBox="0 0 900 100" preserveAspectRatio="none" aria-hidden="true">
-            ${EDGES.map(([a, b, d]) => `<g data-edge="${a}-${b}"><path class="wire" d="${d}"/>
+            ${EDGES.slice(0, 3).map(([a, b, d]) => `<g data-edge="${a}-${b}"><path class="wire" d="${d}"/>
               <path class="energy" d="${d}" hidden/></g>`).join('')}
+          </svg>
+          <svg class="paths cross" viewBox="0 0 900 100" preserveAspectRatio="none" aria-hidden="true">
+            ${EDGES.slice(3).map(([a, b]) => {
+    const d = a === 'grid' ? 'M750 0H150' : a === 'bat' ? 'M260 50H340' : 'M560 50H640';
+    return `<g data-edge="${a}-${b}"><path class="wire" d="${d}"/>
+              <path class="energy" d="${d}" hidden/></g>`;
+  }).join('')}
           </svg>
           ${[['pv', '☀️ PV Erzeugung'], ['bat', '🔋 Speicher'], ['home', '🏠 Hausverbrauch'], ['grid', '⚡ Stromnetz']]
     .map(([key, label]) => `<div class="node ${key}" data-station="${key}"><span class="label">${label}</span>
@@ -183,15 +198,15 @@ class FHEMCMSSolarEnergy extends HTMLElement {
     badge.hidden = !config.readings?.status;
     badge.textContent = `System: ${model.status || '–'}`;
     const energyUnit = config.energyUnit || 'kWh';
-    const energy = source => `${format(solarNumber(source, this.snapshot), 2)} ${energyUnit}`;
+    const energy = (source, digits) => compact(solarNumber(source, this.snapshot), digits);
     for (const [key, value] of Object.entries(model.values)) {
       const sourceKey = key === 'bat' ? 'battery' : key;
       const station = this.$(`[data-station="${key}"]`);
       station.hidden = ['grid', 'bat'].includes(key) && !config.readings?.[sourceKey];
-      this.$(`[data-power="${key}"]`).textContent = `${format(value)} W`;
+      this.$(`[data-power="${key}"]`).textContent = `${compact(value, ['pv', 'home'].includes(key) ? 1 : 0)} W`;
       station.dataset.state = value !== null && value < 0 ? 'negative' : 'neutral';
       const note = this.$(`[data-note="${key}"]`);
-      if (key === 'pv') note.textContent = config.readings?.hour ? `Stunde: ${energy(config.readings.hour)}` : '';
+      if (key === 'pv') note.textContent = config.readings?.hour ? `Std: ${energy(config.readings.hour, 2)} ${energyUnit}` : '';
       if (key === 'home') note.textContent = 'Gesamtlast aktuell';
       if (key === 'bat') note.textContent = `${model.soc === null ? '–' : format(model.soc, 0)} % · ${
         value === null ? 'Unbekannt' : value < 0 ? 'Entladen' : value > 0 ? 'Laden' : 'Inaktiv'}`;
@@ -216,14 +231,14 @@ class FHEMCMSSolarEnergy extends HTMLElement {
     const sections = this.$('[data-sections]');
     sections.replaceChildren(...(config.sections || []).map(section => {
       const card = node('section', undefined, 'yield');
-      const heading = node('h4', section.label);
-      if (section.readings.total) heading.append(node('small', `∑ ${energy(section.readings.total)}`));
+      const heading = node('h4', `${section.label} (${energyUnit})`);
+      if (section.readings.total) heading.append(node('small', `∑ ${energy(section.readings.total, 0)}`));
       card.append(heading);
       const list = node('dl');
       for (const [key, label] of solarYieldFields.slice(1)) {
         if (!section.readings[key]) continue;
         const row = node('div', undefined, 'row');
-        row.append(node('dt', label), node('dd', energy(section.readings[key])));
+        row.append(node('dt', label), node('dd', energy(section.readings[key], key === 'year' ? 0 : ['hour', 'day'].includes(key) ? 2 : 1)));
         list.append(row);
       }
       card.append(list);
@@ -233,7 +248,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
     totals.replaceChildren(...[['day', 'Heute Gesamt'], ['month', 'Monat Gesamt'], ['year', 'Jahr Gesamt'], ['total', 'Gesamt seit Start']]
       .filter(([key]) => config.readings?.[key]).map(([key, label]) => {
         const box = node('div', undefined, 'total');
-        box.append(node('span', label), node('strong', energy(config.readings[key])));
+        box.append(node('span', label), node('strong', `${energy(config.readings[key], key === 'day' ? 2 : key === 'month' ? 1 : 0)} ${energyUnit}`));
         return box;
       }));
     totals.hidden = !totals.children.length;
