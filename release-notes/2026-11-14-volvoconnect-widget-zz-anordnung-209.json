@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-14",
+  "version": "1.18.1-dev",
+  "title": "VolvoConnect: aufgeraeumte Augen- und Kartenbedienung",
+  "changes": [
+    "Reading-Augen stehen einheitlich am Zeilenanfang statt neben unterschiedlich langen Werten.",
+    "Energie & Akku zeigt vorhandene Readings fest ohne einzelne Augen, auch bei frueher gespeicherten Ausblendungen. Fehlende Werte werden weiterhin nicht erfunden.",
+    "Verschiebegriff und Kartenauge sind rechtsbuendig. Kartenweises Ausblenden, Ziehen, Abbrechen und Speichern bleiben erhalten. Refs #209."
+  ]
+}

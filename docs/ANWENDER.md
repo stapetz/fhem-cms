@@ -552,8 +552,13 @@ Die **Auge-Schalter** blenden einzelne Karten einschließlich Galerie ein
 oder aus. Ausgeblendete und noch nicht verfügbare Karten bleiben in dieser
 Bearbeitungsansicht erreichbar; durchgestrichenes Auge und gestrichelter
 Rahmen kennzeichnen ausgeblendete Karten.
-Auch die einzelnen angezeigten Readings haben im Anordnungsmodus einen
-**Auge-Schalter**, einschließlich Akkustand, Reichweite und letztem Update.
+Verschiebegriff und Kartenauge stehen rechtsbündig an jeder Karte.
+Die einzelnen angezeigten Readings haben im Anordnungsmodus einen
+**Auge-Schalter am Zeilenanfang**, vor der Beschriftung.
+**Ausnahme Energie & Akku:** Alle vorhandenen Werte dieser Karte sind fix
+sichtbar und besitzen keine einzelnen Augenschalter. Die Karte selbst bleibt
+verschiebbar und als Ganzes ein-/ausblendbar.
+API-Status und letztes Update bleiben einzeln schaltbar.
 Ausgeblendete Werte bleiben dort erreichbar und werden abgedimmt gezeigt.
 Die Auswahl bleibt beim Wechsel der Energie-Readingvarianten und bei
 vorübergehend fehlenden Readings erhalten.
@@ -568,9 +573,10 @@ Editmodus diese Bearbeitungsansicht als Popup. Die Karten auf der Seite
 werden dabei nicht live umsortiert. Eine doppelte Gruppenliste oder
 interaktive Vorschau im Konfigurationsdialog gibt es nicht.
 Die kompakte Batterie-/Reichweitenanzeige bleibt unabhängig von den
-Gruppeneinstellungen sichtbar; ihre einzelnen Werte folgen aber denselben
-Reading-Schaltern wie im Popup. Ein ausgeblendeter Akkustand entfernt auch
-den Ladebalken. Ausgeblendete Koordinaten verbergen zusätzlich die Karte.
+Gruppeneinstellungen sichtbar; Akkustand, Reichweite und Ladebalken sind bei
+vorhandenen Daten fest eingeblendet. Frühere einzelne Ausblendungen von
+Energie-Readings haben keine Wirkung mehr. Fehlende Werte werden weiterhin
+nicht erfunden. Ausgeblendete Koordinaten verbergen zusätzlich die Karte.
 Im Standort stehen Straße, Ort, Bundesland, Land, Breitengrad und Längengrad
 in dieser Reihenfolge, danach der Positionszeitpunkt.
 

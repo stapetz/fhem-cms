@@ -73,6 +73,20 @@ das Oeffnen/Speichern ohne Berechnungsoption.
 
 ## VolvoConnect-Nachtrag (dev, 1.16.0-dev, Refs #209)
 
+Korrektur 1.18.1-dev: Reading-Augen stehen am Anfang von dt vor Icon/Label.
+Editierbare Zeilen verwenden ein festes Zweispaltenraster, damit wechselnde
+Wertlaengen keine versetzten Augen erzeugen. Kartenwerkzeuge rechtsbuendig.
+Alle Readings der normalisierten Energiegruppe state sind fix sichtbar:
+keine Einzelaugen in Energie & Akku, auch nicht bei SOC/Reichweite.
+readingVisible ignoriert vorhandene hiddenReadings-Eintraege mit state_-Praefix,
+toggleReading kann sie nicht veraendern. Alte Konfigurationen bleiben lesbar;
+kein stilles Umschreiben gespeicherter Daten. API-Status state ohne Unterstrich
+bleibt separat schaltbar. Kartenweise Sichtbarkeit bleibt unveraendert.
+Fixture 89 prueft Augenposition, rechte Werkzeugkante, feste Energiewerte
+und weiterhin Speichern/Abbrechen/konkurrierende Aenderungen;
+Fixture 88 sichert die Sichtbarkeit trotz alter Energie-Ausblendungen.
+Diese Festlegung ersetzt die Einzelaugen fuer Energiewerte aus 1.17.0-dev.
+
 Nachtrag 1.18.0-dev: Gemeinsame rahmenlose SVG-Launcher fuer Info/Aktionen
 aus widget-design.js (28px Symbol, gleiche Kreis-/Konturgeometrie,
 unsichtbare 48px Touchflaeche, aria-label und focus-visible).

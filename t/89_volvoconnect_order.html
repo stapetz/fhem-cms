@@ -83,14 +83,27 @@ try {
   check(order().length === 15, 'all cards including absent groups remain editable');
   check([...host().shadowRoot.querySelectorAll('[data-reading-visibility]')]
     .every(button => button.getBoundingClientRect().height >= 48), 'reading eyes retain 48px touch targets');
+  check(!$('#group-state [data-reading-visibility]'), 'energy readings are fixed without individual eyes');
+  for (const row of host().shadowRoot.querySelectorAll('.row[data-editable]')) {
+    const eye = row.querySelector('[data-reading-visibility]');
+    check(row.querySelector('dt').firstElementChild === eye && !row.querySelector('dd button'),
+      'reading eye precedes the label rather than the variable-width value');
+    check(Math.abs(eye.getBoundingClientRect().left - row.getBoundingClientRect().left) < 1,
+      'reading eyes align at the beginning of each row');
+  }
+  for (const tools of host().shadowRoot.querySelectorAll('.card-tools')) {
+    check(getComputedStyle(tools).justifyContent === 'flex-end'
+      && Math.abs(tools.lastElementChild.getBoundingClientRect().right - tools.getBoundingClientRect().right) < 1,
+      'drag grip and card eye align on right edge');
+  }
   check(!$('#reading-fuel_batteryChargeLevel') && !$('#reading-state_batteryChargeLevel'), 'no duplicate SOC row');
   check(!$('#reading-state_chargingPower') && !$('#reading-statistics_unavailable'), 'unavailable properties omitted');
   host().moveCard('gallery',-1);
   host().toggleCard('doors');
-  $('[data-reading-visibility="state_chargingType"]').click();
+  $('[data-reading-visibility="statistics_tripMeterManual"]').click();
   check(order()[2] === 'gallery' && writes === 0, 'interactive preview does not write');
   check(host().pendingVisibility.hiddenGroups.includes('doors'), 'eye toggles pending visibility');
-  check(host().pendingVisibility.hiddenReadings.includes('state_chargingType'), 'reading eye toggles pending visibility');
+  check(host().pendingVisibility.hiddenReadings.includes('statistics_tripMeterManual'), 'reading eye toggles pending visibility');
   check(!host().config.hiddenGroups?.includes('doors'), 'eye leaves stored config untouched');
   check(!$('[data-card-step]'), 'visible up/down buttons removed');
   host().data = snapshot();
@@ -130,12 +143,12 @@ try {
       const content = $('[data-detail-body]');
       const grid = document.querySelector('.cms-schema5-grid');
       const outerScroll = grid.parentElement.scrollTop;
-      const soc = $('#energy .soc') || $('[data-detail-content] .soc');
       host().data = snapshot();
       host().startArrangement();
-      $('[data-reading-visibility="state_batteryChargeLevel"]').click();
-      $('[data-reading-visibility="state_electricRange"]').click();
-      $('[data-reading-visibility="state_chargingType"]').click();
+      host().toggleReading('state_batteryChargeLevel');
+      check(!host().pendingVisibility.hiddenReadings.includes('state_batteryChargeLevel'),
+        'energy visibility cannot be changed through toggle method');
+      $('[data-reading-visibility="vehicle_descriptions_model"]').click();
       $('[data-reading-visibility="statistics_tripMeterManual"]').click();
       const scroll = content.scrollTop;
       await host().saveArrangement();
@@ -144,18 +157,16 @@ try {
       check(Math.abs(content.scrollTop - Math.min(scroll, content.scrollHeight - content.clientHeight)) <= 1
         && grid.parentElement.scrollTop === outerScroll,
         'saving preserves popup and page scroll');
-      check(!$('.soc') && !$('[role=meter]'), 'hidden battery removes compact and detailed charge and meter');
-      check(!$('.range'), 'hidden range removes compact and detailed range');
-      check(!$('#reading-state_chargingType'), 'hidden reading disappears after apply');
-      check(!soc.isConnected && !host().pendingCardOrder, 'successful apply renders saved visibility');
+      check($('.soc') && $('[role=meter]') && $('.range'), 'fixed energy summary remains visible after apply');
+      check(!$('#reading-vehicle_descriptions_model'), 'hidden reading disappears after apply');
+      check(!host().pendingCardOrder, 'successful apply exits editing');
       host().startArrangement();
-      check($('[data-reading-visibility="state_batteryChargeLevel"]').getAttribute('aria-pressed') === 'false',
-        'hidden summary remains editable');
-      check($('[data-reading-visibility="state_chargingType"]').getAttribute('aria-pressed') === 'false',
+      check(!$('#group-state [data-reading-visibility]'), 'energy summary and readings have no eye controls');
+      check($('[data-reading-visibility="vehicle_descriptions_model"]').getAttribute('aria-pressed') === 'false',
         'hidden reading remains editable');
-      host().toggleReading('state_batteryChargeLevel');
+      host().toggleReading('vehicle_descriptions_model');
       host().cancelArrangement();
-      check(!$('.soc'), 'cancel restores saved reading preference');
+      check(!$('#reading-vehicle_descriptions_model'), 'cancel restores saved reading preference');
       host().data = [{name:'Car',readings:{}}];
       check(host().config.hiddenReadings.includes('statistics_tripMeterManual'), 'missing reading retains hidden preference');
       host().data = snapshot();
@@ -170,7 +181,7 @@ try {
         'saved order includes all unique cards');
       check(state.draft.pages[0].widgets[0].showDetails !== false, 'legacy popup default retained');
       check(state.draft.pages[0].widgets[0].hiddenGroups.includes('doors'), 'eye preference persists with order');
-      check(controller.snapshot().draft.pages[0].widgets[0].hiddenReadings.includes('state_chargingType'),
+      check(controller.snapshot().draft.pages[0].widgets[0].hiddenReadings.includes('vehicle_descriptions_model'),
         'reading preference survives controller reload');
       let staleRejected = false;
       await controller.saveWidget('one',{...state.draft.pages[0].widgets[0], title:'Other edit'}, state.token,'update');
@@ -194,7 +205,7 @@ try {
         readOnly.startArrangement();
         check(!readOnly.pendingCardOrder, 'view mode rejects arrangement method');
         check(!readOnly.$('[data-group="doors"]'), 'saved hidden group is absent in view mode');
-        check(!readOnly.$('.soc') && !readOnly.$('#reading-state_chargingType'),
+        check(readOnly.$('.soc') && !readOnly.$('#reading-vehicle_descriptions_model'),
           'saved hidden readings are absent after a full view remount');
       } finally { view.destroy(); root.remove(); }
       output.dataset.result = 'pass';
