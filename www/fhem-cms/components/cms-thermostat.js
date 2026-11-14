@@ -1,4 +1,5 @@
 import { isValidName } from '../js/fhem-client.js';
+import { widgetDesignCss, detailCardCss } from '../js/widget-design.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
 
@@ -216,6 +217,22 @@ class FHEMCMSThermostat extends HTMLElement {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a9a8f' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
+        ${widgetDesignCss}
+        .tile .body { height: auto; min-height: 100%; flex: 1; gap: 14px; font-size: 1rem; }
+        .tile .boxes { margin: 0; padding: 0; gap: 14px;
+          grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+          flex: none; align-content: start; }
+        .tile .box { ${detailCardCss} gap: 8px; overflow: visible; }
+        .tile .label { font-size: .86rem; color: inherit; opacity: .72;
+          letter-spacing: normal; text-transform: none; white-space: normal; }
+        .tile .num { font-size: 2.7rem; font-weight: 800; white-space: normal; overflow-wrap: anywhere; }
+        .tile .ist .num { color: #3b82f6; }
+        .tile .soll .num { color: #f59e0b; }
+        .tile .unit { color: inherit; }
+        .tile .foot { padding: 0; margin: 0; flex-wrap: wrap; font-size: .86rem; }
+        .tile .foot select { min-height: 48px; min-width: 0; max-width: 100%; font: inherit; }
+        .tile .status { padding: 0; font-size: .86rem; }
+        .tile input[type="range"] { min-height: 48px; }
       </style>
       <article class="tile" data-tile>
         <div class="body">

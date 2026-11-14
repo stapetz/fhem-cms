@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de" data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<title>All widget designs — Liquid Glass</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<style>body{margin:0;padding:16px} #grid{width:100%;max-width:1200px;margin:auto} #result{white-space:pre-wrap}</style>
+<div id="grid" class="grid-stack cms-schema5-grid"></div><pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+import { setLiquidAppearance } from '../www/fhem-cms/js/fcui-schema5-appearance.js';
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const pause = () => new Promise(resolve => setTimeout(resolve, 70));
+const root = document.querySelector('#grid');
+const specs = [
+  { type: 'thermostat', device: 'Demo', readings: { actual: 'temperature', target: 'desiredTemperature' } },
+  { type: 'fhem-value', device: 'Demo', reading: 'temperature', unit: '°C' },
+  { type: 'fhem-switch', device: 'Demo', reading: 'state', on: 'on', off: 'off', label: 'Licht' },
+  { type: 'fhem-button', device: 'Demo', command: 'on', label: 'Start' },
+  { type: 'fhem-icon', device: 'Demo', reading: 'state', states: [{ value: 'on', icon: 'demo', color: '#123456' }] },
+  { type: 'fhem-slider', device: 'Demo', command: 'pct', reading: 'pct' },
+  { type: 'fhem-select', device: 'Demo', command: 'mode', reading: 'mode', mode: 'buttons' },
+  { type: 'fhem-chart', device: 'Demo', reading: 'temperature' },
+  { type: 'fhem-calllist', device: 'Demo', limit: 5, columns: ['state', 'party', 'timestamp', 'duration'] },
+  { type: 'text', html: '<p style="color:#3b82f6;text-align:right">Eigener Text</p>' },
+  { type: 'fhem-html', devices: [], html: '<p style="color:#3b82f6;text-align:right">Eigenes HTML</p>' },
+];
+const data = new Map([['Demo', [{ name: 'Demo', readings: {
+  state: 'on', temperature: '21.5', desiredTemperature: '22', pct: '40', mode: 'eco',
+  '1-state': '=>', '1-name': 'Demo', '1-timestamp': '13.11.26 12:00', '1-duration': '00:01',
+}, sets: 'on:noArg off:noArg pct:slider,0,1,100 mode:eco,comfort desiredTemperature:5,10,20,22,25,30' }]]]);
+const config = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+  navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } }, pages: [{ id: 'start',
+    widgets: specs.map((spec, i) => ({ ...spec, id: `w${i}`, title: spec.type,
+      grid: { col: 1 + i % 2 * 6, row: 2 + Math.floor(i / 2) * 5, w: 6, h: 5 } })) }] };
+const original = JSON.stringify(config);
+const services = { iconUrl: () => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E',
+  history: async () => ({ points: [] }) };
+let mounted;
+try {
+  mounted = mountSchema5Widgets(GridStack, root, config, 'start', document.createElement('nav'), services, data);
+  const hosts = [...root.querySelectorAll('.grid-stack-item-content > *')].filter(e => e.shadowRoot);
+  const identities = hosts.map(e => e.shadowRoot.querySelector('.tile'));
+  check(hosts.length === 11, 'all eleven remaining widget types are covered');
+  for (const theme of ['liquid-glass', 'dark', 'light', 'oled-black', 'catppuccin-mocha']) {
+    document.documentElement.dataset.cmsTheme = theme;
+    for (const transparency of [12, 88]) {
+      setLiquidAppearance(document.documentElement, { liquidIntensity: 47, liquidTransparency: transparency });
+      await pause();
+      const expected = getComputedStyle(root.querySelector('cms-html').shadowRoot.querySelector('.tile'));
+      for (const [i, host] of hosts.entries()) {
+        const tile = host.shadowRoot.querySelector('.tile');
+        const title = host.shadowRoot.querySelector('[data-title]');
+        const css = getComputedStyle(title);
+        check(tile === identities[i], `${host.localName}: theme changes without remount`);
+        check(getComputedStyle(tile).backgroundColor === expected.backgroundColor, `${host.localName}/${theme}: exact reference surface`);
+        check(getComputedStyle(tile).color === expected.color && css.color === expected.color, `${host.localName}/${theme}: inherited text`);
+        check(css.fontWeight === '700' && css.fontSize === '22.4px', `${host.localName}: common readable title`);
+        check(css.whiteSpace === 'normal', `${host.localName}: wrapping titles`);
+      }
+    }
+  }
+  document.documentElement.dataset.cmsTheme = 'liquid-glass';
+  for (const width of [280, 390, 768, 1200]) {
+    root.style.width = `${width}px`;
+    root.gridstack.onResize();
+    await new Promise(resolve => setTimeout(resolve, 400));
+    check(root.scrollWidth <= root.clientWidth + 1, `${width}: no page overflow`);
+    for (const host of hosts) {
+      const tile = host.shadowRoot.querySelector('.tile');
+      check(host.clientWidth <= width, `${host.localName}/${width}: actual widget width follows raster`);
+      check(tile.scrollWidth <= tile.clientWidth + 1, `${host.localName}/${width}: no tile overflow`);
+      const title = host.shadowRoot.querySelector('[data-title]').getBoundingClientRect();
+      for (const selector of ['.main', '[data-content]', '[data-body]', '.boxes', '.choices', '.plot', 'table']) {
+        const content = host.shadowRoot.querySelector(`.tile ${selector}`);
+        if (content) check(content.getBoundingClientRect().top >= title.bottom - 1,
+          `${host.localName}/${width}: title and ${selector} do not overlap`);
+      }
+    }
+  }
+  for (const name of ['cms-html', 'cms-text']) {
+    const text = root.querySelector(name).shadowRoot.querySelector('.content p,.body p');
+    check(getComputedStyle(text.querySelector('span') || text).color === 'rgb(59, 130, 246)' && getComputedStyle(text).textAlign === 'right',
+      `${name}: authored content formatting is untouched`);
+  }
+  check(root.querySelector('cms-icon').shadowRoot.querySelector('[data-icon]').style.getPropertyValue('--state-color') === '#123456',
+    'explicit user icon color preserved');
+  check(JSON.stringify(config) === original, 'rendering does not migrate or mutate saved data');
+  output.dataset.result = 'pass'; output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail'; output.textContent = error.stack;
+} finally {
+  document.documentElement.dataset.cmsTheme = 'liquid-glass';
+  setLiquidAppearance(document.documentElement, { liquidIntensity: 47, liquidTransparency: 12 });
+}
+</script>
+</html>

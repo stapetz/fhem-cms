@@ -2,6 +2,7 @@ import { MAX_FREE_DEVICES, checkSource, elementText, extractDevices, lookupValue
 import { openPlaceholderPicker } from '../js/placeholder-picker.js';
 import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
 import { renderVehicleMaps } from '../js/vehicle-map.js';
+import { widgetDesignCss } from '../js/widget-design.js';
 
 const HELP_URL = 'https://github.com/stapetz/fhem-cms/blob/dev/docs/PLATZHALTER.md';
 const EXAMPLE = `<div class="box">
@@ -79,6 +80,8 @@ class FHEMCMSHtml extends HTMLElement {
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { margin: 0; color: var(--cms-danger, #ffb4a8); min-height: 1.2em; }
+        ${widgetDesignCss}
+        .tile .content { height: auto; min-height: 0; flex: 1; padding: 0; }
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>

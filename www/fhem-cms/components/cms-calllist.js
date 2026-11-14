@@ -1,4 +1,5 @@
 import { openDevicePicker } from '../js/device-picker.js';
+import { widgetDesignCss } from '../js/widget-design.js';
 import { isValidName } from '../js/fhem-client.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 
@@ -95,6 +96,12 @@ class FHEMCMSCallList extends HTMLElement {
         .hint { color:var(--cms-muted,#a5c9b2); font-size:.8rem; }
         [data-message]:empty { display:none; }
         [hidden] { display:none !important; }
+        ${widgetDesignCss}
+        .tile table { font-size: .875rem; table-layout: fixed; color: inherit;
+          border: 1px solid rgba(128,128,128,.18); border-radius: 14px;
+          background: rgba(128,128,128,.08); border-spacing: 0; border-collapse: separate; }
+        .tile th, .tile td { padding: 6px 8px; border-bottom: 1px solid rgba(128,128,128,.1); }
+        .tile th { color: inherit; font-weight: 700; }
       </style>
       <article class="tile" data-tile>
         <button type="button" class="gear" data-open-config aria-label="Anrufliste konfigurieren">⚙</button>

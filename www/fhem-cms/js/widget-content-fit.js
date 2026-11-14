@@ -1,15 +1,16 @@
+import { widgetDesignCss } from './widget-design.js';
+
 export const widgetHierarchyCss = `
-  header h3[data-title] { font-size: clamp(10px, min(13cqh, 5cqw), 15px);
-    font-weight: 600; color: var(--cms-muted, #a5c9b2); }
+  ${widgetDesignCss}
 `;
 
 export const fittedContentCss = `
   ${widgetHierarchyCss}
-  .main { position: absolute; inset: 3%; display: flex; align-items: center;
-    justify-content: center; min-width: 0; min-height: 0; padding: 0; }
+  .main { position: relative; flex: 1 0 48px; display: flex; align-items: safe center;
+    justify-content: safe center; min-width: 0; min-height: 48px; padding: 0; }
   [data-fit-content] { flex: none; width: max-content; max-width: none; }
   .fit-row { display: inline-flex; align-items: center; gap: 0.14em; }
-  :host([view-only]) header { left: 0; right: 0; padding-inline: 3%; }
+  .tile .main { overflow: auto; }
 `;
 
 export function fitWidgetContent(host) {
@@ -24,23 +25,22 @@ export function fitWidgetContent(host) {
     frame = 0;
     const bounds = tile.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
-    const gap = Math.min(bounds.width, bounds.height) * 0.03;
-    const title = header.getBoundingClientRect();
-    const status = message?.getBoundingClientRect();
-    area.style.top = `${Math.max(gap, title.height ? title.bottom - bounds.top + gap : 0)}px`;
-    area.style.bottom = `${Math.max(gap, status?.height ? bounds.bottom - status.top + gap : 0)}px`;
     const available = area.getBoundingClientRect();
     if (!available.width || !available.height) return;
     // Measure the unwrapped group rather than a flex-shrunk value or label.
     area.style.fontSize = '16px';
+    content.style.minWidth = '0';
+    content.style.minHeight = '0';
     const natural = content.getBoundingClientRect();
+    content.style.removeProperty('min-width');
+    content.style.removeProperty('min-height');
     if (!natural.width || !natural.height) return;
-    let size = 16 * Math.min(available.width / natural.width, available.height / natural.height) * 0.98;
+    let size = Math.max(12, 16 * Math.min(available.width / natural.width, available.height / natural.height) * 0.98);
     area.style.fontSize = `${size}px`;
     const actual = content.getBoundingClientRect();
     const correction = Math.min(1, available.width / actual.width, available.height / actual.height);
     if (correction < 1) {
-      size *= correction;
+      size = Math.max(12, size * correction);
       area.style.fontSize = `${size}px`;
     }
   };

@@ -1,4 +1,5 @@
 import { isValidName } from '../js/fhem-client.js';
+import { widgetDesignCss } from '../js/widget-design.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
@@ -118,6 +119,16 @@ class FHEMCMSChart extends HTMLElement {
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
         ${unitInputCss}
+        ${widgetDesignCss}
+        .tile header { flex-wrap: wrap; }
+        .tile .controls { flex-wrap: wrap; min-width: 0; }
+        .tile .controls select { min-height: 48px; max-width: 100%; font-size: .86rem; }
+        .tile .plot { flex: 1 0 160px; min-height: 160px; border-radius: 14px;
+          background: rgba(128,128,128,.08); border: 1px solid rgba(128,128,128,.18); }
+        .tile .stats { color: inherit; font-size: .86rem; }
+        .tile text { fill: currentColor; }
+        .tile .line { stroke: #3b82f6; }
+        .tile .band { fill: #3b82f6; }
       </style>
       <article class="tile" data-tile>
         <header><h3 data-title></h3>
