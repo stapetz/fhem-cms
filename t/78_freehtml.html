@@ -63,7 +63,7 @@ try {
   check(link.querySelector('a').getAttribute('rel') === 'noopener noreferrer', 'links cannot control opener');
   for (const bad of [
     '<script>alert(1)<\/script>', '<img src="javascript:x">', '<img src="media/x.jpg" onerror="x()">',
-    '<iframe src="https://example.test/"></iframe>', '<svg onload="x()"></svg>',
+    '<iframe src="javascript:x"></iframe>', '<svg onload="x()"></svg>',
     '<svg><foreignObject><p>active</p></foreignObject></svg>', '<svg><use href="x"/></svg>',
     '<svg><animate attributeName="href"/></svg>', '<svg><path fill="url(https://example.test/x)"/></svg>',
     '<img src="{{MeinElch:image|prefix(javascript:)}}">', '<div style="background:url(javascript:x)">x</div>', '<!' + '-- unfinished',
@@ -94,7 +94,7 @@ try {
     '.flow{fill:url(#pv)}',
   ]) check(isSafeCss(css), 'requested safe CSS accepted: ' + css);
   for (const css of [
-    '.image{background:url(javascript:x)}', '@import "http://example.test/theme.css";',
+    '.image{background:url(javascript:x)}', '@import "ftp://example.test/theme.css";',
     '.image{background:url(//example.test/x)}', '.image{background:url(data:image/svg+xml,x)}',
     '.image{background:u/**/rl(jav/**/ascript:x)}', '@import;', '.x{background:url("unterminated)}',
     '.image{background:u\\72l(x)}', '.x{color:expression(alert(1))}', '/* unfinished',
@@ -108,7 +108,7 @@ try {
   check(map.getAttribute('referrerpolicy') === 'no-referrer', 'map receives no page referrer');
   check(map.getAttribute('width') === '100%' && map.getAttribute('height') === '300', 'map dimensions preserved');
   for (const bad of [
-    '<iframe src="https://openstreetmap.org.evil.test/export/embed.html"></iframe>',
+    '<iframe src="data:text/html,x"></iframe>',
     '<iframe src="https://openstreetmap.org/export/embed.html" srcdoc="active"></iframe>',
     '<iframe src="https://openstreetmap.org/export/embed.html" sandbox="allow-same-origin"></iframe>',
     '<iframe src="https://openstreetmap.org/export/embed.html" onload="x()"></iframe>',
@@ -161,6 +161,49 @@ try {
   check(getComputedStyle(dash.querySelector('.vd-slider')).scrollBehavior === 'smooth', 'full reported stylesheet survives sanitizer and applies');
   check(getComputedStyle(dash.querySelector('.vd-top-grid')).display === 'grid', 'full dashboard layout is preserved');
   dash.remove();
+  const policy = await (await fetch('fixtures/freehtml_policy.json')).json();
+  for (const [source, expected] of policy.css) check(isSafeCss(source) === expected, 'CSS positive policy: ' + source);
+  for (const [source, expected] of policy.html) check((checkSource(source) === null) === expected, 'HTML positive policy: ' + source);
+  const states = '<style>[data-value^="-"]{color:red}[data-state="on"]{font-weight:700}</style><div data-value="{{Sensor:power|int}}" data-state="{{Sensor:state}}">{{Sensor:state}}</div>';
+  const stateTemplate = sanitize(states);
+  const stateHost = document.createElement('div');
+  stateHost.attachShadow({ mode: 'open' });
+  document.body.append(stateHost);
+  const drawState = (power, state) => {
+    stateHost.shadowRoot.replaceChildren(renderTemplate(stateTemplate, (_device, reading) => reading === 'power' ? power : state));
+    return stateHost.shadowRoot.querySelector('[data-value]');
+  };
+  let stateNode = drawState('-12.3', 'on');
+  check(stateNode.dataset.value === '-12' && stateNode.dataset.state === 'on', 'data readings are resolved as attribute text');
+  check(getComputedStyle(stateNode).color === 'rgb(255, 0, 0)', 'negative reading attribute selector applies');
+  check(getComputedStyle(stateNode).fontWeight === '700', 'state attribute selector applies');
+  stateNode = drawState('12', '" onload="x');
+  check(stateNode.dataset.state === '" onload="x' && !stateNode.hasAttribute('onload'), 'attribute text cannot inject eventhandler');
+  check(getComputedStyle(stateNode).color !== 'rgb(255, 0, 0)', 'new reading clears previous selector match');
+  stateHost.remove();
+  const frameTemplate = sanitize('<iframe src="{{Sensor:panelUrl}}"></iframe>');
+  for (const url of ['http://grafana.local:3000/panel', 'https://weather.test/radar', '/local/panel']) {
+    const frame = renderTemplate(frameTemplate, () => url).querySelector('iframe');
+    check(frame.getAttribute('src') === url, 'arbitrary approved frame source resolves');
+    check(frame.getAttribute('sandbox') === 'allow-scripts', 'arbitrary frames retain immutable sandbox');
+  }
+  check(!renderTemplate(frameTemplate, () => 'javascript:x').querySelector('iframe').hasAttribute('src'), 'unsafe live frame URL blocked');
+  const anchors = createWidgetElement({ id: 'slider', type: 'fhem-html', devices: [],
+    html: '<style>#slide1:TARGET{color:red}[data-state=":target"]{opacity:.6}.image{background:url(https://example.test/:target.png)}</style><a href="#slide1" rel="nofollow">Slide</a><div id="slide1">One</div><a href="#missing">Missing</a>' }, {}, new Map(), true);
+  document.body.append(anchors);
+  const beforeHash = location.hash;
+  anchors.shadowRoot.querySelector('a').click();
+  check(location.hash === beforeHash, 'widget fragment does not navigate CMS page router');
+  check(anchors.shadowRoot.querySelector('#slide1').hasAttribute('data-cms-fragment-target'), 'widget-local target is marked');
+  check(getComputedStyle(anchors.shadowRoot.querySelector('#slide1')).color === 'rgb(255, 0, 0)', 'target pseudoclass works in shadow widget');
+  check(anchors.shadowRoot.querySelector('[data-content] style').textContent.includes('[data-state=":target"]'), 'fragment rewrite preserves quoted selector values');
+  check(anchors.shadowRoot.querySelector('[data-content] style').textContent.includes('url(https://example.test/:target.png)'), 'fragment rewrite preserves resource URLs');
+  anchors.data = new Map();
+  check(anchors.shadowRoot.querySelector('#slide1').hasAttribute('data-cms-fragment-target'), 'local anchor target survives live redraw');
+  check(anchors.shadowRoot.querySelector('a').rel.includes('noopener') && anchors.shadowRoot.querySelector('a').rel.includes('nofollow'), 'rel preserves safe tokens and enforces protection');
+  anchors.shadowRoot.querySelector('a[href="#missing"]').click();
+  check(anchors.shadowRoot.querySelector('[data-cms-fragment-warning]'), 'missing widget anchor explicitly reported');
+  anchors.remove();
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });
 } catch (error) {

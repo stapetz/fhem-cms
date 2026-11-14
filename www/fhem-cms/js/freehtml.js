@@ -1,4 +1,5 @@
 // Freies HTML mit Platzhaltern (S31): strikte Allowlist, kein Skript, Werte werden nur als Text eingesetzt.
+import { validateCssStructure } from './freehtml-css.js';
 export const MAX_FREE_HTML = 20000;
 export const MAX_FREE_DEVICES = 20;
 
@@ -16,12 +17,12 @@ const SVG_ATTRIBUTES = new Set(['viewbox', 'preserveaspectratio', 'd', 'x', 'y',
   'stroke-dashoffset', 'opacity', 'text-anchor', 'dominant-baseline', 'font-size', 'font-weight',
   'offset', 'stop-color', 'stop-opacity', 'gradientunits', 'gradienttransform', 'spreadmethod']);
 const URL_PLACEHOLDER = /^\{\{\s*[A-Za-z0-9_.-]+:@?[A-Za-z0-9_.-]+\s*\}\}$/;
-const HTTPS_URL = /^https:\/\/[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?(?:[/?#][A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/;
-const LOCAL_URL = /^(?:\/?(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*|\.\.\/\.\.\/fhemcms-assets\/[A-Za-z0-9_.-]+\/[0-9a-f]{32})(?:[?#][A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/;
+const WEB_URL = /^https?:\/\/(?:[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?|\[[0-9A-Fa-f:]+\])(?::[0-9]{1,5})?(?:[/?#][A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/;
+const LOCAL_URL = /^(?!\/\/)(?:\.{1,2}\/)*\/?(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*\/?(?:[?#][A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/;
 
 export function isSafeHtmlUrl(value) {
   return typeof value === 'string' && value.length <= 2000
-    && (HTTPS_URL.test(value) || LOCAL_URL.test(value) || /^#[A-Za-z0-9_/-]{1,64}$/.test(value));
+    && (WEB_URL.test(value) || LOCAL_URL.test(value) || value === '/' || /^#[A-Za-z0-9_/-]{1,64}$/.test(value));
 }
 
 export function isSafeMapUrl(value) {
@@ -39,6 +40,10 @@ function isSafeMapTemplate(value) {
   const query = value.indexOf('?');
   return query >= 0 && !value.slice(0, query).includes('{{')
     && isSafeMapUrl(numericTemplate(value)) && !/[{}]/.test(numericTemplate(value));
+}
+
+function isSafeFrameTemplate(value) {
+  return URL_PLACEHOLDER.test(value) || isSafeHtmlUrl(value) || isSafeMapTemplate(value);
 }
 
 function resolveNumericTemplate(text, lookup, coordinate = false) {
@@ -62,14 +67,16 @@ function resolveNumericTemplate(text, lookup, coordinate = false) {
 function extraAttributeAllowed(tag, name, value) {
   name = name.toLowerCase();
   if (name === 'id') return /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value);
+  if (name.startsWith('data-cms-')) return false;
   if (/^(?:aria-[a-z-]+|data-[a-z0-9-]+|role)$/.test(name)) return value.length <= 200;
   if ((name === 'href' && tag === 'a') || (name === 'src' && tag === 'img')) {
     return URL_PLACEHOLDER.test(value) || isSafeHtmlUrl(value);
   }
   if (tag === 'a' && name === 'target') return value === '_blank' || value === '_self';
+  if (tag === 'a' && name === 'rel') return /^(?:(?:noopener|noreferrer|nofollow|external|author|help|license|next|prev|search|tag)\s*)*$/.test(value);
   if (tag === 'img' && name === 'alt') return value.length <= 200;
-  if (tag === 'iframe' && name === 'src') return isSafeMapUrl(value) || isSafeMapTemplate(value);
-  if (tag === 'iframe' && name === 'loading') return value === 'lazy' || value === 'eager';
+  if (tag === 'iframe' && name === 'src') return isSafeFrameTemplate(value);
+  if ((tag === 'iframe' || tag === 'img') && name === 'loading') return value === 'lazy' || value === 'eager';
   if (tag === 'iframe' && name === 'frameborder') return value === '0';
   if (tag === 'iframe' && name === 'scrolling') return value === 'yes' || value === 'no' || value === 'auto';
   if ((tag === 'img' || tag === 'svg' || tag === 'iframe') && (name === 'width' || name === 'height')) {
@@ -91,7 +98,7 @@ const CONDITION = new RegExp(`^\\s*(${NAME}):(${READING})\\s*(>=|<=|!=|=|>|<)\\s
 const DEVICE_ATTR = /^[A-Za-z0-9_.-]{1,64}$/;
 const READING_ATTR = /^@?[A-Za-z0-9_.-]{1,64}$/;
 const FILTER_ATTR = /^\s*(?:[a-z]+(?:\([^()|{}"<>]{0,80}\))?(?:\s*\|\s*[a-z]+(?:\([^()|{}"<>]{0,80}\))?)*)?\s*$/;
-const FORBIDDEN_CSS = /expression\s*\(|(?:^|[;{])\s*(?:behavior|-moz-binding)\s*:|javascript:|[<>\\]/i;
+const FORBIDDEN_CSS = /expression\s*\(|(?:^|[;{])\s*(?:behavior|-moz-binding)\s*:|javascript:|[<\\]/i;
 
 export function isSafeCss(text) {
   if (typeof text !== 'string') return false;
@@ -108,9 +115,9 @@ export function isSafeCss(text) {
     (_match, doubleQuoted, singleQuoted) => {
       const url = doubleQuoted ?? singleQuoted;
       if (url !== 'cms-validated-resource' && !isSafeHtmlUrl(url)) valid = false;
-      return '';
+      return '@import "cms-validated-resource"';
     });
-  return valid && !/url\s*\(|@import/i.test(withoutImports);
+  return valid && !/url\s*\(/i.test(withoutImports) && validateCssStructure(withoutImports);
 }
 
 // Prüft den Quelltext auf Dinge, die die Bereinigung ohnehin entfernt; so bekommt der Autor eine klare Meldung statt stiller Verluste.
@@ -136,14 +143,14 @@ export function checkSource(html) {
     for (const attribute of element.attributes) {
       const name = attribute.name;
       if (tag === 'iframe' && name === 'src' && !extraAttributeAllowed(tag, name, attribute.value)) {
-        return 'Die Karte benötigt https://openstreetmap.org/export/embed.html mit Koordinaten im Querystring.';
+        return 'Die Einbettung benötigt eine HTTP-/HTTPS-URL oder einen lokalen Pfad.';
       }
       if (!['class', 'style', 'title', 'colspan', 'rowspan', 'data-cms-class', 'device', 'reading', 'filter'].includes(name)
         && !extraAttributeAllowed(tag, name, attribute.value)) {
         return `Das Attribut „${name}“ ist nicht erlaubt (Element <${tag}>)`;
       }
       if (name === 'style' && !isSafeCss(attribute.value)) {
-        return 'Das style-Attribut enthält unsichere oder ungültige CSS-Angaben. Ressourcen müssen lokale Pfade oder HTTPS-URLs verwenden.';
+        return 'Das style-Attribut enthält nicht erlaubte CSS-Eigenschaften oder Werte (z-index maximal 100).';
       }
       if (name === 'class' && !/^[A-Za-z0-9_\- ]{0,200}$/.test(attribute.value)) {
         return 'Das class-Attribut enthält ungültige Zeichen';
@@ -169,7 +176,7 @@ export function checkSource(html) {
       return `Die Attribute device und reading gehören zusammen (Element <${tag}>)`;
     }
     if (tag === 'style' && (!isSafeCss(element.textContent) || element.textContent.includes('{{'))) {
-      return 'Das <style>-Element enthält unsichere oder ungültige CSS-Angaben. Ressourcen müssen lokale Pfade oder HTTPS-URLs verwenden.';
+      return 'Das <style>-Element enthält nicht erlaubte CSS-Regeln, Eigenschaften oder Werte (z-index maximal 100).';
     }
   }
   return null;
@@ -231,13 +238,19 @@ function cleanChildren(source, target) {
         } else if (name === 'data-cms-class') {
           element.setAttribute(name, value.split(';').filter((part) => CONDITION.test(part)).join(';'));
         } else if (extraAttributeAllowed(tag, name, value)) {
+          if (tag === 'a' && name === 'rel') {
+            element.setAttribute('rel', [...new Set(['noopener', 'noreferrer', ...value.split(/\s+/).filter(Boolean)])].join(' '));
+            continue;
+          }
           element.setAttribute((URL_PLACEHOLDER.test(value) || (tag === 'iframe' && value.includes('{{')))
             && (name === 'src' || name === 'href')
             ? `data-cms-url-${name}` : name, value);
         }
       }
       if (node.localName === 'style') {
-        element.textContent = isSafeCss(node.textContent) && !node.textContent.includes('{{') ? node.textContent : '';
+        element.textContent = isSafeCss(node.textContent) && !node.textContent.includes('{{')
+          ? node.textContent.replace(/url\s*\(\s*(?:"[^"]*"|'[^']*'|[^()\s"']+)\s*\)|"[^"]*"|'[^']*'|:target(?![A-Za-z0-9_-])/gi,
+            token => token.startsWith(':') ? '[data-cms-fragment-target]' : token) : '';
       } else if (tag !== 'iframe') {
         cleanChildren(node, element);
       }
@@ -428,12 +441,20 @@ export function renderTemplate(template, lookup) {
       element.after(warning);
     }
   }
+  for (const element of container.querySelectorAll('*')) {
+    for (const attribute of [...element.attributes]) {
+      if ((/^data-/.test(attribute.name) && !attribute.name.startsWith('data-cms-'))
+        || attribute.name === 'alt' || attribute.name.startsWith('aria-')) {
+        element.setAttribute(attribute.name, substitute(attribute.value, lookup).slice(0, 200));
+      }
+    }
+  }
   for (const element of container.querySelectorAll('img[src], a[href], img[data-cms-url-src], a[data-cms-url-href], iframe[data-cms-url-src]')) {
     const attribute = element.localName === 'a' ? 'href' : 'src';
     const original = element.getAttribute(`data-cms-url-${attribute}`) ?? element.getAttribute(attribute);
-    const value = element.localName === 'iframe' ? resolveNumericTemplate(original, lookup, true)
+    const value = element.localName === 'iframe' && !URL_PLACEHOLDER.test(original) ? resolveNumericTemplate(original, lookup, true)
       : URL_PLACEHOLDER.test(original) ? substitute(original, lookup) : original;
-    if (element.localName === 'iframe' ? value !== null && isSafeMapUrl(value) : isSafeHtmlUrl(value)) element.setAttribute(attribute, value);
+    if (value !== null && isSafeHtmlUrl(value)) element.setAttribute(attribute, value);
     else {
       element.removeAttribute(attribute);
       element.setAttribute('title', 'Ungültige oder fehlende URL im Reading');

@@ -1385,7 +1385,110 @@ sub FHEMCMS_ValidateLinks {
 sub FHEMCMS_FreeHtmlUrl {
     my ($value) = @_;
     $value =~ s/&amp;/&/g;
-    return length($value) <= 2000 && $value =~ m{\A(?:https://[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?(?:[/?#][A-Za-z0-9._~:/?#\@!\$&'()*+,;=%-]*)?|(?:/?(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*|\.\./\.\./fhemcms-assets/[A-Za-z0-9_.-]+/[0-9a-f]{32})(?:[?#][A-Za-z0-9._~:/?#\@!\$&'()*+,;=%-]*)?|\#[A-Za-z0-9_/-]{1,64})\z};
+    return length($value) <= 2000 && $value =~ m{\A(?:https?://(?:[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?|\[[0-9A-Fa-f:]+\])(?::[0-9]{1,5})?(?:[/?#][A-Za-z0-9._~:/?#\@!\$&'()*+,;=%-]*)?|(?!//)(?:\.{1,2}/)*/?(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*/?(?:[?#][A-Za-z0-9._~:/?#\@!\$&'()*+,;=%-]*)?|/|\#[A-Za-z0-9_/-]{1,64})\z};
+}
+
+sub FHEMCMS_FreeHtmlCssStructure {
+    my ($css) = @_;
+    my %properties = map { $_ => 1 } qw(display box-sizing width height min-width max-width min-height max-height
+        margin margin-top margin-right margin-bottom margin-left margin-inline margin-block margin-inline-start margin-inline-end
+        padding padding-top padding-right padding-bottom padding-left padding-inline padding-block padding-inline-start padding-inline-end
+        border border-top border-right border-bottom border-left border-width border-style border-color border-radius
+        border-top-left-radius border-top-right-radius border-bottom-left-radius border-bottom-right-radius border-collapse border-spacing
+        outline outline-width outline-style outline-color outline-offset background background-color background-image
+        background-size background-position background-repeat background-clip background-origin background-blend-mode
+        color opacity font font-family font-size font-weight font-style font-variant line-height letter-spacing word-spacing
+        text-align text-decoration text-decoration-color text-decoration-style text-transform text-overflow text-shadow
+        white-space word-break overflow-wrap vertical-align list-style list-style-type list-style-position
+        grid grid-template grid-template-columns grid-template-rows grid-template-areas grid-auto-columns grid-auto-rows
+        grid-auto-flow grid-column grid-column-start grid-column-end grid-row grid-row-start grid-row-end grid-area
+        gap row-gap column-gap flex flex-direction flex-wrap flex-flow flex-grow flex-shrink flex-basis
+        justify-content justify-items justify-self align-content align-items align-self place-content place-items place-self order
+        position top right bottom left inset inset-inline inset-block z-index overflow overflow-x overflow-y
+        transform transform-origin transform-style perspective perspective-origin backface-visibility
+        animation animation-name animation-duration animation-delay animation-timing-function animation-iteration-count
+        animation-direction animation-fill-mode animation-play-state transition transition-property transition-duration
+        transition-delay transition-timing-function scroll-behavior scroll-snap-type scroll-snap-align scroll-snap-stop
+        scroll-margin scroll-padding scrollbar-width scrollbar-color overscroll-behavior overscroll-behavior-x overscroll-behavior-y
+        box-shadow filter backdrop-filter -webkit-backdrop-filter cursor pointer-events user-select -webkit-user-select
+        object-fit object-position aspect-ratio visibility isolation mix-blend-mode clip-path
+        fill fill-rule fill-opacity stroke stroke-width stroke-opacity stroke-linecap stroke-linejoin stroke-dasharray
+        stroke-dashoffset text-anchor dominant-baseline paint-order vector-effect stop-color stop-opacity);
+    my %functions = map { lc($_) => 1 } qw(url var calc min max clamp rgb rgba hsl hsla hwb lab lch oklab oklch color color-mix
+        linear-gradient radial-gradient conic-gradient repeating-linear-gradient repeating-radial-gradient repeating-conic-gradient
+        repeat minmax fit-content translate translateX translateY translateZ translate3d scale scaleX scaleY scaleZ scale3d
+        rotate rotateX rotateY rotateZ rotate3d skew skewX skewY matrix matrix3d perspective
+        cubic-bezier steps linear blur brightness contrast drop-shadow grayscale hue-rotate invert opacity saturate sepia
+        inset circle ellipse polygon path);
+    my (@tokens, @stack, @brackets);
+    my ($text, $quote) = ('', '');
+    for my $char (split(//, $css)) {
+        if ($quote ne '') {
+            $text .= $char;
+            $quote = '' if ($char eq $quote);
+        } elsif ($char eq '"' || $char eq "'") {
+            $quote = $char;
+            $text .= $char;
+        } elsif ($char eq '(' || $char eq '[') {
+            push(@brackets, $char);
+            $text .= $char;
+        } elsif ($char eq ')' || $char eq ']') {
+            my $open = pop(@brackets);
+            return 0 if (!defined($open) || $open ne ($char eq ')' ? '(' : '['));
+            $text .= $char;
+        } elsif (!@brackets && $char =~ /[{};]/) {
+            $text =~ s/\A\s+|\s+\z//g;
+            push(@tokens, [$char, $text]);
+            $text = '';
+        } else {
+            $text .= $char;
+        }
+    }
+    return 0 if ($quote ne '' || @brackets);
+    $text =~ s/\A\s+|\s+\z//g;
+    push(@tokens, [';', $text]) if ($text ne '');
+    my $declaration = sub {
+        my ($value) = @_;
+        return 1 if ($value eq '');
+        return 0 if ($value !~ /\A([A-Za-z-][A-Za-z0-9_-]*)\s*:\s*(.+)\z/s);
+        my ($name, $body) = (lc($1), $2);
+        $body =~ s/\s*!important\s*\z//i;
+        $body =~ s/\A\s+|\s+\z//g;
+        return 0 if (!$properties{$name} && $name !~ /\A--[A-Za-z0-9_-]{1,64}\z/);
+        return 0 if ($name eq 'z-index' && $body ne 'auto' && ($body !~ /\A-?[0-9]+\z/ || $body > 100));
+        $body =~ s/"[^"]*"|'[^']*'//g;
+        return 0 if ($body =~ /[\@{}]/);
+        while ($body =~ /([A-Za-z-][A-Za-z0-9-]*)\s*\(/g) {
+            return 0 if (!$functions{lc($1)});
+        }
+        return 1;
+    };
+    my $hasBlocks = scalar(grep { $_->[0] eq '{' || $_->[0] eq '}' } @tokens);
+    for my $token (@tokens) {
+        my ($delimiter, $value) = @{$token};
+        my $context = @stack ? $stack[-1] : '';
+        if ($delimiter eq '{') {
+            return 0 if ($context eq 'declarations');
+            if ($value =~ /\A\@(?:media|supports|container|layer)\b/i) {
+                push(@stack, 'rules');
+            } elsif ($value =~ /\A\@(?:-webkit-)?keyframes\s+[A-Za-z_][A-Za-z0-9_-]*\z/i) {
+                push(@stack, 'keyframes');
+            } elsif ($value ne '' && $value !~ /\A\@/ && $value !~ /:host(?:-context)?\b/i
+                && ($context ne 'keyframes' || $value =~ /\A(?:(?:from|to|[0-9]+(?:\.[0-9]+)?%)\s*,?\s*)+\z/i)) {
+                push(@stack, 'declarations');
+            } else {
+                return 0;
+            }
+        } elsif ($delimiter eq '}') {
+            return 0 if (!@stack || ($context eq 'declarations' ? !$declaration->($value) : $value ne ''));
+            pop(@stack);
+        } elsif ($context eq 'declarations') {
+            return 0 if (!$declaration->($value));
+        } elsif ($value ne '' && $value !~ /\A\@import\s+"cms-validated-resource"(?:\s+[^{};]+)?\z/i) {
+            return 0 if (@stack || $hasBlocks || !$declaration->($value));
+        }
+    }
+    return !@stack;
 }
 
 sub FHEMCMS_FreeHtmlCss {
@@ -1396,7 +1499,7 @@ sub FHEMCMS_FreeHtmlCss {
     return 0 if ($css =~ /&(?:\#[0-9]+|\#x[0-9a-f]+|[a-z]+);/i);
     $css =~ s{/\*.*?\*/}{}gs;
     $css =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)))*\s*\}\}}{0}g;
-    return 0 if ($css =~ m~/\*|\*/|\{\{|expression\s*\(|(?:\A|[;{])\s*(?:behavior|-moz-binding)\s*:|javascript:|[<>\\]~i);
+    return 0 if ($css =~ m~/\*|\*/|\{\{|expression\s*\(|(?:\A|[;{])\s*(?:behavior|-moz-binding)\s*:|javascript:|[<\\]~i);
     my $valid = 1;
     $css =~ s{url\s*\(\s*(?:"([^"]*)"|'([^']*)'|([^()\s"']+))\s*\)}{
         my $url = defined($1) ? $1 : defined($2) ? $2 : $3;
@@ -1406,30 +1509,33 @@ sub FHEMCMS_FreeHtmlCss {
     $css =~ s{\@import\s+(?:"([^"]*)"|'([^']*)')}{
         my $url = defined($1) ? $1 : $2;
         $valid = 0 if ($url ne 'cms-validated-resource' && !FHEMCMS_FreeHtmlUrl($url));
-        '';
+        '@import "cms-validated-resource"';
     }gei;
-    return $valid && $css !~ /url\s*\(|\@import/i;
+    return $valid && $css !~ /url\s*\(/i && FHEMCMS_FreeHtmlCssStructure($css);
 }
 
 sub FHEMCMS_FreeHtmlExtraAttribute {
     my ($tag, $name, $value) = @_;
     return $value =~ /\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/ if ($name eq 'id');
+    return 0 if ($name =~ /\Adata-cms-/);
     return length($value) <= 200 if ($name =~ /\A(?:aria-[a-z-]+|data-[a-z0-9-]+|role)\z/);
     if (($tag eq 'a' && $name eq 'href') || ($tag eq 'img' && $name eq 'src')) {
         return 1 if ($value =~ /\A\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+\s*\}\}\z/);
         return FHEMCMS_FreeHtmlUrl($value);
     }
     return $value eq '_blank' || $value eq '_self' if ($tag eq 'a' && $name eq 'target');
+    return $value =~ /\A(?:(?:noopener|noreferrer|nofollow|external|author|help|license|next|prev|search|tag)\s*)*\z/
+        if ($tag eq 'a' && $name eq 'rel');
     return length($value) <= 200 if ($tag eq 'img' && $name eq 'alt');
     return $value =~ /\A[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?\z/
         if (($tag eq 'img' || $tag eq 'svg' || $tag eq 'iframe') && ($name eq 'width' || $name eq 'height'));
     if ($tag eq 'iframe' && $name eq 'src') {
+        return 1 if ($value =~ /\A\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+\s*\}\}\z/);
         $value =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)))*\s*\}\}}{0}g
             if ($value =~ m{\Ahttps://(?:www\.)?openstreetmap\.org/export/embed\.html\?});
-        return FHEMCMS_FreeHtmlUrl($value)
-            && $value =~ m{\Ahttps://(?:www\.)?openstreetmap\.org/export/embed\.html(?:\?[A-Za-z0-9._~:/?#\@!\$&'()*+,;=%-]*)?\z};
+        return FHEMCMS_FreeHtmlUrl($value);
     }
-    return $value eq 'lazy' || $value eq 'eager' if ($tag eq 'iframe' && $name eq 'loading');
+    return $value eq 'lazy' || $value eq 'eager' if (($tag eq 'iframe' || $tag eq 'img') && $name eq 'loading');
     return $value eq '0' if ($tag eq 'iframe' && $name eq 'frameborder');
     return $value eq 'yes' || $value eq 'no' || $value eq 'auto' if ($tag eq 'iframe' && $name eq 'scrolling');
     return $value eq 'http://www.w3.org/2000/svg' if ($tag eq 'svg' && $name eq 'xmlns');
