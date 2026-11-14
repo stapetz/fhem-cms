@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-14",
+  "version": "1.11.0",
+  "title": "VolvoConnect, Solar und Energiefluss und einheitliches Widgetdesign",
+  "changes": [
+    "VolvoConnect-Widget mit Kompakt-/Vollansicht und Info-/Aktionspopup.",
+    "Fahrzeugkarten verschieben, skalieren, ausblenden und automatisch anordnen.",
+    "VolvoConnect-Modul erforderlich; Wiki mit Installation und Screenshots.",
+    "Solar und Energiefluss mit Ertragskarten; auch fuer Leistungsmesser.",
+    "Unbekannten Hausverbrauch nicht erfinden; Solarlinien an Boxraendern.",
+    "Themegerechtes Widgetdesign, mobiles Safari-Layout und stabile Scrollposition.",
+    "Geraet zuerst waehlen; diskrete Set-Listen als Dropdown oder Buttons.",
+    "Breite Dialoge, Tabelleneinheiten/-bezeichner und eindeutige Widget-IDs.",
+    "Geprueftes HTML/SVG/CSS, sichere Einbettungen und Live-Fahrzeugkarte.",
+    "Neue Menues, rasterfreie Vorschau, Escape und deutsche Datumsdarstellung."
+  ]
+}
