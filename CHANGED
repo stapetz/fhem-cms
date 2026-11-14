@@ -262,6 +262,12 @@ Stationsraendern
 - Refs #206: echte Messwerte bleiben erhalten; Leeranzeige in Chrome und WebKit
   geprueft.
 
+2026-11-13 - 1.10.1-dev: Entwicklung nach dem freigegebenen Release 1.10.0
+- Main-Release 1.10.0 in dev integriert; noch keine weiteren
+  Funktionsaenderungen.
+- Interne Entwicklungs- und KI-Anweisungen bleiben auf dev.
+- Die offene Wiki-Dokumentationsaufgabe #171 ist nicht Teil dieses Releases.
+
 2026-11-13 - 1.10.0: Widgetvorlagen, schneller Assistent und globale
 Administration
 - S142 - Non-Blocking DbLog-Abfragen fuer Diagramme
@@ -483,6 +489,14 @@ vorbelegen
 - Digitale und analoge Uhr, Datum, Sekunden, Linkziele, Bilder und gespeicherte
   Layouts bleiben erhalten.
 
+2026-11-13 - 1.11.0-dev: Klare Diagramm-Rueckmeldung bei fehlenden Logdaten
+- Diagramm-Konfiguration und Geraetevorschlaege melden fehlende geloggte
+  Readings explizit als Keine Daten zum Device vorhanden.
+- Alte Readingauswahlen werden bei leerer Quelle oder laufender Pruefung
+  entfernt; verspaetete Antworten ersetzen keinen neueren Zustand.
+- Fehler der Datenquelle und ein leerer ausgewaehlter Zeitraum bleiben
+  unterscheidbar.
+
 2026-11-13 - 1.11.0-dev: Einheitliches themegerechtes Design aller bestehenden
 Widgets
 - Die elf verbliebenen Widgettypen folgen jetzt dem neuen Design mit klaren
@@ -516,6 +530,13 @@ Widgets
   angezeigt.
 - Neue Status-Icon-Farben uebernehmen den Theme-Akzent als Vorschlag;
   gespeicherte Benutzerfarben bleiben erhalten.
+
+2026-11-12 - 1.9.1-dev: Entwicklung nach Release 1.9.0
+- Der freigegebene Stand 1.9.0 wurde nach dev synchronisiert.
+- Seiten-Modals, Bildbearbeitung, LinkWidget-Platzvorschau und volle
+  Rasterbreite sind auf main veroeffentlicht.
+- Nicht freigegebene Funktionen und interne AI-Anweisungen bleiben
+  ausschliesslich auf dev.
 
 2026-11-12 - 1.9.0: Seiten-Popups, Bildbearbeitung und volle Rasterbreite
 - S70 - Refactoring 11 - Universelles Navigations-Widget umsetzen
@@ -619,6 +640,39 @@ Widgets
 - Mobile Vorschau und Touch-Ansicht pruefen den verfuegbaren Platz weiterhin
   ohne Aenderung des gespeicherten Rasters.
 
+2026-11-11 - 1.8.1-dev: Entwicklung nach Release 1.8.0
+- Der freigegebene Stand 1.8.0 wurde nach dev synchronisiert.
+- Theme-Manager, mobiles Raster und Anrufliste sind in 1.8.0 enthalten.
+- Die vollstaendige DE/EN-Geraetehilfe bleibt weiterhin offen.
+
+2026-11-11 - 1.8.0-dev: Liquid Glass (Refs #136)
+- Neues Liquid-Glass-Theme; Hintergrundbilder je Seite fuer alle Themes.
+- Das Startseitenbild kann fuer alle Seiten verwendet werden; eigene Bilder
+  bleiben erhalten.
+- Bilder werden im Assetmanager gegen Loeschen geschuetzt.
+- Globale Regler fuer Liquid-Effekt und Transparenz mit direkter Vorschau.
+- Zusaetzliche Themes OLED Black und Catppuccin Mocha.
+- Seiteneinstellungen zeigen Bildnamen und Ordnerpfad aus dem Assetmanager.
+- Smartphone-Quervorschau zeigt ungespeicherte Seiteneinstellungen.
+- Das Theme Dunkel heisst jetzt Forest Green.
+
+2026-11-11 - 1.7.1-dev: Entwicklung nach Release 1.7.0
+- Der freigegebene Stand 1.7.0 wurde nach dev synchronisiert.
+- Einrichtungsassistent, Navigation und FHEM-Update-Historie sind in 1.7.0
+  enthalten.
+
+2026-11-11 - 1.8.0-dev: Mobiles Raster (Refs #137)
+- Ansicht auf Smartphones und Tablets sowie deren Vorschau ohne horizontalen
+  Raster-Scrollbar.
+- Desktop-Editor und Desktop-Zoom behalten ihr bisheriges Verhalten.
+
+2026-11-11 - 1.6.2-dev: Einrichtungsassistent (Refs #129)
+- Manuelle Raum- und Geraeteauswahl mit Vorschau oder Magic-Entwurf.
+- Erkennung von Thermostaten, Schaltern, Messwerttabellen und Solax-SolarFlow.
+- Automatische Anordnung; Veroeffentlichung bleibt eine eigene Aktion.
+- Aktive Navigationspunkte behalten ihren Schriftstil und ihre Breite (Refs
+  #133).
+
 2026-11-11 - 1.8.0: Theme-Manager und Anrufliste
 - Theme-Manager mit Forest Green, Hell, Liquid Glass, OLED Black und Catppuccin
   Mocha (Refs #136).
@@ -641,6 +695,11 @@ Widgets
   #133).
 - FHEM-Update zeigt die aktuelle Aenderungszusammenfassung an (Refs #135).
 - Automatische Temperaturverlaeufe sind nicht enthalten.
+
+2026-11-10 - 1.6.2-dev: Entwicklung nach Release 1.6.1 (Refs #127)
+- Freigegebenen main-Stand 1.6.1 nach dev synchronisiert.
+- Die noch offene DE/EN-Geraetehilfe bleibt ausschliesslich auf dev; Assetsuche
+  bleibt geplant.
 
 2026-11-10 - 1.6.1: LinkWidget und gemeinsamer Assetmanager
 
