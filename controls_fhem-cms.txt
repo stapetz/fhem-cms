@@ -19,7 +19,7 @@ UPD 2026-11-14_19:11:25 30648 www/fhem-cms/components/cms-table.js
 UPD 2026-11-14_13:48:46 10410 www/fhem-cms/components/cms-text.js
 UPD 2026-11-14_19:11:25 39395 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-14_19:11:25 25831 www/fhem-cms/components/cms-value.js
-UPD 2026-11-14_22:34:04 69690 www/fhem-cms/components/cms-volvoconnect.js
+UPD 2026-11-14_22:34:36 69785 www/fhem-cms/components/cms-volvoconnect.js
 UPD 2026-11-13_10:06:04 2220 www/fhem-cms/css/cms-admin.css
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
 UPD 2026-11-13_17:56:27 15580 www/fhem-cms/css/fcui-map.css
