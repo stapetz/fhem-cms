@@ -79,7 +79,7 @@ class VehicleMap {
   }
 }
 
-export function renderVehicleMaps(content, rendered, existing, runtime, preserveState = true) {
+export function renderVehicleMaps(content, rendered, existing, runtime, preserveState = true, layout) {
   const next = new Map();
   const ids = new Set();
   const hosts = [...rendered.querySelectorAll(selector)].filter(host => {
@@ -94,6 +94,7 @@ export function renderVehicleMaps(content, rendered, existing, runtime, preserve
     return true;
   });
   updateWidgetDom(content, rendered, preserveState);
+  layout?.();
   for (const source of hosts) {
     let host = content.querySelector(selector + `[id="${source.id}"]`);
     if (next.has(host.id)) continue;

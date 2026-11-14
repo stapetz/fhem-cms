@@ -73,6 +73,22 @@ das Oeffnen/Speichern ohne Berechnungsoption.
 
 ## VolvoConnect-Nachtrag (dev, 1.16.0-dev, Refs #209)
 
+Korrektur 1.19.3-dev: Auch die normale Kartenansicht verwendet die freie
+Float-Platzierung mit placeVolvoCards statt starrer CSS-Grid-Zeilen.
+Absolute Rasterboxen und derselbe 8px-Innenrahmen entsprechen den sichtbaren
+Karten im GridStack-Bearbeitungsmodus; kurze Karten blockieren keine ganze Zeile.
+Gespeicherte x/y/w/h bleiben pixelgleich, einschliesslich freier Luecken.
+Die normale Ansicht deaktiviert nachlaufende GridStack-CSS-Transitions,
+damit Safari beim Moduswechsel sofort die gespeicherte Geometrie verwendet.
+Ohne gespeicherte Masse werden sichtbare Inhalte gemessen und im geerbten
+Raster angeordnet, ohne die Konfiguration zu aendern. ResizeObserver reagiert
+nur auf Breitenwechsel; unter 601px bleibt die volle einspaltige Inhaltsansicht.
+Die Layoutphase erfolgt nach DOM-Abgleich, aber vor Initialisierung/Update der
+Standortkarte, damit Leaflet keine transienten Zwischenmasse uebernimmt.
+Regression: Fixture 89 prueft echte DOM-Rechtecke gegen GridStack-Geometrie,
+Float-Fuellung ohne gespeicherte Masse und Ueberlappungsfreiheit; Fixture 88
+prueft responsive Breitenwechsel, Karteninstanz, Pan und Zoom bei Liveupdates.
+
 Korrektur 1.19.2-dev: Kartenbewegung verwendet nun dieselbe gebuendelte
 GridStack-Klasse wie die Hauptwidgets, uebergeben vom Rasteradapter als
 Widgetdienst (Float-Engine, margin:0, echter

@@ -51,6 +51,17 @@ class FHEMCMSVolvoConnect extends HTMLElement {
   }
 
   connectedCallback() {
+    this.layoutObserver = new ResizeObserver(entries=>{
+      let changed = false;
+      for (const {target,contentRect} of entries) {
+        if (this.layoutWidths.get(target) === contentRect.width) continue;
+        this.layoutWidths.set(target,contentRect.width);
+        changed = true;
+      }
+      if (changed) this.render();
+    });
+    this.layoutWidths = new WeakMap();
+    this.layoutObserver.observe(this);
     if (this.shadowRoot.childElementCount) { this.render(); return; }
     this.shadowRoot.innerHTML = `
       <link rel="stylesheet" href="${new URL('../css/fcui-gridstack.css', import.meta.url)}">
@@ -79,12 +90,15 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .top[data-sized] > .card { grid-column-end:span var(--card-w,4); grid-row-end:span var(--card-h,12);
           display:flex; flex-direction:column; overflow:hidden; }
         .top[data-sized] .card-body { min-height:0; flex:1; overflow:auto; }
-        .top.grid-stack { display:block; position:relative; }
-        .top.grid-stack > .card { position:absolute; margin:0; padding:0; border:0; background:none; overflow:visible; }
+        .top.grid-stack,.top[data-float] { display:block; position:relative; }
+        .top.grid-stack > .card,.top[data-float] > .card {
+          position:absolute; margin:0; padding:0; border:0; background:none; overflow:visible; }
+        .top[data-float] > .card { transition:none; }
         .card-frame { display:contents; }
-        .grid-stack .card-frame { position:absolute; inset:8px; ${detailCardCss}
+        .grid-stack .card-frame,.top[data-float] .card-frame { position:absolute; inset:8px; ${detailCardCss}
           background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(59,130,246,.12));
-          border-color:rgba(16,185,129,.35); display:flex; flex-direction:column; min-height:0; padding-bottom:56px; overflow:hidden; }
+          border-color:rgba(16,185,129,.35); display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+        .grid-stack .card-frame { padding-bottom:56px; }
         .card-frame .card-body { min-height:0; flex:1; overflow:auto; }
         .card-frame .card-tools { flex:none; }
         .grid-stack-placeholder .placeholder-content { position:absolute; inset:8px;
@@ -114,6 +128,11 @@ class FHEMCMSVolvoConnect extends HTMLElement {
           .top[data-inherited] > .card { margin:0; }
           .top[data-sized] .card-body { overflow:visible; flex:none; }
           .top.grid-stack .card-frame .card-body { overflow:visible; flex:none; }
+          .top[data-float] { display:flex; flex-direction:column; gap:16px; height:auto !important; }
+          .top[data-float] > .card { position:relative; inset:auto !important;
+            width:100% !important; height:auto !important; ${detailCardCss} }
+          .top[data-float] .card-frame { display:contents; }
+          .top[data-float] .card-body { overflow:visible; flex:none; }
         }
         .card { ${detailCardCss} min-width:0; overflow-wrap:anywhere; }
         .card h4 { margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid rgba(128,128,128,.2); font-size:.95rem; }
@@ -404,6 +423,7 @@ shutdown restart</pre>
   }
 
   disconnectedCallback() {
+    this.layoutObserver.disconnect();
     this.revision++;
     this.closeModuleHelp(false);
     this.closeDetails(false);
@@ -701,6 +721,40 @@ shutdown restart</pre>
       this.destroyCardGrid();
       this.$('[data-message]').textContent = `Kartenraster konnte nicht gestartet werden: ${error.message}`;
       throw error;
+    }
+  }
+
+  layoutDisplayCards(top) {
+    if (!top) return;
+    this.layoutObserver.observe(top.parentElement);
+    if (this.pendingCardOrder || top.clientWidth <= 600) return;
+    const grid = this.cardGrid();
+    const cards = [...top.children];
+    const sizes = Object.fromEntries(cards.map(card=>{
+      const rect = card.getBoundingClientRect();
+      const size = this.widgetConfig.cardSizes?.[card.dataset.group];
+      const sourceGrid = this.widgetConfig.cardGrid || {columns:12,rowHeight:32};
+      return [card.dataset.group,size ? {
+        w:Math.max(1,Math.round(size.w/sourceGrid.columns*grid.columns)),
+        h:Math.max(1,Math.round(size.h*sourceGrid.rowHeight/grid.rowHeight)),
+      } : {
+        w:Math.max(1,Math.min(grid.columns,Math.round((rect.width+16)/(top.clientWidth+16)*grid.columns))),
+        h:Math.max(1,Math.ceil((rect.height+16)/grid.rowHeight)),
+      }];
+    }));
+    const stored = this.widgetConfig.cardGrid;
+    const positions = Object.fromEntries(Object.entries(this.widgetConfig.cardPositions || {}).map(([key,p])=>[key,{
+      x:Math.round(p.x/stored.columns*grid.columns),y:Math.round(p.y*stored.rowHeight/grid.rowHeight),
+    }]));
+    const placed = placeVolvoCards(cards.map(card=>card.dataset.group),sizes,grid.columns,this.widgetConfig,positions);
+    top.toggleAttribute('data-float',true);
+    top.style.height = `${Math.max(0,...placed.map(p=>p.row+p.h))*grid.rowHeight}px`;
+    for (const [index,p] of placed.entries()) {
+      const card = cards[index];
+      card.style.left = `${p.col/grid.columns*100}%`;
+      card.style.top = `${p.row*grid.rowHeight}px`;
+      card.style.width = `${p.w/grid.columns*100}%`;
+      card.style.height = `${p.h*grid.rowHeight}px`;
     }
   }
 
@@ -1142,6 +1196,14 @@ shutdown restart</pre>
   renderContent(content) {
     const target = this.widgetConfig.showDetails === false && !this.$('[data-details]').open
       ? this.$('[data-inline-content]') : this.$('[data-detail-content]');
+    const layout = () => {
+      if (this.widgetConfig.showDetails === false && this.$('[data-details]').open && this.inlineArrangementWidth) {
+        const body = this.$('[data-detail-body]');
+        this.$('[data-details]').style.width = `${this.inlineArrangementWidth + 34 + body.offsetWidth - body.clientWidth}px`;
+      }
+      this.mountCardGrid();
+      this.layoutDisplayCards(target.querySelector('.top'));
+    };
     if (content.querySelector('[data-map]') && !this.mapRuntime) {
       if (!this.mapLoading && !this.mapError) {
         this.mapLoading = true;
@@ -1160,14 +1222,10 @@ shutdown restart</pre>
       status.setAttribute('role', 'status');
       content.querySelector('[data-map]').append(status);
       updateWidgetDom(target, content);
+      layout();
     } else {
-      this.vehicleMaps = renderVehicleMaps(target, content, this.vehicleMaps, this.mapRuntime);
+      this.vehicleMaps = renderVehicleMaps(target, content, this.vehicleMaps, this.mapRuntime,true,layout);
     }
-    if (this.widgetConfig.showDetails === false && this.$('[data-details]').open && this.inlineArrangementWidth) {
-      const body = this.$('[data-detail-body]');
-      this.$('[data-details]').style.width = `${this.inlineArrangementWidth + 34 + body.offsetWidth - body.clientWidth}px`;
-    }
-    this.mountCardGrid();
   }
 
   renderActions(model) {

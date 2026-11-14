@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-14",
+  "version": "1.19.3-dev",
+  "title": "VolvoConnect: Float-Anordnung auch in der normalen Kartenansicht",
+  "changes": [
+    "Normale Kartenansicht und Verschiebemodus verwenden dieselbe freie Rasterplatzierung statt unterschiedlicher Zeilenlogik.",
+    "Positionen, Abstaende und freie Luecken bleiben beim Uebernehmen gleich. Auch ohne gespeicherte Groessen stehen kurze Karten neben hoeheren Karten.",
+    "Breitenwechsel aktualisieren das Layout; die mobile Vollinhaltsansicht sowie Kartenzoom und Liveupdates bleiben erhalten. Refs #209."
+  ]
+}

@@ -549,6 +549,9 @@ Die ganze Karte folgt dem Griff, die gestrichelte Kachel markiert den Platz,
 und überlappende Karten werden verschoben. Freie Rasterpositionen und Lücken
 bleiben nach **Übernehmen** erhalten. Am oberen/unteren Rand des Inhalts wird
 beim Ziehen gescrollt. Auf Touchgeräten den Griff kurz halten und dann ziehen.
+Auch die normale Kartenansicht verwendet diese freie Anordnung statt starrer
+Zeilen: Kürzere Karten können neben höheren Karten aufrücken. Gespeicherte
+Positionen, Abstände und Lücken bleiben beim Verlassen des Verschiebemodus gleich.
 **Escape** bzw. eine abgebrochene Touchgeste verwirft zuerst nur das laufende
 Verschieben einschließlich der dabei verdrängten Karten.
 Es gibt keine separaten Hoch-/Runter-Schaltflächen; mit fokussiertem Griff
