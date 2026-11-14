@@ -120,7 +120,8 @@ for (const [name, fixtures] of [
     [['88_volvoconnect.html', 400]]],
   ['VolvoConnect popup reorders cards by pointer and saves only the editor draft',
     [['89_volvoconnect_order.html', 20], ['89_volvoconnect_order.html?height=600', 20],
-      ['89_volvoconnect_order.html?touch=1', 20]]],
+      ['89_volvoconnect_order.html?touch=1', 20], ['89_volvoconnect_order.html?columns=96&inline=1',20],
+      ['89_volvoconnect_order.html?columns=192',20]]],
   ['widget titles inherit alignment and compact contents fill their available area',
     [['36_widget_titles.html', 180], ['37_widget_content.html', 600],
       ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],
@@ -221,6 +222,41 @@ for (const [name, fixtures] of [
         if (fixture.startsWith('89_volvoconnect_order.html')) {
           const touch = fixture.includes('touch=1');
           await evaluate('window.popupOrderTest.host().openDetails(); window.popupOrderTest.host().startArrangement()');
+          await evaluate(`(() => {
+            const {host}=window.popupOrderTest, h=host();
+            h.ensureCardSizes();
+            h.setCardSize('state',h.pendingGrid.columns,Math.ceil(400/h.pendingGrid.rowHeight));
+            h.reorderCard('state','statistics',false); h.render();
+          })()`);
+          assert.equal(await evaluate('window.popupOrderTest.order()[0]'),'statistics','full-width energy can move below statistics');
+          await evaluate('window.popupOrderTest.$(\'[data-group="state"] [data-drag-card]\').scrollIntoView({block:"center"})');
+          const fullWidthDrag = await evaluate(`(() => {
+            const {$}=window.popupOrderTest,r=$('[data-group="state"] [data-drag-card]').getBoundingClientRect();
+            return {x:r.x+r.width/2,y:r.y+r.height/2};
+          })()`);
+          if (touch) await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...fullWidthDrag,id:1}]});
+          else {
+            await command('Input.dispatchMouseEvent',{type:'mouseMoved',...fullWidthDrag});
+            await command('Input.dispatchMouseEvent',{type:'mousePressed',...fullWidthDrag,button:'left',clickCount:1});
+          }
+          assert.equal(await evaluate('Boolean(window.popupOrderTest.host().drag)'),true,'full-width card starts real drag');
+          const topDrop = await evaluate(`(() => {
+            const {$}=window.popupOrderTest,b=$('[data-detail-body]');b.scrollTop=0;
+            const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+10};
+          })()`);
+          if (touch) {
+            await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...topDrop,id:1}]});
+            await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+          } else {
+            await command('Input.dispatchMouseEvent',{type:'mouseMoved',...topDrop,button:'left',buttons:1});
+            await command('Input.dispatchMouseEvent',{type:'mouseReleased',...topDrop,button:'left',clickCount:1});
+          }
+          assert.equal(await evaluate('window.popupOrderTest.order()[0]'),'state',
+            'full-width energy returns to first position with real drag');
+          assert.equal(await evaluate(`(() => {const {$}=window.popupOrderTest,c=$('[data-group="state"]');
+            return [...$('#top').children].every(other=>c.getBoundingClientRect().top<=other.getBoundingClientRect().top+1);})()`),
+            true,'full-width card is visually at the top after drop');
+          await evaluate('window.popupOrderTest.host().cancelArrangement(); window.popupOrderTest.host().startArrangement()');
           for (const cancelled of [true,false]) {
             await evaluate('window.popupOrderTest.$(\'[data-group="state"] [data-resize-card]\').scrollIntoView({block:"center"})');
             const point = await evaluate(`(() => {

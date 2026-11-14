@@ -28,6 +28,13 @@ export function volvoGroupOrder(config = {}) {
 }
 
 export function validateVolvoGroups(config) {
+  if (config.cardGrid !== undefined && (!config.cardGrid || typeof config.cardGrid !== 'object'
+    || Array.isArray(config.cardGrid) || Object.keys(config.cardGrid).sort().join() !== 'columns,rowHeight'
+    || ![12,24,48,96,192].includes(config.cardGrid.columns)
+    || typeof config.cardGrid.rowHeight !== 'number' || !Number.isFinite(config.cardGrid.rowHeight)
+    || config.cardGrid.rowHeight <= 0 || config.cardGrid.rowHeight > 2000)) {
+    return 'Ungültiges VolvoConnect-Kartenraster.';
+  }
   if (config.cardSizes !== undefined) {
     const sizes = config.cardSizes;
     const keys = new Set(volvoCards.map(([key]) => key));
@@ -36,8 +43,10 @@ export function validateVolvoGroups(config) {
       || Object.entries(sizes).some(([key, size]) => !keys.has(key) || !size
         || typeof size !== 'object' || Array.isArray(size)
         || Object.keys(size).sort().join() !== 'h,w'
-        || !Number.isInteger(size.w) || size.w < 3 || size.w > 12
-        || !Number.isInteger(size.h) || size.h < 6 || size.h > 64)) {
+        || !Number.isInteger(size.w) || size.w < (config.cardGrid ? 1 : 3)
+        || size.w > (config.cardGrid?.columns || 12)
+        || !Number.isInteger(size.h) || size.h < (config.cardGrid ? 1 : 6)
+        || size.h > (config.cardGrid ? 1000 : 64))) {
       return 'Ungültige VolvoConnect-Kachelgrößen.';
     }
   }
@@ -60,9 +69,34 @@ export function validateVolvoGroups(config) {
   return null;
 }
 
-export function arrangeVolvoCards(order, sizes) {
+export function arrangeVolvoCards(order, sizes, config = {}) {
+  const hidden = key => key === 'gallery' ? config.showGallery === false : config.hiddenGroups?.includes(key);
   return [...order].sort((a, b) =>
-    (sizes[b]?.h || 6) - (sizes[a]?.h || 6) || (sizes[b]?.w || 4) - (sizes[a]?.w || 4));
+    Number(Boolean(hidden(a))) - Number(Boolean(hidden(b)))
+    || (sizes[b]?.h || 6) - (sizes[a]?.h || 6) || (sizes[b]?.w || 4) - (sizes[a]?.w || 4));
+}
+
+export function placeVolvoCards(order, sizes, columns, config = {}) {
+  const hidden = key => key === 'gallery' ? config.showGallery === false : config.hiddenGroups?.includes(key);
+  const placed = [];
+  let row = 0, col = 0;
+  for (const [index,key] of order.entries()) {
+    const {w,h} = sizes[key];
+    if (hidden(key) && (index === 0 || !hidden(order[index - 1])) && order.slice(index).every(hidden)) {
+      row = Math.max(row, ...placed.map(entry => entry.row + entry.h));
+      col = 0;
+    }
+    for (;;) {
+      if (col + w > columns) { col = 0; row++; }
+      const overlap = placed.find(entry => col < entry.col + entry.w && col + w > entry.col
+        && row < entry.row + entry.h && row + h > entry.row);
+      if (!overlap) break;
+      col = overlap.col + overlap.w;
+    }
+    placed.push({key,col,row,w,h});
+    col += w;
+  }
+  return placed;
 }
 
 export function volvoReadingIcon(group, key) {

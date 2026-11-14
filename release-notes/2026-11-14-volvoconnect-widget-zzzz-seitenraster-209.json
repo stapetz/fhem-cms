@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-14",
+  "version": "1.19.1-dev",
+  "title": "VolvoConnect: Bearbeitungsbreite und feines Seitenraster korrigiert",
+  "changes": [
+    "Die Bearbeitung eingebetteter Karten nutzt dieselbe Inhaltsbreite wie die Hauptansicht, einschliesslich Scrollbar-Ausgleich.",
+    "Kartenraster und Groessenschritte erben Spaltenzahl und Zeilenhoehe des Seitenrasters. Alte Groessen bleiben lesbar und werden erst im Bearbeitungsentwurf umgerechnet.",
+    "Automatisch anordnen setzt ausgeblendete Karten einschliesslich Galerie unter alle sichtbaren Karten.",
+    "Vollbreite Karten lassen sich wieder an die erste Position ziehen; obere Einfuegezone und Treffer in Rasterluecken verbessert. Refs #209."
+  ]
+}

@@ -544,9 +544,16 @@ An der **unteren rechten Ecke** lässt sich zusätzlich die **Breite und Höhe**
 ändern – mit demselben Eckgriff wie bei den Hauptwidgets, per Maus oder Touch.
 Mit fokussiertem Eckgriff ändern die Pfeiltasten Breite bzw. Höhe.
 **Raster anzeigen** aus dem Menü **Ansicht** gilt auch hier während
-**Anordnung bearbeiten**. Das Popup verwendet dafür zwölf eigene Spalten.
+**Anordnung bearbeiten**. Spaltenzahl und Zeilenhöhe werden vom Seitenraster
+übernommen – auch bei feinen Rastern mit 96 oder 192 Spalten.
+Bei eingebetteter Vollansicht hat die Bearbeitung dieselbe nutzbare Breite
+wie die eingebetteten Karten, nicht die begrenzte Breite eines normalen Popups.
 **Automatisch anordnen** behält die Kachelgrößen und Sichtbarkeit bei und
-ordnet die Karten platzsparend nach Größe mit aufgefüllten Rasterlücken.
+ordnet die sichtbaren Karten nach Größe. Ausgeblendete Karten einschließlich
+Galerie wandern geschlossen unter alle sichtbaren Karten.
+Manuell nach oben verschobene Karten bleiben auch optisch oben; insbesondere
+lässt sich eine vollbreite Energiekarte am oberen Inhaltsrand wieder vor
+die erste Karte ziehen.
 **Standardreihenfolge** stellt nur die Kartenreihenfolge zurück, nicht die Größen.
 Auf kleinen Displays bis 600px Inhaltsbreite stehen die Karten immer
 einspaltig mit vollständigem Inhalt. Die manuellen Größen bleiben für größere
@@ -555,6 +562,9 @@ Bei begrenzter Kartenhöhe auf größeren Displays lässt sich der Karteninhalt
 scrollen. Ohne gespeicherte Größen bleibt das bisherige responsive Layout erhalten.
 Größen werden zusammen mit der Anordnung erst durch **Übernehmen** gespeichert;
 **Abbrechen** verwirft beides. Escape verwirft zuerst eine laufende Größenänderung.
+Bereits gespeicherte Größen aus dem älteren groben Raster bleiben lesbar.
+Bei erneuter Bearbeitung werden sie passend zum Seitenraster umgerechnet
+(Breitenanteil und Höhe bleiben bis auf eine Rastereinheit erhalten).
 Die einzelnen angezeigten Readings haben im Anordnungsmodus einen
 **Auge-Schalter am Zeilenanfang**, vor der Beschriftung.
 **Ausnahme Energie & Akku:** Alle vorhandenen Werte dieser Karte sind fix

@@ -5,7 +5,7 @@ import { updateWidgetDom } from '../js/widget-dom.js';
 import { renderVehicleMaps } from '../js/vehicle-map.js';
 import { isValidName } from '../js/fhem-client.js';
 import { formatDateDisplay } from '../js/date-display.js';
-import { volvoCards, volvoGroupIcons, volvoGroupOrder, arrangeVolvoCards, validateVolvoGroups,
+import { volvoCards, volvoGroupIcons, volvoGroupOrder, arrangeVolvoCards, placeVolvoCards, validateVolvoGroups,
   volvoModel, volvoValue } from '../js/volvoconnect.js';
 
 const node = (tag, text, className) => {
@@ -71,8 +71,11 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .top { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));
           gap:16px; align-items:start; }
         .top[data-sized] { grid-template-columns:repeat(12,minmax(0,1fr)); grid-auto-rows:16px;
-          grid-auto-flow:row dense; align-items:stretch; }
-        .top[data-sized] > .card { grid-column:span var(--card-w,4); grid-row:span var(--card-h,12);
+          grid-auto-flow:row; align-items:stretch; }
+        .top[data-inherited] { grid-template-columns:repeat(var(--card-columns),minmax(0,1fr));
+          grid-auto-rows:var(--card-row-height); gap:0; }
+        .top[data-inherited] > .card { margin:8px; }
+        .top[data-sized] > .card { grid-column-end:span var(--card-w,4); grid-row-end:span var(--card-h,12);
           display:flex; flex-direction:column; overflow:hidden; }
         .top[data-sized] .card-body { min-height:0; flex:1; overflow:auto; }
         .hero > .card-body { display:flex; flex-direction:column; gap:14px; }
@@ -80,7 +83,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .top[data-guides] {
           background-image:linear-gradient(to right,var(--cms-guide,rgba(128,128,128,.3)) 1px,transparent 1px),
             linear-gradient(to bottom,var(--cms-guide,rgba(128,128,128,.3)) 1px,transparent 1px);
-          background-size:calc((100% + 16px) / 12) 32px;
+          background-size:calc(100% / var(--card-columns,12)) var(--card-row-height,32px);
         }
         .card { position:relative; }
         .card[data-editing] { padding-bottom:56px; }
@@ -94,6 +97,8 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         @container (max-width:600px) {
           .top[data-sized] { display:flex; flex-direction:column; }
           .top[data-sized] > .card { width:100%; height:auto; overflow:visible; flex-shrink:0; }
+          .top[data-inherited] { gap:16px; }
+          .top[data-inherited] > .card { margin:0; }
           .top[data-sized] .card-body { overflow:visible; flex:none; }
         }
         .card { ${detailCardCss} min-width:0; overflow-wrap:anywhere; }
@@ -399,6 +404,7 @@ shutdown restart</pre>
     this.pendingCardOrder = null;
     this.pendingVisibility = null;
     this.pendingSizes = null;
+    this.pendingGrid = null;
     for (const controller of this.vehicleMaps.values()) controller.destroy();
     this.vehicleMaps.clear();
     this.$('[data-detail-content]')?.replaceChildren();
@@ -409,6 +415,8 @@ shutdown restart</pre>
     const dialog = this.$('[data-details]');
     if (!this.isConnected || dialog.open || this.$('[data-dialog]').open) return;
     this.$('[data-message]').textContent = '';
+    this.inlineArrangementWidth = this.widgetConfig.showDetails === false
+      ? this.$('[data-inline-content] .top')?.getBoundingClientRect().width : null;
     dialog.showModal();
     this.$('[data-info]')?.setAttribute('aria-expanded', 'true');
     this.render();
@@ -500,11 +508,16 @@ shutdown restart</pre>
       || !this.$('[data-details]').open) return;
     this.pendingCardOrder = volvoGroupOrder(this.widgetConfig);
     this.pendingSizes = structuredClone(this.widgetConfig.cardSizes || {});
+    this.pendingGrid = this.widgetConfig.cardGrid ? {...this.widgetConfig.cardGrid} : null;
     this.pendingVisibility = {showGallery:this.widgetConfig.showGallery !== false,
       hiddenGroups:[...(this.widgetConfig.hiddenGroups || [])],
       hiddenReadings:[...(this.widgetConfig.hiddenReadings || [])]};
     this.$('[data-message]').textContent = '';
     this.render();
+    if (Object.keys(this.pendingSizes).length) {
+      this.ensureCardSizes();
+      this.render();
+    }
     this.$('[data-cancel-arrange]').focus({preventScroll:true});
   }
 
@@ -515,6 +528,7 @@ shutdown restart</pre>
     this.pendingCardOrder = null;
     this.pendingVisibility = null;
     this.pendingSizes = null;
+    this.pendingGrid = null;
     this.render();
     this.$('[data-arrange]').focus({preventScroll:true});
   }
@@ -525,6 +539,7 @@ shutdown restart</pre>
     const scrollTop = body.scrollTop;
     const settings = {groupOrder:[...this.pendingCardOrder],
       cardSizes:structuredClone(this.pendingSizes),
+      ...(this.pendingGrid ? {cardGrid:{...this.pendingGrid}} : {}),
       hiddenGroups:[...this.pendingVisibility.hiddenGroups], hiddenReadings:[...this.pendingVisibility.hiddenReadings],
       showGallery:this.pendingVisibility.showGallery};
     this.arrangementSaving = true;
@@ -538,6 +553,7 @@ shutdown restart</pre>
       this.pendingCardOrder = null;
       this.pendingVisibility = null;
       this.pendingSizes = null;
+      this.pendingGrid = null;
       message.textContent = 'Anordnung im Entwurf gespeichert. Veröffentlichung erfolgt separat.';
       this.$('[data-arrange]').hidden = false;
       this.$('[data-arrange]').focus({preventScroll:true});
@@ -577,6 +593,7 @@ shutdown restart</pre>
     const card = [...top.children].find(entry => entry.dataset.group === key);
     const other = [...top.children].find(entry => entry.dataset.group === target);
     top.insertBefore(card, before ? other : other.nextSibling);
+    this.applyCardSizes(top, this.pendingSizes);
   }
 
   startCardDrag(event) {
@@ -621,7 +638,24 @@ shutdown restart</pre>
     const {x, y, card, preview} = this.drag;
     preview.style.left = `${Math.max(0, Math.min(innerWidth - 240, x + 12))}px`;
     preview.style.top = `${Math.max(0, Math.min(innerHeight - 60, y + 12))}px`;
-    const target = this.shadowRoot.elementFromPoint(x, y)?.closest('#top > [data-group]');
+    const top = this.$('[data-detail-content] .top');
+    const cards = [...top.children];
+    const body = this.$('[data-detail-body]').getBoundingClientRect();
+    const first = cards.find(entry => entry !== card);
+    if (first && x >= body.left && x <= body.right
+      && y >= body.top && y <= body.top + 48 && this.$('[data-detail-body]').scrollTop === 0) {
+      this.reorderCard(card.dataset.group, first.dataset.group, true);
+      return;
+    }
+    let target = this.shadowRoot.elementFromPoint(x, y)?.closest('#top > [data-group]');
+    if (!target && x >= body.left && x <= body.right && y >= body.top && y <= body.bottom) {
+      target = cards.filter(entry => entry !== card).reduce((nearest, entry) => {
+        const bounds = entry.getBoundingClientRect();
+        const distance = Math.hypot(Math.max(bounds.left - x,0,x - bounds.right),
+          Math.max(bounds.top - y,0,y - bounds.bottom));
+        return !nearest || distance < nearest.distance ? {entry,distance} : nearest;
+      }, null)?.entry;
+    }
     if (target && target !== card) {
       const bounds = target.getBoundingClientRect();
       this.reorderCard(card.dataset.group, target.dataset.group, y < bounds.top + bounds.height / 2);
@@ -645,31 +679,58 @@ shutdown restart</pre>
   }
 
   updateGridGuides() {
-    this.$('[data-detail-content] .top')?.toggleAttribute('data-guides',
-      Boolean(this.pendingCardOrder && this.services?.showGrid?.()));
+    const top = this.$('[data-detail-content] .top');
+    if (top) this.applyGridGuides(top);
+  }
+
+  cardGrid() {
+    return this.services?.cardGrid?.() || this.pendingGrid || this.widgetConfig.cardGrid
+      || {columns:12,rowHeight:32};
+  }
+
+  applyGridGuides(top) {
+    const grid = this.cardGrid();
+    top.style.setProperty('--card-columns', String(grid.columns));
+    top.style.setProperty('--card-row-height', `${grid.rowHeight}px`);
+    top.toggleAttribute('data-guides', Boolean(this.pendingCardOrder && this.services?.showGrid?.()));
   }
 
   ensureCardSizes() {
     const top = this.$('[data-detail-content] .top');
     const width = top.getBoundingClientRect().width;
+    const grid = this.cardGrid();
+    const previous = this.pendingGrid || {columns:12,rowHeight:32};
+    if (!this.pendingGrid || previous.columns !== grid.columns || previous.rowHeight !== grid.rowHeight) {
+      for (const [key,size] of Object.entries(this.pendingSizes)) {
+        this.pendingSizes[key] = {
+          w:Math.max(1,Math.min(grid.columns,Math.round(size.w / previous.columns * grid.columns))),
+          h:Math.max(1,Math.min(1000,Math.round(size.h * previous.rowHeight / grid.rowHeight)))};
+      }
+    }
+    this.pendingGrid = {...grid};
     for (const card of top.children) {
       const key = card.dataset.group;
       if (this.pendingSizes[key]) continue;
       const rect = card.getBoundingClientRect();
-      this.pendingSizes[key] = {w:width <= 600 ? 4
-        : Math.max(3, Math.min(12, Math.round((rect.width + 16) / (width + 16) * 12))),
-        h:Math.max(6, Math.min(64, Math.ceil((rect.height + 16) / 32)))};
+      this.pendingSizes[key] = {w:width <= 600 ? Math.round(grid.columns / 3)
+        : Math.max(1, Math.min(grid.columns, Math.round((rect.width + 16) / (width + 16) * grid.columns))),
+        h:Math.max(1, Math.min(1000, Math.ceil((rect.height + 16) / grid.rowHeight)))};
     }
   }
 
   setCardSize(key, w, h) {
-    this.pendingSizes[key] = {w:Math.max(3,Math.min(12,w)),h:Math.max(6,Math.min(64,h))};
+    const grid = this.pendingGrid || this.cardGrid();
+    const width = this.$('[data-detail-content] .top').getBoundingClientRect().width;
+    const minWidth = Math.min(grid.columns,Math.ceil(176 / (width / grid.columns)));
+    const minHeight = Math.min(1000,Math.ceil(192 / grid.rowHeight));
+    this.pendingSizes[key] = {w:Math.max(minWidth,Math.min(grid.columns,w)),
+      h:Math.max(minHeight,Math.min(1000,h))};
   }
 
   autoArrangeCards() {
     if (!this.pendingCardOrder || this.arrangementSaving || this.drag || this.resize) return;
     this.ensureCardSizes();
-    this.pendingCardOrder = arrangeVolvoCards(this.pendingCardOrder, this.pendingSizes);
+    this.pendingCardOrder = arrangeVolvoCards(this.pendingCardOrder, this.pendingSizes, this.pendingVisibility);
     this.render();
     this.$('[data-message]').textContent = 'Kacheln platzsparend angeordnet. Größen beibehalten; noch nicht übernommen.';
   }
@@ -680,11 +741,13 @@ shutdown restart</pre>
     event.preventDefault();
     const card = event.target.closest('[data-group]');
     const previous = structuredClone(this.pendingSizes);
+    const previousGrid = this.pendingGrid ? {...this.pendingGrid} : null;
     this.ensureCardSizes();
     const key = card.dataset.group;
     this.resize = {key, pointer:event.pointerId, x:event.clientX, y:event.clientY,
-      size:{...this.pendingSizes[key]}, previous,
-      step:(this.$('[data-detail-content] .top').getBoundingClientRect().width + 16) / 12};
+      size:{...this.pendingSizes[key]}, previous, previousGrid,
+      step:this.$('[data-detail-content] .top').getBoundingClientRect().width / this.pendingGrid.columns,
+      rowStep:this.pendingGrid.rowHeight};
     card.toggleAttribute('data-resizing', true);
     this.applyCardSizes(this.$('[data-detail-content] .top'), this.pendingSizes);
     this.$('[data-detail-content]').setPointerCapture(event.pointerId);
@@ -693,9 +756,9 @@ shutdown restart</pre>
   moveCardResize(event) {
     if (!this.resize || event.pointerId !== this.resize.pointer) return;
     event.preventDefault();
-    const {key,x,y,size,step} = this.resize;
+    const {key,x,y,size,step,rowStep} = this.resize;
     this.setCardSize(key, size.w + Math.round((event.clientX - x) / step),
-      size.h + Math.round((event.clientY - y) / 32));
+      size.h + Math.round((event.clientY - y) / rowStep));
     this.applyCardSizes(this.$('[data-detail-content] .top'), this.pendingSizes);
   }
 
@@ -703,7 +766,10 @@ shutdown restart</pre>
     const resize = this.resize;
     if (!resize) return;
     this.resize = null;
-    if (cancelled) this.pendingSizes = resize.previous;
+    if (cancelled) {
+      this.pendingSizes = resize.previous;
+      this.pendingGrid = resize.previousGrid;
+    }
     const capture = this.$('[data-detail-content]');
     if (capture.hasPointerCapture(resize.pointer)) capture.releasePointerCapture(resize.pointer);
     if (render && this.isConnected) {
@@ -716,10 +782,30 @@ shutdown restart</pre>
 
   applyCardSizes(top, sizes) {
     top.toggleAttribute('data-sized', Object.keys(sizes).length > 0);
+    const stored = this.pendingCardOrder ? this.pendingGrid : this.widgetConfig.cardGrid;
+    const grid = this.cardGrid();
+    top.toggleAttribute('data-inherited', Boolean(stored && Object.keys(sizes).length));
+    top.style.setProperty('--card-columns', String(grid.columns));
+    top.style.setProperty('--card-row-height', `${grid.rowHeight}px`);
+    const effective = {};
     for (const card of top.children) {
       const size = sizes[card.dataset.group];
-      card.style.setProperty('--card-w', String(size?.w || 4));
-      card.style.setProperty('--card-h', String(size?.h || 12));
+      card.style.setProperty('--card-w', String(stored
+        ? Math.max(1,Math.round((size?.w || stored.columns / 3) / stored.columns * grid.columns)) : size?.w || 4));
+      card.style.setProperty('--card-h', String(stored
+        ? Math.max(1,Math.round((size?.h || 12) * stored.rowHeight / grid.rowHeight)) : size?.h || 12));
+      effective[card.dataset.group] = {w:Number(card.style.getPropertyValue('--card-w')),
+        h:Number(card.style.getPropertyValue('--card-h'))};
+      card.style.removeProperty('grid-column-start');
+      card.style.removeProperty('grid-row-start');
+    }
+    if (stored && Object.keys(sizes).length) {
+      const config = this.pendingVisibility || this.widgetConfig;
+      for (const position of placeVolvoCards([...top.children].map(card => card.dataset.group), effective, grid.columns, config)) {
+        const card = [...top.children].find(entry => entry.dataset.group === position.key);
+        card.style.gridColumnStart = String(position.col + 1);
+        card.style.gridRowStart = String(position.row + 1);
+      }
     }
   }
 
@@ -769,6 +855,10 @@ shutdown restart</pre>
     if (this.drag || this.resize) return;
     this.$('[data-arrange]').hidden = typeof this.services?.savePopupSettings !== 'function' || Boolean(this.pendingCardOrder);
     this.$('[data-arrange-bar]').hidden = !this.pendingCardOrder;
+    const dialog = this.$('[data-details]');
+    if (this.widgetConfig.showDetails === false && dialog.open && this.inlineArrangementWidth) {
+      dialog.style.width = `${this.inlineArrangementWidth + 34}px`;
+    } else dialog.style.removeProperty('width');
     const model = volvoModel(this.snapshot, config.device);
     const title = config.showTitle === false ? '' : config.title || '';
     const vehicleName = config.title || config.device || 'VolvoConnect';
@@ -813,8 +903,8 @@ shutdown restart</pre>
     }
     updateWidgetDom(this.$('[data-content]'), compact);
     const inline = this.$('[data-inline-content]');
-    inline.hidden = config.showDetails !== false;
-    if (inline.hidden && inline.childElementCount) {
+    inline.hidden = config.showDetails !== false || this.$('[data-details]').open;
+    if (config.showDetails !== false && inline.childElementCount) {
       for (const controller of this.vehicleMaps.values()) controller.destroy();
       this.vehicleMaps.clear();
       inline.replaceChildren();
@@ -986,7 +1076,7 @@ shutdown restart</pre>
       top.append(card);
     }
     this.applyCardSizes(top, this.pendingSizes || this.widgetConfig.cardSizes || {});
-    top.toggleAttribute('data-guides', Boolean(preview && this.services?.showGrid?.()));
+    this.applyGridGuides(top);
     content.append(top);
     const footer = node('footer');
     footer.id = 'footer';
@@ -1028,6 +1118,10 @@ shutdown restart</pre>
       updateWidgetDom(target, content);
     } else {
       this.vehicleMaps = renderVehicleMaps(target, content, this.vehicleMaps, this.mapRuntime);
+    }
+    if (this.widgetConfig.showDetails === false && this.$('[data-details]').open && this.inlineArrangementWidth) {
+      const body = this.$('[data-detail-body]');
+      this.$('[data-details]').style.width = `${this.inlineArrangementWidth + 34 + body.offsetWidth - body.clientWidth}px`;
     }
   }
 
@@ -1120,6 +1214,7 @@ shutdown restart</pre>
       groupOrder: volvoGroupOrder(this.widgetConfig),
       hiddenGroups: [...(this.widgetConfig.hiddenGroups || [])],
       cardSizes: structuredClone(this.widgetConfig.cardSizes || {}),
+      ...(this.widgetConfig.cardGrid ? {cardGrid:{...this.widgetConfig.cardGrid}} : {}),
       hiddenReadings: [...(this.widgetConfig.hiddenReadings || [])] };
     const groupError = validateVolvoGroups(next);
     if (groupError) { this.$('[data-error]').textContent = groupError; return; }
