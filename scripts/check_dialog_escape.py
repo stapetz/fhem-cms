@@ -32,6 +32,7 @@ def run(browser, url):
         widget = panel.locator("cms-solarflow")
         dialog = widget.locator("[data-dialog]")
         dialog.wait_for(state="visible")
+        check_dialog_actions(widget)
         dialog.locator('[name="title"]').fill("Nicht speichern")
         dialog.locator('[data-pick="single"]').focus()
         dialog.locator('[data-pick="single"]').click()
@@ -65,6 +66,7 @@ def run(browser, url):
             panel.get_by_text(label, exact=True).click()
             other = panel.locator(tag)
             other.locator("[data-dialog]").wait_for(state="visible")
+            check_dialog_actions(other)
             if label in ("Thermostat", "Wert-Anzeige"):
                 other.locator("[data-pick-device]").click()
                 nested = other.locator("[data-picker]")
@@ -138,6 +140,23 @@ def run(browser, url):
         print(f"{browser.browser_type.name}: Escape stacking, cancellation and dirty confirmation passed", flush=True)
     finally:
         page.close()
+
+
+def check_dialog_actions(widget):
+    result = widget.evaluate("""el => {
+      const dialog = el.shadowRoot.querySelector('[data-dialog]');
+      const remove = dialog.querySelector('[data-delete]');
+      const actions = remove.parentElement;
+      return {
+        labels: [...actions.querySelectorAll('button')].map(button => button.textContent.trim()),
+        align: getComputedStyle(actions).justifyContent,
+        removeMargin: getComputedStyle(remove).marginRight,
+        last: actions === dialog.querySelector('form').lastElementChild
+      };
+    }""")
+    assert result["labels"] == ["Widget löschen", "Abbrechen", "Speichern"], result
+    assert result["align"] == "flex-end" and result["last"], result
+    assert result["removeMargin"] == "auto", result
 
 
 def main():

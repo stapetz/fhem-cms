@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-14",
+  "version": "1.16.0-dev",
+  "title": "VolvoConnect: Symbole, Kartenaugen und separate Aktionen",
+  "changes": [
+    "Die Kartenbearbeitung bleibt im Popup: Ziehgriff und Auge-Schalter statt sichtbarer Hoch-/Runter-Pfeile. Reihenfolge und Sichtbarkeit werden gemeinsam nur im Entwurf gespeichert.",
+    "Der Widgetdialog bleibt kompakt: Device unter Titel, Umschalter fuer Details im Popup oder vollstaendig inline. Keine doppelte Gruppenliste oder interaktive Konfigurationsvorschau.",
+    "Statuswerte nur als passende Symbole mit zugaenglichen Beschreibungen; kurze deutsche Labels mit VIN und Durchschnittszeichen. Fehlender Ladetyp bei vorhandenen Energiedaten als Strich.",
+    "Fahrzeugaktionen im eigenen Modal hinter dem A-Symbol, ohne weitere Bestaetigungsabfrage. Im Editor bleiben sie gesperrt.",
+    "Gemeinsame Dialogfusszeile aller Widgets: Widget loeschen links, Abbrechen und Speichern rechts. Beschriftung auch bei der Anrufliste vereinheitlicht. Refs #209."
+  ]
+}

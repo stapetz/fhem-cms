@@ -135,7 +135,7 @@ class FHEMCMSCallList extends HTMLElement {
           <p class="hint">Das Device benötigt create-readings 1 und passende visible-columns.
             Es werden höchstens die dort bereitgestellten Anrufe angezeigt.</p>
           <p class="error" data-error role="alert"></p>
-          <div class="actions"><button type="button" data-delete>Entfernen</button>
+          <div class="actions"><button type="button" data-delete>Widget löschen</button>
             <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>
         </form>
       </dialog>`;

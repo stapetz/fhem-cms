@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { volvoGroups, volvoCards, volvoModel, volvoImageUrl, volvoText, volvoValue,
-  volvoGroupOrder, validateVolvoGroups, volvoStatusSymbol } from '../www/fhem-cms/js/volvoconnect.js';
+  volvoGroupOrder, validateVolvoGroups, volvoStatusSymbol, volvoLabel } from '../www/fhem-cms/js/volvoconnect.js';
 import { deviceWidgetSuggestions } from '../www/fhem-cms/js/device-widget-suggestions.js';
 import { schema5WidgetSuggestions, createSchema5RoomPlan, buildSchema5SetupConfig } from '../www/fhem-cms/js/fcui-schema5-setup-wizard.js';
 
@@ -123,7 +123,7 @@ test('VolvoConnect status symbols match module semantics without turning normal 
     ['doors', 'centralLock', 'LOCKED', '🔒', 'good'],
     ['doors', 'frontLeftDoor', 'OPEN', '🔓', 'warning'],
     ['state', 'chargerConnectionStatus', 'CONNECTED', '🔌', 'good'],
-    ['state', 'chargerConnectionStatus', 'DISCONNECTED', '🔌', 'neutral'],
+    ['state', 'chargerConnectionStatus', 'DISCONNECTED', '🔌̸', 'neutral'],
     ['state', 'chargingStatus', 'ONGOING', '⚡', 'good'],
     ['capabilities', 'feature_isSupported', '0', '−', 'neutral'],
   ]) assert.deepEqual(volvoStatusSymbol(group, key, value), { icon, tone });
@@ -133,4 +133,26 @@ test('VolvoConnect status symbols match module semantics without turning normal 
   assert.equal(rows.get('doors')[0].icon, '🔒');
   assert.equal(rows.get('doors')[0].status.icon, '🔒');
   assert.equal(rows.get('state')[0].icon, '🔋');
+});
+
+test('VolvoConnect uses short German labels and an empty charging-type marker', () => {
+  for (const [key,label] of [
+    ['averageEnergyConsumption','Ø Energieverbrauch'], ['averageFuelConsumption','Ø Verbrauch'],
+    ['averageSpeed','Ø Geschwindigkeit'], ['averageSpeedAutomatic','Ø Geschwindigkeit automatisch'],
+    ['vin','VIN'], ['specifications_numberOfSeats','Sitzplätze'],
+    ['specifications_numberOfDoors','Türenanzahl'], ['specifications_gearbox','Getriebe'],
+    ['specifications_driveType','Antriebsart'], ['specifications_enginePowerKw','Motorleistung (kW)'],
+    ['specifications_firstRegistrationDate','Erstzulassung'],
+    ['specifications_grossWeightKg','Zulässiges Gesamtgewicht (kg)'],
+    ['charge_isSupported','Laden unterstützt'], ['climate_isSupported','Klimatisierung unterstützt'],
+  ]) assert.equal(volvoLabel(key),label);
+  for (const value of ['',null,'PROPERTY_NOT_FOUND','PROPERTY_NOT_SUPPORTED']) {
+    const rows = model({state_chargingType:value,state_chargingPower:'PROPERTY_NOT_FOUND'}).groups.get('state');
+    assert.equal(rows.length,1);
+    assert.equal(rows[0].value,'−');
+  }
+  assert.equal(model({state_batteryChargeLevel:'0'}).groups.get('state')
+    .find(row=>row.key==='chargingType').value,'−');
+  assert.deepEqual(volvoStatusSymbol('engineDiagnostics','engineStatus','STOPPED'),{icon:'⏻',tone:'neutral'});
+  assert.deepEqual(volvoStatusSymbol('engineDiagnostics','engineStatus','RUNNING'),{icon:'▶',tone:'neutral'});
 });

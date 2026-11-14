@@ -20,7 +20,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.15.0-dev';
+our $FHEMCMS_VERSION = '1.16.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1034,7 +1034,7 @@ sub FHEMCMS_ValidateConfig {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid'],
-                    ['title', 'showTitle', 'showGallery', 'groupOrder', 'hiddenGroups']);
+                    ['title', 'showTitle', 'showGallery', 'showDetails', 'groupOrder', 'hiddenGroups']);
             } elsif ($widget->{type} eq 'fhem-solar-energy') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'sections', 'grid'],
                     ['title', 'showTitle', 'powerUnit', 'energyUnit', 'threshold', 'deriveHome']);
@@ -1162,6 +1162,8 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
                 return 'Ungueltiger Wert fuer showGallery'
                     if (exists($widget->{showGallery}) && !$isBool->($widget->{showGallery}));
+                return 'Ungueltiger Wert fuer showDetails'
+                    if (exists($widget->{showDetails}) && !$isBool->($widget->{showDetails}));
                 for my $field ('groupOrder', 'hiddenGroups') {
                     next if (!exists($widget->{$field}));
                     return "Ungueltige VolvoConnect-Gruppen in $field"

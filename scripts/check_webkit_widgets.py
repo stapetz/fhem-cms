@@ -49,10 +49,10 @@ def check_popup_order(page):
     assert page.evaluate("window.popupOrderTest.order()[1]") == "statistics", "Escape did not cancel"
     assert page.locator("cms-volvoconnect [data-details]").is_visible()
     page.evaluate("window.popupOrderTest.host().startArrangement()")
-    page.locator('cms-volvoconnect [data-group="gallery"] [data-card-step="-1"]').focus()
-    page.keyboard.press("Enter")
+    page.locator('cms-volvoconnect [data-group="gallery"] [data-drag-card]').focus()
+    page.keyboard.press("ArrowUp")
     assert page.evaluate("window.popupOrderTest.order()[2]") == "gallery", "keyboard did not reorder"
-    page.evaluate("window.popupOrderTest.host().saveArrangement()")
+    page.evaluate('window.popupOrderTest.host().toggleCard("doors"); window.popupOrderTest.host().saveArrangement()')
     page.wait_for_function("""window.popupOrderTest.writes() === 1
         && !document.querySelector('cms-volvoconnect').shadowRoot.querySelector('[data-details]').open""")
     page.evaluate("window.popupOrderTest.finish()")

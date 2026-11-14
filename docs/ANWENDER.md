@@ -495,27 +495,45 @@ Die kompakte Kachel zeigt nur Akkustand und Restreichweite. Das
 **Informationssymbol ⓘ** öffnet die vollständige Fahrzeugansicht als Popup,
 mit Ladeinformationen, Galerie und tatsächlich vorhandenen Modulgruppen.
 Symbole kennzeichnen Readings und Zustände wie verriegelte Türen oder
-Warnungen. Fehlende oder nicht unterstützte Werte und leere Gruppen
+Warnungen, ohne redundanten Zustandstext. Beschreibungen bleiben für
+Screenreader und als Tooltip verfügbar. VIN und Ø-Verbrauchsangaben
+halten die Beschriftungen kurz; Fahrzeugspezifikationen sind deutsch beschriftet.
+Fehlende oder nicht unterstützte Werte und leere Gruppen
 werden nicht angezeigt; echte Nullwerte bleiben sichtbar. Das Popup
 verwendet das gewählte Theme und scrollt auf kleinen Bildschirmen innerhalb
 des Fensters. Schließen per **✕**, **Escape** oder Klick außerhalb des Popups;
 danach kehrt der Fokus zum Informationssymbol zurück.
 
-Im Widgetdialog unter **Modulgruppen im Popup** können alle 14 Gruppen
-und die Galerie ein-/ausgeschaltet und mit **↑ / ↓** umgeordnet werden. Die Einstellungen
-werden erst beim Speichern übernommen. Die kompakte Batterie-/Reichweitenanzeige
-bleibt unabhängig von den Popupgruppen sichtbar. Einzelne Readings lassen
-sich derzeit noch nicht separat ausblenden.
-Alternativ im geöffneten Popup im **Editmodus → Anordnung bearbeiten** wählen:
+Im Widgetdialog steht die **Device-Zuordnung direkt unter dem Titel**.
+**Zeige Detaildaten im Popup** ist standardmäßig eingeschaltet.
+Bei ausgeschalteter Option erscheinen alle freigegebenen Karten direkt im
+Widget, ohne Informationssymbol. Die vorhandene Rastergröße bleibt erhalten
+und kann bei Bedarf im Editor vergrößert werden.
+Die Dialogaktionen stehen einheitlich in der Fußzeile:
+**Widget löschen** links, **Abbrechen** und **Speichern** rechts.
+
+Im geöffneten Popup im **Editmodus → Anordnung bearbeiten** wählen:
 Kacheln am **⠿**-Griff mit Maus oder Touch an die gewünschte Stelle ziehen.
 Die gestrichelte Kachel markiert den Platz, andere Karten rücken nach;
 am oberen/unteren Rand des Inhalts wird beim Ziehen gescrollt.
-**↑ / ↓** bieten dieselbe Funktion per Tastatur.
-**Übernehmen** speichert ausschließlich die Reihenfolge im CMS-Entwurf und
+Es gibt keine separaten Hoch-/Runter-Schaltflächen; mit fokussiertem Griff
+ist dieselbe Bedienung über die Pfeiltasten möglich.
+Die **Auge-Schalter** blenden einzelne Karten einschließlich Galerie ein
+oder aus. Ausgeblendete und noch nicht verfügbare Karten bleiben in dieser
+Bearbeitungsansicht erreichbar; durchgestrichenes Auge und gestrichelter
+Rahmen kennzeichnen ausgeblendete Karten.
+**Übernehmen** speichert Reihenfolge und Sichtbarkeit im CMS-Entwurf und
 schließt das Popup; die normale Veröffentlichung bleibt separat.
 **Abbrechen** verwirft die Vorschau. Escape bricht zuerst einen laufenden
 Ziehvorgang, danach die Anordnungsbearbeitung ab und schließt erst dann das Popup.
 Im Ansichts-/Vorschaumodus gibt es keine Verschiebegriffe.
+Auch bei ausgeschaltetem Detailpopup öffnet **Anordnung bearbeiten** im
+Editmodus diese Bearbeitungsansicht als Popup. Die Karten auf der Seite
+werden dabei nicht live umsortiert. Eine doppelte Gruppenliste oder
+interaktive Vorschau im Konfigurationsdialog gibt es nicht.
+Die kompakte Batterie-/Reichweitenanzeige bleibt unabhängig von den
+Gruppeneinstellungen sichtbar. Einzelne Readings lassen sich noch nicht
+separat ausblenden.
 
 Die Standardreihenfolge ist Energie & Akku, Statistik, Fahrzeuginformationen,
 Galerie, Standort, Licht, Türen, Fenster, Diagnose und die übrigen Gruppen.
@@ -526,22 +544,28 @@ stehen drei gleich breite Spalten nebeneinander; auf kleineren entsprechend
 weniger. Kurze Karten werden nicht auf die Höhe langer Nachbarkarten gestreckt.
 `PROPERTY_NOT_FOUND` und `PROPERTY_NOT_SUPPORTED` werden in allen Gruppen
 als fehlende Werte behandelt; ihre gesamten Zeilen entfallen.
+Nur beim Ladetyp steht bei vorhandenen Energiedaten für einen fehlenden/nicht verfügbaren Wert
+ein **−** statt „Keiner“.
 Der Akkustand wird nicht zusätzlich als Tabellenzeile wiederholt.
 Neue Widgets starten im Standardraster mit 4 × 4 Zellen. Vorhandene
 Rastergrößen und HTML-Widgets werden nicht automatisch verändert; eine
 bisher große VolvoConnect-Kachel lässt sich im Editor kleiner ziehen.
 
-Die **Bildergalerie anzeigen**-Option ist standardmäßig eingeschaltet.
+Die **Bildergalerie** ist standardmäßig eingeschaltet.
 Außen- und Innenansicht erscheinen nur mit entsprechenden Bildreadings;
 zwischen den Bildern kann gewischt oder per Tastatur gescrollt werden.
-Die Galerie lässt sich im Widgetdialog vollständig abschalten. Standortdaten
+Die Galerie lässt sich über ihr Auge im Anordnungsmodus abschalten. Standortdaten
 verwenden die vorhandene Fahrzeugkarte; dabei werden Kartenkacheln von
-OpenStreetMap geladen. Bilder und Karte werden erst im geöffneten Popup
-aufgebaut. Liveupdates erhalten das offene Popup, seine Scrollposition,
+OpenStreetMap geladen. Bilder und Karte werden erst bei angezeigten Details
+aufgebaut, im Popup oder in der vollständigen Inline-Ansicht.
+Liveupdates erhalten das offene Popup, seine Scrollposition,
 Galerieposition und Kartenzoom; beim Schließen wird die Karte freigegeben.
 
-Vom Device angebotene Fahrzeugaktionen lassen sich nur im Ansichtsmodus
-und nach einer Bestätigung ausführen. „Befehl gesendet“ bedeutet nicht, dass
+Das **Ⓐ-Symbol** öffnet ein eigenes kleines Modal für die vom Device
+angebotenen Fahrzeugaktionen. Diese sind nur im Ansichtsmodus ausführbar;
+ein Klick sendet die Aktion direkt, ohne weitere Bestätigungsabfrage.
+Im Editor sind Fahrzeugaktionen gesperrt.
+„Befehl gesendet“ bedeutet nicht, dass
 das Fahrzeug den Auftrag bereits abgeschlossen hat; maßgeblich sind die
 zurückkommenden Readings. Vorhandene freie HTML-Widgets bleiben unverändert.
 

@@ -64,8 +64,10 @@ export function volvoStatusSymbol(group, key, value) {
     return { icon: text === 'RUNNING' ? '▶' : '⏻', tone: 'neutral' };
   }
   if (/^(?:CONNECTED|DISCONNECTED)$/.test(text)) {
-    return { icon: '🔌', tone: text === 'CONNECTED' ? 'good' : 'neutral' };
+    return { icon: text === 'CONNECTED' ? '🔌' : '🔌̸', tone: text === 'CONNECTED' ? 'good' : 'neutral' };
   }
+  if (text === 'CHARGING_STOPPED') return { icon:'⏸', tone:'neutral' };
+  if (group === 'commands' && /^(?:COMPLETED|SUCCESS)$/.test(text)) return { icon:'✓', tone:'good' };
   if (/^(?:CHARGING|ONGOING|PROVIDING_POWER)$/.test(text)) return { icon: '⚡', tone: 'good' };
   if (/^(?:NONE|NO_POWER_AVAILABLE|UNAVAILABLE|0|false)$/.test(text)
     && (group === 'capabilities' || !/^(?:0|false)$/.test(text))) return { icon: '−', tone: 'neutral' };
@@ -75,6 +77,9 @@ export function volvoStatusSymbol(group, key, value) {
 
 const labels = {
   batteryChargeLevel: 'Akkustand', chargerConnectionStatus: 'Ladekabel',
+  charge: 'Laden', charge_start: 'Laden starten', charge_stop: 'Laden stoppen',
+  climate: 'Klimatisierung', climate_stop: 'Klimatisierung stoppen',
+  precondition: 'Vorkonditionierung', lock: 'Verriegeln', unlock: 'Entriegeln', horn: 'Hupe',
   chargerPowerStatus: 'Ladeleistung-Status', chargingCurrentLimit: 'Lade-Stromlimit',
   chargingPower: 'Ladeleistung', chargingStatus: 'Ladestatus', chargingType: 'Lade-Typ',
   electricRange: 'Elektrische Reichweite',
@@ -84,10 +89,10 @@ const labels = {
   frontRightDoor: 'Tür vorne rechts', rearLeftDoor: 'Tür hinten links',
   rearRightDoor: 'Tür hinten rechts', hood: 'Motorhaube', tailgate: 'Heckklappe',
   tankLid: 'Tankdeckel', odometer: 'Kilometerstand',
-  averageFuelConsumption: 'Durchschnittlicher Verbrauch',
-  averageSpeed: 'Durchschnittsgeschwindigkeit',
-  averageEnergyConsumption: 'Durchschnittlicher Energieverbrauch',
-  averageSpeedAutomatic: 'Durchschnittsgeschwindigkeit automatisch',
+  averageFuelConsumption: 'Ø Verbrauch',
+  averageSpeed: 'Ø Geschwindigkeit',
+  averageEnergyConsumption: 'Ø Energieverbrauch',
+  averageSpeedAutomatic: 'Ø Geschwindigkeit automatisch',
   distanceToService: 'Strecke bis zur Wartung', engineHoursToService: 'Betriebsstunden bis zur Wartung',
   serviceWarning: 'Service', timeToService: 'Zeit bis zur Wartung',
   washerFluidLevelWarning: 'Wischwasser', distanceToEmptyBattery: 'Reichweite Akku',
@@ -97,7 +102,7 @@ const labels = {
   unavailableReason: 'Grund der Nichtverfügbarkeit', engineCoolantLevelWarning: 'Kühlmittelstand',
   oilLevelWarning: 'Ölstand', engineStatus: 'Motor', fuelAmount: 'Kraftstoffmenge',
   batteryCapacityKWH: 'Batteriekapazität', modelYear: 'Modelljahr', gearbox: 'Getriebe',
-  fuelType: 'Antriebsart', externalColour: 'Außenfarbe', vin: 'Fahrgestellnummer',
+  fuelType: 'Antriebsart', externalColour: 'Außenfarbe', vin: 'VIN',
   descriptions_model: 'Modell', descriptions_steering: 'Lenkradseite',
   descriptions_upholstery: 'Polsterung', frontLeft: 'Vorne links', frontRight: 'Vorne rechts',
   rearLeft: 'Hinten links', rearRight: 'Hinten rechts', invokeStatus: 'Befehlsstatus',
@@ -124,6 +129,17 @@ const labels = {
   road: 'Straße', house_number: 'Hausnummer', postcode: 'Postleitzahl', city: 'Ort',
   state: 'Bundesland', country: 'Land', latitude: 'Breitengrad', longitude: 'Längengrad',
   timestamp: 'Positionszeitpunkt',
+  specifications_numberOfSeats: 'Sitzplätze', specifications_numberOfDoors: 'Türenanzahl',
+  specifications_driveType: 'Antriebsart', specifications_enginePowerKw: 'Motorleistung (kW)',
+  specifications_firstRegistrationDate: 'Erstzulassung',
+  specifications_grossWeightKg: 'Zulässiges Gesamtgewicht (kg)',
+  specifications_modelYear: 'Modelljahr', specifications_gearbox: 'Getriebe',
+  specifications_fuelType: 'Antriebsart', specifications_steering: 'Lenkradseite',
+  specifications_batteryCapacityKWH: 'Batteriekapazität',
+  specifications_enginePower: 'Motorleistung', specifications_engineVolume: 'Hubraum',
+  specifications_height: 'Höhe', specifications_length: 'Länge',
+  specifications_width: 'Breite', specifications_weight: 'Gewicht',
+  specifications_fuelCapacity: 'Tankinhalt', specifications_doors: 'Türenanzahl',
 };
 const states = {
   state: { authenticated: 'Verbunden', auth_required: 'Anmeldung erforderlich',
@@ -168,7 +184,9 @@ export function volvoLabel(key) {
   const clean = key.replace(/^getEnergyState_/, '').replace(/_isSupported$/, '');
   const label = Object.hasOwn(labels, clean) ? labels[clean]
     : clean.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replaceAll('_', ' ');
-  return label.charAt(0).toUpperCase() + label.slice(1) + (/_isSupported$/.test(key) ? ' unterstützt' : '');
+  return (label.charAt(0).toUpperCase() + label.slice(1))
+    .replace(/Durchschnitt(?:licher|liche|liches|lichen|lich)?\s*/gi, 'Ø ')
+    .replace(/\bAverage\s*/gi, 'Ø ') + (/_isSupported$/.test(key) ? ' unterstützt' : '');
 }
 
 export function volvoValue(group, key, value, unit = '') {
@@ -209,9 +227,15 @@ export function volvoModel(snapshot, device) {
     if (group === 'engine' || reading === 'workshopDiagnostics_washerFluidLevelWarning'
       || reading === 'brakes_brakeFluidLevelWarning') group = 'engineDiagnostics';
     if (group === 'location' && /^(?:address|altitude|heading)$/.test(key)) continue;
-    const value = volvoValue(group, key, readings[reading], readings[`${reading}_unit`]);
+    const value = volvoValue(group, key, readings[reading], readings[`${reading}_unit`])
+      || (key === 'chargingType' ? '−' : '');
     if (value) groups.get(group).push({ reading, key, label: volvoLabel(key), value,
       icon: volvoReadingIcon(group, key), status: volvoStatusSymbol(group, key, readings[reading]) });
+  }
+  const energy = groups.get('state');
+  if (energy.length && !energy.some(entry => entry.key === 'chargingType')) {
+    energy.push({reading:'state_chargingType',key:'chargingType',label:volvoLabel('chargingType'),
+      value:'−',icon:volvoReadingIcon('state','chargingType'),status:null});
   }
   const location = groups.get('location');
   for (const [main, extra, prepend] of [['road', 'house_number', false], ['city', 'postcode', true]]) {

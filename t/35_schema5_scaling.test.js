@@ -267,12 +267,13 @@ for (const [name, fixtures] of [
           assert.equal(await evaluate('window.popupOrderTest.order()[1]'), 'statistics', 'Escape cancels unsaved arrangement');
           assert.equal(await evaluate('window.popupOrderTest.$("[data-details]").open'), true, 'Escape leaves details open');
           await evaluate('window.popupOrderTest.host().startArrangement()');
-          await evaluate('window.popupOrderTest.$(\'[data-group="gallery"] [data-card-step="-1"]\').focus()');
-          await command('Input.dispatchKeyEvent', {type:'keyDown',key:'Enter',code:'Enter',text:'\r',windowsVirtualKeyCode:13});
-          await command('Input.dispatchKeyEvent', {type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+          await evaluate('window.popupOrderTest.$(\'[data-group="gallery"] [data-drag-card]\').focus()');
+          await command('Input.dispatchKeyEvent', {type:'keyDown',key:'ArrowUp',code:'ArrowUp',windowsVirtualKeyCode:38});
+          await command('Input.dispatchKeyEvent', {type:'keyUp',key:'ArrowUp',code:'ArrowUp',windowsVirtualKeyCode:38});
           assert.equal(await evaluate('window.popupOrderTest.order()[2]'), 'gallery', 'real keyboard moves card');
           await evaluate('window.popupOrderTest.host().cancelArrangement(); window.popupOrderTest.host().startArrangement()');
           await dragGallery();
+          await evaluate('window.popupOrderTest.host().toggleCard("doors")');
           await evaluate('window.popupOrderTest.host().saveArrangement()');
           assert.equal(await evaluate('window.popupOrderTest.snapshot().draft.pages[0].widgets[0].groupOrder[1]'),
             'gallery', 'editor callback persists exact dropped order');
@@ -318,6 +319,17 @@ for (const [name, fixtures] of [
           await evaluate(`window.volvoPopupRegression.host.shadowRoot.querySelector('[data-close-details]').focus()`);
           await key('Enter','Enter',13,'\r');
           assert.equal(await open(), false, 'close button works from the keyboard');
+          await evaluate('window.volvoPopupRegression.host.shadowRoot.querySelector("[data-open-actions]").focus()');
+          await key('Enter','Enter',13,'\r');
+          assert.equal(await evaluate('window.volvoPopupRegression.host.shadowRoot.querySelector("[data-actions-dialog]").open'),
+            true, 'keyboard opens separate action modal');
+          await key('Escape','Escape',27);
+          assert.equal(await evaluate('window.volvoPopupRegression.host.shadowRoot.querySelector("[data-actions-dialog]").open'),
+            false, 'Escape closes action modal');
+          assert.equal(await evaluate('window.volvoPopupRegression.host.shadowRoot.activeElement.hasAttribute("data-open-actions")'),
+            true, 'action modal returns focus to launcher');
+          assert.equal(await evaluate('window.scrollY === window.volvoPopupRegression.scroll'), true,
+            'action modal never resets page scroll');
           await evaluate('window.volvoPopupRegression.host.remove()');
           return;
         }

@@ -71,7 +71,41 @@ der verfuegbaren Diagrammhoehe, ohne Stations-/Titelueberlauf.
 Chrome-Runner und `python scripts/check_webkit_widgets.py` pruefen auch
 das Oeffnen/Speichern ohne Berechnungsoption.
 
+## VolvoConnect-Nachtrag (dev, 1.16.0-dev, Refs #209)
+
+Nach erneuter Abstimmung bleibt die Kartenbearbeitung direkt im Detailpopup.
+Keine interaktive Vorschau und keine doppelte Gruppenliste im Konfigurationsdialog.
+Sichtbare Hoch-/Runter-Pfeile entfallen; der fokussierte Griff verarbeitet
+Pfeiltasten. Auge-Schalter bearbeiten hiddenGroups/showGallery zusammen mit
+groupOrder als ausstehende Einstellungen. Auch ausgeblendete/leere Karten
+bleiben in der Bearbeitungsansicht erreichbar; ausserhalb bleiben sie verborgen.
+savePopupSettings schreibt diese drei Felder gemeinsam mit dem Token des
+angezeigten Editorzustands ausschliesslich in den Entwurf.
+
+Optionales boolesches showDetails (Default true, auch in Blueprints):
+false zeigt die vollen Karten inline ohne Informationssymbol.
+Auch dann wird ausschliesslich im Popup umgeordnet; die Inline-DOM bleibt
+waehrend der Vorschau unveraendert. Inline-IDs erhalten einen eigenen Praefix.
+Device-Auswahl direkt unter Titel, gemeinsame Dialogfusszeile:
+Loeschen links, Abbrechen/Speichern rechts. Gemeinsame Styles in dialog-groups.js
+sichern diese Anordnung fuer alle 17 Widgettypen, auch fuer Anrufliste,
+Solar/Energie und LinkWidget.
+Auch die Anrufliste verwendet die einheitliche Beschriftung Widget loeschen.
+
+Statuswerte werden nur symbolisch angezeigt, Text bleibt aria-label/Tooltip.
+VIN, Ø-Beschriftungen und bekannte technische Spezifikationen werden deutsch
+und kurz ausgegeben. Ein leerer/nicht verfuegbarer Ladetyp bei vorhandenen Energiedaten
+bekommt als ausdrueckliche Ausnahme den Strich statt einer Ersatzbezeichnung.
+Fahrzeugaktionen stehen in einem separaten Modal hinter dem A-Symbol.
+Nur angebotene Allowlistbefehle, keine zweite Bestaetigung, Busy-Schutz und
+sichtbare Fehler. Editor/Anordnungsmodus kann keine Fahrzeugbefehle senden.
+Fixture 88 prueft beide Anzeigevarianten, Symboltexte, Footer, Fehler und
+Map-/DOM-Erhalt; Fixture 89 den echten Entwurfspfad fuer Augen und Reihenfolge.
+check_dialog_escape.py prueft Footerreihenfolge/-ausrichtung aller 17 Widgets.
+
 ## VolvoConnect-Popupanordnung (dev, 1.15.0-dev, Refs #209)
+
+Historischer Ausgangsstand; fuer 1.16.0-dev gelten die Aenderungen des Nachtrags oben.
 
 Standard: state, statistics, vehicle, gallery, location, warnings, doors,
 windows, engineDiagnostics, capabilities, brakes, workshopDiagnostics,
