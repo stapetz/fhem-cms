@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Tabellen uebernehmen die Themeflaeche",
+  "changes": [
+    "Die neue Tabellendarstellung verwendet wieder die aeussere Themeflaeche einschliesslich Liquid-Glass-Transparenz.",
+    "Spaltenkoepfe bleiben transparent statt eine zusaetzliche Themeflaeche ueber die Tabelle zu legen."
+  ]
+}
