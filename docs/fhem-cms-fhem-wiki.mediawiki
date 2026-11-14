@@ -323,6 +323,8 @@ Unter '''Bearbeiten → Gerät hinzufügen''' zuerst nach Name, Alias, Typ oder 
 
 Nach der Widgetwahl öffnet sich der gewohnte Konfigurationsdialog mit änderbaren Vorgaben. Erst '''Speichern''' schreibt den Entwurf; '''Abbrechen''' kehrt zur Vorschlagsliste zurück. Geräteauswahl und Abbruch speichern oder schalten nichts. '''Widget hinzufügen''' bleibt unverändert verfügbar.
 
+Wartungsbefehle für Batteriewechsel, Aufwecken oder Werksreset ergeben keinen Tastervorschlag. Schalter benötigen angebotene An-/Aus-Befehle und einen passenden <code>on</code>- oder <code>off</code>-Status. Slider und Auswahllisten verlangen zusätzlich ein zuordenbares Statusreading. Die automatische Auswahl ist bewusst zurückhaltend; eigene Zuordnungen bleiben über '''Widget hinzufügen''' möglich.
+
 === Verfügbare Widgets ===
 
 '''Neu auf dev, ab 1.11.0-dev:''' '''Wert auswählen''' zeigt diskrete Set-Angebote wie <code>mode:auto,eco,boost</code> als Dropdown oder kompakte Buttons. Optionale Anzeigenamen machen technische Werte lesbar, etwa „Sparbetrieb“ für <code>eco</code>; gesendet bleibt der technische Wert. Gerät, Befehl und optionales Statusreading lassen sich im Standarddialog einstellen. Der Typ erscheint auch bei '''Gerät hinzufügen''', wenn passende Set-Wertelisten vorhanden sind. Slider- und Freitextdeklarationen sind keine diskreten Listen. Nur in der Ansicht werden aktuell angebotene Befehle/Werte gesendet; während einer Anfrage sind die Bedienelemente gesperrt, Fehler bleiben sichtbar. Im Editor wird nicht geschaltet.
