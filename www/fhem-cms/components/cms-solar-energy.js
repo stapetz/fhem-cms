@@ -1,6 +1,8 @@
 import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { widgetDesignCss, detailCardCss } from '../js/widget-design.js';
+import { createManualFieldTracker } from '../js/device-suggestions.js';
+import { solarEnergySuggestions, suggestedSolarSource } from '../js/solar-energy-suggestions.js';
 import {
   solarEnergyFields, solarYieldFields, MAX_SOLAR_SECTIONS, validateSolarEnergy,
   solarEnergyModel, solarNumber,
@@ -135,6 +137,8 @@ class FHEMCMSSolarEnergy extends HTMLElement {
               Netz: + Einspeisung / − Bezug. Speicher: + Laden / − Entladen.
               Fehlende Werte bleiben unbekannt. Das Widget sendet keine FHEM-Befehle.</p>
             <button type="button" data-shared-device>Gemeinsames Device für alle Felder wählen …</button>
+            <button type="button" data-detect>Freie Felder automatisch zuordnen</button>
+            <p class="hint" data-detection role="status"></p>
             <div data-sources></div>
           </div></details>
           <details class="config-group"><summary>Ertragskarten je Anlagenteil</summary><div class="config-group-fields">
@@ -151,6 +155,8 @@ class FHEMCMSSolarEnergy extends HTMLElement {
     this.$('[data-form]').addEventListener('submit', event => { event.preventDefault(); this.saveConfig(); });
     this.$('[data-add-section]').addEventListener('click', () => this.addSection());
     this.$('[data-shared-device]').addEventListener('click', () => this.pickSource(null));
+    this.manualFields = createManualFieldTracker(this.$('[data-form]'));
+    this.$('[data-detect]').addEventListener('click', () => this.suggestSources());
     this.$('[data-delete]').addEventListener('click', async () => {
       if (!window.confirm('Dieses Widget entfernen?')) return;
       try { await this.services.deleteWidget(this.config.id); this.closeConfig(true); }
@@ -276,16 +282,59 @@ class FHEMCMSSolarEnergy extends HTMLElement {
       if (!this.devices.some(entry => entry.name === device.name)) this.devices.push(device);
       for (const field of row ? [row] : this.shadowRoot.querySelectorAll('.source')) {
         const previous = field.querySelector('[data-reading]').value;
-        const reading = Object.hasOwn(device.readings || {}, previous) ? previous : '';
+        const label = field.closest('[data-section]')?.querySelector('[data-section-label]').value;
+        const reading = Object.hasOwn(device.readings || {}, previous) ? previous
+          : suggestedSolarSource(device, field.dataset.sourceKey, label)?.reading || '';
         this.setSource(field, device.name, reading);
       }
+      if (!row || (row.parentElement === this.$('[data-sources]') && row.dataset.sourceKey === 'pv')) {
+        this.suggestSources(device.name);
+      }
     } catch (error) { this.error(`Device-Auswahl fehlgeschlagen: ${error.message}`); }
+  }
+
+  suggestSources(preferredDevice) {
+    const pv = this.$('[data-sources] [data-source-key="pv"] [data-device]').value;
+    const suggestion = solarEnergySuggestions(this.devices, preferredDevice || pv);
+    let count = 0;
+    for (const row of this.$('[data-sources]').children) {
+      const input = row.querySelector('[data-device]');
+      const select = row.querySelector('[data-reading]');
+      const candidate = suggestion.readings[row.dataset.sourceKey];
+      if (!candidate || select.value || this.manualFields.isEdited(select)) continue;
+      if (input.value && input.value !== candidate.device) continue;
+      this.setSource(row, candidate.device, candidate.reading);
+      count++;
+    }
+    if (!this.$('[data-section-fields]').children.length && !this.manualSections) {
+      for (const section of suggestion.sections) { this.addSection(section); count++; }
+    }
+    const anchor = preferredDevice || pv || suggestion.readings.pv?.device;
+    for (const section of this.$('[data-section-fields]').children) {
+      const label = section.querySelector('[data-section-label]').value.trim();
+      if (!label) continue;
+      for (const row of section.querySelectorAll('.source')) {
+        const select = row.querySelector('[data-reading]');
+        if (select.value || this.manualFields.isEdited(select)) continue;
+        const name = row.querySelector('[data-device]').value || anchor;
+        const device = this.devices.find(entry => entry.name === name);
+        const candidate = suggestedSolarSource(device, row.dataset.sourceKey, label);
+        if (!candidate) continue;
+        this.setSource(row, candidate.device, candidate.reading);
+        count++;
+      }
+    }
+    this.$('[data-detection]').textContent = suggestion.ambiguous
+      ? 'Mehrere PV-Devices erkannt. Bitte zuerst das PV-Device oder ein gemeinsames Device wählen.'
+      : count ? `${count} Zuordnungen/Ertragskarten vorgeschlagen. Bitte Quellen, Einheiten und Vorzeichen prüfen.`
+        : 'Keine weiteren eindeutigen Zuordnungen gefunden. Vorhandene und manuelle Eingaben bleiben erhalten.';
   }
 
   addSection(section = { label: '', readings: {} }) {
     const box = this.$('[data-section-fields]');
     if (box.children.length >= MAX_SOLAR_SECTIONS) { this.error(`Höchstens ${MAX_SOLAR_SECTIONS} Ertragskarten.`); return; }
     const details = node('details', undefined, 'config-group');
+    details.dataset.section = '';
     details.open = true;
     details.append(node('summary', 'Ertragskarte'));
     const fields = node('div', undefined, 'config-group-fields');
@@ -298,7 +347,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
     fields.append(label, ...solarYieldFields.map(([key, name]) => this.sourceField(key, name, section.readings[key])));
     const remove = node('button', 'Ertragskarte entfernen');
     remove.type = 'button';
-    remove.addEventListener('click', () => details.remove());
+    remove.addEventListener('click', () => { this.manualSections = true; details.remove(); });
     fields.append(remove);
     details.append(fields);
     box.append(details);
@@ -317,7 +366,11 @@ class FHEMCMSSolarEnergy extends HTMLElement {
     form.elements.deriveHome.checked = config.deriveHome !== false;
     this.$('[data-delete]').hidden = isNew;
     this.error('');
+    this.$('[data-detection]').textContent = '';
     this.$('[data-save]').disabled = true;
+    for (const selector of ['[data-detect]', '[data-shared-device]', '[data-add-section]']) {
+      this.$(selector).disabled = true;
+    }
     this.$('[data-dialog]').showModal();
     try {
       this.devices = await this.services.listAllDevices();
@@ -325,7 +378,13 @@ class FHEMCMSSolarEnergy extends HTMLElement {
       this.$('[data-sources]').replaceChildren(...solarEnergyFields.map(([key, label]) => this.sourceField(key, label, config.readings?.[key])));
       this.$('[data-section-fields]').replaceChildren();
       for (const section of config.sections || []) this.addSection(section);
+      this.manualFields.reset();
+      this.manualSections = false;
+      if (isNew) this.suggestSources();
       this.$('[data-save]').disabled = false;
+      for (const selector of ['[data-detect]', '[data-shared-device]', '[data-add-section]']) {
+        this.$(selector).disabled = false;
+      }
     } catch (error) { if (revision === this.dialogRevision) this.error(`Devices konnten nicht geladen werden: ${error.message}`); }
   }
 

@@ -160,6 +160,73 @@ try {
   check($('[data-totals]').hidden, 'unconfigured summaries hidden');
   host.config = widget;
   check(JSON.stringify(config) === original, 'rendering and dialog never mutate saved original');
+  const plant = { name: 'Plant', readings: { pv_total_power: '1000', home_power: '600',
+    grid_feed_in_power: '100', battery_power: '300', battery_remain_capacity: '60', state: 'OK',
+    EnergyRoof: '100', statEnergyRoofDay: '2', statEnergyRoofMonthLast: '20',
+    EnergyTotal: '100', statEnergyTotalHour: '1', statEnergyTotalDay: '2' } };
+  devices.push(plant);
+  host.config = { ...widget, readings: {}, sections: [] };
+  await host.openConfig({ isNew: true });
+  const field = key => $(`[data-sources] [data-source-key="${key}"]`);
+  const selected = key => field(key).querySelector('[data-reading]');
+  check(selected('pv').value === 'pv_total_power'
+    && field('pv').querySelector('[data-device]').value === 'Plant',
+  'normal new-widget dialog detects a unique solar dummy without device-first mode');
+  check(selected('home').value === 'home_power' && selected('soc').value === 'battery_remain_capacity',
+    'power and battery sources are prefilled before saving');
+  check(selected('day').value === 'statEnergyTotalDay' && selected('hour').value === 'statEnergyTotalHour',
+    'summary and hourly statistics prefilled');
+  check($('[data-section-label]').value === 'Roof'
+    && $('[data-section] [data-source-key="previousMonth"] [data-reading]').value === 'statEnergyRoofMonthLast',
+  'named yield cards and previous-month statistics proposed automatically');
+  check(writes === 1 && Object.keys(host.config.readings).length === 0,
+    'suggestions remain unsaved dialog draft');
+  selected('home').value = '';
+  selected('home').dispatchEvent(new Event('change', { bubbles: true }));
+  $('[data-detect]').click();
+  check(selected('home').value === '', 'explicitly cleared reading protected against re-detection');
+  const manual = selected('pv');
+  manual.value = 'home_power';
+  manual.dispatchEvent(new Event('change', { bubbles: true }));
+  $('[data-detect]').click();
+  check(manual.value === 'home_power', 'manual reading preserved');
+  host.closeConfig(false);
+  await host.openConfig();
+  check(selected('pv').value === '' && !$('[data-section-label]'),
+    'editing an existing widget does not silently add sources or cards');
+  field('pv').querySelector('[data-device]').click();
+  await pause();
+  const pvPicker = host.shadowRoot.querySelector('.cms-dp-dialog') || document.querySelector('.cms-dp-dialog');
+  [...pvPicker.querySelectorAll('[data-list] button')].find(e => e.textContent.includes('Plant')).click();
+  await pause();
+  check(selected('pv').value === 'pv_total_power' && selected('home').value === 'home_power',
+    'choosing a PV device proposes matching readings and remaining sources');
+  host.closeConfig(false);
+  devices.push({ name: 'SecondPlant', readings: { pv_total_power: '300' } });
+  await host.openConfig({ isNew: true });
+  check(selected('pv').value === '' && $('[data-detection]').textContent.includes('Mehrere PV-Devices'),
+    'ambiguous installations require a device choice instead of an arbitrary default');
+  $('[data-shared-device]').click();
+  await pause();
+  const sharedPicker = host.shadowRoot.querySelector('.cms-dp-dialog') || document.querySelector('.cms-dp-dialog');
+  [...sharedPicker.querySelectorAll('[data-list] button')].find(e => e.textContent.includes('Plant') && !e.textContent.includes('SecondPlant')).click();
+  await pause();
+  check(selected('pv').value === 'pv_total_power' && selected('battery').value === 'battery_power',
+    'shared device selection preselects actual matching readings');
+  check($('[data-section-label]').value === 'Roof', 'shared device selection also seeds yield cards');
+  $('[data-add-section]').click();
+  const extraSection = $('[data-section-fields]').lastElementChild;
+  extraSection.querySelector('[data-section-label]').value = 'Roof';
+  $('[data-detect]').click();
+  check(extraSection.querySelector('[data-source-key="day"] [data-reading]').value === 'statEnergyRoofDay',
+    'explicit detection completes empty readings in a manually named yield card');
+  const extraDay = extraSection.querySelector('[data-source-key="day"] [data-reading]');
+  extraDay.value = '';
+  extraDay.dispatchEvent(new Event('change', { bubbles: true }));
+  $('[data-detect]').click();
+  check(extraDay.value === '', 'manually cleared yield source remains empty');
+  host.closeConfig(false);
+  host.config = widget;
   output.dataset.result = 'pass'; output.textContent = JSON.stringify({ checks });
 } catch (error) {
   output.dataset.result = 'fail'; output.textContent = error.stack;
