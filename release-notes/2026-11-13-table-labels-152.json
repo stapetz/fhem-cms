@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "Tabellenbezeichner passend zu den Datenquellen",
+  "changes": [
+    "Tabellen ohne eigenen Bezeichner zeigen bei einem Device den Readingnamen, bei mehreren Devices Geraetename: Readingname.",
+    "Die automatische Beschriftung folgt Quellen- und Readingwechseln sowie hinzugefuegten und entfernten Zeilen.",
+    "Eigene Bezeichner bleiben erhalten; ein leeres Feld aktiviert die automatische Vorgabe auch nach Speichern und Neuladen."
+  ]
+}

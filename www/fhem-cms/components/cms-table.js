@@ -84,7 +84,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Tabelle konfigurieren">⚙</button>
         <table>
-          <thead data-head><tr><th data-device-heading>Device</th><th data-value-heading>Wert</th></tr></thead>
+          <thead data-head><tr><th data-device-heading>Bezeichner</th><th data-value-heading>Wert</th></tr></thead>
           <tbody data-rows></tbody>
           <tfoot data-sum hidden><tr><th data-sum-label>Summe</th><th data-sum-value></th></tr></tfoot>
         </table>
@@ -117,7 +117,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
               <fieldset class="mode"><legend>Tabellenüberschrift</legend>
                 <label class="check"><input name="header" type="checkbox" checked>Überschrift anzeigen</label>
                 <div data-header-fields>
-                  <label>Bezeichnungsspalte<input name="deviceLabel" type="text" maxlength="32" placeholder="Device" autocomplete="off"></label>
+                  <label>Bezeichnungsspalte<input name="deviceLabel" type="text" maxlength="32" placeholder="Bezeichner" autocomplete="off"></label>
                   <label>Wertespalte<input name="valueLabel" type="text" maxlength="32" placeholder="Wert" autocomplete="off"></label>
                   <label class="check"><input name="showValueLabel" type="checkbox" checked>Wertespalten-Überschrift anzeigen</label>
                 </div></fieldset>
@@ -258,6 +258,18 @@ class FHEMCMSReadingsTable extends HTMLElement {
     return [...this.shadowRoot.querySelectorAll('[data-config-rows] .row')];
   }
 
+  updateLabelDefaults() {
+    const rows = this.rowsInDialog();
+    const multipleDevices = new Set(rows.map((row) => row.querySelector('.device input').value).filter(Boolean)).size > 1;
+    for (const row of rows) {
+      const device = row.querySelector('.device input').value;
+      const reading = row.querySelector('select').value;
+      row.querySelector('[data-row-label]').placeholder = reading
+        ? multipleDevices ? `${device}: ${reading}` : reading
+        : 'Reading wählen';
+    }
+  }
+
   // Beim Umschalten bleiben die Zeilen erhalten; das Reading bleibt, wenn das Device es kennt.
   setMode(mode) {
     const form = this.shadowRoot.querySelector('[data-form]');
@@ -334,7 +346,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     nameInput.type = 'text';
     nameInput.maxLength = 32;
     nameInput.autocomplete = 'off';
-    nameInput.placeholder = 'Alias oder Device-Name';
+    nameInput.placeholder = 'Reading wählen';
     nameInput.dataset.rowLabel = '';
     nameInput.value = initial.label || '';
     nameLabel.append(nameInput);
@@ -358,7 +370,10 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = 'Entfernen';
-    remove.addEventListener('click', () => row.remove());
+    remove.addEventListener('click', () => {
+      row.remove();
+      this.updateLabelDefaults();
+    });
     const pickRowDevice = async () => {
       try {
         const device = await openDevicePicker({ services: this.services });
@@ -377,6 +392,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     pick.addEventListener('click', pickRowDevice);
     deviceInput.addEventListener('click', pickRowDevice);
     row.append(deviceLabel, nameLabel, readingLabel, unitFields, remove);
+    readingSelect.addEventListener('change', () => this.updateLabelDefaults());
     container.append(row);
     this.setRowUnit(row, initial.unit || '');
     if (initial.device) {
@@ -388,6 +404,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         this.shadowRoot.querySelector('[data-error]').textContent = `Devices konnten nicht geladen werden: ${error.message}`;
       }
     }
+    this.updateLabelDefaults();
   }
 
   setRowDevice(row, device, selectedReading) {
@@ -409,6 +426,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     }
     select.replaceChildren(...options);
     select.value = selected || '';
+    this.updateLabelDefaults();
   }
 
   setRowUnit(row, unit) {
@@ -526,19 +544,20 @@ class FHEMCMSReadingsTable extends HTMLElement {
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = this.widgetConfig.title || '';
     title.parentElement.hidden = !this.widgetConfig.title || this.widgetConfig.showTitle === false;
-    this.shadowRoot.querySelector('[data-device-heading]').textContent = this.widgetConfig.deviceLabel || 'Device';
+    this.shadowRoot.querySelector('[data-device-heading]').textContent = this.widgetConfig.deviceLabel || 'Bezeichner';
     this.shadowRoot.querySelector('[data-head]').hidden = this.widgetConfig.hideHeader === true;
     this.shadowRoot.querySelector('[data-value-heading]').textContent = this.widgetConfig.hideValueLabel === true
       ? '' : (this.widgetConfig.valueLabel || 'Wert');
     const body = this.shadowRoot.querySelector('[data-rows]');
     const numbers = [];
     const units = new Set();
+    const multipleDevices = new Set((this.widgetConfig.rows || []).map((row) => row.device)).size > 1;
     body.replaceChildren(...(this.widgetConfig.rows || []).map((row) => {
       const tr = document.createElement('tr');
       const deviceCell = document.createElement('td');
       const valueCell = document.createElement('td');
       const group = this.snapshots.get(row.device) || [];
-      deviceCell.textContent = row.label || group.find((snapshot) => snapshot.name === row.device)?.alias || row.device;
+      deviceCell.textContent = row.label || (multipleDevices ? `${row.device}: ${row.reading}` : row.reading);
       const item = group.find((snapshot) => snapshot.readings?.[row.reading] !== undefined);
       const number = item ? Number.parseFloat(String(item.readings[row.reading]).trim().replace(',', '.')) : Number.NaN;
       if (Number.isFinite(number)) {

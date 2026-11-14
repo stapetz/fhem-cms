@@ -147,6 +147,8 @@ for (const [name, fixtures] of [
     [['71_device_first.html', 21]]],
   ['Discrete set lists render configurable safe selection controls',
     [['72_selection.html', 15]]],
+  ['Table labels follow actual device sources and preserve manual overrides',
+    [['73_table_labels.html', 18]]],
   ['mobile device preview fits the raster without horizontal overflow', [
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile', 200],
     ['56_mobile_viewport.html?mode=preview&cms-device=mobile&landscape=1', 200],

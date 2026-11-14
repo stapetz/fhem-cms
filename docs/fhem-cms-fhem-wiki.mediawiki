@@ -365,6 +365,8 @@ Alle Widgetaufnahmen und Einstellungsdialoge findest du in der [https://github.c
 
 === Geräte und Befehle richtig zuordnen ===
 
+'''Automatische Tabellenbezeichner (dev, ab 1.11.0-dev):''' Ohne eigene Beschriftung wird bei Werten aus einem Device der Readingname angezeigt, bei mehreren Devices '''Gerätename: Readingname''' (nicht der Alias). Maßgeblich sind die tatsächlichen Quellen, nicht der Dialogmodus. Der leere Bezeichner zeigt die Vorgabe als Platzhalter und passt sie bei Quellen-/Readingwechsel sowie Hinzufügen/Entfernen an. Eigene Bezeichner bleiben beim Speichern und Neuladen erhalten. Das Leeren des Feldes aktiviert wieder die automatische Beschriftung.
+
 Nach einem Gerätewechsel prüfst du die neu angebotenen Readings und Set-Befehle. Beim Thermostat richten sich Solltemperaturbereich und Betriebsarten nach dem ausgewählten Gerät; gegebenenfalls werden dessen Kanäle berücksichtigt.
 
 Schalter und Taster sind im Editor nicht zum Schalten vorgesehen. In der normalen Ansicht können sie reale Geräte bedienen.

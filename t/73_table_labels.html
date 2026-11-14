@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Automatic table labels regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-table.js';
+const checks = [];
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+};
+const devices = [
+  { name: 'Sensor', alias: 'A different alias', readings: { temperature: '21', humidity: '60' } },
+  { name: 'Other', alias: 'Another alias', readings: { temperature: '19', humidity: '50' } },
+];
+let saved;
+const table = document.createElement('cms-table');
+table.services = { listAllDevices: async () => devices, saveWidget: async value => { saved = structuredClone(value); } };
+table.config = { id: 'table', type: 'fhem-table', grid: { col: 1, row: 1, w: 6, h: 8 },
+  rows: [{ device: 'Sensor', reading: 'temperature' }, { device: 'Sensor', reading: 'humidity' }] };
+table.data = new Map(devices.map(device => [device.name, [device]]));
+document.body.append(table);
+const labels = () => [...table.shadowRoot.querySelectorAll('[data-rows] tr')].map(row => row.firstChild.textContent);
+const field = row => row.querySelector('[data-row-label]');
+try {
+  check(labels().join('|') === 'temperature|humidity', 'Single device defaults to reading names, not aliases');
+  check(table.shadowRoot.querySelector('[data-device-heading]').textContent === 'Bezeichner', 'Default column heading describes labels');
+  await table.openConfig();
+  let rows = table.rowsInDialog();
+  check(field(rows[0]).value === '' && field(rows[0]).placeholder === 'temperature', 'Automatic label is shown without storing a manual override');
+  table.setMode('multi');
+  check(field(rows[0]).placeholder === 'temperature', 'Multiple-device mode alone does not prefix a single actual source');
+  table.setRowDevice(rows[1], devices[1], 'humidity');
+  check(field(rows[0]).placeholder === 'Sensor: temperature'
+    && field(rows[1]).placeholder === 'Other: humidity', 'Second source updates every automatic label');
+  field(rows[0]).value = 'My temperature';
+  rows[0].querySelector('select').value = 'humidity';
+  rows[0].querySelector('select').dispatchEvent(new Event('change'));
+  check(field(rows[0]).value === 'My temperature', 'Reading changes preserve explicit labels');
+  check(field(rows[0]).placeholder === 'Sensor: humidity', 'Automatic alternative follows reading changes');
+  await table.saveConfig();
+  check(saved.rows[0].label === 'My temperature' && !Object.hasOwn(saved.rows[1], 'label'),
+    'Only custom labels are persisted, automatic labels remain derived');
+  table.config = saved;
+  check(labels().join('|') === 'My temperature|Other: humidity', 'Saved multi-device configuration renders custom and derived labels');
+  await table.openConfig();
+  rows = table.rowsInDialog();
+  check(field(rows[0]).value === 'My temperature' && field(rows[1]).value === '',
+    'Reopening retains explicit versus automatic label distinction');
+  table.setRowDevice(rows[1], devices[0], 'temperature');
+  check(field(rows[1]).placeholder === 'temperature', 'Replacing second source removes device prefix');
+  check(field(rows[0]).value === 'My temperature', 'Source changes do not replace custom labels');
+  table.setRowDevice(rows[1], devices[1], 'temperature');
+  rows[1].lastElementChild.click();
+  check(table.rowsInDialog().length === 1 && field(rows[0]).placeholder === 'humidity',
+    'Removing last foreign source updates remaining automatic labels');
+  field(rows[0]).value = '';
+  await table.saveConfig();
+  table.config = saved;
+  check(labels()[0] === 'humidity' && !Object.hasOwn(saved.rows[0], 'label'),
+    'Clearing custom label restores automatic behavior after saving');
+  await table.openConfig();
+  table.setMode('multi');
+  await table.addRow({ device: 'Other', reading: 'temperature', label: 'Preserved' });
+  check(field(table.rowsInDialog()[0]).placeholder === 'Sensor: humidity', 'Adding a source recomputes existing labels');
+  table.setMode('single');
+  rows = table.rowsInDialog();
+  check(field(rows[0]).placeholder === 'humidity' && field(rows[1]).value === 'Preserved',
+    'Single mode reassigns sources but preserves manual labels');
+  table.closeConfig(false);
+  check(saved.rows.length === 1, 'Cancel does not persist dialog changes');
+  table.config = { ...saved, rows: [{ device: 'Missing', reading: 'unavailable' }] };
+  check(labels()[0] === 'unavailable', 'Missing snapshots do not change derived labels');
+  result.dataset.result = 'pass';
+  result.textContent = JSON.stringify({ status: 'pass', checks: checks.length, messages: checks });
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = JSON.stringify({ status: 'fail', error: error.stack, checks });
+} finally {
+  table.remove();
+}
+</script>
