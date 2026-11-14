@@ -1,4 +1,4 @@
-UPD 2026-11-14_19:22:36 169122 FHEM/01_FHEMCMS.pm
+UPD 2026-11-14_19:40:50 169122 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-13_17:56:27 8880 www/fhem-cms/FCUI-LICENSES.txt
@@ -19,7 +19,7 @@ UPD 2026-11-14_19:11:25 30648 www/fhem-cms/components/cms-table.js
 UPD 2026-11-14_13:48:46 10410 www/fhem-cms/components/cms-text.js
 UPD 2026-11-14_19:11:25 39395 www/fhem-cms/components/cms-thermostat.js
 UPD 2026-11-14_19:11:25 25831 www/fhem-cms/components/cms-value.js
-UPD 2026-11-14_19:22:36 51262 www/fhem-cms/components/cms-volvoconnect.js
+UPD 2026-11-14_19:40:50 51139 www/fhem-cms/components/cms-volvoconnect.js
 UPD 2026-11-13_10:06:04 2220 www/fhem-cms/css/cms-admin.css
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
 UPD 2026-11-13_17:56:27 15580 www/fhem-cms/css/fcui-map.css
