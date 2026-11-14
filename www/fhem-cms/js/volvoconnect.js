@@ -28,6 +28,19 @@ export function volvoGroupOrder(config = {}) {
 }
 
 export function validateVolvoGroups(config) {
+  if (config.cardSizes !== undefined) {
+    const sizes = config.cardSizes;
+    const keys = new Set(volvoCards.map(([key]) => key));
+    if (!sizes || typeof sizes !== 'object' || Array.isArray(sizes)
+      || Object.keys(sizes).length > keys.size
+      || Object.entries(sizes).some(([key, size]) => !keys.has(key) || !size
+        || typeof size !== 'object' || Array.isArray(size)
+        || Object.keys(size).sort().join() !== 'h,w'
+        || !Number.isInteger(size.w) || size.w < 3 || size.w > 12
+        || !Number.isInteger(size.h) || size.h < 6 || size.h > 64)) {
+      return 'Ungültige VolvoConnect-Kachelgrößen.';
+    }
+  }
   if (config.hiddenReadings !== undefined && (!Array.isArray(config.hiddenReadings)
     || config.hiddenReadings.length > 1000
     || config.hiddenReadings.some(key => !isValidName(key) || (!['state','lastUpdate'].includes(key)
@@ -45,6 +58,11 @@ export function validateVolvoGroups(config) {
     }
   }
   return null;
+}
+
+export function arrangeVolvoCards(order, sizes) {
+  return [...order].sort((a, b) =>
+    (sizes[b]?.h || 6) - (sizes[a]?.h || 6) || (sizes[b]?.w || 4) - (sizes[a]?.w || 4));
 }
 
 export function volvoReadingIcon(group, key) {
@@ -233,6 +251,7 @@ export function volvoModel(snapshot, device) {
     const match = /^(state|fuel|capabilities|warnings|brakes|doors|windows|engineDiagnostics|engine|workshopDiagnostics|commandAccessibility|commands|statistics|odometer|tyres|vehicle|location)_(.+)$/.exec(reading);
     if (!match) continue;
     let [, group, key] = match;
+    if (key === 'code') continue;
     if (group === 'fuel') group = 'state';
     if (group === 'odometer') group = 'statistics';
     if (group === 'engine' || reading === 'workshopDiagnostics_washerFluidLevelWarning'

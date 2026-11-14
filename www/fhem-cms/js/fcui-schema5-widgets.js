@@ -33,6 +33,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     const element = createWidgetElement(widget, widgetServices, snapshots, true);
     if (widget.type === 'fhem-volvoconnect' && editing) {
       element.services = { ...widgetServices, editing:true,
+        showGrid:editing.showGrid,
         ...(typeof editing.onPopupSettings === 'function'
           ? {savePopupSettings: settings => editing.onPopupSettings(id, settings)} : {}) };
     }

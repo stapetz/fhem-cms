@@ -20,7 +20,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.18.2-dev';
+our $FHEMCMS_VERSION = '1.19.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1034,7 +1034,7 @@ sub FHEMCMS_ValidateConfig {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid'],
-                    ['title', 'showTitle', 'showGallery', 'showDetails', 'groupOrder', 'hiddenGroups', 'hiddenReadings']);
+                    ['title', 'showTitle', 'showGallery', 'showDetails', 'groupOrder', 'hiddenGroups', 'hiddenReadings', 'cardSizes']);
             } elsif ($widget->{type} eq 'fhem-solar-energy') {
                 $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'sections', 'grid'],
                     ['title', 'showTitle', 'powerUnit', 'energyUnit', 'threshold', 'deriveHome']);
@@ -1169,6 +1169,21 @@ sub FHEMCMS_ValidateConfig {
                             if (!$isName->($reading)
                                 || ($reading ne 'lastUpdate' && $reading ne 'state' && $reading !~ /\A(?:state|statistics|vehicle|location|warnings|doors|windows|engineDiagnostics|capabilities|brakes|workshopDiagnostics|commandAccessibility|commands|tyres)_.+\z/)
                                 || $seenReading{$reading}++);
+                    }
+                }
+                if (exists($widget->{cardSizes})) {
+                    my $sizes = $widget->{cardSizes};
+                    return 'Ungueltige VolvoConnect-Kachelgroessen'
+                        if (ref($sizes) ne 'HASH' || keys(%{$sizes}) > 15);
+                    for my $group (keys %{$sizes}) {
+                        my $size = $sizes->{$group};
+                        return 'Ungueltige VolvoConnect-Kachelgroesse'
+                            if ($group !~ /\A(?:state|statistics|vehicle|location|warnings|doors|windows|engineDiagnostics|capabilities|brakes|workshopDiagnostics|commandAccessibility|commands|tyres|gallery)\z/
+                                || ref($size) ne 'HASH' || join(',', sort keys %{$size}) ne 'h,w'
+                                || ref($size->{w}) || !defined($size->{w}) || $size->{w} !~ /\A[0-9]+\z/
+                                || $size->{w} < 3 || $size->{w} > 12
+                                || ref($size->{h}) || !defined($size->{h}) || $size->{h} !~ /\A[0-9]+\z/
+                                || $size->{h} < 6 || $size->{h} > 64);
                     }
                 }
                 return 'Ungueltiger Wert fuer showGallery'

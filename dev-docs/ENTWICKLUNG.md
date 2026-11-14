@@ -73,6 +73,34 @@ das Oeffnen/Speichern ohne Berechnungsoption.
 
 ## VolvoConnect-Nachtrag (dev, 1.16.0-dev, Refs #209)
 
+Erweiterung 1.19.0-dev: Popup-Kacheln erhalten denselben 18px-Eckwinkel wie
+Hauptwidgets innerhalb einer unsichtbaren 48px Touchflaeche. Maus/Pointer,
+Touch und Pfeiltasten aendern Breite/Hoehe; Escape bzw. pointercancel verwirft
+zuerst die laufende Geste, danach die Anordnung. Liveupdates remounten keine
+aktive Resizegeste. Anordnung und Groessen werden gemeinsam nur als Entwurf
+gespeichert, Abbrechen verwirft beides. Haupt-Konfigurationsdialog und
+Blueprints erhalten cardSizes ebenfalls.
+cardSizes ist eine optionale Map aus den 15 Kartenkeys auf exakt {w,h}.
+Breite: Integer 3..12 in einem eigenen 12-Spalten-Popupraster;
+Hoehe: Integer 6..64 in 32px-Schritten einschliesslich Abstand
+(CSS grid-auto-rows 16px, gap 16px; Kartenhoehe h*32-16).
+Begrenzte Desktopkacheln scrollen intern, damit alle Werte erreichbar bleiben.
+Unter 601px Containerbreite zeigt das Popup nach ausdruecklicher Freigabe
+alle Karten einspaltig mit vollstaendigem Inhalt ohne feste Kartenhoehe.
+Die gespeicherten Desktopmasse bleiben dabei erhalten; mobile Resizegesten
+aendern die fuer groessere Displays gemerkten Masse.
+Ohne cardSizes bleibt das bisherige responsive Inhaltsraster unveraendert.
+Automatisch anordnen behaelt Masse/Sichtbarkeit bei, sortiert stabil nach
+absteigender Hoehe/Breite und fuellt Rasterluecken per CSS dense placement.
+Die globale lokale Ansichtspraeferenz Raster anzeigen wird durch Editor,
+Schema5View und Widgetdienste bis in den offenen Anordnungsmodus gereicht;
+keine Rasterlinien in der normalen Popupansicht und keine extra Persistenz.
+Technische Endpoint-Zeilen mit key code werden auf ausdruecklichen Wunsch
+vor der Darstellung entfernt; Modulreadings und Loginstatus bleiben unberuehrt.
+Geprueft: state_code = AUTHORIZATION_ERROR bei gleichzeitig authenticated.
+Regressionen: 88 Modell/Perl, 88/89 Browser, echte Pointer-/Touch-/Escape-
+Resizegesten in Chrome und Pointer in WebKit, Speicherung mit stale token.
+
 Korrektur 1.18.2-dev: Auch der Verbindungsstatus state ist fix sichtbar.
 Kein Auge im Popup; readingVisible ignoriert alte Ausblendungen in Popup
 und Hauptwidget, toggleReading kann state nicht ausblenden.
