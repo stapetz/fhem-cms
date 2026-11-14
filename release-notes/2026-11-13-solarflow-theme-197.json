@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-13",
+  "version": "1.11.0-dev",
+  "title": "SolarFlow zeigt nur das themegerechte Flussbild",
+  "changes": [
+    "SolarFlow zeigt wieder ausschliesslich das animierte Diagramm mit Werten in den Stationen, ohne zusaetzliche Wertekacheln.",
+    "Die aeussere Flaeche folgt dem Seitentheme und seiner Glass-Transparenz; Stationen nutzen nur eine dezente neutrale Ueberlagerung."
+  ]
+}

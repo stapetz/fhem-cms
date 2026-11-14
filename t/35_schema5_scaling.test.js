@@ -151,7 +151,7 @@ for (const [name, fixtures] of [
     [['73_table_labels.html', 27]]],
   ['Table design uses neutral cards and preserves responsive live readings',
     [['81_table_design.html', 104]]],
-  ['SolarFlow design preserves live flows and renders Liquid Glass cards',
+  ['SolarFlow design preserves live flows in a theme-aware diagram',
     [['82_solarflow_design.html', 220], ['82_solarflow_design.html?reduced=1', 221]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
