@@ -13,6 +13,22 @@
 - Refs #207: Modelle, Servervalidierung und responsive Darstellung in Chrome
   und WebKit geprueft.
 
+2026-11-14 - 1.14.0-dev: VolvoConnect-Kompaktkachel mit Detailpopup
+- VolvoConnect zeigt kompakt Akkustand und Restreichweite. Das
+  Informationssymbol oeffnet die vollstaendige Fahrzeugansicht als responsives
+  Popup mit Galerie und Standort.
+- Reading- und Statussymbole wie im Modul-Dashboard; alle 14 Modulgruppen im
+  Widgetdialog einzeln an-/abschaltbar und per Pfeiltasten sortierbar. Einzelne
+  Reading-Schalter folgen spaeter.
+- Popup schliesst per Escape, Schliessen oder Backdrop und gibt den Fokus ohne
+  Seitensprung zurueck. Liveupdates erhalten Popupscroll, Galerieposition und
+  Kartenzoom.
+- Neue Widgets starten mit 4x4 Standardrasterzellen; vorhandene Raster und
+  HTML-Widgets bleiben unveraendert. Galerie standardmaessig aktiv und
+  abschaltbar.
+- Refs #207: Gruppenvertrag, kompakte Darstellung, Popup-Lebenszyklus und
+  Tastaturbedienung in Chrome sowie Desktop-/iPhone-/iPad-WebKit geprueft.
+
 2026-11-14 - 1.12.1-dev: Solarwidgets: kein erfundener Hausverbrauch und
 passender Bildausschnitt
 - Ohne Hausverbrauchsreading zeigen beide Solarwidgets keinen Verbrauchswert.
