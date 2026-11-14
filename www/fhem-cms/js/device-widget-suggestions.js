@@ -27,6 +27,12 @@ export function deviceWidgetSuggestions(device, devices = [], logInfo = null) {
       if (['thermostat', 'fhem-solarflow'].includes(suggestion.type) && !result.has(suggestion.type)) {
         const { type, label, ...fields } = suggestion;
         add(type, fields);
+        if (type === 'fhem-solarflow') {
+          add('fhem-solar-energy', { readings: Object.fromEntries(
+            Object.entries(fields.readings).map(([key, source]) => [key,
+              typeof source === 'string' ? { device: fields.device, reading: source } : source])),
+          sections: [] });
+        }
       }
     }
   }

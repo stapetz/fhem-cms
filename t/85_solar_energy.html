@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="de" data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<title>Solar und Energiefluss — Liquid Glass</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<style>body{margin:0;padding:16px} #grid{width:100%;max-width:1000px;margin:auto} #result{white-space:pre-wrap}</style>
+<div id="grid" class="grid-stack cms-schema5-grid"></div><pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+import { devicesOf } from '../www/fhem-cms/js/widget-factory.js';
+import { blueprintDevices, remapBlueprintDevice } from '../www/fhem-cms/js/fcui-schema5-blueprints.js';
+import { setLiquidAppearance } from '../www/fhem-cms/js/fcui-schema5-appearance.js';
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const pause = (ms = 50) => new Promise(resolve => setTimeout(resolve, ms));
+const root = document.querySelector('#grid');
+const source = (device, reading) => ({ device, reading });
+const core = { pv: source('PV', 'power'), home: source('Home', 'load'),
+  grid: source('Grid', 'power'), battery: source('Battery', 'power'), soc: source('Battery', 'soc'),
+  status: source('PV', 'state'), hour: source('Meter', 'hour'), day: source('Meter', 'day'),
+  month: source('Meter', 'month'), year: source('Meter', 'year'), total: source('Meter', 'total') };
+const sections = ['Dach', 'Garage', 'Gartenhaus'].map(label => ({ label, readings:
+  Object.fromEntries(['total', 'hour', 'day', 'month', 'previousMonth', 'year'].map(key => [key, source('Meter', key)])) }));
+const widget = { id: 'energy', type: 'fhem-solar-energy', title: 'Solar und Energiefluss',
+  readings: core, sections, grid: { col: 1, row: 2, w: 12, h: 12 } };
+const config = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+  navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } }, pages: [{ id: 'start', widgets: [widget] }] };
+const original = JSON.stringify(config);
+const devices = [
+  { name: 'PV', readings: { power: '2500', state: 'OK' } },
+  { name: 'Home', readings: { load: '1000' } },
+  { name: 'Grid', readings: { power: '1000' } },
+  { name: 'Battery', readings: { power: '500', soc: '65' } },
+  { name: 'Meter', readings: { total: '12456.78', hour: '1.23', day: '12.3', month: '123.4', previousMonth: '456.7', year: '1234.5' } },
+];
+let saved, writes = 0, fail = false;
+const services = { listAllDevices: async () => devices,
+  saveWidget: async value => { if (fail) throw new Error('Testfehler'); saved = value; writes++; },
+  deleteWidget: async () => { throw new Error('Testfehler Entfernen'); } };
+const snapshots = () => new Map(devices.map(device => [device.name, [structuredClone(device)]]));
+let mounted;
+try {
+  mounted = mountSchema5Widgets(GridStack, root, config, 'start', document.createElement('nav'), services, snapshots());
+  const host = root.querySelector('cms-solar-energy');
+  const $ = selector => host.shadowRoot.querySelector(selector);
+  check(Boolean(host), 'factory mounts native Solar und Energiefluss');
+  check(devicesOf(widget).length === 5 && blueprintDevices(widget).length === 5, 'all source devices included in subscriptions and blueprints');
+  const remapped = remapBlueprintDevice(widget, 'Meter', 'OtherMeter');
+  check(remapped.sections[0].readings.day.device === 'OtherMeter' && remapped.readings.day.device === 'OtherMeter',
+    'blueprint remapping reaches nested yield and summary sources');
+  check($('[data-system]').textContent === 'System: OK', 'real system status displayed');
+  check($('[data-sections]').children.length === 3 && $('[data-totals]').children.length === 4,
+    'original three yield cards and four totals represented');
+  check($('progress').value === 65 && !$('progress').hidden, 'SoC drives real progress element');
+  check($('[data-sections]').textContent.includes('Vormonat'), 'previous month retained');
+  const svg = $('svg');
+  check(!$('[data-edge="pv-home"] .energy').hasAttribute('hidden'), 'PV to home flow active');
+  check(getComputedStyle($('[data-edge="pv-home"] .energy')).animationName
+    === (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : 'energy-flow'),
+  'reduced-motion preference controls actual animation');
+  const updated = snapshots();
+  updated.get('PV')[0].readings.power = '0';
+  updated.get('Grid')[0].readings.power = '-800';
+  updated.get('Battery')[0].readings.power = '-200';
+  mounted.update(updated, null);
+  check(svg === $('svg'), 'live values preserve SVG and running animations');
+  check($('[data-edge="home-grid"] .energy').hasAttribute('data-reverse')
+    && $('[data-edge="home-grid"] .energy').dataset.source === 'grid', 'grid import reverses actual flow');
+  check($('[data-station="bat"]').textContent.includes('Entladen'), 'battery direction explicit');
+  updated.delete('Grid');
+  updated.get('Battery')[0].readings.soc = 'broken';
+  mounted.update(updated, 'stale');
+  check($('[data-power="grid"]').textContent.includes('–') && $('progress').hidden, 'missing values never become zero or a full battery');
+  check([...host.shadowRoot.querySelectorAll('.energy')].every(e => e.hasAttribute('hidden')),
+    'unknown balance does not invent animated power');
+  check($('.tile').hasAttribute('data-stale'), 'stale data visibly marked');
+  mounted.update(snapshots(), null);
+  for (const theme of ['liquid-glass', 'dark', 'light', 'oled-black', 'catppuccin-mocha']) {
+    document.documentElement.dataset.cmsTheme = theme;
+    for (const transparency of [12, 88]) {
+      setLiquidAppearance(document.documentElement, { liquidIntensity: 47, liquidTransparency: transparency });
+      await pause();
+      const probe = document.createElement('div');
+      probe.style.cssText = 'background:var(--cms-surface);color:inherit';
+      host.parentElement.append(probe);
+      check(getComputedStyle($('.tile')).backgroundColor === getComputedStyle(probe).backgroundColor,
+        `${theme}/${transparency}: exact inherited theme surface`);
+      check(getComputedStyle($('[data-title]')).color === getComputedStyle(probe).color,
+        `${theme}: inherited title color`);
+      probe.remove();
+    }
+  }
+  for (const width of [280, 390, 768, 1000]) {
+    root.style.width = `${width}px`;
+    root.gridstack.onResize();
+    await pause(400);
+    check(host.clientWidth <= width, `${width}: actual widget width follows raster`);
+    check(root.scrollWidth <= root.clientWidth + 1 && $('.tile').scrollWidth <= $('.tile').clientWidth + 1,
+      `${width}: responsive solar layout without horizontal overflow`);
+    const paths = $('.paths').getBoundingClientRect();
+    check(paths.top >= $('[data-station="pv"]').getBoundingClientRect().bottom
+      && paths.bottom <= $('[data-station="home"]').getBoundingClientRect().top,
+    `${width}: flow paths stay between stations without crossing labels or values`);
+    const cards = [...host.shadowRoot.querySelectorAll('.yield')].map(e => e.getBoundingClientRect());
+    check(width > 390 || cards[1].top > cards[0].top,
+      `${width}: narrow yield cards stack vertically: ${JSON.stringify(cards.map(r => [r.x,r.y,r.width,r.height]))}; host ${host.clientWidth}`);
+  }
+  await host.openConfig();
+  check($('[data-dialog]').getBoundingClientRect().width <= innerWidth
+    && $('[data-dialog]').scrollWidth <= $('[data-dialog]').clientWidth + 1,
+  'complete configuration fits actual desktop, tablet or phone viewport');
+  check($('[data-dialog]').open && host.shadowRoot.querySelectorAll('.source').length === 29,
+    'configuration contains every reading from original design');
+  check(host.shadowRoot.querySelector('[data-source-key="pv"] [data-device]').value === 'PV',
+    'per-field device restored');
+  await host.saveConfig();
+  check(writes === 1 && saved.sections.length === 3 && saved.readings.grid.device === 'Grid',
+    'complete cross-device configuration saves');
+  check(JSON.stringify(saved.sections) === JSON.stringify(sections), 'yield sources round-trip exactly');
+  await host.openConfig();
+  const form = $('[data-form]');
+  const pvRow = $('[data-sources] [data-source-key="pv"]');
+  pvRow.querySelector('[data-reading]').value = '';
+  await host.saveConfig();
+  check(writes === 1 && $('[data-error]').textContent.includes('PV-Leistung'), 'missing PV rejected explicitly');
+  host.setSource(pvRow, 'PV', 'power');
+  form.elements.threshold.value = '2.5';
+  await host.saveConfig();
+  check(writes === 1 && $('[data-error]').textContent.includes('Schwellwert'), 'fractional threshold rejected');
+  form.elements.threshold.value = '10';
+  fail = true;
+  await host.saveConfig();
+  check(writes === 1 && $('[data-dialog]').open && $('[data-error]').textContent.includes('Testfehler'),
+    'save failure remains visible without closing or clearing draft');
+  fail = false;
+  host.closeConfig(false);
+  await host.openConfig();
+  const pickerInput = $('[data-sources] [data-source-key="home"] [data-device]');
+  pickerInput.click();
+  await pause();
+  const picker = host.shadowRoot.querySelector('.cms-dp-dialog') || document.querySelector('.cms-dp-dialog');
+  check(picker?.open, 'clicking device field opens normal device picker');
+  const target = [...picker.querySelectorAll('[data-list] button')].find(e => e.textContent.includes('Home'));
+  check(Boolean(target), 'device picker offers real devices');
+  target.click();
+  await pause();
+  host.closeConfig(false);
+  let cancelled = 0;
+  host.addEventListener('cms-widget-cancel', () => cancelled++);
+  await host.openConfig({ isNew: true });
+  check($('[data-delete]').hidden, 'new widget cannot delete existing data');
+  host.closeConfig(false);
+  check(cancelled === 1 && writes === 1, 'new-widget cancellation writes nothing');
+  host.config = { ...widget, readings: { pv: core.pv }, sections: [], showTitle: false };
+  check($('[data-title]').hidden && $('[data-station="bat"]').hidden && $('[data-station="grid"]').hidden,
+    'optional title, battery and grid can be omitted');
+  check($('[data-totals]').hidden, 'unconfigured summaries hidden');
+  host.config = widget;
+  check(JSON.stringify(config) === original, 'rendering and dialog never mutate saved original');
+  output.dataset.result = 'pass'; output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail'; output.textContent = error.stack;
+} finally {
+  document.documentElement.dataset.cmsTheme = 'liquid-glass';
+  setLiquidAppearance(document.documentElement, { liquidIntensity: 47, liquidTransparency: 12 });
+}
+</script>
+</html>
