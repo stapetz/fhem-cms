@@ -75,6 +75,23 @@ Details:
   shutdown restart
   ```
 
+## Freeform-Seiten (Schema 6, geplant)
+
+- Vor der Umsetzung den [Schema- und Migrationsvertrag](../dev-docs/ENTWICKLUNG.md#freeform-seiten-schema-6-geplant)
+  und den [Freeform-Styleguide](../dev-docs/entwicklerdoku_und_styleguides.md#freeform-seitenlayout) lesen.
+  Blueprint-Code nur als Muster verwenden; vorhandene Schnittstellen im Repository prüfen.
+- Freeform pro Seite aktivieren; fehlender `layoutMode` bedeutet `grid`.
+  Schema 5 beim Laden und in der Vorschau nicht umschreiben. Geometrie und
+  Widget-Konfiguration getrennt halten; `mobileRect` nicht in Phase 1 einführen.
+- Bestehendes `background` mit Asset-Auflösung, Entwurfs-/Publish-Pfade, Vorschau
+  und Widget-Lifecycle wiederverwenden. Schema-6-Daten serverseitig typ- und
+  grenzprüfen; Schutzmechanismen und bestehende Grid-Pfade nicht umgehen.
+- Native Pointer Events, `ResizeObserver` und `requestAnimationFrame` nutzen;
+  keine neuen Laufzeitabhängigkeiten. Bei Seiten-/Moduswechsel Gesten,
+  Listener und Observer sauber aufräumen. UI-/Fehlertexte deutsch,
+  Code-Bezeichner englisch. Desktop, Touch, Tastatur, Phone-Vorschau und
+  Schema-5-Regressionen mitprüfen.
+
 ## Zugriff auf die Testinstanz
 
 - Eine vom Entwickler ausdrücklich als Testinstanz benannte FHEM-/CMS-URL darf mit dem integrierten Browser direkt geöffnet und für vereinbarte UI- und Funktionstests verwendet werden, sofern sie aus der Browserumgebung erreichbar ist.

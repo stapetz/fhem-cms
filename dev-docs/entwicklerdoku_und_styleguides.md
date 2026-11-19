@@ -34,6 +34,48 @@ Knopfrahmen: identische SVG-Kreisgeometrie, 28px Symbol, 1.7px Kontur, transpare
 Hover aendert nur die Symbolfarbe. Das SVG ist dekorativ/aria-hidden.
 Die gemeinsamen Styles nach allgemeinen Buttonstyles einbinden.
 
+### Freeform-Seitenlayout
+
+Zielbild für Seiten mit `layoutMode: "freeform"`; das bestehende Raster bleibt
+Standard. Datenvertrag und Migration stehen in der
+[Entwicklungsdokumentation](./ENTWICKLUNG.md#freeform-seiten-schema-6-geplant).
+
+- Ein `.cms-freeform-viewport` umschließt den
+  `.cms-freeform-canvas`. Widgets liegen in absoluten, unskalierten
+  Canvas-Koordinaten und dürfen sich bewusst überlagern. Das bestehende
+  Seitenbild liegt auf dem Canvas (`background-size: 100% 100%`), damit
+  Bilddetails und Widget-Koordinaten beim Skalieren deckungsgleich bleiben.
+  `fit` passt proportional in den verfügbaren Bereich, `width` füllt
+  proportional die Breite und scrollt bei Bedarf vertikal, `none` zeigt
+  1:1 mit Scrollmöglichkeit. Skalierung und Scrollfläche gemeinsam prüfen;
+  reine CSS-Transformation ändert das Layoutmaß nicht.
+- Seiteneinstellungen: „Raster (Standard)“ und „Frei (Pixelgenau)“ als
+  beschriftete Auswahl; für Freeform Maße, Presets (`1280×800`, `1920×1080`),
+  Bildmaß-Übernahme, Skalierung, Fangraster und Mobilverhalten anbieten.
+- Acht Griffe an Ecken/Kanten und eine beschriftete Eingabeleiste für
+  `X`, `Y`, Breite, Höhe, Ebene und „Auf Mobilgeräten ausblenden“ anbieten.
+  Pfeile verschieben bei Editor-Fokus um 1, mit Shift um 10 Canvas-Pixel.
+  Alt deaktiviert Raster und Smart Guides während einer Geste. Pointer-Deltas
+  durch den wirksamen Canvas-Maßstab teilen; ganzzahlige Geometrie speichern.
+  Gesten mit Escape oder `pointercancel` abbrechen und Ausgangsmaße erhalten;
+  Eingaben, Widget-Aktionen und übergeordnete Dialoge nicht abfangen.
+- Smart Guides zeigen Treffer an Widget-Kanten/-Mitten und Canvas-Mitte
+  innerhalb von 5 Canvas-Pixeln. Beim Resize nur gezogene Kanten beeinflussen;
+  die gegenüberliegende Kante bleibt fest. Linien sind einen sichtbaren
+  CSS-Pixel stark, nicht interaktiv und nur während der Geste sichtbar.
+  Griffe und Guides im Editor-Overlay halten, damit sie nicht am Widget
+  abgeschnitten werden. Theme-Tokens (`--cms-*`), gut sichtbaren Fokus und
+  ausreichend große Touch-Ziele (mindestens 44×44 CSS-Pixel für Bedienelemente;
+  größere bestehende Vorgaben beibehalten) verwenden.
+- Bei `stack` unter 640 CSS-Pixeln im Inhaltsbereich oder in der
+  Phone-Vorschau einspaltig und ohne Hintergrundbild anzeigen. Kacheln in
+  Zeilen-Clustern von oben nach unten, darin von links nach rechts anordnen.
+  DOM-/Tab-Reihenfolge entspricht der Anzeige; `hideOnMobile` verbirgt das
+  Widget auch für Tastatur und Screenreader. `scale` bleibt im Pixel-Layout.
+  Widget-Typografie über lokale `@container`-Regeln an die tatsächliche
+  Widget-Breite anpassen; bestehende Shadow-DOM- und Theme-Verträge wahren.
+  Die Vorschau zeigt keine Griffe, Hilfslinien oder aktiven Editor-Gesten.
+
 ## 1. Technologische Kern-Architektur
 
 Das Framework trennt die Steuerungs- und Kommunikationsebene (TypeScript/ES6) strikt von der Darstellungsebene (Web Components via Lit).

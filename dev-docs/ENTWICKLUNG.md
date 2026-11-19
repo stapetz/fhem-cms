@@ -21,6 +21,61 @@ verbindlich. Insbesondere bleiben bestehende Daten und die beiden
 [Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) erhalten; Codebeispiele des
 Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherung.
 
+## Freeform-Seiten (Schema 6, geplant)
+
+Freeform ist eine optionale Seitenalternative für Grundrisse und Wandtablets,
+kein Ersatz für GridStack. Bestehende Entwürfe und Live-Seiten in Schema 5
+bleiben les- und bearbeitbar; ohne `layoutMode` gilt `grid`. Lesen und Vorschau
+schreiben keine Konfiguration um. Grid- und Freeform-Seiten können in Schema 6
+nebeneinander bestehen. Der Wechsel betrifft nur die gewählte Entwurfsseite;
+live wird er erst über den bestehenden Veröffentlichungsablauf wirksam.
+
+- **Datenvertrag:** Seite `layoutMode: "grid" | "freeform"`; Freeform zusätzlich
+  `canvas` mit ganzzahliger Breite/Höhe (`200–7680` CSS-Pixel), `scaling`
+  (`fit`/`width`/`none`, Standard `fit`), `snapGrid` (`1`/`5`/`10`, Standard `5`)
+  und `mobileBehavior` (`stack`/`scale`, Standard `stack`). Widget-Geometrie in
+  `rect: {x,y,w,h,z}` (Ganzzahlen, Mindestgröße `10×10`, `z` optional mit
+  Standard `1`); `hideOnMobile` ist ein optionaler JSON-Boolean mit Standard
+  `false`. Layoutdaten sind von Widget-Konfiguration und -IDs getrennt.
+  Vor Implementierung zulässigen Überstand, Koordinaten- und Ebenengrenzen
+  sowie die Übergangsregeln für bestehende Rastergeometrie festlegen.
+- **Speicherpfade:** Typen, erlaubte Schlüssel, Wertebereiche und tatsächliche
+  Schema-Grenzen in `01_FHEMCMS.pm` und clientseitig konsistent prüfen.
+  Bestehende Autorisierung, CSRF, HTML-Sanitizing und Asset-Prüfungen beibehalten;
+  vorhandenes Seitenfeld `background` (`media/...`) samt Asset-Auflösung
+  wiederverwenden, nicht `backgroundImage` aus dem Beispiel einführen.
+  Beim Lesen, Entwurfsspeichern, Publish, Import/Export und Wiederherstellen
+  dürfen keine Konfiguration oder Medienreferenzen verloren gehen. Auch
+  Blueprint-Pfade auf das richtige Schema und den Erhalt der Daten prüfen.
+  Alte Schreiber dürfen Schema 6 nicht überschreiben. Ungültige Eingaben mit
+  verständlicher Fehlermeldung abweisen, ohne einen gültigen Stand zu ändern.
+- **Moduswechsel:** Grid-Rechtecke aus einer stabilen, nicht gestapelten
+  Rasteransicht relativ zur Layoutfläche ableiten, inklusive Scroll-, Zoom- und
+  Größenbezug; fehlende Messwerte deterministisch behandeln. „Größe aus
+  Hintergrundbild übernehmen“ liest die natürlichen Bildmaße des vorhandenen
+  Assets; fehlende/ungültige Bilder und Maße verändern den Entwurf nicht.
+  Rückwechsel nur nach Warnung und Bestätigung; vor Umsetzung festlegen, wie
+  Rasterplätze wiederhergestellt bzw. für neue Widgets erzeugt werden.
+- **Integration und Abnahme:** Bestehenden Renderer, Widget-Lifecycle,
+  Assetmanager, Entwurfsablauf und tatsächliche iframe-Gerätevorschau
+  wiederverwenden. Vorlagen-APIs sind keine vorhandenen Schnittstellen.
+  Listener, Observer und ausstehende Gesten bei Modus-/Seitenwechsel abbauen.
+  Regressionen: unverändertes Schema 5, gültige/ungültige Schema-6-Daten,
+  Speichern/Publish/Backup-Roundtrip, Grid↔Freeform, Chrome und Safari/WebKit
+  in Live-Ansicht und Vorschau, Tastatur/Touch sowie FHEM-Geräteabnahme.
+  `mobileRect` und `mobileBehavior: "custom"` gehören nur zur optionalen Phase 2.
+- **Rücksprung:** Code-Ausgangsstand auf GitHub:
+  [`v1.19.6-dev-before-freeform`](https://github.com/stapetz/fhem-cms/tree/v1.19.6-dev-before-freeform)
+  (`85be974`). Der Tag sichert keinen Datenbestand. Vor der ersten
+  Schema-6-Schreiboperation Entwurf, Live-Konfiguration und Medien sichern;
+  beim Rücksprung zum alten Code nötigenfalls auch die Schema-5-Daten
+  wiederherstellen und diesen Ablauf auf einer Testinstanz verifizieren.
+
+Gestaltung und Interaktion regelt der
+[Freeform-Styleguide](./entwicklerdoku_und_styleguides.md#freeform-seitenlayout).
+Akzeptanzkriterien und Abhängigkeiten stehen im
+[Freeform-Epic](https://github.com/stapetz/fhem-cms/issues/212) und seinen Sub-Issues.
+
 ## Escape und verschachtelte Dialoge (dev, 1.13.1-dev, Refs #208)
 
 Korrektur 1.19.5-dev (Refs #210): Die Kopfmenue-Vorschau zeigt nie
