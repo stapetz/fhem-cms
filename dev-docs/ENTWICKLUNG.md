@@ -23,9 +23,10 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 
 ## Freeform-Seiten (Schema 6, geplant)
 
-Erster Backend-Teil: `FHEMCMS_ValidateConfig` kann den Schema-6-Vertrag
-explizit prüfen (`prove -l t/91_schema6_validation.t`). Die bestehenden
-Speicher- und Lesebefehle sind noch nicht für Schema 6 freigeschaltet.
+Backend-Zwischenstand: Schema-6-Validierung und der interne, tokengeprüfte
+Entwurfs-/Publish-Pfad sind offline geprüft
+(`prove -l t/91_schema6_validation.t t/92_schema6_persistence.t`). Die
+öffentlichen Befehle sind noch nicht für Schema 6 freigeschaltet.
 
 Freeform ist eine optionale Seitenalternative für Grundrisse und Wandtablets,
 kein Ersatz für GridStack. Bestehende Entwürfe und Live-Seiten in Schema 5
@@ -76,10 +77,14 @@ live wird er erst über den bestehenden Veröffentlichungsablauf wirksam.
   `mobileRect` und `mobileBehavior: "custom"` gehören nur zur optionalen Phase 2.
 - **Rücksprung:** Code-Ausgangsstand auf GitHub:
   [`v1.19.6-dev-before-freeform`](https://github.com/stapetz/fhem-cms/tree/v1.19.6-dev-before-freeform)
-  (`85be974`). Der Tag sichert keinen Datenbestand. Vor der ersten
-  Schema-6-Schreiboperation Entwurf, Live-Konfiguration und Medien sichern;
-  beim Rücksprung zum alten Code nötigenfalls auch die Schema-5-Daten
-  wiederherstellen und diesen Ablauf auf einer Testinstanz verifizieren.
+  (`85be974`). Der Tag sichert keinen Datenbestand. Der interne Upgrade-Pfad
+  sichert zuerst Live-Konfiguration, den vorhandenen Entwurf, den Medienkatalog
+  und die unveränderlichen Medien in `freeform-rollback-*` im nicht öffentlichen
+  CMS-Datenverzeichnis. Beim Rücksprung zum alten Code nötigenfalls auch die
+  Schema-5-Daten wiederherstellen und den Ablauf auf einer Testinstanz
+  verifizieren. Zusätzlich ein separates Backup außerhalb des CMS-Datenpfads
+  vorhalten; die interne Sicherung schützt nicht vor Geräte-Purge oder
+  Dateisystemverlust.
 
 Gestaltung und Interaktion regelt der
 [Freeform-Styleguide](./entwicklerdoku_und_styleguides.md#freeform-seitenlayout).
