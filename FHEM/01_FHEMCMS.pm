@@ -21,7 +21,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.19.6-dev';
+our $FHEMCMS_VERSION = '1.20.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -154,6 +154,7 @@ sub FHEMCMS_Get {
         return $formatError if (defined($formatError));
         return JSON::PP->new->utf8->canonical->encode({
             schemaVersion => $format,
+            ($format >= 5 ? (freeform => JSON::PP::true) : ()),
             adminMenuEnabled => ($main::attr{$name}{adminMenu} // '0') eq '1'
                 ? JSON::PP::true : JSON::PP::false,
         });
@@ -186,12 +187,12 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->canonical->encode({config => $candidate, source => $source, token => $token});
     }
 
-    if ($cmd eq 'version5state') {
-        return 'version5state erwartet keine Parameter' if (@args);
+    if ($cmd eq 'version5state' || $cmd eq 'version6state') {
+        return "$cmd erwartet keine Parameter" if (@args);
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
         my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
         return $error if (defined($error));
-        my ($state, $stateError) = FHEMCMS_ReadVersion5State($dataDir);
+        my ($state, $stateError) = FHEMCMS_ReadVersion5State($dataDir, $cmd eq 'version6state');
         return $stateError if (defined($stateError));
         return JSON::PP->new->utf8->canonical->encode($state);
     }
@@ -275,7 +276,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings history layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version5blueprints:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings history layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version6state:noArg version5blueprints:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -283,7 +284,7 @@ sub FHEMCMS_Set {
     my ($hash, $name, $cmd, @args) = @_;
     my $result = FHEMCMS_SetCommand($hash, $name, $cmd, @args);
     if (defined($result) && length($result) && defined($cmd)
-        && $cmd =~ /\A(?:config|draft|restore|publish|discard|media|purge|rebuild|version5draft|version5blueprints|migrationcommit|layoutupgrade)\z/
+        && $cmd =~ /\A(?:config|draft|restore|publish|discard|media|purge|rebuild|version[56]draft|version5blueprints|migrationcommit|layoutupgrade)\z/
         && !($cmd eq 'layoutupgrade' && $result =~ /\A\{.*"schemaVersion":5\}\z/)
         && !($cmd eq 'migrationcommit'
             && $result =~ /\A\{"backup":"config\.json\.\d{8}-\d{6}(?:-\d+)?\.bak"\}\z/)
@@ -352,11 +353,12 @@ sub FHEMCMS_SetCommand {
         return JSON::PP->new->utf8->canonical->encode({token => sha256_hex($bytes)});
     }
 
-    if ($cmd eq 'version5draft' || $cmd eq 'migrationcommit') {
+    if ($cmd eq 'version5draft' || $cmd eq 'version6draft' || $cmd eq 'migrationcommit') {
         return 'Ungueltiges Device' if (!FHEMCMS_ValidName($name));
         my ($error, $dataDir) = FHEMCMS_CreateDataDir($name, 1);
         return $error if (defined($error));
         return FHEMCMS_Version5DraftCommand($dataDir, @args) if ($cmd eq 'version5draft');
+        return FHEMCMS_LayoutDraftCommand($dataDir, 1, @args) if ($cmd eq 'version6draft');
         my ($backup, $migrationError) = FHEMCMS_MigrationCommand($dataDir, @args);
         return $migrationError if (defined($migrationError));
         return JSON::PP->new->utf8->canonical->encode({backup => $backup});
@@ -2410,10 +2412,10 @@ sub FHEMCMS_ReadLayoutFormat {
     my $raw = eval { JSON::PP->new->utf8->decode($bytes) };
     return (undef, 'Live-Konfiguration ist kein gueltiges JSON') if ($@ || ref($raw) ne 'HASH');
     my $version = $raw->{schemaVersion};
-    if (defined($version) && !ref($version) && $version =~ /\A[0-9]{1,6}\z/ && $version == 5) {
-        my $error = FHEMCMS_ValidateConfig($raw, 5);
+    if (defined($version) && !ref($version) && $version =~ /\A0{0,5}[56]\z/) {
+        my $error = FHEMCMS_ValidateConfig($raw, 0 + $version);
         return (undef, "Live-Konfiguration ist ungueltig: $error") if (defined($error));
-        return (5, undef);
+        return (0 + $version, undef);
     }
     my (undef, $error) = FHEMCMS_ParseConfig($bytes);
     return (undef, "Live-Konfiguration ist ungueltig: $error") if (defined($error));
@@ -2645,16 +2647,22 @@ sub FHEMCMS_SaveFreeformRollback {
         my $writeError = FHEMCMS_WriteUpgradeFile(File::Spec->catfile($snapshot, $file), $bytes, 0);
         return $failure->("$file: $writeError") if (defined($writeError));
     }
-    if (-e $mediaDir) {
-        opendir(my $dh, $mediaDir) or return $failure->("Medienverzeichnis nicht lesbar: $!");
-        my @files = grep { $_ =~ $FHEMCMS_MEDIA_NAME } readdir($dh);
+    for my $entry ([$mediaDir, 'media', $FHEMCMS_MEDIA_NAME],
+        [File::Spec->catdir($dataDir, 'assets'), 'assets', qr/\A[0-9a-f]{32}\.bin\z/]) {
+        my ($sourceDir, $subdir, $filePattern) = @{$entry};
+        return $failure->('Assetverzeichnis darf kein Symlink sein') if (-l $sourceDir);
+        next if (!-e $sourceDir);
+        my $destination = File::Spec->catdir($snapshot, $subdir);
+        return $failure->("Asset-Sicherung konnte nicht angelegt werden: $!")
+            if ($subdir ne 'media' && !mkdir($destination, 0700));
+        opendir(my $dh, $sourceDir) or return $failure->("Medienverzeichnis nicht lesbar: $!");
+        my @files = grep { $_ =~ $filePattern } readdir($dh);
         closedir($dh);
-        return $failure->('Zu viele Mediendateien fuer die Freeform-Sicherung') if (@files > $FHEMCMS_MAX_MEDIA_FILES);
         for my $file (@files) {
-            my $source = File::Spec->catfile($mediaDir, $file);
+            my $source = File::Spec->catfile($sourceDir, $file);
             # CMS media are immutable; removal/replacement unlinks their original directory entry.
             return $failure->('Mediendatei konnte nicht sicher hardverlinkt werden')
-                if (-l $source || !-f $source || !link($source, File::Spec->catfile($backupMedia, $file)));
+                if (-l $source || !-f $source || !link($source, File::Spec->catfile($destination, $file)));
         }
     }
     my ($state, $stateError) = FHEMCMS_ReadVersion5State($snapshot);
@@ -2785,7 +2793,12 @@ sub FHEMCMS_PublishVersion5Draft {
 
 # Versionierter Entwurfsvertrag.
 sub FHEMCMS_Version5DraftCommand {
-    my ($dataDir, $action, @args) = @_;
+    my ($dataDir, @args) = @_;
+    return FHEMCMS_LayoutDraftCommand($dataDir, 0, @args);
+}
+
+sub FHEMCMS_LayoutDraftCommand {
+    my ($dataDir, $allowFreeform, $action, @args) = @_;
     return 'version5draft ist ein interner Befehl; bitte den CMS-Editor verwenden'
         if (!defined($action) || (!ref($action) && $action eq ''));
     return 'Unbekannte versionierte Entwurfsaktion'
@@ -2806,10 +2819,10 @@ sub FHEMCMS_Version5DraftCommand {
         return 'Konfiguration ist zu gross' if (length($bytes) > $FHEMCMS_MAX_CONFIG_BYTES);
         my $config = eval { JSON::PP->new->utf8->decode($bytes) };
         return 'Konfiguration ist kein gueltiges JSON' if ($@ || !defined($config));
-        return FHEMCMS_WriteVersion5Draft($dataDir, $config, $token);
+        return FHEMCMS_WriteVersion5Draft($dataDir, $config, $token, $allowFreeform);
     }
-    return FHEMCMS_DiscardVersion5Draft($dataDir, $token) if ($action eq 'discard');
-    my (undef, $error) = FHEMCMS_PublishVersion5Draft($dataDir, $token);
+    return FHEMCMS_DiscardVersion5Draft($dataDir, $token, $allowFreeform) if ($action eq 'discard');
+    my (undef, $error) = FHEMCMS_PublishVersion5Draft($dataDir, $token, $allowFreeform);
     return $error;
 }
 
@@ -3090,8 +3103,8 @@ sub FHEMCMS_PreviewMigrationRestore {
         return (undef, undef, "$label ist kein gueltiges JSON") if ($@ || ref($config) ne 'HASH');
         my $error;
         if (defined($config->{schemaVersion}) && !ref($config->{schemaVersion})
-            && $config->{schemaVersion} =~ /\A[0-9]{1,6}\z/ && $config->{schemaVersion} == 5) {
-            $error = FHEMCMS_ValidateConfig($config, 5);
+            && $config->{schemaVersion} =~ /\A0{0,5}[56]\z/) {
+            $error = FHEMCMS_ValidateConfig($config, 0 + $config->{schemaVersion});
         } else {
             (undef, $error) = FHEMCMS_ParseConfig($bytes);
         }

@@ -60,7 +60,7 @@ subtest 'new device starts in schema 5 without rewriting existing data' => sub {
     my $initial = read_bytes($live);
     my $config = $json->decode($initial);
     is(FHEMCMS_ValidateConfig($config, 5), undef, 'default passes schema 5 validation');
-    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 5, adminMenuEnabled => JSON::PP::false},
+    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 5, adminMenuEnabled => JSON::PP::false, freeform => JSON::PP::true},
         'entry dispatch detects schema 5');
     my ($state, $error) = FHEMCMS_ReadVersion5State($dir);
     is($error, undef, 'schema 5 editor state is readable');
@@ -241,7 +241,7 @@ subtest 'layout format is validated without writing or creating directories' => 
     is($candidateError, undef, 'prepares valid schema 5');
     my $five = $json->encode($candidate);
     write_bytes($live, $five);
-    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 5, adminMenuEnabled => JSON::PP::false},
+    is_deeply($json->decode(FHEMCMS_Get($hash, $name, 'layoutformat')), {schemaVersion => 5, adminMenuEnabled => JSON::PP::false, freeform => JSON::PP::true},
         'recognises valid schema 5 independently of draft');
     like(FHEMCMS_Get($hash, $name, 'draft'), qr/schemaVersion/,
         'legacy draft read detects a format change after initial detection');
