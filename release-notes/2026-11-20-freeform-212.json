@@ -3,8 +3,9 @@
   "version": "1.20.0-dev",
   "title": "Pixelgenaue Freeform-Seiten",
   "changes": [
-    "Raster bleibt Standard. Einzelne Seiten können optional mit Pixelkoordinaten, Hintergrundbild und automatischem Smartphone-Stack gestaltet werden.",
-    "Der Editor unterstützt Verschieben, Größenänderung, Tastatur und magnetische Hilfslinien.",
-    "Schema 6 nutzt den Entwurfs- und Veröffentlichungsablauf und legt beim ersten Upgrade eine Rücksprungsicherung an. Refs #212."
+    "Raster bleibt Standard. Freeform bietet Pixelkoordinaten und Seitenbilder.",
+    "Schmale Ansichten stapeln Widgets automatisch, wenn dies aktiviert ist.",
+    "Der Editor bietet Resize, Tastatursteuerung und magnetische Hilfslinien.",
+    "Vor dem ersten Schema-6-Entwurf wird eine Sicherung angelegt. Refs #212."
   ]
 }
