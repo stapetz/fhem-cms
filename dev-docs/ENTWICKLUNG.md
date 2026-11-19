@@ -23,6 +23,10 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 
 ## Freeform-Seiten (Schema 6, geplant)
 
+Erster Backend-Teil: `FHEMCMS_ValidateConfig` kann den Schema-6-Vertrag
+explizit prüfen (`prove -l t/91_schema6_validation.t`). Die bestehenden
+Speicher- und Lesebefehle sind noch nicht für Schema 6 freigeschaltet.
+
 Freeform ist eine optionale Seitenalternative für Grundrisse und Wandtablets,
 kein Ersatz für GridStack. Bestehende Entwürfe und Live-Seiten in Schema 5
 bleiben les- und bearbeitbar; ohne `layoutMode` gilt `grid`. Lesen und Vorschau
@@ -37,8 +41,10 @@ live wird er erst über den bestehenden Veröffentlichungsablauf wirksam.
   `rect: {x,y,w,h,z}` (Ganzzahlen, Mindestgröße `10×10`, `z` optional mit
   Standard `1`); `hideOnMobile` ist ein optionaler JSON-Boolean mit Standard
   `false`. Layoutdaten sind von Widget-Konfiguration und -IDs getrennt.
-  Vor Implementierung zulässigen Überstand, Koordinaten- und Ebenengrenzen
-  sowie die Übergangsregeln für bestehende Rastergeometrie festlegen.
+  Rechtecke liegen vollständig im Canvas (`x,y ≥ 0`, `x+w ≤ width`,
+  `y+h ≤ height`); Überlappungen zwischen Widgets sind erlaubt. `z` liegt
+  zwischen `0` und `9999`. Bestehende Rasterpositionen bleiben in `grid`
+  erhalten; für neu in Freeform angelegte Widgets ist `grid` optional.
 - **Speicherpfade:** Typen, erlaubte Schlüssel, Wertebereiche und tatsächliche
   Schema-Grenzen in `01_FHEMCMS.pm` und clientseitig konsistent prüfen.
   Bestehende Autorisierung, CSRF, HTML-Sanitizing und Asset-Prüfungen beibehalten;
@@ -47,15 +53,19 @@ live wird er erst über den bestehenden Veröffentlichungsablauf wirksam.
   Beim Lesen, Entwurfsspeichern, Publish, Import/Export und Wiederherstellen
   dürfen keine Konfiguration oder Medienreferenzen verloren gehen. Auch
   Blueprint-Pfade auf das richtige Schema und den Erhalt der Daten prüfen.
-  Alte Schreiber dürfen Schema 6 nicht überschreiben. Ungültige Eingaben mit
-  verständlicher Fehlermeldung abweisen, ohne einen gültigen Stand zu ändern.
+  Der erste gespeicherte Entwurf mit Freeform wechselt zu Schema 6;
+  die Live-Konfiguration erst bei Veröffentlichung. Reine Schema-5-Rasterentwürfe
+  bleiben Schema 5. Alte Schreiber dürfen Schema 6 nicht überschreiben.
+  Ungültige Eingaben mit verständlicher Fehlermeldung abweisen, ohne einen
+  gültigen Stand zu ändern.
 - **Moduswechsel:** Grid-Rechtecke aus einer stabilen, nicht gestapelten
   Rasteransicht relativ zur Layoutfläche ableiten, inklusive Scroll-, Zoom- und
   Größenbezug; fehlende Messwerte deterministisch behandeln. „Größe aus
   Hintergrundbild übernehmen“ liest die natürlichen Bildmaße des vorhandenen
   Assets; fehlende/ungültige Bilder und Maße verändern den Entwurf nicht.
-  Rückwechsel nur nach Warnung und Bestätigung; vor Umsetzung festlegen, wie
-  Rasterplätze wiederhergestellt bzw. für neue Widgets erzeugt werden.
+  Rückwechsel nur nach Warnung und Bestätigung. Gemerkte Rasterpositionen
+  zuerst wiederherstellen, sofern sie im aktuellen Raster gültig und frei
+  sind; neue bzw. nicht mehr passend platzierbare Widgets auf freie Plätze setzen.
 - **Integration und Abnahme:** Bestehenden Renderer, Widget-Lifecycle,
   Assetmanager, Entwurfsablauf und tatsächliche iframe-Gerätevorschau
   wiederverwenden. Vorlagen-APIs sind keine vorhandenen Schnittstellen.

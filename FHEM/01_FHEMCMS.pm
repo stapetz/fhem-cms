@@ -844,7 +844,8 @@ sub FHEMCMS_ValidateConfig {
     my ($config, $targetSchema) = @_;
     $targetSchema //= 4;
     return 'Nicht unterstuetzter Validierungsvertrag'
-        if ($targetSchema ne '4' && $targetSchema ne '5');
+        if ($targetSchema ne '4' && $targetSchema ne '5' && $targetSchema ne '6');
+    my $fcui = $targetSchema >= 5;
     my $id = qr/\A[A-Za-z0-9_-]{1,64}\z/;
     my $fhemName = qr/\A[A-Za-z0-9_.-]{1,128}\z/;
 
@@ -872,6 +873,12 @@ sub FHEMCMS_ValidateConfig {
         my ($v) = @_;
         return JSON::PP::is_bool($v);
     };
+    my $scalarJson = JSON::PP->new->allow_nonref;
+    my $isPixelInt = sub {
+        my ($v, $min, $max) = @_;
+        return defined($v) && !ref($v) && $scalarJson->encode($v) =~ /\A[0-9]{1,6}\z/
+            && $v >= $min && $v <= $max;
+    };
 
     my $columns = 48;
     my $checkGrid = sub {
@@ -882,7 +889,7 @@ sub FHEMCMS_ValidateConfig {
             if (!$isInt->($grid->{col}, 1, $columns) || !$isInt->($grid->{row}, 1, 1000)
                 || !$isInt->($grid->{w}, 1, $columns) || !$isInt->($grid->{h}, 1, 1000)
                 || $grid->{col} + $grid->{w} > $columns + 1
-                || ($targetSchema == 5 && $grid->{row} + $grid->{h} > 1001));
+                || ($fcui && $grid->{row} + $grid->{h} > 1001));
         return undef;
     };
 
@@ -892,7 +899,7 @@ sub FHEMCMS_ValidateConfig {
         if (!$isInt->($config->{schemaVersion}, $targetSchema, $targetSchema));
     if (exists($config->{settings})) {
         my @settings = ('showFrames', 'layoutMode', 'gridColumns', 'titleAlign');
-        push(@settings, 'sharedBackground', 'liquidIntensity', 'liquidTransparency') if ($targetSchema == 5);
+        push(@settings, 'sharedBackground', 'liquidIntensity', 'liquidTransparency') if ($fcui);
         $err = $exact->($config->{settings}, 'settings', [], \@settings);
         return $err if ($err);
         return 'Ungueltiger Wert fuer layoutMode'
@@ -902,7 +909,7 @@ sub FHEMCMS_ValidateConfig {
         return 'Ungueltiger Wert fuer gridColumns'
             if (exists($config->{settings}{gridColumns}) && (ref($config->{settings}{gridColumns})
                 || !defined($config->{settings}{gridColumns})
-                || ($targetSchema == 5
+                || ($fcui
                     ? $config->{settings}{gridColumns} !~ /\A(?:12|24|48|96|192)\z/
                     : $config->{settings}{gridColumns} !~ /\A(?:12|24|48)\z/)));
         return 'Ungueltiger Wert fuer showFrames'
@@ -918,8 +925,8 @@ sub FHEMCMS_ValidateConfig {
                 || !defined($config->{settings}{titleAlign})
                 || $config->{settings}{titleAlign} !~ /\A(?:left|center|right)\z/));
     }
-    if ($targetSchema == 5) {
-        return 'Schema 5 erfordert Navigation und 12, 24, 48, 96 oder 192 Rasterspalten'
+    if ($fcui) {
+        return "Schema $targetSchema erfordert Navigation und 12, 24, 48, 96 oder 192 Rasterspalten"
             if (!exists($config->{navigation}) || !exists($config->{settings})
                 || !defined($config->{settings}{layoutMode})
                 || $config->{settings}{layoutMode} ne 'grid'
@@ -928,7 +935,7 @@ sub FHEMCMS_ValidateConfig {
     }
     return 'Ungueltiges Theme'
         if (exists($config->{theme}) && (ref($config->{theme}) || !defined($config->{theme})
-            || $config->{theme} !~ ($targetSchema == 5 ? qr/\A(?:dark|light|liquid-glass|oled-black|catppuccin-mocha)\z/ : qr/\A(?:dark|light)\z/)));
+            || $config->{theme} !~ ($fcui ? qr/\A(?:dark|light|liquid-glass|oled-black|catppuccin-mocha)\z/ : qr/\A(?:dark|light)\z/)));
     if (exists($config->{navigation})) {
         $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid'], ['items', 'itemWidth', 'itemHeight']);
         return $err if ($err);
@@ -973,9 +980,35 @@ sub FHEMCMS_ValidateConfig {
 
     my %pageIds;
     for my $page (@{$config->{pages}}) {
-        $err = $exact->($page, 'Seite', ['id', 'title', 'widgets'],
-            $targetSchema == 5 ? ['background'] : []);
+        my @pageFields = $fcui ? ('background') : ();
+        push(@pageFields, 'layoutMode', 'canvas') if ($targetSchema == 6);
+        $err = $exact->($page, 'Seite', ['id', 'title', 'widgets'], \@pageFields);
         return $err if ($err);
+        return 'Ungueltiger Layoutmodus der Seite'
+            if (exists($page->{layoutMode}) && (!defined($page->{layoutMode}) || ref($page->{layoutMode})
+                || $page->{layoutMode} !~ /\A(?:grid|freeform)\z/));
+        my $freeform = ($page->{layoutMode} // 'grid') eq 'freeform';
+        my $canvas = $page->{canvas};
+        if ($freeform) {
+            $err = $exact->($canvas, 'canvas', ['width', 'height'], ['scaling', 'snapGrid', 'mobileBehavior']);
+            return $err if ($err);
+            for my $dim ('width', 'height') {
+                return "Ungueltiger Wert fuer canvas.$dim" if (!$isPixelInt->($canvas->{$dim}, 200, 7680));
+            }
+            return 'Ungueltiger Wert fuer canvas.scaling'
+                if (exists($canvas->{scaling}) && (!defined($canvas->{scaling}) || ref($canvas->{scaling})
+                    || $canvas->{scaling} !~ /\A(?:fit|width|none)\z/));
+            if (exists($canvas->{snapGrid})) {
+                my $snap = $canvas->{snapGrid};
+                return 'Ungueltiger Wert fuer canvas.snapGrid'
+                    if (!$isPixelInt->($snap, 1, 10) || ($snap != 1 && $snap != 5 && $snap != 10));
+            }
+            return 'Ungueltiger Wert fuer canvas.mobileBehavior'
+                if (exists($canvas->{mobileBehavior}) && (!defined($canvas->{mobileBehavior}) || ref($canvas->{mobileBehavior})
+                    || $canvas->{mobileBehavior} !~ /\A(?:stack|scale)\z/));
+        } elsif (exists($page->{canvas})) {
+            return 'canvas ist nur auf Freeform-Seiten erlaubt';
+        }
         return 'Ungueltiges Hintergrundbild'
             if (exists($page->{background}) && (ref($page->{background}) || !defined($page->{background})
                 || $page->{background} !~ m{\Amedia/[0-9a-f]{32}\.(?:png|jpg|gif)\z}));
@@ -990,7 +1023,13 @@ sub FHEMCMS_ValidateConfig {
             if (ref($page->{widgets}) ne 'ARRAY' || @{$page->{widgets}} > 200);
 
         my %widgetIds;
-        my @targetGrids = $targetSchema == 5 ? ($config->{navigation}{grid}) : ();
+        my @targetGrids = $fcui ? ($config->{navigation}{grid}) : ();
+        my $widgetExact = sub {
+            my ($widget, $where, $required, $optional) = @_;
+            return $exact->($widget, $where, $required, $optional) if (!$freeform);
+            return $exact->($widget, $where, ['rect', grep { $_ ne 'grid' } @{$required}],
+                [@{$optional}, 'grid', 'hideOnMobile']);
+        };
         for my $widget (@{$page->{widgets}}) {
             return 'Widget muss ein Objekt sein' if (ref($widget) ne 'HASH');
             return 'Unbekannter Widget-Typ'
@@ -1002,61 +1041,61 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-slider'
                         && $widget->{type} ne 'fhem-select'
                         && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'
-                        && !($targetSchema == 5 && ($widget->{type} eq 'fhem-link' || $widget->{type} eq 'fhem-calllist'
+                        && !($fcui && ($widget->{type} eq 'fhem-link' || $widget->{type} eq 'fhem-calllist'
                             || $widget->{type} eq 'fhem-solar-energy' || $widget->{type} eq 'fhem-volvoconnect'))));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
-                $err = $exact->($widget, 'Widget', ['id', 'type', $body, 'grid'], ['title', 'showTitle']);
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', $body, 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-html') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'html', 'devices', 'grid'], ['title', 'showTitle']);
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'html', 'devices', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-link') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'links', 'grid'], ['title', 'showTitle']);
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'links', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-value') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['title', 'showTitle', 'unit', 'icon']);
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'], ['title', 'showTitle', 'unit', 'icon']);
             } elsif ($widget->{type} eq 'fhem-switch') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'on', 'off', 'grid'],
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'on', 'off', 'grid'],
                     ['title', 'showTitle', 'icon', 'iconOff', 'label', 'showLabel']);
             } elsif ($widget->{type} eq 'fhem-button') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'grid'],
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'grid'],
                     ['title', 'showTitle', 'label', 'icon', 'showLabel']);
             } elsif ($widget->{type} eq 'fhem-clock') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'style', 'showSeconds', 'showDate', 'showWeekday', 'grid'],
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'style', 'showSeconds', 'showDate', 'showWeekday', 'grid'],
                     ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-icon') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title', 'showTitle']);
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-table') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title', 'showTitle', 'deviceLabel', 'sum', 'sumLabel', 'hideHeader', 'valueLabel', 'hideValueLabel', 'hideSumLabel', 'sumUnit']);
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'rows', 'grid'], ['title', 'showTitle', 'deviceLabel', 'sum', 'sumLabel', 'hideHeader', 'valueLabel', 'hideValueLabel', 'hideSumLabel', 'sumUnit']);
             } elsif ($widget->{type} eq 'fhem-chart') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
                     ['title', 'showTitle', 'unit', 'range', 'granularity', 'source']);
             } elsif ($widget->{type} eq 'fhem-calllist') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid'],
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'grid'],
                     ['title', 'showTitle', 'showGallery', 'showDetails', 'groupOrder', 'hiddenGroups', 'hiddenReadings', 'cardSizes', 'cardGrid', 'cardPositions']);
             } elsif ($widget->{type} eq 'fhem-solar-energy') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'sections', 'grid'],
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'readings', 'sections', 'grid'],
                     ['title', 'showTitle', 'powerUnit', 'energyUnit', 'threshold', 'deriveHome']);
             } elsif ($widget->{type} eq 'fhem-solarflow') {
                 # 'device' mit Reading-Namen als Text ist das aeltere Format (ein gemeinsames Device);
                 # invertGrid/invertBattery sind veraltet und wirkungslos, bleiben aber fuer gespeicherte Entwuerfe gueltig.
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'readings', 'grid'],
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'readings', 'grid'],
                     ['title', 'showTitle', 'device', 'unit', 'invertGrid', 'invertBattery', 'threshold', 'deriveHome']);
             } elsif ($widget->{type} eq 'fhem-slider') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title', 'showTitle']);
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-select') {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'mode', 'grid'],
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'command', 'reading', 'mode', 'grid'],
                     ['title', 'showTitle', 'labels']);
             } else {
-                $err = $exact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title', 'showTitle']);
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'grid', 'readings'], ['title', 'showTitle']);
             }
             return $err if ($err);
 
             return 'Ungueltige Widget-ID'
                 if (ref($widget->{id}) || !defined($widget->{id}) || $widget->{id} !~ $id);
             return 'Widget-ID __nav ist fuer die Navigation reserviert'
-                if ($targetSchema == 5 && $widget->{id} eq '__nav');
+                if ($fcui && $widget->{id} eq '__nav');
             return "Doppelte Widget-ID '$widget->{id}'" if ($widgetIds{$widget->{id}}++);
             return 'Ungueltiger Widget-Titel'
                 if (exists($widget->{title})
@@ -1422,12 +1461,26 @@ sub FHEMCMS_ValidateConfig {
                 }
             }
 
+            if ($freeform) {
+                my $rect = $widget->{rect};
+                $err = $exact->($rect, 'rect', ['x', 'y', 'w', 'h'], ['z']);
+                return $err if ($err);
+                return 'Ungueltige Freeform-Koordinaten'
+                    if (!$isPixelInt->($rect->{x}, 0, $canvas->{width}) || !$isPixelInt->($rect->{y}, 0, $canvas->{height})
+                        || !$isPixelInt->($rect->{w}, 10, $canvas->{width}) || !$isPixelInt->($rect->{h}, 10, $canvas->{height})
+                        || $rect->{x} + $rect->{w} > $canvas->{width} || $rect->{y} + $rect->{h} > $canvas->{height});
+                return 'Ungueltiger Wert fuer rect.z'
+                    if (exists($rect->{z}) && !$isPixelInt->($rect->{z}, 0, 9999));
+                return 'Ungueltiger Wert fuer hideOnMobile'
+                    if (exists($widget->{hideOnMobile}) && !$isBool->($widget->{hideOnMobile}));
+                next if (!exists($widget->{grid}));
+            }
             $err = $checkGrid->($widget->{grid});
             return $err if ($err);
-            if ($targetSchema == 5) {
+            if ($fcui && !$freeform) {
                 my $grid = $widget->{grid};
                 for my $other (@targetGrids) {
-                    return 'Ueberschneidung im Schema-5-Raster'
+                    return "Ueberschneidung im Schema-$targetSchema-Raster"
                         if ($grid->{col} < $other->{col} + $other->{w}
                             && $other->{col} < $grid->{col} + $grid->{w}
                             && $grid->{row} < $other->{row} + $other->{h}
