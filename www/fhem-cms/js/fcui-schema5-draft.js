@@ -1,6 +1,7 @@
 import { applySchema5GridItems, reflowSchema5Widget, schema5GridItems } from './fcui-schema5-layout.js';
 import { fitLinkWidget } from './link-widget.js';
 import { normalizeWidgetIds, uniqueWidgetId, widgetIds } from './widget-ids.js';
+import { fitFreeformRect, freeformStartRect, isFreeform } from './fcui-freeform-layout.js';
 
 export class WidgetLayoutError extends Error {}
 
@@ -159,7 +160,13 @@ export class Schema5DraftController {
     if (action === 'create' && widgetIds(candidate).has(copy.id)) {
       copy.id = uniqueWidgetId(copy.id, widgetIds(candidate));
     }
-    if (widget.type === 'fhem-link') {
+    if (isFreeform(page)) {
+      const original = page.widgets[index];
+      copy.rect = action === 'update' ? original.rect : copy.rect
+        ?? freeformStartRect(copy, page.widgets.length, page.canvas, Number(candidate.settings.gridColumns));
+      if (action === 'update' && original.hideOnMobile !== undefined) copy.hideOnMobile = original.hideOnMobile;
+    }
+    if (widget.type === 'fhem-link' && !isFreeform(page)) {
       try {
         copy = fitLinkWidget(copy, Number(candidate.settings.gridColumns), candidate.pages,
           action === 'update' ? page.widgets[index] : null);
@@ -169,7 +176,7 @@ export class Schema5DraftController {
     }
     if (action === 'create') page.widgets.push(copy);
     else page.widgets[index] = copy;
-    if (copy.type === 'fhem-link') {
+    if (copy.type === 'fhem-link' && !isFreeform(page)) {
       try {
         if (reflow) candidate = reflowSchema5Widget(candidate, pageId, copy.id);
         validateConfig(candidate);
@@ -235,15 +242,20 @@ export class Schema5DraftController {
     if (!page) throw new Error('Unbekannte Seite');
     if (page.widgets.length >= 200) throw new Error('Die Seite enthält bereits 200 Widgets');
     if (!widget || typeof widget !== 'object' || Array.isArray(widget)
-      || typeof widget.id !== 'string' || !widget.grid) throw new Error('Ungültige Widget-Vorlage');
+      || typeof widget.id !== 'string' || (!widget.grid && !widget.rect)) throw new Error('Ungültige Widget-Vorlage');
     const ids = widgetIds(candidate);
     let copy = structuredClone(widget);
     copy.id = uniqueCopyId(copy.id, ids);
     const columns = Number(candidate.settings.gridColumns);
-    if (copy.type === 'fhem-link') {
+    if (copy.type === 'fhem-link' && !isFreeform(page)) {
       copy = fitLinkWidget(copy, columns, candidate.pages, null);
     }
-    copy.grid = freeGridPosition(copy, [candidate.navigation.grid, ...page.widgets.map((entry) => entry.grid)], columns);
+    if (isFreeform(page)) {
+      if (copy.rect) copy.rect = fitFreeformRect({...copy.rect, x: copy.rect.x + 15, y: copy.rect.y + 15}, page.canvas);
+      delete copy.grid;
+    } else {
+      copy.grid = freeGridPosition(copy, [candidate.navigation.grid, ...page.widgets.map((entry) => entry.grid)], columns);
+    }
     const prepared = this.#prepareWidget(pageId, copy, expectedToken, 'create', false);
     if (afterWidgetId !== null) {
       const preparedPage = prepared.candidate.pages.find((entry) => entry.id === pageId);
@@ -319,7 +331,15 @@ export class Schema5DraftController {
     if (index < 0) throw new Error('Unbekanntes Widget');
     const widget = source.widgets.splice(index, 1)[0];
     if (widgetIds(candidate).has(widget.id)) widget.id = uniqueWidgetId(widget.id, widgetIds(candidate));
-    widget.grid = structuredClone(grid);
+    if (isFreeform(target)) {
+      widget.rect = widget.rect ? fitFreeformRect(widget.rect, target.canvas)
+        : freeformStartRect(widget, target.widgets.length, target.canvas, Number(candidate.settings.gridColumns));
+      if (!isFreeform(source)) delete widget.grid;
+    } else {
+      widget.grid = structuredClone(grid);
+      delete widget.rect;
+      delete widget.hideOnMobile;
+    }
     target.widgets.push(widget);
     return this.saveDraft(candidate, expectedToken);
   }

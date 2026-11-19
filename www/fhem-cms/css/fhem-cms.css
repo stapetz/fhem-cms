@@ -2090,3 +2090,84 @@ html:not(.cms-view) body {
 .cms-device-bar button {
   min-height: 2.3rem;
 }
+.cms-schema5-grid.cms-freeform-root {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 8px;
+}
+
+.cms-freeform-viewport {
+  position: relative;
+  height: min(72dvh, 1050px);
+  min-width: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.cms-freeform-footprint { position: relative; overflow: clip; }
+.cms-freeform-fit .cms-freeform-footprint { margin-inline: auto; }
+.cms-freeform-canvas {
+  position: absolute;
+  transform-origin: top left;
+  background: no-repeat center / 100% 100%;
+  isolation: isolate;
+}
+.cms-freeform-widget {
+  position: absolute;
+  container-type: inline-size;
+  container-name: cms-widget;
+  overflow: hidden;
+}
+.cms-freeform-widget > :first-child { display: block; width: 100%; height: 100%; }
+.cms-freeform-stack { height: auto; }
+.cms-freeform-stack .cms-freeform-canvas {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-image: none !important;
+}
+.cms-freeform-stack .cms-freeform-widget {
+  position: relative;
+  inset: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 64px;
+}
+.cms-freeform-stack .cms-freeform-widget[hidden] { display: none; }
+.cms-freeform-stack .cms-freeform-widget > :first-child { height: auto; }
+.cms-freeform-overlay { position: absolute; inset: 0; z-index: 10000; pointer-events: none; }
+.cms-freeform-handles { position: absolute; outline: 2px solid var(--cms-accent, #3b82f6); }
+.cms-freeform-handles button {
+  position: absolute; pointer-events: auto; touch-action: none; min-width: 44px; min-height: 44px;
+  padding: 0; background: transparent; border: 0; display: grid; place-items: center;
+}
+@supports (width: calc(44px / 1)) {
+  .cms-freeform-handles button {
+    min-width: calc(44px / var(--cms-freeform-scale, 1));
+    min-height: calc(44px / var(--cms-freeform-scale, 1));
+  }
+}
+.cms-freeform-handles button::before {
+  content: ''; width: 10px; height: 10px; border: 2px solid var(--cms-accent, #3b82f6); background: var(--cms-bg, white);
+}
+.cms-freeform-handles [data-dir="move"] { top: 50%; left: 50%; transform: translate(-50%, -50%); cursor: move; }
+.cms-freeform-handles [data-dir="move"]::before { display: none; }
+.cms-freeform-handles :is([data-dir="nw"],[data-dir="n"],[data-dir="ne"]) { top: 0; }
+.cms-freeform-handles :is([data-dir="sw"],[data-dir="s"],[data-dir="se"]) { bottom: 0; }
+.cms-freeform-handles :is([data-dir="nw"],[data-dir="w"],[data-dir="sw"]) { left: 0; }
+.cms-freeform-handles :is([data-dir="ne"],[data-dir="e"],[data-dir="se"]) { right: 0; }
+.cms-freeform-handles :is([data-dir="n"],[data-dir="s"]) { left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+.cms-freeform-handles :is([data-dir="w"],[data-dir="e"]) { top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+.cms-freeform-handles :is([data-dir="nw"],[data-dir="se"]) { cursor: nwse-resize; }
+.cms-freeform-handles :is([data-dir="ne"],[data-dir="sw"]) { cursor: nesw-resize; }
+.cms-freeform-guide { position: absolute; background: var(--cms-guide-color, var(--cms-accent, #3b82f6)); }
+.cms-freeform-guide-x { inset-block: 0; }
+.cms-freeform-guide-y { inset-inline: 0; }
+.cms-freeform-properties div:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cms-freeform-properties input[type="number"] { width: 6rem; }
+.cms-freeform-stack :is(button, [role="button"], input[type="range"]) { min-width: 44px; min-height: 44px; }
+@container cms-widget (width < 240px) {
+  .cms-freeform-widget > :first-child { font-size: .875em; }
+}

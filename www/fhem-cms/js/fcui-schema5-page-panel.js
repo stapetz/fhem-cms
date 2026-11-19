@@ -1,4 +1,7 @@
 import { resizeSchema5Grid, schema5GridItems, SCHEMA5_GRID_COLUMNS } from './fcui-schema5-layout.js';
+import { changePageLayout } from './fcui-schema5-layout.js';
+import { DEFAULT_CANVAS, isFreeform, validateFreeformCanvas } from './fcui-freeform-layout.js';
+import { schema5PageBackground } from './fcui-schema5-appearance.js';
 import { ASSET_IMAGE, assetPathText, validateAssetState } from './asset-contract.js';
 import { LIQUID_DEFAULTS } from './fcui-schema5-appearance.js';
 
@@ -38,7 +41,10 @@ export class Schema5PagePanel {
   #backgroundLabelRevision = 0;
   #preview;
 
-  constructor({ root, controller, pageId, token, services = {}, browser = window, onClose }) {
+  #freeform;
+
+  constructor({ root, controller, pageId, token, services = {}, browser = window, onClose,
+    freeformSupported = false, measurements }) {
     if (!root || root.children.length || !controller || typeof controller.snapshot !== 'function'
       || typeof controller.saveDraft !== 'function'
       || !browser || typeof browser.confirm !== 'function' || typeof onClose !== 'function') {
@@ -67,6 +73,7 @@ export class Schema5PagePanel {
     this.#status.setAttribute('role', 'status');
 
     this.#form = element('form');
+    if (freeformSupported) this.#addFreeformControls(page, measurements);
     const themeLabel = element('label', 'Darstellung ');
     this.#theme = element('select');
     for (const [value, title] of [['dark', 'Forest Green'], ['light', 'Hell'], ['liquid-glass', 'Liquid Glass'],
@@ -278,7 +285,88 @@ export class Schema5PagePanel {
   #settings() {
     return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value,
       this.#titleAlign.value, this.#background, this.#sharedBackground?.checked ?? null,
-      this.#intensity.value, this.#transparency.value]);
+      this.#intensity.value, this.#transparency.value, this.#freeform?.values()]);
+  }
+
+  #addFreeformControls(page, measurements) {
+    const section = element('fieldset');
+    section.append(element('legend', 'Seitenlayout'));
+    const select = (parent, title, entries, value) => {
+      const label = element('label', `${title} `);
+      const control = element('select');
+      for (const [key, text] of entries) {
+        const option = element('option', text);
+        option.value = key;
+        control.append(option);
+      }
+      control.value = value;
+      label.append(control);
+      parent.append(label);
+      return control;
+    };
+    const mode = select(section, 'Modus', [['grid', 'Raster (Standard)'], ['freeform', 'Frei (Pixelgenau)']],
+      page.layoutMode || 'grid');
+    const extras = element('div');
+    section.append(extras);
+    const initial = {...DEFAULT_CANVAS, ...page.canvas};
+    if (!isFreeform(page) && measurements?.width && measurements?.height) {
+      initial.width = Math.max(200, Math.min(7680, Math.round(measurements.width)));
+      initial.height = Math.max(200, Math.min(7680, Math.round(measurements.height)));
+    }
+    const size = (labelText, value) => {
+      const label = element('label', `${labelText} `);
+      const input = element('input');
+      Object.assign(input, {type: 'number', min: 200, max: 7680, step: 1, value: String(value)});
+      label.append(input);
+      extras.append(label);
+      return input;
+    };
+    const width = size('Breite (px)', initial.width);
+    const height = size('Höhe (px)', initial.height);
+    const scaling = select(extras, 'Skalierung', [['fit', 'Einpassen'], ['width', 'Breite füllen'], ['none', '1:1']], initial.scaling);
+    const snap = select(extras, 'Fangraster', [1, 5, 10].map(n => [n, `${n} px`]), initial.snapGrid);
+    const mobile = select(extras, 'Smartphone', [['stack', 'Stapeln'], ['scale', 'Pixel-Layout behalten']], initial.mobileBehavior);
+    const button = (text, fn) => {
+      const control = element('button', text);
+      control.type = 'button';
+      control.addEventListener('click', fn);
+      extras.append(control);
+    };
+    const setSize = (w, h) => {
+      width.value = String(w);
+      height.value = String(h);
+      this.#updateSettingsPreview();
+    };
+    button('1280 × 800', () => setSize(1280, 800));
+    button('1920 × 1080', () => setSize(1920, 1080));
+    button('Größe aus Hintergrundbild übernehmen', () => {
+      const background = this.#sharedBackground?.checked && this.#config.pages[0].id !== page.id
+        ? this.#config.pages[0].background : this.#background;
+      if (!background) { this.#message('Kein Hintergrundbild ausgewählt.', true); return; }
+      const image = new this.#browser.Image();
+      image.onload = () => {
+        if (this.#closed || this.#suspended || this.#busy) return;
+        try {
+          validateFreeformCanvas({width: image.naturalWidth, height: image.naturalHeight});
+          setSize(image.naturalWidth, image.naturalHeight);
+        } catch (error) {
+          this.#message(`Bildmaße nicht übernommen: ${error.message}`, true);
+        }
+      };
+      image.onerror = () => this.#message('Hintergrundbild konnte nicht geladen werden.', true);
+      image.src = new URL(background, this.#browser.location.href).href;
+    });
+    const update = () => {
+      extras.hidden = mode.value !== 'freeform';
+      this.#updateSettingsPreview();
+    };
+    extras.hidden = mode.value !== 'freeform';
+    section.addEventListener('change', update);
+    this.#form.append(section);
+    this.#freeform = {
+      mode, measurements,
+      values: () => [mode.value, width.value, height.value, scaling.value, snap.value, mobile.value],
+    };
   }
 
   #changeColumns() {
@@ -329,6 +417,12 @@ export class Schema5PagePanel {
     }
     if (this.#intensity.value !== originalIntensity) candidate.settings.liquidIntensity = Number(this.#intensity.value);
     if (this.#transparency.value !== originalTransparency) candidate.settings.liquidTransparency = Number(this.#transparency.value);
+    if (this.#freeform) {
+      const [mode, width, height, scaling, snapGrid, mobileBehavior] = this.#freeform.values();
+      changePageLayout(candidate, this.#pageId, mode,
+        {width: Number(width), height: Number(height), scaling, snapGrid: Number(snapGrid), mobileBehavior},
+        this.#freeform.measurements?.boxes);
+    }
     return candidate;
   }
 
@@ -344,6 +438,9 @@ export class Schema5PagePanel {
     }
     let pending;
     try {
+      const page = this.#config.pages.find(entry => entry.id === this.#pageId);
+      if (isFreeform(page) && this.#freeform?.mode.value === 'grid'
+        && !this.#browser.confirm('Beim Rückwechsel gehen die Pixelpositionen verloren. Zum Raster wechseln?')) return;
       pending = this.#controller.saveDraft(this.#candidate(), this.#token);
     } catch (error) {
       this.#message(`Änderung ungültig: ${error.message || String(error)}`, true);

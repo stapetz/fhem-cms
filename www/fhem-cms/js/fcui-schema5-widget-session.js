@@ -8,6 +8,11 @@ function sameGrid(left, right) {
     && keys.every((key) => Object.hasOwn(left, key) && Object.hasOwn(right, key) && left[key] === right[key]);
 }
 
+function samePlacement(left, right) {
+  if (left?.rect && right) return right.rect === undefined || ['x','y','w','h','z']
+    .every(key => left.rect[key] === right.rect[key]);
+  return sameGrid(left?.grid, right?.grid);
+}
 export class Schema5WidgetSession {
   #controller;
   #pageId;
@@ -23,7 +28,7 @@ export class Schema5WidgetSession {
       || typeof controller.saveWidget !== 'function' || typeof controller.deleteWidget !== 'function'
       || !widget || typeof widget !== 'object' || Array.isArray(widget)
       || typeof widget.id !== 'string' || typeof widget.type !== 'string'
-      || !sameGrid(widget.grid, widget.grid) || !['create', 'update'].includes(action)) {
+      || !samePlacement(widget, widget) || !['create', 'update'].includes(action)) {
       throw new Error('Ungültige Widget-Bearbeitung');
     }
     const state = controller.snapshot();
@@ -32,7 +37,7 @@ export class Schema5WidgetSession {
     if (!page) throw new Error('Unbekannte Seite');
     const original = page.widgets.find((entry) => entry.id === widget.id);
     if (action === 'create' && original) throw new Error('Widget-ID ist bereits vorhanden');
-    if (action === 'update' && (!original || original.type !== widget.type || !sameGrid(original.grid, widget.grid))) {
+    if (action === 'update' && (!original || original.type !== widget.type || !samePlacement(original, widget))) {
       throw new Error('Widget stimmt nicht mit dem angezeigten Zustand überein');
     }
     this.#controller = controller;
@@ -96,7 +101,7 @@ export class Schema5WidgetSession {
 
   #validateWidget(widget) {
     if (!widget || widget.id !== this.#widget.id || widget.type !== this.#widget.type
-      || !sameGrid(widget.grid, this.#widget.grid)) {
+      || !samePlacement(this.#widget, widget)) {
       throw new Error('Widget-Identität oder Raster wurde verändert');
     }
   }

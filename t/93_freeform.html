@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<div id="root" class="cms-schema5-grid" style="width: 800px"></div>
+<output id="result">pending</output>
+<script type="module">
+  import { mountFreeform } from '../www/fhem-cms/js/fcui-freeform-view.js';
+  import { mountFreeformEditor } from '../www/fhem-cms/js/fcui-freeform-edit.js';
+  const root = document.querySelector('#root');
+  const result = document.querySelector('#result');
+  const page = {canvas:{width:1000,height:500,scaling:'width'}, widgets:[
+    {id:'right',rect:{x:400,y:20,w:200,h:120}},
+    {id:'left',rect:{x:20,y:25,w:200,h:120}},
+    {id:'hidden',rect:{x:20,y:200,w:200,h:100},hideOnMobile:true},
+  ]};
+  const render = id => Object.assign(document.createElement('button'), {textContent:id});
+  const check = (condition, name) => { if (!condition) throw new Error(name); };
+  const paint = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  try {
+    let view = mountFreeform(root, page, document.createElement('nav'), render);
+    await paint();
+    check(view.getScale() > .75 && view.getScale() <= .8, 'width scale');
+    const widget = view.wrappers.get('left');
+    check(Math.abs(widget.getBoundingClientRect().width - 200 * view.getScale()) < 2, 'rendered width');
+    root.style.width = '500px';
+    await paint();
+    check([...view.canvas.children].map(node => node.dataset.widgetId).join() === 'left,right,hidden', 'mobile DOM order');
+    check(view.wrappers.get('hidden').getBoundingClientRect().width === 0, 'mobile visibility');
+    view.destroy();
+    root.replaceChildren();
+    root.style.width = '800px';
+    view = mountFreeform(root, page, document.createElement('nav'), render, {phone:true});
+    check(view.canvas.closest('.cms-freeform-stack'), 'wide phone preview stacks');
+    view.destroy();
+    root.replaceChildren();
+    const nav = document.createElement('nav');
+    view = mountFreeform(root, page, nav, render, {editing:true});
+    let saved;
+    const cleanup = mountFreeformEditor(root, page, view, {
+      selectedWidget:'left', onEdit:() => {}, onFreeformChange:(id,rect) => { saved = {id,rect}; },
+    }, nav);
+    root.querySelector('[data-dir="move"]').dispatchEvent(new KeyboardEvent('keydown', {
+      key:'ArrowRight', shiftKey:true, bubbles:true,
+    }));
+    check(saved?.id === 'left' && saved.rect.x === 30, 'keyboard move');
+    window.addEventListener('pagehide', () => { cleanup(); view.destroy(); }, {once:true});
+    root.addEventListener('freeform-check', () => { result.dataset.saved = JSON.stringify(saved); });
+    result.textContent = 'pass';
+  } catch (error) {
+    result.textContent = `fail: ${error.message}`;
+  }
+</script>
+</html>

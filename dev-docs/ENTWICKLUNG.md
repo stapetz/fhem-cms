@@ -23,10 +23,15 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 
 ## Freeform-Seiten (Schema 6, geplant)
 
-Backend-Zwischenstand: Schema-6-Validierung und der interne, tokengeprüfte
-Entwurfs-/Publish-Pfad sind offline geprüft
-(`prove -l t/91_schema6_validation.t t/92_schema6_persistence.t`). Die
-öffentlichen Befehle sind noch nicht für Schema 6 freigeschaltet.
+Implementierung auf `dev` (Phase 1): Der Editor aktiviert Freeform pro Seite
+unter „Seiteneinstellungen“. `layoutformat` meldet die Unterstützung; der
+Browser verwendet dann `version6state` und `version6draft`, welche auch
+Schema 5 bedienen. Alte `version5`-Befehle bleiben unverändert. „Datei“
+bietet JSON-Import als Entwurf und Export des aktuellen Entwurfs bzw.
+Live-Stands, jeweils ohne Mediendateien. Widget-Vorlagen speichern bewusst
+die Widget-Konfiguration und eine Raster-Startgröße, nicht die Geometrie
+der Ursprungsseite. Prüfungen: `prove -l t/91_schema6_validation.t
+t/92_schema6_persistence.t` und `node --test t/93_freeform.test.js`.
 
 Freeform ist eine optionale Seitenalternative für Grundrisse und Wandtablets,
 kein Ersatz für GridStack. Bestehende Entwürfe und Live-Seiten in Schema 5

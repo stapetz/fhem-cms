@@ -1,4 +1,5 @@
 import { validateLinkItems } from './link-widget.js';
+import { freeformStartRect, isFreeform, validateFreeformCanvas, validateFreeformWidget } from './fcui-freeform-layout.js';
 
 const NAVIGATION = '__nav';
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -32,7 +33,7 @@ function overlaps(a, b) {
 }
 
 function validateLayout(config, includeNavigation = true) {
-  if (!config || integer(config.schemaVersion, 5, 5) === null
+  if (!config || integer(config.schemaVersion, 5, 6) === null
     || config.settings?.layoutMode !== 'grid'
     || !SCHEMA5_GRID_COLUMNS.includes(integer(config.settings?.gridColumns, 12, 192))
     || !Array.isArray(config.pages) || config.pages.length < 1 || config.pages.length > 50) {
@@ -50,6 +51,11 @@ function validateLayout(config, includeNavigation = true) {
       throw new Error('Ungültige oder doppelte Seite');
     }
     pages.add(page.id);
+    if (page.layoutMode !== undefined && (Number(config.schemaVersion) !== 6
+      || !['grid', 'freeform'].includes(page.layoutMode))) throw new Error('Ungültiger Seiten-Layoutmodus');
+    const freeform = isFreeform(page);
+    if (freeform) validateFreeformCanvas(page.canvas);
+    else if (page.canvas !== undefined) throw new Error('Canvas ist nur auf Freeform-Seiten erlaubt');
     const ids = new Set();
     const grids = includeNavigation ? [nav] : [];
     for (const widget of page.widgets) {
@@ -59,6 +65,12 @@ function validateLayout(config, includeNavigation = true) {
       }
       ids.add(widget.id);
       if (widget.type === 'fhem-link') validateLinkItems(widget.links, config.pages);
+      if (freeform) {
+        validateFreeformWidget(widget, page.canvas);
+        if (widget.grid !== undefined) geometry(widget.grid, columns);
+        continue;
+      }
+      if (widget.rect !== undefined || widget.hideOnMobile !== undefined) throw new Error('Freeform-Daten auf einer Rasterseite');
       const current = geometry(widget.grid, columns);
       if (grids.some((other) => overlaps(current, other))) {
         throw new Error(`Rasterüberschneidung auf Seite ${page.id}`);
@@ -83,7 +95,7 @@ export function schema5GridItems(config, pageId) {
   const page = config.pages.find((entry) => entry.id === pageId);
   if (!page) throw new Error('Unbekannte Seite');
   return [{ id: NAVIGATION, grid: geometry(config.navigation.grid, columns) },
-    ...page.widgets.map((widget) => ({ id: widget.id, grid: geometry(widget.grid, columns) }))]
+    ...(isFreeform(page) ? [] : page.widgets.map((widget) => ({ id: widget.id, grid: geometry(widget.grid, columns) })))]
     .map(({ id, grid }) => ({ id, x: grid.col - 1, y: grid.row - 1, w: grid.w, h: grid.h }));
 }
 
@@ -111,6 +123,40 @@ export function reflowSchema5Widget(config, pageId, widgetId) {
   return result;
 }
 
+export function changePageLayout(config, pageId, mode, canvas, measurements) {
+    const page = config.pages.find(entry => entry.id === pageId);
+    const columns = Number(config.settings.gridColumns);
+    if (mode === 'freeform') {
+      validateFreeformCanvas(canvas);
+      if (!isFreeform(page)) {
+        page.widgets.forEach((widget, index) => {
+          widget.rect = freeformStartRect(widget, index, canvas, columns, measurements?.get(widget.id));
+        });
+      }
+      config.schemaVersion = 6;
+      page.layoutMode = mode;
+      page.canvas = canvas;
+    } else if (isFreeform(page)) {
+      const placed = [geometry(config.navigation.grid, columns)];
+      const pending = [];
+      for (const widget of page.widgets) {
+        if (widget.grid && !placed.some(grid => overlaps(widget.grid, grid))) placed.push(widget.grid);
+        else pending.push(widget);
+        delete widget.rect;
+        delete widget.hideOnMobile;
+      }
+      for (const widget of pending) {
+        const { w, h } = widget.grid || { w: Math.max(1, columns / 3), h: 3 };
+        widget.grid = moveBelowCollisions({col: 1, row: 1, w: Number(w), h: Number(h)}, placed, columns);
+        placed.push(widget.grid);
+      }
+      delete page.layoutMode;
+      delete page.canvas;
+    }
+    validateLayout(config);
+    return config;
+}
+
 export function applySchema5GridItems(config, pageId, items) {
   const expected = schema5GridItems(config, pageId);
   if (!Array.isArray(items) || items.length !== expected.length) {
@@ -132,11 +178,12 @@ export function applySchema5GridItems(config, pageId, items) {
   const result = structuredClone(config);
   result.navigation.grid = positions.get(NAVIGATION);
   const page = result.pages.find((entry) => entry.id === pageId);
-  for (const widget of page.widgets) widget.grid = positions.get(widget.id);
+  if (!isFreeform(page)) for (const widget of page.widgets) widget.grid = positions.get(widget.id);
   if (['col', 'row', 'w', 'h'].some((key) => result.navigation.grid[key] !== Number(config.navigation.grid[key]))) {
     // Only navigation collisions may trigger reflow; unrelated widget overlaps remain invalid.
     validateLayout(result, false);
     for (const entry of result.pages) {
+      if (isFreeform(entry)) continue;
       const placed = [result.navigation.grid];
       const ordered = [...entry.widgets].sort((a, b) => a.grid.row - b.grid.row || a.grid.col - b.grid.col);
       for (const widget of ordered) {
@@ -227,6 +274,10 @@ export function resizeSchema5Grid(config, columns) {
   result.settings.gridColumns = columns;
   result.navigation.grid = resize(config.navigation.grid);
   for (const page of result.pages) {
+    if (isFreeform(page)) {
+      for (const widget of page.widgets) if (widget.grid) widget.grid = resize(widget.grid);
+      continue;
+    }
     const placed = [result.navigation.grid];
     // Keep visual order when rounding creates collisions, without reordering stored widgets.
     const ordered = [...page.widgets].sort((a, b) => Number(a.grid.row) - Number(b.grid.row)

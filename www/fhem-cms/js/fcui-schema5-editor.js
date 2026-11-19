@@ -28,6 +28,7 @@ export function createSchema5Editor({ GridStack, root, draftClient, liveClient, 
   const controller = new Schema5DraftController(createSchema5Transport(draftClient));
   const widgetServices = {
     ...(services === undefined ? createSchema5WidgetServices(draftClient) : services),
+    freeformSupported: draftClient.freeformSupported === true,
     createSettingsPreview: ({ pageId }) => new Schema5SettingsPreview({ browser, pageId }),
   };
   return new Schema5Editor({ GridStack, root, controller, client: liveClient, services: widgetServices, browser,
@@ -72,6 +73,9 @@ export class Schema5Editor {
   #gridElement = null;
   #layoutSaving = false;
   #layoutSavePromise = Promise.resolve();
+  #freeformSelection;
+  #configImport;
+  #configExport;
 
   constructor({ GridStack, root, controller, client, services, browser = window,
     adminMenuEnabled = client?.adminMenuEnabled === true }) {
@@ -150,7 +154,28 @@ export class Schema5Editor {
     this.#previewToggle.textContent = 'Vorschau';
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
-    this.#menu('Datei', [this.#publish, this.#discard, this.#backup, this.#assets]);
+    const fileActions = [this.#publish, this.#discard, this.#backup, this.#assets];
+    if (services.freeformSupported) {
+      this.#configImport = document.createElement('button');
+      this.#configExport = document.createElement('button');
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json,.json';
+      input.hidden = true;
+      this.#toolbar.append(input);
+      this.#configImport.type = this.#configExport.type = 'button';
+      this.#configImport.textContent = 'JSON als Entwurf importieren';
+      this.#configExport.textContent = 'Konfiguration als JSON exportieren';
+      this.#configImport.addEventListener('click', () => input.click());
+      input.addEventListener('change', () => {
+        const [file] = input.files;
+        input.value = '';
+        if (file) void this.#importConfig(file);
+      });
+      this.#configExport.addEventListener('click', () => this.#exportConfig());
+      fileActions.push(this.#configImport, this.#configExport);
+    }
+    this.#menu('Datei', fileActions);
     this.#menu('Bearbeiten', [this.#page, ...createCmsAdminMenuLinks({ adminMenuEnabled })]);
     this.#menu('Einfügen', [this.#widgets, this.#addDevice, this.#blueprints]);
     this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle, this.#arrange]);
@@ -256,6 +281,8 @@ export class Schema5Editor {
   }
 
   #setActions(enabled, hasDraft) {
+    if (this.#configImport) this.#configImport.disabled = !enabled;
+    if (this.#configExport) this.#configExport.disabled = !enabled;
     this.#page.disabled = !enabled;
     this.#widgets.disabled = !enabled;
     this.#addDevice.disabled = !enabled;
@@ -347,6 +374,12 @@ export class Schema5Editor {
       config, client: this.#client, services: this.#services, browser: this.#browser,
       editing: this.#previewMode ? undefined : {
         showGrid: () => this.#showGrid,
+        selectedWidget: this.#freeformSelection?.pageId === (this.#browser.location.hash.slice(2) || config.pages[0].id)
+          ? this.#freeformSelection.id : undefined,
+        onFreeformChange: (pageId, id, rect, hide) => {
+          this.#layoutSavePromise = this.#saveFreeform(pageId, id, rect, hide);
+          return this.#layoutSavePromise;
+        },
         onChange: (pageId, items) => {
           this.#layoutSavePromise = this.#saveLayout(pageId, items);
           return this.#layoutSavePromise;
@@ -416,6 +449,10 @@ export class Schema5Editor {
     try {
       const state = this.#controller.snapshot();
       const pageId = this.#view.current;
+      if ((state.draft || state.live).pages.find(page => page.id === pageId)?.layoutMode === 'freeform') {
+        this.#status.textContent = 'Automatisch anordnen ist nur für Rasterseiten verfügbar.';
+        return;
+      }
       const candidate = arrangeSchema5Widgets(state.draft || state.live, pageId);
       this.#layoutSavePromise = this.#saveLayout(pageId, schema5GridItems(candidate, pageId));
       return this.#layoutSavePromise;
@@ -461,6 +498,62 @@ export class Schema5Editor {
     } finally {
       this.#layoutSaving = false;
     }
+  }
+
+  async #saveFreeform(pageId, id, rect, hide) {
+    if (!this.#active || this.#suspended || !this.#view || this.#layoutSaving) return;
+    this.#layoutSaving = true;
+    const generation = ++this.#generation;
+    this.#view.lock();
+    this.#setActions(false, false);
+    try {
+      const state = this.#controller.snapshot();
+      const candidate = state.draft || state.live;
+      const widget = candidate.pages.find(page => page.id === pageId).widgets.find(entry => entry.id === id);
+      widget.rect = rect;
+      if (hide !== undefined) widget.hideOnMobile = hide;
+      this.#freeformSelection = {pageId, id};
+      const result = await this.#controller.saveDraft(candidate, state.token);
+      await this.#display(result, generation);
+    } catch (error) {
+      if (generation === this.#generation) this.#error(error);
+    } finally {
+      this.#layoutSaving = false;
+    }
+  }
+
+  async #importConfig(file) {
+    if (!this.#active || this.#suspended || this.#configImport.disabled) return;
+    const generation = this.#generation;
+    try {
+      if (file.size > 1048576) throw new Error('Die JSON-Datei ist größer als 1 MiB.');
+      const candidate = JSON.parse(await file.text());
+      if (!this.#active || this.#suspended || generation !== this.#generation || this.#configImport.disabled) return;
+      if (!this.#browser.confirm('JSON als Entwurf übernehmen? Der bisherige Entwurf wird ersetzt; Medien werden nicht importiert.')) return;
+      const state = this.#controller.snapshot();
+      const next = ++this.#generation;
+      this.#view.lock();
+      this.#setActions(false, false);
+      const result = await this.#controller.saveDraft(candidate, state.token);
+      await this.#display(result, next);
+    } catch (error) {
+      if (this.#active && !this.#suspended) {
+        this.#status.setAttribute('data-error', '');
+        this.#status.textContent = `Import fehlgeschlagen: ${error.message}`;
+        if (this.#configImport.disabled) this.#reloadButton.hidden = false;
+      }
+    }
+  }
+
+  #exportConfig() {
+    if (!this.#active || this.#suspended || this.#configExport.disabled) return;
+    const state = this.#controller.snapshot();
+    const url = URL.createObjectURL(new Blob([JSON.stringify(state.draft || state.live, null, 2)], {type: 'application/json'}));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'fhem-cms-config.json';
+    anchor.click();
+    this.#browser.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   #error(error) {
@@ -566,7 +659,11 @@ export class Schema5Editor {
       const widget = (state.draft || state.live).pages.find((page) => page.id === pageId)
         ?.widgets.find((entry) => entry.id === widgetId);
       if (!widget) throw new Error('Unbekanntes Widget');
-      this.#openBlueprints(widget);
+      if (widget.rect) {
+        const {rect, hideOnMobile, ...template} = widget;
+        template.grid ??= {col: 1, row: 2, w: 4, h: 3};
+        this.#openBlueprints(template);
+      } else this.#openBlueprints(widget);
     } catch (error) {
       this.#status.setAttribute('data-error', 'true');
       this.#status.textContent = `Vorlagen konnten nicht geöffnet werden: ${error.message}`;
@@ -719,6 +816,7 @@ export class Schema5Editor {
     try {
       const pageId = this.#view.current;
       const state = this.#controller.snapshot();
+      const measurements = this.#services.freeformSupported ? this.#view.view?.measureGrid?.() : undefined;
       this.#generation += 1;
       this.#setActions(false, false);
       this.#view.stop();
@@ -728,6 +826,7 @@ export class Schema5Editor {
       this.#panel = new Schema5PagePanel({
         root: container, controller: this.#controller, pageId, services: this.#services,
         token: state.token, browser: this.#browser,
+        freeformSupported: this.#services.freeformSupported === true, measurements,
         onClose: ({ requiresReload }) => {
           this.#panel = null;
           Promise.resolve().then(() => requiresReload

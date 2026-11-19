@@ -118,12 +118,18 @@ export function listenForSettingsPreview({ view, browser = window }) {
         root.style.setProperty('--cms-page-image', image);
         setLiquidAppearance(root, config.settings);
         view.root.style.setProperty('--cms-widget-title-align', config.settings.titleAlign || 'left');
-        if (view.current !== pageId || view.config.settings.gridColumns !== config.settings.gridColumns) {
+        const page = config.pages.find(entry => entry.id === pageId);
+        const previous = view.config.pages.find(entry => entry.id === pageId);
+        if (view.current !== pageId || view.config.settings.gridColumns !== config.settings.gridColumns
+          || ((page?.layoutMode === 'freeform' || previous?.layoutMode === 'freeform')
+            && (JSON.stringify(page) !== JSON.stringify(previous)
+              || background !== schema5PageBackground(view.config, pageId)))) {
           view.clearPage();
           view.config = config;
           await view.showPage(pageId);
         } else {
           view.config = config;
+          if (page?.layoutMode === 'freeform') root.style.setProperty('--cms-page-image', 'none');
         }
         if (!pending && !closed) browser.parent.postMessage({ type: UPDATED }, origin);
       }

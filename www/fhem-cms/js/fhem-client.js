@@ -120,10 +120,12 @@ export class FhemClient {
     const text = await this.command(`get ${this.cmsDevice} layoutformat`);
     const result = await this.parseJsonResult(text, 'Das Layoutformat konnte nicht gelesen werden');
     if (!result || typeof result !== 'object' || Array.isArray(result)
-      || (result.schemaVersion !== 4 && result.schemaVersion !== 5)) {
+      || ![4, 5, 6].includes(result.schemaVersion)
+      || (result.schemaVersion === 6 && result.freeform !== true)) {
       throw new Error('Unerwartete Antwort für das Layoutformat');
     }
     this.adminMenuEnabled = result.adminMenuEnabled === true;
+    this.freeformSupported = result.freeform === true || result.schemaVersion === 6;
     return result.schemaVersion;
   }
 
@@ -164,10 +166,11 @@ export class FhemClient {
   }
 
   async getVersion5State() {
-    const text = await this.command(`get ${this.cmsDevice} version5state`);
+    const text = await this.command(`get ${this.cmsDevice} ${this.freeformSupported ? 'version6state' : 'version5state'}`);
     const state = await this.parseJsonResult(text, 'Der versionierte Zustand konnte nicht gelesen werden');
     const isVersion5 = (config) => config && typeof config === 'object' && !Array.isArray(config)
-      && /^[0-9]{1,6}$/.test(String(config.schemaVersion)) && Number(config.schemaVersion) === 5;
+      && /^0{0,5}[56]$/.test(String(config.schemaVersion))
+      && (Number(config.schemaVersion) === 5 || this.freeformSupported);
     if (!state || typeof state !== 'object' || Array.isArray(state)
       || !isVersion5(state.live) || (state.draft !== null && !isVersion5(state.draft))
       || typeof state.token !== 'string' || !STATE_TOKEN.test(state.token)
@@ -266,7 +269,7 @@ export class FhemClient {
     const result = await this.parseJsonResult(text, 'Die Wiederherstellungsvorschau konnte nicht gelesen werden');
     const isSupported = (config) => config && typeof config === 'object' && !Array.isArray(config)
       && /^[0-9]{1,6}$/.test(String(config.schemaVersion))
-      && Number(config.schemaVersion) >= 1 && Number(config.schemaVersion) <= 5;
+      && Number(config.schemaVersion) >= 1 && Number(config.schemaVersion) <= (this.freeformSupported ? 6 : 5);
     if (!result || typeof result !== 'object' || Array.isArray(result)
       || !isSupported(result.live) || !isSupported(result.backup)
       || typeof result.token !== 'string' || !STATE_TOKEN.test(result.token)) {
