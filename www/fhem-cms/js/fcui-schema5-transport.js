@@ -31,7 +31,8 @@ export function createSchema5Transport(client) {
       }
       payload = ` ${encodeJson(config)}`;
     }
-    const result = await client.command(`set ${client.cmsDevice} version5draft ${action} ${token}${payload}`);
+    const command = client.freeformSupported ? 'version6draft' : 'version5draft';
+    const result = await client.command(`set ${client.cmsDevice} ${command} ${action} ${token}${payload}`);
     if (typeof result !== 'string') throw new Error('Ungültige Antwort auf Entwurfsaktion');
     if (result !== '') throw new Error(result);
   }

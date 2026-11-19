@@ -2044,7 +2044,7 @@ export class CmsPage {
 export async function startCmsDevice(client, startLegacy, startSchema5) {
   const format = await client.getLayoutFormat();
   if (format === 4) return startLegacy();
-  if (format === 5 && typeof startSchema5 === 'function') return startSchema5();
+  if ([5, 6].includes(format) && typeof startSchema5 === 'function') return startSchema5();
   throw new Error(`Layoutformat ${format} kann hier nicht bearbeitet oder angezeigt werden`);
 }
 

@@ -1,5 +1,6 @@
 import { Schema5WidgetSession } from './fcui-schema5-widget-session.js';
 import { schema5GridItems } from './fcui-schema5-layout.js';
+import { freeformStartRect, isFreeform } from './fcui-freeform-layout.js';
 import { createWidgetElement } from './widget-factory.js';
 import { openDevicePicker } from './device-picker.js';
 import { deviceWidgetSuggestions } from './device-widget-suggestions.js';
@@ -223,7 +224,7 @@ export class Schema5WidgetPanel {
     let number = 1;
     while (ids.has(`${prefix}${number}`)) number += 1;
     const row = Math.max(Number(config.navigation.grid.row) + Number(config.navigation.grid.h),
-      ...page.widgets.map((widget) => Number(widget.grid.row) + Number(widget.grid.h)));
+      ...page.widgets.filter(widget => widget.grid).map((widget) => Number(widget.grid.row) + Number(widget.grid.h)));
     const scale = Number(config.settings.gridColumns) / 12;
     const widget = { id: `${prefix}${number}`, type, ...structuredClone(fields),
       ...(this.#deviceFirst ? structuredClone(this.#suggestions.get(type)) : {}),
@@ -231,6 +232,10 @@ export class Schema5WidgetPanel {
     if (type === 'fhem-link') widget.links = [{ id: 'link1', kind: 'internal', page: page.id,
       text: page.title, showText: true, textPosition: 'overlay', target: 'self',
       grid: { col: 1, row: 1, w: 4, h: 3 } }];
+    if (isFreeform(page)) {
+      widget.rect = freeformStartRect({}, page.widgets.length, page.canvas, Number(config.settings.gridColumns));
+      delete widget.grid;
+    }
     const candidate = structuredClone(config);
     candidate.pages.find((entry) => entry.id === this.#page).widgets.push(widget);
     schema5GridItems(candidate, this.#page);

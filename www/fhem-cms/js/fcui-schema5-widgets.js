@@ -1,5 +1,8 @@
 import { createSchema5Grid, schema5GridItems } from './fcui-schema5-layout.js';
 import { createWidgetElement, dataFor, isLiveWidget } from './widget-factory.js';
+import { isFreeform } from './fcui-freeform-layout.js';
+import { mountFreeform } from './fcui-freeform-view.js';
+import { mountFreeformEditor } from './fcui-freeform-edit.js';
 
 export function mountSchema5Widgets(GridStack, root, config, pageId, navigation, services, snapshots, editing) {
   if (!navigation || !services || typeof services !== 'object' || !(snapshots instanceof Map)) {
@@ -10,23 +13,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   const page = config.pages.find((item) => item.id === pageId);
   const widgets = new Map(page.widgets.map((widget) => [widget.id, widget]));
   const elements = new Map();
-  const viewConfig = editing ? config : {
-    ...config,
-    pages: config.pages.map((entry) => entry !== page ? entry : {
-      ...page,
-      widgets: [...page.widgets].sort((a, b) => a.grid.row - b.grid.row || a.grid.col - b.grid.col),
-    }),
-  };
-  const grid = createSchema5Grid(GridStack, root, viewConfig, pageId, (id, wrapper) => {
-    if (id === '__nav') {
-      wrapper.className += ' cms-responsive-navigation';
-    } else if (!editing) {
-      const { w, h } = widgets.get(id).grid;
-      const fraction = Number(w) / Number(config.settings.gridColumns);
-      wrapper.style.setProperty('--cms-widget-fraction', String(Math.max(0.25, fraction)));
-      wrapper.style.setProperty('--cms-widget-padding', `${100 * Number(h) / Number(w)}%`);
-    }
-    if (id === '__nav') return navigation;
+  const createWidget = id => {
     const widget = widgets.get(id);
     const widgetServices = widget.type === 'fhem-link' ? { ...services,
       pages: config.pages.map(({ id, title }) => ({ id, title })) } : services;
@@ -43,11 +30,34 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     }
     elements.set(id, element);
     return element;
+  };
+  const params = new URLSearchParams(root.ownerDocument?.defaultView?.location?.search ?? globalThis.window?.location?.search);
+  const mobilePreview = params.get('mode') === 'preview' && params.get('cms-device') === 'mobile';
+  const freeform = isFreeform(page) ? mountFreeform(root, page, navigation, createWidget, {
+    background: services.freeformBackground, editing, phone: mobilePreview,
+  }) : null;
+  const stopEditor = freeform && editing?.onFreeformChange
+    ? mountFreeformEditor(root, page, freeform, editing, navigation) : null;
+  const viewConfig = editing || freeform ? config : {
+    ...config,
+    pages: config.pages.map((entry) => entry !== page ? entry : {
+      ...page, widgets: [...page.widgets].sort((a, b) => a.grid.row - b.grid.row || a.grid.col - b.grid.col),
+    }),
+  };
+  const grid = freeform ? null : createSchema5Grid(GridStack, root, viewConfig, pageId, (id, wrapper) => {
+    if (id === '__nav') {
+      wrapper.className += ' cms-responsive-navigation';
+      return navigation;
+    }
+    if (!editing) {
+      const { w, h } = widgets.get(id).grid;
+      wrapper.style.setProperty('--cms-widget-fraction', String(Math.max(0.25, Number(w) / Number(config.settings.gridColumns))));
+      wrapper.style.setProperty('--cms-widget-padding', `${100 * Number(h) / Number(w)}%`);
+    }
+    return createWidget(id);
   }, Boolean(editing));
-  if (!editing) {
+  if (!editing && !freeform) {
     root.setAttribute('data-responsive', '');
-    const params = new URLSearchParams(window.location.search);
-    const mobilePreview = params.get('mode') === 'preview' && params.get('cms-device') === 'mobile';
     const touchDevice = window.matchMedia?.('(pointer: coarse)').matches;
     if (mobilePreview) {
       root.setAttribute('data-mobile-preview', '');
@@ -55,7 +65,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     if (mobilePreview || touchDevice) root.setAttribute('data-mobile-layout', '');
   }
   let destroyed = false;
-  if (editing) {
+  if (editing && grid) {
     root.classList.toggle('cms-grid-editable', true);
     for (const wrapper of Array.from(root.children)) {
       const id = wrapper.gridstackNode?.id;
@@ -126,14 +136,25 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     });
   }
   return {
+    measureGrid() {
+      if (!grid || !editing) return undefined;
+      const bounds = root.getBoundingClientRect();
+      const boxes = new Map(Array.from(root.children).flatMap(wrapper => {
+        const id = wrapper.gridstackNode?.id;
+        if (!widgets.has(id)) return [];
+        const box = wrapper.getBoundingClientRect();
+        return [[id, {x: box.left - bounds.left, y: box.top - bounds.top, w: box.width, h: box.height}]];
+      }));
+      return {width: bounds.width, height: bounds.height, boxes};
+    },
     lock() {
       if (destroyed) return;
       root.inert = true;
       // Gridstack must finish its pointer-stop cleanup before DD is disabled.
       queueMicrotask(() => {
         if (destroyed) return;
-        grid.enableMove(false);
-        grid.enableResize(false);
+        grid?.enableMove(false);
+        grid?.enableResize(false);
       });
     },
     update(nextSnapshots, staleSince = null) {
@@ -149,7 +170,9 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     destroy() {
       if (destroyed) return;
       destroyed = true;
-      grid.destroy(false);
+      grid?.destroy(false);
+      stopEditor?.();
+      freeform?.destroy();
       if (!editing) {
         root.removeAttribute('data-responsive');
         root.removeAttribute('data-mobile-preview');

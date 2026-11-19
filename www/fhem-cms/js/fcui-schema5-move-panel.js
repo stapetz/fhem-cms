@@ -93,8 +93,9 @@ export class Schema5MovePanel {
     }
     // Unterhalb aller Inhalte der Zielseite einreihen (wie beim Anlegen neuer Widgets).
     const row = Math.max(Number(config.navigation.grid.row) + Number(config.navigation.grid.h),
-      ...target.widgets.map((entry) => Number(entry.grid.row) + Number(entry.grid.h)));
-    const grid = { col: 1, row, w: Number(widget.grid.w), h: Number(widget.grid.h) };
+      ...target.widgets.filter(entry => entry.grid).map((entry) => Number(entry.grid.row) + Number(entry.grid.h)));
+    const grid = { col: 1, row, w: Number(widget.grid?.w ?? Number(config.settings.gridColumns) / 3),
+      h: Number(widget.grid?.h ?? 3) };
     this.#busy = true;
     this.#move.disabled = true;
     this.#close.disabled = true;

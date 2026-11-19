@@ -153,7 +153,8 @@ test('isolated migration, restart, versioned draft and restore form one protecte
       }
       const parts = command.split(' ');
       assert.deepEqual(parts.slice(0, 2), ['get', 'CMS']);
-      assert.ok(['layoutformat', 'migrationstate', 'migrationpreview', 'version5state', 'migrationrestorepreview'].includes(parts[2]));
+      assert.ok(['layoutformat', 'migrationstate', 'migrationpreview', 'version5state', 'version6state',
+        'migrationrestorepreview'].includes(parts[2]));
       return new Response(invoke('get', ...parts.slice(2)).value);
     };
     const client = new FhemClient('CMS', 'https://example.test/fhem/');
