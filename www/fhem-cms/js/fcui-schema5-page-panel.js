@@ -1,6 +1,6 @@
 import { resizeSchema5Grid, schema5GridItems, SCHEMA5_GRID_COLUMNS } from './fcui-schema5-layout.js';
 import { changePageLayout } from './fcui-schema5-layout.js';
-import { DEFAULT_CANVAS, isFreeform, resizeFreeformPage, validateFreeformCanvas } from './fcui-freeform-layout.js';
+import { DEFAULT_CANVAS, isFreeform, validateFreeformCanvas } from './fcui-freeform-layout.js';
 import { schema5PageBackground } from './fcui-schema5-appearance.js';
 import { ASSET_IMAGE, assetPathText, validateAssetState } from './asset-contract.js';
 import { LIQUID_DEFAULTS } from './fcui-schema5-appearance.js';
@@ -122,7 +122,8 @@ export class Schema5PagePanel {
     const remove = element('button', 'Hintergrundbild entfernen');
     remove.type = 'button';
     remove.className = 'cms-button';
-    this.#backgroundControls.append(choose);
+    const inheritsBackground = pageId !== config.pages[0].id && config.settings.sharedBackground === true;
+    if (!inheritsBackground) this.#backgroundControls.append(choose);
     if (pageId === config.pages[0].id) {
       const sharedLabel = element('label', 'Bild auf allen Seiten verwenden ');
       this.#sharedBackground = element('input');
@@ -131,11 +132,11 @@ export class Schema5PagePanel {
       sharedLabel.append(this.#sharedBackground);
       this.#backgroundControls.append(sharedLabel);
     }
-    this.#backgroundControls.append(remove, headingBackground);
+    if (!inheritsBackground) this.#backgroundControls.append(remove, headingBackground);
     if (this.#sharedBackground) {
       this.#backgroundControls.append(element('p', 'Ist die Checkbox deaktiviert, kann das Hintergrundbild auf jeder Seite einzeln über die Seiteneinstellungen gewählt werden. Eigene Bilder anderer Seiten bleiben erhalten.'));
-    } else if (config.settings.sharedBackground === true) {
-      this.#backgroundControls.append(element('p', 'Das Bild der Startseite wird aktuell auf allen Seiten verwendet.'));
+    } else if (inheritsBackground) {
+      this.#backgroundControls.append(element('p', 'Bild wird von der Startseite geerbt.'));
     }
     const controls = element('div');
     controls.className = 'cms-liquid-controls';
@@ -249,7 +250,7 @@ export class Schema5PagePanel {
       this.close();
       this.#onClose(outcome);
     });
-    if (this.#background) void this.#updateBackgroundLabel(services);
+    if (this.#background && !inheritsBackground) void this.#updateBackgroundLabel(services);
   }
 
   async #updateBackgroundLabel(services) {
@@ -314,8 +315,13 @@ export class Schema5PagePanel {
     const extras = element('div');
     extras.className = 'cms-freeform-options';
     section.append(extras);
+    const start = this.#config.pages[0];
+    const inherited = page !== start && this.#config.settings.sharedFreeformSize === true;
     const initial = {...DEFAULT_CANVAS, ...page.canvas};
-    if (!isFreeform(page) && measurements?.width && measurements?.height) {
+    if (inherited) {
+      initial.width = start.canvas.width;
+      initial.height = start.canvas.height;
+    } else if (!isFreeform(page) && measurements?.width && measurements?.height) {
       initial.width = Math.max(200, Math.min(7680, Math.round(measurements.width)));
       initial.height = Math.max(200, Math.min(7680, Math.round(measurements.height)));
     }
@@ -325,7 +331,7 @@ export class Schema5PagePanel {
       label.className = 'cms-freeform-dimension';
       Object.assign(input, {type: 'number', min: 200, max: 7680, step: 1, value: String(value)});
       label.append(input);
-      extras.append(label);
+      if (!inherited) extras.append(label);
       return input;
     };
     const presetLabel = element('label', 'Gerätegröße ');
@@ -354,7 +360,8 @@ export class Schema5PagePanel {
     preset.value = exactPreset;
     preset.setAttribute('aria-label', 'Freeform-Größe nach Gerät');
     presetLabel.append(preset);
-    extras.append(presetLabel);
+    if (!inherited) extras.append(presetLabel);
+    else extras.append(element('p', `Seite erbt Größeneinstellungen von der Startseite (${initial.width} × ${initial.height} px).`));
     const width = size('Breite (px)', initial.width);
     const height = size('Höhe (px)', initial.height);
     const scaling = select(extras, 'Skalierung', [['fit', 'Browserfläche ausnutzen (proportional)'], ['width', 'Breite füllen'], ['none', '1:1, bei Platzmangel verkleinern']], initial.scaling);
@@ -391,9 +398,9 @@ export class Schema5PagePanel {
       preset.value = '';
       update();
     });
-    button('Größe aus Hintergrundbild übernehmen', () => {
-      const background = this.#sharedBackground?.checked && this.#config.pages[0].id !== page.id
-        ? this.#config.pages[0].background : this.#background;
+    if (!inherited) button('Größe aus Hintergrundbild übernehmen', () => {
+      const background = page !== start && this.#config.settings.sharedBackground === true
+        ? start.background : this.#background;
       if (!background) { this.#message('Kein Hintergrundbild ausgewählt.', true); return; }
       const image = new this.#browser.Image();
       image.onload = () => {
@@ -413,6 +420,7 @@ export class Schema5PagePanel {
       applyLabel.className = 'cms-freeform-apply-all';
       this.#applyFreeformSize = element('input');
       this.#applyFreeformSize.type = 'checkbox';
+      this.#applyFreeformSize.checked = this.#config.settings.sharedFreeformSize === true;
       this.#applyFreeformSize.setAttribute('aria-label',
         'Freeform-Abmessungen auf alle Freeform-Seiten anwenden; Rasterseiten bleiben unverändert');
       applyLabel.append(this.#applyFreeformSize);
@@ -480,15 +488,13 @@ export class Schema5PagePanel {
     if (this.#transparency.value !== originalTransparency) candidate.settings.liquidTransparency = Number(this.#transparency.value);
     if (this.#freeform) {
       const [mode, width, height, scaling, snapGrid, mobileBehavior] = this.#freeform.values();
+      if (this.#applyFreeformSize) {
+        if (mode === 'freeform' && this.#applyFreeformSize.checked) candidate.settings.sharedFreeformSize = true;
+        else delete candidate.settings.sharedFreeformSize;
+      }
       changePageLayout(candidate, this.#pageId, mode,
         {width: Number(width), height: Number(height), scaling, snapGrid: Number(snapGrid), mobileBehavior},
         this.#freeform.measurements?.boxes);
-      const targetPage = candidate.pages.find(entry => entry.id === this.#pageId);
-      if (isFreeform(targetPage) && this.#applyFreeformSize?.checked) {
-        for (const target of candidate.pages) {
-          if (target !== targetPage && isFreeform(target)) resizeFreeformPage(target, Number(width), Number(height));
-        }
-      }
     }
     return candidate;
   }

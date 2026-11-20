@@ -1,5 +1,6 @@
 import { isValidName } from './fhem-client.js';
 import { arrangeSchema5Widgets } from './fcui-schema5-layout.js';
+import { syncSharedFreeformSize } from './fcui-freeform-layout.js';
 import { READING_PRESETS, suggestedReading } from './device-suggestions.js';
 import { solarPowerReadings, suggestedSolarSource } from './solar-energy-suggestions.js';
 const MAGIC_DEVICE_TYPES = new Set(['CUL_HM', 'MAX', 'LaCrosse', 'Shelly', 'IT', 'MQTT2_DEVICE', 'MQTT_DEVICE', 'SolaxModbus', 'VolvoConnect']);
@@ -420,6 +421,7 @@ export function buildSchema5SetupConfig(source, plans, startRoom = '') {
       }
     }
   });
+  syncSharedFreeformSize(config);
   return config;
 }
 

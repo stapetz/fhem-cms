@@ -78,6 +78,15 @@ for my $case (
 }
 
 my $mixed = $json->decode($bytes);
+my $shared = $json->decode($bytes);
+$shared->{settings}{sharedFreeformSize} = JSON::PP::true;
+like(FHEMCMS_ValidateConfig($shared, 6), qr/Freeform-Startseite/, 'sharing requires a Freeform start page');
+my $second_freeform = $json->decode($bytes)->{pages}[1];
+$second_freeform->{id} = 'another';
+unshift @{$shared->{pages}}, $second_freeform;
+is(FHEMCMS_ValidateConfig($shared, 6), undef, 'Freeform pages share dimensions without affecting Grid pages');
+$second_freeform->{canvas}{width}++;
+like(FHEMCMS_ValidateConfig($shared, 6), qr/Startseite entsprechen/, 'mismatched inherited dimensions are rejected');
 $mixed->{pages}[0]{widgets}[0]{rect} = {x => 0, y => 0, w => 10, h => 10};
 like(FHEMCMS_ValidateConfig($mixed, 6), qr/rect/, 'grid page rejects Freeform widget geometry');
 delete $mixed->{pages}[0]{widgets}[0]{rect};

@@ -21,7 +21,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.20.4-dev';
+our $FHEMCMS_VERSION = '1.20.5-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -903,6 +903,7 @@ sub FHEMCMS_ValidateConfig {
     if (exists($config->{settings})) {
         my @settings = ('showFrames', 'layoutMode', 'gridColumns', 'titleAlign');
         push(@settings, 'sharedBackground', 'liquidIntensity', 'liquidTransparency') if ($fcui);
+        push(@settings, 'sharedFreeformSize') if ($targetSchema == 6);
         $err = $exact->($config->{settings}, 'settings', [], \@settings);
         return $err if ($err);
         return 'Ungueltiger Wert fuer layoutMode'
@@ -919,6 +920,8 @@ sub FHEMCMS_ValidateConfig {
             if (exists($config->{settings}{showFrames}) && !$isBool->($config->{settings}{showFrames}));
         return 'Ungueltiger Wert fuer sharedBackground'
             if (exists($config->{settings}{sharedBackground}) && !$isBool->($config->{settings}{sharedBackground}));
+        return 'Ungueltiger Wert fuer sharedFreeformSize'
+            if (exists($config->{settings}{sharedFreeformSize}) && !$isBool->($config->{settings}{sharedFreeformSize}));
         for my $key ('liquidIntensity', 'liquidTransparency') {
             return "Ungueltiger Wert fuer $key"
                 if (exists($config->{settings}{$key}) && !$isInt->($config->{settings}{$key}, 0, 100));
@@ -1500,6 +1503,16 @@ sub FHEMCMS_ValidateConfig {
                 }
                 push(@targetGrids, $grid);
             }
+        }
+    }
+    if ($targetSchema == 6 && exists($config->{settings}) && $config->{settings}{sharedFreeformSize}) {
+        my $start = $config->{pages}[0];
+        return 'Gemeinsame Freeform-Groesse erfordert eine Freeform-Startseite'
+            if (($start->{layoutMode} // '') ne 'freeform');
+        for my $page (@{$config->{pages}}) {
+            next if (($page->{layoutMode} // '') ne 'freeform');
+            return 'Freeform-Groesse muss der Startseite entsprechen'
+                if ($page->{canvas}{width} != $start->{canvas}{width} || $page->{canvas}{height} != $start->{canvas}{height});
         }
     }
     return undef;

@@ -1,6 +1,21 @@
 export const isFreeform = page => page?.layoutMode === 'freeform';
 export const DEFAULT_CANVAS = Object.freeze({width: 1280, height: 800, scaling: 'fit', snapGrid: 5, mobileBehavior: 'stack'});
 
+export function syncSharedFreeformSize(config) {
+  if (config.settings.sharedFreeformSize !== true) return;
+  const [start, ...pages] = config.pages;
+  if (!isFreeform(start)) {
+    delete config.settings.sharedFreeformSize;
+    return;
+  }
+  const {width, height} = start.canvas;
+  for (const page of pages) {
+    if (isFreeform(page) && (page.canvas.width !== width || page.canvas.height !== height)) {
+      resizeFreeformPage(page, width, height);
+    }
+  }
+}
+
 function integer(value, min, max) {
   return Number.isInteger(value) && value >= min && value <= max;
 }

@@ -1,4 +1,5 @@
 import { uniqueWidgetId } from './widget-ids.js';
+import { syncSharedFreeformSize } from './fcui-freeform-layout.js';
 
 function element(tag, text) {
   const result = document.createElement(tag);
@@ -411,6 +412,7 @@ export class Schema5NavigationPanel {
       page.title = row.title;
       return page;
     });
+    syncSharedFreeformSize(config);
     for (const page of config.pages) for (const widget of page.widgets) {
       if (widget.type !== 'fhem-link') continue;
       for (const link of widget.links) {

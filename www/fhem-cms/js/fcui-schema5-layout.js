@@ -1,5 +1,5 @@
 import { validateLinkItems } from './link-widget.js';
-import { freeformStartRect, isFreeform, resizeFreeformPage, validateFreeformCanvas, validateFreeformWidget } from './fcui-freeform-layout.js';
+import { freeformStartRect, isFreeform, resizeFreeformPage, syncSharedFreeformSize, validateFreeformCanvas, validateFreeformWidget } from './fcui-freeform-layout.js';
 
 const NAVIGATION = '__nav';
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -44,6 +44,11 @@ function validateLayout(config, includeNavigation = true) {
     throw new Error('Ungültige Titelausrichtung');
   }
   const nav = geometry(config.navigation?.grid, columns);
+  const sharedSize = config.settings.sharedFreeformSize;
+  const start = config.pages[0];
+  if (Object.hasOwn(config.settings, 'sharedFreeformSize')
+    && (Number(config.schemaVersion) !== 6 || typeof sharedSize !== 'boolean'
+      || (sharedSize && !isFreeform(start)))) throw new Error('Ungültige gemeinsame Freeform-Größe');
   const pages = new Set();
   for (const page of config.pages) {
     if (!page || typeof page.id !== 'string' || !ID.test(page.id) || pages.has(page.id)
@@ -56,6 +61,9 @@ function validateLayout(config, includeNavigation = true) {
     const freeform = isFreeform(page);
     if (freeform) {
       validateFreeformCanvas(page.canvas);
+      if (sharedSize && (page.canvas.width !== start.canvas.width || page.canvas.height !== start.canvas.height)) {
+        throw new Error('Freeform-Größe muss der Startseite entsprechen');
+      }
       if (page.navigationRect !== undefined) {
         validateFreeformWidget({id: 'Navigation', rect: page.navigationRect}, page.canvas);
         if (Object.hasOwn(page.navigationRect, 'z')) throw new Error('Die Navigation hat keine einstellbare Ebene.');
@@ -134,6 +142,10 @@ export function changePageLayout(config, pageId, mode, canvas, measurements) {
     const page = config.pages.find(entry => entry.id === pageId);
     const columns = Number(config.settings.gridColumns);
     if (mode === 'freeform') {
+      const start = config.pages[0];
+      if (page !== start && config.settings.sharedFreeformSize === true) {
+        canvas = {...canvas, width: start.canvas.width, height: start.canvas.height};
+      }
       validateFreeformCanvas(canvas);
       if (!isFreeform(page)) {
         page.widgets.forEach((widget, index) => {
@@ -163,6 +175,7 @@ export function changePageLayout(config, pageId, mode, canvas, measurements) {
       delete page.canvas;
       delete page.navigationRect;
     }
+    syncSharedFreeformSize(config);
     validateLayout(config);
     return config;
 }

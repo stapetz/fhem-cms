@@ -53,6 +53,9 @@ Standard. Datenvertrag und Migration stehen in der
 - Seiteneinstellungen: „Raster (Standard)“ und „Frei (Pixelgenau)“ als
   beschriftete Auswahl; für Freeform Maße, Presets (`1280×800`, `1920×1080`),
   Bildmaß-Übernahme, Skalierung, Fangraster und Mobilverhalten anbieten.
+  Geerbte Maße bzw. Hintergrundbilder nicht zur Bearbeitung anbieten;
+  stattdessen die Startseite als Quelle nennen. Skalierung, Fangraster und
+  Mobilverhalten bleiben lokal einstellbar.
 - Raster und Freeform: Verschieben und Widget-Aktionen direkt am Widget;
   acht Griffe an Ecken und Kanten. Navigationsleiste innerhalb des Freeform-
   Canvas, im Mobilstapel als erstes Element. „Seiteneinstellungen“ zeigt

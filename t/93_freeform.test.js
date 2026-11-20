@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_CANVAS, freeformReadingOrder, freeformScale } from '../www/fhem-cms/js/fcui-freeform-layout.js';
+import { DEFAULT_CANVAS, freeformReadingOrder, freeformScale, syncSharedFreeformSize } from '../www/fhem-cms/js/fcui-freeform-layout.js';
 import { changePageLayout, resizeSchema5Grid, schema5GridItems } from '../www/fhem-cms/js/fcui-schema5-layout.js';
 import { freeformGesture } from '../www/fhem-cms/js/fcui-freeform-edit.js';
 
@@ -31,6 +31,39 @@ test('fits, fills and uses one-to-one canvas sizes', () => {
   assert.equal(freeformScale(DEFAULT_CANVAS, 640, 200), 0.25);
   assert.equal(freeformScale({...DEFAULT_CANVAS, scaling: 'width'}, 640, 200), 0.5);
   assert.equal(freeformScale({...DEFAULT_CANVAS, scaling: 'none'}, 640, 200), 1);
+});
+
+test('shared dimensions apply to new Freeform pages and follow the current Start page', () => {
+  const state = config();
+  changePageLayout(state, 'home', 'freeform', {...DEFAULT_CANVAS});
+  state.settings.sharedFreeformSize = true;
+  changePageLayout(state, 'other', 'freeform', {...DEFAULT_CANVAS, width: 400, scaling: 'none'});
+  assert.deepEqual(state.pages[1].canvas, {...DEFAULT_CANVAS, scaling: 'none'});
+  changePageLayout(state, 'other', 'freeform', {...DEFAULT_CANVAS, height: 500, scaling: 'width'});
+  assert.deepEqual(state.pages[1].canvas, {...DEFAULT_CANVAS, scaling: 'width'});
+  changePageLayout(state, 'home', 'freeform', {...DEFAULT_CANVAS, width: 820, height: 1180});
+  assert.deepEqual(state.pages[1].canvas, {...DEFAULT_CANVAS, width: 820, height: 1180, scaling: 'width'});
+  state.pages.reverse();
+  syncSharedFreeformSize(state);
+  changePageLayout(state, 'other', 'freeform', {...DEFAULT_CANVAS, width: 640});
+  assert.equal(state.pages[1].canvas.width, 640);
+  changePageLayout(state, 'other', 'grid');
+  assert.equal(state.settings.sharedFreeformSize, undefined);
+  assert.equal(state.pages[1].canvas.width, 640);
+});
+
+test('layout validation rejects invalid sharing flags and mismatched dimensions', () => {
+  const state = config();
+  state.settings.sharedFreeformSize = false;
+  assert.throws(() => resizeSchema5Grid(state, 12), /gemeinsame Freeform/);
+  delete state.settings.sharedFreeformSize;
+  changePageLayout(state, 'home', 'freeform', {...DEFAULT_CANVAS});
+  state.settings.sharedFreeformSize = 'true';
+  assert.throws(() => resizeSchema5Grid(state, 12), /gemeinsame Freeform/);
+  delete state.settings.sharedFreeformSize;
+  changePageLayout(state, 'other', 'freeform', {...DEFAULT_CANVAS, width: 400});
+  state.settings.sharedFreeformSize = true;
+  assert.throws(() => resizeSchema5Grid(state, 12), /Startseite entsprechen/);
 });
 
 test('drag and resize find the nearest guide; Alt disables raster and guides', () => {
