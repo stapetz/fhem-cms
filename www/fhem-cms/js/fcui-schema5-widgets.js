@@ -74,7 +74,6 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       const widget = widgets.get(id);
       if (grid) {
         wrapper.addEventListener('pointerdown', () => selectGridWidget(wrapper));
-        wrapper.addEventListener('focusin', () => selectGridWidget(wrapper));
       }
       const controls = document.createElement('div');
       controls.className = 'cms-widget-tools';
