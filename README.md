@@ -2,7 +2,13 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
-**Aktuelle stabile Version: 1.11.0**
+**Aktuelle stabile Version: 1.12.0**
+
+## Neu in 1.12.0
+
+- Pixelgenaues Freeform-Layout (Schema 6) als Alternative zum Raster, mit gemeinsamen Seitengrößen und Navigation.
+- DWD-Wetter online oder über `DWD_OpenData`, mit Warnungen, Vorhersage und wählbarer Quelle für die Ist-Temperatur.
+- Verbesserte Mobilansicht, analoge Uhr und Popup-Scrollschutz in Safari. Widgets können weiterhin kopiert werden; das Vorlagenmenü entfällt.
 
 ## Neu in 1.11.0
 
