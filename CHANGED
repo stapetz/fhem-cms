@@ -3,6 +3,10 @@
 - Seiteneinstellungen oeffnen wieder im Browser. Refs #216.
 - Freeform im Tablet-Querformat passt das ganze Canvas proportional ein.
 
+2026-11-20 - 1.20.5-dev: Dauerhafte Freeform-Groessenvererbung
+- Freeform-Seiten erben Breite und Hoehe dauerhaft von Start. Refs #216.
+- Geerbte Groessen und Hintergrundbilder zeigen einen Hinweis.
+
 2026-11-20 - 1.20.4-dev: Passende Geraetevorschau und responsive
 Freeform-Skalierung
 - Geraetevorgaben bestimmen die Groesse der Seitenvorschau. Refs #216.
