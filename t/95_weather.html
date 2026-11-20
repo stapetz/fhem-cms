@@ -24,6 +24,7 @@
 <script type="module">
 import '../www/fhem-cms/components/cms-weather.js';
 import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
+import { createWidgetIconButton } from '../www/fhem-cms/js/widget-design.js';
 import { Schema5WidgetPanel } from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
 
 const now = new Date();
@@ -116,9 +117,12 @@ try {
   check(getComputedStyle(wideForecast).gridTemplateColumns.split(' ').length === 4,
     'Forecast above 260px uses four day columns');
   const info = wide.shadowRoot.querySelector('[data-detail]');
-  check(info.textContent.trim() === 'ⓘ' && info.getAttribute('aria-haspopup') === 'dialog'
-    && info.getBoundingClientRect().width >= 44 && info.getBoundingClientRect().height >= 44,
-    'Visible info button has a touch-sized target and announces the popup');
+  const referenceInfo = createWidgetIconButton('info', 'Wetterdetails anzeigen');
+  check(info.className === referenceInfo.className && info.innerHTML === referenceInfo.innerHTML
+    && info.getAttribute('aria-haspopup') === 'dialog' && info.getAttribute('aria-label') === referenceInfo.getAttribute('aria-label')
+    && info.getBoundingClientRect().width === 48 && info.getBoundingClientRect().height === 48
+    && getComputedStyle(info).borderTopLeftRadius === '50%',
+    'Weather uses the shared Volvo info glyph and circular 48px button');
   info.click();
   const modal = wide.shadowRoot.querySelector('[data-modal]');
   check(modal.open, 'Detail dialog opens from the public tile');

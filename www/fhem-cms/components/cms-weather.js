@@ -1,5 +1,6 @@
 import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
+import { createWidgetIconButton, widgetIconButtonCss } from '../js/widget-design.js';
 
 const STATION_ID = /^(?:dwd:\d{5}|wmo:[A-Z0-9]{5})$/;
 const READING = /^[A-Za-z0-9_.-]{1,128}$/;
@@ -385,8 +386,8 @@ class FHEMCMSWeather extends HTMLElement {
         .day .weather-icon { width:2.4rem; }
         .day-name,.day-precip { font-size:.72rem; color:var(--cms-muted,#a5c9b2); }
         .day-temp { font-size:.82rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
-        [data-detail] { position:absolute; top:.4rem; right:.4rem; min-width:44px; min-height:44px;
-          font-size:1.35rem; padding:0; }
+        ${widgetIconButtonCss}
+        [data-detail] { position:absolute; top:.4rem; right:.4rem; }
         dialog { width:min(94vw,60rem); max-width:60rem; max-height:min(92dvh,60rem); overflow:auto;
           padding:1rem; border:1px solid var(--cms-border,#43564a); border-radius:1rem;
           background:var(--cms-surface,#202e27); color:var(--cms-text,#edf4ef); }
@@ -454,9 +455,7 @@ class FHEMCMSWeather extends HTMLElement {
       </style>
       <article class="tile" data-tile>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="DWD-Wetter konfigurieren">⚙</button>
-        <header><h3 data-title></h3><span data-alert-badge class="badge" hidden></span><span class="updated" data-updated></span>
-          <button type="button" data-detail hidden aria-label="Wetterdetails anzeigen" aria-haspopup="dialog"
-            title="Wetterdetails anzeigen">ⓘ</button></header>
+        <header><h3 data-title></h3><span data-alert-badge class="badge" hidden></span><span class="updated" data-updated></span></header>
         <p class="forecast-place" data-forecast-place hidden></p>
         <p class="message" data-message role="status">Wetterdaten werden geladen …</p>
         <div class="current" data-current hidden></div>
@@ -521,7 +520,11 @@ class FHEMCMSWeather extends HTMLElement {
         </form>
       </dialog>`;
     this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
-    this.shadowRoot.querySelector('[data-detail]').addEventListener('click', () => this.openDetails());
+    const info = createWidgetIconButton('info', 'Wetterdetails anzeigen');
+    info.dataset.detail = '';
+    info.hidden = true;
+    info.addEventListener('click', () => this.openDetails());
+    this.shadowRoot.querySelector('header').append(info);
     this.shadowRoot.querySelector('[data-modal-close]').addEventListener('click', () => this.closeDetails());
     const modal = this.shadowRoot.querySelector('[data-modal]');
     modal.addEventListener('cancel', (event) => { event.preventDefault(); this.closeDetails(); });
