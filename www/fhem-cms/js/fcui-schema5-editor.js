@@ -14,7 +14,6 @@ import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-wizard.js';
 import { createCmsAdminMenuLinks } from './cms-admin-link.js';
 import { Schema5SettingsPreview } from './fcui-schema5-settings-preview.js';
-import { Schema5BlueprintPanel } from './fcui-schema5-blueprints.js';
 import { readGridPreference, writeGridPreference } from './grid-preference.js';
 import { validateVolvoGroups } from './volvoconnect.js';
 
@@ -48,7 +47,6 @@ export class Schema5Editor {
   #mode;
   #widgets;
   #addDevice;
-  #blueprints;
   #arrange;
   #backup;
   #assets;
@@ -125,14 +123,11 @@ export class Schema5Editor {
     this.#addDevice.type = 'button';
     this.#addDevice.textContent = 'Gerät hinzufügen';
     this.#addDevice.className = 'cms-button';
-    this.#blueprints = document.createElement('button');
-    this.#blueprints.type = 'button';
-    this.#blueprints.textContent = 'Widget-Vorlagen';
     this.#arrange = document.createElement('button');
     this.#arrange.type = 'button';
     this.#arrange.textContent = 'Widgets automatisch anordnen';
     for (const button of [this.#page, this.#publish, this.#discard, this.#reloadButton,
-      this.#widgets, this.#blueprints, this.#arrange]) {
+      this.#widgets, this.#arrange]) {
       button.className = 'cms-button';
     }
     this.#publish.className = 'cms-button cms-publish';
@@ -178,7 +173,7 @@ export class Schema5Editor {
     }
     this.#menu('Datei', fileActions);
     this.#menu('Bearbeiten', [this.#page, ...createCmsAdminMenuLinks({ adminMenuEnabled })]);
-    this.#menu('Einfügen', [this.#widgets, this.#addDevice, this.#blueprints]);
+    this.#menu('Einfügen', [this.#widgets, this.#addDevice]);
     this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle, this.#arrange]);
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
@@ -192,7 +187,6 @@ export class Schema5Editor {
     this.#page.addEventListener('click', () => this.#openPage());
     this.#widgets.addEventListener('click', () => this.#openWidgets());
     this.#addDevice.addEventListener('click', () => this.#openWidgets(undefined, true));
-    this.#blueprints.addEventListener('click', () => this.#openBlueprints());
     this.#arrange.addEventListener('click', () => this.#arrangeWidgets());
     this.#backup.addEventListener('click', () => this.#openBackup());
     this.#assets.addEventListener('click', async () => {
@@ -287,7 +281,6 @@ export class Schema5Editor {
     this.#page.disabled = !enabled;
     this.#widgets.disabled = !enabled;
     this.#addDevice.disabled = !enabled;
-    this.#blueprints.disabled = !enabled;
     this.#arrange.disabled = !enabled;
     this.#backup.disabled = !enabled;
     this.#assets.disabled = !enabled;
@@ -431,7 +424,6 @@ export class Schema5Editor {
         },
         onMove: (pageId, id) => this.#openMove(id),
         onDuplicate: (pageId, id) => this.#duplicateWidget(pageId, id),
-        onSaveBlueprint: (pageId, id) => this.#saveWidgetBlueprint(pageId, id),
         onDelete: (pageId, id) => this.#deleteWidget(pageId, id),
       } });
     this.#view = view;
@@ -660,61 +652,6 @@ export class Schema5Editor {
       await this.#display(result, generation);
     } catch (error) {
       if (generation === this.#generation) this.#error(error);
-    }
-  }
-
-  #saveWidgetBlueprint(pageId, widgetId) {
-    if (!this.#active || this.#suspended || !this.#view || this.#view.current !== pageId) return;
-    try {
-      const state = this.#controller.snapshot();
-      const widget = (state.draft || state.live).pages.find((page) => page.id === pageId)
-        ?.widgets.find((entry) => entry.id === widgetId);
-      if (!widget) throw new Error('Unbekanntes Widget');
-      if (widget.rect) {
-        const {rect, hideOnMobile, ...template} = widget;
-        template.grid ??= {col: 1, row: 2, w: 4, h: 3};
-        this.#openBlueprints(template);
-      } else this.#openBlueprints(widget);
-    } catch (error) {
-      this.#status.setAttribute('data-error', 'true');
-      this.#status.textContent = `Vorlagen konnten nicht geöffnet werden: ${error.message}`;
-    }
-  }
-
-  #openBlueprints(widget = null) {
-    if (!this.#active || this.#suspended || !this.#view || this.#blueprints.disabled) return;
-    try {
-      const state = this.#controller.snapshot();
-      const pageId = this.#view.current;
-      const generation = ++this.#generation;
-      this.#setActions(false, false);
-      this.#view.stop();
-      this.#view = null;
-      this.#content.replaceChildren();
-      const container = this.#panelContainer('blueprints');
-      this.#panel = new Schema5BlueprintPanel({
-        root: container,
-        client: this.#client,
-        services: this.#services,
-        widget,
-        browser: this.#browser,
-        onInsert: async (blueprintWidget) => {
-          if (!this.#active || this.#suspended || generation !== this.#generation) {
-            throw new Error('Der Editorzustand hat sich geändert; bitte erneut laden');
-          }
-          const result = await this.#controller.insertWidget(pageId, blueprintWidget, state.token);
-          this.#panel = null;
-          await this.#display(result, generation);
-        },
-        onClose: () => {
-          this.#panel = null;
-          Promise.resolve().then(() => this.#display(this.#controller.snapshot(), this.#generation))
-            .catch((error) => this.#error(error));
-        },
-      });
-    } catch (error) {
-      this.#content.replaceChildren();
-      this.#error(error);
     }
   }
 

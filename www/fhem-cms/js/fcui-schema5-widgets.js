@@ -131,16 +131,6 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
         duplicate.addEventListener('click', () => editing.onDuplicate(id));
         controls.append(duplicate);
       }
-      if (widget && typeof editing.onSaveBlueprint === 'function') {
-        const blueprint = document.createElement('button');
-        blueprint.type = 'button';
-        blueprint.className = 'cms-widget-blueprint';
-        blueprint.textContent = '▧';
-        blueprint.title = `Widget „${widget.title || widget.id}“ als Vorlage speichern`;
-        blueprint.setAttribute('aria-label', blueprint.title);
-        blueprint.addEventListener('click', () => editing.onSaveBlueprint(id));
-        controls.append(blueprint);
-      }
       if (widget && typeof editing.onMove === 'function') {
         const move = document.createElement('button');
         move.type = 'button';

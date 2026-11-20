@@ -266,7 +266,7 @@ Widgettitel lassen sich global links, zentriert oder rechts ausrichten. Ob ein T
 
 '''Ansicht → Widgets automatisch anordnen''' rückt die Widgets der aktuellen Seite nach oben und links. Größen und Inhalte bleiben erhalten; die Änderung landet im Entwurf.
 
-'''Einfügen''' enthält Widget hinzufügen, Gerät hinzufügen und Widget-Vorlagen. Die freigegebene globale FHEM-CMS Administration steht unter '''Bearbeiten'''. '''Ansicht → Raster anzeigen''' merkt die letzte Auswahl dauerhaft pro CMS im verwendeten Browser, auch für spätere Besuche; auf anderen Geräten gilt die dortige Auswahl.
+'''Einfügen''' enthält Widget hinzufügen und Gerät hinzufügen. Vorhandene Widgets lassen sich direkt am Widget duplizieren. Die freigegebene globale FHEM-CMS Administration steht unter '''Bearbeiten'''. '''Ansicht → Raster anzeigen''' merkt die letzte Auswahl dauerhaft pro CMS im verwendeten Browser, auch für spätere Besuche; auf anderen Geräten gilt die dortige Auswahl.
 
 === Theme-Manager und Hintergrundbilder ===
 

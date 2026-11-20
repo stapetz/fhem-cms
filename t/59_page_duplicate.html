@@ -96,11 +96,9 @@ try {
   gridRoot.className = 'grid-stack';
   document.body.append(gridRoot);
   let duplicatedWidgetId = '';
-  let blueprintWidgetId = '';
   const mounted = mountSchema5Widgets(GridStack, gridRoot, widgetLive, 'start',
     document.createElement('nav'), {}, new Map(), {
       onEdit() {}, onChange() {}, onDuplicate(id) { duplicatedWidgetId = id; },
-      onSaveBlueprint(id) { blueprintWidgetId = id; },
     });
   const duplicateWidgetButton = gridRoot.querySelector('.cms-widget-duplicate');
   check(duplicateWidgetButton?.getAttribute('aria-label') === 'Widget „Status“ duplizieren',
@@ -108,10 +106,7 @@ try {
   duplicateWidgetButton.click();
   check(duplicatedWidgetId === 'text', 'duplicate button requests a copy of the selected widget');
   const blueprintButton = gridRoot.querySelector('.cms-widget-blueprint');
-  check(blueprintButton?.getAttribute('aria-label') === 'Widget „Status“ als Vorlage speichern',
-    'editor exposes an accessible widget blueprint action');
-  blueprintButton.click();
-  check(blueprintWidgetId === 'text', 'blueprint action targets the selected widget');
+  check(!blueprintButton, 'editor has no widget template action');
   mounted.destroy();
   gridRoot.remove();
   output.dataset.result = 'pass';
