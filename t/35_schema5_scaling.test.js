@@ -767,6 +767,17 @@ test('editor tools require activation and Freeform navigation supports real poin
     const result = await browserResult(profile,
       `http://127.0.0.1:${server.address().port}/t/41_editor_hover.html`, child, interact);
     assert.ok(result.checks >= 70);
+    await browserResult(profile, `http://127.0.0.1:${server.address().port}/t/93_freeform.html?grid`, child, async command => {
+      await command('Runtime.evaluate', {expression:
+        `document.querySelector('.grid-stack-item:not(.cms-responsive-navigation) > .grid-stack-item-content').click()`});
+      await command('Input.dispatchKeyEvent', {type:'keyDown', key:'Escape', code:'Escape', windowsVirtualKeyCode:27});
+      const {result} = await command('Runtime.evaluate', {expression:
+        `!document.querySelector('.cms-widget-selected') && !document.activeElement.matches('.cms-widget-drag')`,
+        returnByValue:true});
+      assert.equal(result.value, true, 'Grid Escape clears selection and the focused move outline');
+      await command('Runtime.evaluate', {expression:
+        `Object.assign(document.querySelector('#result'), {textContent:'{"checks":1}'}).dataset.result='pass'`});
+    });
     await browserResult(profile, `http://127.0.0.1:${server.address().port}/t/93_freeform.html?navigation`, child, async command => {
       const read = async expression => {
         const reply = await command('Runtime.evaluate', {expression, awaitPromise:true, returnByValue:true});
@@ -812,9 +823,35 @@ test('editor tools require activation and Freeform navigation supports real poin
       assert.equal(await read(`JSON.parse(document.querySelector('#result').dataset.saved).rect.x`), 51);
       await read(`Object.assign(document.querySelector('#result'), {textContent:'{}'}).dataset.result='pass'`);
     });
+    await browserResult(profile, `http://127.0.0.1:${server.address().port}/t/93_freeform.html`, child);
     const mobileUrl = `http://127.0.0.1:${server.address().port}/t/94_freeform_mobile.html`;
     const setViewport = (width, height) => command => command('Emulation.setDeviceMetricsOverride',
       {width, height, deviceScaleFactor:1, mobile:false});
+    await browserResult(profile, `http://127.0.0.1:${server.address().port}/t/93_freeform.html?responsive`, child, async command => {
+      const measure = async (width, height) => {
+        await setViewport(width, height)(command);
+        const {result} = await command('Runtime.evaluate', {expression: `new Promise(resolve => setTimeout(() => {
+          const viewport = document.querySelector('.cms-freeform-viewport');
+          const canvas = document.querySelector('.cms-freeform-canvas').getBoundingClientRect();
+          const burger = document.querySelector('.cms-freeform-compact-navigation .cms-nav-burger');
+          resolve({width: viewport.clientWidth, canvasWidth: canvas.width, bottom: canvas.bottom,
+            stacked: viewport.classList.contains('cms-freeform-stack'), burger: burger?.offsetHeight ?? 0});
+        }, 120))`, awaitPromise:true, returnByValue:true});
+        return result.value;
+      };
+      const desktop = await measure(1440, 800);
+      assert.ok(Math.abs(desktop.width - desktop.canvasWidth) < 1 && desktop.bottom > 800 && !desktop.burger);
+      const landscape = await measure(1000, 700);
+      assert.ok(!landscape.stacked && landscape.bottom <= 700 && landscape.burger >= 44);
+      const portrait = await measure(820, 1180);
+      assert.ok(portrait.stacked && portrait.burger >= 44);
+      const phone = await measure(390, 844);
+      assert.ok(phone.stacked && Math.abs(phone.width - phone.canvasWidth) < 1 && phone.burger >= 44);
+      const restored = await measure(1440, 800);
+      assert.deepEqual(restored, desktop);
+      await command('Runtime.evaluate', {expression:
+        `Object.assign(document.querySelector('#result'), {textContent:'{"checks":5}'}).dataset.result='pass'`});
+    });
     const mobile = await browserResult(profile, mobileUrl, child, undefined, setViewport(820, 1180));
     assert.ok(mobile.checks > 1000);
     const landscape = await browserResult(profile, mobileUrl, child, undefined, setViewport(1000, 700));

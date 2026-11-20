@@ -58,7 +58,7 @@ Standard. Datenvertrag und Migration stehen in der
   Mobilverhalten bleiben lokal einstellbar.
 - Raster und Freeform: Verschieben und Widget-Aktionen direkt am Widget;
   acht Griffe an Ecken und Kanten. Navigationsleiste innerhalb des Freeform-
-  Canvas, im Mobilstapel als erstes Element. „Seiteneinstellungen“ zeigt
+  Canvas, auf kleinen Ansichten als unskalierte Burger-Navigation davor. „Seiteneinstellungen“ zeigt
   im Menü und im Dialog den Namen der aktuellen Seite.
 - Ein Klick aktiviert Widget-Aktionen, Verschiebefläche und Größenanfasser;
   erneuter Klick deaktiviert sie. Kein separates Verschiebesymbol. Während
@@ -67,13 +67,15 @@ Standard. Datenvertrag und Migration stehen in der
 - Auf Phones, Tablets und schmalen Browserfenstern im Querformat wird das
   gesamte Freeform-Canvas proportional eingepasst. Im Hochformat stapelt
   der Mobilmodus „Stapeln“; „Pixel-Layout behalten“ passt ohne seitliches
-  Scrollen ein. „Browserfläche ausnutzen“ passt das Canvas proportional in
-  die verfügbare Fläche ein, ohne Koordinaten zu ändern. Im Pixelmodus
+  Scrollen ein. „Automatisch“ füllt am Desktop proportional die Browserbreite;
+  höhere Seiten scrollen vertikal. Die gespeicherten Koordinaten bleiben unverändert. Im Pixelmodus
   gibt es kein automatisches Anordnen.
 - Die Geräteauswahl steht über Breite und Höhe. Die Einstellungs-Vorschau
   verwendet die CSS-Pixelgröße und Geräteklasse der gewählten Vorgabe.
-- Freeform: Am Widget eine beschriftete Eingabeleiste für
-  `X`, `Y`, Breite, Höhe, Ebene und „Auf Mobilgeräten ausblenden“ anbieten.
+- Freeform: Pixelgeometrie am Widget in Position, Größe und Ebene gliedern.
+  Die Ebene wird in Einzelschritten geändert. Nur „Übernehmen“ speichert;
+  Escape und „Abbrechen“ verwerfen Eingaben. Escape außerhalb des Dialogs
+  beendet die Widget-Auswahl einschließlich Verschieberahmen.
   Pfeile verschieben bei Editor-Fokus um 1, mit Shift um 10 Canvas-Pixel.
   Alt deaktiviert Raster und Smart Guides während einer Geste. Pointer-Deltas
   durch den wirksamen Canvas-Maßstab teilen; ganzzahlige Geometrie speichern.

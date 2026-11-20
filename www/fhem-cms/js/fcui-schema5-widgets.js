@@ -67,8 +67,17 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   }
   let destroyed = false;
   const selectGridWidget = selected => {
-    for (const wrapper of root.children) wrapper.classList.toggle('cms-widget-selected', wrapper === selected);
+    for (const wrapper of root.children) {
+      if (wrapper !== selected && wrapper.classList.contains('cms-widget-selected')
+        && wrapper.contains(root.ownerDocument.activeElement)) root.ownerDocument.activeElement.blur();
+      wrapper.classList.toggle('cms-widget-selected', wrapper === selected);
+    }
   };
+  const gridKeys = new AbortController();
+  if (grid && editing) root.ownerDocument.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !event.defaultPrevented && !root.inert
+      && !event.target.closest?.('dialog, .cms-menu-items, :popover-open')) selectGridWidget(null);
+  }, {signal: gridKeys.signal});
   if (editing) {
     if (grid) root.classList.toggle('cms-grid-editable', true);
     const entries = freeform ? [['__nav', freeform.navBox], ...freeform.wrappers] : Array.from(root.children, wrapper => [wrapper.gridstackNode?.id, wrapper]);
@@ -92,7 +101,6 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       drag.setAttribute('aria-label', drag.title);
       if (grid) {
         drag.addEventListener('keydown', event => {
-          if (event.key === 'Escape') { selectGridWidget(null); return; }
           const delta = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]}[event.key];
           if (!delta || !wrapper.classList.contains('cms-widget-selected')) return;
           event.preventDefault();
@@ -213,6 +221,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      gridKeys.abort();
       grid?.destroy(false);
       if (grid) root.style.removeProperty?.('height');
       stopEditor?.();

@@ -79,7 +79,10 @@ function mount(options = {}, canvas = page.canvas) {
   root.replaceChildren();
   const nav = document.createElement('nav');
   nav.className = 'cms-nav';
-  nav.textContent = 'Start · Zweite Seite';
+  const burger = Object.assign(document.createElement('button'), {className: 'cms-nav-burger', textContent: '☰'});
+  const link = Object.assign(document.createElement('a'), {className: 'cms-nav-link', textContent: 'Zweite Seite', href: '#/second'});
+  burger.addEventListener('click', () => burger.setAttribute('aria-expanded', String(nav.toggleAttribute('data-open'))));
+  nav.append(burger, link);
   view = mountFreeform(root, { ...page, canvas }, nav,
     id => createWidgetElement(page.widgets.find(widget => widget.id === id), services, snapshots, true), options);
 }
@@ -135,6 +138,12 @@ try {
   mount();
   await paint();
   check(root.querySelector('.cms-freeform-stack'), 'narrow browser stacks without preview flag');
+  const burger = root.querySelector('.cms-freeform-compact-navigation .cms-nav-burger');
+  check(burger.getBoundingClientRect().height >= 44 && !root.querySelector('.cms-nav-link').getClientRects().length,
+    'phone and tablet portrait show an unscaled burger instead of links');
+  burger.click();
+  check(root.querySelector('.cms-nav-link').getClientRects().length && burger.getAttribute('aria-expanded') === 'true',
+    'burger opens navigation on the stacked page');
   } else {
   for (const scenario of [
     { width: 343, options: { phone: true }, canvas: { ...page.canvas, mobileBehavior: 'scale' }, name: 'explicit mobile scale' },
@@ -165,6 +174,8 @@ try {
   check(Math.abs((tabletWidget.left - tabletBounds.left) / tabletScale - page.widgets[0].rect.x) < 1
     && Math.abs(tabletWidget.width / tabletScale - page.widgets[0].rect.w) < 1,
   'landscape tablet keeps original widget position and dimensions proportionally');
+  check(root.querySelector('.cms-freeform-compact-navigation .cms-nav-burger').getBoundingClientRect().height >= 44,
+    'landscape tablet burger is not scaled with the canvas');
   for (const options of [{phone: true}, {}]) {
     mount(options, {...page.canvas, scaling: 'none'});
     await paint();

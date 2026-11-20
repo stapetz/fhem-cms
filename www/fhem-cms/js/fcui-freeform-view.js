@@ -1,4 +1,4 @@
-import { DEFAULT_CANVAS, fitFreeformRect, freeformReadingOrder, freeformScale } from './fcui-freeform-layout.js';
+import { DEFAULT_CANVAS, fitFreeformRect, freeformReadingOrder } from './fcui-freeform-layout.js';
 
 export function mountFreeform(root, page, navigation, render, {background, editing, phone, tablet, navigationGrid, columns} = {}) {
   const doc = root.ownerDocument;
@@ -6,6 +6,9 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   const box = className => Object.assign(doc.createElement('div'), {className});
   const viewport = box('cms-freeform-viewport');
   const footprint = box('cms-freeform-footprint');
+  const compactNavigation = box('cms-freeform-compact-navigation');
+  compactNavigation.hidden = true;
+  const burger = navigation.querySelector('.cms-nav-burger');
   const canvas = box('cms-freeform-canvas');
   const settings = {...DEFAULT_CANVAS, ...page.canvas};
   canvas.style.setProperty('--cms-freeform-snap', `${settings.snapGrid}px`);
@@ -30,20 +33,31 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     canvas.append(wrapper);
   }
   footprint.append(canvas);
-  viewport.append(footprint);
+  viewport.append(compactNavigation, footprint);
   root.classList.add('cms-freeform-root');
   root.append(viewport);
   let stacked = null;
+  let compact = false;
   let scale = 1;
   const landscape = browser.matchMedia('(orientation: landscape)');
-  const narrowLandscape = browser.matchMedia('(orientation: landscape) and (max-width: 1100px)');
   const touchTablet = browser.matchMedia('(pointer: coarse) and (min-width: 600px) and (min-height: 600px) and (max-width: 1400px)');
   function resize() {
     const width = viewport.clientWidth;
     if (!width) return;
-    const isTablet = tablet || (!phone && touchTablet.matches);
-    const fitLandscape = !editing && landscape.matches && (phone || isTablet || narrowLandscape.matches);
-    const stack = !editing && !fitLandscape && settings.mobileBehavior === 'stack' && (phone || isTablet || width < 640);
+    const small = !editing && (phone || tablet || touchTablet.matches || browser.innerWidth <= 1100 || width < 640);
+    const stack = small && !landscape.matches && settings.mobileBehavior === 'stack';
+    const showBurger = small && Boolean(burger);
+    if (showBurger !== compact) {
+      compact = showBurger;
+      compactNavigation.hidden = !compact;
+      navBox.hidden = compact;
+      navigation.toggleAttribute('data-adaptive', compact);
+      navigation.toggleAttribute('data-compact', compact);
+      navigation.removeAttribute('data-open');
+      burger.setAttribute('aria-expanded', 'false');
+      if (compact) compactNavigation.append(navigation);
+      else navBox.append(navigation);
+    }
     if (stack !== stacked) {
       stacked = stack;
       viewport.classList.toggle('cms-freeform-stack', stack);
@@ -53,16 +67,15 @@ export function mountFreeform(root, page, navigation, render, {background, editi
         canvas.append(node);
       }
     }
-    const top = viewport.getBoundingClientRect().top + browser.scrollY;
+    const top = footprint.getBoundingClientRect().top + browser.scrollY;
     const padding = Number.parseFloat(browser.getComputedStyle(doc.body).paddingBottom) || 0;
     const height = Math.max(1, browser.innerHeight - Math.max(0, top) - padding);
-    const fit = fitLandscape || settings.scaling === 'fit'
-      || (!editing && (phone || isTablet || width < 640) && settings.scaling === 'none');
-    scale = stack ? 1 : fit ? Math.min(width / settings.width, height / settings.height, fitLandscape ? 1 : Infinity)
-      : Math.min(freeformScale(settings, width, height), editing ? Infinity : width / settings.width);
+    const byWidth = width / settings.width;
+    scale = stack ? 1 : small ? Math.min(byWidth, height / settings.height, 1)
+      : settings.scaling === 'none' ? Math.min(1, editing ? Infinity : byWidth) : byWidth;
     canvas.style.setProperty('--cms-freeform-scale', scale);
     canvas.style.setProperty('--cms-view-width', stack ? `${width}px` : `${settings.width}px`);
-    viewport.classList.toggle('cms-freeform-fit', !stack && (fit || settings.scaling === 'none'));
+    viewport.classList.toggle('cms-freeform-fit', !stack && (small || settings.scaling === 'none'));
     footprint.style.width = stack ? '100%' : `${settings.width * scale}px`;
     footprint.style.height = stack ? 'auto' : `${settings.height * scale}px`;
     canvas.style.width = stack ? '100%' : `${settings.width}px`;
@@ -74,8 +87,8 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     if (frame === null) frame = browser.requestAnimationFrame(() => { frame = null; resize(); });
   });
   observer.observe(viewport);
+  observer.observe(compactNavigation);
   landscape.addEventListener('change', resize);
-  narrowLandscape.addEventListener('change', resize);
   touchTablet.addEventListener('change', resize);
   browser.addEventListener('resize', resize);
   resize();
@@ -84,7 +97,6 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     destroy() {
       observer.disconnect();
       landscape.removeEventListener('change', resize);
-      narrowLandscape.removeEventListener('change', resize);
       touchTablet.removeEventListener('change', resize);
       browser.removeEventListener('resize', resize);
       if (frame !== null) browser.cancelAnimationFrame(frame);

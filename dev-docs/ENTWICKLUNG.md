@@ -24,7 +24,10 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 ## Freeform-Seiten (Schema 6, geplant)
 
 Abnahmenachtrag (Refs #216): Die Seitennavigation gehört im Freeform-Modus
-zum Canvas (im mobilen Stapel als erstes Element). Beim Wechsel vom Raster
+zum Canvas (in kleinen Ansichten als separates, unskaliertes Burger-Menü).
+Die automatische Skalierung füllt am Desktop die verfügbare Breite; Layouts
+oberhalb der Fensterhöhe scrollen vertikal. Bis 1100 CSS-Pixel Fensterbreite
+greift auch ohne Geräte-Vorschau das Mobilverhalten. Beim Wechsel vom Raster
 zu Freeform bleibt keine GridStack-Höhe zurück. In beiden Modi sitzen
 Widget-Aktionen und Verschiebegriff am Widget; GridStack übernimmt im Raster
 die acht Größenanfasser. Pixel-Eigenschaften werden am Widget geöffnet.
