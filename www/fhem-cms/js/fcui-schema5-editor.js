@@ -9,7 +9,7 @@ import { createSchema5Transport } from './fcui-schema5-transport.js';
 import { createSchema5WidgetServices } from './widget-services.js';
 import { applySchema5GridItems, arrangeSchema5Widgets, schema5GridItems } from './fcui-schema5-layout.js';
 import { DevicePreview } from './device-preview.js';
-import { isFreeform } from './fcui-freeform-layout.js';
+import { applyCmsPageCanvas, cmsPageCanvas, isFreeform } from './fcui-freeform-layout.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-wizard.js';
 import { createCmsAdminMenuLinks } from './cms-admin-link.js';
@@ -507,9 +507,10 @@ export class Schema5Editor {
       const state = this.#controller.snapshot();
       const candidate = state.draft || state.live;
       const page = candidate.pages.find(entry => entry.id === pageId);
+      applyCmsPageCanvas(candidate, cmsPageCanvas(candidate));
       if (id === '__nav') {
         const {x, y, w, h} = rect;
-        page.navigationRect = {x, y, w, h};
+        candidate.settings.pageNavigationRect = {x, y, w, h};
       } else {
         const widget = page.widgets.find(entry => entry.id === id);
         widget.rect = rect;

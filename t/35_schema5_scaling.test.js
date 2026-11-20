@@ -807,7 +807,7 @@ test('editor tools require activation and Freeform navigation supports real poin
       await mouse('mousePressed', handle, 1);
       await mouse('mouseMoved', {x:handle.x+40,y:handle.y+20}, 1);
       await pause(40);
-      assert.match(await read(`document.querySelector('.cms-widget-dimensions')?.textContent`), /\d+ × \d+ px/);
+      assert.match(await read(`document.querySelector('.cms-freeform-handles .cms-widget-dimensions')?.textContent`), /\d+ × \d+ px/);
       await mouse('mouseReleased', {x:handle.x+40,y:handle.y+20}, 0);
       const saved = await read(`JSON.parse(document.querySelector('#result').dataset.saved)`);
       assert.equal(saved.id, '__nav');

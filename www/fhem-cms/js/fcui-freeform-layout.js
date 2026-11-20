@@ -1,6 +1,39 @@
 export const isFreeform = page => page?.layoutMode === 'freeform';
 export const DEFAULT_CANVAS = Object.freeze({width: 1280, height: 800, scaling: 'fit', snapGrid: 5, mobileBehavior: 'stack'});
 
+export function cmsPageCanvas(config) {
+  const start = config.pages[0];
+  return config.settings.pageCanvas ?? start.canvas
+    ?? (config.pages.some(isFreeform) ? DEFAULT_CANVAS : undefined);
+}
+
+export function cmsPageNavigationRect(config) {
+  return config.settings.pageCanvas ? config.settings.pageNavigationRect : config.pages[0].navigationRect;
+}
+
+export function applyCmsPageCanvas(config, canvas) {
+  validateFreeformCanvas(canvas);
+  const previous = cmsPageCanvas(config);
+  const navigation = cmsPageNavigationRect(config);
+  if (navigation && previous) config.settings.pageNavigationRect = scaleFreeformRect(navigation, previous, canvas);
+  config.settings.pageCanvas = {...canvas};
+  delete config.settings.sharedFreeformSize;
+  for (const page of config.pages) {
+    if (!isFreeform(page)) continue;
+    if (page.canvas.width !== canvas.width || page.canvas.height !== canvas.height) {
+      resizeFreeformPage(page, canvas.width, canvas.height);
+    }
+    page.canvas = {...canvas};
+  }
+}
+
+export function scaleFreeformRect(rect, from, to) {
+  return fitFreeformRect({
+    ...rect, x: rect.x * to.width / from.width, y: rect.y * to.height / from.height,
+    w: rect.w * to.width / from.width, h: rect.h * to.height / from.height,
+  }, to);
+}
+
 export function syncSharedFreeformSize(config) {
   if (config.settings.sharedFreeformSize !== true) return;
   const [start, ...pages] = config.pages;

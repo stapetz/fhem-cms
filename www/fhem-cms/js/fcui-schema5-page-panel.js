@@ -1,6 +1,6 @@
 import { resizeSchema5Grid, schema5GridItems, SCHEMA5_GRID_COLUMNS } from './fcui-schema5-layout.js';
 import { changePageLayout } from './fcui-schema5-layout.js';
-import { DEFAULT_CANVAS, isFreeform, validateFreeformCanvas } from './fcui-freeform-layout.js';
+import { DEFAULT_CANVAS, applyCmsPageCanvas, cmsPageCanvas, isFreeform, validateFreeformCanvas } from './fcui-freeform-layout.js';
 import { schema5PageBackground } from './fcui-schema5-appearance.js';
 import { ASSET_IMAGE, assetPathText, validateAssetState } from './asset-contract.js';
 import { LIQUID_DEFAULTS } from './fcui-schema5-appearance.js';
@@ -43,7 +43,6 @@ export class Schema5PagePanel {
   #preview;
 
   #freeform;
-  #applyFreeformSize;
 
   constructor({ root, controller, pageId, token, services = {}, browser = window, onClose,
     freeformSupported = false, measurements }) {
@@ -288,8 +287,7 @@ export class Schema5PagePanel {
   #settings() {
     return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value,
       this.#titleAlign.value, this.#background, this.#sharedBackground?.checked ?? null,
-      this.#intensity.value, this.#transparency.value, this.#freeform?.values(),
-      this.#applyFreeformSize?.checked ?? false]);
+      this.#intensity.value, this.#transparency.value, this.#freeform?.values()]);
   }
 
   #addFreeformControls(page, measurements) {
@@ -316,12 +314,10 @@ export class Schema5PagePanel {
     extras.className = 'cms-freeform-options';
     section.append(extras);
     const start = this.#config.pages[0];
-    const inherited = page !== start && this.#config.settings.sharedFreeformSize === true;
-    const initial = {...DEFAULT_CANVAS, ...page.canvas};
-    if (inherited) {
-      initial.width = start.canvas.width;
-      initial.height = start.canvas.height;
-    } else if (!isFreeform(page) && measurements?.width && measurements?.height) {
+    const inherited = page !== start;
+    const common = cmsPageCanvas(this.#config);
+    const initial = {...DEFAULT_CANVAS, ...common};
+    if (!common && !inherited && measurements?.width && measurements?.height) {
       initial.width = Math.max(200, Math.min(7680, Math.round(measurements.width)));
       initial.height = Math.max(200, Math.min(7680, Math.round(measurements.height)));
     }
@@ -361,15 +357,14 @@ export class Schema5PagePanel {
     preset.setAttribute('aria-label', 'Freeform-Größe nach Gerät');
     presetLabel.append(preset);
     if (!inherited) extras.append(presetLabel);
-    else extras.append(element('p', `Seite erbt Größeneinstellungen von der Startseite (${initial.width} × ${initial.height} px).`));
+    else extras.append(element('p', `Seite erbt Größeneinstellungen von der Startseite (${common
+      ? `${initial.width} × ${initial.height} px` : 'automatische Browserbreite'}).`));
     const width = size('Breite (px)', initial.width);
     const height = size('Höhe (px)', initial.height);
-    const scaling = select(extras, 'Skalierung', [['fit', 'Automatisch (Browserbreite nutzen)'], ['width', 'Breite füllen'], ['none', '1:1, bei Platzmangel verkleinern']], initial.scaling);
-    const snap = select(extras, 'Fangraster', [1, 5, 10].map(n => [n, `${n} px`]), initial.snapGrid);
-    const mobile = select(extras, 'Smartphone und Tablet', [['stack', 'Stapeln'], ['scale', 'Pixel-Layout behalten']], initial.mobileBehavior);
-    for (let index = extras.children.length - 3; index < extras.children.length; index += 1) {
-      extras.children[index].className = 'cms-freeform-advanced';
-    }
+    const advanced = inherited ? element('div') : extras;
+    const scaling = select(advanced, 'Skalierung', [['fit', 'Automatisch (Browserbreite nutzen)'], ['width', 'Breite füllen'], ['none', '1:1, bei Platzmangel verkleinern']], initial.scaling, 'cms-freeform-advanced');
+    const snap = select(advanced, 'Fangraster', [1, 5, 10].map(n => [n, `${n} px`]), initial.snapGrid, 'cms-freeform-advanced');
+    const mobile = select(advanced, 'Smartphone und Tablet', [['stack', 'Stapeln'], ['scale', 'Layout behalten']], initial.mobileBehavior, 'cms-freeform-advanced');
     const button = (text, fn) => {
       const control = element('button', text);
       control.type = 'button';
@@ -387,7 +382,6 @@ export class Schema5PagePanel {
       if (dimensions) setSize(dimensions.width, dimensions.height, preset.value);
     });
     const update = () => {
-      extras.hidden = mode.value !== 'freeform';
       this.#updateSettingsPreview();
     };
     width.addEventListener('change', () => {
@@ -415,21 +409,7 @@ export class Schema5PagePanel {
       image.onerror = () => this.#message('Hintergrundbild konnte nicht geladen werden.', true);
       image.src = new URL(background, this.#browser.location.href).href;
     });
-    if (page.id === this.#config.pages[0].id) {
-      const applyLabel = element('label', 'Größe auf alle Freeform-Seiten anwenden');
-      applyLabel.className = 'cms-freeform-apply-all';
-      this.#applyFreeformSize = element('input');
-      this.#applyFreeformSize.type = 'checkbox';
-      this.#applyFreeformSize.checked = this.#config.settings.sharedFreeformSize === true;
-      this.#applyFreeformSize.setAttribute('aria-label',
-        'Freeform-Abmessungen auf alle Freeform-Seiten anwenden; Rasterseiten bleiben unverändert');
-      applyLabel.append(this.#applyFreeformSize);
-      extras.append(applyLabel);
-      this.#applyFreeformSize.addEventListener('change', update);
-      extras.append(element('p',
-        'Skaliert Widget- und Navigationspositionen proportional. Rasterseiten bleiben unverändert.'));
-    }
-    extras.hidden = mode.value !== 'freeform';
+    if (!inherited) extras.append(element('p', 'Diese Einstellungen gelten für alle Seiten dieses CMS.'));
     section.addEventListener('change', update);
     this.#form.append(section);
     this.#freeform = {
@@ -469,7 +449,7 @@ export class Schema5PagePanel {
     }
     const candidate = resizeSchema5Grid(this.#config, Number(this.#columns.value));
     const [originalTheme, originalFrames, , originalTitleAlign, originalBackground, originalShared,
-      originalIntensity, originalTransparency] = JSON.parse(this.#settingsBaseline);
+      originalIntensity, originalTransparency, originalLayout] = JSON.parse(this.#settingsBaseline);
     for (const value of [this.#intensity.value, this.#transparency.value]) {
       if (!/^(?:100|[1-9]?\d)$/.test(value)) throw new Error('Ungültiger Liquid-Glass-Wert');
     }
@@ -488,12 +468,16 @@ export class Schema5PagePanel {
     if (this.#transparency.value !== originalTransparency) candidate.settings.liquidTransparency = Number(this.#transparency.value);
     if (this.#freeform) {
       const [mode, width, height, scaling, snapGrid, mobileBehavior] = this.#freeform.values();
-      if (this.#applyFreeformSize) {
-        if (mode === 'freeform' && this.#applyFreeformSize.checked) candidate.settings.sharedFreeformSize = true;
-        else delete candidate.settings.sharedFreeformSize;
+      const canvas = {width: Number(width), height: Number(height), scaling, snapGrid: Number(snapGrid), mobileBehavior};
+      const isStart = this.#pageId === candidate.pages[0].id;
+      if (isStart && (cmsPageCanvas(candidate) || mode === 'freeform'
+        || this.#freeform.values().slice(1).some((value, index) => value !== originalLayout[index + 1]))) {
+        applyCmsPageCanvas(candidate, canvas);
       }
-      changePageLayout(candidate, this.#pageId, mode,
-        {width: Number(width), height: Number(height), scaling, snapGrid: Number(snapGrid), mobileBehavior},
+      if (!isStart && !candidate.settings.pageCanvas && mode !== (candidate.pages.find(page => page.id === this.#pageId).layoutMode || 'grid')) {
+        applyCmsPageCanvas(candidate, cmsPageCanvas(candidate) ?? canvas);
+      }
+      changePageLayout(candidate, this.#pageId, mode, cmsPageCanvas(candidate) ?? canvas,
         this.#freeform.measurements?.boxes);
     }
     return candidate;

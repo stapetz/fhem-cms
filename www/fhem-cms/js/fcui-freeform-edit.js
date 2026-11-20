@@ -41,7 +41,7 @@ export function freeformGesture(rect, direction, dx, dy, canvas, widgets, noSnap
   return {rect: result, guides};
 }
 
-export function mountFreeformEditor(root, page, view, editing, navigation) {
+export function mountFreeformEditor(root, page, view, editing, navigation, editNavigation = true) {
   const doc = root.ownerDocument;
   const win = doc.defaultView;
   const events = new AbortController();
@@ -66,10 +66,10 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
   };
   const nav = {id: '__nav', rect: view.navigationRect};
   const entries = new Map([['__nav', view.navBox], ...view.wrappers]);
-  const widgets = [nav, ...page.widgets];
+  const widgets = editNavigation ? [nav, ...page.widgets] : page.widgets;
   const size = doc.createElement('span');
   size.className = 'cms-widget-dimensions';
-  if (!view.navBox.querySelector('.cms-widget-config')) {
+  if (editNavigation && !view.navBox.querySelector('.cms-widget-config')) {
     button(navigation, '✎', 'Navigation einstellen', () => editing.onEdit('__nav'));
   }
   const row = name => {
@@ -201,7 +201,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
     geometry.className = 'cms-widget-geometry';
   }
   view.canvas.addEventListener('click', event => {
-    const widget = event.target.closest('.cms-freeform-widget,.cms-freeform-navigation');
+    const widget = event.target.closest(editNavigation ? '.cms-freeform-widget,.cms-freeform-navigation' : '.cms-freeform-widget');
     if (widget && !active && !event.target.closest('.cms-widget-tools,.cms-freeform-properties,[data-dir="move"],a:not([aria-current])')) {
       if (event.target.closest('a[aria-current]')) event.preventDefault();
       const id = widget.dataset.widgetId || '__nav';

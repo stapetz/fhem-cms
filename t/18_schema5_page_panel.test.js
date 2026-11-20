@@ -334,9 +334,7 @@ test('freeform presets resize only freeform pages proportionally from the open b
     assert.ok(presetLabel, 'device presets are grouped in the settings control');
     assert.deepEqual(presetLabel.children[0].children.slice(1).map(group => group.label),
       ['iPhone', 'iPad', 'Desktop / Monitor']);
-    const applyAll = byClass('cms-freeform-apply-all').children[0];
-    applyAll.checked = true;
-    applyAll.fire('change');
+    assert.equal(byClass('cms-freeform-apply-all'), undefined);
     const preset = byClass('cms-freeform-preset').children[0];
     preset.value = 'desktop-1280';
     preset.fire('change');
@@ -352,7 +350,7 @@ test('freeform presets resize only freeform pages proportionally from the open b
     };
     const expectedOther = {
       ...f.live.pages[1],
-      canvas: {...f.live.pages[1].canvas, width: 1280, height: 720},
+      canvas: expectedStart.canvas,
       widgets: [{...f.live.pages[1].widgets[0], rect: {x: 26, y: 36, w: 77, h: 72}}],
       navigationRect: {x: 51, y: 18, w: 256, h: 90},
     };
@@ -369,7 +367,8 @@ test('freeform presets resize only freeform pages proportionally from the open b
     assert.deepEqual(f.controller.snapshot().draft.pages[0], expectedStart);
     assert.deepEqual(f.controller.snapshot().draft.pages[1], expectedOther);
     assert.deepEqual(f.controller.snapshot().draft.pages[2], f.live.pages[2]);
-    assert.equal(f.controller.snapshot().draft.settings.sharedFreeformSize, true);
+    assert.deepEqual(f.controller.snapshot().draft.settings.pageCanvas, expectedStart.canvas);
+    assert.deepEqual(f.controller.snapshot().draft.settings.pageNavigationRect, expectedStart.navigationRect);
     panel.close();
 
     const updated = await f.controller.reload();
@@ -381,7 +380,7 @@ test('freeform presets resize only freeform pages proportionally from the open b
     const inheritedNodes = descendants(inheritedRoot);
     assert.ok(inheritedNodes.some(node => node.textContent?.includes('Seite erbt Größeneinstellungen von der Startseite')));
     assert.ok(!inheritedNodes.some(node => ['cms-freeform-preset', 'cms-freeform-dimension'].includes(node.className)));
-    assert.equal(inheritedNodes.filter(node => node.className === 'cms-freeform-advanced').length, 3);
+    assert.equal(inheritedNodes.filter(node => node.className === 'cms-freeform-advanced').length, 0);
     inherited.close();
     const nextRoot = new Element('section');
     const next = new Schema5PagePanel({
@@ -390,16 +389,14 @@ test('freeform presets resize only freeform pages proportionally from the open b
     });
     const nextDescendants = node => [node, ...node.children.flatMap(nextDescendants)];
     const nextByClass = name => nextDescendants(nextRoot).find(node => node.className === name);
-    const shared = nextByClass('cms-freeform-apply-all').children[0];
-    assert.equal(shared.checked, true, 'inheritance stays enabled across reloads');
-    shared.checked = false;
+    assert.equal(nextByClass('cms-freeform-apply-all'), undefined);
     const nextPreset = nextByClass('cms-freeform-preset').children[0];
     nextPreset.value = 'iphone-13';
     nextPreset.fire('change');
     await nextRoot.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[0].canvas.width, 390);
-    assert.equal(f.controller.snapshot().draft.pages[1].canvas.width, 1280,
-      'without the Start-page checkbox other Freeform pages remain unchanged');
+    assert.equal(f.controller.snapshot().draft.pages[1].canvas.width, 390,
+      'other Freeform pages always follow Start');
     assert.equal(f.controller.snapshot().draft.settings.sharedFreeformSize, undefined);
     assert.equal(nextRoot.children.length, 0);
 

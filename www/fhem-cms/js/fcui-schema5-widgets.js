@@ -1,6 +1,6 @@
 import { createSchema5Grid, schema5GridItems } from './fcui-schema5-layout.js';
 import { createWidgetElement, dataFor, isLiveWidget } from './widget-factory.js';
-import { isFreeform } from './fcui-freeform-layout.js';
+import { cmsPageCanvas, cmsPageNavigationRect, isFreeform, resizeFreeformPage } from './fcui-freeform-layout.js';
 import { mountFreeform } from './fcui-freeform-view.js';
 import { mountFreeformEditor } from './fcui-freeform-edit.js';
 
@@ -10,7 +10,17 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   }
   schema5GridItems(config, pageId);
   root.style.setProperty('--cms-widget-title-align', config.settings.titleAlign || 'left');
-  const page = config.pages.find((item) => item.id === pageId);
+  const sourcePage = config.pages.find((item) => item.id === pageId);
+  const commonCanvas = cmsPageCanvas(config);
+  const pixel = isFreeform(sourcePage);
+  const page = pixel ? structuredClone(sourcePage) : sourcePage;
+  if (pixel && commonCanvas) {
+    if (page.canvas.width !== commonCanvas.width || page.canvas.height !== commonCanvas.height) {
+      resizeFreeformPage(page, commonCanvas.width, commonCanvas.height);
+    }
+    page.canvas = commonCanvas;
+    page.navigationRect = cmsPageNavigationRect(config);
+  }
   const widgets = new Map(page.widgets.map((widget) => [widget.id, widget]));
   const elements = new Map();
   const createWidget = id => {
@@ -34,20 +44,32 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   const params = new URLSearchParams(root.ownerDocument?.defaultView?.location?.search ?? globalThis.window?.location?.search);
   const previewDevice = params.get('mode') === 'preview' && params.get('cms-device');
   const mobilePreview = previewDevice === 'mobile' || previewDevice === 'tablet';
-  const freeform = isFreeform(page) ? mountFreeform(root, page, navigation, createWidget, {
+  const gridRoot = !pixel && commonCanvas ? root.ownerDocument.createElement('div') : root;
+  if (gridRoot !== root) gridRoot.className = 'grid-stack cms-schema5-grid cms-shared-canvas-grid';
+  const framePage = pixel ? page : commonCanvas && {
+    canvas: commonCanvas, widgets: [],
+    navigationRect: cmsPageNavigationRect(config),
+  };
+  const frame = framePage ? mountFreeform(root, framePage, navigation, createWidget, {
     background: services.freeformBackground, editing,
     phone: previewDevice === 'mobile', tablet: previewDevice === 'tablet',
     navigationGrid: config.navigation.grid, columns: Number(config.settings.gridColumns),
+    grid: pixel ? undefined : gridRoot,
   }) : null;
-  const viewConfig = editing || freeform ? config : {
+  const freeform = pixel ? frame : null;
+  const viewConfig = editing || pixel ? config : {
     ...config,
     pages: config.pages.map((entry) => entry !== page ? entry : {
       ...page, widgets: [...page.widgets].sort((a, b) => a.grid.row - b.grid.row || a.grid.col - b.grid.col),
     }),
   };
-  const grid = freeform ? null : createSchema5Grid(GridStack, root, viewConfig, pageId, (id, wrapper) => {
+  const grid = pixel ? null : createSchema5Grid(GridStack, gridRoot, viewConfig, pageId, (id, wrapper) => {
     if (id === '__nav') {
       wrapper.className += ' cms-responsive-navigation';
+      if (frame) {
+        wrapper.classList.add('cms-shared-navigation-placeholder');
+        return root.ownerDocument.createElement('span');
+      }
       return navigation;
     }
     if (!editing) {
@@ -57,7 +79,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     }
     return createWidget(id);
   }, Boolean(editing));
-  if (!editing && !freeform) {
+  if (!editing && !frame) {
     root.setAttribute('data-responsive', '');
     const touchDevice = window.matchMedia?.('(pointer: coarse)').matches;
     if (mobilePreview) {
@@ -67,7 +89,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   }
   let destroyed = false;
   const selectGridWidget = selected => {
-    for (const wrapper of root.children) {
+    for (const wrapper of gridRoot.children) {
       if (wrapper !== selected && wrapper.classList.contains('cms-widget-selected')
         && wrapper.contains(root.ownerDocument.activeElement)) root.ownerDocument.activeElement.blur();
       wrapper.classList.toggle('cms-widget-selected', wrapper === selected);
@@ -79,11 +101,15 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       && !event.target.closest?.('dialog, .cms-menu-items, :popover-open')) selectGridWidget(null);
   }, {signal: gridKeys.signal});
   if (editing) {
-    if (grid) root.classList.toggle('cms-grid-editable', true);
-    const entries = freeform ? [['__nav', freeform.navBox], ...freeform.wrappers] : Array.from(root.children, wrapper => [wrapper.gridstackNode?.id, wrapper]);
+    if (grid) gridRoot.classList.toggle('cms-grid-editable', true);
+    const entries = pixel ? Array.from(freeform.wrappers)
+      : Array.from(gridRoot.children, wrapper => [wrapper.gridstackNode?.id, wrapper])
+        .filter(([id]) => !frame || id !== '__nav');
+    if (frame && pageId === config.pages[0].id) entries.unshift(['__nav', frame.navBox]);
     for (const [id, wrapper] of entries) {
       const widget = widgets.get(id);
-      if (grid) {
+      const gridItem = Boolean(grid && wrapper !== frame?.navBox);
+      if (gridItem) {
         wrapper.addEventListener('click', event => {
           if (event.target.closest?.('.cms-widget-tools,.ui-resizable-handle,a:not([aria-current])') || wrapper.classList.contains('ui-draggable-dragging')) return;
           if (event.target.closest?.('a[aria-current]')) event.preventDefault();
@@ -96,10 +122,10 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       const drag = document.createElement('button');
       drag.type = 'button';
       drag.className = 'cms-widget-drag';
-      if (freeform) drag.dataset.dir = 'move';
+      if (!gridItem) drag.dataset.dir = 'move';
       drag.title = `${widget?.title || widget?.id || 'Navigation'} verschieben`;
       drag.setAttribute('aria-label', drag.title);
-      if (grid) {
+      if (gridItem) {
         drag.addEventListener('keydown', event => {
           const delta = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]}[event.key];
           if (!delta || !wrapper.classList.contains('cms-widget-selected')) return;
@@ -152,7 +178,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
         controls.append(remove);
       }
       wrapper.append(controls);
-      if (grid) {
+      if (gridItem) {
         const size = document.createElement('span');
         size.className = 'cms-widget-dimensions';
         size.hidden = true;
@@ -174,19 +200,20 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       if (!destroyed) editing.onChange(grid.save(false));
     });
   }
-  const stopEditor = freeform && editing?.onFreeformChange
-    ? mountFreeformEditor(root, page, freeform, editing, navigation) : null;
+  const stopEditor = frame && editing?.onFreeformChange && (pixel || pageId === config.pages[0].id)
+    ? mountFreeformEditor(root, framePage, frame, editing, navigation, pageId === config.pages[0].id) : null;
   return {
     measureGrid() {
       if (!grid || !editing) return undefined;
-      const bounds = root.getBoundingClientRect();
-      const boxes = new Map(Array.from(root.children).flatMap(wrapper => {
+      const bounds = gridRoot.getBoundingClientRect();
+      const scale = frame?.getScale() ?? 1;
+      const boxes = new Map(Array.from(gridRoot.children).flatMap(wrapper => {
         const id = wrapper.gridstackNode?.id;
         if (!widgets.has(id)) return [];
         const box = wrapper.getBoundingClientRect();
-        return [[id, {x: box.left - bounds.left, y: box.top - bounds.top, w: box.width, h: box.height}]];
+        return [[id, {x: (box.left - bounds.left) / scale, y: (box.top - bounds.top) / scale, w: box.width / scale, h: box.height / scale}]];
       }));
-      return {width: bounds.width, height: bounds.height, boxes};
+      return {width: bounds.width / scale, height: bounds.height / scale, boxes};
     },
     lock() {
       if (destroyed) return;
@@ -215,7 +242,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       grid?.destroy(false);
       if (grid) root.style.removeProperty?.('height');
       stopEditor?.();
-      freeform?.destroy();
+      frame?.destroy();
       if (!editing) {
         root.removeAttribute('data-responsive');
         root.removeAttribute('data-mobile-preview');
@@ -223,7 +250,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       }
       root.replaceChildren();
       if (editing) {
-        root.classList.toggle('cms-grid-editable', false);
+        gridRoot.classList.toggle('cms-grid-editable', false);
         root.inert = false;
       }
       elements.clear();
