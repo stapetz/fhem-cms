@@ -391,9 +391,10 @@ class FHEMCMSWeather extends HTMLElement {
           padding:1rem; border:1px solid var(--cms-border,#43564a); border-radius:1rem;
           background:var(--cms-surface,#202e27); color:var(--cms-text,#edf4ef); }
         dialog::backdrop { background:var(--cms-backdrop,rgb(0 0 0 / .65)); }
-        .modal-head { position:sticky; top:-1rem; z-index:2; display:flex; gap:.5rem; align-items:center;
-          padding:.35rem 0 .7rem; background:var(--cms-surface,#202e27); }
-        .modal-head h2 { margin:0; font-size:1.25rem; }
+        dialog[data-modal][open] { display:flex; flex-direction:column; overflow:hidden; }
+        .modal-head { flex:none; display:flex; gap:.5rem; align-items:center; padding:.35rem 0 .7rem; }
+        .modal-head h2 { margin:0; min-width:0; overflow-wrap:anywhere; font-size:1.25rem; }
+        [data-modal-content] { min-height:0; overflow-y:auto; }
         .modal-close { margin-left:auto; min-width:44px; min-height:44px; }
         .modal-section { margin:1rem 0; }
         .modal-section h3 { margin:.2rem 0 .65rem; }
@@ -407,11 +408,16 @@ class FHEMCMSWeather extends HTMLElement {
         .metric { padding:.55rem; border-radius:.5rem; background:color-mix(in srgb,var(--cms-surface-raised,#2a3b32) 75%,transparent); }
         .metric dt { color:var(--cms-muted,#a5c9b2); font-size:.78rem; overflow-wrap:anywhere; }
         .metric dd { margin:.2rem 0 0; font-variant-numeric:tabular-nums; }
-        .hourly { display:flex; gap:.5rem; overflow-x:auto; padding:.3rem 0 .7rem; scroll-snap-type:x proximity; }
-        .hour { flex:0 0 12rem; display:grid; align-content:start; justify-items:center; gap:.2rem; padding:.5rem;
-          border-radius:.6rem; background:color-mix(in srgb,var(--cms-surface-raised,#2a3b32) 75%,transparent); scroll-snap-align:start; }
-        .hour .weather-icon { width:2.5rem; }
-        .hour .metric-grid { width:100%; grid-template-columns:1fr; }
+        .hourly { width:100%; table-layout:fixed; border-spacing:0; }
+        .hourly thead { position:sticky; top:0; z-index:1; background:var(--cms-surface,#202e27); }
+        .hourly th,.hourly td { padding:.3rem .15rem; text-align:center; overflow-wrap:anywhere; }
+        .hourly th { font-size:.8rem; }
+        .hourly th,.hourly .hour td { border-bottom:1px solid var(--cms-border,#43564a); }
+        .hourly th:last-child { width:3.1rem; }
+        .hourly .weather-icon { display:block; width:2rem; max-width:100%; margin:auto; }
+        .hour-toggle { width:44px; min-height:44px; padding:0; }
+        .hour-toggle[aria-expanded=true] { transform:rotate(180deg); }
+        .hour-details .metric-grid { text-align:left; }
         .daily details { border-top:1px solid var(--cms-border,#43564a); }
         .daily summary { display:flex; align-items:center; gap:.6rem; min-height:48px; cursor:pointer; }
         .daily summary .weather-icon { width:2.5rem; }
@@ -444,7 +450,6 @@ class FHEMCMSWeather extends HTMLElement {
         @media (max-width:639px) {
           dialog { width:100vw; max-width:none; height:100dvh; max-height:100dvh; margin:0;
             border-radius:0; padding:calc(env(safe-area-inset-top) + .75rem) .75rem calc(env(safe-area-inset-bottom) + .75rem); }
-          .modal-head { top:calc(-1 * (env(safe-area-inset-top) + .75rem)); }
         }
       </style>
       <article class="tile" data-tile>
@@ -462,7 +467,7 @@ class FHEMCMSWeather extends HTMLElement {
       <dialog data-modal aria-labelledby="weather-modal-title">
         <div class="modal-head"><h2 id="weather-modal-title" data-modal-title>Wetterdetails</h2>
           <button type="button" class="modal-close" data-modal-close aria-label="Details schließen">×</button></div>
-        <div data-modal-content></div>
+        <div data-modal-content tabindex="0" role="region" aria-label="Wetterdetails und Vorhersagen"></div>
       </dialog>
       <dialog data-dialog aria-labelledby="weather-editor-title">
         <form data-form novalidate>
@@ -777,15 +782,50 @@ class FHEMCMSWeather extends HTMLElement {
     const hourly = Array.isArray(data.hourly) ? data.hourly.slice(0, 48) : [];
     const hourlySection = make('section', 'modal-section');
     hourlySection.append(make('h3', '', 'Stündliche Vorhersage · nächste 48 Stunden'));
-    const hourlyList = make('div', 'hourly');
-    for (const hour of hourly) {
-      const card = make('article', 'hour');
-      card.append(make('strong', '', `${formatDate(hour.timestamp)} · ${formatTime(hour.timestamp)}`),
-        iconSvg(conditionKey(hour)), make('span', '', conditionText(hour)), metricList(weatherMetrics(hour)));
-      hourlyList.append(card);
+    if (hourly.length) {
+      const table = make('table', 'hourly');
+      table.setAttribute('aria-label', 'Stündliche Vorhersage');
+      const heading = table.createTHead().insertRow();
+      for (const label of ['Datum', 'Uhrzeit', 'Wetter', 'Temp.', 'Details']) {
+        const cell = make('th', '', label);
+        cell.scope = 'col';
+        heading.append(cell);
+      }
+      const body = table.createTBody();
+      for (const hour of hourly) {
+        const row = body.insertRow();
+        row.className = 'hour';
+        const date = formatDate(hour.timestamp);
+        const time = formatTime(hour.timestamp);
+        row.insertCell().textContent = date;
+        row.insertCell().textContent = time;
+        const icon = iconSvg(conditionKey(hour));
+        const condition = conditionText(hour);
+        icon.removeAttribute('aria-hidden');
+        icon.setAttribute('role', 'img');
+        icon.setAttribute('aria-label', condition);
+        row.insertCell().append(icon);
+        row.insertCell().textContent = displayNumber(hour.temp, ' °C');
+        const toggle = make('button', 'hour-toggle', '⌄');
+        toggle.type = 'button';
+        toggle.setAttribute('aria-label', `Wetterwerte am ${date} um ${time} Uhr`);
+        toggle.setAttribute('aria-expanded', 'false');
+        row.insertCell().append(toggle);
+        const details = body.insertRow();
+        details.className = 'hour-details';
+        details.hidden = true;
+        const cell = details.insertCell();
+        cell.colSpan = heading.cells.length;
+        cell.append(make('p', '', condition), metricList(weatherMetrics(hour)));
+        toggle.addEventListener('click', () => {
+          details.hidden = !details.hidden;
+          toggle.setAttribute('aria-expanded', String(!details.hidden));
+        });
+      }
+      hourlySection.append(table);
+    } else {
+      hourlySection.append(make('p', 'message', 'Keine Stundenwerte verfügbar.'));
     }
-    if (!hourly.length) hourlyList.append(make('p', 'message', 'Keine Stundenwerte verfügbar.'));
-    hourlySection.append(hourlyList);
     content.append(hourlySection);
 
     const dailySection = make('section', 'modal-section daily');
@@ -825,6 +865,7 @@ class FHEMCMSWeather extends HTMLElement {
     content.append(dailySection);
     content.append(make('p', 'source', 'Datenbasis: Deutscher Wetterdienst (DWD)'));
     this.shadowRoot.querySelector('[data-modal]').showModal();
+    content.scrollTop = 0;
   }
 
   closeDetails() {

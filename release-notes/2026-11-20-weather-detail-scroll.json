@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-20",
+  "version": "1.23.1-dev",
+  "title": "DWD-Wetterdetails: Scrollbare Stundentabelle",
+  "changes": [
+    "Stundenwerte stehen in einer vertikalen Tabelle mit fixierter Kopfzeile und aufklappbaren Wetterwerten. Refs #223."
+  ]
+}

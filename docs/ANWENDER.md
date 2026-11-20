@@ -706,7 +706,11 @@ Unter **Widget hinzufügen → DWD-Wetter** wählen Sie die Quelle je nach Zweck
 Die Kachel zeigt je nach Einstellung aktuelles Wetter, bis zu acht
 Vorhersagetage und amtliche DWD-Warnungen. Das **ⓘ** am Widget öffnet verfügbare
 Messwerte, Warntexte, die Vorhersage für die nächsten 48 Stunden und
-bis zu zehn Tage. Der Vorhersageort steht auch bei einem eigenen Widget-Titel
+bis zu zehn Tage. Die Stundenwerte stehen in einer Tabelle im vertikal
+scrollenden Detailfenster. Datum, Uhrzeit, Wetter und Temperatur bleiben als
+Kopfzeile bis zum Ende der Stundentabelle sichtbar. Über den Pfeil am Ende
+jeder Stundenzeile lassen sich die weiteren Wetterwerte aufklappen.
+Der Vorhersageort steht auch bei einem eigenen Widget-Titel
 auf der Kachel und im Detailfenster. Online ist das der ausgewählte Ort; die
 angezeigte Messstation kann davon abweichen. Bei `DWD_OpenData` stammen der
 Stationsname und ersatzweise die Stationskennung aus den Vorhersage-Readings.
