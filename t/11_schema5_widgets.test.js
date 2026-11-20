@@ -13,6 +13,7 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
       this.style = { setProperty(name, value) { this[name] = value; } };
       this.classList = { toggle() {} };
     }
+    get ownerDocument() { return globalThis.document; }
     append(child) { this.children.push(child); }
     replaceChildren(...children) { this.children = children; }
     setAttribute(name, value) { this.attributes[name] = value; }
@@ -20,7 +21,7 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
     addEventListener(name, listener) { this.listeners[name] = listener; }
   }
   globalThis.window = { location: { href: 'https://example.test/' } };
-  globalThis.document = { createElement: (tag) => new Element(tag) };
+  globalThis.document = Object.assign(new EventTarget(), { createElement: (tag) => new Element(tag) });
   globalThis.HTMLElement = class {};
   const registry = new Map();
   globalThis.customElements = {
