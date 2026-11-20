@@ -27,9 +27,13 @@
       const nav = Object.assign(document.createElement('nav'), {className:'cms-nav'});
       const burger = Object.assign(document.createElement('button'), {className:'cms-nav-burger', textContent:'☰'});
       nav.append(burger);
+      for (const name of ['Start', 'Schalter']) {
+        nav.append(Object.assign(document.createElement('a'), {className:'cms-nav-link', textContent:name, href:'#'}));
+      }
       const canvas = {width:1000, height:800, scaling:'fit', mobileBehavior:'stack'};
       const grid = params.has('tablet') ? document.createElement('div') : undefined;
-      const responsive = mountFreeform(root, {...page, canvas, widgets:grid ? [] : page.widgets}, nav, render, {
+      const navigationRect = {x:0, y:0, w:900, h:48};
+      const responsive = mountFreeform(root, {...page, canvas, navigationRect, widgets:grid ? [] : page.widgets}, nav, render, {
         tablet: Boolean(grid), grid,
         background: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 5 4%27%3E%3Cpath fill=%27teal%27 d=%27M0 0h5v4H0z%27/%3E%3C/svg%3E',
       });

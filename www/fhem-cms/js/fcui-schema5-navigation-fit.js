@@ -1,14 +1,19 @@
-export function measureSchema5Navigation(nav) {
+export function measureSchema5Navigation(nav, scale = 1) {
   const browser = nav.ownerDocument.defaultView;
   const measuring = nav.hasAttribute('data-measuring');
   nav.setAttribute('data-measuring', '');
   try {
     const style = browser.getComputedStyle(nav);
     const links = [...nav.querySelectorAll('.cms-nav-link')].filter((link) => !link.hidden);
-    const sizes = links.map((link) => link.getBoundingClientRect());
+    const sizes = links.map((link) => {
+      const {width, height} = link.getBoundingClientRect();
+      return {width: width / scale, height: height / scale};
+    });
     const gap = Math.max(0, links.length - 1);
     const vertical = nav.classList.contains('is-vertical');
     return {
+      minTarget: Math.min(Infinity, ...sizes.map(({width, height}) => Math.min(width, height))) * scale,
+      minFont: Math.min(Infinity, ...links.map(link => Number.parseFloat(browser.getComputedStyle(link).fontSize))) * scale,
       width: (vertical ? Math.max(0, ...sizes.map((size) => size.width))
         : sizes.reduce((sum, size) => sum + size.width, 0) + gap * (Number.parseFloat(style.columnGap) || 0))
         + (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0),

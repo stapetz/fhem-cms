@@ -24,7 +24,10 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 ## Freeform-Seiten (Schema 6, geplant)
 
 Abnahmenachtrag (Refs #216): Die Seitennavigation gehört im Freeform-Modus
-zum Canvas (in kleinen Ansichten als separates, unskaliertes Burger-Menü).
+zum Canvas. Im mobilen Hochformat erscheint das unskalierte Burger-Menü.
+Im Querformat bleiben die Links im Canvas, sofern sie ohne Umbruch passen
+und nach Skalierung mindestens 24 CSS-Pixel groß und mit mindestens 12
+CSS-Pixel Schrift lesbar sind. Andernfalls erscheint das unskalierte Menü.
 Die automatische Skalierung füllt am Desktop die verfügbare Breite;
 im mobilen Querformat gilt das unabhängig von der Desktop-Skalierung.
 Der gemeinsame Rahmen reicht dort bis zu den sicheren Displayrändern; das
