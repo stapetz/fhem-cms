@@ -146,6 +146,20 @@ try {
       `${scenario.name}: desktop size containment preserved`);
     check(!view.wrappers.get('w18').hidden, `${scenario.name}: desktop-only widget visible`);
   }
+  check(matchMedia('(orientation: landscape)').matches, 'browser fixture uses a landscape viewport');
+  shell.style.width = '820px';
+  mount({ tablet: true }, {...page.canvas, scaling: 'none'});
+  await paint();
+  const tabletViewport = root.querySelector('.cms-freeform-viewport');
+  const tabletBounds = view.canvas.getBoundingClientRect();
+  const tabletScale = view.getScale();
+  check(!root.querySelector('.cms-freeform-stack'), 'landscape tablet retains the canvas');
+  check(tabletScale < 1 && tabletBounds.width <= tabletViewport.clientWidth + 1
+    && tabletBounds.height <= tabletViewport.clientHeight + 1, 'landscape tablet fits entire canvas even in saved 1:1 mode');
+  const tabletWidget = view.wrappers.get('w0').getBoundingClientRect();
+  check(Math.abs((tabletWidget.left - tabletBounds.left) / tabletScale - page.widgets[0].rect.x) < 1
+    && Math.abs(tabletWidget.width / tabletScale - page.widgets[0].rect.w) < 1,
+  'landscape tablet keeps original widget position and dimensions proportionally');
   shell.style.width = '393px';
   mount();
   await paint();

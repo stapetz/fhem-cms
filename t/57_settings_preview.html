@@ -62,7 +62,7 @@ if (child) {
     dialog.dataset.panel = 'page';
     document.body.append(dialog);
     const controller = { snapshot: () => ({ live: config, token: 'test' }), saveDraft: async () => { writes++; } };
-    new Schema5PagePanel({ root: dialog, controller, pageId: 'room', token: 'test',
+    new Schema5PagePanel({ root: dialog, controller, pageId: 'room', token: 'test', freeformSupported: true,
       browser: { ...window, confirm: () => true },
       services: {
         createSettingsPreview: ({ pageId }) => new Schema5SettingsPreview({ browser: window, pageId }),
@@ -70,6 +70,8 @@ if (child) {
       },
       onClose: value => { outcome = value; } });
     dialog.showModal();
+    check(dialog.open && dialog.querySelector('.cms-freeform-mode select')?.value === 'grid',
+      'settings with Freeform controls open in the native browser DOM');
     const frame = dialog.querySelector('.cms-settings-preview iframe');
     check(dialog.querySelector('.cms-settings-preview > p').textContent === 'Vorschau', 'preview heading is concise');
     check(!dialog.querySelector('.cms-liquid-preview, .cms-liquid-preview-card'), 'no redundant example widget');
@@ -94,7 +96,8 @@ if (child) {
     check(stage.width > 250 && stage.height > 100 && stage.right <= dialog.getBoundingClientRect().right,
       'scaled phone preview is visible and fits the dialog');
     check(frame.inert && frame.tabIndex === -1, 'preview does not allow device actions');
-    const theme = dialog.querySelector('select');
+    const theme = [...dialog.querySelectorAll('select')].find(select =>
+      [...select.options].some(option => option.value === 'dark'));
     const widget = document.createElement('cms-button');
     document.body.append(widget);
     const widgetSelect = widget.shadowRoot.querySelector('select');
@@ -140,14 +143,17 @@ if (child) {
     check(getComputedStyle(frameDocument().querySelector('cms-text').shadowRoot.querySelector('.tile')).backgroundColor
       === 'rgba(19, 34, 52, 0.4)', 'actual widget transparency changes');
     const form = dialog.querySelector('form');
-    const selects = form.querySelectorAll('select');
-    selects[1].value = '24';
-    selects[1].dispatchEvent(new Event('change'));
+    const selectWith = value => [...form.querySelectorAll('select')].find(select =>
+      [...select.options].some(option => option.value === value));
+    const columns = selectWith('24');
+    columns.value = '24';
+    columns.dispatchEvent(new Event('change'));
     await until(() => frameDocument().querySelector('.cms-schema5-grid').gridstack?.getColumn() === 24, 'grid did not update');
     check(frameDocument().querySelector('cms-text').shadowRoot.textContent.includes('Aktuelle Seite'),
       'actual widget survives raster preview');
-    selects[2].value = 'right';
-    selects[2].dispatchEvent(new Event('change'));
+    const titleAlign = selectWith('right');
+    titleAlign.value = 'right';
+    titleAlign.dispatchEvent(new Event('change'));
     await until(() => frameDocument().querySelector('.cms-schema5-grid').style.getPropertyValue('--cms-widget-title-align') === 'right',
       'title alignment did not update');
     const frames = form.querySelector('input[type="checkbox"]');

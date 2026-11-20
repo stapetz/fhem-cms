@@ -219,6 +219,14 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     rotate.fire('click');
     assert.equal(iframe.style.width, '667px', 'rotation swaps the phone dimensions');
     assert.equal(iframe.style.height, '375px');
+    deviceSelect.value = 'ipad-air';
+    await deviceSelect.fire('change');
+    const tabletFrame = document.body.children.find((node) => node.className === 'cms-device-overlay')
+      .children[0].children[0].children[0];
+    assert.equal(tabletFrame.src, 'https://example.test/?mode=preview&cms-device=tablet#/a');
+    rotate.fire('click');
+    assert.equal(tabletFrame.style.width, '1180px');
+    assert.equal(tabletFrame.style.height, '820px');
     deviceSelect.value = 'desktop-1280';
     await deviceSelect.fire('change');
     iframe = document.body.children.find((node) => node.className === 'cms-device-overlay')

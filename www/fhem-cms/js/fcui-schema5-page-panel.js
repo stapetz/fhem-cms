@@ -295,8 +295,9 @@ export class Schema5PagePanel {
     const section = element('fieldset');
     section.className = 'cms-freeform-settings';
     section.append(element('legend', 'Seitenlayout'));
-    const select = (parent, title, entries, value) => {
+    const select = (parent, title, entries, value, labelClass = '') => {
       const label = element('label', `${title} `);
+      if (labelClass) label.className = labelClass;
       const control = element('select');
       for (const [key, text] of entries) {
         const option = element('option', text);
@@ -309,9 +310,7 @@ export class Schema5PagePanel {
       return control;
     };
     const mode = select(section, 'Modus', [['grid', 'Raster (Standard)'], ['freeform', 'Frei (Pixelgenau)']],
-      page.layoutMode || 'grid');
-    const modeLabel = section.children.at(-1);
-    modeLabel.className = 'cms-freeform-mode';
+      page.layoutMode || 'grid', 'cms-freeform-mode');
     const extras = element('div');
     extras.className = 'cms-freeform-options';
     section.append(extras);
