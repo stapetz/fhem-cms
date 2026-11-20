@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { isValidName } from '../js/fhem-client.js';
 import { formatDateDisplay } from '../js/date-display.js';
 import { widgetDesignCss } from '../js/widget-design.js';
@@ -334,7 +335,7 @@ class FHEMCMSSelect extends HTMLElement {
     form.elements.mode.value = this.widgetConfig.mode === 'buttons' ? 'buttons' : 'dropdown';
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
     try {
       this.devices = await this.services.listAllDevices();
       const device = this.devices.find((item) => item.name === this.widgetConfig.device) || null;

@@ -2299,6 +2299,7 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   width: min(448px, calc(100vw - 16px));
   max-height: calc(100dvh - 16px);
   overflow: auto;
+  overscroll-behavior: contain;
   padding: .5rem;
   color: var(--cms-text);
   border: 1px solid var(--cms-border);

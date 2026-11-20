@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
@@ -181,7 +182,7 @@ class FHEMCMSCallList extends HTMLElement {
     this.shadowRoot.querySelector('[data-error]').textContent = '';
     const detection = this.shadowRoot.querySelector('[data-detection]');
     detection.textContent = isNew && !form.elements.device.value ? 'Suche nach FB_CALLLIST-Devices …' : '';
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
     if (isNew && !form.elements.device.value) {
       try {
         const devices = await this.services.listAllDevices();

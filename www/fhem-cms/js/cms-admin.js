@@ -1,3 +1,4 @@
+import { showCmsModal } from './modal-dialog.js';
 import { isValidName } from './fhem-client.js';
 import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261113-5';
 
@@ -142,7 +143,7 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
       $('#selected').replaceChildren(...selected.map(item => element('li', item.name)));
       $('#confirm-text').value = '';
       dialog.returnValue = '';
-      dialog.showModal();
+      showCmsModal(dialog);
     });
   }
   dialog.querySelector('form').addEventListener('submit', async event => {

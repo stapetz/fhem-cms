@@ -1,3 +1,4 @@
+import { showCmsModal } from './modal-dialog.js';
 // Dialog zum Suchen und Einsetzen eines Platzhalters (Device, Reading, Filter), gemeinsam für Texteditor und freies HTML.
 import { formatValue, isValidDeviceName, isValidFilter, isValidReadingName } from './freehtml.js';
 import { UNIT_SUGGESTIONS, unitInputCss, unitSuggestions } from './unit-input.js';
@@ -298,7 +299,7 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
     });
 
     document.body.append(dialog);
-    dialog.showModal();
+    showCmsModal(dialog);
     refresh(true);
     deviceInput.focus();
     Promise.resolve(services.listAllDevices()).then((list) => {

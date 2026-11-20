@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<title>CMS popup scroll boundaries</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<style>
+  body { min-height: 350vh; }
+  dialog { width: 300px; height: 240px; overflow: hidden; }
+  .scroll { height: 140px; overflow: auto; }
+  .tall { height: 700px; }
+  .cms-freeform-properties { top: 100px; left: 100px; height: 240px; }
+</style>
+<pre id="result"></pre>
+<div id="host"></div>
+<dialog id="nested">Zweiter Dialog</dialog>
+<div id="geometry" class="cms-freeform-properties" popover><div class="tall"></div></div>
+<script type="module">
+import { showCmsModal } from '../www/fhem-cms/js/modal-dialog.js';
+
+const root = document.querySelector('#host').attachShadow({ mode: 'open' });
+root.innerHTML = `<style>dialog { width:300px; height:240px; overflow:hidden }
+  .scroll { height:140px; overflow:auto } .tall { height:700px }</style>
+  <dialog><div class="scroll"><div class="tall"></div></div></dialog>`;
+const dialog = root.querySelector('dialog');
+const nested = document.querySelector('#nested');
+const geometry = document.querySelector('#geometry');
+window.popupScroll = {
+  open() { showCmsModal(dialog); },
+  nest() { showCmsModal(nested); },
+  closeNested() { nested.close(); },
+  close() { dialog.close(); },
+  openGeometry() { geometry.showPopover(); },
+  closeGeometry() { geometry.hidePopover(); },
+  point(name) {
+    const el = { inner: root.querySelector('.scroll'), nested, geometry }[name];
+    const { x, y, width, height } = el.getBoundingClientRect();
+    return { x: x + width / 2, y: y + height / 2 };
+  },
+  position(name) {
+    return ({ inner: root.querySelector('.scroll'), page: document.scrollingElement, geometry })[name].scrollTop;
+  },
+  finish() {
+    const output = document.querySelector('#result');
+    output.dataset.result = 'pass';
+    output.textContent = '{"checks":7}';
+  },
+};
+window.scrollTo(0, 300);
+document.querySelector('#result').dataset.ready = 'true';
+</script>

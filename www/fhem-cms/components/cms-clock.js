@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
 import { formatDateDisplay } from '../js/date-display.js';
 
@@ -180,7 +181,7 @@ class FHEMCMSClock extends HTMLElement {
     form.elements.showWeekday.checked = this.widgetConfig.showWeekday === true;
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
   }
 
   async saveConfig() {

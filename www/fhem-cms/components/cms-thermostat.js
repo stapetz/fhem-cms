@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { isValidName } from '../js/fhem-client.js';
 import { formatDateDisplay } from '../js/date-display.js';
 import { widgetDesignCss, detailCardCss } from '../js/widget-design.js';
@@ -591,7 +592,7 @@ class FHEMCMSThermostat extends HTMLElement {
     this.fillReadingOptions(null, config.readings);
 
     if (!dialog.open) {
-      dialog.showModal();
+      showCmsModal(dialog);
     }
 
     if (this.services) {
@@ -635,7 +636,7 @@ class FHEMCMSThermostat extends HTMLElement {
       filter.value = '';
     }
     if (!picker.open) {
-      picker.showModal();
+      showCmsModal(picker);
     }
     search.focus();
     if (this.devices.length === 0 && this.services) {

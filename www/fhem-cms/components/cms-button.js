@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { openIconPicker } from '../js/icon-picker.js';
 import { switchCommands } from './cms-switch.js';
@@ -260,7 +261,7 @@ class FHEMCMSButton extends HTMLElement {
     this.setIcon(this.widgetConfig.icon || '');
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.setDialogError('');
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
     this.devices = [];
     this.fillCommands(this.widgetConfig.command);
     try {

@@ -1,3 +1,4 @@
+import { showCmsModal } from './modal-dialog.js';
 // Gemeinsamer Dialog zum Suchen eines Devices (Name, Alias, Typ, Raum); liefert den Eintrag aus listAllDevices() oder null.
 const MAX_ROWS = 60;
 
@@ -92,7 +93,7 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
     });
     dialog.addEventListener('cancel', (event) => event.preventDefault());
     document.body.append(dialog);
-    dialog.showModal();
+    showCmsModal(dialog);
     $('[data-search]').focus();
     $('[data-info]').textContent = 'Geräteliste wird geladen …';
     services.listAllDevices().then((list) => {

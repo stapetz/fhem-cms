@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { formatDateDisplay } from '../js/date-display.js';
 import { openIconPicker } from '../js/icon-picker.js';
@@ -189,7 +190,7 @@ class FHEMCMSIcon extends HTMLElement {
     for (const mapping of mappings) {
       this.addMapping(mapping);
     }
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
   }
 
   setReadings(device, selected) {

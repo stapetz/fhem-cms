@@ -1,3 +1,4 @@
+import { showCmsModal } from './modal-dialog.js';
 import { ASSET_BLOCKED, assetFolderPath, validateAssetState } from './asset-contract.js';
 import { loadAssetExif } from './asset-exif.js';
 import { editAssetImage } from './asset-image-editor.js';
@@ -219,7 +220,7 @@ export async function openAssetManager(services, { mode = null, owner = document
     dialog.addEventListener('cancel', event => { event.preventDefault(); finish(null); });
     footer.append(cancel, accept); dialog.append(title, path, content, selectedPath, footer);
     dismissFolderDialog = () => finish(null);
-    root.append(dialog); navigate(current); dialog.showModal();
+    root.append(dialog); navigate(current); showCmsModal(dialog);
   });
   const createFolderName = () => new Promise(resolve => {
     const dialog = element('dialog'); dialog.className = 'folder-create'; dialog.dataset.folderCreate = '';
@@ -250,7 +251,7 @@ export async function openAssetManager(services, { mode = null, owner = document
     form.append(element('p', `Anlegen in: ${pathText(folder)}`), label, error, footer);
     dialog.append(title, form); root.append(dialog);
     dismissFolderDialog = () => finish(null);
-    dialog.showModal(); name.focus();
+    showCmsModal(dialog); name.focus();
   });
   const confirmDelete = ({ kind, message }) => new Promise(resolve => {
     const dialog = element('dialog'); dialog.dataset[`${kind}Delete`] = '';
@@ -268,7 +269,7 @@ export async function openAssetManager(services, { mode = null, owner = document
     dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
     dismissFolderDialog = () => finish(false);
     const footer = element('div'); footer.className = 'footer'; footer.append(cancel, accept);
-    dialog.append(footer); root.append(dialog); dialog.showModal(); cancel.focus();
+    dialog.append(footer); root.append(dialog); showCmsModal(dialog); cancel.focus();
   });
   const showInfo = (heading, content, kind) => {
     if (closed) return;
@@ -282,7 +283,7 @@ export async function openAssetManager(services, { mode = null, owner = document
     const footer = element('div'); footer.className = 'footer'; footer.append(close);
     dialog.append(title, ...content, footer);
     dismissFolderDialog = finish;
-    root.append(dialog); dialog.showModal();
+    root.append(dialog); showCmsModal(dialog);
   };
   const showExif = (asset, rows) => {
     const list = element('dl');
@@ -665,7 +666,7 @@ export async function openAssetManager(services, { mode = null, owner = document
   });
   observer.observe(document, { childList: true, subtree: true });
   if (owner !== document.body) observer.observe(owner, { childList: true, subtree: true });
-  $('[data-assets-dialog]').showModal();
+  showCmsModal($('[data-assets-dialog]'));
   await operation(reload);
   return completion;
 }

@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { MAX_FREE_DEVICES, checkSource, elementText, extractDevices, lookupValue, placeholderText, renderTemplate, sanitize } from '../js/freehtml.js';
 import { openPlaceholderPicker } from '../js/placeholder-picker.js';
 import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
@@ -281,7 +282,7 @@ class FHEMCMSHtml extends HTMLElement {
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.showDevices();
     this.setDialogError('');
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
   }
 
   setDialogError(message) {

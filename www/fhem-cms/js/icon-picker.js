@@ -1,3 +1,4 @@
+import { showCmsModal } from './modal-dialog.js';
 // Gemeinsamer Dialog zur Icon-Auswahl; liefert den Icon-Namen, '' für „kein Icon“ oder null bei Abbruch.
 const PAGE = 120;
 
@@ -88,7 +89,7 @@ export function openIconPicker({ services, title = 'Icon wählen', clearLabel = 
     });
     dialog.addEventListener('cancel', (event) => event.preventDefault());
     document.body.append(dialog);
-    dialog.showModal();
+    showCmsModal(dialog);
     $('[data-filter]').focus();
     $('[data-hint]').textContent = 'Icons werden geladen …';
     services.listIcons().then((list) => {

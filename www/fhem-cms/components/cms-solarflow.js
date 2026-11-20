@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { suggestedSolarSource } from '../js/solar-energy-suggestions.js';
@@ -334,7 +335,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
       this.setSource(field.key, multi ? (source?.device || null) : (config.device || null), source?.reading || '');
     }
     this.applyMode();
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
   }
 
   showAlias(name) {

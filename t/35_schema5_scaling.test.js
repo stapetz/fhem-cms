@@ -118,6 +118,8 @@ for (const [name, fixtures] of [
     [['90_widget_dates.html', 19]]],
   ['DWD weather renders responsive tiles, details and editor',
     [['95_weather.html', 42], ['95_weather.html?width=820', 42], ['95_weather.html?width=390', 42]]],
+  ['CMS popups contain scroll without moving the page',
+    [['96_popup_scroll.html', 7]]],
   ['VolvoConnect renders module groups and preserves responsive live vehicle data',
     [['88_volvoconnect.html', 400]]],
   ['VolvoConnect popup reorders cards by pointer and saves only the editor draft',
@@ -207,7 +209,7 @@ for (const [name, fixtures] of [
     for (const [fixture, minimum] of fixtures) {
       const interact = !['49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
         '63_responsive_edges.html', '65_widget_dialogs.html', '88_volvoconnect.html',
-        '89_volvoconnect_order.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
+        '89_volvoconnect_order.html', '96_popup_scroll.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
           assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
@@ -221,6 +223,34 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
+        if (fixture === '96_popup_scroll.html') {
+          const position = name => evaluate(`window.popupScroll.position('${name}')`);
+          const wheel = async (target, deltaY) => {
+            const point = await evaluate(`window.popupScroll.point('${target}')`);
+            await command('Input.dispatchMouseEvent', {type:'mouseWheel', ...point, deltaX:0, deltaY});
+            await pause(200);
+          };
+          await evaluate('window.popupScroll.open()');
+          const initial = await position('page');
+          await wheel('inner', 3000);
+          assert.ok(await position('inner') > 0, 'dialog content itself scrolls');
+          await wheel('inner', 800);
+          assert.equal(await position('page'), initial, 'bottom of modal does not scroll page');
+          await wheel('inner', -3000);
+          await wheel('inner', -800);
+          assert.equal(await position('page'), initial, 'top of modal does not scroll page');
+          await evaluate('window.popupScroll.nest()');
+          await wheel('nested', 800);
+          assert.equal(await position('page'), initial, 'short stacked dialog blocks page scroll');
+          assert.equal(await position('inner'), 0, 'short stacked dialog blocks underlying dialog scroll');
+          await evaluate('window.popupScroll.closeNested(); window.popupScroll.close(); window.popupScroll.openGeometry()');
+          await wheel('geometry', 3000);
+          assert.ok(await position('geometry') > 0, 'Freeform popover itself scrolls');
+          await wheel('geometry', 800);
+          assert.equal(await position('page'), initial, 'bottom of Freeform popover does not scroll page');
+          await evaluate('window.popupScroll.closeGeometry(); window.popupScroll.finish()');
+          return;
+        }
         if (fixture.startsWith('89_volvoconnect_order.html')) {
           const touch = fixture.includes('touch=1');
           await evaluate('window.popupOrderTest.host().openDetails(); window.popupOrderTest.prepareFullWidth()');

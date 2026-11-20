@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { widgetDesignCss, detailCardCss, widgetIconButtonCss, createWidgetIconButton } from '../js/widget-design.js';
@@ -451,7 +452,7 @@ shutdown restart</pre>
     this.$('[data-message]').textContent = '';
     this.inlineArrangementWidth = this.widgetConfig.showDetails === false
       ? this.$('[data-inline-content] .top')?.getBoundingClientRect().width : null;
-    dialog.showModal();
+    showCmsModal(dialog);
     this.$('[data-info]')?.setAttribute('aria-expanded', 'true');
     this.render();
   }
@@ -472,7 +473,7 @@ shutdown restart</pre>
 
   openModuleHelp() {
     if (!this.$('[data-dialog]').open || this.$('[data-module-help]').open || this.configBusy) return;
-    this.$('[data-module-help]').showModal();
+    showCmsModal(this.$('[data-module-help]'));
   }
 
   closeModuleHelp(restoreFocus = true) {
@@ -488,7 +489,7 @@ shutdown restart</pre>
     if (this.$('[data-actions-dialog]').open) return;
     this.renderActions(volvoModel(this.snapshot, this.widgetConfig.device));
     this.$('[data-action-message]').textContent = '';
-    this.$('[data-actions-dialog]').showModal();
+    showCmsModal(this.$('[data-actions-dialog]'));
   }
 
   closeActions(restoreFocus = true) {
@@ -1277,7 +1278,7 @@ shutdown restart</pre>
     form.elements.showDetails.checked = this.widgetConfig.showDetails !== false;
     this.$('[data-delete]').hidden = isNew;
     this.$('[data-error]').textContent = '';
-    this.$('[data-dialog]').showModal();
+    showCmsModal(this.$('[data-dialog]'));
     if (!form.elements.device.value && isNew) {
       try {
         const devices = await this.services.listAllDevices();
