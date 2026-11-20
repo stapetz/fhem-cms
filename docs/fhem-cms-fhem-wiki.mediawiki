@@ -11,7 +11,7 @@
 | Inoffizielles Modul; Installation aus externer Updatequelle.
 |- style="background-color:#FFFFFF"
 | Aktuelle stabile Version
-| [https://github.com/stapetz/fhem-cms/releases/tag/v1.11.0 1.11.0]
+| [https://github.com/stapetz/fhem-cms/releases/tag/v1.12.0 1.12.0]
 |- style="background-color:#EFEFFF"
 ! colspan="2" | Details
 |- style="background-color:#FFFFFF"
@@ -33,7 +33,11 @@
 
 '''fhem-cms''' ergänzt FHEM um eine frei gestaltbare Bedienoberfläche im Browser. Du kombinierst Gerätewerte, Bedienelemente, Texte, Bilder und Links auf eigenen Seiten. Das Layout erstellst du grafisch, ohne dafür eine komplette HTML-Oberfläche programmieren zu müssen.
 
-Dieser Artikel beschreibt den stabilen Funktionsstand '''1.11.0''' und das aktuelle Seitenformat '''Schema 5'''. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+Dieser Artikel beschreibt den stabilen Funktionsstand '''1.12.0'''. Rasterseiten bleiben verfügbar; für pixelgenaues Freeform wird Schema 6 verwendet. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+
+'''Neu in 1.12.0:''' Raster- und Freeform-Seiten übernehmen die Darstellungsgröße von der Startseite. Im mobilen Hochformat werden Widgets in Leserichtung angeordnet und das Hintergrundbild mittig ohne Wiederholung beschnitten. Im Querformat bleiben Navigationslinks sichtbar, sofern sie passen. Das Vorlagenmenü entfällt; Widgets lassen sich weiterhin kopieren.
+
+'''DWD-Wetter:''' Unter '''Widget hinzufügen → DWD-Wetter''' einen Ort für '''DWD Online''' suchen oder ein vorhandenes <code>DWD_OpenData</code>-Gerät für die Anzeige seiner FHEM-Readings wählen. Online lässt sich die Ist-Temperatur automatisch von einer Station mit frischem Messwert ermitteln, eine Station fest auswählen oder ein eigenes FHEM-Thermometer einbinden. Fällt die gewählte Quelle aus, wird der Rückfall auf die Automatik angezeigt. Vorhersage und Warnungen bleiben beim gewählten Ort. Das '''i''' öffnet Warntexte und die vertikale Stundentabelle mit fixierter Kopfzeile. [https://github.com/stapetz/fhem-cms/wiki/DWD-Wetter Ausführliche Wetter-Anleitung].
 
 '''Neu in 1.11.0:''' VolvoConnect-Fahrzeugwidget mit Kompakt-/Vollansicht und anpassbaren Detailkarten, Solar und Energiefluss mit Ertragskarten, einheitliches Widgetdesign, bessere Safari-/Mobilansicht, Geräte zuerst hinzufügen, diskrete Set-Auswahl, breite Dialoge und geprüfte HTML/SVG/CSS-Einbettungen. Die Vorschau zeigt kein Bearbeitungsraster; Liveupdates erhalten die Scrollposition. Das Fahrzeugwidget setzt ausschließlich das Modul [[VolvoConnect]] voraus; siehe die [https://github.com/stapetz/fhem-cms/wiki/VolvoConnect-Widget bebilderte Anleitung mit Modulinstallation].
 
@@ -68,7 +72,7 @@ kann ueber die Seiteneinstellungen ersetzt oder entfernt werden.
 Leere Seiten und Seiten aus dem gefuehrten Einrichtungsassistenten starten
 ohne Hintergrundbild. Bestehende Seiten werden nicht automatisch geaendert.
 
-Neu in 1.10.0: Widgets und Seiten duplizieren, wiederverwendbare Widgetvorlagen,
+Seit 1.10.0: Widgets und Seiten duplizieren,
 direktes Loeschen im Entwurf, aufgabenbezogene Widgetdialoge mit
 Geraete-/Reading-Vorschlaegen, konsistente Statusfarben, DbLog-Abfragen im
 Hintergrund sowie der verbesserte Einrichtungsassistent und die globale
