@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-20",
+  "version": "1.23.0-dev",
+  "title": "DWD-Wetter: Anzeigename fuer eigene Temperaturquelle",
+  "changes": [
+    "Bei eigenen Thermometern kann die Quellenanzeige den Geraetenamen, den FHEM-Alias oder einen eigenen Text verwenden. Refs #221."
+  ]
+}

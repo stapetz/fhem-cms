@@ -33,6 +33,8 @@ test('temperature selects the closest recent measurement, supports fixed station
   assert.equal(selectTemperature({ mode: 'station', station: 'dwd:04078' }, stations, null, now).fallback, true);
   const sensor = { mode: 'sensor', device: 'Garden', reading: 'temperature' };
   assert.equal(selectTemperature(sensor, stations, sample(-2.2, 1), now).temp, -2.2);
+  assert.equal(selectTemperature({ ...sensor, labelMode: 'alias' }, stations, sample(2, 1), now).label,
+    'Quelle: Garden');
   assert.equal(selectTemperature(sensor, stations, sample(9, 91), now).fallback, true);
   assert.equal(selectTemperature(sensor, [], sample(9, -1), now), null);
 });

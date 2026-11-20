@@ -190,7 +190,7 @@ try {
   wide.services = {
     ...wide.services,
     weatherStations: async () => ({ stations: temperatureStations }),
-    weatherTemperature: async () => ({ temp: 12.5, timestamp: at(-0.1) }),
+    weatherTemperature: async () => ({ temp: 12.5, timestamp: at(-0.1), alias: 'Garten Süd' }),
     listAllDevices: async () => [{ name: 'Garden', type: 'Thermometer', readings: { temperature: 12.5 } }],
   };
   await wide.refresh();
@@ -223,8 +223,26 @@ try {
   await paint();
   check(window.savedWeatherWidget.config.temperatureSource.reading === 'temperature'
     && wide.shadowRoot.querySelector('.temp').textContent === '12,5°'
-    && wide.shadowRoot.querySelector('.current-origin').textContent.includes('Eigenes Thermometer: Garden'),
+    && wide.shadowRoot.querySelector('.current-origin').textContent.startsWith('Quelle: Garden ·'),
     'Shared picker saves the sensor reading and only replaces current temperature');
+  await wide.openConfig();
+  tempForm.elements.temperatureLabelMode.value = 'alias';
+  await wide.saveConfig();
+  await paint();
+  check(window.savedWeatherWidget.config.temperatureSource.labelMode === 'alias'
+    && wide.shadowRoot.querySelector('.current-origin').textContent.startsWith('Quelle: Garten Süd ·'),
+    'Alias mode uses the current FHEM alias');
+  await wide.openConfig();
+  tempForm.elements.temperatureLabelMode.value = 'custom';
+  tempForm.elements.temperatureLabelMode.dispatchEvent(new Event('change'));
+  check(!tempForm.elements.temperatureLabelText.closest('label').hidden, 'Custom mode reveals the label input');
+  tempForm.elements.temperatureLabelText.value = ' Terrasse ';
+  await wide.saveConfig();
+  await paint();
+  check(window.savedWeatherWidget.config.temperatureSource.labelText === 'Terrasse'
+    && wide.shadowRoot.querySelector('.current-origin').textContent.startsWith('Quelle: Terrasse ·')
+    && wide.shadowRoot.querySelector('[data-title]').textContent === 'Wetter direkt',
+    'Custom source label is saved without changing the widget title');
   wide.services.weatherTemperature = async () => ({ temp: 12.5, timestamp: at(-2) });
   await wide.refresh();
   await paint();

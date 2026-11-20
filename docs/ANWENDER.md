@@ -730,7 +730,9 @@ Für **DWD Online** lässt sich die **Ist-Temperatur** separat einstellen:
   Messzeit bzw. ob gerade kein frischer Wert vorliegt.
 - **Eigenes FHEM-Thermometer:** Wählen Sie ein Device und dessen numerisches
   Temperatur-Reading in Grad Celsius. Der Wert wird nur aus FHEM gelesen
-  und nicht an Bright Sky gesendet.
+  und nicht an Bright Sky gesendet. Unter **Anzeigename der Quelle** wählen
+  Sie Gerätename, FHEM-Alias oder eigenen Text. Fehlt der Alias, erscheint
+  der Gerätename. Die Anzeige **Quelle: …** ändert den Widget-Titel nicht.
 
 Wenn die gewählte Quelle keinen frischen Wert liefert, wechselt die Anzeige
 mit Hinweis zur DWD-Automatik. Gibt es auch dort keinen frischen Wert, bleibt
