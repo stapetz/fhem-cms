@@ -55,6 +55,11 @@ Freeform-Seitenwechsel
 - Der Editor bietet Resize, Tastatursteuerung und magnetische Hilfslinien.
 - Vor dem ersten Schema-6-Entwurf wird eine Sicherung angelegt. Refs #212.
 
+2026-11-20 - 1.20.11-dev: Uhr: laufende Zeiger und korrekte Berliner Ortszeit
+- Die Uhr laeuft nach dem Einhaengen in Freeform weiter. Refs #216.
+- Zeiger und Digitalanzeige stimmen auch bei Sommerzeit und um Mitternacht
+  ueberein.
+
 2026-11-14 - 1.11.0: VolvoConnect, Solar und Energiefluss und einheitliches
 Widgetdesign
 - VolvoConnect-Widget mit Kompakt-/Vollansicht und Info-/Aktionspopup.
