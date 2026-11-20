@@ -115,8 +115,7 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
       assert.equal(root.style['--cms-widget-title-align'], 'right');
       view.destroy();
       const editor = mountSchema5Widgets(api, root, current, 'one', navigation, services, new Map(),
-        { onEdit() {}, onChange() {}, onDuplicate(id) { assert.equal(id, 'html'); },
-          onSaveBlueprint(id) { assert.equal(id, 'html'); } });
+        { onEdit() {}, onChange() {}, onDuplicate(id) { assert.equal(id, 'html'); } });
       assert.equal('data-responsive' in root.attributes, false, 'editing is never reflowed');
       assert.ok(root.children.every((child) => !('--cms-widget-fraction' in child.style)));
       assert.ok(root.children.every((child) => !('--cms-widget-padding' in child.style)));
@@ -128,8 +127,7 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
       assert.equal(duplicate.attributes['aria-label'], 'Widget „html“ duplizieren');
       duplicate.listeners.click();
       const blueprint = tools.children.find((child) => child.className === 'cms-widget-blueprint');
-      assert.ok(blueprint, 'widget template control is rendered in the editor');
-      blueprint.listeners.click();
+      assert.equal(blueprint, undefined, 'widget template control is absent');
       assert.deepEqual(current, before);
       editor.destroy();
     }

@@ -221,7 +221,7 @@ Geräte lassen sich später im Editor hinzufügen.
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
 - **Bearbeiten:** Seiteneinstellungen (Theme, Widget-Rahmen, Titelausrichtung und Rastergröße)
   sowie die globale FHEM-CMS Administration, wenn freigegeben.
-- **Einfügen:** Widget hinzufügen (mit Suche), Gerät hinzufügen und Widget-Vorlagen.
+- **Einfügen:** Widget hinzufügen (mit Suche) oder Gerät hinzufügen. Vorhandene Widgets lassen sich direkt am Widget duplizieren.
 - **Ansicht:** Vorschau, Raster anzeigen und Widgets automatisch anordnen.
   Die Rasteranzeige wird dauerhaft pro CMS in diesem Browser gespeichert,
   unabhängig vom Entwurf. Auf anderen Browsern oder Geräten gilt deren eigene Wahl.

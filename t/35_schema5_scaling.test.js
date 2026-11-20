@@ -136,7 +136,7 @@ for (const [name, fixtures] of [
   ['modal page preserves the main page and closes by keyboard and backdrop', [['62_page_modal.html', 35]]],
   ['themes use and restore page backgrounds', [['55_liquid_glass.html', 63]]],
   ['page settings preview shows the real phone page without saving', [['57_settings_preview.html', 25]]],
-  ['page and widget duplication and blueprint actions preserve drafts and live configuration',
+  ['page and widget duplication preserve drafts and live configuration',
     [['59_page_duplicate.html', 21]]],
   ['Widget-Vorlagen speichern, Device-Referenzen ersetzen und als Entwurf einfügen',
     [['67_blueprints.html', 16]]],

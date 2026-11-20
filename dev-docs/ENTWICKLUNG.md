@@ -51,9 +51,9 @@ unter „Seiteneinstellungen“. `layoutformat` meldet die Unterstützung; der
 Browser verwendet dann `version6state` und `version6draft`, welche auch
 Schema 5 bedienen. Alte `version5`-Befehle bleiben unverändert. „Datei“
 bietet JSON-Import als Entwurf und Export des aktuellen Entwurfs bzw.
-Live-Stands, jeweils ohne Mediendateien. Widget-Vorlagen speichern bewusst
-die Widget-Konfiguration und eine Raster-Startgröße, nicht die Geometrie
-der Ursprungsseite. Prüfungen: `prove -l t/91_schema6_validation.t
+Live-Stands, jeweils ohne Mediendateien. Der Editor bietet keine
+Widget-Vorlagen an; vorhandene Widgets lassen sich direkt duplizieren.
+Bestehende Vorlagendaten werden nicht gelöscht. Prüfungen: `prove -l t/91_schema6_validation.t
 t/92_schema6_persistence.t` und `node --test t/93_freeform.test.js`.
 
 Freeform ist eine optionale Seitenalternative für Grundrisse und Wandtablets,

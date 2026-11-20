@@ -271,7 +271,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     await new Promise(resolve => setTimeout(resolve, 0));
     assert.equal(editMenu.children[1].children[0].textContent, 'Seiteneinstellungen „A“');
     assert.deepEqual(insertMenu.children[1].children.map((item) => item.textContent),
-      ['Widget hinzufügen', 'Gerät hinzufügen', 'Widget-Vorlagen']);
+      ['Widget hinzufügen', 'Gerät hinzufügen']);
     assert.deepEqual(viewMenu.children[1].children.map((item) => item.textContent),
       ['Vorschau', 'Raster anzeigen', 'Widgets automatisch anordnen']);
     const gridToggle = viewMenu.children[1].children[1];
