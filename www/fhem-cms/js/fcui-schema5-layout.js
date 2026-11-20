@@ -44,6 +44,13 @@ function validateLayout(config, includeNavigation = true) {
     throw new Error('Ungültige Titelausrichtung');
   }
   const nav = geometry(config.navigation?.grid, columns);
+  const {pageCanvas, pageNavigationRect} = config.settings;
+  if (Object.hasOwn(config.settings, 'pageCanvas')) validateFreeformCanvas(pageCanvas);
+  if (Object.hasOwn(config.settings, 'pageNavigationRect')) {
+    if (!pageCanvas) throw new Error('Ungültige gemeinsame Navigation');
+    validateFreeformWidget({id: 'Navigation', rect: pageNavigationRect}, pageCanvas);
+    if (Object.hasOwn(pageNavigationRect, 'z')) throw new Error('Ungültige gemeinsame Navigation');
+  }
   const sharedSize = config.settings.sharedFreeformSize;
   const start = config.pages[0];
   if (Object.hasOwn(config.settings, 'sharedFreeformSize')

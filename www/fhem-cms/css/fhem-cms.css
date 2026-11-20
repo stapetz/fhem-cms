@@ -2196,6 +2196,15 @@ html:not(.cms-view) body {
 
 .cms-freeform-footprint { position: relative; overflow: clip; }
 .cms-freeform-fit .cms-freeform-footprint { margin-inline: auto; }
+.cms-shared-grid-pane {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.cms-shared-grid-pane .cms-shared-navigation-placeholder { visibility: hidden; pointer-events: none; }
+.cms-freeform-stack .cms-shared-grid-pane { position: static; overflow: visible; }
+.cms-freeform-stack .cms-shared-grid-pane .cms-shared-navigation-placeholder { display: none; }
 .cms-freeform-compact-navigation { position: relative; z-index: 1; min-height: 44px; margin-bottom: .5rem; }
 .cms-freeform-compact-navigation .cms-nav {
   position: absolute;

@@ -35,16 +35,16 @@ Menü und Dialog zeigen den Namen der aktuellen Seite. Browserregression:
 `t/93_freeform.html` prüft wiederholte Raster-/Freeform-Wechsel mit einem hohen
 Raster, die Navigationsposition und acht tatsächliche GridStack-Griffe.
 
-Die Navigation kann pro Freeform-Seite eine optionale `navigationRect`
-(`x`, `y`, `w`, `h`) haben. Ohne Rechteck wird das gemeinsame Raster
-als Ausgangspunkt verwendet. Änderungen an der Pixel-Navigation ändern
-das gemeinsame Raster nicht. Die Canvas-Maße skalieren Widget- und gespeicherte
-Navigationsrechtecke proportional, ausgehend vom unveränderten Entwurf.
-`settings.sharedFreeformSize` (Schema 6) speichert die Vererbung von Breite
-und Höhe der Startseite. Sie gilt auch für später umgestellte Freeform-Seiten.
-Rasterseiten und andere Canvas-Einstellungen bleiben unverändert. Nach dem
-Abschalten bleiben die zuletzt übernommenen Maße erhalten. Der Dialog blendet
-geerbte Größen- und Hintergrundbild-Steuerelemente aus und nennt die Startseite.
+`settings.pageCanvas` speichert Maße, Skalierung, Fangraster und Mobilverhalten
+für Raster und Freeform. Nur die Startseite bietet diese Eingaben an.
+`settings.pageNavigationRect` speichert das gemeinsame Navigationsrechteck;
+ohne Rechteck dient das Navigationsraster als Ausgangspunkt. Bestehende
+Freeform-Konfigurationen nutzen zunächst die Maße und Navigation der Startseite;
+reine Alt-Raster-Konfigurationen behalten ohne Größenwahl ihre automatische
+Browserbreite. Änderungen am Canvas skalieren Pixelrechtecke proportional,
+ohne Rasterpositionen umzuschreiben. Überlange Rasterinhalte scrollen im
+gemeinsamen Rahmen, ohne die Navigation mitzubewegen. Die frühere Option
+`sharedFreeformSize` bleibt lesbar, ist aber nicht mehr im Editor verfügbar.
 
 Implementierung auf `dev` (Phase 1): Der Editor aktiviert Freeform pro Seite
 unter „Seiteneinstellungen“. `layoutformat` meldet die Unterstützung; der

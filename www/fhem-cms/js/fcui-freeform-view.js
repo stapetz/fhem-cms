@@ -1,6 +1,6 @@
 import { DEFAULT_CANVAS, fitFreeformRect, freeformReadingOrder } from './fcui-freeform-layout.js';
 
-export function mountFreeform(root, page, navigation, render, {background, editing, phone, tablet, navigationGrid, columns} = {}) {
+export function mountFreeform(root, page, navigation, render, {background, editing, phone, tablet, navigationGrid, columns, grid} = {}) {
   const doc = root.ownerDocument;
   const browser = doc.defaultView;
   const box = className => Object.assign(doc.createElement('div'), {className});
@@ -23,6 +23,11 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   setFreeformBox(navBox, {...navigationRect, z: 10000});
   navBox.append(navigation);
   canvas.append(navBox);
+  if (grid) {
+    const pane = box('cms-shared-grid-pane');
+    pane.append(grid);
+    canvas.prepend(pane);
+  }
   if (background) canvas.style.backgroundImage = `url("${new URL(background, browser.location.href).href}")`;
   for (const widget of page.widgets) {
     const wrapper = box('cms-freeform-widget');
@@ -61,6 +66,8 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     if (stack !== stacked) {
       stacked = stack;
       viewport.classList.toggle('cms-freeform-stack', stack);
+      grid?.toggleAttribute('data-responsive', stack);
+      grid?.toggleAttribute('data-mobile-layout', stack);
       for (const widget of stack ? freeformReadingOrder(page.widgets) : page.widgets) {
         const node = wrappers.get(widget.id);
         node.hidden = stack && widget.hideOnMobile === true;

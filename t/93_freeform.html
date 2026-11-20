@@ -49,7 +49,8 @@
     view.destroy();
     root.replaceChildren();
     root.style.width = '800px';
-    const config = {schemaVersion: 6, settings: {layoutMode:'grid',gridColumns:12},
+    const config = {schemaVersion: 6, settings: {layoutMode:'grid',gridColumns:12, pageCanvas:page.canvas,
+      pageNavigationRect:{x:50,y:350,w:500,h:55}},
       navigation: {grid:{col:1,row:1,w:12,h:1}}, pages:[
         {id:'grid', widgets:[{id:'text',type:'text',markdown:'Grid',grid:{col:1,row:12,w:4,h:3}}]},
         {id:'canvas',layoutMode:'freeform',canvas:page.canvas,navigationRect:{x:50,y:350,w:500,h:55},widgets:page.widgets.map(widget => ({
@@ -66,7 +67,7 @@
     } else if (new URLSearchParams(location.search).has('navigation')) {
       root.classList.add('cms-grid-guides');
       editing.onFreeformChange = (id, rect) => { result.dataset.saved = JSON.stringify({id, rect}); };
-      const freeform = mountSchema5Widgets(GridStack, root, config, 'canvas', document.createElement('nav'), {}, new Map(), editing);
+      const freeform = mountSchema5Widgets(GridStack, root, config, 'grid', document.createElement('nav'), {}, new Map(), editing);
       window.addEventListener('pagehide', () => freeform.destroy(), {once:true});
       result.textContent = 'navigation ready';
     } else {
@@ -75,13 +76,20 @@
     for (let i=0;i<2;i++) {
       const grid = mountSchema5Widgets(GridStack, root, config, 'grid', document.createElement('nav'), {}, new Map(), editing);
       check(root.querySelectorAll('.grid-stack-item:not(.cms-responsive-navigation) > .ui-resizable-handle').length === 8, 'eight native Grid resize handles');
-      check(parseFloat(root.style.height) > 500, 'tall Grid gets inline height');
+      const raster = root.querySelector('.cms-shared-canvas-grid');
+      check(parseFloat(raster.style.height) > 500, 'tall Grid gets inline height inside the shared frame');
+      const gridBounds = root.querySelector('.cms-freeform-canvas').getBoundingClientRect();
+      const gridNav = root.querySelector('.cms-freeform-navigation').getBoundingClientRect();
       grid.destroy();
       const freeform = mountSchema5Widgets(GridStack, root, config, 'canvas', document.createElement('nav'), {}, new Map(), editing);
       check(root.style.height === '', 'Grid height does not survive in Freeform');
       check(Math.abs(root.querySelector('.cms-freeform-canvas').getBoundingClientRect().top - canvasStart) < 2, 'canvas starts at top after Grid');
       check(root.querySelector('.cms-freeform-canvas .cms-freeform-navigation nav'), 'navigation is inside canvas');
       check(root.querySelector('.cms-freeform-navigation').style.left === '50px', 'custom navigation position');
+      const size = root.querySelector('.cms-freeform-canvas').getBoundingClientRect();
+      const navSize = root.querySelector('.cms-freeform-navigation').getBoundingClientRect();
+      check(size.width === gridBounds.width && size.height === gridBounds.height, 'canvas has equal dimensions in both modes');
+      check(['x','y','width','height'].every(key => navSize[key] === gridNav[key]), 'navigation has identical bounds across modes');
       check(root.querySelector('.cms-freeform-widget > .cms-widget-tools > .cms-widget-config'), 'widget actions are local');
       freeform.destroy();
     }

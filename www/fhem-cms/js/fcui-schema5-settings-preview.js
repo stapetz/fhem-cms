@@ -60,7 +60,7 @@ export class Schema5SettingsPreview {
 
   update(config, preset) {
     this.config = config;
-    const canvas = config.pages.find(page => page.id === this.pageId)?.canvas;
+    const canvas = config.settings.pageCanvas ?? config.pages.find(page => page.id === this.pageId)?.canvas;
     const size = canvas ? deviceSize(preset, false) || canvas : deviceSize('iphone-se', true);
     const type = canvas ? previewDeviceType(preset) : 'mobile';
     this.width = size.width;
@@ -131,7 +131,11 @@ export function listenForSettingsPreview({ view, browser = window }) {
         view.root.style.setProperty('--cms-widget-title-align', config.settings.titleAlign || 'left');
         const page = config.pages.find(entry => entry.id === pageId);
         const previous = view.config.pages.find(entry => entry.id === pageId);
+        const sharedFrameChanged = ['pageCanvas', 'pageNavigationRect'].some(key =>
+          JSON.stringify(view.config.settings[key]) !== JSON.stringify(config.settings[key]));
+        const sharedBackgroundChanged = config.settings.pageCanvas && background !== schema5PageBackground(view.config, pageId);
         if (view.current !== pageId || view.config.settings.gridColumns !== config.settings.gridColumns
+          || sharedFrameChanged || sharedBackgroundChanged
           || ((page?.layoutMode === 'freeform' || previous?.layoutMode === 'freeform')
             && (JSON.stringify(page) !== JSON.stringify(previous)
               || background !== schema5PageBackground(view.config, pageId)))) {
@@ -140,7 +144,7 @@ export function listenForSettingsPreview({ view, browser = window }) {
           await view.showPage(pageId);
         } else {
           view.config = config;
-          if (page?.layoutMode === 'freeform') root.style.setProperty('--cms-page-image', 'none');
+          if (config.settings.pageCanvas || page?.layoutMode === 'freeform') root.style.setProperty('--cms-page-image', 'none');
         }
         if (!pending && !closed) browser.parent.postMessage({ type: UPDATED }, origin);
       }

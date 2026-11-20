@@ -21,7 +21,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.20.7-dev';
+our $FHEMCMS_VERSION = '1.20.8-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -896,6 +896,36 @@ sub FHEMCMS_ValidateConfig {
         return undef;
     };
 
+    my $validateCanvas = sub {
+        my ($canvas) = @_;
+        my $error = $exact->($canvas, 'canvas', ['width', 'height'], ['scaling', 'snapGrid', 'mobileBehavior']);
+        return $error if ($error);
+        for my $dim ('width', 'height') {
+            return "Ungueltiger Wert fuer canvas.$dim" if (!$isPixelInt->($canvas->{$dim}, 200, 7680));
+        }
+        return 'Ungueltiger Wert fuer canvas.scaling'
+            if (exists($canvas->{scaling}) && (!defined($canvas->{scaling}) || ref($canvas->{scaling})
+                || $canvas->{scaling} !~ /\A(?:fit|width|none)\z/));
+        if (exists($canvas->{snapGrid})) {
+            my $snap = $canvas->{snapGrid};
+            return 'Ungueltiger Wert fuer canvas.snapGrid'
+                if (!$isPixelInt->($snap, 1, 10) || ($snap != 1 && $snap != 5 && $snap != 10));
+        }
+        return 'Ungueltiger Wert fuer canvas.mobileBehavior'
+            if (exists($canvas->{mobileBehavior}) && (!defined($canvas->{mobileBehavior}) || ref($canvas->{mobileBehavior})
+                || $canvas->{mobileBehavior} !~ /\A(?:stack|scale)\z/));
+        return undef;
+    };
+    my $validateNavigationRect = sub {
+        my ($rect, $canvas) = @_;
+        my $error = $exact->($rect, 'navigationRect', ['x', 'y', 'w', 'h'], []);
+        return $error if ($error);
+        return 'Ungueltige Freeform-Geometrie der Navigation'
+            if (!$isPixelInt->($rect->{x}, 0, $canvas->{width}) || !$isPixelInt->($rect->{y}, 0, $canvas->{height})
+                || !$isPixelInt->($rect->{w}, 10, $canvas->{width}) || !$isPixelInt->($rect->{h}, 10, $canvas->{height})
+                || $rect->{x} + $rect->{w} > $canvas->{width} || $rect->{y} + $rect->{h} > $canvas->{height});
+        return undef;
+    };
     my $err = $exact->($config, 'Konfiguration', ['schemaVersion', 'pages'], ['navigation', 'theme', 'settings']);
     return $err if ($err);
     return 'Nicht unterstuetzte schemaVersion'
@@ -903,9 +933,19 @@ sub FHEMCMS_ValidateConfig {
     if (exists($config->{settings})) {
         my @settings = ('showFrames', 'layoutMode', 'gridColumns', 'titleAlign');
         push(@settings, 'sharedBackground', 'liquidIntensity', 'liquidTransparency') if ($fcui);
+        push(@settings, 'pageCanvas', 'pageNavigationRect') if ($fcui);
         push(@settings, 'sharedFreeformSize') if ($targetSchema == 6);
         $err = $exact->($config->{settings}, 'settings', [], \@settings);
         return $err if ($err);
+        if (exists($config->{settings}{pageCanvas})) {
+            $err = $validateCanvas->($config->{settings}{pageCanvas});
+            return $err if ($err);
+        }
+        if (exists($config->{settings}{pageNavigationRect})) {
+            return 'Gemeinsame Navigation erfordert eine Seitengroesse' if (!exists($config->{settings}{pageCanvas}));
+            $err = $validateNavigationRect->($config->{settings}{pageNavigationRect}, $config->{settings}{pageCanvas});
+            return $err if ($err);
+        }
         return 'Ungueltiger Wert fuer layoutMode'
             if (exists($config->{settings}{layoutMode}) && (ref($config->{settings}{layoutMode})
                 || !defined($config->{settings}{layoutMode})
@@ -996,30 +1036,11 @@ sub FHEMCMS_ValidateConfig {
         my $freeform = ($page->{layoutMode} // 'grid') eq 'freeform';
         my $canvas = $page->{canvas};
         if ($freeform) {
-            $err = $exact->($canvas, 'canvas', ['width', 'height'], ['scaling', 'snapGrid', 'mobileBehavior']);
+            $err = $validateCanvas->($canvas);
             return $err if ($err);
-            for my $dim ('width', 'height') {
-                return "Ungueltiger Wert fuer canvas.$dim" if (!$isPixelInt->($canvas->{$dim}, 200, 7680));
-            }
-            return 'Ungueltiger Wert fuer canvas.scaling'
-                if (exists($canvas->{scaling}) && (!defined($canvas->{scaling}) || ref($canvas->{scaling})
-                    || $canvas->{scaling} !~ /\A(?:fit|width|none)\z/));
-            if (exists($canvas->{snapGrid})) {
-                my $snap = $canvas->{snapGrid};
-                return 'Ungueltiger Wert fuer canvas.snapGrid'
-                    if (!$isPixelInt->($snap, 1, 10) || ($snap != 1 && $snap != 5 && $snap != 10));
-            }
-            return 'Ungueltiger Wert fuer canvas.mobileBehavior'
-                if (exists($canvas->{mobileBehavior}) && (!defined($canvas->{mobileBehavior}) || ref($canvas->{mobileBehavior})
-                    || $canvas->{mobileBehavior} !~ /\A(?:stack|scale)\z/));
             if (exists($page->{navigationRect})) {
-                my $rect = $page->{navigationRect};
-                $err = $exact->($rect, 'navigationRect', ['x', 'y', 'w', 'h'], []);
+                $err = $validateNavigationRect->($page->{navigationRect}, $canvas);
                 return $err if ($err);
-                return 'Ungueltige Freeform-Geometrie der Navigation'
-                    if (!$isPixelInt->($rect->{x}, 0, $canvas->{width}) || !$isPixelInt->($rect->{y}, 0, $canvas->{height})
-                        || !$isPixelInt->($rect->{w}, 10, $canvas->{width}) || !$isPixelInt->($rect->{h}, 10, $canvas->{height})
-                        || $rect->{x} + $rect->{w} > $canvas->{width} || $rect->{y} + $rect->{h} > $canvas->{height});
             }
         } elsif (exists($page->{canvas}) || exists($page->{navigationRect})) {
             return 'canvas und navigationRect sind nur auf Freeform-Seiten erlaubt';

@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-20",
+  "version": "1.20.8-dev",
+  "title": "Gemeinsame Seitengroesse und Navigation",
+  "changes": [
+    "Raster und Freeform verwenden dieselben Canvas-Einstellungen. Refs #216.",
+    "Seitengroesse und Navigationsposition werden auf Start eingestellt."
+  ]
+}

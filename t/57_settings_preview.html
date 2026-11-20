@@ -173,15 +173,23 @@ if (child) {
     const mode = dialog.querySelector('.cms-freeform-mode select');
     mode.value = 'freeform';
     mode.dispatchEvent(new Event('change'));
-    const preset = selectWith('ipad-air');
+    check(!dialog.querySelector('.cms-freeform-preset'), 'non-Start layout mode has no size preset');
+    dialog.querySelector('.cms-panel-close').click();
+    new Schema5PagePanel({ root: dialog, controller, pageId: 'start', token: 'test', freeformSupported: true,
+      browser: { ...window, confirm: () => true },
+      services: {createSettingsPreview: ({pageId}) => new Schema5SettingsPreview({browser: window, pageId})},
+      onClose: value => { outcome = value; } });
+    dialog.showModal();
+    const startFrame = dialog.querySelector('.cms-settings-preview iframe');
+    const preset = dialog.querySelector('.cms-freeform-preset select');
     for (const [id, width, height, type] of [
       ['ipad-air', 820, 1180, 'tablet'], ['iphone-15', 393, 852, 'mobile'], ['desktop-1280', 1280, 720, 'desktop'],
     ]) {
       preset.value = id;
       preset.dispatchEvent(new Event('change'));
-      await until(() => frameDocument()?.querySelector('.cms-freeform-canvas')
-        && frame.contentWindow.innerWidth === width && frame.contentWindow.innerHeight === height
-        && new URL(frame.contentWindow.location.href).searchParams.get('cms-device') === type,
+      await until(() => startFrame.contentDocument?.querySelector('.cms-freeform-canvas .cms-shared-canvas-grid')
+        && startFrame.contentWindow.innerWidth === width && startFrame.contentWindow.innerHeight === height
+        && new URL(startFrame.contentWindow.location.href).searchParams.get('cms-device') === type,
       `${id}: settings preview does not use the selected viewport`);
     }
     check(JSON.stringify(config) === original && writes === 0, 'preview never mutates or saves the original');
@@ -208,14 +216,12 @@ if (child) {
     const background = dialog.querySelector('.cms-page-background-controls');
     check(background.textContent.includes('Bild wird von der Startseite geerbt.') && !background.querySelector('button'),
       'inherited background replaces local image controls');
-    const [scaling] = options.querySelectorAll('select');
-    scaling.value = 'width';
-    scaling.dispatchEvent(new Event('change'));
+    check(!options.querySelector('select'), 'all canvas settings are controlled by Start');
     [...dialog.querySelectorAll('button')].find(button => button.textContent === 'Speichern').click();
     await until(() => saved, 'inherited page settings did not save');
     check(saved.pages[1].canvas.width === 820 && saved.pages[1].canvas.height === 1180
-      && saved.pages[1].canvas.scaling === 'width' && saved.pages[1].background === second,
-    'saving local scaling preserves inherited dimensions and the stored local image');
+      && saved.pages[1].background === second,
+    'saving subordinate settings preserves inherited dimensions and the stored local image');
     result.dataset.result = 'pass';
     result.textContent = JSON.stringify({ checks });
   } catch (error) {

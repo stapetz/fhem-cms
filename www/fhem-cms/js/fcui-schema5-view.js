@@ -3,7 +3,7 @@ import { Schema5LivePage } from './fcui-schema5-live.js';
 import { mountSchema5Widgets } from './fcui-schema5-widgets.js';
 import { observeSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 import { schema5PageBackground, setLiquidAppearance } from './fcui-schema5-appearance.js';
-import { isFreeform } from './fcui-freeform-layout.js';
+import { cmsPageCanvas } from './fcui-freeform-layout.js';
 
 export class Schema5View {
   constructor({ GridStack, root, status, config, client, services, browser = window, editing, onPageChange }) {
@@ -131,7 +131,7 @@ export class Schema5View {
       const background = schema5PageBackground(this.config, pageId);
       const image = background
         ? `url("${new URL(background, this.browser.location.href).href}")` : 'none';
-      document.documentElement.style.setProperty('--cms-page-image', isFreeform(page) ? 'none' : image);
+      document.documentElement.style.setProperty('--cms-page-image', cmsPageCanvas(this.config) ? 'none' : image);
       setLiquidAppearance(document.documentElement, this.config.settings);
       const navigation = this.navigation(pageId);
       const services = { ...this.services, freeformBackground: background, openPageModal: (id, size) => this.openModal(id, size) };
@@ -151,7 +151,7 @@ export class Schema5View {
           onDelete: typeof this.editing.onDelete === 'function'
             ? (id) => this.editing.onDelete(pageId, id) : undefined,
         });
-      this.stopNavigation = isFreeform(page) ? null : observeSchema5Navigation(navigation,
+      this.stopNavigation = cmsPageCanvas(this.config) ? null : observeSchema5Navigation(navigation,
         () => Boolean(this.editing) || getComputedStyle(this.root).display !== 'flex');
       const view = this.view;
       this.live = new Schema5LivePage(this.client, page.widgets,
@@ -196,7 +196,7 @@ export class Schema5View {
     dialog.dataset.size = size;
     dialog.setAttribute('aria-labelledby', 'cms-modal-title');
     const background = schema5PageBackground(this.config, pageId);
-    if (background && !isFreeform(page)) dialog.style.backgroundImage = `url("${new URL(background, this.browser.location.href).href}")`;
+    if (background && !cmsPageCanvas(this.config)) dialog.style.backgroundImage = `url("${new URL(background, this.browser.location.href).href}")`;
     const header = document.createElement('header');
     const title = document.createElement('h2');
     title.id = 'cms-modal-title'; title.textContent = page.title;
@@ -225,7 +225,7 @@ export class Schema5View {
       view = mountSchema5Widgets(this.GridStack, grid, this.config, pageId, navigation,
         { ...this.services, freeformBackground: background, openPageModal: (id, nextSize) => this.openModal(id, nextSize) },
         this.live.snapshots);
-      const stopNavigation = isFreeform(page) ? null : observeSchema5Navigation(navigation, () => getComputedStyle(grid).display !== 'flex');
+      const stopNavigation = cmsPageCanvas(this.config) ? null : observeSchema5Navigation(navigation, () => getComputedStyle(grid).display !== 'flex');
       this.modal = { dialog, view, stopNavigation, originalFocus };
       dialog.showModal();
       close.focus();
