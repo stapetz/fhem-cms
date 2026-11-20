@@ -364,7 +364,7 @@ export class Schema5PagePanel {
     else extras.append(element('p', `Seite erbt Größeneinstellungen von der Startseite (${initial.width} × ${initial.height} px).`));
     const width = size('Breite (px)', initial.width);
     const height = size('Höhe (px)', initial.height);
-    const scaling = select(extras, 'Skalierung', [['fit', 'Browserfläche ausnutzen (proportional)'], ['width', 'Breite füllen'], ['none', '1:1, bei Platzmangel verkleinern']], initial.scaling);
+    const scaling = select(extras, 'Skalierung', [['fit', 'Automatisch (Browserbreite nutzen)'], ['width', 'Breite füllen'], ['none', '1:1, bei Platzmangel verkleinern']], initial.scaling);
     const snap = select(extras, 'Fangraster', [1, 5, 10].map(n => [n, `${n} px`]), initial.snapGrid);
     const mobile = select(extras, 'Smartphone und Tablet', [['stack', 'Stapeln'], ['scale', 'Pixel-Layout behalten']], initial.mobileBehavior);
     for (let index = extras.children.length - 3; index < extras.children.length; index += 1) {

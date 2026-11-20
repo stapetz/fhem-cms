@@ -21,6 +21,16 @@
   const check = (condition, name) => { if (!condition) throw new Error(name); };
   const paint = () => new Promise(resolve => setTimeout(resolve, 150));
   try {
+    if (new URLSearchParams(location.search).has('responsive')) {
+      root.style.width = '100%';
+      const nav = Object.assign(document.createElement('nav'), {className:'cms-nav'});
+      const burger = Object.assign(document.createElement('button'), {className:'cms-nav-burger', textContent:'☰'});
+      nav.append(burger);
+      const canvas = {width:1000, height:1000, scaling:'fit', mobileBehavior:'stack'};
+      const responsive = mountFreeform(root, {...page, canvas}, nav, render);
+      window.addEventListener('pagehide', () => responsive.destroy(), {once:true});
+      result.textContent = 'responsive ready';
+    } else {
     let view = mountFreeform(root, page, document.createElement('nav'), render);
     await paint();
     check(view.getScale() > .75 && view.getScale() <= .8, 'width scale');
@@ -30,8 +40,12 @@
     root.replaceChildren();
     root.style.width = '500px';
     view = mountFreeform(root, page, document.createElement('nav'), render);
-    check([...view.canvas.querySelectorAll('[data-widget-id]')].map(node => node.dataset.widgetId).join() === 'left,right,hidden', 'mobile DOM order');
-    check(view.wrappers.get('hidden').getBoundingClientRect().width === 0, 'mobile visibility');
+    if (matchMedia('(orientation: portrait)').matches) {
+      check([...view.canvas.querySelectorAll('[data-widget-id]')].map(node => node.dataset.widgetId).join() === 'left,right,hidden', 'mobile DOM order');
+      check(view.wrappers.get('hidden').getBoundingClientRect().width === 0, 'mobile visibility');
+    } else {
+      check(view.getScale() <= .5 && !view.canvas.closest('.cms-freeform-stack'), 'narrow landscape retains canvas');
+    }
     view.destroy();
     root.replaceChildren();
     root.style.width = '800px';
@@ -72,7 +86,8 @@
       freeform.destroy();
     }
     view = mountFreeform(root, page, document.createElement('nav'), render, {phone:true});
-    check(view.canvas.closest('.cms-freeform-stack'), 'wide phone preview stacks');
+    check(Boolean(view.canvas.closest('.cms-freeform-stack')) === matchMedia('(orientation: portrait)').matches,
+      'phone preview respects orientation');
     view.destroy();
     root.replaceChildren();
     const nav = document.createElement('nav');
@@ -93,12 +108,42 @@
       key:'ArrowRight', shiftKey:true, bubbles:true,
     }));
     check(saved?.id === 'left' && saved.rect.x === 30, 'keyboard move');
+    saved = undefined;
+    const geometry = view.wrappers.get('left').querySelector('.cms-widget-geometry');
+    geometry.click();
+    const properties = root.querySelector('.cms-freeform-properties');
+    const [x, y, width, height] = properties.querySelectorAll('input[type=number]');
+    const level = properties.querySelector('output');
+    check([...properties.querySelectorAll('.cms-freeform-property-row')].map(row => row.getAttribute('aria-label')).join() ===
+      'Position,Größe,Ebene', 'geometry uses three groups');
+    x.value = 60;
+    properties.querySelector('[aria-label="Ebene um eins erhöhen"]').click();
+    check(level.value === '2' && !saved, 'layer changes locally by one');
+    x.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true, cancelable:true}));
+    check(!properties.matches(':popover-open') && document.activeElement === geometry && !saved, 'ESC cancels and returns focus');
+    geometry.click();
+    check(x.value === '20' && level.value === '1', 'reopen shows saved values after ESC');
+    width.value = 205;
+    properties.querySelector('[aria-label="Abbrechen"]').click();
+    geometry.click();
+    check(width.value === '200' && !saved, 'Abbrechen discards width');
+    [x.value, y.value, width.value, height.value] = ['30','40','210','125'];
+    properties.querySelector('[aria-label="Ebene um eins verringern"]').click();
+    properties.querySelector('[aria-label="Geometrie übernehmen"]').click();
+    check(JSON.stringify(saved?.rect) === '{"x":30,"y":40,"w":210,"h":125,"z":0}' &&
+      !properties.matches(':popover-open'), 'Übernehmen saves the full geometry once');
+    geometry.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true}));
+    check(!root.querySelector('.cms-widget-selected, .cms-freeform-handles') &&
+      !view.wrappers.get('left').contains(document.activeElement), 'ESC clears selection and its focused move outline');
     window.addEventListener('pagehide', () => { cleanup(); view.destroy(); }, {once:true});
     root.addEventListener('freeform-check', () => { result.dataset.saved = JSON.stringify(saved); });
-    result.textContent = 'pass';
+    result.textContent = '{"checks": 1}';
+    result.dataset.result = 'pass';
+    }
     }
   } catch (error) {
     result.textContent = `fail: ${error.message}`;
+    result.dataset.result = 'fail';
   }
 </script>
 </html>
