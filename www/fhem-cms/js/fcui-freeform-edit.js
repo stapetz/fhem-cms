@@ -52,7 +52,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
   const controls = doc.createElement('div');
   controls.className = 'cms-freeform-properties';
   controls.setAttribute('popover', 'auto');
-  let selected, active, preview, raf;
+  let selected, active, preview, raf, dragged;
   const button = (parent, text, label, action) => {
     const node = doc.createElement('button');
     node.type = 'button';
@@ -62,7 +62,14 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
     parent.append(node);
     return node;
   };
-  button(navigation, '✎', 'Navigation einstellen', () => editing.onEdit('__nav'));
+  const nav = {id: '__nav', rect: view.navigationRect};
+  const entries = new Map([['__nav', view.navBox], ...view.wrappers]);
+  const widgets = [nav, ...page.widgets];
+  const size = doc.createElement('span');
+  size.className = 'cms-widget-dimensions';
+  if (!view.navBox.querySelector('.cms-widget-config')) {
+    button(navigation, '✎', 'Navigation einstellen', () => editing.onEdit('__nav'));
+  }
   const details = doc.createElement('div');
   controls.append(details);
   const fields = {};
@@ -98,8 +105,12 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
   function draw(rect, guides = []) {
     overlay.querySelectorAll('.cms-freeform-guide').forEach(node => node.remove());
     if (!selected || !rect) return;
-    setFreeformBox(view.wrappers.get(selected.id), rect);
+    setFreeformBox(entries.get(selected.id), selected === nav ? {...rect, z: 10000} : rect);
     setFreeformBox(handles, {...rect, z: 1});
+    if (active && active.direction !== 'move') {
+      handles.append(size);
+      size.textContent = `${rect.w} × ${rect.h} px`;
+    } else size.remove();
     for (const [axis, value] of guides) {
       const line = doc.createElement('div');
       line.className = `cms-freeform-guide cms-freeform-guide-${axis}`;
@@ -109,12 +120,12 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
     }
   }
   function select(id, focus = false) {
-    if (selected) view.wrappers.get(selected.id).classList.remove('cms-widget-selected');
+    if (selected) entries.get(selected.id).classList.remove('cms-widget-selected');
     controls.remove();
-    selected = page.widgets.find(widget => widget.id === id);
+    selected = widgets.find(widget => widget.id === id);
     overlay.replaceChildren();
     if (!selected) return;
-    const wrapper = view.wrappers.get(id);
+    const wrapper = entries.get(id);
     wrapper.classList.add('cms-widget-selected');
     handles = doc.createElement('div');
     handles.className = 'cms-freeform-handles';
@@ -128,11 +139,14 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
     fields.hideOnMobile.checked = selected.hideOnMobile === true;
     if (focus) wrapper.querySelector('[data-dir="move"]')?.focus({preventScroll: true});
   }
-  for (const [id, wrapper] of view.wrappers) {
+  for (const [id, wrapper] of entries) {
     const tools = wrapper.querySelector('.cms-widget-tools');
-    const move = tools?.querySelector('[data-dir="move"]');
+    const move = wrapper.querySelector('[data-dir="move"]');
     if (!tools || !move) continue;
-    move.addEventListener('focus', () => { if (!active && selected?.id !== id) select(id); }, options);
+    move.addEventListener('click', event => {
+      if (!active && (!dragged || event.detail === 0)) select(selected?.id === id ? undefined : id);
+    }, options);
+    if (id === '__nav') continue;
     const geometry = button(tools, '↔', 'Pixelposition und Größe einstellen', () => {
       const wasOpen = controls.parentNode === wrapper;
       if (selected?.id !== id) select(id);
@@ -153,28 +167,34 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
     geometry.className = 'cms-widget-geometry';
   }
   view.canvas.addEventListener('click', event => {
-    const widget = event.target.closest('.cms-freeform-widget');
-    if (widget && !active && selected?.id !== widget.dataset.widgetId
-      && !event.target.closest('.cms-widget-tools,.cms-freeform-properties')) select(widget.dataset.widgetId);
+    const widget = event.target.closest('.cms-freeform-widget,.cms-freeform-navigation');
+    if (widget && !active && !event.target.closest('.cms-widget-tools,.cms-freeform-properties,[data-dir="move"],a:not([aria-current])')) {
+      if (event.target.closest('a[aria-current]')) event.preventDefault();
+      const id = widget.dataset.widgetId || '__nav';
+      select(selected?.id === id ? undefined : id, selected?.id !== id);
+    }
     if (event.target === view.canvas && !active) select();
   }, options);
   view.canvas.addEventListener('pointerdown', event => {
+    dragged = false;
     const direction = event.target.dataset.dir;
     if (!direction || active || event.button !== 0) return;
-    const id = event.target.closest('.cms-freeform-widget')?.dataset.widgetId;
+    const wrapper = event.target.closest('.cms-freeform-widget,.cms-freeform-navigation');
+    const id = wrapper && (wrapper.dataset.widgetId || '__nav');
     if (id && selected?.id !== id) select(id);
     if (!selected) return;
     event.preventDefault();
     event.target.focus();
-    active = {id: event.pointerId, direction, x: event.clientX, y: event.clientY, scale: view.getScale(), moved: false};
-    overlay.setPointerCapture(event.pointerId);
+    active = {id: event.pointerId, target: event.target, direction, x: event.clientX, y: event.clientY, scale: view.getScale(), moved: false};
+    event.target.setPointerCapture(event.pointerId);
+    draw(selected.rect);
   }, options);
   function calculate(event) {
     return freeformGesture(selected.rect, active.direction,
       (event.clientX - active.x) / active.scale, (event.clientY - active.y) / active.scale,
-      page.canvas, page.widgets.filter(widget => widget !== selected), event.altKey);
+      page.canvas, widgets.filter(widget => widget !== selected), event.altKey);
   }
-  overlay.addEventListener('pointermove', event => {
+  view.canvas.addEventListener('pointermove', event => {
     if (active?.id !== event.pointerId) return;
     active.moved ||= event.clientX !== active.x || event.clientY !== active.y;
     preview = calculate(event);
@@ -182,19 +202,20 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
   }, options);
   function end(event, commit) {
     if (!active || (event.pointerId !== undefined && event.pointerId !== active.id)) return;
-    const {id} = active;
+    const {id, target, moved} = active;
     const rect = commit && (active.moved || event.clientX !== active.x || event.clientY !== active.y)
       ? calculate(event).rect : selected.rect;
     active = null;
-    if (overlay.hasPointerCapture(id)) overlay.releasePointerCapture(id);
+    dragged = moved;
+    if (target.hasPointerCapture(id)) target.releasePointerCapture(id);
     if (raf !== undefined) win.cancelAnimationFrame(raf);
     raf = undefined;
     draw(rect);
     if (commit && ['x','y','w','h'].some(key => rect[key] !== selected.rect[key])) save(rect);
   }
-  overlay.addEventListener('pointerup', event => end(event, true), options);
-  overlay.addEventListener('pointercancel', event => end(event, false), options);
-  overlay.addEventListener('lostpointercapture', event => end(event, false), options);
+  view.canvas.addEventListener('pointerup', event => end(event, true), options);
+  view.canvas.addEventListener('pointercancel', event => end(event, false), options);
+  view.canvas.addEventListener('lostpointercapture', event => end(event, false), options);
   view.canvas.addEventListener('keydown', event => {
     if (event.key === 'Escape' && controls.contains(event.target)) {
       event.preventDefault();
@@ -204,6 +225,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
       return;
     }
     if (event.key === 'Escape' && active) { event.stopPropagation(); end(event, false); return; }
+    if (event.key === 'Escape' && selected) { event.stopPropagation(); select(); return; }
     if (!selected || active || !event.target.matches('[data-dir="move"]')) return;
     const delta = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]}[event.key];
     if (!delta) return;

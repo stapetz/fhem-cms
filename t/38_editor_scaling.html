@@ -75,6 +75,7 @@ try {
   const checkHandles = () => {
     const grid = root.querySelector('.cms-grid-editable');
     for (const widget of grid.children) {
+      if (!widget.classList.contains('cms-widget-selected')) widget.click();
       const handle = widget.querySelector('.ui-resizable-se');
       const tools = widget.querySelector('.cms-widget-tools');
       const h = handle.getBoundingClientRect();
@@ -83,6 +84,7 @@ try {
         `${widget.gridstackNode.id}: tools and resize handle do not overlap`);
       check(document.elementFromPoint(h.right - 2, h.bottom - 2) === handle,
         `${widget.gridstackNode.id}: visible resize corner receives pointer`);
+      widget.click();
     }
   };
   checkHandles();

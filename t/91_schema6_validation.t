@@ -40,6 +40,13 @@ my $defaults = $json->decode($bytes);
 delete @{$defaults->{pages}[1]{canvas}}{qw(scaling snapGrid mobileBehavior)};
 $defaults->{pages}[0]{layoutMode} = 'grid';
 is(FHEMCMS_ValidateConfig($defaults, 6), undef, 'optional canvas settings and explicit grid are accepted');
+$defaults->{pages}[1]{navigationRect} = {x => 1, y => 2, w => 400, h => 48};
+is(FHEMCMS_ValidateConfig($defaults, 6), undef, 'page-specific navigation rectangle is accepted');
+$defaults->{pages}[1]{navigationRect}{w} = 1280;
+like(FHEMCMS_ValidateConfig($defaults, 6), qr/Geometrie der Navigation/, 'navigation rectangle cannot exceed canvas');
+delete $defaults->{pages}[1]{navigationRect};
+$defaults->{pages}[0]{navigationRect} = {x => 1, y => 2, w => 400, h => 48};
+like(FHEMCMS_ValidateConfig($defaults, 6), qr/nur auf Freeform-Seiten/, 'Grid page cannot store a Freeform navigation rectangle');
 
 for my $case (
     ['unknown layout', sub { $_[0]{layoutMode} = 'other' }, qr/Layoutmodus/],

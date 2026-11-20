@@ -49,6 +49,30 @@ export function fitFreeformRect(rect, canvas) {
   return {...rect, x: clamp(rect.x, 0, canvas.width - w), y: clamp(rect.y, 0, canvas.height - h), w, h};
 }
 
+export function resizeFreeformPage(page, width, height) {
+  if (!isFreeform(page) || !Array.isArray(page.widgets)) throw new Error('Freeform-Seite für Größenänderung erforderlich');
+  validateFreeformCanvas(page.canvas);
+  const canvas = {...page.canvas, width, height};
+  validateFreeformCanvas(canvas);
+  const scaleRect = rect => fitFreeformRect({
+    ...rect,
+    x: Math.round(rect.x * width / page.canvas.width),
+    y: Math.round(rect.y * height / page.canvas.height),
+    w: Math.round(rect.w * width / page.canvas.width),
+    h: Math.round(rect.h * height / page.canvas.height),
+  }, canvas);
+  for (const widget of page.widgets) {
+    widget.rect = scaleRect(widget.rect);
+    validateFreeformWidget(widget, canvas);
+  }
+  if (page.navigationRect !== undefined) {
+    page.navigationRect = scaleRect(page.navigationRect);
+    validateFreeformWidget({id: 'navigation', rect: page.navigationRect}, canvas);
+  }
+  page.canvas = canvas;
+  return page;
+}
+
 export function freeformStartRect(widget, index, canvas, columns, measured) {
   if (measured && measured.w > 0 && measured.h > 0) return fitFreeformRect({...measured, z: 1}, canvas);
   if (widget.grid) {

@@ -56,6 +56,10 @@ Standard. Datenvertrag und Migration stehen in der
   acht Griffe an Ecken und Kanten. Navigationsleiste innerhalb des Freeform-
   Canvas, im Mobilstapel als erstes Element. „Seiteneinstellungen“ zeigt
   im Menü und im Dialog den Namen der aktuellen Seite.
+- Ein Klick aktiviert Widget-Aktionen, Verschiebefläche und Größenanfasser;
+  erneuter Klick deaktiviert sie. Kein separates Verschiebesymbol. Während
+  der Größenänderung zeigt das Widget Breite und Höhe in Pixeln. Mobile
+  Stapel-Widgets wachsen mit ihrem Inhalt statt ihn in kleinen Boxen zu scrollen.
 - Freeform: Am Widget eine beschriftete Eingabeleiste für
   `X`, `Y`, Breite, Höhe, Ebene und „Auf Mobilgeräten ausblenden“ anbieten.
   Pfeile verschieben bei Editor-Fokus um 1, mit Shift um 10 Canvas-Pixel.

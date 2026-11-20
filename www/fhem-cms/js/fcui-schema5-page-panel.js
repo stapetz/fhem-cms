@@ -1,9 +1,10 @@
 import { resizeSchema5Grid, schema5GridItems, SCHEMA5_GRID_COLUMNS } from './fcui-schema5-layout.js';
 import { changePageLayout } from './fcui-schema5-layout.js';
-import { DEFAULT_CANVAS, isFreeform, validateFreeformCanvas } from './fcui-freeform-layout.js';
+import { DEFAULT_CANVAS, isFreeform, resizeFreeformPage, validateFreeformCanvas } from './fcui-freeform-layout.js';
 import { schema5PageBackground } from './fcui-schema5-appearance.js';
 import { ASSET_IMAGE, assetPathText, validateAssetState } from './asset-contract.js';
 import { LIQUID_DEFAULTS } from './fcui-schema5-appearance.js';
+import { FREEFORM_DEVICE_GROUPS, deviceSize } from './device-preview.js';
 
 function element(tag, text) {
   const result = document.createElement(tag);
@@ -42,6 +43,7 @@ export class Schema5PagePanel {
   #preview;
 
   #freeform;
+  #applyFreeformSize;
 
   constructor({ root, controller, pageId, token, services = {}, browser = window, onClose,
     freeformSupported = false, measurements }) {
@@ -285,11 +287,13 @@ export class Schema5PagePanel {
   #settings() {
     return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value,
       this.#titleAlign.value, this.#background, this.#sharedBackground?.checked ?? null,
-      this.#intensity.value, this.#transparency.value, this.#freeform?.values()]);
+      this.#intensity.value, this.#transparency.value, this.#freeform?.values(),
+      this.#applyFreeformSize?.checked ?? false]);
   }
 
   #addFreeformControls(page, measurements) {
     const section = element('fieldset');
+    section.className = 'cms-freeform-settings';
     section.append(element('legend', 'Seitenlayout'));
     const select = (parent, title, entries, value) => {
       const label = element('label', `${title} `);
@@ -306,7 +310,10 @@ export class Schema5PagePanel {
     };
     const mode = select(section, 'Modus', [['grid', 'Raster (Standard)'], ['freeform', 'Frei (Pixelgenau)']],
       page.layoutMode || 'grid');
+    const modeLabel = section.children.at(-1);
+    modeLabel.className = 'cms-freeform-mode';
     const extras = element('div');
+    extras.className = 'cms-freeform-options';
     section.append(extras);
     const initial = {...DEFAULT_CANVAS, ...page.canvas};
     if (!isFreeform(page) && measurements?.width && measurements?.height) {
@@ -316,6 +323,7 @@ export class Schema5PagePanel {
     const size = (labelText, value) => {
       const label = element('label', `${labelText} `);
       const input = element('input');
+      label.className = 'cms-freeform-dimension';
       Object.assign(input, {type: 'number', min: 200, max: 7680, step: 1, value: String(value)});
       label.append(input);
       extras.append(label);
@@ -323,22 +331,67 @@ export class Schema5PagePanel {
     };
     const width = size('Breite (px)', initial.width);
     const height = size('Höhe (px)', initial.height);
+    const presetLabel = element('label', 'Gerätegröße ');
+    presetLabel.className = 'cms-freeform-preset';
+    const preset = element('select');
+    const customSize = element('option', 'Eigene Größe');
+    customSize.value = '';
+    preset.append(customSize);
+    for (const [groupName, devices] of FREEFORM_DEVICE_GROUPS) {
+      const group = element('optgroup');
+      group.label = groupName;
+      for (const [id, name, , , landscape] of devices) {
+        const dimensions = deviceSize(id, false);
+        const orientation = landscape ? 'Querformat' : 'Hochformat';
+        const option = element('option', `${name} (${dimensions.width} × ${dimensions.height} px, ${orientation})`);
+        option.value = id;
+        group.append(option);
+      }
+      preset.append(group);
+    }
+    const exactPreset = FREEFORM_DEVICE_GROUPS.flatMap(([, devices]) => devices)
+      .find(([id]) => {
+        const dimensions = deviceSize(id, false);
+        return dimensions.width === initial.width && dimensions.height === initial.height;
+      })?.[0] || '';
+    preset.value = exactPreset;
+    preset.setAttribute('aria-label', 'Freeform-Größe nach Gerät');
+    presetLabel.append(preset);
+    extras.append(presetLabel);
     const scaling = select(extras, 'Skalierung', [['fit', 'Einpassen'], ['width', 'Breite füllen'], ['none', '1:1']], initial.scaling);
     const snap = select(extras, 'Fangraster', [1, 5, 10].map(n => [n, `${n} px`]), initial.snapGrid);
-    const mobile = select(extras, 'Smartphone', [['stack', 'Stapeln'], ['scale', 'Pixel-Layout behalten']], initial.mobileBehavior);
+    const mobile = select(extras, 'Smartphone und Tablet', [['stack', 'Stapeln'], ['scale', 'Pixel-Layout behalten']], initial.mobileBehavior);
+    for (let index = extras.children.length - 3; index < extras.children.length; index += 1) {
+      extras.children[index].className = 'cms-freeform-advanced';
+    }
     const button = (text, fn) => {
       const control = element('button', text);
       control.type = 'button';
       control.addEventListener('click', fn);
       extras.append(control);
     };
-    const setSize = (w, h) => {
+    const setSize = (w, h, presetId = '') => {
       width.value = String(w);
       height.value = String(h);
+      preset.value = presetId;
       this.#updateSettingsPreview();
     };
-    button('1280 × 800', () => setSize(1280, 800));
-    button('1920 × 1080', () => setSize(1920, 1080));
+    preset.addEventListener('change', () => {
+      const dimensions = deviceSize(preset.value, false);
+      if (dimensions) setSize(dimensions.width, dimensions.height, preset.value);
+    });
+    const update = () => {
+      extras.hidden = mode.value !== 'freeform';
+      this.#updateSettingsPreview();
+    };
+    width.addEventListener('change', () => {
+      preset.value = '';
+      update();
+    });
+    height.addEventListener('change', () => {
+      preset.value = '';
+      update();
+    });
     button('Größe aus Hintergrundbild übernehmen', () => {
       const background = this.#sharedBackground?.checked && this.#config.pages[0].id !== page.id
         ? this.#config.pages[0].background : this.#background;
@@ -356,10 +409,19 @@ export class Schema5PagePanel {
       image.onerror = () => this.#message('Hintergrundbild konnte nicht geladen werden.', true);
       image.src = new URL(background, this.#browser.location.href).href;
     });
-    const update = () => {
-      extras.hidden = mode.value !== 'freeform';
-      this.#updateSettingsPreview();
-    };
+    if (page.id === this.#config.pages[0].id) {
+      const applyLabel = element('label', 'Größe auf alle Freeform-Seiten anwenden');
+      applyLabel.className = 'cms-freeform-apply-all';
+      this.#applyFreeformSize = element('input');
+      this.#applyFreeformSize.type = 'checkbox';
+      this.#applyFreeformSize.setAttribute('aria-label',
+        'Freeform-Abmessungen auf alle Freeform-Seiten anwenden; Rasterseiten bleiben unverändert');
+      applyLabel.append(this.#applyFreeformSize);
+      extras.append(applyLabel);
+      this.#applyFreeformSize.addEventListener('change', update);
+      extras.append(element('p',
+        'Skaliert Widget- und Navigationspositionen proportional. Rasterseiten bleiben unverändert.'));
+    }
     extras.hidden = mode.value !== 'freeform';
     section.addEventListener('change', update);
     this.#form.append(section);
@@ -422,6 +484,12 @@ export class Schema5PagePanel {
       changePageLayout(candidate, this.#pageId, mode,
         {width: Number(width), height: Number(height), scaling, snapGrid: Number(snapGrid), mobileBehavior},
         this.#freeform.measurements?.boxes);
+      const targetPage = candidate.pages.find(entry => entry.id === this.#pageId);
+      if (isFreeform(targetPage) && this.#applyFreeformSize?.checked) {
+        for (const target of candidate.pages) {
+          if (target !== targetPage && isFreeform(target)) resizeFreeformPage(target, Number(width), Number(height));
+        }
+      }
     }
     return candidate;
   }

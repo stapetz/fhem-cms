@@ -371,8 +371,8 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
 
     // Navigation bearbeiten öffnet über das Stiftsymbol an der Navigationskachel
     const navWrapper = content.children[0].children[0];
-    const navTools = navWrapper.children.at(-1);
-    navTools.children[1].fire('click');
+    const navTools = navWrapper.children.find(child => child.className === 'cms-widget-tools');
+    navTools.children[0].fire('click');
     const navigationPanel = content.children[0];
     assert.equal(navigationPanel.children[0].textContent, 'Navigation bearbeiten');
     assert.equal(edit.disabled, true);
@@ -395,7 +395,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     assert.equal(previewWrapper.children.some?.((c) => c.className === 'cms-widget-tools') ?? previewWrapper.children.filter((c) => c.className === 'cms-widget-tools').length > 0, false, 'preview hides widget tools');
     previewButton.fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
-    assert.equal(content.children[0].children[0].children.at(-1).className, 'cms-widget-tools');
+    assert.ok(content.children[0].children[0].children.some(child => child.className === 'cms-widget-tools'));
     assert.equal(content.children[0].classList.contains('cms-grid-guides'), true, 'leaving preview restores enabled editing guides');
 
     edit.fire('click');
@@ -593,7 +593,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     await content.children[0].children[4].children[1].fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     const navWrapper2 = content.children[0].children[0];
-    navWrapper2.children.at(-1).children[1].fire('click');
+    navWrapper2.children.find(child => child.className === 'cms-widget-tools').children[0].fire('click');
     const navPanel = content.children[0];
     const addSection = navPanel.children[3].children[3];
     addSection.children[0].children[0].value = 'Zweite';

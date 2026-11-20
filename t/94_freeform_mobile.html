@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="de" data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Freeform mobile natural sizing regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<style>
+  .cms-shell { margin: 0; }
+  #result { white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>
+<main class="cms-shell"><div class="cms-schema5-workspace"><div id="root" class="cms-schema5-grid"></div></div></main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+// Serve the repository locally; Chrome --headless=new --virtual-time-budget=4000
+// --dump-dom http://127.0.0.1:PORT/t/94_freeform_mobile.html must report data-result="pass".
+import { mountFreeform } from '../www/fhem-cms/js/fcui-freeform-view.js';
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+
+const root = document.querySelector('#root');
+const shell = root.closest('.cms-shell');
+const output = document.querySelector('#result');
+let checks = 0, view;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const paint = () => new Promise(resolve => setTimeout(resolve, 70));
+const source = reading => ({ device: 'Demo', reading });
+const specs = [
+  { type: 'text', html: '<p>Messwert 21.5 °C</p>'.repeat(12) },
+  { type: 'text', html: `<p>${'LangerMesswert'.repeat(35)}</p>` },
+  { type: 'fhem-html', devices: ['Demo'], html: '<div><p>{{Demo:temperature}}</p>'
+    + '<p>Lokale Daten ohne FHEM-Zugriff</p>'.repeat(15)
+    + '<div id="intentional-scroll" style="height:80px;overflow:auto"><div style="height:240px">Scrollbereich</div></div></div>' },
+  { type: 'thermostat', device: 'Demo', readings: { actual: 'temperature', target: 'desiredTemperature' } },
+  { type: 'fhem-value', device: 'Demo', reading: 'temperature', unit: '°C' },
+  { type: 'fhem-switch', device: 'Demo', reading: 'state', on: 'on', off: 'off',
+    label: 'Lichtsteuerung im gesamten Wohnbereich und auf der Terrasse' },
+  { type: 'fhem-button', device: 'Demo', command: 'on',
+    label: 'Beleuchtung im gesamten Wohnbereich und auf der Terrasse schalten' },
+  { type: 'fhem-icon', device: 'Demo', reading: 'state', states: [{ value: 'on', icon: 'demo' }] },
+  { type: 'fhem-slider', device: 'Demo', command: 'pct', reading: 'pct' },
+  { type: 'fhem-select', device: 'Demo', command: 'mode', reading: 'mode', mode: 'dropdown' },
+  { type: 'fhem-chart', device: 'Demo', reading: 'temperature' },
+  { type: 'fhem-calllist', device: 'Demo', limit: 5, columns: ['state', 'party', 'timestamp', 'duration'] },
+  { type: 'fhem-table', rows: Array.from({ length: 10 }, (_, i) =>
+    ({ device: 'Demo', reading: 'power', label: `Leistung ${i}`, unit: 'W' })) },
+  { type: 'fhem-clock', style: 'analog', showDate: true, showWeekday: true },
+  { type: 'fhem-link', links: [{ id: 'one', kind: 'internal', page: 'second', text: 'Zur zweiten Seite',
+    textPosition: 'above', showText: true, target: 'self', grid: { col: 1, row: 1, w: 6, h: 3 } }] },
+  { type: 'fhem-solarflow', device: 'Demo',
+    readings: { pv: 'power', home: 'home', grid: 'grid', battery: 'battery', soc: 'soc' } },
+  { type: 'fhem-solar-energy', readings: Object.fromEntries(
+    ['pv', 'home', 'grid', 'battery', 'soc', 'day', 'month', 'year', 'total'].map(key =>
+      [key, source(key === 'pv' ? 'power' : key)])),
+    sections: ['Dach', 'Garage', 'Gartenhaus'].map(label => ({ label, readings:
+      Object.fromEntries(['total', 'hour', 'day', 'month', 'previousMonth', 'year'].map(key => [key, source(key)])) })) },
+  { type: 'fhem-volvoconnect', device: 'Demo', showGallery: true },
+  { type: 'text', html: '<p>Nur Desktop</p>', hideOnMobile: true },
+];
+const page = { canvas: { width: 1280, height: 1600, scaling: 'width', mobileBehavior: 'stack' },
+  widgets: specs.map((spec, i) => ({ ...spec, id: `w${i}`, title: `Widget ${spec.type}`,
+    rect: { x: i % 2 * 640, y: Math.floor(i / 2) * 160, w: 640, h: 150 } })) };
+const original = JSON.stringify(page);
+const values = { state: 'on', temperature: '21.5', desiredTemperature: '22', pct: '40', mode: 'eco',
+  power: '2056.5', home: '861.5', grid: '590', battery: '607', soc: '95',
+  total: '12456.78', hour: '1.23', day: '12.3', month: '123.4', previousMonth: '456.7', year: '1234.5',
+  '1-state': '=>', '1-name': 'Demo', '1-timestamp': '14.11.26 12:00', '1-duration': '00:01',
+  state_batteryChargeLevel: '83', state_electricRange: '320', state_electricRange_unit: 'km',
+  state_targetBatteryChargeLevel: '100', state_targetBatteryChargeLevel_unit: 'percentage',
+  state_chargingStatus: 'DONE', vehicle_descriptions_model: 'Volvo EX40', statistics_tripMeterManual: '785.7',
+  engine_engineStatus: 'STOPPED', doors_centralLock: 'LOCKED', tyres_frontLeft: 'NO_WARNING' };
+const snapshots = new Map([['Demo', [{ name: 'Demo', readings: values,
+  sets: 'on:noArg off:noArg pct:slider,0,1,100 mode:eco,comfort desiredTemperature:5,10,20,22,25,30' }]]]);
+const services = {
+  iconUrl: () => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E',
+  history: async () => ({ points: [] }), setCommand: async () => {},
+  pages: [{ id: 'second', title: 'Zweite Seite' }],
+};
+function mount(options = {}, canvas = page.canvas) {
+  view?.destroy();
+  root.replaceChildren();
+  const nav = document.createElement('nav');
+  nav.className = 'cms-nav';
+  nav.textContent = 'Start · Zweite Seite';
+  view = mountFreeform(root, { ...page, canvas }, nav,
+    id => createWidgetElement(page.widgets.find(widget => widget.id === id), services, snapshots, true), options);
+}
+try {
+  mount({ phone: true });
+  const heights = [];
+  for (const width of [280, 343, 375, 393, 430, 600, 744, 820, 834, 1024, 1366]) {
+    shell.style.width = `${width}px`;
+    await paint();
+    check(root.querySelector('.cms-freeform-stack'), `${width}: mobile preview stacks`);
+    check(root.scrollWidth <= root.clientWidth + 1, `${width}: no horizontal page overflow`);
+    const viewport = root.querySelector('.cms-freeform-viewport');
+    check(viewport.scrollWidth <= viewport.clientWidth + 1, `${width}: no horizontal viewport overflow`);
+    let bottom = root.querySelector('.cms-freeform-navigation').getBoundingClientRect().bottom;
+    for (const [id, wrapper] of view.wrappers) {
+      if (page.widgets.find(widget => widget.id === id).hideOnMobile) {
+        check(wrapper.getBoundingClientRect().height === 0, `${width}/${id}: mobile visibility`);
+        continue;
+      }
+      const host = wrapper.firstElementChild;
+      const tile = host.shadowRoot.querySelector('.tile');
+      const label = `${width}/${id}/${host.localName}`;
+      const rect = wrapper.getBoundingClientRect();
+      check(rect.top >= bottom - 1, `${label}: no overlap with preceding widget/navigation`);
+      bottom = rect.bottom;
+      check(tile.clientHeight > 16, `${label}: tile is not collapsed by size containment (${tile.clientHeight}px)`);
+      check(getComputedStyle(tile).containerType !== 'size', `${label}: block size follows content`);
+      check(tile.scrollHeight <= tile.clientHeight + 1, `${label}: no vertical tile overflow ${tile.scrollHeight}/${tile.clientHeight}`);
+      check(tile.scrollWidth <= tile.clientWidth + 1, `${label}: no horizontal tile overflow ${tile.scrollWidth}/${tile.clientWidth}`);
+      check(host.scrollWidth <= host.clientWidth + 1, `${label}: no horizontal host overflow`);
+      check(tile.getBoundingClientRect().bottom <= rect.bottom + 1, `${label}: wrapper contains complete frame`);
+      for (const div of tile.querySelectorAll('div')) {
+        let clipped = false;
+        for (let node = div; node && node !== tile; node = node.parentElement) {
+          if (['clip', 'hidden'].includes(getComputedStyle(node).overflowX)) clipped = true;
+        }
+        if (div.clientWidth > 0 && !clipped) check(div.scrollWidth <= div.clientWidth + 1,
+          `${label}/div.${div.className}: no horizontal content overflow ${div.scrollWidth}/${div.clientWidth}`);
+      }
+      for (const selector of ['.main', '[data-body]', '[data-content]']) {
+        const area = tile.querySelector(selector);
+        if (area) check(area.scrollHeight <= area.clientHeight + 1,
+          `${label}/${selector}: body grows naturally ${area.scrollHeight}/${area.clientHeight}`);
+      }
+    }
+    const html = view.wrappers.get('w2').firstElementChild.shadowRoot.querySelector('#intentional-scroll');
+    check(html.scrollHeight > html.clientHeight, `${width}: explicit user HTML scroll area is preserved`);
+    if (width === 393 || width === 820) heights.push({ width, heights: ['w0', 'w1', 'w2', 'w3'].map(id =>
+      view.wrappers.get(id).firstElementChild.shadowRoot.querySelector('.tile').clientHeight) });
+  }
+  for (const scenario of [
+    { width: 343, options: { phone: true }, canvas: { ...page.canvas, mobileBehavior: 'scale' }, name: 'explicit mobile scale' },
+    { width: 343, options: { editing: true, phone: true }, name: 'mobile editor' },
+    { width: 1000, options: {}, name: 'desktop' },
+  ]) {
+    shell.style.width = `${scenario.width}px`;
+    mount(scenario.options, scenario.canvas);
+    await paint();
+    check(!root.querySelector('.cms-freeform-stack'), `${scenario.name}: pixel layout unchanged`);
+    const wrapper = view.wrappers.get('w0');
+    check(getComputedStyle(wrapper).position === 'absolute', `${scenario.name}: absolute geometry`);
+    check(getComputedStyle(wrapper).height === '150px', `${scenario.name}: saved height preserved`);
+    check(getComputedStyle(wrapper.firstElementChild.shadowRoot.querySelector('.tile')).containerType === 'size',
+      `${scenario.name}: desktop size containment preserved`);
+    check(!view.wrappers.get('w18').hidden, `${scenario.name}: desktop-only widget visible`);
+  }
+  shell.style.width = '393px';
+  mount();
+  await paint();
+  check(root.querySelector('.cms-freeform-stack'), 'narrow browser stacks without preview flag');
+  check(JSON.stringify(page) === original, 'responsive layout never mutates saved geometry');
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks, heights });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = `${error.message}\n${error.stack}`;
+} finally {
+  view?.destroy();
+}
+</script>
+</html>

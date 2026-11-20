@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-20",
+  "version": "1.20.2-dev",
+  "title": "Freeform auf Mobilgeraeten und im Editor verbessert",
+  "changes": [
+    "Pixelnavigation pro Seite verschieben und skalieren. Refs #216.",
+    "Widget-Aktionen nach Klick; Pixelmasse beim Ziehen der Groessengriffe.",
+    "Phone- und Tablet-Widgets im Stapel wachsen mit ihrem Inhalt.",
+    "Geraetegroessen skalieren Canvas-Inhalte; optional auf allen Pixelseiten."
+  ]
+}

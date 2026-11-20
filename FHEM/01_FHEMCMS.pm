@@ -21,7 +21,7 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 
-our $FHEMCMS_VERSION = '1.20.1-dev';
+our $FHEMCMS_VERSION = '1.20.2-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -984,7 +984,7 @@ sub FHEMCMS_ValidateConfig {
     my %pageIds;
     for my $page (@{$config->{pages}}) {
         my @pageFields = $fcui ? ('background') : ();
-        push(@pageFields, 'layoutMode', 'canvas') if ($targetSchema == 6);
+        push(@pageFields, 'layoutMode', 'canvas', 'navigationRect') if ($targetSchema == 6);
         $err = $exact->($page, 'Seite', ['id', 'title', 'widgets'], \@pageFields);
         return $err if ($err);
         return 'Ungueltiger Layoutmodus der Seite'
@@ -1009,8 +1009,17 @@ sub FHEMCMS_ValidateConfig {
             return 'Ungueltiger Wert fuer canvas.mobileBehavior'
                 if (exists($canvas->{mobileBehavior}) && (!defined($canvas->{mobileBehavior}) || ref($canvas->{mobileBehavior})
                     || $canvas->{mobileBehavior} !~ /\A(?:stack|scale)\z/));
-        } elsif (exists($page->{canvas})) {
-            return 'canvas ist nur auf Freeform-Seiten erlaubt';
+            if (exists($page->{navigationRect})) {
+                my $rect = $page->{navigationRect};
+                $err = $exact->($rect, 'navigationRect', ['x', 'y', 'w', 'h'], []);
+                return $err if ($err);
+                return 'Ungueltige Freeform-Geometrie der Navigation'
+                    if (!$isPixelInt->($rect->{x}, 0, $canvas->{width}) || !$isPixelInt->($rect->{y}, 0, $canvas->{height})
+                        || !$isPixelInt->($rect->{w}, 10, $canvas->{width}) || !$isPixelInt->($rect->{h}, 10, $canvas->{height})
+                        || $rect->{x} + $rect->{w} > $canvas->{width} || $rect->{y} + $rect->{h} > $canvas->{height});
+            }
+        } elsif (exists($page->{canvas}) || exists($page->{navigationRect})) {
+            return 'canvas und navigationRect sind nur auf Freeform-Seiten erlaubt';
         }
         return 'Ungueltiges Hintergrundbild'
             if (exists($page->{background}) && (ref($page->{background}) || !defined($page->{background})

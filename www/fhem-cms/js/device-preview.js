@@ -28,6 +28,9 @@ export const DEVICE_GROUPS = [
   ]]
 ];
 
+export const FREEFORM_DEVICE_GROUPS = DEVICE_GROUPS.filter(([name]) =>
+  ['iPhone', 'iPad', 'Desktop / Monitor'].includes(name));
+
 const DEVICES = new Map(DEVICE_GROUPS.flatMap(([, items]) => items.map(([id, name, width, height, landscape]) => [
   id, { id, name, width, height, landscape: Boolean(landscape) }
 ])));

@@ -32,6 +32,14 @@ Menü und Dialog zeigen den Namen der aktuellen Seite. Browserregression:
 `t/93_freeform.html` prüft wiederholte Raster-/Freeform-Wechsel mit einem hohen
 Raster, die Navigationsposition und acht tatsächliche GridStack-Griffe.
 
+Die Navigation kann pro Freeform-Seite eine optionale `navigationRect`
+(`x`, `y`, `w`, `h`) haben. Ohne Rechteck wird das gemeinsame Raster
+als Ausgangspunkt verwendet. Änderungen an der Pixel-Navigation ändern
+das gemeinsame Raster nicht. Die Canvas-Maße skalieren Widget- und gespeicherte
+Navigationsrechtecke proportional, ausgehend vom unveränderten Entwurf.
+Die Startseite kann die Maße auf alle Freeform-Seiten übertragen; Rasterseiten
+und sonstige Canvas-Einstellungen bleiben unverändert.
+
 Implementierung auf `dev` (Phase 1): Der Editor aktiviert Freeform pro Seite
 unter „Seiteneinstellungen“. `layoutformat` meldet die Unterstützung; der
 Browser verwendet dann `version6state` und `version6draft`, welche auch

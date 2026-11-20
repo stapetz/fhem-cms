@@ -695,7 +695,7 @@ for (const [name, fixtures] of [
   }
 });
 
-test('editor tools follow real hover, keyboard focus and touch capability without layout changes', {
+test('editor tools require activation and Freeform navigation supports real pointer gestures', {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 45000,
 }, async () => {
@@ -737,15 +737,20 @@ test('editor tools follow real hover, keyboard focus and touch capability withou
         await evaluate(`document.querySelector('#hover-item-${index}').scrollIntoView({block:'center'})`);
         await pause(100);
         const point = await evaluate(`(() => { const r = document.querySelector('#hover-item-${index}').getBoundingClientRect();
-          return {x:r.x + 10, y:r.y + 10}; })()`);
+          return {x:r.x + r.width / 2, y:r.y + r.height / 2}; })()`);
         await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
         await pause(50);
         await check('hover', index);
+        await command('Input.dispatchMouseEvent', {type:'mousePressed', ...point, button:'left', clickCount:1});
+        await command('Input.dispatchMouseEvent', {type:'mouseReleased', ...point, button:'left', clickCount:1});
+        await check('selected', index);
+        await command('Input.dispatchMouseEvent', {type:'mousePressed', ...point, button:'left', clickCount:1});
+        await command('Input.dispatchMouseEvent', {type:'mouseReleased', ...point, button:'left', clickCount:1});
         await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
         await pause(50);
         await check('leave');
         await evaluate(`(() => { const button = document.querySelector('#hover-item-${index} .cms-widget-drag');
-          const focusable = [...document.querySelectorAll('button,a[href],select,input')].filter(el => el.getClientRects().length);
+          const focusable = [...document.querySelectorAll('button,a[href],select,input')].filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden');
           focusable[focusable.indexOf(button) - 1].focus(); })()`);
         await command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
         await command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
@@ -762,6 +767,53 @@ test('editor tools follow real hover, keyboard focus and touch capability withou
     const result = await browserResult(profile,
       `http://127.0.0.1:${server.address().port}/t/41_editor_hover.html`, child, interact);
     assert.ok(result.checks >= 70);
+    await browserResult(profile, `http://127.0.0.1:${server.address().port}/t/93_freeform.html?navigation`, child, async command => {
+      const read = async expression => {
+        const reply = await command('Runtime.evaluate', {expression, awaitPromise:true, returnByValue:true});
+        assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
+        return reply.result.value;
+      };
+      const point = selector => read(`(() => {
+        const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
+        return {x:r.x+r.width/2,y:r.y+r.height/2};
+      })()`);
+      const mouse = (type, p, buttons) => command('Input.dispatchMouseEvent',
+        {type, ...p, button:'left', buttons, clickCount:1});
+      await read(`new Promise(resolve => {
+        const timer = setInterval(() => {
+          if (document.querySelector('#result').textContent === 'pending') return;
+          clearInterval(timer); resolve();
+        },25);
+      })`);
+      assert.equal(await read(`document.querySelector('#result').textContent`), 'navigation ready');
+      const center = await point('.cms-freeform-navigation');
+      await mouse('mouseMoved', center, 0);
+      assert.equal(await read(`document.elementFromPoint(${center.x},${center.y})?.closest('.cms-freeform-navigation')?.className`),
+        'cms-freeform-navigation', `Navigation hit at ${JSON.stringify(center)}`);
+      await mouse('mousePressed', center, 1);
+      await mouse('mouseReleased', center, 0);
+      await pause(40);
+      assert.equal(await read(`document.querySelectorAll('.cms-freeform-handles button').length`), 8);
+      const handle = await point('.cms-freeform-handles [data-dir=se]');
+      await mouse('mousePressed', handle, 1);
+      await mouse('mouseMoved', {x:handle.x+40,y:handle.y+20}, 1);
+      await pause(40);
+      assert.match(await read(`document.querySelector('.cms-widget-dimensions')?.textContent`), /\d+ × \d+ px/);
+      await mouse('mouseReleased', {x:handle.x+40,y:handle.y+20}, 0);
+      const saved = await read(`JSON.parse(document.querySelector('#result').dataset.saved)`);
+      assert.equal(saved.id, '__nav');
+      assert.ok(saved.rect.w > 500 && saved.rect.h > 55);
+      const move = await point('.cms-freeform-navigation .cms-widget-drag');
+      await mouse('mousePressed', move, 1);
+      await mouse('mouseMoved', {x:move.x+40,y:move.y}, 1);
+      await mouse('mouseReleased', {x:move.x+40,y:move.y}, 0);
+      assert.ok(await read(`JSON.parse(document.querySelector('#result').dataset.saved).rect.x > 50`));
+      await command('Input.dispatchKeyEvent', {type:'keyDown', key:'ArrowRight', code:'ArrowRight', windowsVirtualKeyCode:39});
+      assert.equal(await read(`JSON.parse(document.querySelector('#result').dataset.saved).rect.x`), 51);
+      await read(`Object.assign(document.querySelector('#result'), {textContent:'{}'}).dataset.result='pass'`);
+    });
+    const mobile = await browserResult(profile, `http://127.0.0.1:${server.address().port}/t/94_freeform_mobile.html`, child);
+    assert.ok(mobile.checks > 1000);
   } catch (error) {
     throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });
   } finally {
@@ -819,6 +871,7 @@ test('real editor pointer drag and resize preserve appearance on a full-width ca
         const point = await evaluate(`(() => {
           const grid = document.querySelector('.cms-grid-editable');
           const widget = [...grid.children].find(el => el.gridstackNode?.id === '${id}');
+          if (!widget.classList.contains('cms-widget-selected')) widget.click();
           const handle = widget.querySelector('${selector}');
           const rect = handle.getBoundingClientRect();
           return { x:'${selector}' === '.ui-resizable-se' ? rect.right - 2 : rect.x + rect.width/2,

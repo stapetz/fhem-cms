@@ -26,8 +26,10 @@
     check(view.getScale() > .75 && view.getScale() <= .8, 'width scale');
     const widget = view.wrappers.get('left');
     check(Math.abs(widget.getBoundingClientRect().width - 200 * view.getScale()) < 2, 'rendered width');
+    view.destroy();
+    root.replaceChildren();
     root.style.width = '500px';
-    await paint();
+    view = mountFreeform(root, page, document.createElement('nav'), render);
     check([...view.canvas.querySelectorAll('[data-widget-id]')].map(node => node.dataset.widgetId).join() === 'left,right,hidden', 'mobile DOM order');
     check(view.wrappers.get('hidden').getBoundingClientRect().width === 0, 'mobile visibility');
     view.destroy();
@@ -36,7 +38,7 @@
     const config = {schemaVersion: 6, settings: {layoutMode:'grid',gridColumns:12},
       navigation: {grid:{col:1,row:1,w:12,h:1}}, pages:[
         {id:'grid', widgets:[{id:'text',type:'text',markdown:'Grid',grid:{col:1,row:12,w:4,h:3}}]},
-        {id:'canvas',layoutMode:'freeform',canvas:page.canvas,widgets:page.widgets.map(widget => ({
+        {id:'canvas',layoutMode:'freeform',canvas:page.canvas,navigationRect:{x:50,y:350,w:500,h:55},widgets:page.widgets.map(widget => ({
           ...widget,type:'text',markdown:widget.id,
         }))},
       ]};
@@ -47,6 +49,12 @@
       const grid = mountSchema5Widgets(GridStack, root, config, 'grid', document.createElement('nav'), {}, new Map(), editing);
       window.addEventListener('pagehide', () => grid.destroy(), {once:true});
       result.textContent = 'grid ready';
+    } else if (new URLSearchParams(location.search).has('navigation')) {
+      root.classList.add('cms-grid-guides');
+      editing.onFreeformChange = (id, rect) => { result.dataset.saved = JSON.stringify({id, rect}); };
+      const freeform = mountSchema5Widgets(GridStack, root, config, 'canvas', document.createElement('nav'), {}, new Map(), editing);
+      window.addEventListener('pagehide', () => freeform.destroy(), {once:true});
+      result.textContent = 'navigation ready';
     } else {
     root.classList.add('grid-stack');
     const canvasStart = root.getBoundingClientRect().top;
@@ -59,6 +67,7 @@
       check(root.style.height === '', 'Grid height does not survive in Freeform');
       check(Math.abs(root.querySelector('.cms-freeform-canvas').getBoundingClientRect().top - canvasStart) < 2, 'canvas starts at top after Grid');
       check(root.querySelector('.cms-freeform-canvas .cms-freeform-navigation nav'), 'navigation is inside canvas');
+      check(root.querySelector('.cms-freeform-navigation').style.left === '50px', 'custom navigation position');
       check(root.querySelector('.cms-freeform-widget > .cms-widget-tools > .cms-widget-config'), 'widget actions are local');
       freeform.destroy();
     }

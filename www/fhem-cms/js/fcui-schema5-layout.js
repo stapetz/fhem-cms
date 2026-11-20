@@ -1,5 +1,5 @@
 import { validateLinkItems } from './link-widget.js';
-import { freeformStartRect, isFreeform, validateFreeformCanvas, validateFreeformWidget } from './fcui-freeform-layout.js';
+import { freeformStartRect, isFreeform, resizeFreeformPage, validateFreeformCanvas, validateFreeformWidget } from './fcui-freeform-layout.js';
 
 const NAVIGATION = '__nav';
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -54,8 +54,15 @@ function validateLayout(config, includeNavigation = true) {
     if (page.layoutMode !== undefined && (Number(config.schemaVersion) !== 6
       || !['grid', 'freeform'].includes(page.layoutMode))) throw new Error('Ungültiger Seiten-Layoutmodus');
     const freeform = isFreeform(page);
-    if (freeform) validateFreeformCanvas(page.canvas);
-    else if (page.canvas !== undefined) throw new Error('Canvas ist nur auf Freeform-Seiten erlaubt');
+    if (freeform) {
+      validateFreeformCanvas(page.canvas);
+      if (page.navigationRect !== undefined) {
+        validateFreeformWidget({id: 'Navigation', rect: page.navigationRect}, page.canvas);
+        if (Object.hasOwn(page.navigationRect, 'z')) throw new Error('Die Navigation hat keine einstellbare Ebene.');
+      }
+    } else if (page.canvas !== undefined || page.navigationRect !== undefined) {
+      throw new Error('Canvas und Navigationsgeometrie sind nur auf Freeform-Seiten erlaubt');
+    }
     const ids = new Set();
     const grids = includeNavigation ? [nav] : [];
     for (const widget of page.widgets) {
@@ -132,6 +139,8 @@ export function changePageLayout(config, pageId, mode, canvas, measurements) {
         page.widgets.forEach((widget, index) => {
           widget.rect = freeformStartRect(widget, index, canvas, columns, measurements?.get(widget.id));
         });
+      } else {
+        resizeFreeformPage(page, canvas.width, canvas.height);
       }
       config.schemaVersion = 6;
       page.layoutMode = mode;
@@ -152,6 +161,7 @@ export function changePageLayout(config, pageId, mode, canvas, measurements) {
       }
       delete page.layoutMode;
       delete page.canvas;
+      delete page.navigationRect;
     }
     validateLayout(config);
     return config;
