@@ -64,7 +64,7 @@ export class Schema5PagePanel {
     const page = config.pages.find((entry) => entry.id === pageId);
     this.#background = page.background || '';
 
-    const heading = element('h2', 'Seiteneinstellungen');
+    const heading = element('h2', `Seiteneinstellungen „${page.title}“`);
     const hint = element('p',
       'Darstellung und Raster der Seite. Die Rastergröße gilt für alle Seiten und die Navigation. '
       + 'Beim Vergröbern werden Positionen und Größen gerundet und Überschneidungen nach unten aufgelöst. '

@@ -51,7 +51,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
   view.canvas.append(overlay);
   const controls = doc.createElement('div');
   controls.className = 'cms-freeform-properties';
-  root.insertBefore(controls, view.canvas.closest('.cms-freeform-viewport'));
+  controls.setAttribute('popover', 'auto');
   let selected, active, preview, raf;
   const button = (parent, text, label, action) => {
     const node = doc.createElement('button');
@@ -62,12 +62,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
     parent.append(node);
     return node;
   };
-  button(navigation, 'Navigation einstellen', 'Navigation einstellen', () => editing.onEdit('__nav'));
-  const selector = doc.createElement('select');
-  selector.setAttribute('aria-label', 'Widget auswählen');
-  selector.append(new win.Option('Widget auswählen', ''));
-  for (const widget of page.widgets) selector.append(new win.Option(widget.title || widget.id, widget.id));
-  controls.append(selector);
+  button(navigation, '✎', 'Navigation einstellen', () => editing.onEdit('__nav'));
   const details = doc.createElement('div');
   controls.append(details);
   const fields = {};
@@ -98,9 +93,6 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
   button(details, 'Nach hinten', 'Widget nach hinten setzen', () => {
     save({...selected.rect, z: Math.max(0, Math.min(9999, ...page.widgets.map(widget => widget.rect.z ?? 1)) - 1)});
   });
-  for (const [callback, label] of [['onEdit','Widget einstellen'], ['onDuplicate','Duplizieren'], ['onSaveBlueprint','Als Vorlage speichern'], ['onMove','Verschieben auf andere Seite'], ['onDelete','Löschen']]) {
-    if (editing[callback]) button(details, label, label, () => editing[callback](selected.id));
-  }
   details.append(error);
   let handles;
   function draw(rect, guides = []) {
@@ -117,32 +109,61 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
     }
   }
   function select(id, focus = false) {
+    if (selected) view.wrappers.get(selected.id).classList.remove('cms-widget-selected');
+    controls.remove();
     selected = page.widgets.find(widget => widget.id === id);
-    selector.value = selected?.id || '';
-    details.hidden = !selected;
     overlay.replaceChildren();
     if (!selected) return;
+    const wrapper = view.wrappers.get(id);
+    wrapper.classList.add('cms-widget-selected');
     handles = doc.createElement('div');
     handles.className = 'cms-freeform-handles';
-    for (const direction of ['move','n','ne','e','se','s','sw','w','nw']) {
-      const handle = button(handles, direction === 'move' ? '⠿' : '', direction === 'move' ? 'Widget verschieben' : `Größe ändern (${direction})`,
-        () => {});
+    for (const direction of ['n','ne','e','se','s','sw','w','nw']) {
+      const handle = button(handles, '', `Größe ändern (${direction})`, () => {});
       handle.dataset.dir = direction;
     }
     overlay.append(handles);
     draw(selected.rect);
     for (const key of ['x','y','w','h','z']) fields[key].value = selected.rect[key] ?? 1;
     fields.hideOnMobile.checked = selected.hideOnMobile === true;
-    if (focus) handles.firstChild.focus();
+    if (focus) wrapper.querySelector('[data-dir="move"]')?.focus({preventScroll: true});
   }
-  selector.addEventListener('change', () => select(selector.value), options);
+  for (const [id, wrapper] of view.wrappers) {
+    const tools = wrapper.querySelector('.cms-widget-tools');
+    const move = tools?.querySelector('[data-dir="move"]');
+    if (!tools || !move) continue;
+    move.addEventListener('focus', () => { if (!active && selected?.id !== id) select(id); }, options);
+    const geometry = button(tools, '↔', 'Pixelposition und Größe einstellen', () => {
+      const wasOpen = controls.parentNode === wrapper;
+      if (selected?.id !== id) select(id);
+      if (wasOpen && controls.matches(':popover-open')) controls.hidePopover();
+      else {
+        wrapper.append(controls);
+        const anchor = geometry.getBoundingClientRect();
+        controls.style.left = `${Math.max(8, Math.min(anchor.left, doc.documentElement.clientWidth - 456))}px`;
+        controls.style.top = `${anchor.bottom + 4}px`;
+        controls.showPopover();
+        const height = controls.getBoundingClientRect().height;
+        if (anchor.bottom + height + 12 > doc.documentElement.clientHeight) {
+          controls.style.top = `${Math.max(8, anchor.top - height - 4)}px`;
+        }
+        fields.x.focus();
+      }
+    });
+    geometry.className = 'cms-widget-geometry';
+  }
   view.canvas.addEventListener('click', event => {
     const widget = event.target.closest('.cms-freeform-widget');
-    if (widget && !active) select(widget.dataset.widgetId, true);
+    if (widget && !active && selected?.id !== widget.dataset.widgetId
+      && !event.target.closest('.cms-widget-tools,.cms-freeform-properties')) select(widget.dataset.widgetId);
+    if (event.target === view.canvas && !active) select();
   }, options);
-  overlay.addEventListener('pointerdown', event => {
+  view.canvas.addEventListener('pointerdown', event => {
     const direction = event.target.dataset.dir;
-    if (!direction || !selected || active || event.button !== 0) return;
+    if (!direction || active || event.button !== 0) return;
+    const id = event.target.closest('.cms-freeform-widget')?.dataset.widgetId;
+    if (id && selected?.id !== id) select(id);
+    if (!selected) return;
     event.preventDefault();
     event.target.focus();
     active = {id: event.pointerId, direction, x: event.clientX, y: event.clientY, scale: view.getScale(), moved: false};
@@ -174,7 +195,14 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
   overlay.addEventListener('pointerup', event => end(event, true), options);
   overlay.addEventListener('pointercancel', event => end(event, false), options);
   overlay.addEventListener('lostpointercapture', event => end(event, false), options);
-  overlay.addEventListener('keydown', event => {
+  view.canvas.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && controls.contains(event.target)) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.target.closest('.cms-freeform-widget')?.querySelector('.cms-widget-geometry')?.focus();
+      controls.remove();
+      return;
+    }
     if (event.key === 'Escape' && active) { event.stopPropagation(); end(event, false); return; }
     if (!selected || active || !event.target.matches('[data-dir="move"]')) return;
     const delta = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]}[event.key];
@@ -184,7 +212,6 @@ export function mountFreeformEditor(root, page, view, editing, navigation) {
     save(fitFreeformRect({...selected.rect, x: selected.rect.x + delta[0] * step,
       y: selected.rect.y + delta[1] * step}, page.canvas));
   }, options);
-  select(editing.selectedWidget);
-  if (selected) handles.firstChild.focus({preventScroll: true});
+  select(editing.selectedWidget, true);
   return () => { end({}, false); events.abort(); };
 }

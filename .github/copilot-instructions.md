@@ -91,6 +91,10 @@ Details:
   Listener und Observer sauber aufräumen. UI-/Fehlertexte deutsch,
   Code-Bezeichner englisch. Desktop, Touch, Tastatur, Phone-Vorschau und
   Schema-5-Regressionen mitprüfen.
+- Widget-Aktionen und Verschiebegriff in beiden Layouts direkt am Widget
+  halten; GridStack bietet im Raster acht Größenanfasser. Bei Raster-/
+  Freeform-Wechseln Canvas-Position und Navigation im Canvas prüfen.
+  Seiteneinstellungen in Menü und Dialog mit aktuellem Seitennamen anzeigen.
 
 ## Zugriff auf die Testinstanz
 

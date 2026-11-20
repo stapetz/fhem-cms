@@ -23,6 +23,15 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 
 ## Freeform-Seiten (Schema 6, geplant)
 
+Abnahmenachtrag (Refs #216): Die Seitennavigation gehört im Freeform-Modus
+zum Canvas (im mobilen Stapel als erstes Element). Beim Wechsel vom Raster
+zu Freeform bleibt keine GridStack-Höhe zurück. In beiden Modi sitzen
+Widget-Aktionen und Verschiebegriff am Widget; GridStack übernimmt im Raster
+die acht Größenanfasser. Pixel-Eigenschaften werden am Widget geöffnet.
+Menü und Dialog zeigen den Namen der aktuellen Seite. Browserregression:
+`t/93_freeform.html` prüft wiederholte Raster-/Freeform-Wechsel mit einem hohen
+Raster, die Navigationsposition und acht tatsächliche GridStack-Griffe.
+
 Implementierung auf `dev` (Phase 1): Der Editor aktiviert Freeform pro Seite
 unter „Seiteneinstellungen“. `layoutformat` meldet die Unterstützung; der
 Browser verwendet dann `version6state` und `version6draft`, welche auch

@@ -52,7 +52,11 @@ Standard. Datenvertrag und Migration stehen in der
 - Seiteneinstellungen: „Raster (Standard)“ und „Frei (Pixelgenau)“ als
   beschriftete Auswahl; für Freeform Maße, Presets (`1280×800`, `1920×1080`),
   Bildmaß-Übernahme, Skalierung, Fangraster und Mobilverhalten anbieten.
-- Acht Griffe an Ecken/Kanten und eine beschriftete Eingabeleiste für
+- Raster und Freeform: Verschieben und Widget-Aktionen direkt am Widget;
+  acht Griffe an Ecken und Kanten. Navigationsleiste innerhalb des Freeform-
+  Canvas, im Mobilstapel als erstes Element. „Seiteneinstellungen“ zeigt
+  im Menü und im Dialog den Namen der aktuellen Seite.
+- Freeform: Am Widget eine beschriftete Eingabeleiste für
   `X`, `Y`, Breite, Höhe, Ebene und „Auf Mobilgeräten ausblenden“ anbieten.
   Pfeile verschieben bei Editor-Fokus um 1, mit Shift um 10 Canvas-Pixel.
   Alt deaktiviert Raster und Smart Guides während einer Geste. Pointer-Deltas

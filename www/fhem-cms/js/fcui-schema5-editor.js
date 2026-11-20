@@ -372,6 +372,7 @@ export class Schema5Editor {
     this.#content.append(grid);
     const view = new Schema5View({ GridStack: this.#GridStack, root: grid, status: this.#status,
       config, client: this.#client, services: this.#services, browser: this.#browser,
+      onPageChange: page => { this.#page.textContent = `Seiteneinstellungen „${page.title}“`; },
       editing: this.#previewMode ? undefined : {
         showGrid: () => this.#showGrid,
         selectedWidget: this.#freeformSelection?.pageId === (this.#browser.location.hash.slice(2) || config.pages[0].id)

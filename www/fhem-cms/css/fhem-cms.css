@@ -581,7 +581,7 @@ body:has(.cms-schema5-grid) {
     pointer-events: none;
   }
 
-  .cms-grid-editable > .grid-stack-item:is(:hover, :focus-within, .ui-draggable-dragging, .ui-resizable-resizing) > .cms-widget-tools {
+  .cms-grid-editable > .grid-stack-item:is(:hover, :focus-within, .cms-widget-selected, .ui-draggable-dragging, .ui-resizable-resizing) > .cms-widget-tools {
     opacity: 1;
     pointer-events: auto;
   }
@@ -610,8 +610,29 @@ body:has(.cms-schema5-grid) {
   touch-action: none;
 }
 
-.cms-grid-editable > .grid-stack-item:hover > .ui-resizable-se {
-  opacity: 1;
+.cms-grid-editable > .grid-stack-item > .ui-resizable-handle {
+  display: block !important;
+  width: 18px;
+  height: 18px;
+  z-index: 6;
+  border: 0;
+  background: none;
+  opacity: 0;
+  transform: none;
+  touch-action: none;
+}
+.cms-grid-editable > .grid-stack-item > .ui-resizable-handle::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--cms-accent);
+  background: var(--cms-bg);
+}
+.cms-grid-editable > .grid-stack-item:is(:hover, :focus-within, .cms-widget-selected, .ui-resizable-resizing) > .ui-resizable-handle { opacity: 1; }
+.cms-grid-editable > .grid-stack-item > :is(.ui-resizable-n, .ui-resizable-s) { left: calc(50% - 9px); right: auto; }
+.cms-grid-editable > .grid-stack-item > :is(.ui-resizable-e, .ui-resizable-w) { top: calc(50% - 9px); bottom: auto; }
+@media (pointer: coarse) {
+  .cms-grid-editable > .grid-stack-item > .ui-resizable-handle { opacity: 1; }
 }
 
 .cms-editor-panel {
@@ -2095,6 +2116,8 @@ html:not(.cms-view) body {
   flex-direction: column;
   min-width: 0;
   gap: 8px;
+  height: auto;
+  background-image: none;
 }
 
 .cms-freeform-viewport {
@@ -2115,9 +2138,57 @@ html:not(.cms-view) body {
 }
 .cms-freeform-widget {
   position: absolute;
+}
+.cms-freeform-widget > :first-child {
   container-type: inline-size;
   container-name: cms-widget;
   overflow: hidden;
+}
+.cms-freeform-navigation { position: absolute; inset: 0 auto auto 0; width: 100%; }
+.cms-freeform-stack .cms-freeform-navigation {
+  position: relative;
+  inset: auto !important;
+  width: 100% !important;
+  height: auto !important;
+}
+.cms-freeform-canvas {
+  --cms-freeform-handle-target: 18px;
+  --cms-freeform-handle-size: var(--cms-freeform-handle-target);
+}
+@media (pointer: coarse) {
+  .cms-freeform-canvas { --cms-freeform-handle-target: 44px; }
+}
+@supports (width: calc(44px / 1)) {
+  .cms-freeform-canvas {
+    --cms-freeform-handle-size: calc(var(--cms-freeform-handle-target) / var(--cms-freeform-scale, 1));
+  }
+}
+.cms-freeform-widget > .cms-widget-tools {
+  z-index: 2;
+  top: calc(var(--cms-freeform-handle-size) + 2px);
+  right: calc(var(--cms-freeform-handle-size) + 2px);
+}
+.cms-freeform-widget .cms-widget-drag { cursor: grab; touch-action: none; }
+@media (hover: hover) and (pointer: fine) {
+  .cms-freeform-widget:not(:hover, :focus-within, .cms-widget-selected) > .cms-widget-tools {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+.cms-freeform-widget.cms-widget-selected { z-index: 10001 !important; }
+.cms-freeform-properties {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  width: min(448px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  padding: .5rem;
+  color: var(--cms-text);
+  border: 1px solid var(--cms-border);
+  border-radius: .5rem;
+  background: var(--cms-surface);
 }
 .cms-freeform-widget > :first-child { display: block; width: 100%; height: 100%; }
 .cms-freeform-stack { height: auto; }
@@ -2137,17 +2208,12 @@ html:not(.cms-view) body {
 }
 .cms-freeform-stack .cms-freeform-widget[hidden] { display: none; }
 .cms-freeform-stack .cms-freeform-widget > :first-child { height: auto; }
-.cms-freeform-overlay { position: absolute; inset: 0; z-index: 10000; pointer-events: none; }
+.cms-freeform-overlay { position: absolute; inset: 0; z-index: 10002; pointer-events: none; }
 .cms-freeform-handles { position: absolute; outline: 2px solid var(--cms-accent, #3b82f6); }
 .cms-freeform-handles button {
-  position: absolute; pointer-events: auto; touch-action: none; min-width: 44px; min-height: 44px;
+  position: absolute; pointer-events: auto; touch-action: none;
+  min-width: var(--cms-freeform-handle-size); min-height: var(--cms-freeform-handle-size);
   padding: 0; background: transparent; border: 0; display: grid; place-items: center;
-}
-@supports (width: calc(44px / 1)) {
-  .cms-freeform-handles button {
-    min-width: calc(44px / var(--cms-freeform-scale, 1));
-    min-height: calc(44px / var(--cms-freeform-scale, 1));
-  }
 }
 .cms-freeform-handles button::before {
   content: ''; width: 10px; height: 10px; border: 2px solid var(--cms-accent, #3b82f6); background: var(--cms-bg, white);
@@ -2169,5 +2235,5 @@ html:not(.cms-view) body {
 .cms-freeform-properties input[type="number"] { width: 6rem; }
 .cms-freeform-stack :is(button, [role="button"], input[type="range"]) { min-width: 44px; min-height: 44px; }
 @container cms-widget (width < 240px) {
-  .cms-freeform-widget > :first-child { font-size: .875em; }
+  .cms-freeform-widget > :first-child > * { font-size: .875em; }
 }
