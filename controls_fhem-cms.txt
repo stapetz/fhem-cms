@@ -1,4 +1,4 @@
-UPD 2026-11-20_05:22:47 184054 FHEM/01_FHEMCMS.pm
+UPD 2026-11-20_05:32:56 184054 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-20_05:01:57 22558 FHEM/lib/FHEMCMS/Weather.pm
@@ -25,7 +25,7 @@ UPD 2026-11-20_05:22:47 45384 www/fhem-cms/components/cms-weather.js
 UPD 2026-11-13_10:06:04 2220 www/fhem-cms/css/cms-admin.css
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
 UPD 2026-11-13_17:56:27 15580 www/fhem-cms/css/fcui-map.css
-UPD 2026-11-20_04:59:18 57187 www/fhem-cms/css/fhem-cms.css
+UPD 2026-11-20_05:32:56 57157 www/fhem-cms/css/fhem-cms.css
 UPD 2026-11-10_07:50:19 26290 www/fhem-cms/examples/fcui-check.html
 UPD 2026-11-08_21:07:16 4844 www/fhem-cms/examples/migration-preview.html
 UPD 2026-11-13_09:56:15 353874 www/fhem-cms/images/sunnybeach.jpg

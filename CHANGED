@@ -7,6 +7,10 @@
 - Widget-Vorlagen sind nicht mehr im Editor. Refs #216.
 - Das direkte Duplizieren und Kopieren von Widgets bleibt unveraendert.
 
+2026-11-20 - 1.21.2-dev: Seitenhintergrund im Hochformat ohne Wiederholung
+- Telefon und Tablet zeigen das Hintergrundbild mittig und proportional
+  beschnitten. Refs #216.
+
 2026-11-20 - 1.20.9-dev: Volle Breite im mobilen Querformat
 - Der Canvas nutzt im Phone- und Tablet-Querformat die Breite. Refs #216.
 - Laengere Seiten scrollen vertikal; das Hochformat bleibt unveraendert.
