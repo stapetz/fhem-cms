@@ -326,7 +326,7 @@ subtest 'prepares a fully specified target without writing or accepting schema 5
         $case->[1]->($bad);
         ok(defined(FHEMCMS_ValidateConfig($bad, 5)), "target rejects $case->[0]");
     }
-    like(FHEMCMS_ValidateConfig($candidate, 6), qr/Validierungsvertrag/, 'unknown validation contract is rejected');
+    like(FHEMCMS_ValidateConfig($candidate, 7), qr/Validierungsvertrag/, 'unknown validation contract is rejected');
     my (undef, $parse_error) = FHEMCMS_ParseConfig($json->encode($candidate));
     like($parse_error, qr/schemaVersion/, 'existing API parser does not accept candidate');
 
