@@ -6,7 +6,7 @@ import { schema5PageBackground, setLiquidAppearance } from './fcui-schema5-appea
 import { isFreeform } from './fcui-freeform-layout.js';
 
 export class Schema5View {
-  constructor({ GridStack, root, status, config, client, services, browser = window, editing }) {
+  constructor({ GridStack, root, status, config, client, services, browser = window, editing, onPageChange }) {
     if (!GridStack || !root || !status || !config || !client || !services || !browser
       || typeof browser.addEventListener !== 'function' || typeof browser.removeEventListener !== 'function') {
       throw new Error('Ungültige Dienste für die Schema-5-Ansicht');
@@ -19,6 +19,7 @@ export class Schema5View {
     this.services = services;
     this.browser = browser;
     this.editing = editing;
+    this.onPageChange = onPageChange;
     this.locked = false;
     this.current = null;
     this.live = null;
@@ -150,7 +151,7 @@ export class Schema5View {
           onDelete: typeof this.editing.onDelete === 'function'
             ? (id) => this.editing.onDelete(pageId, id) : undefined,
         });
-      this.stopNavigation = observeSchema5Navigation(navigation,
+      this.stopNavigation = isFreeform(page) ? null : observeSchema5Navigation(navigation,
         () => Boolean(this.editing) || getComputedStyle(this.root).display !== 'flex');
       const view = this.view;
       this.live = new Schema5LivePage(this.client, page.widgets,
@@ -168,6 +169,7 @@ export class Schema5View {
           }
         });
       this.current = pageId;
+      this.onPageChange?.(page);
       await this.live.start();
     } catch (error) {
       if (generation !== this.generation || !this.active) return;
@@ -223,7 +225,7 @@ export class Schema5View {
       view = mountSchema5Widgets(this.GridStack, grid, this.config, pageId, navigation,
         { ...this.services, freeformBackground: background, openPageModal: (id, nextSize) => this.openModal(id, nextSize) },
         this.live.snapshots);
-      const stopNavigation = observeSchema5Navigation(navigation, () => getComputedStyle(grid).display !== 'flex');
+      const stopNavigation = isFreeform(page) ? null : observeSchema5Navigation(navigation, () => getComputedStyle(grid).display !== 'flex');
       this.modal = { dialog, view, stopNavigation, originalFocus };
       dialog.showModal();
       close.focus();
@@ -240,7 +242,7 @@ export class Schema5View {
     const modal = this.modal;
     if (!modal) return;
     this.modal = null;
-    modal.stopNavigation();
+    modal.stopNavigation?.();
     modal.view.destroy();
     if (modal.dialog.open) modal.dialog.close();
     modal.dialog.remove();

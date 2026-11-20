@@ -237,7 +237,7 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
       onClose: (outcome) => { assert.equal(outcome.requiresReload, false); closed += 1; },
     });
     const panel = open();
-    assert.equal(root.children[0].textContent, 'Seiteneinstellungen');
+    assert.equal(root.children[0].textContent, `Seiteneinstellungen „${state.live.pages[0].title}“`);
     assert.equal(root.children.length, 5);
     const descendants = (node) => [node, ...node.children.flatMap(descendants)];
     assert.ok(descendants(root).every((node) => node.type !== 'number'

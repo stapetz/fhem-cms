@@ -1,6 +1,6 @@
 import { DEFAULT_CANVAS, freeformReadingOrder, freeformScale } from './fcui-freeform-layout.js';
 
-export function mountFreeform(root, page, navigation, render, {background, editing, phone} = {}) {
+export function mountFreeform(root, page, navigation, render, {background, editing, phone, navigationGrid, columns} = {}) {
   const doc = root.ownerDocument;
   const browser = doc.defaultView;
   const box = className => Object.assign(doc.createElement('div'), {className});
@@ -9,6 +9,14 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   const canvas = box('cms-freeform-canvas');
   const settings = {...DEFAULT_CANVAS, ...page.canvas};
   const wrappers = new Map();
+  const navBox = box('cms-freeform-navigation');
+  if (navigationGrid && columns) {
+    const cell = settings.width / columns;
+    const {col, row, w, h} = navigationGrid;
+    setFreeformBox(navBox, {x: (col - 1) * cell, y: (row - 1) * cell, w: w * cell, h: h * cell, z: 10000});
+  }
+  navBox.append(navigation);
+  canvas.append(navBox);
   if (background) canvas.style.backgroundImage = `url("${new URL(background, browser.location.href).href}")`;
   for (const widget of page.widgets) {
     const wrapper = box('cms-freeform-widget');
@@ -21,7 +29,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   footprint.append(canvas);
   viewport.append(footprint);
   root.classList.add('cms-freeform-root');
-  root.append(navigation, viewport);
+  root.append(viewport);
   let stacked = null;
   let scale = 1;
   function resize() {
@@ -44,6 +52,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     }
     scale = stack ? 1 : freeformScale(settings, width, height);
     canvas.style.setProperty('--cms-freeform-scale', scale);
+    canvas.style.setProperty('--cms-view-width', stack ? `${width}px` : `${settings.width}px`);
     viewport.classList.toggle('cms-freeform-fit', !stack && settings.scaling === 'fit');
     footprint.style.width = stack ? '100%' : `${settings.width * scale}px`;
     footprint.style.height = stack ? 'auto' : `${settings.height * scale}px`;

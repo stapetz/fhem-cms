@@ -1,12 +1,15 @@
 <!doctype html>
 <html lang="de">
 <meta charset="utf-8">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
 <link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
 <div id="root" class="cms-schema5-grid" style="width: 800px"></div>
 <output id="result">pending</output>
 <script type="module">
   import { mountFreeform } from '../www/fhem-cms/js/fcui-freeform-view.js';
   import { mountFreeformEditor } from '../www/fhem-cms/js/fcui-freeform-edit.js';
+  import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+  import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
   const root = document.querySelector('#root');
   const result = document.querySelector('#result');
   const page = {canvas:{width:1000,height:500,scaling:'width'}, widgets:[
@@ -16,7 +19,7 @@
   ]};
   const render = id => Object.assign(document.createElement('button'), {textContent:id});
   const check = (condition, name) => { if (!condition) throw new Error(name); };
-  const paint = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const paint = () => new Promise(resolve => setTimeout(resolve, 150));
   try {
     let view = mountFreeform(root, page, document.createElement('nav'), render);
     await paint();
@@ -25,17 +28,54 @@
     check(Math.abs(widget.getBoundingClientRect().width - 200 * view.getScale()) < 2, 'rendered width');
     root.style.width = '500px';
     await paint();
-    check([...view.canvas.children].map(node => node.dataset.widgetId).join() === 'left,right,hidden', 'mobile DOM order');
+    check([...view.canvas.querySelectorAll('[data-widget-id]')].map(node => node.dataset.widgetId).join() === 'left,right,hidden', 'mobile DOM order');
     check(view.wrappers.get('hidden').getBoundingClientRect().width === 0, 'mobile visibility');
     view.destroy();
     root.replaceChildren();
     root.style.width = '800px';
+    const config = {schemaVersion: 6, settings: {layoutMode:'grid',gridColumns:12},
+      navigation: {grid:{col:1,row:1,w:12,h:1}}, pages:[
+        {id:'grid', widgets:[{id:'text',type:'text',markdown:'Grid',grid:{col:1,row:12,w:4,h:3}}]},
+        {id:'canvas',layoutMode:'freeform',canvas:page.canvas,widgets:page.widgets.map(widget => ({
+          ...widget,type:'text',markdown:widget.id,
+        }))},
+      ]};
+    const editing = {onEdit:() => {}, onChange:() => {}, onFreeformChange:() => {}};
+    if (new URLSearchParams(location.search).has('grid')) {
+      root.classList.add('grid-stack');
+      config.pages[0].widgets[0].grid.row = 3;
+      const grid = mountSchema5Widgets(GridStack, root, config, 'grid', document.createElement('nav'), {}, new Map(), editing);
+      window.addEventListener('pagehide', () => grid.destroy(), {once:true});
+      result.textContent = 'grid ready';
+    } else {
+    root.classList.add('grid-stack');
+    const canvasStart = root.getBoundingClientRect().top;
+    for (let i=0;i<2;i++) {
+      const grid = mountSchema5Widgets(GridStack, root, config, 'grid', document.createElement('nav'), {}, new Map(), editing);
+      check(root.querySelectorAll('.grid-stack-item:not(.cms-responsive-navigation) > .ui-resizable-handle').length === 8, 'eight native Grid resize handles');
+      check(parseFloat(root.style.height) > 500, 'tall Grid gets inline height');
+      grid.destroy();
+      const freeform = mountSchema5Widgets(GridStack, root, config, 'canvas', document.createElement('nav'), {}, new Map(), editing);
+      check(root.style.height === '', 'Grid height does not survive in Freeform');
+      check(Math.abs(root.querySelector('.cms-freeform-canvas').getBoundingClientRect().top - canvasStart) < 2, 'canvas starts at top after Grid');
+      check(root.querySelector('.cms-freeform-canvas .cms-freeform-navigation nav'), 'navigation is inside canvas');
+      check(root.querySelector('.cms-freeform-widget > .cms-widget-tools > .cms-widget-config'), 'widget actions are local');
+      freeform.destroy();
+    }
     view = mountFreeform(root, page, document.createElement('nav'), render, {phone:true});
     check(view.canvas.closest('.cms-freeform-stack'), 'wide phone preview stacks');
     view.destroy();
     root.replaceChildren();
     const nav = document.createElement('nav');
     view = mountFreeform(root, page, nav, render, {editing:true});
+    for (const wrapper of view.wrappers.values()) {
+      const tools = document.createElement('div');
+      tools.className = 'cms-widget-tools';
+      const move = document.createElement('button');
+      move.dataset.dir = 'move';
+      tools.append(move);
+      wrapper.append(tools);
+    }
     let saved;
     const cleanup = mountFreeformEditor(root, page, view, {
       selectedWidget:'left', onEdit:() => {}, onFreeformChange:(id,rect) => { saved = {id,rect}; },
@@ -47,6 +87,7 @@
     window.addEventListener('pagehide', () => { cleanup(); view.destroy(); }, {once:true});
     root.addEventListener('freeform-check', () => { result.dataset.saved = JSON.stringify(saved); });
     result.textContent = 'pass';
+    }
   } catch (error) {
     result.textContent = `fail: ${error.message}`;
   }

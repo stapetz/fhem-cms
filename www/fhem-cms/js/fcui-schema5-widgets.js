@@ -35,9 +35,8 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   const mobilePreview = params.get('mode') === 'preview' && params.get('cms-device') === 'mobile';
   const freeform = isFreeform(page) ? mountFreeform(root, page, navigation, createWidget, {
     background: services.freeformBackground, editing, phone: mobilePreview,
+    navigationGrid: config.navigation.grid, columns: Number(config.settings.gridColumns),
   }) : null;
-  const stopEditor = freeform && editing?.onFreeformChange
-    ? mountFreeformEditor(root, page, freeform, editing, navigation) : null;
   const viewConfig = editing || freeform ? config : {
     ...config,
     pages: config.pages.map((entry) => entry !== page ? entry : {
@@ -65,16 +64,24 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     if (mobilePreview || touchDevice) root.setAttribute('data-mobile-layout', '');
   }
   let destroyed = false;
-  if (editing && grid) {
-    root.classList.toggle('cms-grid-editable', true);
-    for (const wrapper of Array.from(root.children)) {
-      const id = wrapper.gridstackNode?.id;
+  const selectGridWidget = selected => {
+    for (const wrapper of root.children) wrapper.classList.toggle('cms-widget-selected', wrapper === selected);
+  };
+  if (editing) {
+    if (grid) root.classList.toggle('cms-grid-editable', true);
+    const entries = freeform ? [...freeform.wrappers] : Array.from(root.children, wrapper => [wrapper.gridstackNode?.id, wrapper]);
+    for (const [id, wrapper] of entries) {
       const widget = widgets.get(id);
+      if (grid) {
+        wrapper.addEventListener('pointerdown', () => selectGridWidget(wrapper));
+        wrapper.addEventListener('focusin', () => selectGridWidget(wrapper));
+      }
       const controls = document.createElement('div');
       controls.className = 'cms-widget-tools';
       const drag = document.createElement('button');
       drag.type = 'button';
       drag.className = 'cms-widget-drag';
+      if (freeform) drag.dataset.dir = 'move';
       drag.textContent = '⠿';
       drag.title = `${widget?.title || widget?.id || 'Navigation'} verschieben`;
       drag.setAttribute('aria-label', drag.title);
@@ -130,11 +137,13 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       }
       wrapper.append(controls);
     }
-    grid.setStatic(false);
-    grid.on('dragstop resizestop', () => {
+    grid?.setStatic(false);
+    grid?.on('dragstop resizestop', () => {
       if (!destroyed) editing.onChange(grid.save(false));
     });
   }
+  const stopEditor = freeform && editing?.onFreeformChange
+    ? mountFreeformEditor(root, page, freeform, editing, navigation) : null;
   return {
     measureGrid() {
       if (!grid || !editing) return undefined;
@@ -171,6 +180,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       if (destroyed) return;
       destroyed = true;
       grid?.destroy(false);
+      if (grid) root.style.removeProperty?.('height');
       stopEditor?.();
       freeform?.destroy();
       if (!editing) {

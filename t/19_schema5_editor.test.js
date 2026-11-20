@@ -77,7 +77,9 @@ function toolbarControls(toolbar) {
   return [
     'Seiteneinstellungen', null, 'Entwurf veröffentlichen', 'Entwurf verwerfen',
     'Zustand erneut laden', 'Widget hinzufügen',
-  ].map((label) => nodes.find((node) => label ? node.textContent === label : node.className === 'cms-editor-mode'));
+  ].map((label) => nodes.find((node) => label === 'Seiteneinstellungen'
+    ? /^Seiteneinstellungen „.+“$/.test(node.textContent)
+    : label ? node.textContent === label : node.className === 'cms-editor-mode'));
 }
 
 test('editor connects view and grid draft, and suspends in-flight writes on pagehide', async () => {
@@ -120,7 +122,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
       navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
       pages: [{ id: 'a', title: 'A', widgets: [
         { id: 'text', type: 'text', html: '{{Temp:state}}', grid: { col: 1, row: 2, w: 4, h: 2 } },
-      ] }],
+      ] }, { id: 'b', title: 'Thermometer', widgets: [] }],
     };
     let state = { live, draft: null, token: 'a'.repeat(64) };
     let release;
@@ -251,7 +253,15 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
       'administration entry is absent without explicit CMS opt-in');
     assert.deepEqual([fileMenu, editMenu, insertMenu, viewMenu].map((menu) => menu.children[0].textContent),
       ['Datei', 'Bearbeiten', 'Einfügen', 'Ansicht']);
-    assert.equal(editMenu.children[1].children[0].textContent, 'Seiteneinstellungen');
+    assert.equal(editMenu.children[1].children[0].textContent, `Seiteneinstellungen „${live.pages[0].title}“`);
+    browser.location.hash = '#/b';
+    browser.dispatch('hashchange');
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(editMenu.children[1].children[0].textContent, 'Seiteneinstellungen „Thermometer“');
+    browser.location.hash = '#/a';
+    browser.dispatch('hashchange');
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(editMenu.children[1].children[0].textContent, 'Seiteneinstellungen „A“');
     assert.deepEqual(insertMenu.children[1].children.map((item) => item.textContent),
       ['Widget hinzufügen', 'Gerät hinzufügen', 'Widget-Vorlagen']);
     assert.deepEqual(viewMenu.children[1].children.map((item) => item.textContent),
@@ -288,9 +298,9 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     await assert.rejects(widgetServices.setTarget({}, 20), /Bearbeitungsmodus deaktiviert/);
     edit.fire('click');
     assert.equal(grids[0].destroyed, true);
-    assert.equal(unsubscribed, 1, 'opening settings stops the current view');
+    assert.equal(unsubscribed, 3, 'page switches and opening settings stop the previous view');
     const panel = content.children[0];
-    assert.equal(panel.children[0].textContent, 'Seiteneinstellungen');
+    assert.equal(panel.children[0].textContent, edit.textContent);
     assert.equal(panel.children.length, 5, 'settings contain no separate widget grid or position form');
     panel.children[3].children[0].children[0].value = 'light';
     await panel.children[4].children[1].fire('click');

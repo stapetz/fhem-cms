@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-20",
+  "version": "1.20.1-dev",
+  "title": "Einheitliche Widget-Bedienung und Freeform-Seitenwechsel",
+  "changes": [
+    "Freeform zeigt die Navigation im Canvas und startet oben nach Raster.",
+    "Raster und Freeform bieten Widget-Aktionen am Widget und acht Griffe.",
+    "Seiteneinstellungen zeigen den Seitennamen in Menue und Dialog. Refs #216."
+  ]
+}

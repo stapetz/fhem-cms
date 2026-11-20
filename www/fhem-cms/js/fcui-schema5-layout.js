@@ -299,7 +299,7 @@ export function createSchema5Grid(GridStack, element, config, pageId, renderCont
   }
   const grid = GridStack.init({ column: columns, maxRow: 1000, minRow: editable ? 8 * columns / 12 : 0, mode: 'float', staticGrid: true,
     margin: 0,
-    draggable: { handle: '.cms-widget-drag' }, resizable: { handles: 'se' } }, element);
+    draggable: { handle: '.cms-widget-drag' }, resizable: { handles: 'n,ne,e,se,s,sw,w,nw' } }, element);
   if (!grid) throw new Error(`${columns}-Spalten-Raster konnte nicht angelegt werden`);
   try {
     if (grid.getColumn() !== columns) throw new Error(`${columns}-Spalten-Raster konnte nicht angelegt werden`);
