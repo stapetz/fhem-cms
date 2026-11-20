@@ -7,6 +7,10 @@
 - DWD Online zeigt fuer die Ist-Temperatur die tatsaechliche Messquelle;
   alternativ eine DWD-Station oder ein FHEM-Thermometer waehlen. Refs #221.
 
+2026-11-20 - 1.23.0-dev: DWD-Wetter: Anzeigename fuer eigene Temperaturquelle
+- Bei eigenen Thermometern kann die Quellenanzeige den Geraetenamen, den
+  FHEM-Alias oder einen eigenen Text verwenden. Refs #221.
+
 2026-11-20 - 1.21.3-dev: DWD-Wetter: Vorhersageort und Zeitbezug
 - Die Wetterkachel zeigt den Vorhersageort auch bei eigenem Titel und
   unterscheidet Stationsmessungen von zeitlich zugeordneten Vorhersagewerten.
