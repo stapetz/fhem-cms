@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-20",
+  "version": "1.21.0-dev",
+  "title": "DWD-Wetterwidget fuer Raster und Freeform",
+  "changes": [
+    "Ortssuche und DWD-Daten ueber Bright Sky oder ein lokales DWD_OpenData-Device. Refs #220.",
+    "Kachel und Details mit Vorhersage, amtlichen Warnungen und gekennzeichneten Cache-Daten."
+  ]
+}

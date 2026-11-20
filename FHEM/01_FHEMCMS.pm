@@ -20,8 +20,9 @@ use Time::Local ();
 
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
+require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.20.11-dev';
+our $FHEMCMS_VERSION = '1.21.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -135,6 +136,10 @@ sub FHEMCMS_Get {
         return 'history erwartet <device> <reading> [24h|7d|30d|365d] [auto|raw|15m|1h|1d] [auto|dblog|filelog]'
             if (@args < 2 || @args > 5);
         return FHEMCMS_History($name, @args);
+    }
+
+    if ($cmd eq 'weather' || $cmd eq 'weathergeocode' || $cmd eq 'weatherdevices') {
+        return FHEMCMS_WeatherGet($hash, $cmd, @args);
     }
 
     if ($cmd eq 'url') {
@@ -276,7 +281,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings history layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version6state:noArg version5blueprints:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings history weather weathergeocode weatherdevices:noArg layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version6state:noArg version5blueprints:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -1078,7 +1083,8 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'fhem-select'
                         && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'
                         && !($fcui && ($widget->{type} eq 'fhem-link' || $widget->{type} eq 'fhem-calllist'
-                            || $widget->{type} eq 'fhem-solar-energy' || $widget->{type} eq 'fhem-volvoconnect'))));
+                            || $widget->{type} eq 'fhem-solar-energy' || $widget->{type} eq 'fhem-volvoconnect'
+                            || $widget->{type} eq 'weather'))));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -1098,6 +1104,8 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-clock') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'style', 'showSeconds', 'showDate', 'showWeekday', 'grid'],
                     ['title', 'showTitle']);
+            } elsif ($widget->{type} eq 'weather') {
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'config', 'grid'], []);
             } elsif ($widget->{type} eq 'fhem-icon') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-table') {
@@ -1163,6 +1171,9 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-link') {
                 my $linkError = FHEMCMS_ValidateLinks($widget->{links}, $config->{pages});
                 return $linkError if (defined($linkError));
+            } elsif ($widget->{type} eq 'weather') {
+                my $weatherError = FHEMCMS_ValidateWeather($widget->{config}, $exact);
+                return $weatherError if (defined($weatherError));
             } elsif ($widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-solar-energy'
                 && !($widget->{type} eq 'fhem-solarflow' && !exists($widget->{device}))) {
                 return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
@@ -1177,7 +1188,7 @@ sub FHEMCMS_ValidateConfig {
                             || length($widget->{label}) < 1 || length($widget->{label}) > 32
                             || $widget->{label} =~ /[\x00-\x1f\x7f]/));
             }
-            if ($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html' || $widget->{type} eq 'fhem-link') {
+            if ($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html' || $widget->{type} eq 'fhem-link' || $widget->{type} eq 'weather') {
                 # keine weiteren Felder
             } elsif ($widget->{type} eq 'fhem-button') {
                 return 'Ungueltiger Wert fuer command' if (!$isName->($widget->{command}));

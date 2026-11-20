@@ -1,0 +1,837 @@
+import { isValidName } from '../js/fhem-client.js';
+
+const DEFAULTS = Object.freeze({
+  dataSource: 'brightsky',
+  location: null,
+  device: '',
+  customTitle: '',
+  forecastDays: 3,
+  showAlertsBanner: true,
+  showCurrentDetails: true,
+  enableDetailPopup: true,
+});
+const SEVERITIES = Object.freeze({
+  minor: ['Wetterwarnung', 'minor'],
+  moderate: ['Markantes Wetter', 'moderate'],
+  severe: ['Unwetterwarnung', 'severe'],
+  extreme: ['Extremes Unwetter', 'extreme'],
+});
+const ICON_KEYS = new Set([
+  'clear-day', 'clear-night', 'partly-cloudy-day', 'partly-cloudy-night', 'cloudy',
+  'fog', 'rain', 'snow', 'drizzle', 'sleet', 'thunderstorm',
+]);
+const WMO_TEXT = [
+  [new Set([0, 1]), 'Klar oder heiter'],
+  [new Set([2]), 'Leicht bewölkt'],
+  [new Set([3]), 'Bewölkt'],
+  [new Set([4, 5, 6, 7, 8, 9, 10, 11, 12, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49]), 'Dunst oder Nebel'],
+  [new Set([20, 21, 22, 23, 24, 25, 26, 27, 28, 29]), 'Niederschlag in der letzten Stunde'],
+  [new Set([50, 51, 52, 53, 54, 55, 56, 57, 58, 59]), 'Sprühregen'],
+  [new Set([60, 61, 62, 63, 64, 65, 66, 67, 80, 81, 82]), 'Regen'],
+  [new Set([68, 69, 87, 88, 89, 90]), 'Schneeregen oder Graupel'],
+  [new Set([70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 83, 84, 85, 86]), 'Schnee'],
+  [new Set([91, 92, 93, 94, 95, 96, 97, 98, 99]), 'Gewitter'],
+];
+
+const MONTHS = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
+const WEEKDAY = new Intl.DateTimeFormat('de-DE', { weekday: 'short', timeZone: 'Europe/Berlin' });
+const DATE = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Berlin' });
+const TIME = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
+const HOUR = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Europe/Berlin' });
+const NUMBER = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
+
+function safeText(value, limit = 5000) {
+  return typeof value === 'string' ? value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').slice(0, limit) : '';
+}
+
+function finite(value) {
+  const number = Number(value);
+  return value !== null && value !== '' && Number.isFinite(number) ? number : null;
+}
+
+function displayNumber(value, unit = '') {
+  const number = finite(value);
+  return number === null ? '–' : `${NUMBER.format(number)}${unit}`;
+}
+
+function asDate(value) {
+  if (typeof value !== 'string' || value.length > 64) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatTime(value) {
+  const date = asDate(value);
+  return date ? TIME.format(date) : '–';
+}
+
+function dateHour(value) {
+  const date = asDate(value);
+  return date ? Number(HOUR.format(date)) : null;
+}
+
+function formatDate(value, weekday = false) {
+  if (typeof value !== 'string') return '–';
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00Z`) : asDate(value);
+  if (!date || Number.isNaN(date.getTime())) return '–';
+  return weekday ? `${WEEKDAY.format(date)} ${DATE.format(date)}` : DATE.format(date);
+}
+
+function conditionKey(current) {
+  const ww = finite(current?.wwCode);
+  const fallback = (() => {
+    if (ww === null) return '';
+    if ([0, 1].includes(ww)) return current?.isDay === false ? 'clear-night' : 'clear-day';
+    if (ww === 2) return current?.isDay === false ? 'partly-cloudy-night' : 'partly-cloudy-day';
+    if (ww === 3) return 'cloudy';
+    if ([4, 5, 6, 7, 8, 9, 10, 11, 12, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49].includes(ww)) return 'fog';
+    if ([20, 21, 22, 23, 24, 25, 26, 27, 28, 29].includes(ww)) return [22, 23, 26, 27].includes(ww) ? 'snow' : 'rain';
+    if (ww >= 50 && ww <= 59) return 'drizzle';
+    if ([68, 69, 87, 88, 89, 90].includes(ww)) return 'sleet';
+    if ((ww >= 70 && ww <= 79) || (ww >= 83 && ww <= 86)) return 'snow';
+    if (ww >= 91 && ww <= 99) return 'thunderstorm';
+    if ((ww >= 60 && ww <= 69) || (ww >= 80 && ww <= 82)) return 'rain';
+    return '';
+  })();
+  const supplied = typeof current?.icon === 'string' && ICON_KEYS.has(current.icon) ? current.icon : '';
+  return supplied || fallback || 'cloudy';
+}
+
+function conditionText(current) {
+  const code = finite(current?.wwCode);
+  if (code !== null) {
+    const entry = WMO_TEXT.find(([codes]) => codes.has(code));
+    if (entry) return entry[1];
+  }
+  const labels = {
+    'clear-day': 'Klar', 'clear-night': 'Klar', 'partly-cloudy-day': 'Leicht bewölkt',
+    'partly-cloudy-night': 'Leicht bewölkt', cloudy: 'Bewölkt', fog: 'Nebel',
+    rain: 'Regen', snow: 'Schnee', drizzle: 'Sprühregen', sleet: 'Schneeregen',
+    thunderstorm: 'Gewitter',
+  };
+  return labels[conditionKey(current)] || 'Wetterdaten';
+}
+
+function iconSvg(key, large = false) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 64 64');
+  svg.setAttribute('class', large ? 'weather-icon is-large' : 'weather-icon');
+  svg.setAttribute('aria-hidden', 'true');
+  const node = (name, attrs) => {
+    const item = document.createElementNS(svg.namespaceURI, name);
+    for (const [attr, value] of Object.entries(attrs)) item.setAttribute(attr, value);
+    svg.append(item);
+  };
+  const cloud = () => node('path', { d: 'M18 45h29a10 10 0 0 0 0-20 15 15 0 0 0-28-3A12 12 0 0 0 18 45Z', class: 'icon-cloud' });
+  if (key === 'clear-day') {
+    node('circle', { cx: '32', cy: '31', r: '12', class: 'icon-sun' });
+    for (let angle = 0; angle < 360; angle += 45) {
+      node('path', { d: 'M32 6v7', class: 'icon-ray', transform: `rotate(${angle} 32 32)` });
+    }
+  } else if (key === 'clear-night') {
+    node('path', { d: 'M42 13a21 21 0 1 0 9 35A23 23 0 0 1 42 13Z', class: 'icon-moon' });
+    node('circle', { cx: '48', cy: '18', r: '1.8', class: 'icon-star' });
+  } else if (key === 'partly-cloudy-day' || key === 'partly-cloudy-night') {
+    node('circle', { cx: '24', cy: '24', r: '10', class: key.endsWith('night') ? 'icon-moon' : 'icon-sun' });
+    cloud();
+  } else {
+    cloud();
+    if (key === 'rain' || key === 'drizzle' || key === 'sleet') {
+      node('path', { d: key === 'drizzle' ? 'M25 51v2m11-2v2m11-2v2' : 'M25 50l-3 6m14-6-3 6m14-6-3 6', class: 'icon-rain' });
+    } else if (key === 'snow') {
+      node('path', { d: 'M24 50v8m-4-4h8m-6.8-2.8 5.6 5.6m0-5.6-5.6 5.6m14.8-6.8v8m-4-4h8m-6.8-2.8 5.6 5.6m0-5.6-5.6 5.6', class: 'icon-snow' });
+    } else if (key === 'thunderstorm') {
+      node('path', { d: 'm34 47-8 10h7l-3 7 11-13h-7l4-4', class: 'icon-lightning' });
+    } else if (key === 'fog') {
+      node('path', { d: 'M13 51h38M18 57h29', class: 'icon-fog' });
+    } else if (key === 'sleet') {
+      node('circle', { cx: '22', cy: '57', r: '1.5', class: 'icon-snow' });
+    }
+  }
+  return svg;
+}
+
+function make(tag, className, value) {
+  const item = document.createElement(tag);
+  if (className) item.className = className;
+  if (value !== undefined) item.textContent = value;
+  return item;
+}
+
+function iconForAlert(alert) {
+  const severity = safeText(alert?.severity, 24).toLowerCase();
+  return Object.hasOwn(SEVERITIES, severity) ? SEVERITIES[severity] : ['Wetterwarnung', 'moderate'];
+}
+
+function weatherConfig(widget) {
+  const source = widget?.config && typeof widget.config === 'object' && !Array.isArray(widget.config)
+    ? widget.config : {};
+  const location = source.location && typeof source.location === 'object' ? source.location : null;
+  return {
+    ...DEFAULTS,
+    ...source,
+    dataSource: source.dataSource === 'fhem_dwd' ? 'fhem_dwd' : 'brightsky',
+    location: location ? {
+      name: safeText(location.name, 120),
+      admin1: safeText(location.admin1, 120),
+      country: safeText(location.country, 80),
+      lat: finite(location.lat),
+      lon: finite(location.lon),
+    } : null,
+    device: isValidName(source.device) ? source.device : '',
+    customTitle: safeText(source.customTitle, 64),
+    forecastDays: Number.isInteger(Number(source.forecastDays))
+      ? Math.min(8, Math.max(0, Number(source.forecastDays))) : DEFAULTS.forecastDays,
+    showAlertsBanner: source.showAlertsBanner !== false,
+    showCurrentDetails: source.showCurrentDetails !== false,
+    enableDetailPopup: source.enableDetailPopup !== false,
+  };
+}
+
+function locationLabel(location) {
+  if (!location) return '';
+  return [location.name, location.admin1, location.country].filter(Boolean).join(', ');
+}
+
+function weatherTitle(widget, data) {
+  const config = weatherConfig(widget);
+  return safeText(config.customTitle || config.location?.name || data?.stationName || config.device || 'DWD-Wetter', 160);
+}
+
+function directionName(value) {
+  const degrees = finite(value);
+  if (degrees === null) return '–';
+  const directions = ['N', 'NNO', 'NO', 'ONO', 'O', 'OSO', 'SO', 'SSO',
+    'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  return `${directions[Math.round((((degrees % 360) + 360) % 360) / 22.5) % 16]} ${Math.round(degrees)}°`;
+}
+
+class FHEMCMSWeather extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.widgetConfig = null;
+    this.services = null;
+    this.weatherData = null;
+    this.refreshTimer = null;
+    this.requestRevision = 0;
+    this.geocodeRevision = 0;
+    this.isNew = false;
+  }
+
+  connectedCallback() {
+    if (!this.shadowRoot.childElementCount) this.initialize();
+    this.render();
+    this.scheduleRefresh(0);
+  }
+
+  disconnectedCallback() {
+    clearTimeout(this.refreshTimer);
+    this.refreshTimer = null;
+    this.requestRevision += 1;
+    this.geocodeRevision += 1;
+  }
+
+  set config(value) {
+    this.widgetConfig = value;
+    this.render();
+    if (this.isConnected) this.scheduleRefresh(0);
+  }
+
+  get config() { return this.widgetConfig; }
+
+  set stale(value) {
+    this.shadowRoot.querySelector('[data-tile]')?.toggleAttribute('data-fhem-stale', value !== null);
+  }
+
+  initialize() {
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display:block; min-width:0; min-height:0; color:var(--cms-text,#edf4ef); }
+        * { box-sizing:border-box; }
+        .tile { height:var(--cms-widget-height,100%); min-height:0; overflow:auto; position:relative;
+          container-type:inline-size; container-name:weather; border:1px solid var(--cms-frame,#7f8c84); border-radius:1.2rem;
+          padding:.7rem; background:var(--cms-surface,#202e27); color:inherit; font:inherit; }
+        .tile[data-fhem-stale] { opacity:.78; border-style:dashed; }
+        .gear { position:absolute; z-index:1; top:.4rem; right:.4rem; min-width:44px; min-height:44px; }
+        button { font:inherit; color:inherit; cursor:pointer; border:1px solid var(--cms-border,#43564a);
+          border-radius:.55rem; background:var(--cms-surface-raised,#2a3b32); padding:.4rem .65rem; }
+        button:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid var(--cms-accent,#8fd0a8); outline-offset:2px; }
+        :host([view-only]) .gear, :host(:not([view-only])) [data-detail] { display:none; }
+        [hidden] { display:none !important; }
+        header { min-height:2rem; display:flex; align-items:center; gap:.45rem; padding-right:3rem; }
+        h3 { margin:0; font-size:clamp(.95rem,5cqi,1.3rem); overflow-wrap:anywhere; }
+        .updated { margin-left:auto; color:var(--cms-muted,#a5c9b2); font-size:.75rem; white-space:nowrap; }
+        .badge { flex:none; border-radius:99px; padding:.15rem .45rem; font-size:.72rem; font-weight:700; color:#241500; }
+        .badge.minor { background:#ffeb3b; } .badge.moderate { background:#ff9800; }
+        .badge.severe { background:#f44336; color:white; } .badge.extreme { background:#7e57c2; color:white; }
+        .current { display:flex; align-items:center; gap:clamp(.5rem,3cqi,1rem); min-width:0; padding:.5rem 0; }
+        .weather-icon { width:clamp(2.4rem,14cqi,4.2rem); height:auto; flex:none; overflow:visible; }
+        .is-large { width:4.5rem; }
+        .icon-sun,.icon-star { fill:#ffd54f; } .icon-moon { fill:#d7e3ff; }
+        .icon-ray,.icon-rain,.icon-fog { fill:none; stroke:#ffd54f; stroke-width:3; stroke-linecap:round; }
+        .icon-cloud { fill:#aebdc6; stroke:#dbe4e9; stroke-width:1.5; }
+        .icon-rain,.icon-fog { stroke:#64b5f6; } .icon-snow { fill:none; stroke:#b3e5fc; stroke-width:2; stroke-linecap:round; }
+        .icon-lightning { fill:#ffca28; stroke:#ffca28; stroke-width:1; }
+        .temp { font-size:clamp(2rem,14cqi,4rem); line-height:1; font-weight:750; font-variant-numeric:tabular-nums; }
+        .condition { color:var(--cms-muted-strong,#c4d0c8); font-size:clamp(.8rem,4cqi,1rem); }
+        .forecast-kind { display:inline-block; margin-top:.2rem; padding:.12rem .4rem; border-radius:99px;
+          background:color-mix(in srgb,#ffca28 24%,transparent); color:var(--cms-text,#edf4ef); font-size:.72rem; }
+        .details { display:flex; flex-wrap:wrap; gap:.25rem .8rem; color:var(--cms-muted-strong,#c4d0c8); font-size:.85rem; }
+        .message { margin:.3rem 0; color:var(--cms-muted,#a5c9b2); font-size:.83rem; overflow-wrap:anywhere; }
+        .message.alert-unavailable { color:#ffcc80; }
+        .forecast { display:grid; grid-template-columns:repeat(var(--forecast-count,3),minmax(0,1fr)); gap:.35rem; margin:.45rem 0; }
+        .day { min-width:0; display:grid; justify-items:center; gap:.15rem; padding:.35rem .15rem;
+          border-radius:.6rem; background:color-mix(in srgb,var(--cms-surface-raised,#2a3b32) 75%,transparent); text-align:center; }
+        .day .weather-icon { width:2.4rem; }
+        .day-name,.day-precip { font-size:.72rem; color:var(--cms-muted,#a5c9b2); }
+        .day-temp { font-size:.82rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        [data-detail] { min-height:44px; margin-top:.4rem; }
+        dialog { width:min(94vw,60rem); max-width:60rem; max-height:min(92dvh,60rem); overflow:auto;
+          padding:1rem; border:1px solid var(--cms-border,#43564a); border-radius:1rem;
+          background:var(--cms-surface,#202e27); color:var(--cms-text,#edf4ef); }
+        dialog::backdrop { background:var(--cms-backdrop,rgb(0 0 0 / .65)); }
+        .modal-head { position:sticky; top:-1rem; z-index:2; display:flex; gap:.5rem; align-items:center;
+          padding:.35rem 0 .7rem; background:var(--cms-surface,#202e27); }
+        .modal-head h2 { margin:0; font-size:1.25rem; }
+        .modal-close { margin-left:auto; min-width:44px; min-height:44px; }
+        .modal-section { margin:1rem 0; }
+        .modal-section h3 { margin:.2rem 0 .65rem; }
+        .alerts { display:grid; gap:.6rem; }
+        .alert { padding:.7rem; border-left:.35rem solid var(--alert-color,#ff9800); border-radius:.5rem;
+          background:color-mix(in srgb,var(--alert-color,#ff9800) 14%,transparent); }
+        .alert.minor { --alert-color:#fdd835; } .alert.moderate { --alert-color:#fb8c00; }
+        .alert.severe { --alert-color:#e53935; } .alert.extreme { --alert-color:#8e24aa; }
+        .alert h4 { margin:0 0 .35rem; } .alert p { margin:.35rem 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+        .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr)); gap:.45rem; margin:0; }
+        .metric { padding:.55rem; border-radius:.5rem; background:color-mix(in srgb,var(--cms-surface-raised,#2a3b32) 75%,transparent); }
+        .metric dt { color:var(--cms-muted,#a5c9b2); font-size:.78rem; }
+        .metric dd { margin:.2rem 0 0; font-variant-numeric:tabular-nums; }
+        .hourly { display:flex; gap:.5rem; overflow-x:auto; padding:.3rem 0 .7rem; scroll-snap-type:x proximity; }
+        .hour { flex:0 0 8.5rem; display:grid; justify-items:center; gap:.2rem; padding:.5rem;
+          border-radius:.6rem; background:color-mix(in srgb,var(--cms-surface-raised,#2a3b32) 75%,transparent); scroll-snap-align:start; }
+        .hour .weather-icon { width:2.5rem; }
+        .daily details { border-top:1px solid var(--cms-border,#43564a); }
+        .daily summary { display:flex; align-items:center; gap:.6rem; min-height:48px; cursor:pointer; }
+        .daily summary .weather-icon { width:2.5rem; }
+        .daily summary .daily-temp { margin-left:auto; }
+        .day-parts { display:grid; grid-template-columns:repeat(auto-fit,minmax(8rem,1fr)); gap:.35rem; padding:.25rem .5rem .7rem; }
+        .day-part { padding:.45rem; border-radius:.4rem; background:color-mix(in srgb,var(--cms-surface-raised,#2a3b32) 75%,transparent); }
+        .day-part strong,.day-part span { display:block; } .day-part span { font-size:.82rem; margin-top:.2rem; }
+        .source { color:var(--cms-muted,#a5c9b2); font-size:.8rem; }
+        form { display:grid; gap:.75rem; }
+        label { display:grid; gap:.25rem; }
+        fieldset { display:flex; flex-wrap:wrap; gap:.65rem; }
+        fieldset label,.check { display:flex; align-items:center; gap:.35rem; }
+        input,select { width:100%; min-height:44px; padding:.45rem .55rem; color:inherit; font:inherit;
+          border:1px solid var(--cms-border,#43564a); border-radius:.5rem; background:var(--cms-bg,#17211d); }
+        input[type=checkbox],input[type=radio] { width:1.15rem; min-height:1.15rem; }
+        .location-search,.form-actions { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+        .location-search input { flex:1 1 12rem; }
+        .results { display:grid; gap:.35rem; max-height:12rem; overflow:auto; }
+        .results button { text-align:left; }
+        .hint { margin:0; color:var(--cms-muted,#a5c9b2); font-size:.82rem; }
+        .error { margin:0; color:var(--cms-danger,#ffb4a8); }
+        .form-actions { justify-content:flex-end; }
+        .danger { margin-right:auto; }
+        @container weather (max-width:259px) {
+          .forecast { grid-template-columns:1fr; }
+          .day { grid-template-columns:2.4rem 1fr auto auto; justify-items:start; text-align:left; }
+          .day .weather-icon { width:2rem; grid-row:span 2; }
+          .day-precip { align-self:end; }
+        }
+        @media (max-width:639px) {
+          dialog { width:100vw; max-width:none; height:100dvh; max-height:100dvh; margin:0;
+            border-radius:0; padding:calc(env(safe-area-inset-top) + .75rem) .75rem calc(env(safe-area-inset-bottom) + .75rem); }
+          .modal-head { top:calc(-1 * (env(safe-area-inset-top) + .75rem)); }
+        }
+      </style>
+      <article class="tile" data-tile>
+        <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="DWD-Wetter konfigurieren">⚙</button>
+        <header><h3 data-title></h3><span data-alert-badge class="badge" hidden></span><span class="updated" data-updated></span></header>
+        <p class="message" data-message role="status">Wetterdaten werden geladen …</p>
+        <div class="current" data-current hidden></div>
+        <div class="details" data-details hidden></div>
+        <div class="message alert-unavailable" data-alert-status hidden></div>
+        <div class="forecast" data-forecast></div>
+        <button type="button" data-detail>Details anzeigen</button>
+      </article>
+      <dialog data-modal aria-labelledby="weather-modal-title">
+        <div class="modal-head"><h2 id="weather-modal-title" data-modal-title>Wetterdetails</h2>
+          <button type="button" class="modal-close" data-modal-close aria-label="Details schließen">×</button></div>
+        <div data-modal-content></div>
+      </dialog>
+      <dialog data-editor aria-labelledby="weather-editor-title">
+        <form data-form novalidate>
+          <h2 id="weather-editor-title">DWD-Wetter konfigurieren</h2>
+          <fieldset><legend>Datenquelle</legend>
+            <label><input type="radio" name="dataSource" value="brightsky"> Ort suchen (DWD Online)</label>
+            <label><input type="radio" name="dataSource" value="fhem_dwd"> FHEM DWD_OpenData Device</label>
+          </fieldset>
+          <section data-location-fields>
+            <label>Ort suchen
+              <span class="location-search"><input name="query" type="search" minlength="2" maxlength="80" autocomplete="off" placeholder="Ort oder Postleitzahl">
+                <button type="button" data-search> Suchen</button></span>
+            </label>
+            <div class="results" data-results aria-live="polite"></div>
+            <p class="hint" data-location-selected></p>
+          </section>
+          <section data-device-fields hidden>
+            <label>DWD_OpenData-Device<select name="device"><option value="">Device auswählen …</option></select></label>
+            <p class="hint" data-device-status></p>
+          </section>
+          <label>Anzeigename (optional)<input name="customTitle" type="text" maxlength="64" autocomplete="off"></label>
+          <label>Vorhersagetage (0–8)<input name="forecastDays" type="number" min="0" max="8" step="1" required></label>
+          <label class="check"><input name="showAlertsBanner" type="checkbox"> Warn-Banner anzeigen</label>
+          <label class="check"><input name="showCurrentDetails" type="checkbox"> Wind, Luftfeuchtigkeit und Regen auf der Kachel anzeigen</label>
+          <label class="check"><input name="enableDetailPopup" type="checkbox"> Detail-Popup aktivieren</label>
+          <p class="error" data-error role="alert"></p>
+          <div class="form-actions"><button type="button" class="danger" data-delete>Widget löschen</button>
+            <button type="button" data-cancel>Abbrechen</button><button type="submit">Speichern</button></div>
+        </form>
+      </dialog>`;
+    this.shadowRoot.querySelector('[data-open-config]').addEventListener('click', () => this.openConfig());
+    this.shadowRoot.querySelector('[data-detail]').addEventListener('click', () => this.openDetails());
+    this.shadowRoot.querySelector('[data-modal-close]').addEventListener('click', () => this.closeDetails());
+    const modal = this.shadowRoot.querySelector('[data-modal]');
+    modal.addEventListener('cancel', (event) => { event.preventDefault(); this.closeDetails(); });
+    modal.addEventListener('click', (event) => { if (event.target === modal) this.closeDetails(); });
+    this.shadowRoot.querySelector('[data-editor]').addEventListener('cancel', (event) => {
+      event.preventDefault();
+      this.closeConfig(false);
+    });
+    this.shadowRoot.querySelector('[data-cancel]').addEventListener('click', () => this.closeConfig(false));
+    this.shadowRoot.querySelector('[data-delete]').addEventListener('click', () => this.deleteWidget());
+    this.shadowRoot.querySelector('[data-search]').addEventListener('click', () => this.searchLocation());
+    this.shadowRoot.querySelector('[name=query]').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { event.preventDefault(); this.searchLocation(); }
+    });
+    this.shadowRoot.querySelector('[data-form]').addEventListener('submit', (event) => {
+      event.preventDefault();
+      this.saveConfig();
+    });
+    for (const radio of this.shadowRoot.querySelectorAll('[name=dataSource]')) {
+      radio.addEventListener('change', () => this.updateSourceFields());
+    }
+  }
+
+  scheduleRefresh(delay) {
+    clearTimeout(this.refreshTimer);
+    if (!this.isConnected) return;
+    this.refreshTimer = setTimeout(() => this.refresh(), delay);
+  }
+
+  async refresh() {
+    const revision = ++this.requestRevision;
+    const config = weatherConfig(this.widgetConfig);
+    if (!this.services || typeof this.services.weather !== 'function'
+      || (config.dataSource === 'brightsky' && (!config.location
+        || config.location.lat === null || config.location.lon === null))) {
+      this.setStatus('Bitte Wetterdaten im Widgetdialog konfigurieren.');
+      return;
+    }
+    if (config.dataSource === 'fhem_dwd' && !config.device) {
+      this.setStatus('Bitte ein DWD_OpenData-Device auswählen.');
+      return;
+    }
+    if (!this.weatherData) this.setStatus('Wetterdaten werden geladen …');
+    try {
+      const result = await this.services.weather(config);
+      if (!this.isConnected || revision !== this.requestRevision) return;
+      if (result?.loading === true) {
+        this.setStatus(this.weatherData ? 'Wetterdaten werden aktualisiert …' : 'Wetterdaten werden geladen …');
+        this.scheduleRefresh(1500);
+        return;
+      }
+      this.weatherData = result;
+      this.render();
+      this.scheduleRefresh(5 * 60 * 1000);
+    } catch (error) {
+      if (!this.isConnected || revision !== this.requestRevision) return;
+      this.setStatus(`Wetterdaten nicht verfügbar: ${safeText(error?.message || String(error), 240)}`);
+      this.scheduleRefresh(30 * 1000);
+    }
+  }
+
+  setStatus(message) {
+    const output = this.shadowRoot.querySelector('[data-message]');
+    if (output) output.textContent = message;
+  }
+
+  render() {
+    if (!this.widgetConfig || !this.shadowRoot.querySelector('[data-title]')) return;
+    const config = weatherConfig(this.widgetConfig);
+    const data = this.weatherData;
+    const title = weatherTitle(this.widgetConfig, data);
+    this.shadowRoot.querySelector('[data-title]').textContent = safeText(title, 160);
+    const detailButton = this.shadowRoot.querySelector('[data-detail]');
+    detailButton.hidden = !this.hasAttribute('view-only') || !config.enableDetailPopup || !data;
+    const message = this.shadowRoot.querySelector('[data-message]');
+    const current = data?.current && typeof data.current === 'object' ? data.current : null;
+    const alerts = Array.isArray(data?.alerts) ? data.alerts.filter(alert => alert && typeof alert === 'object') : [];
+    const badge = this.shadowRoot.querySelector('[data-alert-badge]');
+    if (config.showAlertsBanner && alerts.length) {
+      const [label, severity] = iconForAlert(alerts[0]);
+      badge.hidden = false;
+      badge.className = `badge ${severity}`;
+      badge.textContent = alerts.length > 1 ? `${alerts.length} Warnungen` : label;
+    } else {
+      badge.hidden = true;
+      badge.textContent = '';
+    }
+    const updated = data?.updatedAt ? formatTime(data.updatedAt) : '';
+    this.shadowRoot.querySelector('[data-updated]').textContent = updated
+      ? `${data.stale ? 'Cache · ' : 'Stand: '}${updated}` : (data?.stale ? 'Gecacht' : '');
+    const currentBox = this.shadowRoot.querySelector('[data-current]');
+    currentBox.replaceChildren();
+    currentBox.hidden = !current;
+    if (current) {
+      currentBox.append(iconSvg(conditionKey(current)));
+      const summary = make('div', 'summary');
+      summary.append(make('div', 'temp', displayNumber(current.temp, '°')), make('div', 'condition', conditionText(current)));
+      if (current.isForecast === true) {
+        summary.append(make('span', 'forecast-kind', 'Vorhersage · keine Stationsmessung'));
+      }
+      currentBox.append(summary);
+    }
+    const details = this.shadowRoot.querySelector('[data-details]');
+    details.replaceChildren();
+    details.hidden = !config.showCurrentDetails || !current;
+    if (!details.hidden) {
+      for (const label of [
+        ['Wind', displayNumber(current.windSpeed, ' km/h')],
+        ['Richtung', directionName(current.windDirection)],
+        ['Luftfeuchte', displayNumber(current.humidity, ' %')],
+        ['Regen', displayNumber(current.precipitation, ' mm/h')],
+      ]) details.append(make('span', '', `${label[0]}: ${label[1]}`));
+    }
+    const unavailable = this.shadowRoot.querySelector('[data-alert-status]');
+    unavailable.hidden = data?.alertsUnavailable !== true;
+    unavailable.textContent = data?.alertsUnavailable === true
+      ? 'Amtliche Warnungen sind derzeit nicht verfügbar.' : '';
+    if (!data) {
+      message.textContent ||= 'Wetterdaten werden geladen …';
+    } else if (data.loading === true) {
+      message.textContent = 'Wetterdaten werden geladen …';
+    } else {
+      message.textContent = current ? '' : 'Aktuelle Wetterwerte sind nicht verfügbar.';
+    }
+    const forecast = this.shadowRoot.querySelector('[data-forecast]');
+    forecast.replaceChildren();
+    const days = Array.isArray(data?.daily) ? data.daily.slice(0, config.forecastDays) : [];
+    forecast.hidden = config.forecastDays === 0 || !days.length;
+    forecast.style.setProperty('--forecast-count', String(Math.max(1, days.length)));
+    for (const day of days) {
+      const card = make('div', 'day');
+      card.append(iconSvg(conditionKey(day)));
+      card.append(make('span', 'day-name', formatDate(day.date, true)));
+      card.append(make('span', 'day-temp', `${displayNumber(day.tempMin, '°')} / ${displayNumber(day.tempMax, '°')}`));
+      card.append(make('span', 'day-precip', `Regen ${displayNumber(day.precipitationProbabilityMax, ' %')}`));
+      forecast.append(card);
+    }
+  }
+
+  openDetails() {
+    const config = weatherConfig(this.widgetConfig);
+    if (!this.weatherData || !config.enableDetailPopup || !this.hasAttribute('view-only')) return;
+    const data = this.weatherData;
+    const title = weatherTitle(this.widgetConfig, data);
+    this.shadowRoot.querySelector('[data-modal-title]').textContent = `${safeText(title, 160)} – Wetterdetails`;
+    const content = this.shadowRoot.querySelector('[data-modal-content]');
+    content.replaceChildren();
+    const alerts = Array.isArray(data.alerts) ? data.alerts.filter(alert => alert && typeof alert === 'object') : [];
+    const alertsSection = make('section', 'modal-section alerts');
+    alertsSection.append(make('h3', '', 'Amtliche DWD-Unwetterwarnungen'));
+    if (data.alertsUnavailable === true) {
+      alertsSection.append(make('p', 'message alert-unavailable',
+        'Warninformationen sind derzeit nicht vollständig verfügbar; daraus lässt sich nicht auf Warnungsfreiheit schließen.'));
+    }
+    if (alerts.length) {
+      for (const alert of alerts) {
+        const [label, severity] = iconForAlert(alert);
+        const card = make('article', `alert ${severity}`);
+        card.append(make('h4', '', safeText(alert.headline || alert.event || label, 300)));
+        const onset = formatTime(alert.onset);
+        const expires = formatTime(alert.expires);
+        card.append(make('p', '', `${onset} – ${expires}`));
+        if (alert.description) card.append(make('p', '', safeText(alert.description)));
+        if (alert.instruction) card.append(make('p', '', safeText(alert.instruction)));
+        alertsSection.append(card);
+      }
+    } else if (data.alertsUnavailable !== true) {
+      alertsSection.append(make('p', 'message', 'Keine aktiven Warnungen gemeldet.'));
+    }
+    content.append(alertsSection);
+
+    const current = data.current && typeof data.current === 'object' ? data.current : {};
+    const currentSection = make('section', 'modal-section');
+    currentSection.append(make('h3', '', current.isForecast === true
+      ? 'Vorhersagewerte · keine Stationsmessung' : 'Aktuelle Messwerte'));
+    const metrics = make('dl', 'metric-grid');
+    const wind = finite(current.windSpeed);
+    const beaufort = wind === null ? '–' : `${Math.min(12, Math.floor(Math.pow(wind / 3.6 / 0.836, 2 / 3)))} Bft`;
+    const metricRows = [
+      ['Temperatur', displayNumber(current.temp, ' °C')], ['Taupunkt', displayNumber(current.dewPoint, ' °C')],
+      ['Luftfeuchtigkeit', displayNumber(current.humidity, ' %')], ['Luftdruck', displayNumber(current.pressure, ' hPa')],
+      ['Wind', `${displayNumber(current.windSpeed, ' km/h')} · ${beaufort}`],
+      ['Böen', displayNumber(current.windGust, ' km/h')], ['Windrichtung', directionName(current.windDirection)],
+      ['Niederschlag', displayNumber(current.precipitation, ' mm')],
+      ['Sonnenschein', displayNumber(current.sunshine, ' min')],
+      ['Globalstrahlung', displayNumber(current.solar, ' kWh/m²')],
+      ['Bewölkung', displayNumber(current.cloudCover, ' %')],
+      ['Sichtweite', displayNumber(finite(current.visibility) === null ? null : Number(current.visibility) / 1000, ' km')],
+    ];
+    for (const [label, value] of metricRows) {
+      const metric = make('div', 'metric');
+      metric.append(make('dt', '', label), make('dd', '', value));
+      metrics.append(metric);
+    }
+    currentSection.append(metrics);
+    content.append(currentSection);
+
+    const hourly = Array.isArray(data.hourly) ? data.hourly.slice(0, 48) : [];
+    const hourlySection = make('section', 'modal-section');
+    hourlySection.append(make('h3', '', 'Stündliche Vorhersage · nächste 48 Stunden'));
+    const hourlyList = make('div', 'hourly');
+    for (const hour of hourly) {
+      const card = make('article', 'hour');
+      card.append(make('strong', '', formatTime(hour.timestamp)), iconSvg(conditionKey(hour)));
+      card.append(make('span', '', displayNumber(hour.temp, ' °C')));
+      card.append(make('span', '', `Regen ${displayNumber(hour.precipitationProbability, ' %')}`));
+      card.append(make('span', '', `${displayNumber(hour.precipitation, ' mm')} · Wind ${displayNumber(hour.windSpeed, ' km/h')}`));
+      card.append(make('span', '', `Böen ${displayNumber(hour.windGust, ' km/h')}`));
+      hourlyList.append(card);
+    }
+    if (!hourly.length) hourlyList.append(make('p', 'message', 'Keine Stundenwerte verfügbar.'));
+    hourlySection.append(hourlyList);
+    content.append(hourlySection);
+
+    const dailySection = make('section', 'modal-section daily');
+    dailySection.append(make('h3', '', 'Erweiterte Vorhersage'));
+    const daily = Array.isArray(data.daily) ? data.daily : [];
+    for (const day of daily.slice(0, 10)) {
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.append(iconSvg(conditionKey(day)), make('strong', '', formatDate(day.date, true)));
+      summary.append(make('span', 'daily-temp', `${displayNumber(day.tempMin, '°')} / ${displayNumber(day.tempMax, '°')}`));
+      details.append(summary);
+      const sunshineHours = finite(day.sunshineMinutes) === null ? null : Number(day.sunshineMinutes) / 60;
+      const stats = make('p', 'message', [
+        `Regen ${displayNumber(day.precipitationProbabilityMax, ' %')}`,
+        displayNumber(day.precipitationSum, ' mm'),
+        `Sonne ${displayNumber(sunshineHours, ' h')}`,
+      ].join(' · '));
+      details.append(stats);
+      const parts = make('div', 'day-parts');
+      for (const hour of [6, 12, 18, 0]) {
+        const periods = Array.isArray(day.periods) ? day.periods : [];
+        const entry = periods.find(item => dateHour(item?.timestamp) === hour)
+          || hourly.find(item => dateHour(item?.timestamp) === hour
+            && formatDate(item.timestamp) === formatDate(day.date));
+        const part = make('div', 'day-part');
+        part.append(make('strong', '', `${hour === 0 ? 'Nachts' : hour === 6 ? 'Morgens' : hour === 12 ? 'Mittags' : 'Abends'} · ${String(hour).padStart(2, '0')}:00`));
+        part.append(make('span', '', entry
+          ? `${displayNumber(entry.temp, ' °C')} · Wind ${displayNumber(entry.windSpeed, ' km/h')} · Bewölkung ${displayNumber(entry.cloudCover, ' %')} · Regen ${displayNumber(entry.precipitation, ' mm')}`
+          : 'Keine Stundenwerte verfügbar'));
+        parts.append(part);
+      }
+      details.append(parts);
+      dailySection.append(details);
+    }
+    if (!daily.length) dailySection.append(make('p', 'message', 'Keine Tagesvorhersage verfügbar.'));
+    content.append(dailySection);
+    content.append(make('p', 'source', 'Datenbasis: Deutscher Wetterdienst (DWD)'));
+    this.shadowRoot.querySelector('[data-modal]').showModal();
+  }
+
+  closeDetails() {
+    const modal = this.shadowRoot.querySelector('[data-modal]');
+    if (modal?.open) modal.close();
+  }
+
+  updateSourceFields() {
+    const source = this.shadowRoot.querySelector('[name=dataSource]:checked')?.value || 'brightsky';
+    this.shadowRoot.querySelector('[data-location-fields]').hidden = source !== 'brightsky';
+    this.shadowRoot.querySelector('[data-device-fields]').hidden = source !== 'fhem_dwd';
+  }
+
+  async openConfig({ isNew = false } = {}) {
+    this.isNew = isNew;
+    this.selectedLocation = null;
+    const config = weatherConfig(this.widgetConfig);
+    const form = this.shadowRoot.querySelector('[data-form]');
+    form.elements.dataSource.value = config.dataSource;
+    form.elements.customTitle.value = config.customTitle;
+    form.elements.forecastDays.value = String(config.forecastDays);
+    form.elements.showAlertsBanner.checked = config.showAlertsBanner;
+    form.elements.showCurrentDetails.checked = config.showCurrentDetails;
+    form.elements.enableDetailPopup.checked = config.enableDetailPopup;
+    this.shadowRoot.querySelector('[data-results]').replaceChildren();
+    this.shadowRoot.querySelector('[data-location-selected]').textContent = config.location
+      ? `Ausgewählt: ${locationLabel(config.location)}` : 'Noch kein Ort ausgewählt.';
+    this.shadowRoot.querySelector('[data-error]').textContent = '';
+    this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
+    this.updateSourceFields();
+    this.shadowRoot.querySelector('[data-editor]').showModal();
+    await this.loadWeatherDevices(config.device);
+  }
+
+  async loadWeatherDevices(selected) {
+    const select = this.shadowRoot.querySelector('[name=device]');
+    const status = this.shadowRoot.querySelector('[data-device-status]');
+    select.replaceChildren(new Option('Device auswählen …', ''));
+    status.textContent = 'DWD_OpenData-Devices werden geladen …';
+    try {
+      let devices;
+      if (typeof this.services?.weatherDevices === 'function') {
+        const result = await this.services.weatherDevices();
+        if (result?.loading === true) {
+          status.textContent = 'DWD_OpenData-Devices werden geladen …';
+          return;
+        }
+        devices = Array.isArray(result?.devices)
+          ? result.devices.map(name => ({ name, type: 'DWD_OpenData' })) : [];
+      } else if (typeof this.services?.listAllDevices === 'function') {
+        devices = await this.services.listAllDevices();
+      } else {
+        throw new Error('Geräteliste ist nicht verfügbar');
+      }
+      if (!this.shadowRoot.querySelector('[data-editor]').open) return;
+      const matches = devices.filter(device => device?.type === 'DWD_OpenData' && isValidName(device.name));
+      for (const item of matches) select.add(new Option(safeText(item.alias || item.name, 160), item.name));
+      if (matches.some(item => item.name === selected)) select.value = selected;
+      status.textContent = matches.length ? `${matches.length} DWD_OpenData-Device${matches.length === 1 ? '' : 's'} gefunden.`
+        : 'Kein DWD_OpenData-Device gefunden.';
+    } catch (error) {
+      if (!this.shadowRoot.querySelector('[data-editor]').open) return;
+      status.textContent = `Geräteliste nicht verfügbar: ${safeText(error?.message || String(error), 200)}`;
+    }
+  }
+
+  async searchLocation() {
+    const query = this.shadowRoot.querySelector('[name=query]').value.trim();
+    const resultsRoot = this.shadowRoot.querySelector('[data-results]');
+    const status = this.shadowRoot.querySelector('[data-location-selected]');
+    const revision = ++this.geocodeRevision;
+    resultsRoot.replaceChildren();
+    status.textContent = 'Ortssuche läuft …';
+    try {
+      if (typeof this.services?.weatherGeocode !== 'function') throw new Error('Ortssuche ist nicht verfügbar');
+      if (query.length < 2 || query.length > 80) throw new Error('Bitte 2 bis 80 Zeichen eingeben');
+      const deadline = Date.now() + 30000;
+      let result;
+      do {
+        result = await this.services.weatherGeocode(query);
+        if (result?.loading === true) {
+          if (Date.now() >= deadline) throw new Error('Zeitüberschreitung bei der Ortssuche');
+          status.textContent = 'Ortssuche läuft …';
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          if (revision !== this.geocodeRevision || !this.shadowRoot.querySelector('[data-editor]').open) return;
+        }
+      } while (result?.loading === true);
+      if (revision !== this.geocodeRevision || !this.shadowRoot.querySelector('[data-editor]').open) return;
+      if (typeof result?.error === 'string') throw new Error(result.error);
+      if (!result.results.length) {
+        status.textContent = 'Keine passenden Orte gefunden.';
+        return;
+      }
+      status.textContent = 'Bitte einen Ort auswählen:';
+      for (const item of result.results) {
+        const lat = finite(item.lat);
+        const lon = finite(item.lon);
+        const name = safeText(item.name, 120);
+        if (!name || lat === null || lon === null || lat < -90 || lat > 90 || lon < -180 || lon > 180) continue;
+        const country = safeText(item.country, 2);
+        if (!/^[A-Z]{2}$/.test(country)) continue;
+        const location = { name, admin1: safeText(item.admin1, 120), country, lat, lon };
+        const button = make('button', '', locationLabel(location));
+        button.type = 'button';
+        button.addEventListener('click', () => {
+          this.selectedLocation = location;
+          this.shadowRoot.querySelector('[data-location-selected]').textContent = `Ausgewählt: ${locationLabel(location)}`;
+          resultsRoot.replaceChildren();
+        });
+        resultsRoot.append(button);
+      }
+    } catch (error) {
+      if (revision !== this.geocodeRevision || !this.shadowRoot.querySelector('[data-editor]').open) return;
+      status.textContent = '';
+      this.shadowRoot.querySelector('[data-error]').textContent = `Ortssuche fehlgeschlagen: ${safeText(error?.message || String(error), 240)}`;
+    }
+  }
+
+  async saveConfig() {
+    const form = this.shadowRoot.querySelector('[data-form]');
+    const error = this.shadowRoot.querySelector('[data-error]');
+    const current = weatherConfig(this.widgetConfig);
+    const dataSource = form.elements.dataSource.value;
+    const customTitle = form.elements.customTitle.value.trim();
+    const rawDays = form.elements.forecastDays.value;
+    if (!['brightsky', 'fhem_dwd'].includes(dataSource)) { error.textContent = 'Bitte eine Datenquelle auswählen.'; return; }
+    if (customTitle.length > 64 || /[\u0000-\u001f\u007f]/.test(customTitle)) { error.textContent = 'Der Anzeigename ist ungültig.'; return; }
+    if (!/^[0-8]$/.test(rawDays)) { error.textContent = 'Die Vorhersagetage müssen zwischen 0 und 8 liegen.'; return; }
+    const location = this.selectedLocation || current.location;
+    const device = form.elements.device.value;
+    if (dataSource === 'brightsky' && (!location || location.lat === null || location.lon === null
+      || !/^[A-Z]{2}$/.test(location.country) || !location.name || location.name.length > 120)) {
+      error.textContent = 'Bitte einen Ort suchen und auswählen.';
+      return;
+    }
+    if (dataSource === 'fhem_dwd' && !isValidName(device)) {
+      error.textContent = 'Bitte ein gültiges DWD_OpenData-Device auswählen.';
+      return;
+    }
+    const config = {
+      dataSource,
+      customTitle,
+      forecastDays: Number(rawDays),
+      showAlertsBanner: form.elements.showAlertsBanner.checked,
+      showCurrentDetails: form.elements.showCurrentDetails.checked,
+      enableDetailPopup: form.elements.enableDetailPopup.checked,
+    };
+    if (dataSource === 'brightsky') config.location = location;
+    else config.device = device;
+    const next = { ...structuredClone(this.widgetConfig), type: 'weather', config };
+    try {
+      await this.services.saveWidget(next);
+      this.widgetConfig = next;
+      this.selectedLocation = null;
+      this.closeConfig(true);
+      this.render();
+      this.scheduleRefresh(0);
+    } catch (failure) {
+      error.textContent = `Speichern fehlgeschlagen: ${safeText(failure?.message || String(failure), 240)}`;
+    }
+  }
+
+  async deleteWidget() {
+    if (!window.confirm('Dieses DWD-Wetter-Widget entfernen?')) return;
+    try {
+      await this.services.deleteWidget(this.widgetConfig.id);
+      this.closeConfig(true);
+    } catch (error) {
+      this.shadowRoot.querySelector('[data-error]').textContent =
+        `Entfernen fehlgeschlagen: ${safeText(error?.message || String(error), 240)}`;
+    }
+  }
+
+  closeConfig(saved) {
+    this.geocodeRevision += 1;
+    const editor = this.shadowRoot.querySelector('[data-editor]');
+    if (editor?.open) editor.close();
+    this.selectedLocation = null;
+    if (!saved && this.isNew) this.dispatchEvent(new CustomEvent('cms-widget-cancel', { bubbles: true }));
+  }
+}
+
+if (!customElements.get('cms-weather')) customElements.define('cms-weather', FHEMCMSWeather);
+
+export {
+  conditionKey,
+  conditionText,
+  directionName,
+  formatDate,
+  formatTime,
+  weatherTitle,
+  weatherConfig,
+};
