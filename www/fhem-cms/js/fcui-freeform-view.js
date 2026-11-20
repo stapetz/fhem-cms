@@ -50,7 +50,8 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     const width = viewport.clientWidth;
     if (!width) return;
     const small = !editing && (phone || tablet || touchTablet.matches || browser.innerWidth <= 1100 || width < 640);
-    const stack = small && !landscape.matches && settings.mobileBehavior === 'stack';
+    const mobilePortrait = small && !landscape.matches;
+    const stack = mobilePortrait && settings.mobileBehavior === 'stack';
     const showBurger = small && Boolean(burger);
     if (showBurger !== compact) {
       compact = showBurger;
@@ -78,7 +79,8 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     const padding = Number.parseFloat(browser.getComputedStyle(doc.body).paddingBottom) || 0;
     const height = Math.max(1, browser.innerHeight - Math.max(0, top) - padding);
     const byWidth = width / settings.width;
-    scale = stack ? 1 : small ? Math.min(byWidth, height / settings.height, 1)
+    scale = stack ? 1 : mobilePortrait ? Math.min(byWidth, height / settings.height, 1)
+      : small ? byWidth
       : settings.scaling === 'none' ? Math.min(1, editing ? Infinity : byWidth) : byWidth;
     canvas.style.setProperty('--cms-freeform-scale', scale);
     canvas.style.setProperty('--cms-view-width', stack ? `${width}px` : `${settings.width}px`);

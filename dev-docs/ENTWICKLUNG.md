@@ -25,8 +25,9 @@ Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherun
 
 Abnahmenachtrag (Refs #216): Die Seitennavigation gehört im Freeform-Modus
 zum Canvas (in kleinen Ansichten als separates, unskaliertes Burger-Menü).
-Die automatische Skalierung füllt am Desktop die verfügbare Breite; Layouts
-oberhalb der Fensterhöhe scrollen vertikal. Bis 1100 CSS-Pixel Fensterbreite
+Die automatische Skalierung füllt am Desktop die verfügbare Breite;
+im mobilen Querformat gilt das unabhängig von der Desktop-Skalierung.
+Layouts oberhalb der Fensterhöhe scrollen vertikal. Bis 1100 CSS-Pixel Fensterbreite
 greift auch ohne Geräte-Vorschau das Mobilverhalten. Beim Wechsel vom Raster
 zu Freeform bleibt keine GridStack-Höhe zurück. In beiden Modi sitzen
 Widget-Aktionen und Verschiebegriff am Widget; GridStack übernimmt im Raster

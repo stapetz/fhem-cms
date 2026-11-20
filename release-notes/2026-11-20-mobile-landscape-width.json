@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-20",
+  "version": "1.20.9-dev",
+  "title": "Volle Breite im mobilen Querformat",
+  "changes": [
+    "Der Canvas nutzt im Phone- und Tablet-Querformat die Breite. Refs #216.",
+    "Laengere Seiten scrollen vertikal; das Hochformat bleibt unveraendert."
+  ]
+}

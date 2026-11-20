@@ -168,8 +168,8 @@ try {
   const tabletBounds = view.canvas.getBoundingClientRect();
   const tabletScale = view.getScale();
   check(!root.querySelector('.cms-freeform-stack'), 'landscape tablet retains the canvas');
-  check(tabletScale < 1 && tabletBounds.width <= tabletViewport.clientWidth + 1
-    && tabletBounds.height <= tabletViewport.clientHeight + 1, 'landscape tablet fits entire canvas even in saved 1:1 mode');
+  check(tabletScale < 1 && Math.abs(tabletBounds.width - tabletViewport.clientWidth) <= 1
+    && tabletBounds.bottom > innerHeight, 'landscape tablet fills the width and allows vertical scrolling even in saved 1:1 mode');
   const tabletWidget = view.wrappers.get('w0').getBoundingClientRect();
   check(Math.abs((tabletWidget.left - tabletBounds.left) / tabletScale - page.widgets[0].rect.x) < 1
     && Math.abs(tabletWidget.width / tabletScale - page.widgets[0].rect.w) < 1,
@@ -179,8 +179,9 @@ try {
   for (const options of [{phone: true}, {}]) {
     mount(options, {...page.canvas, scaling: 'none'});
     await paint();
-    check(!root.querySelector('.cms-freeform-stack') && view.getScale() < 1
-      && root.scrollWidth <= root.clientWidth + 1, 'phone or narrow browser in landscape fits without sideways scroll');
+    check(!root.querySelector('.cms-freeform-stack')
+      && Math.abs(view.canvas.getBoundingClientRect().width - view.canvas.closest('.cms-freeform-viewport').clientWidth) <= 1
+      && root.scrollWidth <= root.clientWidth + 1, 'phone or narrow browser in landscape fills the width without sideways scroll');
   }
   }
   check(JSON.stringify(page) === original, 'responsive layout never mutates saved geometry');

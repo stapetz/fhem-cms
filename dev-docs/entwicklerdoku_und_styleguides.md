@@ -65,8 +65,9 @@ Standard. Datenvertrag und Migration stehen in der
   erneuter Klick deaktiviert sie. Kein separates Verschiebesymbol. Während
   der Größenänderung zeigt das Widget Breite und Höhe in Pixeln. Mobile
   Stapel-Widgets wachsen mit ihrem Inhalt statt ihn in kleinen Boxen zu scrollen.
-- Auf Phones, Tablets und schmalen Browserfenstern im Querformat wird das
-  gesamte Freeform-Canvas proportional eingepasst. Im Hochformat stapelt
+- Auf Phones, Tablets und schmalen Browserfenstern im Querformat nutzt der
+  gemeinsame Canvas proportional die volle verfügbare Breite; längere
+  Inhalte scrollen vertikal, ohne seitlich zu scrollen. Im Hochformat stapelt
   der Mobilmodus „Stapeln“; „Pixel-Layout behalten“ passt ohne seitliches
   Scrollen ein. „Automatisch“ füllt am Desktop proportional die Browserbreite;
   höhere Seiten scrollen vertikal. Die gespeicherten Koordinaten bleiben unverändert. Im Pixelmodus
