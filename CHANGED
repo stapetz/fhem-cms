@@ -19,6 +19,10 @@
   unterscheidet Stationsmessungen von zeitlich zugeordneten Vorhersagewerten.
   Refs #220.
 
+2026-11-20 - 1.23.3-dev: Kompakter Wetterdialog
+- Thermometer-Einstellungen stehen paarweise nebeneinander; die Wetterdetails
+  starten bei jedem Oeffnen oben. Refs #225.
+
 2026-11-20 - 1.23.1-dev: DWD-Wetterdetails: Scrollbare Stundentabelle
 - Stundenwerte stehen in einer vertikalen Tabelle mit fixierter Kopfzeile und
   aufklappbaren Wetterwerten. Refs #223.
