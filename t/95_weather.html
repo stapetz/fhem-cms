@@ -9,7 +9,11 @@
   .fixture { min-width: 0; height: 330px; }
   .fixture cms-weather { display: block; width: 100%; height: 100%; }
   #result { white-space: pre-wrap; }
-  @media (max-width: 700px) { main { grid-template-columns: minmax(0,1fr); } .fixture { height: 420px; } }
+  @media (max-width: 700px) {
+    main { grid-template-columns: minmax(0,1fr); }
+    .fixture { height: 420px; }
+    .fixture:first-child { max-width: 240px; }
+  }
 </style>
 <main>
   <section class="fixture" aria-label="Schmale Wetterkachel"><cms-weather id="narrow" view-only></cms-weather></section>
@@ -127,9 +131,36 @@ try {
     'Detail dialog separates online forecast location from measured conditions');
   check(wide.shadowRoot.querySelector('[data-modal-content]').textContent.includes('Mittags · 12:00'),
     'Daily period details use the normalized day.periods array');
-  check(modal.querySelector('.hour').textContent.includes('Luftfeuchtigkeit86 %')
-    && modal.querySelector('.hour').textContent.includes('Globalstrahlung0 kWh/m²'),
+  const scroll = modal.querySelector('[data-modal-content]');
+  const table = scroll.querySelector('.hourly');
+  const toggle = table.querySelector('.hour-toggle');
+  const hourlyDetails = table.querySelector('.hour-details');
+  check(table.tBodies[0].querySelectorAll('.hour').length === 48 && hourlyDetails.hidden,
+    'All 48 hours are shown with details initially collapsed');
+  toggle.click();
+  check(toggle.getAttribute('aria-expanded') === 'true' && !hourlyDetails.hidden
+    && hourlyDetails.textContent.includes('Luftfeuchtigkeit86 %')
+    && hourlyDetails.textContent.includes('Globalstrahlung0 kWh/m²'),
     'Hourly details show measured value groups and preserve zero');
+  toggle.click();
+  check(hourlyDetails.hidden && toggle.getAttribute('aria-expanded') === 'false',
+    'Hourly details collapse again');
+  check(scroll.scrollWidth <= scroll.clientWidth && scroll.scrollHeight > scroll.clientHeight,
+    'Forecast fits horizontally and can be scrolled vertically');
+  const head = table.tHead;
+  const modalHead = modal.querySelector('.modal-head');
+  const dialogTitleY = modalHead.getBoundingClientRect().top;
+  const tableStart = table.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
+  scroll.scrollTop = tableStart + 180;
+  check(scroll.scrollTop >= tableStart + 175
+    && Math.abs(head.getBoundingClientRect().top - scroll.getBoundingClientRect().top) < 2,
+    'Forecast header sticks to the top of the scroll area within the table');
+  check(modalHead.getBoundingClientRect().top === dialogTitleY, 'Dialog title and close button remain fixed');
+  for (const day of scroll.querySelectorAll('.daily details')) day.open = true;
+  const tableEnd = table.getBoundingClientRect().bottom - scroll.getBoundingClientRect().top + scroll.scrollTop;
+  scroll.scrollTop = tableEnd + 20;
+  check(head.getBoundingClientRect().bottom <= scroll.getBoundingClientRect().top + 1,
+    'Forecast header scrolls out when the last hour passes');
   check(modal.querySelector('.daily details').textContent.includes('Böen (max.)48 km/h')
     && modal.querySelector('.daily details').textContent.includes('Globalstrahlung1,45 kWh/m²'),
     'Daily details show peak gusts and accumulated solar energy');

@@ -117,7 +117,7 @@ for (const [name, fixtures] of [
   ['shared German dates render across widget types without rewriting source data',
     [['90_widget_dates.html', 19]]],
   ['DWD weather renders responsive tiles, details and editor',
-    [['95_weather.html', 25]]],
+    [['95_weather.html', 42], ['95_weather.html?width=820', 42], ['95_weather.html?width=390', 42]]],
   ['VolvoConnect renders module groups and preserves responsive live vehicle data',
     [['88_volvoconnect.html', 400]]],
   ['VolvoConnect popup reorders cards by pointer and saves only the editor draft',
@@ -662,6 +662,11 @@ for (const [name, fixtures] of [
               name: 'prefers-reduced-motion', value: fixture.includes('reduced=1') ? 'reduce' : 'no-preference',
             }] });
           }
+          : fixture.startsWith('95_weather.html')
+          ? command => command('Emulation.setDeviceMetricsOverride', {
+            width: Number(new URLSearchParams(fixture.split('?')[1]).get('width') || 1440),
+            height: 850, deviceScaleFactor: 1, mobile: false,
+          })
           : fixture.startsWith('75_dialog_layout.html')
           ? command => command('Emulation.setDeviceMetricsOverride', {
             width: Number(new URLSearchParams(fixture.split('?')[1]).get('width')),
