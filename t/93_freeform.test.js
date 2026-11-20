@@ -79,7 +79,19 @@ test('drag and resize find the nearest guide; Alt disables raster and guides', (
 });
 
 test('mobile reader order clusters rows and is deterministic for equal coordinates', () => {
-  const widgets = [{id: 'right', rect: {x: 80, y: 10}}, {id: 'left', rect: {x: 10, y: 35}},
-    {id: 'next', rect: {x: 0, y: 41}}, {id: 'same', rect: {x: 10, y: 35}}];
+  const widgets = [{id: 'right', rect: {x: 80, y: 10, h: 240}}, {id: 'left', rect: {x: 10, y: 65, h: 100}},
+    {id: 'next', rect: {x: 0, y: 170, h: 40}}, {id: 'same', rect: {x: 10, y: 65, h: 100}}];
   assert.deepEqual(freeformReadingOrder(widgets).map(w => w.id), ['left', 'same', 'right', 'next']);
+});
+
+test('mobile reader order groups the staggered first row of a large canvas', () => {
+  const widgets = [
+    {id: 'clock', rect: {x: 3446, y: 300, h: 451}},
+    {id: 'middle', rect: {x: 2039, y: 78, h: 543}},
+    {id: 'right', rect: {x: 2726, y: 78, h: 577}},
+    {id: 'left', rect: {x: 0, y: 126, h: 608}},
+    {id: 'left-middle', rect: {x: 1386, y: 120, h: 571}},
+    {id: 'second', rect: {x: 23, y: 750, h: 535}},
+  ];
+  assert.deepEqual(freeformReadingOrder(widgets).map(w => w.id), ['left', 'left-middle', 'middle', 'right', 'clock', 'second']);
 });

@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-20",
+  "version": "1.20.10-dev",
+  "title": "Mobile Canvas-Raender, Hintergrund und Lesereihenfolge",
+  "changes": [
+    "Querformat nutzt die sicheren Displayraender. Refs #216.",
+    "Der Seitenhintergrund bleibt auch im mobilen Stapel sichtbar.",
+    "Ueberlappende Widget-Zeilen werden von links nach rechts gelesen."
+  ]
+}

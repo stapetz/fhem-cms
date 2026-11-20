@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
 <link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
-<div id="root" class="cms-schema5-grid" style="width: 800px"></div>
+<main class="cms-shell"><div id="root" class="cms-schema5-grid" style="width: 800px"></div></main>
 <output id="result">pending</output>
 <script type="module">
   import { mountFreeform } from '../www/fhem-cms/js/fcui-freeform-view.js';
@@ -21,13 +21,18 @@
   const check = (condition, name) => { if (!condition) throw new Error(name); };
   const paint = () => new Promise(resolve => setTimeout(resolve, 150));
   try {
-    if (new URLSearchParams(location.search).has('responsive')) {
+    const params = new URLSearchParams(location.search);
+    if (params.has('responsive')) {
       root.style.width = '100%';
       const nav = Object.assign(document.createElement('nav'), {className:'cms-nav'});
       const burger = Object.assign(document.createElement('button'), {className:'cms-nav-burger', textContent:'☰'});
       nav.append(burger);
-      const canvas = {width:1000, height:1000, scaling:'fit', mobileBehavior:'stack'};
-      const responsive = mountFreeform(root, {...page, canvas}, nav, render);
+      const canvas = {width:1000, height:800, scaling:'fit', mobileBehavior:'stack'};
+      const grid = params.has('tablet') ? document.createElement('div') : undefined;
+      const responsive = mountFreeform(root, {...page, canvas, widgets:grid ? [] : page.widgets}, nav, render, {
+        tablet: Boolean(grid), grid,
+        background: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 5 4%27%3E%3Cpath fill=%27teal%27 d=%27M0 0h5v4H0z%27/%3E%3C/svg%3E',
+      });
       window.addEventListener('pagehide', () => responsive.destroy(), {once:true});
       result.textContent = 'responsive ready';
     } else {

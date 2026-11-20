@@ -2194,6 +2194,20 @@ html:not(.cms-view) body {
   overflow: auto;
 }
 
+html:has(body > .cms-shell .cms-freeform-landscape-full) { scrollbar-gutter: auto; }
+body:has(> .cms-shell .cms-freeform-landscape-full) {
+  --cms-page-padding: 0px;
+  min-width: 0;
+  min-height: 100dvh;
+}
+.cms-freeform-mobile {
+  background: var(--cms-canvas-image, none) repeat-y top center / 100% auto;
+}
+.cms-freeform-landscape {
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
 .cms-freeform-footprint { position: relative; overflow: clip; }
 .cms-freeform-fit .cms-freeform-footprint { margin-inline: auto; }
 .cms-shared-grid-pane {
@@ -2227,9 +2241,10 @@ html:not(.cms-view) body {
 .cms-freeform-canvas {
   position: absolute;
   transform-origin: top left;
-  background: no-repeat center / 100% 100%;
+  background: var(--cms-canvas-image, none) no-repeat center / 100% 100%;
   isolation: isolate;
 }
+.cms-freeform-mobile .cms-freeform-canvas { background-image: none; }
 .cms-freeform-widget {
   position: absolute;
 }
@@ -2306,7 +2321,6 @@ html:not(.cms-view) body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background-image: none !important;
 }
 .cms-freeform-stack .cms-freeform-widget {
   position: relative;
