@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-20",
+  "version": "1.22.1-dev",
+  "title": "DWD-Wetter: Sonderzeichen in FHEM-Warnungen",
+  "changes": [
+    "Warnmeldungen aus DWD_OpenData zeigen Umlaute und Sonderzeichen korrekt an. Die Online-Quelle bleibt unveraendert. Refs #222."
+  ]
+}
