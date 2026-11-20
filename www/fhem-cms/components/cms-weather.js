@@ -436,6 +436,11 @@ class FHEMCMSWeather extends HTMLElement {
         input[type=checkbox],input[type=radio] { width:1.15rem; min-height:1.15rem; }
         .location-search,.form-actions { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
         .location-search input { flex:1 1 12rem; }
+        [data-sensor-select] { display:grid; gap:.5rem; margin-top:.5rem; }
+        .sensor-row { display:flex; flex-wrap:wrap; align-items:end; gap:.5rem; }
+        .sensor-row label { flex:1 1 9rem; min-width:0; }
+        .sensor-row input,.sensor-row select { min-width:0; }
+        .sensor-row [data-pick-sensor] { flex:none; min-height:44px; max-width:100%; }
         .results { display:grid; gap:.35rem; max-height:12rem; overflow:auto; }
         .results button { text-align:left; }
         .hint { margin:0; color:var(--cms-muted,#a5c9b2); font-size:.82rem; }
@@ -465,7 +470,7 @@ class FHEMCMSWeather extends HTMLElement {
       </article>
       <dialog data-modal aria-labelledby="weather-modal-title">
         <div class="modal-head"><h2 id="weather-modal-title" data-modal-title>Wetterdetails</h2>
-          <button type="button" class="modal-close" data-modal-close aria-label="Details schließen">×</button></div>
+          <button type="button" class="modal-close" data-modal-close aria-label="Details schließen" autofocus>×</button></div>
         <div data-modal-content tabindex="0" role="region" aria-label="Wetterdetails und Vorhersagen"></div>
       </dialog>
       <dialog data-dialog aria-labelledby="weather-editor-title">
@@ -496,14 +501,18 @@ class FHEMCMSWeather extends HTMLElement {
             <p class="hint" data-station-status></p>
             <label data-station-select hidden>DWD-Messstation<select name="temperatureStation"></select></label>
             <section data-sensor-select hidden>
-              <label>Thermometer (FHEM-Device)<input name="temperatureDevice" readonly></label>
-              <button type="button" data-pick-sensor>Device auswählen …</button>
-              <label>Temperatur-Reading (°C)<select name="temperatureReading"></select></label>
-              <label>Anzeigename der Quelle<select name="temperatureLabelMode">
-                <option value="device">Gerätename</option>
-                <option value="alias">FHEM-Alias</option>
-                <option value="custom">Eigener Text</option>
-              </select></label>
+              <div class="sensor-row">
+                <label>Thermometer (FHEM-Device)<input name="temperatureDevice" readonly></label>
+                <button type="button" data-pick-sensor>Device auswählen …</button>
+              </div>
+              <div class="sensor-row">
+                <label>Temperatur-Reading (°C)<select name="temperatureReading"></select></label>
+                <label>Anzeigename der Quelle<select name="temperatureLabelMode">
+                  <option value="device">Gerätename</option>
+                  <option value="alias">FHEM-Alias</option>
+                  <option value="custom">Eigener Text</option>
+                </select></label>
+              </div>
               <label data-temperature-label-text hidden>Eigener Anzeigename
                 <input name="temperatureLabelText" maxlength="64" autocomplete="off" placeholder="z. B. Garten">
               </label>
@@ -740,8 +749,10 @@ class FHEMCMSWeather extends HTMLElement {
     const data = this.weatherData;
     const title = weatherTitle(this.widgetConfig);
     this.shadowRoot.querySelector('[data-modal-title]').textContent = `${safeText(title, 160)} – Wetterdetails`;
-    const content = this.shadowRoot.querySelector('[data-modal-content]');
-    content.replaceChildren();
+    const previousContent = this.shadowRoot.querySelector('[data-modal-content]');
+    // A new scroll container cannot restore the position from the previous opening.
+    const content = previousContent.cloneNode(false);
+    previousContent.replaceWith(content);
     const place = forecastPlace(config, data);
     if (place) content.append(make('p', 'forecast-place', `Vorhersageort: ${place}`));
     const alerts = Array.isArray(data.alerts) ? data.alerts.filter(alert => alert && typeof alert === 'object') : [];
@@ -868,7 +879,6 @@ class FHEMCMSWeather extends HTMLElement {
     content.append(dailySection);
     content.append(make('p', 'source', 'Datenbasis: Deutscher Wetterdienst (DWD)'));
     this.shadowRoot.querySelector('[data-modal]').showModal();
-    content.scrollTop = 0;
   }
 
   closeDetails() {

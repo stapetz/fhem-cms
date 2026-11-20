@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-20",
+  "version": "1.23.3-dev",
+  "title": "Kompakter Wetterdialog",
+  "changes": [
+    "Thermometer-Einstellungen stehen paarweise nebeneinander; die Wetterdetails starten bei jedem Oeffnen oben. Refs #225."
+  ]
+}

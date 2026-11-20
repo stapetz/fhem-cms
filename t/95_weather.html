@@ -168,7 +168,13 @@ try {
   check(modal.querySelector('.daily details').textContent.includes('Böen (max.)48 km/h')
     && modal.querySelector('.daily details').textContent.includes('Globalstrahlung1,45 kWh/m²'),
     'Daily details show peak gusts and accumulated solar energy');
-  modal.close();
+  modal.querySelector('[data-modal-close]').click();
+  await paint();
+  info.click();
+  await paint();
+  check(modal.open && modal.querySelector('[data-modal-content]').scrollTop === 0,
+    'Reopening via info after scrolling and closing starts at the top');
+  modal.querySelector('[data-modal-close]').click();
   const editor = document.querySelector('#editor');
   await editor.openConfig({ isNew: true });
   editor.shadowRoot.querySelector('[name=dataSource][value=fhem_dwd]').click();
@@ -250,6 +256,14 @@ try {
   await wide.openConfig();
   tempForm.elements.temperatureMode.value = 'sensor';
   tempForm.elements.temperatureMode.dispatchEvent(new Event('change'));
+  const deviceField = tempForm.elements.temperatureDevice.getBoundingClientRect();
+  const pickSensor = wide.shadowRoot.querySelector('[data-pick-sensor]').getBoundingClientRect();
+  check(Math.abs(deviceField.bottom - pickSensor.bottom) < 2 && deviceField.right < pickSensor.left,
+    'The device selector button fits beside the thermometer field');
+  const readingField = tempForm.elements.temperatureReading.closest('label').getBoundingClientRect();
+  const sourceLabel = tempForm.elements.temperatureLabelMode.closest('label').getBoundingClientRect();
+  check(readingField.bottom > sourceLabel.top && readingField.right < sourceLabel.left,
+    'Temperature reading and source label share one row');
   wide.shadowRoot.querySelector('[data-pick-sensor]').click();
   await paint();
   document.querySelector('.cms-dp-dialog [role=option]').click();
