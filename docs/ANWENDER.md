@@ -697,6 +697,7 @@ bis zu zehn Tage. Die Stundenwerte stehen in einer Tabelle im vertikal
 scrollenden Detailfenster. Datum, Uhrzeit, Wetter und Temperatur bleiben als
 Kopfzeile bis zum Ende der Stundentabelle sichtbar. Über den Pfeil am Ende
 jeder Stundenzeile lassen sich die weiteren Wetterwerte aufklappen.
+Beim erneuten Öffnen beginnen die Wetterdetails wieder ganz oben.
 Der Vorhersageort steht auch bei einem eigenen Widget-Titel
 auf der Kachel und im Detailfenster. Online ist das der ausgewählte Ort; die
 angezeigte Messstation kann davon abweichen. Bei `DWD_OpenData` stammen der
