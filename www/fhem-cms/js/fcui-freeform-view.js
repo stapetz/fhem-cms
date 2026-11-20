@@ -1,4 +1,5 @@
 import { DEFAULT_CANVAS, fitFreeformRect, freeformReadingOrder } from './fcui-freeform-layout.js';
+import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 
 export function mountFreeform(root, page, navigation, render, {background, editing, phone, tablet, navigationGrid, columns, grid} = {}) {
   const doc = root.ownerDocument;
@@ -9,6 +10,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   const compactNavigation = box('cms-freeform-compact-navigation');
   compactNavigation.hidden = true;
   const burger = navigation.querySelector('.cms-nav-burger');
+  if (burger) navigation.setAttribute('data-adaptive', '');
   const canvas = box('cms-freeform-canvas');
   const settings = {...DEFAULT_CANVAS, ...page.canvas};
   canvas.style.setProperty('--cms-freeform-snap', `${settings.snapGrid}px`);
@@ -46,6 +48,25 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   let scale = 1;
   const landscape = browser.matchMedia('(orientation: landscape)');
   const touchTablet = browser.matchMedia('(pointer: coarse) and (min-width: 600px) and (min-height: 600px) and (max-width: 1400px)');
+  function landscapeNavigationFits(byWidth) {
+    const probe = compact ? navigation.cloneNode(true) : navigation;
+    if (compact) {
+      probe.inert = true;
+      probe.style.visibility = 'hidden';
+      navBox.append(probe);
+      navBox.hidden = false;
+    }
+    try {
+      const required = measureSchema5Navigation(probe, byWidth);
+      return required.width <= probe.clientWidth + .5 && required.height <= probe.clientHeight + .5
+        && required.minTarget >= 23.99 && required.minFont >= 12;
+    } finally {
+      if (compact) {
+        probe.remove();
+        navBox.hidden = true;
+      }
+    }
+  }
   function resize() {
     const mobileDevice = phone || tablet || touchTablet.matches || browser.innerWidth <= 1100;
     const small = !editing && (mobileDevice || viewport.clientWidth < 640);
@@ -58,17 +79,26 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     const width = viewport.clientWidth;
     if (!width) return;
     const stack = mobilePortrait && settings.mobileBehavior === 'stack';
-    const showBurger = small && Boolean(burger);
+    const byWidth = width / settings.width;
+    if (mobileLandscape) {
+      canvas.style.width = `${settings.width}px`;
+      canvas.style.transform = `scale(${byWidth})`;
+      canvas.style.setProperty('--cms-view-width', `${settings.width}px`);
+      canvas.style.setProperty('--cms-landscape-nav-target', `${24 / byWidth}px`);
+      viewport.classList.remove('cms-freeform-stack');
+    }
+    const showBurger = Boolean(burger) && (mobilePortrait || (mobileLandscape && !landscapeNavigationFits(byWidth)));
     if (showBurger !== compact) {
+      const hadFocus = navigation.contains(doc.activeElement);
       compact = showBurger;
       compactNavigation.hidden = !compact;
       navBox.hidden = compact;
-      navigation.toggleAttribute('data-adaptive', compact);
       navigation.toggleAttribute('data-compact', compact);
       navigation.removeAttribute('data-open');
       burger.setAttribute('aria-expanded', 'false');
       if (compact) compactNavigation.append(navigation);
       else navBox.append(navigation);
+      if (hadFocus) (compact ? burger : navigation.querySelector('.cms-nav-link'))?.focus({preventScroll:true});
     }
     if (stack !== stacked) {
       stacked = stack;
@@ -86,7 +116,6 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     const height = Math.max(1, browser.innerHeight - Math.max(0, top) - padding);
     const viewportTop = viewport.getBoundingClientRect().top + browser.scrollY;
     viewport.style.minHeight = fullLandscape ? `${Math.max(0, browser.innerHeight - viewportTop - padding)}px` : '';
-    const byWidth = width / settings.width;
     scale = stack ? 1 : mobilePortrait ? Math.min(byWidth, height / settings.height, 1)
       : small ? byWidth
       : settings.scaling === 'none' ? Math.min(1, editing ? Infinity : byWidth) : byWidth;
@@ -108,11 +137,16 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   landscape.addEventListener('change', resize);
   touchTablet.addEventListener('change', resize);
   browser.addEventListener('resize', resize);
+  const navChanges = new browser.MutationObserver(resize);
+  navChanges.observe(navigation, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['hidden', 'aria-current']});
+  doc.fonts?.addEventListener('loadingdone', resize);
   resize();
   return {
     canvas, wrappers, navBox, navigationRect, getScale: () => scale,
     destroy() {
       observer.disconnect();
+      navChanges.disconnect();
+      doc.fonts?.removeEventListener('loadingdone', resize);
       landscape.removeEventListener('change', resize);
       touchTablet.removeEventListener('change', resize);
       browser.removeEventListener('resize', resize);

@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-20",
+  "version": "1.21.0-dev",
+  "title": "Direkte Seitennavigation im mobilen Querformat",
+  "changes": [
+    "Raster und Freeform zeigen im Querformat die normalen Navigationslinks, wenn sie passen. Refs #216.",
+    "Bei Platzmangel oder zu kleinen Links bleibt das unskalierte Burger-Menue."
+  ]
+}

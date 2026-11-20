@@ -2254,6 +2254,10 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   overflow: hidden;
 }
 .cms-freeform-navigation { position: absolute; inset: 0 auto auto 0; width: 100%; }
+.cms-freeform-landscape .cms-freeform-navigation .cms-nav-link {
+  min-width: var(--cms-landscape-nav-target);
+  min-height: var(--cms-landscape-nav-target);
+}
 .cms-freeform-stack .cms-freeform-navigation {
   position: relative;
   inset: auto !important;

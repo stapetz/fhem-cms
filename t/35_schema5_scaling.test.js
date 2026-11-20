@@ -832,12 +832,14 @@ test('editor tools require activation and Freeform navigation supports real poin
           const viewport = document.querySelector('.cms-freeform-viewport');
           const canvas = document.querySelector('.cms-freeform-canvas').getBoundingClientRect();
           const burger = document.querySelector('.cms-freeform-compact-navigation .cms-nav-burger');
+          const links = [...viewport.querySelectorAll('.cms-freeform-navigation .cms-nav-link')];
           const bounds = viewport.getBoundingClientRect();
           resolve({width: viewport.clientWidth, canvasWidth: canvas.width, bottom: canvas.bottom,
             left: bounds.left, frameBottom: bounds.bottom, image: getComputedStyle(viewport).backgroundImage,
             horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth
               || viewport.scrollWidth > viewport.clientWidth,
-            stacked: viewport.classList.contains('cms-freeform-stack'), burger: burger?.offsetHeight ?? 0});
+            stacked: viewport.classList.contains('cms-freeform-stack'), burger: burger?.offsetHeight ?? 0,
+            targets: links.map(link => link.getBoundingClientRect().height)});
         }, 120))`, awaitPromise:true, returnByValue:true});
         return result.value;
     };
@@ -851,8 +853,9 @@ test('editor tools require activation and Freeform navigation supports real poin
         const landscape = await resize(width, height);
         assert.ok(!landscape.stacked && Math.abs(landscape.width - landscape.canvasWidth) < 1
           && landscape.left <= 1 && landscape.width >= width - 16
-          && landscape.bottom > height && landscape.burger >= 44 && !landscape.horizontalOverflow,
-        `${width} × ${height}: full width, vertical overflow and unscaled navigation`);
+          && landscape.bottom > height && !landscape.burger && !landscape.horizontalOverflow
+          && landscape.targets.length === 2 && landscape.targets.every(size => size >= 23.99),
+        `${width} × ${height}: full width, vertical overflow and usable inline navigation`);
       }
       assert.equal(desktop.image, 'none', 'desktop keeps the background on the canvas');
       const tallLandscape = await resize(1000, 990);
@@ -863,6 +866,14 @@ test('editor tools require activation and Freeform navigation supports real poin
       const phone = await resize(430, 932);
       assert.ok(phone.stacked && Math.abs(phone.width - phone.canvasWidth) < 1 && phone.burger >= 44);
       assert.match(phone.image, /data:image\/svg\+xml/, 'portrait stack retains its page image');
+      await command('Runtime.evaluate', {expression:
+        `document.querySelector('.cms-nav-link').textContent = 'Sehr langer Seitenname '.repeat(30)`});
+      const cramped = await resize(932, 430);
+      assert.ok(cramped.burger >= 44 && cramped.targets.length === 0, 'long navigation falls back to the burger');
+      await command('Runtime.evaluate', {expression:
+        `document.querySelector('.cms-nav-link').textContent = 'Start'`});
+      const fitsAgain = await resize(932, 430);
+      assert.ok(!fitsAgain.burger && fitsAgain.targets.length === 2, 'inline navigation returns once links fit');
       const restored = await resize(1440, 800);
       assert.deepEqual(restored, desktop);
       await finishResponsive(command);
@@ -871,7 +882,8 @@ test('editor tools require activation and Freeform navigation supports real poin
       const landscape = await measure(command, 1180, 820);
       assert.ok(!landscape.stacked && landscape.left <= 1 && landscape.width >= 1164
         && Math.abs(landscape.width - landscape.canvasWidth) < 1
-        && landscape.burger >= 44 && !landscape.horizontalOverflow, 'iPad Air: shared Grid canvas fills the width');
+        && !landscape.burger && landscape.targets.length === 2
+        && !landscape.horizontalOverflow, 'iPad Air: shared Grid canvas fills the width and shows its links');
       const portrait = await measure(command, 820, 1180);
       assert.ok(portrait.stacked && !portrait.horizontalOverflow);
       assert.match(portrait.image, /data:image\/svg\+xml/, 'shared Grid stack retains its page image');

@@ -174,8 +174,10 @@ try {
   check(Math.abs((tabletWidget.left - tabletBounds.left) / tabletScale - page.widgets[0].rect.x) < 1
     && Math.abs(tabletWidget.width / tabletScale - page.widgets[0].rect.w) < 1,
   'landscape tablet keeps original widget position and dimensions proportionally');
-  check(root.querySelector('.cms-freeform-compact-navigation .cms-nav-burger').getBoundingClientRect().height >= 44,
-    'landscape tablet burger is not scaled with the canvas');
+  const compactBurger = root.querySelector('.cms-freeform-compact-navigation .cms-nav-burger');
+  check(compactBurger ? compactBurger.getBoundingClientRect().height >= 44
+    : root.querySelector('.cms-freeform-navigation .cms-nav-link').getBoundingClientRect().height >= 23.99,
+    'landscape tablet has a usable link or an unscaled burger fallback');
   for (const options of [{phone: true}, {}]) {
     mount(options, {...page.canvas, scaling: 'none'});
     await paint();
