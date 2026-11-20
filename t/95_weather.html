@@ -36,7 +36,7 @@ const daily = Array.from({ length: 5 }, (_, index) => ({
 }));
 const data = {
   source: 'brightsky', stationName: 'DWD Station', updatedAt: at(0), stale: false,
-  current: { temp: 6.4, dewPoint: 4.1, humidity: 85, pressure: 1018.2, windSpeed: 18.5,
+  current: { timestamp: at(0), temp: 6.4, dewPoint: 4.1, humidity: 85, pressure: 1018.2, windSpeed: 18.5,
     windGust: 34, windDirection: 240, cloudCover: 75, visibility: 10000, precipitation: 0,
     sunshine: 12, solar: 0.14, condition: 'cloudy', icon: 'cloudy', wwCode: 3, isDay: false, isForecast: true },
   alerts: [{ id: 'alert', event: 'WINDBÖEN', headline: 'Amtliche WARNUNG',
@@ -70,8 +70,16 @@ const fixtureServices = {
 };
 for (const id of ['narrow', 'wide', 'editor']) {
   const widget = document.getElementById(id);
-  widget.services = fixtureServices;
-  widget.config = { id: `weather-${id}`, type: 'weather', config: structuredClone(config),
+  widget.services = id === 'narrow' ? { ...fixtureServices, weather: async () => ({
+    ...data, source: 'fhem_dwd', stationName: 'DWD_Oldenburg',
+    forecastStationName: 'OLDENBURG', forecastStationId: '10215',
+  }) } : id === 'wide' ? { ...fixtureServices, weather: async () => ({
+    ...data, stationName: 'Rastede', current: { ...data.current, isForecast: false },
+  }) } : fixtureServices;
+  const tileConfig = id === 'narrow' ? { ...config, dataSource: 'fhem_dwd',
+    device: 'DWD_Oldenburg', location: null, customTitle: 'Wetter aus FHEM' }
+    : { ...config, customTitle: id === 'wide' ? 'Wetter direkt' : '' };
+  widget.config = { id: `weather-${id}`, type: 'weather', config: structuredClone(tileConfig),
     grid: { col: 1, row: 1, w: 6, h: 8 } };
 }
 let checks = 0;
@@ -83,10 +91,22 @@ try {
   const wide = document.querySelector('#wide');
   const narrowForecast = narrow.shadowRoot.querySelector('[data-forecast]');
   const wideForecast = wide.shadowRoot.querySelector('[data-forecast]');
-  check(narrow.shadowRoot.querySelector('[data-title]').textContent === 'Oldenburg',
-    'Configured location takes priority over backend station name');
-  check(narrow.shadowRoot.querySelector('.forecast-kind')?.textContent.includes('keine Stationsmessung'),
-    'Forecast-sourced current data is clearly labeled on the tile');
+  check(narrow.shadowRoot.querySelector('[data-title]').textContent === 'Wetter aus FHEM' &&
+    narrow.shadowRoot.querySelector('[data-forecast-place]').textContent === 'Vorhersageort: OLDENBURG',
+    'Device title and actual forecast station are shown independently');
+  check(wide.shadowRoot.querySelector('[data-title]').textContent === 'Wetter direkt' &&
+    wide.shadowRoot.querySelector('[data-forecast-place]').textContent === 'Vorhersageort: Oldenburg',
+    'Custom title does not hide the requested online forecast location');
+  check(/^Vorhersage für \d{2}\.\d{2}\. \d{2}:\d{2} Uhr · keine Stationsmessung$/.test(
+    narrow.shadowRoot.querySelector('.current-origin')?.textContent),
+    'Forecast validity is clearly labeled on the tile');
+  check(/^Messung \d{2}\.\d{2}\. \d{2}:\d{2} Uhr · Rastede$/.test(
+    wide.shadowRoot.querySelector('.current-origin')?.textContent),
+    'Online measurement time and station are distinct from the forecast location');
+  delete narrow.weatherData.forecastStationName;
+  narrow.render();
+  check(narrow.shadowRoot.querySelector('[data-forecast-place]').textContent === 'Vorhersageort: DWD-Station 10215',
+    'Falls back to the station identifier, not the device name');
   check(getComputedStyle(narrowForecast).gridTemplateColumns.split(' ').length === 1,
     'Forecast below 260px uses a compact row list');
   check(getComputedStyle(wideForecast).gridTemplateColumns.split(' ').length === 4,
@@ -102,8 +122,9 @@ try {
     'External warning text is inserted only as text');
   check(wide.shadowRoot.querySelector('[data-modal-content]').textContent.includes('nicht vollständig verfügbar'),
     'Unavailable warning data is never described as warning-free');
-  check(wide.shadowRoot.querySelector('[data-modal-content]').textContent.includes('Vorhersagewerte · keine Stationsmessung'),
-    'Forecast-sourced current data is clearly labeled in the detail modal');
+  check(modal.textContent.includes('Aktuelle Messwerte') && modal.textContent.includes('· Rastede')
+    && modal.textContent.includes('Vorhersageort: Oldenburg'),
+    'Detail dialog separates online forecast location from measured conditions');
   check(wide.shadowRoot.querySelector('[data-modal-content]').textContent.includes('Mittags · 12:00'),
     'Daily period details use the normalized day.periods array');
   check(modal.querySelector('.hour').textContent.includes('Luftfeuchtigkeit86 %')
