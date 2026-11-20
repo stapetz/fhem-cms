@@ -571,20 +571,42 @@ body:has(.cms-schema5-grid) {
   opacity: 0;
 }
 
-.cms-grid-editable > .grid-stack-item:is(:hover, :focus-within, .ui-draggable-dragging, .ui-resizable-resizing)::after {
+.cms-grid-editable > .grid-stack-item:is(.cms-widget-selected, .ui-draggable-dragging, .ui-resizable-resizing)::after {
   opacity: 1;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .cms-grid-editable > .grid-stack-item > .cms-widget-tools {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .cms-grid-editable > .grid-stack-item:is(:hover, :focus-within, .cms-widget-selected, .ui-draggable-dragging, .ui-resizable-resizing) > .cms-widget-tools {
-    opacity: 1;
-    pointer-events: auto;
-  }
+.cms-widget-tools {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.cms-widget-selected > .cms-widget-tools {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+.cms-widget-drag {
+  position: absolute;
+  z-index: 4;
+  inset: 25% 25%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+.cms-widget-selected > .cms-widget-drag { pointer-events: auto; }
+.cms-widget-drag:focus-visible { outline: 2px solid var(--cms-accent); }
+.cms-widget-dimensions {
+  position: absolute;
+  z-index: 7;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  white-space: nowrap;
+  padding: .2rem .4rem;
+  border-radius: .25rem;
+  color: var(--cms-text);
+  background: var(--cms-surface-raised);
 }
 
 .cms-grid-editable .cms-widget-drag:active {
@@ -602,8 +624,6 @@ body:has(.cms-schema5-grid) {
   transform: none;
   background: none;
   border: 0;
-  border-right: 3px solid var(--cms-accent);
-  border-bottom: 3px solid var(--cms-accent);
   border-radius: 0;
   opacity: .7;
   cursor: nwse-resize;
@@ -618,22 +638,23 @@ body:has(.cms-schema5-grid) {
   border: 0;
   background: none;
   opacity: 0;
+  pointer-events: none;
   transform: none;
   touch-action: none;
 }
 .cms-grid-editable > .grid-stack-item > .ui-resizable-handle::after {
   content: '';
   position: absolute;
-  inset: 5px;
-  border: 1px solid var(--cms-accent);
+  inset: 50% auto auto 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--cms-accent);
   background: var(--cms-bg);
 }
-.cms-grid-editable > .grid-stack-item:is(:hover, :focus-within, .cms-widget-selected, .ui-resizable-resizing) > .ui-resizable-handle { opacity: 1; }
+.cms-grid-editable > .grid-stack-item:is(.cms-widget-selected, .ui-resizable-resizing) > .ui-resizable-handle { opacity: 1; pointer-events: auto; }
 .cms-grid-editable > .grid-stack-item > :is(.ui-resizable-n, .ui-resizable-s) { left: calc(50% - 9px); right: auto; }
 .cms-grid-editable > .grid-stack-item > :is(.ui-resizable-e, .ui-resizable-w) { top: calc(50% - 9px); bottom: auto; }
-@media (pointer: coarse) {
-  .cms-grid-editable > .grid-stack-item > .ui-resizable-handle { opacity: 1; }
-}
 
 .cms-editor-panel {
   color: var(--cms-text);
@@ -795,6 +816,56 @@ body:has(.cms-schema5-grid) {
   margin-block: .5rem;
 }
 
+.cms-editor-dialog[data-panel="page"] .cms-freeform-settings {
+  flex: 1 1 100%;
+  gap: .4rem .5rem;
+  padding: .6rem;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-freeform-mode {
+  flex: 1 1 100%;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-freeform-mode select,
+.cms-editor-dialog[data-panel="page"] .cms-freeform-preset {
+  flex: 1 1 100%;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-freeform-options {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: .4rem .5rem;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-freeform-options > .cms-freeform-dimension {
+  flex: 0 1 7rem;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-freeform-options > .cms-freeform-advanced {
+  flex: 1 1 8rem;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-freeform-options > .cms-freeform-apply-all {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: .4rem;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-freeform-options > .cms-freeform-apply-all input {
+  flex: 0 0 auto;
+  width: 1.2rem;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-freeform-options > p {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: .75rem;
+  color: var(--cms-muted-strong);
+}
+
 .cms-editor-dialog[data-panel="page"] label {
   flex: 1 1 8rem;
   gap: .2rem;
@@ -803,6 +874,14 @@ body:has(.cms-schema5-grid) {
 
 .cms-editor-dialog[data-panel="page"] form label:has(input[type="number"]) {
   flex: 0 1 4.5rem;
+}
+
+.cms-editor-dialog[data-panel="page"] form .cms-freeform-options > .cms-freeform-dimension {
+  flex: 0 1 7rem;
+}
+
+.cms-editor-dialog[data-panel="page"] .cms-freeform-options[hidden] {
+  display: none;
 }
 
 .cms-editor-dialog[data-panel="page"] input {
@@ -2163,17 +2242,20 @@ html:not(.cms-view) body {
     --cms-freeform-handle-size: calc(var(--cms-freeform-handle-target) / var(--cms-freeform-scale, 1));
   }
 }
-.cms-freeform-widget > .cms-widget-tools {
+.cms-freeform-canvas > :is(.cms-freeform-widget, .cms-freeform-navigation) > .cms-widget-tools {
   z-index: 2;
   top: calc(var(--cms-freeform-handle-size) + 2px);
   right: calc(var(--cms-freeform-handle-size) + 2px);
 }
-.cms-freeform-widget .cms-widget-drag { cursor: grab; touch-action: none; }
-@media (hover: hover) and (pointer: fine) {
-  .cms-freeform-widget:not(:hover, :focus-within, .cms-widget-selected) > .cms-widget-tools {
-    opacity: 0;
-    pointer-events: none;
-  }
+.cms-freeform-canvas .cms-widget-drag { cursor: grab; touch-action: none; }
+.cms-grid-guides .cms-freeform-canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(to right, var(--cms-guide) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--cms-guide) 1px, transparent 1px);
+  background-size: max(10px, var(--cms-freeform-snap)) max(10px, var(--cms-freeform-snap));
 }
 .cms-freeform-widget.cms-widget-selected { z-index: 10001 !important; }
 .cms-freeform-properties {
@@ -2191,7 +2273,19 @@ html:not(.cms-view) body {
   background: var(--cms-surface);
 }
 .cms-freeform-widget > :first-child { display: block; width: 100%; height: 100%; }
-.cms-freeform-stack { height: auto; }
+.cms-freeform-stack {
+  --cms-widget-height: auto;
+  --cms-widget-overflow: visible;
+  --cms-widget-containment: inline-size;
+  --cms-widget-body-min-height: 0px;
+  --cms-widget-main-height: clamp(48px, 30cqi, 160px);
+  --cms-widget-main-basis: auto;
+  --cms-widget-fit-width: 100%;
+  --cms-widget-fit-white-space: normal;
+  --cms-widget-flow-ratio: 400 / 375;
+  --cms-widget-link-height: 48px;
+  height: auto;
+}
 .cms-freeform-stack .cms-freeform-canvas {
   position: relative;
   display: flex;
@@ -2204,10 +2298,12 @@ html:not(.cms-view) body {
   inset: auto !important;
   width: 100% !important;
   height: auto !important;
+  min-width: 0;
   min-height: 64px;
+  max-width: 100%;
 }
 .cms-freeform-stack .cms-freeform-widget[hidden] { display: none; }
-.cms-freeform-stack .cms-freeform-widget > :first-child { height: auto; }
+.cms-freeform-stack .cms-freeform-widget > :first-child { height: auto; max-width: 100%; }
 .cms-freeform-overlay { position: absolute; inset: 0; z-index: 10002; pointer-events: none; }
 .cms-freeform-handles { position: absolute; outline: 2px solid var(--cms-accent, #3b82f6); }
 .cms-freeform-handles button {

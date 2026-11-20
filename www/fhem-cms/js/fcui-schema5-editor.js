@@ -510,9 +510,15 @@ export class Schema5Editor {
     try {
       const state = this.#controller.snapshot();
       const candidate = state.draft || state.live;
-      const widget = candidate.pages.find(page => page.id === pageId).widgets.find(entry => entry.id === id);
-      widget.rect = rect;
-      if (hide !== undefined) widget.hideOnMobile = hide;
+      const page = candidate.pages.find(entry => entry.id === pageId);
+      if (id === '__nav') {
+        const {x, y, w, h} = rect;
+        page.navigationRect = {x, y, w, h};
+      } else {
+        const widget = page.widgets.find(entry => entry.id === id);
+        widget.rect = rect;
+        if (hide !== undefined) widget.hideOnMobile = hide;
+      }
       this.#freeformSelection = {pageId, id};
       const result = await this.#controller.saveDraft(candidate, state.token);
       await this.#display(result, generation);

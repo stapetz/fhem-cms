@@ -69,11 +69,16 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   };
   if (editing) {
     if (grid) root.classList.toggle('cms-grid-editable', true);
-    const entries = freeform ? [...freeform.wrappers] : Array.from(root.children, wrapper => [wrapper.gridstackNode?.id, wrapper]);
+    const entries = freeform ? [['__nav', freeform.navBox], ...freeform.wrappers] : Array.from(root.children, wrapper => [wrapper.gridstackNode?.id, wrapper]);
     for (const [id, wrapper] of entries) {
       const widget = widgets.get(id);
       if (grid) {
-        wrapper.addEventListener('pointerdown', () => selectGridWidget(wrapper));
+        wrapper.addEventListener('click', event => {
+          if (event.target.closest?.('.cms-widget-tools,.ui-resizable-handle,a:not([aria-current])') || wrapper.classList.contains('ui-draggable-dragging')) return;
+          if (event.target.closest?.('a[aria-current]')) event.preventDefault();
+          selectGridWidget(wrapper.classList.contains('cms-widget-selected') ? null : wrapper);
+          if (wrapper.classList.contains('cms-widget-selected')) wrapper.querySelector('.cms-widget-drag')?.focus({preventScroll: true});
+        });
       }
       const controls = document.createElement('div');
       controls.className = 'cms-widget-tools';
@@ -81,10 +86,22 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       drag.type = 'button';
       drag.className = 'cms-widget-drag';
       if (freeform) drag.dataset.dir = 'move';
-      drag.textContent = '⠿';
       drag.title = `${widget?.title || widget?.id || 'Navigation'} verschieben`;
       drag.setAttribute('aria-label', drag.title);
-      controls.append(drag);
+      if (grid) {
+        drag.addEventListener('keydown', event => {
+          if (event.key === 'Escape') { selectGridWidget(null); return; }
+          const delta = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]}[event.key];
+          if (!delta || !wrapper.classList.contains('cms-widget-selected')) return;
+          event.preventDefault();
+          const {x, y, w} = wrapper.gridstackNode;
+          const next = {x: x + delta[0], y: y + delta[1]};
+          if (next.x < 0 || next.y < 0 || next.x + w > grid.getColumn()) return;
+          grid.update(wrapper, next);
+          editing.onChange(grid.save(false));
+        });
+      }
+      wrapper.append(drag);
       const edit = document.createElement('button');
       edit.type = 'button';
       edit.className = 'cms-widget-config';
@@ -135,8 +152,24 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
         controls.append(remove);
       }
       wrapper.append(controls);
+      if (grid) {
+        const size = document.createElement('span');
+        size.className = 'cms-widget-dimensions';
+        size.hidden = true;
+        wrapper.append(size);
+      }
     }
     grid?.setStatic(false);
+    grid?.on('resizestart resize', (_event, wrapper) => {
+      const size = wrapper.querySelector('.cms-widget-dimensions');
+      if (!size) return;
+      size.hidden = false;
+      size.textContent = `${wrapper.offsetWidth} × ${wrapper.offsetHeight} px`;
+    });
+    grid?.on('resizestop', (_event, wrapper) => {
+      const size = wrapper.querySelector('.cms-widget-dimensions');
+      if (size) size.hidden = true;
+    });
     grid?.on('dragstop resizestop', () => {
       if (!destroyed) editing.onChange(grid.save(false));
     });

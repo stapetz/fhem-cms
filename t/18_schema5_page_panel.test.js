@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
 import { Schema5PagePanel } from '../www/fhem-cms/js/fcui-schema5-page-panel.js';
+import { resizeFreeformPage } from '../www/fhem-cms/js/fcui-freeform-layout.js';
 import { schema5PageBackground } from '../www/fhem-cms/js/fcui-schema5-appearance.js';
 
 class Element {
@@ -292,6 +293,125 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
   } finally {
     globalThis.document = original;
   }
+});
+
+test('freeform presets resize only freeform pages proportionally from the open baseline', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const f = fixture();
+    f.live.schemaVersion = 6;
+    f.live.pages[0].layoutMode = 'freeform';
+    f.live.pages[0].canvas = {width: 1000, height: 800, scaling: 'fit', snapGrid: 5, mobileBehavior: 'stack'};
+    f.live.pages[0].widgets[0].rect = {x: 100, y: 200, w: 300, h: 100, z: 2};
+    f.live.pages[0].widgets[1].rect = {x: 600, y: 400, w: 200, h: 100};
+    f.live.pages[0].navigationRect = {x: 50, y: 50, w: 100, h: 100};
+    f.live.pages[1].layoutMode = 'freeform';
+    f.live.pages[1].canvas = {width: 500, height: 400, scaling: 'none', snapGrid: 10, mobileBehavior: 'scale'};
+    f.live.pages[1].widgets[0].rect = {x: 10, y: 20, w: 30, h: 40};
+    f.live.pages[1].navigationRect = {x: 20, y: 10, w: 100, h: 50};
+    f.live.pages.push({id: 'grid', title: 'Grid', widgets: [
+      {id: 'grid-widget', type: 'text', html: 'Grid', grid: {col: 1, row: 2, w: 3, h: 2}},
+    ]});
+    const state = await f.controller.reload();
+    const root = new Element('section');
+    let previewConfig;
+    const panel = new Schema5PagePanel({
+      root, controller: f.controller, pageId: 'a', token: state.token,
+      services: {createSettingsPreview: () => ({
+        element: new Element('section'),
+        update(config) { previewConfig = structuredClone(config); },
+        close() {},
+      })},
+      browser: {confirm: () => true}, onClose: () => {}, freeformSupported: true,
+    });
+    const descendants = node => [node, ...node.children.flatMap(descendants)];
+    const byClass = name => descendants(root).find(node => node.className === name);
+    const modeLabel = byClass('cms-freeform-mode');
+    assert.ok(modeLabel, 'the page mode dropdown is the first full-width layout control');
+    assert.equal(modeLabel.children[0].value, 'freeform');
+    const presetLabel = byClass('cms-freeform-preset');
+    assert.ok(presetLabel, 'device presets are grouped in the settings control');
+    assert.deepEqual(presetLabel.children[0].children.slice(1).map(group => group.label),
+      ['iPhone', 'iPad', 'Desktop / Monitor']);
+    const applyAll = byClass('cms-freeform-apply-all').children[0];
+    applyAll.checked = true;
+    applyAll.fire('change');
+    const preset = byClass('cms-freeform-preset').children[0];
+    preset.value = 'desktop-1280';
+    preset.fire('change');
+    const expectedStart = {
+      ...f.live.pages[0],
+      canvas: {...f.live.pages[0].canvas, width: 1280, height: 720},
+      widgets: f.live.pages[0].widgets.map(widget => ({
+        ...widget, rect: widget.id === 'text'
+          ? {x: 128, y: 180, w: 384, h: 90, z: 2}
+          : {x: 768, y: 360, w: 256, h: 90},
+      })),
+      navigationRect: {x: 64, y: 45, w: 128, h: 90},
+    };
+    const expectedOther = {
+      ...f.live.pages[1],
+      canvas: {...f.live.pages[1].canvas, width: 1280, height: 720},
+      widgets: [{...f.live.pages[1].widgets[0], rect: {x: 26, y: 36, w: 77, h: 72}}],
+      navigationRect: {x: 51, y: 18, w: 256, h: 90},
+    };
+    assert.deepEqual(previewConfig.pages[0], expectedStart);
+    assert.deepEqual(previewConfig.pages[1], expectedOther);
+    assert.deepEqual(previewConfig.pages[2], f.live.pages[2], 'Grid pages are never resized');
+    preset.value = 'iphone-15';
+    preset.fire('change');
+    preset.value = 'desktop-1280';
+    preset.fire('change');
+    assert.deepEqual(previewConfig.pages[0], expectedStart, 'repeated previews scale from the original baseline');
+    assert.deepEqual(previewConfig.pages[1], expectedOther);
+    await root.children[4].children[1].fire('click');
+    assert.deepEqual(f.controller.snapshot().draft.pages[0], expectedStart);
+    assert.deepEqual(f.controller.snapshot().draft.pages[1], expectedOther);
+    assert.deepEqual(f.controller.snapshot().draft.pages[2], f.live.pages[2]);
+    panel.close();
+
+    const updated = await f.controller.reload();
+    const nextRoot = new Element('section');
+    const next = new Schema5PagePanel({
+      root: nextRoot, controller: f.controller, pageId: 'a', token: updated.token,
+      browser: {confirm: () => true}, onClose: () => {}, freeformSupported: true,
+    });
+    const nextDescendants = node => [node, ...node.children.flatMap(nextDescendants)];
+    const nextByClass = name => nextDescendants(nextRoot).find(node => node.className === name);
+    nextByClass('cms-freeform-apply-all').children[0].checked = false;
+    const nextPreset = nextByClass('cms-freeform-preset').children[0];
+    nextPreset.value = 'iphone-13';
+    nextPreset.fire('change');
+    await nextRoot.children[4].children[1].fire('click');
+    assert.equal(f.controller.snapshot().draft.pages[0].canvas.width, 390);
+    assert.equal(f.controller.snapshot().draft.pages[1].canvas.width, 1280,
+      'without the Start-page checkbox other Freeform pages remain unchanged');
+    assert.equal(nextRoot.children.length, 0);
+
+    const nonStart = new Element('section');
+    const current = f.controller.snapshot();
+    new Schema5PagePanel({
+      root: nonStart, controller: f.controller, pageId: 'b', token: current.token,
+      browser: {confirm: () => true}, onClose: () => {}, freeformSupported: true,
+    });
+    assert.equal(nextDescendants(nonStart).some(node => node.className === 'cms-freeform-apply-all'), false,
+      'bulk resize is available only in the Start page panel');
+  } finally {
+    globalThis.document = original;
+  }
+});
+
+test('freeform geometry scaling rounds sizes into the valid canvas bounds', () => {
+  const page = {
+    layoutMode: 'freeform',
+    canvas: {width: 500, height: 500, scaling: 'fit', snapGrid: 5, mobileBehavior: 'stack'},
+    widgets: [{id: 'small', rect: {x: 480, y: 480, w: 10, h: 10}}],
+    navigationRect: {x: 100, y: 100, w: 10, h: 10},
+  };
+  resizeFreeformPage(page, 200, 200);
+  assert.deepEqual(page.widgets[0].rect, {x: 190, y: 190, w: 10, h: 10});
+  assert.deepEqual(page.navigationRect, {x: 40, y: 40, w: 10, h: 10});
 });
 
 test('liquid glass uses a reversible start-page background without changing individual images', async () => {

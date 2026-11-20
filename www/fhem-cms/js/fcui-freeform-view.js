@@ -1,4 +1,4 @@
-import { DEFAULT_CANVAS, freeformReadingOrder, freeformScale } from './fcui-freeform-layout.js';
+import { DEFAULT_CANVAS, fitFreeformRect, freeformReadingOrder, freeformScale } from './fcui-freeform-layout.js';
 
 export function mountFreeform(root, page, navigation, render, {background, editing, phone, navigationGrid, columns} = {}) {
   const doc = root.ownerDocument;
@@ -8,13 +8,16 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   const footprint = box('cms-freeform-footprint');
   const canvas = box('cms-freeform-canvas');
   const settings = {...DEFAULT_CANVAS, ...page.canvas};
+  canvas.style.setProperty('--cms-freeform-snap', `${settings.snapGrid}px`);
   const wrappers = new Map();
   const navBox = box('cms-freeform-navigation');
+  let navigationRect = page.navigationRect ?? {x: 0, y: 0, w: settings.width, h: 48};
   if (navigationGrid && columns) {
     const cell = settings.width / columns;
     const {col, row, w, h} = navigationGrid;
-    setFreeformBox(navBox, {x: (col - 1) * cell, y: (row - 1) * cell, w: w * cell, h: h * cell, z: 10000});
+    navigationRect = page.navigationRect ?? fitFreeformRect({x: (col - 1) * cell, y: (row - 1) * cell, w: w * cell, h: h * cell}, settings);
   }
+  setFreeformBox(navBox, {...navigationRect, z: 10000});
   navBox.append(navigation);
   canvas.append(navBox);
   if (background) canvas.style.backgroundImage = `url("${new URL(background, browser.location.href).href}")`;
@@ -36,7 +39,8 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     const width = viewport.clientWidth;
     const height = viewport.clientHeight;
     if (!width) return;
-    const stack = !editing && settings.mobileBehavior === 'stack' && (phone || width < 640);
+    const tablet = width <= 1366 && browser.matchMedia?.('(pointer: coarse)').matches;
+    const stack = !editing && settings.mobileBehavior === 'stack' && (phone || tablet || width < 640);
     if (stack !== stacked) {
       stacked = stack;
       viewport.classList.toggle('cms-freeform-stack', stack);
@@ -67,7 +71,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   observer.observe(viewport);
   resize();
   return {
-    canvas, wrappers, getScale: () => scale,
+    canvas, wrappers, navBox, navigationRect, getScale: () => scale,
     destroy() {
       observer.disconnect();
       if (frame !== null) browser.cancelAnimationFrame(frame);
