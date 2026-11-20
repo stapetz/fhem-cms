@@ -10,6 +10,7 @@ use File::Copy qw(copy);
 use File::Path qw(make_path remove_tree);
 use File::Spec;
 use File::Basename ();
+use File::Temp qw(tempdir);
 use IO::Handle ();
 use JSON::PP ();
 use MIME::Base64 qw(decode_base64 encode_base64);
@@ -2551,7 +2552,7 @@ sub FHEMCMS_PreviewLayoutMigration {
 
 # Der Lesevertrag ist getrennt versioniert.
 sub FHEMCMS_ReadVersion5State {
-    my ($dataDir) = @_;
+    my ($dataDir, $allowFreeform) = @_;
     return (undef, FHEMCMS_UpgradePending($dataDir)) if (FHEMCMS_UpgradePending($dataDir));
     my $json = JSON::PP->new->utf8->canonical;
     my @entries;
@@ -2566,7 +2567,9 @@ sub FHEMCMS_ReadVersion5State {
         return (undef, "$file: $readError") if (defined($readError));
         my $config = eval { $json->decode($bytes) };
         return (undef, "$file: ungueltiges JSON") if ($@ || !defined($config));
-        my $error = FHEMCMS_ValidateConfig($config, 5);
+        my $schema = $allowFreeform && ref($config) eq 'HASH' && defined($config->{schemaVersion})
+            && !ref($config->{schemaVersion}) && $config->{schemaVersion} eq '6' ? 6 : 5;
+        my $error = FHEMCMS_ValidateConfig($config, $schema);
         return (undef, "$file: $error") if (defined($error));
         push(@entries, {bytes => $bytes, config => $config});
     }
@@ -2616,18 +2619,75 @@ sub FHEMCMS_NormalizeWidgetIds {
     return $copy;
 }
 
+sub FHEMCMS_SaveFreeformRollback {
+    my ($dataDir, $token) = @_;
+    my $name = File::Basename::basename($dataDir);
+    my ($error, $mediaDir) = FHEMCMS_MediaDir($name);
+    return $error if (defined($error));
+    my $snapshot = eval { tempdir('freeform-rollback-XXXXXXXX', DIR => $dataDir) };
+    return 'Freeform-Sicherung konnte nicht angelegt werden' if ($@ || !defined($snapshot));
+    my $failure = sub {
+        my ($message) = @_;
+        my $errors;
+        remove_tree($snapshot, {safe => 1, error => \$errors});
+        Log3($name, 1, 'FHEMCMS: unvollstaendige Freeform-Sicherung konnte nicht entfernt werden')
+            if ($errors && @{$errors});
+        return $message;
+    };
+    my $backupMedia = File::Spec->catdir($snapshot, 'media');
+    return $failure->("Medien-Sicherung konnte nicht angelegt werden: $!") if (!mkdir($backupMedia, 0700));
+    for my $file ('config.json', 'draft.json', 'assets.json') {
+        my $source = File::Spec->catfile($dataDir, $file);
+        return $failure->("Symlink fuer $file ist nicht erlaubt") if (-l $source);
+        next if ($file ne 'config.json' && !-e $source);
+        my ($bytes, $readError) = FHEMCMS_ReadFile($source);
+        return $failure->("$file: $readError") if (defined($readError));
+        my $writeError = FHEMCMS_WriteUpgradeFile(File::Spec->catfile($snapshot, $file), $bytes, 0);
+        return $failure->("$file: $writeError") if (defined($writeError));
+    }
+    if (-e $mediaDir) {
+        opendir(my $dh, $mediaDir) or return $failure->("Medienverzeichnis nicht lesbar: $!");
+        my @files = grep { $_ =~ $FHEMCMS_MEDIA_NAME } readdir($dh);
+        closedir($dh);
+        return $failure->('Zu viele Mediendateien fuer die Freeform-Sicherung') if (@files > $FHEMCMS_MAX_MEDIA_FILES);
+        for my $file (@files) {
+            my $source = File::Spec->catfile($mediaDir, $file);
+            # CMS media are immutable; removal/replacement unlinks their original directory entry.
+            return $failure->('Mediendatei konnte nicht sicher hardverlinkt werden')
+                if (-l $source || !-f $source || !link($source, File::Spec->catfile($backupMedia, $file)));
+        }
+    }
+    my ($state, $stateError) = FHEMCMS_ReadVersion5State($snapshot);
+    return $failure->($stateError // 'Zustand der Freeform-Sicherung stimmt nicht ueberein')
+        if (defined($stateError) || $state->{token} ne $token);
+    return undef;
+}
+
 sub FHEMCMS_WriteVersion5Draft {
-    my ($dataDir, $config, $expectedToken) = @_;
+    my ($dataDir, $config, $expectedToken, $allowFreeform) = @_;
     return 'Ungueltige Zustandskennung'
         if (!defined($expectedToken) || ref($expectedToken) || $expectedToken !~ /\A[0-9a-f]{64}\z/);
-    my $error = FHEMCMS_ValidateConfig($config, 5);
+    my $schema = $allowFreeform && ref($config) eq 'HASH' && defined($config->{schemaVersion})
+        && !ref($config->{schemaVersion}) && $config->{schemaVersion} eq '6' ? 6 : 5;
+    my $error = FHEMCMS_ValidateConfig($config, $schema);
     return "Entwurf ist ungueltig: $error" if (defined($error));
     $config = FHEMCMS_NormalizeWidgetIds($config);
     my $encoded = JSON::PP->new->utf8->canonical->pretty->encode($config);
     return 'Konfiguration ist zu gross' if (length($encoded) > $FHEMCMS_MAX_CONFIG_BYTES);
-    my ($state, $stateError) = FHEMCMS_ReadVersion5State($dataDir);
+    my ($state, $stateError) = FHEMCMS_ReadVersion5State($dataDir, $allowFreeform);
     return $stateError if (defined($stateError));
     return 'Zustand ist veraltet; bitte erneut laden' if ($state->{token} ne $expectedToken);
+    if ($allowFreeform) {
+        my $current = ($state->{draft} // $state->{live})->{schemaVersion};
+        return 'Ein Schema-6-Entwurf darf nicht auf Schema 5 zurueckgesetzt werden'
+            if (($current == 6 || $state->{live}{schemaVersion} == 6) && $schema == 5);
+        if ($current == 5 && $schema == 6) {
+            return 'Schema 6 erfordert beim ersten Speichern mindestens eine Freeform-Seite'
+                if (!grep { ($_->{layoutMode} // 'grid') eq 'freeform' } @{$config->{pages}});
+            my $snapshotError = FHEMCMS_SaveFreeformRollback($dataDir, $expectedToken);
+            return $snapshotError if (defined($snapshotError));
+        }
+    }
 
     my $tmp = File::Spec->catfile($dataDir, 'draft.json.v5.tmp');
     my $out;
@@ -2642,7 +2702,7 @@ sub FHEMCMS_WriteVersion5Draft {
         unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaerer Entwurf konnte nicht entfernt werden: $!");
         return "Entwurf konnte nicht geschrieben werden: $reason";
     }
-    ($state, $stateError) = FHEMCMS_ReadVersion5State($dataDir);
+    ($state, $stateError) = FHEMCMS_ReadVersion5State($dataDir, $allowFreeform);
     if (defined($stateError) || $state->{token} ne $expectedToken) {
         unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaerer Entwurf konnte nicht entfernt werden: $!");
         return defined($stateError) ? $stateError : 'Zustand ist veraltet; bitte erneut laden';
@@ -2656,10 +2716,10 @@ sub FHEMCMS_WriteVersion5Draft {
 }
 
 sub FHEMCMS_DiscardVersion5Draft {
-    my ($dataDir, $expectedToken) = @_;
+    my ($dataDir, $expectedToken, $allowFreeform) = @_;
     return 'Ungueltige Zustandskennung'
         if (!defined($expectedToken) || ref($expectedToken) || $expectedToken !~ /\A[0-9a-f]{64}\z/);
-    my ($state, $error) = FHEMCMS_ReadVersion5State($dataDir);
+    my ($state, $error) = FHEMCMS_ReadVersion5State($dataDir, $allowFreeform);
     return $error if (defined($error));
     return 'Zustand ist veraltet; bitte erneut laden' if ($state->{token} ne $expectedToken);
     return 'Es gibt keinen Entwurf zum Verwerfen' if (!defined($state->{draft}));
@@ -2669,13 +2729,15 @@ sub FHEMCMS_DiscardVersion5Draft {
 }
 
 sub FHEMCMS_PublishVersion5Draft {
-    my ($dataDir, $expectedToken) = @_;
+    my ($dataDir, $expectedToken, $allowFreeform) = @_;
     return (undef, 'Ungueltige Zustandskennung')
         if (!defined($expectedToken) || ref($expectedToken) || $expectedToken !~ /\A[0-9a-f]{64}\z/);
-    my ($state, $error) = FHEMCMS_ReadVersion5State($dataDir);
+    my ($state, $error) = FHEMCMS_ReadVersion5State($dataDir, $allowFreeform);
     return (undef, $error) if (defined($error));
     return (undef, 'Zustand ist veraltet; bitte erneut laden') if ($state->{token} ne $expectedToken);
     return (undef, 'Es gibt keinen Entwurf zum Veroeffentlichen') if (!defined($state->{draft}));
+    return (undef, 'Schema-6-Live kann nicht mit einem Schema-5-Entwurf ersetzt werden')
+        if ($state->{live}{schemaVersion} == 6 && $state->{draft}{schemaVersion} != 6);
     my $livePath = File::Spec->catfile($dataDir, 'config.json');
     my $draftPath = File::Spec->catfile($dataDir, 'draft.json');
     my ($live, $liveError) = FHEMCMS_ReadFile($livePath);
@@ -2707,7 +2769,7 @@ sub FHEMCMS_PublishVersion5Draft {
         unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Datei konnte nicht entfernt werden: $!");
         return (undef, $backupError);
     }
-    ($state, $error) = FHEMCMS_ReadVersion5State($dataDir);
+    ($state, $error) = FHEMCMS_ReadVersion5State($dataDir, $allowFreeform);
     if (defined($error) || $state->{token} ne $expectedToken) {
         unlink($tmp) or Log3('FHEMCMS', 1, "FHEMCMS: temporaere Datei konnte nicht entfernt werden: $!");
         return (undef, defined($error) ? $error : 'Zustand ist veraltet; bitte erneut laden');
