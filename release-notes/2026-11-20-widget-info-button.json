@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-20",
+  "version": "1.23.2-dev",
+  "title": "Einheitlicher Widget-Infobutton",
+  "changes": [
+    "DWD-Wetter verwendet denselben Info-Button wie VolvoConnect. Refs #224."
+  ]
+}

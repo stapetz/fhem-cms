@@ -773,6 +773,11 @@ aufgeklappte Details bleiben erhalten. Pruefung aller 16 Widgettypen mit
 
 #### Themevertrag für alle bestehenden und künftigen Widgets (Refs #198)
 
+- Detail- und Aktionsbuttons verwenden wie VolvoConnect
+  `createWidgetIconButton('info', label)` bzw. `createWidgetIconButton('actions', label)`
+  und `widgetIconButtonCss` aus [widget-design.js](../www/fhem-cms/js/widget-design.js).
+  Keine eigenen Unicode-Symbole verwenden; „a“ nur anbieten, wenn es Aktionen gibt.
+
 **Google-Styles immer unter Beachtung des tatsächlichen Seitenthemes übernehmen.**
 Referenz sind die freien HTML-Entwürfe „Solaranlage Übersicht“ und „Volvo EX40“:
 geerbte Textfarbe, dezente transparente Teilflächen, keine eigenen globalen
