@@ -135,9 +135,15 @@ export function freeformReadingOrder(widgets) {
   const byY = [...widgets].sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x);
   const rows = [];
   for (const widget of byY) {
+    const {y, h} = widget.rect;
     const row = rows.at(-1);
-    if (row && widget.rect.y - row[0].rect.y <= 30) row.push(widget);
-    else rows.push([widget]);
+    // Keep a shared vertical band so a tall widget cannot bridge established rows.
+    if (row && Math.min(row.bottom, y + h) - y >= Math.min(row.anchorHeight, h) / 2) {
+      row.widgets.push(widget);
+      row.bottom = Math.min(row.bottom, y + h);
+    } else {
+      rows.push({widgets: [widget], bottom: y + h, anchorHeight: h});
+    }
   }
-  return rows.flatMap(row => row.sort((a, b) => a.rect.x - b.rect.x || a.rect.y - b.rect.y));
+  return rows.flatMap(({widgets}) => widgets.sort((a, b) => a.rect.x - b.rect.x || a.rect.y - b.rect.y));
 }

@@ -827,34 +827,57 @@ test('editor tools require activation and Freeform navigation supports real poin
     const mobileUrl = `http://127.0.0.1:${server.address().port}/t/94_freeform_mobile.html`;
     const setViewport = (width, height) => command => command('Emulation.setDeviceMetricsOverride',
       {width, height, deviceScaleFactor:1, mobile:false});
-    await browserResult(profile, `http://127.0.0.1:${server.address().port}/t/93_freeform.html?responsive`, child, async command => {
-      const measure = async (width, height) => {
+    const responsiveUrl = `http://127.0.0.1:${server.address().port}/t/93_freeform.html?responsive`;
+    const measure = async (command, width, height) => {
         await setViewport(width, height)(command);
         const {result} = await command('Runtime.evaluate', {expression: `new Promise(resolve => setTimeout(() => {
           const viewport = document.querySelector('.cms-freeform-viewport');
           const canvas = document.querySelector('.cms-freeform-canvas').getBoundingClientRect();
           const burger = document.querySelector('.cms-freeform-compact-navigation .cms-nav-burger');
+          const bounds = viewport.getBoundingClientRect();
           resolve({width: viewport.clientWidth, canvasWidth: canvas.width, bottom: canvas.bottom,
+            left: bounds.left, frameBottom: bounds.bottom, image: getComputedStyle(viewport).backgroundImage,
+            horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth
+              || viewport.scrollWidth > viewport.clientWidth,
             stacked: viewport.classList.contains('cms-freeform-stack'), burger: burger?.offsetHeight ?? 0});
         }, 120))`, awaitPromise:true, returnByValue:true});
         return result.value;
-      };
-      const desktop = await measure(1440, 800);
+    };
+    const finishResponsive = command => command('Runtime.evaluate', {expression:
+      `Object.assign(document.querySelector('#result'), {textContent:'{}'}).dataset.result='pass'`});
+    await browserResult(profile, responsiveUrl, child, async command => {
+      const resize = (width, height) => measure(command, width, height);
+      const desktop = await resize(1440, 800);
       assert.ok(Math.abs(desktop.width - desktop.canvasWidth) < 1 && desktop.bottom > 800 && !desktop.burger);
       for (const [width, height] of [[932, 430], [1100, 760]]) {
-        const landscape = await measure(width, height);
+        const landscape = await resize(width, height);
         assert.ok(!landscape.stacked && Math.abs(landscape.width - landscape.canvasWidth) < 1
-          && landscape.bottom > height && landscape.burger >= 44,
+          && landscape.left <= 1 && landscape.width >= width - 16
+          && landscape.bottom > height && landscape.burger >= 44 && !landscape.horizontalOverflow,
         `${width} × ${height}: full width, vertical overflow and unscaled navigation`);
       }
-      const portrait = await measure(820, 1180);
+      assert.equal(desktop.image, 'none', 'desktop keeps the background on the canvas');
+      const tallLandscape = await resize(1000, 990);
+      assert.match(tallLandscape.image, /data:image\/svg\+xml/);
+      assert.ok(tallLandscape.bottom < 990 && tallLandscape.frameBottom >= 990, 'background fills below a short canvas');
+      const portrait = await resize(820, 1180);
       assert.ok(portrait.stacked && portrait.burger >= 44);
-      const phone = await measure(390, 844);
+      const phone = await resize(430, 932);
       assert.ok(phone.stacked && Math.abs(phone.width - phone.canvasWidth) < 1 && phone.burger >= 44);
-      const restored = await measure(1440, 800);
+      assert.match(phone.image, /data:image\/svg\+xml/, 'portrait stack retains its page image');
+      const restored = await resize(1440, 800);
       assert.deepEqual(restored, desktop);
-      await command('Runtime.evaluate', {expression:
-        `Object.assign(document.querySelector('#result'), {textContent:'{"checks":6}'}).dataset.result='pass'`});
+      await finishResponsive(command);
+    });
+    await browserResult(profile, `${responsiveUrl}&tablet`, child, async command => {
+      const landscape = await measure(command, 1180, 820);
+      assert.ok(!landscape.stacked && landscape.left <= 1 && landscape.width >= 1164
+        && Math.abs(landscape.width - landscape.canvasWidth) < 1
+        && landscape.burger >= 44 && !landscape.horizontalOverflow, 'iPad Air: shared Grid canvas fills the width');
+      const portrait = await measure(command, 820, 1180);
+      assert.ok(portrait.stacked && !portrait.horizontalOverflow);
+      assert.match(portrait.image, /data:image\/svg\+xml/, 'shared Grid stack retains its page image');
+      await finishResponsive(command);
     });
     const mobile = await browserResult(profile, mobileUrl, child, undefined, setViewport(820, 1180));
     assert.ok(mobile.checks > 1000);

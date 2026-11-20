@@ -27,6 +27,10 @@ Abnahmenachtrag (Refs #216): Die Seitennavigation gehört im Freeform-Modus
 zum Canvas (in kleinen Ansichten als separates, unskaliertes Burger-Menü).
 Die automatische Skalierung füllt am Desktop die verfügbare Breite;
 im mobilen Querformat gilt das unabhängig von der Desktop-Skalierung.
+Der gemeinsame Rahmen reicht dort bis zu den sicheren Displayrändern; das
+Seitenbild füllt auch Platz unter dem Canvas. Im Hochformat bleibt es beim
+Stapeln sichtbar. Freeform-Stapel lesen vertikal überlappende Reihen von
+links nach rechts, ohne die Pixelpositionen zu ändern.
 Layouts oberhalb der Fensterhöhe scrollen vertikal. Bis 1100 CSS-Pixel Fensterbreite
 greift auch ohne Geräte-Vorschau das Mobilverhalten. Beim Wechsel vom Raster
 zu Freeform bleibt keine GridStack-Höhe zurück. In beiden Modi sitzen

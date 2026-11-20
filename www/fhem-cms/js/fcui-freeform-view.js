@@ -28,7 +28,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     pane.append(grid);
     canvas.prepend(pane);
   }
-  if (background) canvas.style.backgroundImage = `url("${new URL(background, browser.location.href).href}")`;
+  if (background) viewport.style.setProperty('--cms-canvas-image', `url("${new URL(background, browser.location.href).href}")`);
   for (const widget of page.widgets) {
     const wrapper = box('cms-freeform-widget');
     wrapper.dataset.widgetId = widget.id;
@@ -47,10 +47,16 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   const landscape = browser.matchMedia('(orientation: landscape)');
   const touchTablet = browser.matchMedia('(pointer: coarse) and (min-width: 600px) and (min-height: 600px) and (max-width: 1400px)');
   function resize() {
+    const mobileDevice = phone || tablet || touchTablet.matches || browser.innerWidth <= 1100;
+    const small = !editing && (mobileDevice || viewport.clientWidth < 640);
+    const mobilePortrait = small && !landscape.matches;
+    const mobileLandscape = small && landscape.matches;
+    const fullLandscape = mobileLandscape && mobileDevice && root.closest('body > .cms-shell');
+    viewport.classList.toggle('cms-freeform-mobile', small);
+    viewport.classList.toggle('cms-freeform-landscape', mobileLandscape);
+    viewport.classList.toggle('cms-freeform-landscape-full', Boolean(fullLandscape));
     const width = viewport.clientWidth;
     if (!width) return;
-    const small = !editing && (phone || tablet || touchTablet.matches || browser.innerWidth <= 1100 || width < 640);
-    const mobilePortrait = small && !landscape.matches;
     const stack = mobilePortrait && settings.mobileBehavior === 'stack';
     const showBurger = small && Boolean(burger);
     if (showBurger !== compact) {
@@ -78,6 +84,8 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     const top = footprint.getBoundingClientRect().top + browser.scrollY;
     const padding = Number.parseFloat(browser.getComputedStyle(doc.body).paddingBottom) || 0;
     const height = Math.max(1, browser.innerHeight - Math.max(0, top) - padding);
+    const viewportTop = viewport.getBoundingClientRect().top + browser.scrollY;
+    viewport.style.minHeight = fullLandscape ? `${Math.max(0, browser.innerHeight - viewportTop - padding)}px` : '';
     const byWidth = width / settings.width;
     scale = stack ? 1 : mobilePortrait ? Math.min(byWidth, height / settings.height, 1)
       : small ? byWidth
