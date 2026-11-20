@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use utf8;
+use Encode qw(encode);
 use JSON::PP ();
 use Test::More;
 use POSIX qw(strftime);
@@ -105,7 +106,10 @@ my $localClock = substr($past, 11, 5);
 my %values = (fc0_date => $localDate, fc0_0_time => $localClock, fc0_0_TTT => 6.4, fc0_0_ww => 68,
     fc_description => 'OLDENBURG', fc_station => '10215',
     fc0_0_SunD1 => 600, fc0_0_PPPP => 100200, fc0_Tn => 2, fc0_Tx => 7,
-    a_count => 1, a_state => 'updated', a_0_eventDesc => 'Böen', a_0_severity => 'Severe',
+    a_count => 1, a_state => 'updated', a_0_eventDesc => encode('UTF-8', 'Böen'), a_0_severity => 'Severe',
+    a_0_headline => encode('UTF-8', 'Amtliche WARNUNG vor GLÄTTE'),
+    a_0_description => encode('UTF-8', 'Leichter Frost bis −3 °C.'),
+    a_0_instruction => "Bei Glätte vorsichtig fahren \x{2013} ggf. Frostschutzmaßnahmen ergreifen.",
     a_0_onset => $past, a_0_expires => $expiry);
 $defs{Weather} = {NAME => 'Weather', TYPE => 'DWD_OpenData', '.TZ' => 'UTC',
     READINGS => {map { $_ => {VAL => $values{$_}, TIME => $past} } keys(%values)}};
@@ -121,6 +125,9 @@ is($local->{current}{sunshine}, 10, 'DWD duration normalized from seconds to min
 ok($local->{current}{isForecast}, 'device forecast not presented as measured conditions');
 is($local->{daily}[0]{tempMin}, 2, 'uses DWD daily minimum');
 is($local->{alerts}[0]{event}, 'Böen', 'device warning localized');
+is($local->{alerts}[0]{headline}, 'Amtliche WARNUNG vor GLÄTTE', 'decodes warning headline bytes before JSON encoding');
+is($local->{alerts}[0]{description}, 'Leichter Frost bis −3 °C.', 'preserves degree sign and Unicode minus in decoded warning');
+is($local->{alerts}[0]{instruction}, $values{a_0_instruction}, 'already decoded warning text unchanged');
 is($local->{alerts}[0]{severity}, 'severe', 'device severity normalized');
 is(scalar @requests, 0, 'local source makes no network requests');
 my $stamp = FHEMCMS_WeatherISO(time() - 90);

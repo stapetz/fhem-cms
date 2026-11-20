@@ -2,7 +2,7 @@ package main;
 
 use strict;
 use warnings;
-use Encode qw(encode decode FB_CROAK);
+use Encode qw(encode decode FB_CROAK LEAVE_SRC);
 use JSON::PP ();
 use POSIX qw(strftime);
 use Time::Local qw(timegm timelocal);
@@ -151,6 +151,14 @@ sub FHEMCMS_WeatherAlert {
     $alert{severity} = lc($alert{severity});
     $alert{color} = $weatherColors{$alert{severity}} // '#808080';
     return \%alert;
+}
+
+sub FHEMCMS_WeatherReadingText {
+    my ($text) = @_;
+    return $text if (!defined($text) || ref($text) || utf8::is_utf8($text));
+    # DWD_OpenData can store UTF-8 bytes rather than Perl characters.
+    local $@;
+    return eval { decode('UTF-8', $text, FB_CROAK | LEAVE_SRC) } // $text;
 }
 
 sub FHEMCMS_WeatherDays {
@@ -346,8 +354,9 @@ sub FHEMCMS_WeatherDeviceReadings {
         }
         my $alert = FHEMCMS_WeatherAlert({
             id => ($device->{NAME} // '') . "-$index",
-            event => $val->("${prefix}eventDesc") // $val->("${prefix}event"),
-            %dates, map { $_ => $val->($prefix . $_) } qw(headline severity description instruction),
+            event => FHEMCMS_WeatherReadingText($val->("${prefix}eventDesc") // $val->("${prefix}event")),
+            severity => $val->("${prefix}severity"), %dates,
+            map { $_ => FHEMCMS_WeatherReadingText($val->($prefix . $_)) } qw(headline description instruction),
         }, $now);
         push(@alerts, $alert) if ($alert);
     }
