@@ -810,8 +810,13 @@ test('editor tools require activation and Freeform navigation supports real poin
       assert.equal(await read(`JSON.parse(document.querySelector('#result').dataset.saved).rect.x`), 51);
       await read(`Object.assign(document.querySelector('#result'), {textContent:'{}'}).dataset.result='pass'`);
     });
-    const mobile = await browserResult(profile, `http://127.0.0.1:${server.address().port}/t/94_freeform_mobile.html`, child);
+    const mobileUrl = `http://127.0.0.1:${server.address().port}/t/94_freeform_mobile.html`;
+    const setViewport = (width, height) => command => command('Emulation.setDeviceMetricsOverride',
+      {width, height, deviceScaleFactor:1, mobile:false});
+    const mobile = await browserResult(profile, mobileUrl, child, undefined, setViewport(820, 1180));
     assert.ok(mobile.checks > 1000);
+    const landscape = await browserResult(profile, mobileUrl, child, undefined, setViewport(1000, 700));
+    assert.ok(landscape.checks > 10);
   } catch (error) {
     throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });
   } finally {

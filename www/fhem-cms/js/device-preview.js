@@ -46,6 +46,11 @@ export function deviceSize(id, rotated) {
     : { width: device.width, height: device.height, name: device.name };
 }
 
+export function previewDeviceType(id) {
+  const device = DEVICES.get(id);
+  return !device || device.landscape ? 'desktop' : device.width >= 600 ? 'tablet' : 'mobile';
+}
+
 export class DevicePreview {
   // getUrl liefert die Adresse der Vorschau; beforeOpen speichert vorher ausstehende Änderungen.
   constructor({ getUrl, beforeOpen }) {
@@ -167,8 +172,8 @@ export class DevicePreview {
       this.iframe.title = 'Vorschau';
       this.iframe.addEventListener('load', this.onFrameLoad);
       const url = new URL(this.getUrl());
-      const device = DEVICES.get(this.deviceId);
-      if (!device.landscape) url.searchParams.set('cms-device', device.width >= 600 ? 'tablet' : 'mobile');
+      const type = previewDeviceType(this.deviceId);
+      if (type !== 'desktop') url.searchParams.set('cms-device', type);
       this.iframe.src = url.href;
       this.frame.append(this.iframe);
       this.stage.append(this.frame);

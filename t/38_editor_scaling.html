@@ -78,6 +78,14 @@ try {
       if (!widget.classList.contains('cms-widget-selected')) widget.click();
       const handle = widget.querySelector('.ui-resizable-se');
       const tools = widget.querySelector('.cms-widget-tools');
+      const tile = widget.querySelector('.grid-stack-item-content').getBoundingClientRect();
+      const handles = [...widget.querySelectorAll('.ui-resizable-handle')];
+      check(handles.length === 8 && handles.every(node => {
+        const bounds = node.getBoundingClientRect();
+        const x = bounds.left + bounds.width / 2;
+        const y = bounds.top + bounds.height / 2;
+        return x > tile.left && x < tile.right && y > tile.top && y < tile.bottom;
+      }), 'all eight handle centers are inside the widget outline');
       const h = handle.getBoundingClientRect();
       const t = tools.getBoundingClientRect();
       check(t.right <= h.left || t.bottom <= h.top || h.bottom <= t.top,

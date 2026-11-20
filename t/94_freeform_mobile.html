@@ -84,8 +84,9 @@ function mount(options = {}, canvas = page.canvas) {
     id => createWidgetElement(page.widgets.find(widget => widget.id === id), services, snapshots, true), options);
 }
 try {
-  mount({ phone: true });
   const heights = [];
+  if (!matchMedia('(orientation: landscape)').matches) {
+  mount({ phone: true });
   for (const width of [280, 343, 375, 393, 430, 600, 744, 820, 834, 1024, 1366]) {
     shell.style.width = `${width}px`;
     await paint();
@@ -130,6 +131,11 @@ try {
     if (width === 393 || width === 820) heights.push({ width, heights: ['w0', 'w1', 'w2', 'w3'].map(id =>
       view.wrappers.get(id).firstElementChild.shadowRoot.querySelector('.tile').clientHeight) });
   }
+  shell.style.width = '393px';
+  mount();
+  await paint();
+  check(root.querySelector('.cms-freeform-stack'), 'narrow browser stacks without preview flag');
+  } else {
   for (const scenario of [
     { width: 343, options: { phone: true }, canvas: { ...page.canvas, mobileBehavior: 'scale' }, name: 'explicit mobile scale' },
     { width: 343, options: { editing: true, phone: true }, name: 'mobile editor' },
@@ -146,7 +152,6 @@ try {
       `${scenario.name}: desktop size containment preserved`);
     check(!view.wrappers.get('w18').hidden, `${scenario.name}: desktop-only widget visible`);
   }
-  check(matchMedia('(orientation: landscape)').matches, 'browser fixture uses a landscape viewport');
   shell.style.width = '820px';
   mount({ tablet: true }, {...page.canvas, scaling: 'none'});
   await paint();
@@ -160,10 +165,13 @@ try {
   check(Math.abs((tabletWidget.left - tabletBounds.left) / tabletScale - page.widgets[0].rect.x) < 1
     && Math.abs(tabletWidget.width / tabletScale - page.widgets[0].rect.w) < 1,
   'landscape tablet keeps original widget position and dimensions proportionally');
-  shell.style.width = '393px';
-  mount();
-  await paint();
-  check(root.querySelector('.cms-freeform-stack'), 'narrow browser stacks without preview flag');
+  for (const options of [{phone: true}, {}]) {
+    mount(options, {...page.canvas, scaling: 'none'});
+    await paint();
+    check(!root.querySelector('.cms-freeform-stack') && view.getScale() < 1
+      && root.scrollWidth <= root.clientWidth + 1, 'phone or narrow browser in landscape fits without sideways scroll');
+  }
+  }
   check(JSON.stringify(page) === original, 'responsive layout never mutates saved geometry');
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks, heights });

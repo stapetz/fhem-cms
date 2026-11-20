@@ -1,4 +1,4 @@
-import { deviceSize } from './device-preview.js';
+import { deviceSize, previewDeviceType } from './device-preview.js';
 import { schema5GridItems } from './fcui-schema5-layout.js';
 import { schema5PageBackground, setLiquidAppearance } from './fcui-schema5-appearance.js';
 
@@ -28,13 +28,6 @@ export class Schema5SettingsPreview {
     this.frame.title = 'Vorschau der aktuellen Seite im Smartphone-Querformat';
     this.frame.inert = true;
     this.frame.tabIndex = -1;
-    const size = deviceSize('iphone-se', true);
-    this.frame.style.width = `${size.width}px`;
-    this.frame.style.height = `${size.height}px`;
-    const url = new URL(browser.location.href);
-    url.search = '?mode=preview&cms-device=mobile&cms-page-settings-preview=1';
-    url.hash = `#/${pageId}`;
-    this.frame.src = url.href;
     this.stage.append(this.frame);
     this.element.append(heading, this.stage, this.status);
     this.onMessage = (event) => {
@@ -54,26 +47,44 @@ export class Schema5SettingsPreview {
       }
     };
     browser.addEventListener('message', this.onMessage);
-    this.timeout = browser.setTimeout(() => {
-      if (!this.closed && !this.ready) {
-        this.status.textContent = 'Seitenvorschau konnte nicht geladen werden.';
-        this.status.setAttribute('data-error', '');
-      }
-    }, 15000);
     this.observer = new ResizeObserver(() => this.fit());
     this.observer.observe(this.stage);
-    this.width = size.width;
-    this.height = size.height;
   }
 
   fit() {
-    const scale = Math.min(1, this.stage.clientWidth / this.width);
+    if (!this.width) return;
+    const scale = Math.min(1, this.stage.clientWidth / this.width, this.browser.innerHeight * 0.48 / this.height);
     this.frame.style.transform = `scale(${scale})`;
     this.stage.style.height = `${this.height * scale}px`;
   }
 
-  update(config) {
+  update(config, preset) {
     this.config = config;
+    const canvas = config.pages.find(page => page.id === this.pageId)?.canvas;
+    const size = canvas ? deviceSize(preset, false) || canvas : deviceSize('iphone-se', true);
+    const type = canvas ? previewDeviceType(preset) : 'mobile';
+    this.width = size.width;
+    this.height = size.height;
+    this.frame.style.width = `${size.width}px`;
+    this.frame.style.height = `${size.height}px`;
+    this.frame.title = `Seitenvorschau (${size.width} × ${size.height} px)`;
+    this.fit();
+    if (type !== this.type) {
+      this.type = type;
+      this.ready = false;
+      const url = new URL(this.browser.location.href);
+      url.search = '?mode=preview&cms-page-settings-preview=1';
+      url.searchParams.set('cms-device', type);
+      url.hash = `#/${this.pageId}`;
+      this.status.textContent = 'Seitenvorschau wird geladen …';
+      this.status.removeAttribute('data-error');
+      this.browser.clearTimeout(this.timeout);
+      this.timeout = this.browser.setTimeout(() => {
+        this.status.textContent = 'Seitenvorschau konnte nicht geladen werden.';
+        this.status.setAttribute('data-error', '');
+      }, 15000);
+      this.frame.src = url.href;
+    }
     this.send();
   }
 

@@ -9,6 +9,7 @@ import { createSchema5Transport } from './fcui-schema5-transport.js';
 import { createSchema5WidgetServices } from './widget-services.js';
 import { applySchema5GridItems, arrangeSchema5Widgets, schema5GridItems } from './fcui-schema5-layout.js';
 import { DevicePreview } from './device-preview.js';
+import { isFreeform } from './fcui-freeform-layout.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-wizard.js';
 import { createCmsAdminMenuLinks } from './cms-admin-link.js';
@@ -372,7 +373,10 @@ export class Schema5Editor {
     this.#content.append(grid);
     const view = new Schema5View({ GridStack: this.#GridStack, root: grid, status: this.#status,
       config, client: this.#client, services: this.#services, browser: this.#browser,
-      onPageChange: page => { this.#page.textContent = `Seiteneinstellungen „${page.title}“`; },
+      onPageChange: page => {
+        this.#page.textContent = `Seiteneinstellungen „${page.title}“`;
+        this.#arrange.hidden = isFreeform(page);
+      },
       editing: this.#previewMode ? undefined : {
         showGrid: () => this.#showGrid,
         selectedWidget: this.#freeformSelection?.pageId === (this.#browser.location.hash.slice(2) || config.pages[0].id)
@@ -446,7 +450,7 @@ export class Schema5Editor {
   }
 
   #arrangeWidgets() {
-    if (!this.#active || this.#suspended || !this.#view || this.#arrange.disabled) return;
+    if (!this.#active || this.#suspended || !this.#view || this.#arrange.disabled || this.#arrange.hidden) return;
     try {
       const state = this.#controller.snapshot();
       const pageId = this.#view.current;

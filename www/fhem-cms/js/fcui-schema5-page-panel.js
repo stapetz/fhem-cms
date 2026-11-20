@@ -328,8 +328,6 @@ export class Schema5PagePanel {
       extras.append(label);
       return input;
     };
-    const width = size('Breite (px)', initial.width);
-    const height = size('Höhe (px)', initial.height);
     const presetLabel = element('label', 'Gerätegröße ');
     presetLabel.className = 'cms-freeform-preset';
     const preset = element('select');
@@ -357,7 +355,9 @@ export class Schema5PagePanel {
     preset.setAttribute('aria-label', 'Freeform-Größe nach Gerät');
     presetLabel.append(preset);
     extras.append(presetLabel);
-    const scaling = select(extras, 'Skalierung', [['fit', 'Einpassen'], ['width', 'Breite füllen'], ['none', '1:1']], initial.scaling);
+    const width = size('Breite (px)', initial.width);
+    const height = size('Höhe (px)', initial.height);
+    const scaling = select(extras, 'Skalierung', [['fit', 'Browserfläche ausnutzen (proportional)'], ['width', 'Breite füllen'], ['none', '1:1, bei Platzmangel verkleinern']], initial.scaling);
     const snap = select(extras, 'Fangraster', [1, 5, 10].map(n => [n, `${n} px`]), initial.snapGrid);
     const mobile = select(extras, 'Smartphone und Tablet', [['stack', 'Stapeln'], ['scale', 'Pixel-Layout behalten']], initial.mobileBehavior);
     for (let index = extras.children.length - 3; index < extras.children.length; index += 1) {
@@ -425,7 +425,7 @@ export class Schema5PagePanel {
     section.addEventListener('change', update);
     this.#form.append(section);
     this.#freeform = {
-      mode, measurements,
+      mode, measurements, preset,
       values: () => [mode.value, width.value, height.value, scaling.value, snap.value, mobile.value],
     };
   }
@@ -446,7 +446,7 @@ export class Schema5PagePanel {
   #updateSettingsPreview() {
     if (!this.#preview || this.#closed || this.#suspended) return;
     try {
-      this.#preview.update(this.#candidate());
+      this.#preview.update(this.#candidate(), this.#freeform?.preset.value);
     } catch (error) {
       this.#message(`Seitenvorschau nicht aktualisiert: ${error.message || String(error)}`, true);
     }

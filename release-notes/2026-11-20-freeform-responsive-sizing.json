@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-20",
+  "version": "1.20.4-dev",
+  "title": "Passende Geraetevorschau und responsive Freeform-Skalierung",
+  "changes": [
+    "Geraetevorgaben bestimmen die Groesse der Seitenvorschau. Refs #216.",
+    "Freeform nutzt Browserflaeche ohne erzwungenen vertikalen Scrollbereich.",
+    "Dezente Auswahlrahmen und einheitliche Griffe in Raster und Freeform.",
+    "Automatisch anordnen bleibt auf Rasterseiten beschraenkt."
+  ]
+}
