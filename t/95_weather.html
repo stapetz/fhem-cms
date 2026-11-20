@@ -183,6 +183,54 @@ try {
     `Widget panel saves the weather draft with its original placement (${freeform ? 'Freeform' : 'Grid'})`);
     root.remove();
   }
+  const temperatureStations = [
+    { id: 'dwd:04078', name: 'Rastede', distance: 11480 },
+    { id: 'dwd:02355', name: 'Hude', distance: 14200, temp: 0, timestamp: at(-0.2) },
+  ];
+  wide.services = {
+    ...wide.services,
+    weatherStations: async () => ({ stations: temperatureStations }),
+    weatherTemperature: async () => ({ temp: 12.5, timestamp: at(-0.1) }),
+    listAllDevices: async () => [{ name: 'Garden', type: 'Thermometer', readings: { temperature: 12.5 } }],
+  };
+  await wide.refresh();
+  await paint();
+  check(wide.shadowRoot.querySelector('.temp').textContent === '0°'
+    && wide.shadowRoot.querySelector('.current-origin').textContent.includes('DWD: Hude'),
+    'Automatic mode bypasses a closer station without a temperature');
+  await wide.openConfig();
+  await paint();
+  const tempForm = wide.shadowRoot.querySelector('[data-form]');
+  tempForm.elements.temperatureMode.value = 'station';
+  tempForm.elements.temperatureMode.dispatchEvent(new Event('change'));
+  check(tempForm.elements.temperatureStation.options[1].textContent.includes('keine frische Temperatur')
+    && tempForm.elements.temperatureStation.options[2].textContent.includes('0 °C'),
+    'Station selector lists distances and present or missing values');
+  tempForm.elements.temperatureStation.value = 'dwd:04078';
+  await wide.saveConfig();
+  await paint();
+  check(window.savedWeatherWidget.config.temperatureSource.station === 'dwd:04078'
+    && wide.shadowRoot.querySelector('.current-origin').textContent.includes('Ersatz: DWD: Hude'),
+    'Unavailable fixed station stays saved and visibly falls back');
+  await wide.openConfig();
+  tempForm.elements.temperatureMode.value = 'sensor';
+  tempForm.elements.temperatureMode.dispatchEvent(new Event('change'));
+  wide.shadowRoot.querySelector('[data-pick-sensor]').click();
+  await paint();
+  document.querySelector('.cms-dp-dialog [role=option]').click();
+  await paint();
+  await wide.saveConfig();
+  await paint();
+  check(window.savedWeatherWidget.config.temperatureSource.reading === 'temperature'
+    && wide.shadowRoot.querySelector('.temp').textContent === '12,5°'
+    && wide.shadowRoot.querySelector('.current-origin').textContent.includes('Eigenes Thermometer: Garden'),
+    'Shared picker saves the sensor reading and only replaces current temperature');
+  wide.services.weatherTemperature = async () => ({ temp: 12.5, timestamp: at(-2) });
+  await wide.refresh();
+  await paint();
+  check(wide.shadowRoot.querySelector('.temp').textContent === '0°'
+    && wide.shadowRoot.querySelector('.current-origin').textContent.includes('Ersatz: DWD: Hude'),
+    'An expired sensor reading falls back to the automatic station');
   const client = new FhemClient('CMS', 'http://fhem.example/fhem');
   const commands = [];
   const replies = [

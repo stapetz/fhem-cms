@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.21.3-dev';
+our $FHEMCMS_VERSION = '1.22.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -138,7 +138,8 @@ sub FHEMCMS_Get {
         return FHEMCMS_History($name, @args);
     }
 
-    if ($cmd eq 'weather' || $cmd eq 'weathergeocode' || $cmd eq 'weatherdevices') {
+    if ($cmd eq 'weather' || $cmd eq 'weathergeocode' || $cmd eq 'weatherdevices'
+        || $cmd eq 'weatherstations' || $cmd eq 'weathertemperature') {
         return FHEMCMS_WeatherGet($hash, $cmd, @args);
     }
 
@@ -281,7 +282,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings history weather weathergeocode weatherdevices:noArg layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version6state:noArg version5blueprints:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings history weather weathergeocode weatherdevices:noArg weatherstations weathertemperature layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version6state:noArg version5blueprints:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.

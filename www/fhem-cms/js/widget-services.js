@@ -22,6 +22,8 @@ export function createWidgetServices({ client, listDevices, listAllDevices, list
     weather: (config) => client.weather(config),
     weatherGeocode: (query) => client.weatherGeocode(query),
     weatherDevices: () => client.weatherDevices(),
+    weatherStations: location => client.weatherStations(location),
+    weatherTemperature: source => client.weatherTemperature(source),
     uploadMedia: (bytes) => client.uploadMedia(bytes),
     ...assets,
     pickAsset: options => openAssetManager(assets, options),

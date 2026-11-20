@@ -1,4 +1,30 @@
 import { isValidName } from '../js/fhem-client.js';
+import { openDevicePicker } from '../js/device-picker.js';
+
+const STATION_ID = /^(?:dwd:\d{5}|wmo:[A-Z0-9]{5})$/;
+const READING = /^[A-Za-z0-9_.-]{1,128}$/;
+const MAX_TEMP_AGE = 90 * 60 * 1000;
+
+function freshTemperature(row, now = Date.now()) {
+  const timestamp = asDate(row?.timestamp)?.getTime();
+  return Number.isFinite(row?.temp) && Math.abs(row.temp) <= 100
+    && timestamp >= now - MAX_TEMP_AGE && timestamp <= now;
+}
+
+function stationDistance(station) {
+  return `${NUMBER.format(station.distance / 1000)} km`;
+}
+
+function selectTemperature(source, stations, sensor, now = Date.now()) {
+  if (source?.mode === 'sensor' && freshTemperature(sensor, now)) {
+    return { ...sensor, label: `Eigenes Thermometer: ${source.device}`, fallback: false };
+  }
+  const available = stations.filter(item => freshTemperature(item, now));
+  const fixed = source?.mode === 'station' ? available.find(item => item.id === source.station) : null;
+  const station = fixed || available[0];
+  return station ? { ...station, label: `DWD: ${station.name} · ${stationDistance(station)}`,
+    fallback: Boolean(source && !fixed) } : null;
+}
 
 const DEFAULTS = Object.freeze({
   dataSource: 'brightsky',
@@ -195,6 +221,11 @@ function weatherConfig(widget) {
   const source = widget?.config && typeof widget.config === 'object' && !Array.isArray(widget.config)
     ? widget.config : {};
   const location = source.location && typeof source.location === 'object' ? source.location : null;
+  const temperature = source.temperatureSource;
+  const temperatureSource = temperature?.mode === 'station' && STATION_ID.test(temperature.station)
+    ? { mode: 'station', station: temperature.station }
+    : temperature?.mode === 'sensor' && isValidName(temperature.device) && READING.test(temperature.reading)
+      ? { mode: 'sensor', device: temperature.device, reading: temperature.reading } : null;
   return {
     ...DEFAULTS,
     ...source,
@@ -208,6 +239,7 @@ function weatherConfig(widget) {
     } : null,
     device: isValidName(source.device) ? source.device : '',
     customTitle: safeText(source.customTitle, 64),
+    temperatureSource,
     forecastDays: Number.isInteger(Number(source.forecastDays))
       ? Math.min(8, Math.max(0, Number(source.forecastDays))) : DEFAULTS.forecastDays,
     showAlertsBanner: source.showAlertsBanner !== false,
@@ -266,6 +298,8 @@ class FHEMCMSWeather extends HTMLElement {
     this.refreshTimer = null;
     this.requestRevision = 0;
     this.geocodeRevision = 0;
+    this.stationRevision = 0;
+    this.temperatureData = null;
     this.isNew = false;
   }
 
@@ -280,11 +314,18 @@ class FHEMCMSWeather extends HTMLElement {
     this.refreshTimer = null;
     this.requestRevision += 1;
     this.geocodeRevision += 1;
+    this.sensorPicker?.abort();
   }
 
   set config(value) {
-    if (weatherTarget(weatherConfig(value)) !== weatherTarget(weatherConfig(this.widgetConfig))) {
+    const before = weatherConfig(this.widgetConfig);
+    const after = weatherConfig(value);
+    if (weatherTarget(after) !== weatherTarget(before)) {
       this.weatherData = null;
+      this.temperatureData = null;
+      this.requestRevision += 1;
+    } else if (JSON.stringify(before.temperatureSource) !== JSON.stringify(after.temperatureSource)) {
+      this.temperatureData = null;
       this.requestRevision += 1;
     }
     this.widgetConfig = value;
@@ -439,6 +480,20 @@ class FHEMCMSWeather extends HTMLElement {
             <label>DWD_OpenData-Device<select name="device"><option value="">Device auswählen …</option></select></label>
             <p class="hint" data-device-status></p>
           </section>
+          <section data-temperature-fields>
+            <label>Ist-Temperatur<select name="temperatureMode">
+              <option value="auto">Automatisch · nächster frischer DWD-Messwert</option>
+              <option value="station">DWD-Station auswählen</option>
+              <option value="sensor">Eigenes FHEM-Thermometer</option>
+            </select></label>
+            <p class="hint" data-station-status></p>
+            <label data-station-select hidden>DWD-Messstation<select name="temperatureStation"></select></label>
+            <section data-sensor-select hidden>
+              <label>Thermometer (FHEM-Device)<input name="temperatureDevice" readonly></label>
+              <button type="button" data-pick-sensor>Device auswählen …</button>
+              <label>Temperatur-Reading (°C)<select name="temperatureReading"></select></label>
+            </section>
+          </section>
           <label>Anzeigename (optional)<input name="customTitle" type="text" maxlength="64" autocomplete="off"></label>
           <label>Vorhersagetage (0–8)<input name="forecastDays" type="number" min="0" max="8" step="1" required></label>
           <label class="check"><input name="showAlertsBanner" type="checkbox"> Warn-Banner anzeigen</label>
@@ -462,6 +517,10 @@ class FHEMCMSWeather extends HTMLElement {
     this.shadowRoot.querySelector('[data-cancel]').addEventListener('click', () => this.closeConfig(false));
     this.shadowRoot.querySelector('[data-delete]').addEventListener('click', () => this.deleteWidget());
     this.shadowRoot.querySelector('[data-search]').addEventListener('click', () => this.searchLocation());
+    this.shadowRoot.querySelector('[name=temperatureMode]').addEventListener('change', () => this.updateTemperatureFields());
+    for (const selector of ['[data-pick-sensor]', '[name=temperatureDevice]']) {
+      this.shadowRoot.querySelector(selector).addEventListener('click', () => this.pickTemperatureSensor());
+    }
     this.shadowRoot.querySelector('[name=query]').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') { event.preventDefault(); this.searchLocation(); }
     });
@@ -494,6 +553,9 @@ class FHEMCMSWeather extends HTMLElement {
       return;
     }
     if (!this.weatherData) this.setStatus('Wetterdaten werden geladen …');
+    if (config.dataSource === 'brightsky' && typeof this.services.weatherStations === 'function') {
+      void this.refreshTemperature(config, revision);
+    }
     try {
       const result = await this.services.weather(config);
       if (!this.isConnected || revision !== this.requestRevision) return;
@@ -510,6 +572,62 @@ class FHEMCMSWeather extends HTMLElement {
       this.setStatus(`Wetterdaten nicht verfügbar: ${safeText(error?.message || String(error), 240)}`);
       this.scheduleRefresh(30 * 1000);
     }
+  }
+
+  async readStations(location, active) {
+    for (let attempt = 0; attempt < 20 && active(); attempt++) {
+      const result = await this.services.weatherStations(location);
+      if (Array.isArray(result?.stations)) return result.stations.filter(item => item
+        && STATION_ID.test(item.id) && typeof item.name === 'string'
+        && Number.isFinite(item.distance) && item.distance >= 0)
+        .sort((a, b) => a.distance - b.distance);
+      if (!result?.loading) throw new Error(result?.error || 'Keine gültige Antwort für Messstationen');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+    if (!active()) return [];
+    throw new Error('Zeitüberschreitung bei der Messstationssuche');
+  }
+
+  async refreshTemperature(config, revision) {
+    const source = config.temperatureSource;
+    const active = () => this.isConnected && revision === this.requestRevision;
+    const apply = (data) => {
+      if (!active()) return;
+      this.temperatureData = data;
+      this.render();
+    };
+    if (source?.mode === 'sensor') {
+      let sensor;
+      try {
+        sensor = await this.services.weatherTemperature(source);
+      } catch {
+        // The fallback is labeled on the tile, including on communication errors.
+      }
+      if (!active()) return;
+      if (freshTemperature(sensor)) {
+        apply({ sensor, stations: [] });
+        return;
+      }
+    }
+    try {
+      apply({ stations: await this.readStations(config.location, active) });
+    } catch (error) {
+      apply({ stations: [], error: safeText(error?.message, 120) || 'DWD-Messstationsabfrage fehlgeschlagen' });
+    }
+  }
+
+  temperaturePresentation(config, data) {
+    const enabled = config.dataSource === 'brightsky' && typeof this.services?.weatherStations === 'function';
+    const feeds = this.temperatureData;
+    if (!enabled) return { value: data?.current?.temp, label: '', enabled };
+    const selected = feeds && selectTemperature(config.temperatureSource, feeds.stations, feeds.sensor);
+    if (selected) {
+      return { value: selected.temp, enabled, label: `${selected.fallback ? 'Gewählte Quelle nicht verfügbar · Ersatz: ' : ''}`
+        + `${selected.label} · ${formatDate(selected.timestamp)} ${formatTime(selected.timestamp)} Uhr` };
+    }
+    const unavailable = config.temperatureSource ? 'Gewählte Temperaturquelle nicht verfügbar. ' : '';
+    return { value: null, enabled, label: !feeds ? 'Ist-Temperatur wird geladen …'
+      : `${unavailable}${feeds.error || 'Keine frische DWD-Temperaturmessung in der Umgebung verfügbar.'}` };
   }
 
   setStatus(message) {
@@ -546,14 +664,17 @@ class FHEMCMSWeather extends HTMLElement {
     this.shadowRoot.querySelector('[data-updated]').textContent =
       [updated && `FHEM-Stand: ${updated}`, data?.stale && 'Cache'].filter(Boolean).join(' · ');
     const currentBox = this.shadowRoot.querySelector('[data-current]');
+    const temperature = this.temperaturePresentation(config, data);
     currentBox.replaceChildren();
-    currentBox.hidden = !current;
-    if (current) {
-      currentBox.append(iconSvg(conditionKey(current)));
+    currentBox.hidden = !current && !temperature.enabled;
+    if (!currentBox.hidden) {
+      if (current) currentBox.append(iconSvg(conditionKey(current)));
       const summary = make('div', 'summary');
-      summary.append(make('div', 'temp', displayNumber(current.temp, '°')), make('div', 'condition', conditionText(current)));
+      summary.append(make('div', 'temp', displayNumber(temperature.value, '°')));
+      if (temperature.label) summary.append(make('p', 'current-origin', temperature.label));
+      if (current) summary.append(make('div', 'condition', conditionText(current)));
       const provenance = currentProvenance(data);
-      if (provenance) summary.append(make('p', 'current-origin', provenance));
+      if (provenance) summary.append(make('p', 'current-origin', temperature.enabled ? `Übrige Wetterdaten: ${provenance}` : provenance));
       currentBox.append(summary);
     }
     const details = this.shadowRoot.querySelector('[data-details]');
@@ -633,7 +754,10 @@ class FHEMCMSWeather extends HTMLElement {
       ? 'Vorhersagewerte · keine Stationsmessung' : 'Aktuelle Messwerte'));
     const provenance = currentProvenance(data);
     if (provenance) currentSection.append(make('p', 'current-origin', provenance));
-    const rows = weatherMetrics(current);
+    const temperature = this.temperaturePresentation(config, data);
+    if (temperature.enabled) currentSection.append(make('p', 'current-origin',
+      `Ist-Temperatur: ${displayNumber(temperature.value, ' °C')} · ${temperature.label}`));
+    const rows = weatherMetrics(temperature.enabled ? { ...current, temp: null } : current);
     if (rows.length) currentSection.append(make('p', '', conditionText(current)), metricList(rows));
     else currentSection.append(make('p', 'message', 'Keine aktuellen Wetterwerte verfügbar.'));
     content.append(currentSection);
@@ -700,6 +824,68 @@ class FHEMCMSWeather extends HTMLElement {
     const source = this.shadowRoot.querySelector('[name=dataSource]:checked')?.value || 'brightsky';
     this.shadowRoot.querySelector('[data-location-fields]').hidden = source !== 'brightsky';
     this.shadowRoot.querySelector('[data-device-fields]').hidden = source !== 'fhem_dwd';
+    this.shadowRoot.querySelector('[data-temperature-fields]').hidden = source !== 'brightsky';
+    this.updateTemperatureFields();
+  }
+
+  updateTemperatureFields() {
+    const mode = this.shadowRoot.querySelector('[name=temperatureMode]').value;
+    this.shadowRoot.querySelector('[data-station-select]').hidden = mode !== 'station';
+    this.shadowRoot.querySelector('[data-sensor-select]').hidden = mode !== 'sensor';
+  }
+
+  async loadTemperatureStations(location, wanted = '') {
+    const revision = ++this.stationRevision;
+    const select = this.shadowRoot.querySelector('[name=temperatureStation]');
+    const status = this.shadowRoot.querySelector('[data-station-status]');
+    select.replaceChildren(new Option('Messstation auswählen …', ''));
+    if (STATION_ID.test(wanted)) {
+      select.add(new Option(`Gespeicherte Messstation (${wanted})`, wanted));
+      select.value = wanted;
+    }
+    status.textContent = '';
+    if (!location || typeof this.services?.weatherStations !== 'function') return;
+    status.textContent = 'Messstationen werden geladen …';
+    try {
+      const stations = await this.readStations(location,
+        () => revision === this.stationRevision && this.shadowRoot.querySelector('[data-dialog]').open);
+      if (revision !== this.stationRevision || !this.shadowRoot.querySelector('[data-dialog]').open) return;
+      const currentChoice = select.value;
+      select.replaceChildren(new Option('Messstation auswählen …', ''));
+      for (const item of stations) {
+        const value = freshTemperature(item) ? `${displayNumber(item.temp, ' °C')} um ${formatTime(item.timestamp)} Uhr`
+          : 'keine frische Temperatur';
+        select.add(new Option(`${item.name} · ${stationDistance(item)} · ${value}`, item.id));
+      }
+      if (currentChoice && !stations.some(item => item.id === currentChoice)) {
+        select.add(new Option(`Gespeicherte Messstation (${currentChoice}) · derzeit nicht verfügbar`, currentChoice));
+      }
+      select.value = currentChoice;
+      const nearest = stations.find(item => freshTemperature(item));
+      status.textContent = nearest
+        ? `${nearest.distance > 5000 ? `Keine frische DWD-Temperaturmessung im Umkreis von 5 km um ${location.name} gefunden. ` : ''}`
+          + `Automatisch: ${nearest.name} · ${stationDistance(nearest)} · ${displayNumber(nearest.temp, ' °C')} um ${formatTime(nearest.timestamp)} Uhr.`
+        : 'Keine frische DWD-Temperaturmessung in der Umgebung gefunden.';
+    } catch (error) {
+      if (revision === this.stationRevision && this.shadowRoot.querySelector('[data-dialog]').open) {
+        status.textContent = `Messstationen nicht verfügbar: ${safeText(error?.message, 160)}`;
+      }
+    }
+  }
+
+  async pickTemperatureSensor() {
+    this.sensorPicker?.abort();
+    this.sensorPicker = new AbortController();
+    const device = await openDevicePicker({ services: this.services, title: 'Thermometer auswählen',
+      accept: item => Object.keys(item.readings || {}).some(name => READING.test(name)),
+      signal: this.sensorPicker.signal });
+    if (!device || !this.shadowRoot.querySelector('[data-dialog]').open) return;
+    const { elements } = this.shadowRoot.querySelector('[data-form]');
+    elements.temperatureDevice.value = device.name;
+    const readings = Object.keys(device.readings || {}).filter(name => READING.test(name)).sort();
+    elements.temperatureReading.replaceChildren(new Option('Reading auswählen …', ''),
+      ...readings.map(name => new Option(name, name)));
+    elements.temperatureReading.value = readings.find(name => /^temperature$/i.test(name)) || '';
   }
 
   async openConfig({ isNew = false } = {}) {
@@ -713,6 +899,10 @@ class FHEMCMSWeather extends HTMLElement {
     form.elements.showAlertsBanner.checked = config.showAlertsBanner;
     form.elements.showCurrentDetails.checked = config.showCurrentDetails;
     form.elements.enableDetailPopup.checked = config.enableDetailPopup;
+    const temp = config.temperatureSource;
+    form.elements.temperatureMode.value = temp?.mode || 'auto';
+    form.elements.temperatureDevice.value = temp?.device || '';
+    form.elements.temperatureReading.replaceChildren(new Option(temp?.reading || 'Reading auswählen …', temp?.reading || ''));
     this.shadowRoot.querySelector('[data-results]').replaceChildren();
     this.shadowRoot.querySelector('[data-location-selected]').textContent = config.location
       ? `Ausgewählt: ${locationLabel(config.location)}` : 'Noch kein Ort ausgewählt.';
@@ -720,6 +910,7 @@ class FHEMCMSWeather extends HTMLElement {
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.updateSourceFields();
     this.shadowRoot.querySelector('[data-dialog]').showModal();
+    void this.loadTemperatureStations(config.location, temp?.station);
     await this.loadWeatherDevices(config.device);
   }
 
@@ -761,6 +952,7 @@ class FHEMCMSWeather extends HTMLElement {
     const status = this.shadowRoot.querySelector('[data-location-selected]');
     const revision = ++this.geocodeRevision;
     resultsRoot.replaceChildren();
+    void this.loadTemperatureStations(location);
     status.textContent = 'Ortssuche läuft …';
     try {
       if (typeof this.services?.weatherGeocode !== 'function') throw new Error('Ortssuche ist nicht verfügbar');
@@ -836,8 +1028,20 @@ class FHEMCMSWeather extends HTMLElement {
       showCurrentDetails: form.elements.showCurrentDetails.checked,
       enableDetailPopup: form.elements.enableDetailPopup.checked,
     };
-    if (dataSource === 'brightsky') config.location = location;
-    else config.device = device;
+    if (dataSource === 'brightsky') {
+      config.location = location;
+      const { temperatureMode, temperatureStation, temperatureDevice, temperatureReading } = form.elements;
+      if (temperatureMode.value === 'station') {
+        if (!STATION_ID.test(temperatureStation.value)) { error.textContent = 'Bitte eine DWD-Messstation auswählen.'; return; }
+        config.temperatureSource = { mode: 'station', station: temperatureStation.value };
+      } else if (temperatureMode.value === 'sensor') {
+        if (!isValidName(temperatureDevice.value) || !READING.test(temperatureReading.value)) {
+          error.textContent = 'Bitte ein Thermometer und ein Temperatur-Reading auswählen.';
+          return;
+        }
+        config.temperatureSource = { mode: 'sensor', device: temperatureDevice.value, reading: temperatureReading.value };
+      }
+    } else config.device = device;
     const next = { ...structuredClone(this.widgetConfig), type: 'weather', config };
     try {
       await this.services.saveWidget(next);
@@ -861,6 +1065,8 @@ class FHEMCMSWeather extends HTMLElement {
   }
 
   closeConfig(saved) {
+    this.sensorPicker?.abort();
+    this.stationRevision += 1;
     this.geocodeRevision += 1;
     const editor = this.shadowRoot.querySelector('[data-dialog]');
     if (editor?.open) editor.close();
@@ -872,6 +1078,7 @@ class FHEMCMSWeather extends HTMLElement {
 if (!customElements.get('cms-weather')) customElements.define('cms-weather', FHEMCMSWeather);
 
 export {
+  selectTemperature,
   conditionKey,
   conditionText,
   directionName,

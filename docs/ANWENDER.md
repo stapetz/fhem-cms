@@ -721,6 +721,22 @@ stößt keine Aktualisierung des FHEM-Geräts an. Dessen Einstellungen
 und den Vorhersagetakt. Die Gerätewarnungen richten sich nach `alertArea`.
 Ein Hinweis auf nicht verfügbare Warnungen bedeutet keine Entwarnung.
 
+Für **DWD Online** lässt sich die **Ist-Temperatur** separat einstellen:
+
+- **Automatisch:** Das CMS prüft bis zu acht von Bright Sky gemeldete
+  SYNOP-Stationen in bis zu 50 km Entfernung. Es nimmt die nächstgelegene
+  unter ihnen mit einer Temperaturmessung aus den letzten 90 Minuten.
+- **DWD-Station auswählen:** Die Liste zeigt Entfernung, Temperatur und
+  Messzeit bzw. ob gerade kein frischer Wert vorliegt.
+- **Eigenes FHEM-Thermometer:** Wählen Sie ein Device und dessen numerisches
+  Temperatur-Reading in Grad Celsius. Der Wert wird nur aus FHEM gelesen
+  und nicht an Bright Sky gesendet.
+
+Wenn die gewählte Quelle keinen frischen Wert liefert, wechselt die Anzeige
+mit Hinweis zur DWD-Automatik. Gibt es auch dort keinen frischen Wert, bleibt
+die Ist-Temperatur leer. Die Auswahl ändert nicht den Vorhersageort, die
+Warnungen oder die übrigen Wetterwerte.
+
 ### LinkWidget: Seiten- und Bildlinks
 
 Im Schema-5-Editor unter **Widget hinzufügen → LinkWidget** anlegen.
