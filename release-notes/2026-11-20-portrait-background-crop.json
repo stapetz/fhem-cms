@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-20",
+  "version": "1.21.2-dev",
+  "title": "Seitenhintergrund im Hochformat ohne Wiederholung",
+  "changes": [
+    "Telefon und Tablet zeigen das Hintergrundbild mittig und proportional beschnitten. Refs #216."
+  ]
+}

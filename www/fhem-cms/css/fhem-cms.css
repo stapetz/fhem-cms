@@ -2201,11 +2201,10 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   min-height: 100dvh;
 }
 .cms-freeform-mobile {
-  background: var(--cms-canvas-image, none) repeat-y top center / 100% auto;
+  background: var(--cms-canvas-image, none) no-repeat center / cover;
 }
 .cms-freeform-landscape {
-  background-repeat: no-repeat;
-  background-size: cover;
+  background-position: top center;
 }
 
 .cms-freeform-footprint { position: relative; overflow: clip; }
