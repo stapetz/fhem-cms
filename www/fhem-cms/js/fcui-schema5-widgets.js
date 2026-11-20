@@ -32,9 +32,11 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     return element;
   };
   const params = new URLSearchParams(root.ownerDocument?.defaultView?.location?.search ?? globalThis.window?.location?.search);
-  const mobilePreview = params.get('mode') === 'preview' && params.get('cms-device') === 'mobile';
+  const previewDevice = params.get('mode') === 'preview' && params.get('cms-device');
+  const mobilePreview = previewDevice === 'mobile' || previewDevice === 'tablet';
   const freeform = isFreeform(page) ? mountFreeform(root, page, navigation, createWidget, {
-    background: services.freeformBackground, editing, phone: mobilePreview,
+    background: services.freeformBackground, editing,
+    phone: previewDevice === 'mobile', tablet: previewDevice === 'tablet',
     navigationGrid: config.navigation.grid, columns: Number(config.settings.gridColumns),
   }) : null;
   const viewConfig = editing || freeform ? config : {

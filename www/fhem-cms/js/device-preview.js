@@ -167,7 +167,8 @@ export class DevicePreview {
       this.iframe.title = 'Vorschau';
       this.iframe.addEventListener('load', this.onFrameLoad);
       const url = new URL(this.getUrl());
-      if (!DEVICES.get(this.deviceId).landscape) url.searchParams.set('cms-device', 'mobile');
+      const device = DEVICES.get(this.deviceId);
+      if (!device.landscape) url.searchParams.set('cms-device', device.width >= 600 ? 'tablet' : 'mobile');
       this.iframe.src = url.href;
       this.frame.append(this.iframe);
       this.stage.append(this.frame);

@@ -60,6 +60,9 @@ Standard. Datenvertrag und Migration stehen in der
   erneuter Klick deaktiviert sie. Kein separates Verschiebesymbol. Während
   der Größenänderung zeigt das Widget Breite und Höhe in Pixeln. Mobile
   Stapel-Widgets wachsen mit ihrem Inhalt statt ihn in kleinen Boxen zu scrollen.
+- Auf Tablets im Querformat wird das gesamte Freeform-Canvas proportional
+  eingepasst, auch bei gespeicherter 1:1-Skalierung. Im Hochformat gilt
+  weiterhin der gewählte Mobilmodus.
 - Freeform: Am Widget eine beschriftete Eingabeleiste für
   `X`, `Y`, Breite, Höhe, Ebene und „Auf Mobilgeräten ausblenden“ anbieten.
   Pfeile verschieben bei Editor-Fokus um 1, mit Shift um 10 Canvas-Pixel.
