@@ -690,6 +690,25 @@ Unbekannte Status erscheinen neutral. Ein fehlgeschlagener ausgehender Anruf
 ist anhand dieser Readings nicht zuverlässig als „besetzt“ unterscheidbar.
 Anrufdaten sind persönlich: Zugriff auf CMS und FHEMWEB entsprechend schützen.
 
+### DWD-Wetter
+
+Im Bearbeitungsmodus unter **Widget hinzufügen → DWD-Wetter** entweder einen
+Ort oder eine Postleitzahl suchen und einen Treffer auswählen, oder ein bereits
+eingerichtetes FHEM-Gerät vom Typ `DWD_OpenData` wählen. Die Online-Quelle
+benötigt keinen API-Schlüssel: Die Ortssuche läuft über Open-Meteo,
+Koordinaten werden für Wetter und Warnungen an Bright Sky übermittelt. Bei
+der lokalen Quelle fragt das CMS keine externen Dienste ab.
+Falls der Suchdienst eine deutsche Postleitzahl nicht kennt, suchen Sie nach
+dem Ortsnamen.
+
+Die Kachel zeigt je nach Einstellung aktuelles Wetter, bis zu acht
+Vorhersagetage und amtliche DWD-Warnungen. Mit **Details** öffnen Sie verfügbare
+Messwerte, Warntexte, die Vorhersage für die nächsten 48 Stunden und
+bis zu zehn Tage. Welche Werte verfügbar sind, hängt von der Quelle ab.
+Ein `DWD_OpenData`-Gerät liefert Vorhersagen; daraus abgeleitete aktuelle
+Werte sind keine Stationsmessungen. Ein Hinweis auf nicht verfügbare
+Warnungen bedeutet keine Entwarnung.
+
 ### LinkWidget: Seiten- und Bildlinks
 
 Im Schema-5-Editor unter **Widget hinzufügen → LinkWidget** anlegen.

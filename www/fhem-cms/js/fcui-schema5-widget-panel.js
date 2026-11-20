@@ -23,6 +23,10 @@ const WIDGET_TYPES = [
   ['fhem-solarflow', 'SolarFlow', 'f', 5, 14, { readings: {} }],
   ['fhem-solar-energy', 'Solar und Energiefluss', 'e', 12, 12, { readings: {}, sections: [] }],
   ['fhem-volvoconnect', 'VolvoConnect', 'o', 4, 4, { device: '', showGallery: true }],
+  ['weather', 'DWD-Wetter', 'w', 6, 8, { config: {
+    dataSource: 'brightsky', location: null, device: '', customTitle: '', forecastDays: 3,
+    showAlertsBanner: true, showCurrentDetails: true, enableDetailPopup: true,
+  } }],
   ['text', 'Textbaustein', 'x', 6, 2, { html: '' }],
   ['fhem-link', 'LinkWidget', 'k', 4, 3, { links: [] }],
 ];

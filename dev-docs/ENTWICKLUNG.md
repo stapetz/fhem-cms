@@ -21,6 +21,16 @@ verbindlich. Insbesondere bleiben bestehende Daten und die beiden
 [Platzhalter-Schreibweisen](../docs/PLATZHALTER.md) erhalten; Codebeispiele des
 Styleguides ersetzen keine Validierung, Berechtigungsprüfung oder CSRF-Sicherung.
 
+## DWD-Wetterwidget (Refs #220)
+
+`weather` speichert die Quellenauswahl und Anzeigeoptionen in `widget.config`.
+Der FHEMCMS-Get-Pfad erlaubt ausschließlich validierte Abfragen; Online-Daten
+kommen über `HttpUtils_NonblockingGet` von festen HTTPS-Zielen (Open-Meteo und
+Bright Sky). `DWD_OpenData` wird aus lokalen Readings gelesen. Der auf 15
+Minuten ausgelegte Cache fasst parallele Anfragen zusammen; bei einem Ausfall
+bleibt der vorige Stand gekennzeichnet sichtbar. Warnungen haben einen eigenen
+Verfügbarkeitsstatus. Externe Texte werden ausschließlich als Text eingefügt.
+
 ## Freeform-Seiten (Schema 6, geplant)
 
 Abnahmenachtrag (Refs #216): Die Seitennavigation gehört im Freeform-Modus

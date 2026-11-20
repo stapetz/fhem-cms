@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="de" data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DWD weather responsive fixture</title>
+<style>
+  body { margin: 0; padding: 1rem; color: #edf4ef; background: #17211d; font: 16px system-ui,sans-serif; }
+  main { display: grid; grid-template-columns: minmax(0,240px) minmax(0,440px); gap: 1rem; align-items: start; }
+  .fixture { min-width: 0; height: 330px; }
+  .fixture cms-weather { display: block; width: 100%; height: 100%; }
+  #result { white-space: pre-wrap; }
+  @media (max-width: 700px) { main { grid-template-columns: minmax(0,1fr); } .fixture { height: 420px; } }
+</style>
+<main>
+  <section class="fixture" aria-label="Schmale Wetterkachel"><cms-weather id="narrow" view-only></cms-weather></section>
+  <section class="fixture" aria-label="Breite Wetterkachel"><cms-weather id="wide" view-only></cms-weather></section>
+  <section class="fixture" aria-label="Wetterdialog"><cms-weather id="editor"></cms-weather></section>
+</main>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-weather.js';
+import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
+
+const now = new Date();
+const at = (hours) => new Date(now.getTime() + hours * 3600000).toISOString();
+const daily = Array.from({ length: 5 }, (_, index) => ({
+  date: new Date(now.getTime() + index * 86400000).toISOString().slice(0, 10),
+  tempMin: 5 + index, tempMax: 10 + index,
+  precipitationSum: 1.2, precipitationProbabilityMax: 45,
+  sunshineMinutes: 180, icon: 'partly-cloudy-day', wwCode: 2,
+  periods: [0, 6, 12, 18].map(hour => ({
+    timestamp: `${new Date(now.getTime() + index * 86400000).toISOString().slice(0, 10)}T${String(hour).padStart(2, '0')}:00:00+01:00`,
+    temp: 6 + hour / 10, windSpeed: 12, cloudCover: 60, precipitation: 0.1, wwCode: 2,
+  })),
+}));
+const data = {
+  source: 'brightsky', stationName: 'DWD Station', updatedAt: at(0), stale: false,
+  current: { temp: 6.4, dewPoint: 4.1, humidity: 85, pressure: 1018.2, windSpeed: 18.5,
+    windGust: 34, windDirection: 240, cloudCover: 75, visibility: 10000, precipitation: 0,
+    sunshine: 12, solar: 0.14, condition: 'cloudy', icon: 'cloudy', wwCode: 3, isDay: false, isForecast: true },
+  alerts: [{ id: 'alert', event: 'WINDBÖEN', headline: 'Amtliche WARNUNG',
+    severity: 'moderate', onset: at(1), expires: at(4),
+    description: '<img src=x onerror=alert(1)> Lose Gegenstände sichern.',
+    instruction: 'Lose Gegenstände im Freien sichern.' }],
+  alertsUnavailable: true,
+  hourly: Array.from({ length: 48 }, (_, index) => ({
+    timestamp: at(index), temp: 6 + index / 10, precipitation: 0.1,
+    precipitationProbability: 10, windSpeed: 19, windGust: 35, windDirection: 245,
+    humidity: 86, pressure: 1018, cloudCover: 80, sunshine: 0, solar: 0,
+    icon: 'cloudy', wwCode: 3,
+  })),
+  daily,
+};
+const config = {
+  dataSource: 'brightsky', location: { name: 'Oldenburg', country: 'DE', lat: 53.1435, lon: 8.2146 },
+  customTitle: '', forecastDays: 4, showAlertsBanner: true, showCurrentDetails: true, enableDetailPopup: true,
+};
+let geocodeCalls = 0;
+const fixtureServices = {
+  weather: async () => data,
+  weatherGeocode: async () => {
+    geocodeCalls += 1;
+    return geocodeCalls === 1 ? { loading: true }
+      : { results: [{ name: 'Oldenburg', admin1: 'Niedersachsen', country: 'DE', lat: 53.1435, lon: 8.2146 }] };
+  },
+  weatherDevices: async () => ({ devices: ['DWD_Oldenburg'] }),
+  saveWidget: async (widget) => { window.savedWeatherWidget = widget; },
+  deleteWidget: async () => {},
+};
+for (const id of ['narrow', 'wide', 'editor']) {
+  const widget = document.getElementById(id);
+  widget.services = fixtureServices;
+  widget.config = { id: `weather-${id}`, type: 'weather', config: structuredClone(config),
+    grid: { col: 1, row: 1, w: 6, h: 8 } };
+}
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const paint = () => new Promise(resolve => setTimeout(resolve, 50));
+try {
+  await paint();
+  const narrow = document.querySelector('#narrow');
+  const wide = document.querySelector('#wide');
+  const narrowForecast = narrow.shadowRoot.querySelector('[data-forecast]');
+  const wideForecast = wide.shadowRoot.querySelector('[data-forecast]');
+  check(narrow.shadowRoot.querySelector('[data-title]').textContent === 'Oldenburg',
+    'Configured location takes priority over backend station name');
+  check(narrow.shadowRoot.querySelector('.forecast-kind')?.textContent.includes('keine Stationsmessung'),
+    'Forecast-sourced current data is clearly labeled on the tile');
+  check(getComputedStyle(narrowForecast).gridTemplateColumns.split(' ').length === 1,
+    'Forecast below 260px uses a compact row list');
+  check(getComputedStyle(wideForecast).gridTemplateColumns.split(' ').length === 4,
+    'Forecast above 260px uses four day columns');
+  wide.openDetails();
+  const modal = wide.shadowRoot.querySelector('[data-modal]');
+  check(modal.open, 'Detail dialog opens from the public tile');
+  check(wide.shadowRoot.querySelector('[data-modal-content] img') === null,
+    'External warning text is inserted only as text');
+  check(wide.shadowRoot.querySelector('[data-modal-content]').textContent.includes('nicht vollständig verfügbar'),
+    'Unavailable warning data is never described as warning-free');
+  check(wide.shadowRoot.querySelector('[data-modal-content]').textContent.includes('Vorhersagewerte · keine Stationsmessung'),
+    'Forecast-sourced current data is clearly labeled in the detail modal');
+  check(wide.shadowRoot.querySelector('[data-modal-content]').textContent.includes('Mittags · 12:00'),
+    'Daily period details use the normalized day.periods array');
+  modal.close();
+  const editor = document.querySelector('#editor');
+  await editor.openConfig({ isNew: true });
+  editor.shadowRoot.querySelector('[name=dataSource][value=fhem_dwd]').click();
+  await paint();
+  check(editor.shadowRoot.querySelector('[name=device]').options.length === 2,
+    'Editor lists DWD_OpenData devices');
+  editor.shadowRoot.querySelector('[name=dataSource][value=brightsky]').click();
+  editor.shadowRoot.querySelector('[name=query]').value = 'Oldenburg';
+  await editor.searchLocation();
+  check(geocodeCalls === 2, 'Editor polls a pending asynchronous geocoding result');
+  editor.shadowRoot.querySelector('[data-results] button').click();
+  await editor.saveConfig();
+  check(window.savedWeatherWidget.config.location.name === 'Oldenburg',
+    'Editor saves the selected location inside widget.config');
+  check(window.savedWeatherWidget.config.dataSource === 'brightsky',
+    'Editor saves its data source inside widget.config');
+  const client = new FhemClient('CMS', 'http://fhem.example/fhem');
+  const commands = [];
+  const replies = [
+    { loading: true },
+    { results: [{ name: 'Oldenburg', admin1: 'Niedersachsen', country: 'DE', lat: 53.14, lon: 8.21 }] },
+    { error: 'Wetterquelle nicht erreichbar' },
+    { devices: ['DWD_Oldenburg', 'invalid;set'] },
+  ];
+  client.command = async command => { commands.push(command); return JSON.stringify(replies.shift()); };
+  check((await client.weatherGeocode('Oldenburg')).loading, 'Client accepts pending geocoding');
+  check((await client.weatherGeocode('Oldenburg')).results[0].country === 'DE', 'Client normalizes valid geocode');
+  let weatherError = '';
+  try { await client.weather({ dataSource: 'brightsky', location: { lat: 53.14, lon: 8.21 } }); }
+  catch (error) { weatherError = error.message; }
+  check(weatherError === 'Wetterquelle nicht erreichbar', 'Client surfaces the backend error property');
+  check((await client.weatherDevices()).devices.length === 1, 'Client uses weatherdevices safely');
+  check(commands[0] === 'get CMS weathergeocode Oldenburg'
+    && commands[2] === 'get CMS weather 53.14 8.21'
+    && commands[3] === 'get CMS weatherdevices', 'Client uses the supported FHEM commands');
+  document.querySelector('#result').dataset.result = 'pass';
+  document.querySelector('#result').textContent = JSON.stringify({checks});
+} catch (error) {
+  document.querySelector('#result').dataset.result = 'fail';
+  document.querySelector('#result').textContent = error.stack || String(error);
+}
+</script>
+</html>

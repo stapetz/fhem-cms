@@ -12,6 +12,7 @@ import '../components/cms-select.js';
 import '../components/cms-link.js';
 import '../components/cms-chart.js';
 import '../components/cms-calllist.js';
+import '../components/cms-weather.js';
 import { devicesOfSolarFlow } from '../components/cms-solarflow.js';
 import '../components/cms-solar-energy.js';
 import '../components/cms-volvoconnect.js';
@@ -32,20 +33,21 @@ const tags = new Map([
   ['fhem-volvoconnect', 'cms-volvoconnect'],
   ['fhem-chart', 'cms-chart'],
   ['fhem-calllist', 'cms-calllist'],
+  ['weather', 'cms-weather'],
   ['fhem-slider', 'cms-slider'],
   ['fhem-select', 'cms-select'],
   ['fhem-html', 'cms-html'],
   ['text', 'cms-text'],
   ['fhem-link', 'cms-link'],
 ]);
-const withoutSnapshots = new Set(['fhem-button', 'fhem-clock', 'fhem-chart', 'fhem-link']);
+const withoutSnapshots = new Set(['fhem-button', 'fhem-clock', 'fhem-chart', 'fhem-link', 'weather']);
 const groupedSnapshots = new Set(['fhem-html', 'text', 'fhem-table', 'fhem-solarflow', 'fhem-solar-energy']);
 
 export function devicesOf(widget) {
   if (widget.type === 'fhem-table') {
     return [...new Set((widget.rows || []).map((row) => row.device).filter(isValidName))];
   }
-  if (widget.type === 'fhem-chart' || widget.type === 'fhem-link') return [];
+  if (widget.type === 'fhem-chart' || widget.type === 'fhem-link' || widget.type === 'weather') return [];
   if (widget.type === 'fhem-solarflow') return devicesOfSolarFlow(widget);
   if (widget.type === 'fhem-solar-energy') return solarEnergyDevices(widget);
   if (widget.type === 'fhem-html') return widget.devices;

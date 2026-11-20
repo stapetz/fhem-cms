@@ -308,6 +308,77 @@ export class FhemClient {
     return Array.isArray(list) ? list.filter((name) => ICON_NAME.test(name)) : [];
   }
 
+  async weather(config) {
+    let command;
+    if (config?.dataSource === 'fhem_dwd') {
+      if (!isValidName(config.device)) throw new Error('Ungültiges DWD_OpenData-Device');
+      command = `get ${this.cmsDevice} weather device ${config.device}`;
+    } else {
+      const { lat, lon } = config?.location || {};
+      if (typeof lat !== 'number' || !Number.isFinite(lat) || typeof lon !== 'number' || !Number.isFinite(lon)
+        || Number(lat) < -90 || Number(lat) > 90 || Number(lon) < -180 || Number(lon) > 180) {
+        throw new Error('Bitte einen gültigen Ort auswählen');
+      }
+      command = `get ${this.cmsDevice} weather ${Number(lat)} ${Number(lon)}`;
+    }
+    const result = await this.parseJsonResult(await this.command(command),
+      'Die Wetterdaten konnten nicht gelesen werden');
+    if (!result || typeof result !== 'object' || Array.isArray(result)) {
+      throw new Error('Ungültige Wetterantwort');
+    }
+    if (typeof result.error === 'string' && result.error) {
+      throw new Error(result.error);
+    }
+    if (result.loading !== true && result.status === 'error') {
+      throw new Error(typeof result?.message === 'string' ? result.message : 'Ungültige Wetterantwort');
+    }
+    return result;
+  }
+
+  async weatherGeocode(query) {
+    const normalizedQuery = typeof query === 'string' ? query.trim() : '';
+    if (typeof query !== 'string' || normalizedQuery.length < 2 || normalizedQuery.length > 80
+      || encodeURIComponent(normalizedQuery).length > 240 || /[\u0000-\u001f\u007f]/.test(query)) {
+      throw new Error('Bitte einen gültigen Suchbegriff eingeben');
+    }
+    const result = await this.parseJsonResult(
+      await this.command(`get ${this.cmsDevice} weathergeocode ${encodeURIComponent(normalizedQuery)}`),
+      'Die Ortssuche konnte nicht gelesen werden');
+    if (!result || typeof result !== 'object' || Array.isArray(result)) {
+      throw new Error('Ungültige Antwort der Ortssuche');
+    }
+    if (result.loading === true) return { loading: true };
+    if (typeof result.error === 'string' && result.error) throw new Error(result.error);
+    if (!Array.isArray(result.results)) throw new Error('Ungültige Antwort der Ortssuche');
+    return {
+      results: result.results.filter((item) => item && typeof item === 'object' && !Array.isArray(item)
+        && typeof item.name === 'string' && item.name.length <= 120
+        && Number.isFinite(Number(item.lat)) && Number(item.lat) >= -90 && Number(item.lat) <= 90
+        && Number.isFinite(Number(item.lon)) && Number(item.lon) >= -180 && Number(item.lon) <= 180
+        && typeof item.country === 'string' && /^[A-Z]{2}$/.test(item.country))
+        .slice(0, 8)
+        .map((item) => ({
+          name: item.name.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 120),
+          lat: Number(item.lat),
+          lon: Number(item.lon),
+          admin1: typeof item.admin1 === 'string' ? item.admin1.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 120) : '',
+          country: typeof item.country === 'string' ? item.country.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 80) : '',
+        })),
+    };
+  }
+
+  async weatherDevices() {
+    const result = await this.parseJsonResult(
+      await this.command(`get ${this.cmsDevice} weatherdevices`),
+      'Die DWD_OpenData-Devices konnten nicht gelesen werden');
+    if (!result || typeof result !== 'object' || Array.isArray(result)) {
+      throw new Error('Ungültige DWD_OpenData-Geräteliste');
+    }
+    if (typeof result.error === 'string' && result.error) throw new Error(result.error);
+    if (!Array.isArray(result.devices)) throw new Error('Ungültige DWD_OpenData-Geräteliste');
+    return { devices: [...new Set(result.devices.filter(isValidName))] };
+  }
+
   async parseJsonResult(text, fallback) {
     let result;
     try {
