@@ -8,7 +8,7 @@ use POSIX qw(strftime);
 
 require './FHEM/01_FHEMCMS.pm';
 
-our %defs;
+our (%defs, %attr);
 my @requests;
 my @logs;
 sub HttpUtils_NonblockingGet { push @requests, $_[0]; }
@@ -32,6 +32,12 @@ my $config = {schemaVersion => 6, settings => {layoutMode => 'grid', gridColumns
 is(FHEMCMS_ValidateConfig($config, 6), undef, 'weather config accepted in grid');
 $weather->{config}{temperatureSource} = {mode => 'sensor', device => 'Garden', reading => 'temperature'};
 is(FHEMCMS_ValidateConfig($config, 6), undef, 'sensor accepted');
+$weather->{config}{temperatureSource}{labelMode} = 'alias';
+is(FHEMCMS_ValidateConfig($config, 6), undef, 'sensor alias mode accepted');
+$weather->{config}{temperatureSource}{labelMode} = 'custom';
+like(FHEMCMS_ValidateConfig($config, 6), qr/Anzeigename/, 'custom mode requires text');
+$weather->{config}{temperatureSource}{labelText} = 'Garten Süd';
+is(FHEMCMS_ValidateConfig($config, 6), undef, 'custom temperature source label accepted');
 $weather->{config}{temperatureSource} = {mode => 'station', station => 'dwd:04078'};
 is(FHEMCMS_ValidateConfig($config, 6), undef, 'station accepted');
 $weather->{config}{temperatureSource}{station} = 'dwd:04078&x=1';
@@ -134,6 +140,8 @@ my $stamp = FHEMCMS_WeatherISO(time() - 90);
 $defs{Garden} = {READINGS => {temperature => {VAL => 0, TIME => $stamp},
     old => {VAL => 17, TIME => FHEMCMS_WeatherISO(time() - 5401)}}};
 is($get->('weathertemperature', 'Garden', 'temperature')->{temp}, 0, 'accept fresh local zero');
+$attr{Garden}{alias} = encode('UTF-8', 'Garten Süd');
+is($get->('weathertemperature', 'Garden', 'temperature')->{alias}, 'Garten Süd', 'reading returns decoded FHEM alias');
 ok($get->('weathertemperature', 'Garden', 'old')->{unavailable}, 'reject stale reading');
 ok($get->('weathertemperature', 'Garden', 'missing')->{unavailable}, 'missing reading unavailable');
 is(scalar @requests, 0, 'thermometer causes no upstream requests');

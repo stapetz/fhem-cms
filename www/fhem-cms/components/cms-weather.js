@@ -17,7 +17,8 @@ function stationDistance(station) {
 
 function selectTemperature(source, stations, sensor, now = Date.now()) {
   if (source?.mode === 'sensor' && freshTemperature(sensor, now)) {
-    return { ...sensor, label: `Eigenes Thermometer: ${source.device}`, fallback: false };
+    const name = source.labelMode === 'alias' ? safeText(sensor.alias, 120).trim() : source.labelText;
+    return { ...sensor, label: `Quelle: ${name || source.device}`, fallback: false };
   }
   const available = stations.filter(item => freshTemperature(item, now));
   const fixed = source?.mode === 'station' ? available.find(item => item.id === source.station) : null;
@@ -225,7 +226,9 @@ function weatherConfig(widget) {
   const temperatureSource = temperature?.mode === 'station' && STATION_ID.test(temperature.station)
     ? { mode: 'station', station: temperature.station }
     : temperature?.mode === 'sensor' && isValidName(temperature.device) && READING.test(temperature.reading)
-      ? { mode: 'sensor', device: temperature.device, reading: temperature.reading } : null;
+      ? { mode: 'sensor', device: temperature.device, reading: temperature.reading,
+        labelMode: ['alias', 'custom'].includes(temperature.labelMode) ? temperature.labelMode : 'device',
+        labelText: temperature.labelMode === 'custom' ? safeText(temperature.labelText, 64).trim() : '' } : null;
   return {
     ...DEFAULTS,
     ...source,
@@ -492,6 +495,14 @@ class FHEMCMSWeather extends HTMLElement {
               <label>Thermometer (FHEM-Device)<input name="temperatureDevice" readonly></label>
               <button type="button" data-pick-sensor>Device auswählen …</button>
               <label>Temperatur-Reading (°C)<select name="temperatureReading"></select></label>
+              <label>Anzeigename der Quelle<select name="temperatureLabelMode">
+                <option value="device">Gerätename</option>
+                <option value="alias">FHEM-Alias</option>
+                <option value="custom">Eigener Text</option>
+              </select></label>
+              <label data-temperature-label-text hidden>Eigener Anzeigename
+                <input name="temperatureLabelText" maxlength="64" autocomplete="off" placeholder="z. B. Garten">
+              </label>
             </section>
           </section>
           <label>Anzeigename (optional)<input name="customTitle" type="text" maxlength="64" autocomplete="off"></label>
@@ -518,6 +529,7 @@ class FHEMCMSWeather extends HTMLElement {
     this.shadowRoot.querySelector('[data-delete]').addEventListener('click', () => this.deleteWidget());
     this.shadowRoot.querySelector('[data-search]').addEventListener('click', () => this.searchLocation());
     this.shadowRoot.querySelector('[name=temperatureMode]').addEventListener('change', () => this.updateTemperatureFields());
+    this.shadowRoot.querySelector('[name=temperatureLabelMode]').addEventListener('change', () => this.updateTemperatureFields());
     for (const selector of ['[data-pick-sensor]', '[name=temperatureDevice]']) {
       this.shadowRoot.querySelector(selector).addEventListener('click', () => this.pickTemperatureSensor());
     }
@@ -832,6 +844,8 @@ class FHEMCMSWeather extends HTMLElement {
     const mode = this.shadowRoot.querySelector('[name=temperatureMode]').value;
     this.shadowRoot.querySelector('[data-station-select]').hidden = mode !== 'station';
     this.shadowRoot.querySelector('[data-sensor-select]').hidden = mode !== 'sensor';
+    this.shadowRoot.querySelector('[data-temperature-label-text]').hidden =
+      this.shadowRoot.querySelector('[name=temperatureLabelMode]').value !== 'custom';
   }
 
   async loadTemperatureStations(location, wanted = '') {
@@ -902,6 +916,8 @@ class FHEMCMSWeather extends HTMLElement {
     const temp = config.temperatureSource;
     form.elements.temperatureMode.value = temp?.mode || 'auto';
     form.elements.temperatureDevice.value = temp?.device || '';
+    form.elements.temperatureLabelMode.value = temp?.labelMode || 'device';
+    form.elements.temperatureLabelText.value = temp?.labelText || '';
     form.elements.temperatureReading.replaceChildren(new Option(temp?.reading || 'Reading auswählen …', temp?.reading || ''));
     this.shadowRoot.querySelector('[data-results]').replaceChildren();
     this.shadowRoot.querySelector('[data-location-selected]').textContent = config.location
@@ -1030,7 +1046,8 @@ class FHEMCMSWeather extends HTMLElement {
     };
     if (dataSource === 'brightsky') {
       config.location = location;
-      const { temperatureMode, temperatureStation, temperatureDevice, temperatureReading } = form.elements;
+      const { temperatureMode, temperatureStation, temperatureDevice, temperatureReading,
+        temperatureLabelMode, temperatureLabelText } = form.elements;
       if (temperatureMode.value === 'station') {
         if (!STATION_ID.test(temperatureStation.value)) { error.textContent = 'Bitte eine DWD-Messstation auswählen.'; return; }
         config.temperatureSource = { mode: 'station', station: temperatureStation.value };
@@ -1040,6 +1057,15 @@ class FHEMCMSWeather extends HTMLElement {
           return;
         }
         config.temperatureSource = { mode: 'sensor', device: temperatureDevice.value, reading: temperatureReading.value };
+        if (temperatureLabelMode.value !== 'device') config.temperatureSource.labelMode = temperatureLabelMode.value;
+        if (temperatureLabelMode.value === 'custom') {
+          const label = temperatureLabelText.value.trim();
+          if (!label || label.length > 64 || /[\u0000-\u001f\u007f]/.test(label)) {
+            error.textContent = 'Bitte einen gültigen Anzeigenamen (1–64 Zeichen) eingeben.';
+            return;
+          }
+          config.temperatureSource.labelText = label;
+        }
       }
     } else config.device = device;
     const next = { ...structuredClone(this.widgetConfig), type: 'weather', config };

@@ -7,6 +7,8 @@ use JSON::PP ();
 use POSIX qw(strftime);
 use Time::Local qw(timegm timelocal);
 
+our %attr;
+
 my $weatherJSON = JSON::PP->new->utf8->canonical;
 my $weatherTTL = 900;
 my $weatherRetry = 30;
@@ -65,10 +67,17 @@ sub FHEMCMS_ValidateWeather {
             return $err if ($err);
             return 'Ungueltige Temperaturstation' if (ref($temp->{station}) || ($temp->{station} // '') !~ /\A(?:dwd:\d{5}|wmo:[A-Z0-9]{5})\z/);
         } elsif (($temp->{mode} // '') eq 'sensor') {
-            $err = $exact->($temp, 'Temperaturquelle', [qw(mode device reading)], []);
+            $err = $exact->($temp, 'Temperaturquelle', [qw(mode device reading)], [qw(labelMode labelText)]);
             return $err if ($err);
             return 'Ungueltiger Temperatursensor' unless (!ref($temp->{device}) && FHEMCMS_ValidName($temp->{device})
                 && !ref($temp->{reading}) && ($temp->{reading} // '') =~ /\A[A-Za-z0-9_.-]{1,128}\z/);
+            my $labelMode = $temp->{labelMode} // 'device';
+            return 'Ungueltige Beschriftungsart' if ((exists($temp->{labelMode}) && !defined($temp->{labelMode}))
+                || ref($labelMode) || $labelMode !~ /\A(?:device|alias|custom)\z/);
+            my $labelText = $temp->{labelText};
+            return 'Ungueltiger Anzeigename der Temperaturquelle' if ($labelMode eq 'custom'
+                ? (!defined($labelText) || ref($labelText) || $labelText !~ /\A[^\x00-\x1f\x7f]{1,64}\z/ || $labelText !~ /\S/)
+                : exists($temp->{labelText}));
         } else {
             return 'Ungueltige Temperaturquelle';
         }
@@ -490,8 +499,10 @@ sub FHEMCMS_WeatherGet {
             || $reading !~ /\A[A-Za-z0-9_.-]{1,128}\z/);
         my $raw = $main::defs{$device}{READINGS}{$reading} if (exists($main::defs{$device}));
         return $weatherJSON->encode({unavailable => JSON::PP::true}) if (ref($raw) ne 'HASH');
-        return $weatherJSON->encode(FHEMCMS_WeatherTemperature(@{$raw}{qw(VAL TIME)}, time())
-            // {unavailable => JSON::PP::true});
+        my $measurement = FHEMCMS_WeatherTemperature(@{$raw}{qw(VAL TIME)}, time());
+        return $weatherJSON->encode({unavailable => JSON::PP::true}) if (!$measurement);
+        $measurement->{alias} = FHEMCMS_WeatherText(FHEMCMS_WeatherReadingText(($attr{$device} // {})->{alias}), 120);
+        return $weatherJSON->encode($measurement);
     }
     if ($command eq 'weatherstations') {
         my @coords = @args == 2 ? FHEMCMS_WeatherCoords(@args) : ();
