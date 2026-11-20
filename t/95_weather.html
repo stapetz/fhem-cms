@@ -20,6 +20,7 @@
 <script type="module">
 import '../www/fhem-cms/components/cms-weather.js';
 import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
+import { Schema5WidgetPanel } from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
 
 const now = new Date();
 const at = (hours) => new Date(now.getTime() + hours * 3600000).toISOString();
@@ -27,7 +28,7 @@ const daily = Array.from({ length: 5 }, (_, index) => ({
   date: new Date(now.getTime() + index * 86400000).toISOString().slice(0, 10),
   tempMin: 5 + index, tempMax: 10 + index,
   precipitationSum: 1.2, precipitationProbabilityMax: 45,
-  sunshineMinutes: 180, icon: 'partly-cloudy-day', wwCode: 2,
+  sunshineMinutes: 180, solarSum: 1.45, windSpeedMax: 24, windGustMax: 48, icon: 'partly-cloudy-day', wwCode: 2,
   periods: [0, 6, 12, 18].map(hour => ({
     timestamp: `${new Date(now.getTime() + index * 86400000).toISOString().slice(0, 10)}T${String(hour).padStart(2, '0')}:00:00+01:00`,
     temp: 6 + hour / 10, windSpeed: 12, cloudCover: 60, precipitation: 0.1, wwCode: 2,
@@ -90,7 +91,11 @@ try {
     'Forecast below 260px uses a compact row list');
   check(getComputedStyle(wideForecast).gridTemplateColumns.split(' ').length === 4,
     'Forecast above 260px uses four day columns');
-  wide.openDetails();
+  const info = wide.shadowRoot.querySelector('[data-detail]');
+  check(info.textContent.trim() === 'ⓘ' && info.getAttribute('aria-haspopup') === 'dialog'
+    && info.getBoundingClientRect().width >= 44 && info.getBoundingClientRect().height >= 44,
+    'Visible info button has a touch-sized target and announces the popup');
+  info.click();
   const modal = wide.shadowRoot.querySelector('[data-modal]');
   check(modal.open, 'Detail dialog opens from the public tile');
   check(wide.shadowRoot.querySelector('[data-modal-content] img') === null,
@@ -101,6 +106,12 @@ try {
     'Forecast-sourced current data is clearly labeled in the detail modal');
   check(wide.shadowRoot.querySelector('[data-modal-content]').textContent.includes('Mittags · 12:00'),
     'Daily period details use the normalized day.periods array');
+  check(modal.querySelector('.hour').textContent.includes('Luftfeuchtigkeit86 %')
+    && modal.querySelector('.hour').textContent.includes('Globalstrahlung0 kWh/m²'),
+    'Hourly details show measured value groups and preserve zero');
+  check(modal.querySelector('.daily details').textContent.includes('Böen (max.)48 km/h')
+    && modal.querySelector('.daily details').textContent.includes('Globalstrahlung1,45 kWh/m²'),
+    'Daily details show peak gusts and accumulated solar energy');
   modal.close();
   const editor = document.querySelector('#editor');
   await editor.openConfig({ isNew: true });
@@ -118,6 +129,39 @@ try {
     'Editor saves the selected location inside widget.config');
   check(window.savedWeatherWidget.config.dataSource === 'brightsky',
     'Editor saves its data source inside widget.config');
+  for (const freeform of [false, true]) {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const live = { schemaVersion: 6, settings: { layoutMode: 'grid', gridColumns: 12 },
+      navigation: { grid: { col: 1, row: 1, w: 12, h: 1 } },
+      pages: [{ id: 'start', title: 'Start', widgets: [], ...(freeform ? { layoutMode: 'freeform',
+        canvas: { width: 1280, height: 800, scaling: 'fit', snapGrid: 5, mobileBehavior: 'stack' } } : {}) }] };
+    let saved;
+    const controller = {
+      snapshot: () => ({ token: 'test', draft: null, live }),
+      async saveWidget(pageId, widget, token, action) {
+        saved = { pageId, widget, token, action };
+        return { token, live, draft: { ...live, pages: [{ ...live.pages[0], widgets: [widget] }] } };
+      },
+      async deleteWidget() { throw new Error('Deletion is not expected'); },
+    };
+    new Schema5WidgetPanel({ root, controller, services: fixtureServices, pageId: 'start',
+      token: 'test', onClose: () => {} });
+    [...root.querySelectorAll('.cms-widget-choice')].find(button => button.textContent.trim() === 'DWD-Wetter').click();
+    const item = root.querySelector('cms-weather');
+    const dialog = item?.shadowRoot.querySelector('[data-dialog]');
+    check(dialog?.open, `Widget panel opens weather configuration (${freeform ? 'Freeform' : 'Grid'})`);
+    dialog.querySelector('[name=dataSource][value=fhem_dwd]').click();
+    await paint();
+    dialog.querySelector('[name=device]').value = 'DWD_Oldenburg';
+    dialog.querySelector('button[type=submit]').click();
+    await paint();
+    check(saved?.action === 'create' && saved.token === 'test' && saved.pageId === 'start'
+      && saved.widget.type === 'weather' && saved.widget.config.device === 'DWD_Oldenburg'
+      && Boolean(saved.widget.rect) === freeform && Boolean(saved.widget.grid) !== freeform,
+    `Widget panel saves the weather draft with its original placement (${freeform ? 'Freeform' : 'Grid'})`);
+    root.remove();
+  }
   const client = new FhemClient('CMS', 'http://fhem.example/fhem');
   const commands = [];
   const replies = [
