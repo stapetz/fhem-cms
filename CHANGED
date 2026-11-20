@@ -17,6 +17,11 @@ Lesereihenfolge
 - Der Seitenhintergrund bleibt auch im mobilen Stapel sichtbar.
 - Ueberlappende Widget-Zeilen werden von links nach rechts gelesen.
 
+2026-11-20 - 1.21.0-dev: Direkte Seitennavigation im mobilen Querformat
+- Raster und Freeform zeigen im Querformat die normalen Navigationslinks, wenn
+  sie passen. Refs #216.
+- Bei Platzmangel oder zu kleinen Links bleibt das unskalierte Burger-Menue.
+
 2026-11-20 - 1.20.3-dev: Seiteneinstellungen und Tablet-Querformat
 - Seiteneinstellungen oeffnen wieder im Browser. Refs #216.
 - Freeform im Tablet-Querformat passt das ganze Canvas proportional ein.
@@ -54,6 +59,12 @@ Freeform-Seitenwechsel
 - Schmale Ansichten stapeln Widgets automatisch, wenn dies aktiviert ist.
 - Der Editor bietet Resize, Tastatursteuerung und magnetische Hilfslinien.
 - Vor dem ersten Schema-6-Entwurf wird eine Sicherung angelegt. Refs #212.
+
+2026-11-20 - 1.21.0-dev: DWD-Wetterwidget fuer Raster und Freeform
+- Ortssuche und DWD-Daten ueber Bright Sky oder ein lokales
+  DWD_OpenData-Device. Refs #220.
+- Kachel und Details mit Vorhersage, amtlichen Warnungen und gekennzeichneten
+  Cache-Daten.
 
 2026-11-20 - 1.20.11-dev: Uhr: laufende Zeiger und korrekte Berliner Ortszeit
 - Die Uhr laeuft nach dem Einhaengen in Freeform weiter. Refs #216.
