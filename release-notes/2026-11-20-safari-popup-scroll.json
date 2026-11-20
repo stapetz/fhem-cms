@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-20",
+  "version": "1.23.5-dev",
+  "title": "Popup-Scrollschutz in Safari",
+  "changes": [
+    "CMS-Dialoge und das Freeform-Popup halten Mausrad- und Einfinger-Scrollgesten am Popup-Rand ab. Refs #226."
+  ]
+}

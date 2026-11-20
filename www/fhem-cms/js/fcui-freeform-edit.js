@@ -1,5 +1,6 @@
 import { fitFreeformRect, validateFreeformWidget } from './fcui-freeform-layout.js';
 import { setFreeformBox } from './fcui-freeform-view.js';
+import { containPopupScroll } from './modal-dialog.js';
 
 export function freeformGesture(rect, direction, dx, dy, canvas, widgets, noSnap) {
   const result = {...rect};
@@ -52,6 +53,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
   const controls = doc.createElement('div');
   controls.className = 'cms-freeform-properties';
   controls.setAttribute('popover', 'auto');
+  containPopupScroll(controls);
   controls.setAttribute('role', 'group');
   controls.setAttribute('aria-label', 'Pixelposition und Größe');
   let selected, active, preview, raf, dragged;

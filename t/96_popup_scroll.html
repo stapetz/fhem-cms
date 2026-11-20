@@ -15,7 +15,7 @@
 <dialog id="nested">Zweiter Dialog</dialog>
 <div id="geometry" class="cms-freeform-properties" popover><div class="tall"></div></div>
 <script type="module">
-import { showCmsModal } from '../www/fhem-cms/js/modal-dialog.js';
+import { containPopupScroll, showCmsModal } from '../www/fhem-cms/js/modal-dialog.js';
 
 const root = document.querySelector('#host').attachShadow({ mode: 'open' });
 root.innerHTML = `<style>dialog { width:300px; height:240px; overflow:hidden }
@@ -24,9 +24,13 @@ root.innerHTML = `<style>dialog { width:300px; height:240px; overflow:hidden }
 const dialog = root.querySelector('dialog');
 const nested = document.querySelector('#nested');
 const geometry = document.querySelector('#geometry');
+containPopupScroll(geometry);
+// Exercise the event fallback even when the browser supports CSS containment.
+const disableCssGuard = element => { element.style.overscrollBehavior = 'auto'; };
+disableCssGuard(geometry);
 window.popupScroll = {
-  open() { showCmsModal(dialog); },
-  nest() { showCmsModal(nested); },
+  open() { showCmsModal(dialog); disableCssGuard(dialog); },
+  nest() { showCmsModal(nested); disableCssGuard(nested); },
   closeNested() { nested.close(); },
   close() { dialog.close(); },
   openGeometry() { geometry.showPopover(); },
@@ -39,10 +43,21 @@ window.popupScroll = {
   position(name) {
     return ({ inner: root.querySelector('.scroll'), page: document.scrollingElement, geometry })[name].scrollTop;
   },
+  touchBlocked(delta) {
+    const target = root.querySelector('.scroll');
+    const gesture = (type, y) => {
+      const event = new Event(type, { bubbles: true, cancelable: true, composed: true });
+      Object.defineProperty(event, 'touches', { value: [{ identifier: 1, clientX: 0, clientY: y }] });
+      target.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    gesture('touchstart', 100);
+    return gesture('touchmove', 100 - delta);
+  },
   finish() {
     const output = document.querySelector('#result');
     output.dataset.result = 'pass';
-    output.textContent = '{"checks":7}';
+    output.textContent = '{"checks":10}';
   },
 };
 window.scrollTo(0, 300);

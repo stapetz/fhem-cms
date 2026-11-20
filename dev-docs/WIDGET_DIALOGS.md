@@ -5,7 +5,10 @@ Native Modaldialoge mit `showCmsModal(dialog)` aus
 bleibt ein Scrollcontainer (`overflow: auto` oder bei einem inneren
 Scrollbereich `overflow: hidden`), damit Scrollen am Dialogrand nicht auf
 die CMS-Seite übergeht. Für nichtmodale Popups wie die Freeform-Eigenschaften
-gilt `overscroll-behavior: contain` direkt am Popup.
+gilt `overscroll-behavior: contain` direkt am Popup plus
+`containPopupScroll(popup)`. Der gemeinsame Schutz blockiert zusätzlich
+Mausrad- und Einfinger-Scrollgesten am Rand, falls Safari das Scrollen
+sonst an die Seite weitergibt.
 
 ## Bestandsaufnahme (Refs #165)
 
