@@ -221,9 +221,31 @@ function locationLabel(location) {
   return [location.name, location.admin1, location.country].filter(Boolean).join(', ');
 }
 
-function weatherTitle(widget, data) {
+function weatherTitle(widget) {
   const config = weatherConfig(widget);
-  return safeText(config.customTitle || config.location?.name || data?.stationName || config.device || 'DWD-Wetter', 160);
+  const defaultTitle = config.dataSource === 'fhem_dwd' ? config.device : config.location?.name;
+  return safeText(config.customTitle || defaultTitle || 'DWD-Wetter', 160);
+}
+
+function weatherTarget(config) {
+  return config.dataSource === 'fhem_dwd' ? `device:${config.device}`
+    : `online:${config.location?.lat},${config.location?.lon}`;
+}
+
+function forecastPlace(config, data) {
+  if (config.dataSource === 'brightsky') return config.location?.name || '';
+  const name = safeText(data?.forecastStationName, 120).trim();
+  const id = safeText(data?.forecastStationId, 12).trim();
+  return name || (id ? `DWD-Station ${id}` : 'Ort nicht verfügbar');
+}
+
+function currentProvenance(data) {
+  const current = data?.current;
+  if (!asDate(current?.timestamp)) return '';
+  const stamp = `${formatDate(current.timestamp)} ${formatTime(current.timestamp)} Uhr`;
+  if (current.isForecast === true) return `Vorhersage für ${stamp} · keine Stationsmessung`;
+  const station = safeText(data.stationName, 120).trim();
+  return `Messung ${stamp}${station ? ` · ${station}` : ''}${current.stale === true ? ' · aus dem Cache' : ''}`;
 }
 
 function directionName(value) {
@@ -261,6 +283,10 @@ class FHEMCMSWeather extends HTMLElement {
   }
 
   set config(value) {
+    if (weatherTarget(weatherConfig(value)) !== weatherTarget(weatherConfig(this.widgetConfig))) {
+      this.weatherData = null;
+      this.requestRevision += 1;
+    }
     this.widgetConfig = value;
     this.render();
     if (this.isConnected) this.scheduleRefresh(0);
@@ -304,8 +330,8 @@ class FHEMCMSWeather extends HTMLElement {
         .icon-lightning { fill:#ffca28; stroke:#ffca28; stroke-width:1; }
         .temp { font-size:clamp(2rem,14cqi,4rem); line-height:1; font-weight:750; font-variant-numeric:tabular-nums; }
         .condition { color:var(--cms-muted-strong,#c4d0c8); font-size:clamp(.8rem,4cqi,1rem); }
-        .forecast-kind { display:inline-block; margin-top:.2rem; padding:.12rem .4rem; border-radius:99px;
-          background:color-mix(in srgb,#ffca28 24%,transparent); color:var(--cms-text,#edf4ef); font-size:.72rem; }
+        .forecast-place,.current-origin { margin:.2rem 0 0; color:var(--cms-muted-strong,#c4d0c8);
+          font-size:.8rem; overflow-wrap:anywhere; }
         .details { display:flex; flex-wrap:wrap; gap:.25rem .8rem; color:var(--cms-muted-strong,#c4d0c8); font-size:.85rem; }
         .message { margin:.3rem 0; color:var(--cms-muted,#a5c9b2); font-size:.83rem; overflow-wrap:anywhere; }
         .message.alert-unavailable { color:#ffcc80; }
@@ -382,6 +408,7 @@ class FHEMCMSWeather extends HTMLElement {
         <header><h3 data-title></h3><span data-alert-badge class="badge" hidden></span><span class="updated" data-updated></span>
           <button type="button" data-detail hidden aria-label="Wetterdetails anzeigen" aria-haspopup="dialog"
             title="Wetterdetails anzeigen">ⓘ</button></header>
+        <p class="forecast-place" data-forecast-place hidden></p>
         <p class="message" data-message role="status">Wetterdaten werden geladen …</p>
         <div class="current" data-current hidden></div>
         <div class="details" data-details hidden></div>
@@ -494,8 +521,12 @@ class FHEMCMSWeather extends HTMLElement {
     if (!this.widgetConfig || !this.shadowRoot.querySelector('[data-title]')) return;
     const config = weatherConfig(this.widgetConfig);
     const data = this.weatherData;
-    const title = weatherTitle(this.widgetConfig, data);
+    const title = weatherTitle(this.widgetConfig);
     this.shadowRoot.querySelector('[data-title]').textContent = safeText(title, 160);
+    const place = forecastPlace(config, data);
+    const placeLine = this.shadowRoot.querySelector('[data-forecast-place]');
+    placeLine.textContent = place ? `Vorhersageort: ${place}` : '';
+    placeLine.hidden = !place;
     const detailButton = this.shadowRoot.querySelector('[data-detail]');
     detailButton.hidden = !this.hasAttribute('view-only') || !config.enableDetailPopup || !data;
     const message = this.shadowRoot.querySelector('[data-message]');
@@ -511,9 +542,9 @@ class FHEMCMSWeather extends HTMLElement {
       badge.hidden = true;
       badge.textContent = '';
     }
-    const updated = data?.updatedAt ? formatTime(data.updatedAt) : '';
-    this.shadowRoot.querySelector('[data-updated]').textContent = updated
-      ? `${data.stale ? 'Cache · ' : 'Stand: '}${updated}` : (data?.stale ? 'Gecacht' : '');
+    const updated = config.dataSource === 'fhem_dwd' && asDate(data?.updatedAt) ? formatTime(data.updatedAt) : '';
+    this.shadowRoot.querySelector('[data-updated]').textContent =
+      [updated && `FHEM-Stand: ${updated}`, data?.stale && 'Cache'].filter(Boolean).join(' · ');
     const currentBox = this.shadowRoot.querySelector('[data-current]');
     currentBox.replaceChildren();
     currentBox.hidden = !current;
@@ -521,9 +552,8 @@ class FHEMCMSWeather extends HTMLElement {
       currentBox.append(iconSvg(conditionKey(current)));
       const summary = make('div', 'summary');
       summary.append(make('div', 'temp', displayNumber(current.temp, '°')), make('div', 'condition', conditionText(current)));
-      if (current.isForecast === true) {
-        summary.append(make('span', 'forecast-kind', 'Vorhersage · keine Stationsmessung'));
-      }
+      const provenance = currentProvenance(data);
+      if (provenance) summary.append(make('p', 'current-origin', provenance));
       currentBox.append(summary);
     }
     const details = this.shadowRoot.querySelector('[data-details]');
@@ -567,10 +597,12 @@ class FHEMCMSWeather extends HTMLElement {
     const config = weatherConfig(this.widgetConfig);
     if (!this.weatherData || !config.enableDetailPopup || !this.hasAttribute('view-only')) return;
     const data = this.weatherData;
-    const title = weatherTitle(this.widgetConfig, data);
+    const title = weatherTitle(this.widgetConfig);
     this.shadowRoot.querySelector('[data-modal-title]').textContent = `${safeText(title, 160)} – Wetterdetails`;
     const content = this.shadowRoot.querySelector('[data-modal-content]');
     content.replaceChildren();
+    const place = forecastPlace(config, data);
+    if (place) content.append(make('p', 'forecast-place', `Vorhersageort: ${place}`));
     const alerts = Array.isArray(data.alerts) ? data.alerts.filter(alert => alert && typeof alert === 'object') : [];
     const alertsSection = make('section', 'modal-section alerts');
     alertsSection.append(make('h3', '', 'Amtliche DWD-Unwetterwarnungen'));
@@ -599,6 +631,8 @@ class FHEMCMSWeather extends HTMLElement {
     const currentSection = make('section', 'modal-section');
     currentSection.append(make('h3', '', current.isForecast === true
       ? 'Vorhersagewerte · keine Stationsmessung' : 'Aktuelle Messwerte'));
+    const provenance = currentProvenance(data);
+    if (provenance) currentSection.append(make('p', 'current-origin', provenance));
     const rows = weatherMetrics(current);
     if (rows.length) currentSection.append(make('p', '', conditionText(current)), metricList(rows));
     else currentSection.append(make('p', 'message', 'Keine aktuellen Wetterwerte verfügbar.'));
@@ -807,11 +841,9 @@ class FHEMCMSWeather extends HTMLElement {
     const next = { ...structuredClone(this.widgetConfig), type: 'weather', config };
     try {
       await this.services.saveWidget(next);
-      this.widgetConfig = next;
+      this.config = next;
       this.selectedLocation = null;
       this.closeConfig(true);
-      this.render();
-      this.scheduleRefresh(0);
     } catch (failure) {
       error.textContent = `Speichern fehlgeschlagen: ${safeText(failure?.message || String(failure), 240)}`;
     }

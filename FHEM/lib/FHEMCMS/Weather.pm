@@ -237,7 +237,8 @@ sub FHEMCMS_WeatherBright {
         } elsif ($old) {
             @alerts = grep { (FHEMCMS_WeatherEpoch($_->{expires}) // 0) > $now } @{$old->{alerts} // []};
         }
-        $done->({source => 'brightsky', stationName => $station || ($old // {})->{stationName} || '',
+        $done->({source => 'brightsky', stationName => $current->{stale}
+            ? (($old // {})->{stationName} // '') : ($hasObservation ? $station : ''),
             updatedAt => $observedAt // FHEMCMS_WeatherISO($now), current => $current,
             alerts => \@alerts, alertsUnavailable => $alertsOK ? JSON::PP::false : JSON::PP::true,
             hourly => [map { $_->[1] } grep { $_->[0] > $now && $_->[0] <= $now + 48 * 3600 } @timed],
@@ -253,7 +254,7 @@ sub FHEMCMS_WeatherBright {
 sub FHEMCMS_WeatherDevice {
     my ($device, $now) = @_;
     my $readings = $device->{READINGS} // {};
-    my $updated = FHEMCMS_WeatherEpoch(($readings->{fc0_date} // {})->{TIME}) // $now;
+    my $updated = FHEMCMS_WeatherEpoch(($readings->{fc0_date} // {})->{TIME});
     return FHEMCMS_WeatherDeviceReadings($device, $now, $updated, $readings) if (!defined($device->{'.TZ'}));
     local $ENV{TZ} = $device->{'.TZ'};
     my $value = FHEMCMS_WeatherDeviceReadings($device, $now, $updated, $readings);
@@ -339,7 +340,10 @@ sub FHEMCMS_WeatherDeviceReadings {
         : @future && $future[0][0] <= $now + 21600 ? $future[0][1] : {};
     return {
         source => 'fhem_dwd', stationName => FHEMCMS_WeatherText($device->{NAME}, 120),
-        updatedAt => FHEMCMS_WeatherISO($updated), current => { %$closest, isForecast => JSON::PP::true },
+        forecastStationName => FHEMCMS_WeatherText($val->('fc_description'), 120),
+        forecastStationId => FHEMCMS_WeatherText($val->('fc_station'), 12),
+        updatedAt => defined($updated) ? FHEMCMS_WeatherISO($updated) : undef,
+        current => { %$closest, isForecast => JSON::PP::true },
         alerts => \@alerts, alertsUnavailable => $alertsOK ? JSON::PP::false : JSON::PP::true,
         hourly => [map { $_->[1] } grep { $_->[0] <= $now + 48 * 3600 } @future],
         daily => [map { $days{$_} } sort keys %days],

@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-20",
+  "version": "1.21.3-dev",
+  "title": "DWD-Wetter: Vorhersageort und Zeitbezug",
+  "changes": [
+    "Die Wetterkachel zeigt den Vorhersageort auch bei eigenem Titel und unterscheidet Stationsmessungen von zeitlich zugeordneten Vorhersagewerten. Refs #220."
+  ]
+}

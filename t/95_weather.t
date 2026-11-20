@@ -96,6 +96,7 @@ ok(@logs, 'upstream error is logged without the query');
 my $localDate = substr($past, 0, 10);
 my $localClock = substr($past, 11, 5);
 my %values = (fc0_date => $localDate, fc0_0_time => $localClock, fc0_0_TTT => 6.4, fc0_0_ww => 68,
+    fc_description => 'OLDENBURG', fc_station => '10215',
     fc0_0_SunD1 => 600, fc0_0_PPPP => 100200, fc0_Tn => 2, fc0_Tx => 7,
     a_count => 1, a_state => 'updated', a_0_eventDesc => 'Böen', a_0_severity => 'Severe',
     a_0_onset => $past, a_0_expires => $expiry);
@@ -105,6 +106,8 @@ $defs{Other} = {NAME => 'Other', TYPE => 'dummy'};
 is_deeply($get->('weatherdevices')->{devices}, ['Weather'], 'only DWD_OpenData devices returned');
 like(FHEMCMS_Get($cms, 'CMS', 'weather', 'device', 'Other'), qr/DWD_OpenData-Device/, 'reject other device types');
 my $local = $get->('weather', 'device', 'Weather');
+is($local->{forecastStationName}, 'OLDENBURG', 'uses the forecast station description, not the device name');
+is($local->{forecastStationId}, '10215', 'includes forecast station code for fallback display');
 is($local->{current}{temp}, 6.4, 'reads actual DWD sample naming');
 is($local->{current}{icon}, 'sleet', 'WMO overlapping code mapped specifically');
 is($local->{current}{sunshine}, 10, 'DWD duration normalized from seconds to minutes');

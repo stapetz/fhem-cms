@@ -693,10 +693,20 @@ Unter **Widget hinzufügen → DWD-Wetter** wählen Sie die Quelle je nach Zweck
 Die Kachel zeigt je nach Einstellung aktuelles Wetter, bis zu acht
 Vorhersagetage und amtliche DWD-Warnungen. Das **ⓘ** am Widget öffnet verfügbare
 Messwerte, Warntexte, die Vorhersage für die nächsten 48 Stunden und
-bis zu zehn Tage. Welche Werte verfügbar sind, hängt von der Quelle ab.
-Ein `DWD_OpenData`-Gerät liefert Vorhersagen; daraus abgeleitete aktuelle
-Werte sind keine Stationsmessungen. Ein Hinweis auf nicht verfügbare
-Warnungen bedeutet keine Entwarnung.
+bis zu zehn Tage. Der Vorhersageort steht auch bei einem eigenen Widget-Titel
+auf der Kachel und im Detailfenster. Online ist das der ausgewählte Ort; die
+angezeigte Messstation kann davon abweichen. Bei `DWD_OpenData` stammen der
+Stationsname und ersatzweise die Stationskennung aus den Vorhersage-Readings.
+Das Gerät liefert keine Stationsmessungen: Die Kachel zeigt, für welchen
+Zeitpunkt der Vorhersagewert gilt. Der FHEM-Stand bezeichnet dagegen den
+Zeitpunkt, zu dem FHEM die Vorhersage-Readings aktualisiert hat.
+
+Der Browser fragt bei erfolgreichem Abruf etwa alle fünf Minuten beim CMS
+nach; gültige Antworten speichert das CMS bis zu 15 Minuten zwischen. Das
+stößt keine Aktualisierung des FHEM-Geräts an. Dessen Einstellungen
+`forecastRefresh` und `forecastResolution` bestimmen getrennt den Abruf-
+und den Vorhersagetakt. Die Gerätewarnungen richten sich nach `alertArea`.
+Ein Hinweis auf nicht verfügbare Warnungen bedeutet keine Entwarnung.
 
 ### LinkWidget: Seiten- und Bildlinks
 
