@@ -2,6 +2,11 @@ import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups
 import { formatDateDisplay } from '../js/date-display.js';
 
 const STYLES = ['digital', 'date', 'analog'];
+const timeFormatter = new Intl.DateTimeFormat('de-DE', {
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+  hourCycle: 'h23', timeZone: 'Europe/Berlin',
+});
+const weekdayFormatter = new Intl.DateTimeFormat('de-DE', {weekday: 'long', timeZone: 'Europe/Berlin'});
 
 class FHEMCMSClock extends HTMLElement {
   constructor() {
@@ -13,9 +18,13 @@ class FHEMCMSClock extends HTMLElement {
   }
 
   connectedCallback() {
-    if (this.shadowRoot.childElementCount) {
-      return;
+    if (!this.shadowRoot.childElementCount) {
+      this.initialize();
     }
+    this.render();
+  }
+
+  initialize() {
     this.shadowRoot.innerHTML = `
       <style>
         [data-title] { text-align: var(--cms-widget-title-align, left); width: 100%; min-width: 0; flex: 1; }
@@ -142,11 +151,11 @@ class FHEMCMSClock extends HTMLElement {
       event.preventDefault();
       this.closeConfig(false);
     });
-    this.render();
   }
 
   disconnectedCallback() {
     window.clearInterval(this.timer);
+    this.timer = null;
   }
 
   set config(value) {
@@ -247,42 +256,37 @@ class FHEMCMSClock extends HTMLElement {
     face.hidden = !analog;
     date.hidden = !(this.widgetConfig.showDate || this.widgetConfig.showWeekday || this.widgetConfig.style === 'date');
     this.shadowRoot.querySelector('.content').toggleAttribute('data-time-only', date.hidden);
-    window.clearInterval(this.timer);
     this.updateTime();
-    this.timer = window.setInterval(() => this.updateTime(), 1000);
+    if (this.isConnected && this.timer === null) {
+      this.timer = window.setInterval(() => this.updateTime(), 1000);
+    }
   }
 
-  updateTime() {
-    const now = new Date();
+  updateTime(now = new Date()) {
     const config = this.widgetConfig;
     if (!config || !this.isConnected) {
       return;
     }
-    const timeText = new Intl.DateTimeFormat('de-DE', {
-      hour: '2-digit',
-      minute: '2-digit',
-      ...(config.showSeconds === true ? { second: '2-digit' } : {}),
-      hourCycle: 'h23',
-      timeZone: 'Europe/Berlin'
-    }).format(now);
+    const partsByType = Object.fromEntries(timeFormatter.formatToParts(now).map(({type, value}) => [type, value]));
+    const {hour, minute, second} = partsByType;
+    const timeText = `${hour}:${minute}${config.showSeconds === true ? `:${second}` : ''}`;
     if (config.style !== 'analog') {
       this.shadowRoot.querySelector('[data-time]').textContent = timeText;
     }
     const parts = [];
     if (config.showWeekday) {
-      parts.push(new Intl.DateTimeFormat('de-DE', { weekday: 'long', timeZone:'Europe/Berlin' }).format(now));
+      parts.push(weekdayFormatter.format(now));
     }
     if (config.showDate || config.style === 'date') {
       parts.push(formatDateDisplay(now));
     }
     this.shadowRoot.querySelector('[data-date]').textContent = parts.join(', ');
     this.shadowRoot.querySelector('[data-clock-label]').textContent = `Uhrzeit ${timeText}${parts.length ? `, ${parts.join(', ')}` : ''}`;
-    const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
-    const minute = now.getMinutes() + seconds / 60;
-    const hour = (Number(new Intl.DateTimeFormat('de-DE', {hour:'2-digit',hourCycle:'h23',
-      timeZone:'Europe/Berlin'}).format(now)) % 12) + minute / 60;
-    this.shadowRoot.querySelector('[data-hour]').style.setProperty('--angle', `${hour * 30}deg`);
-    this.shadowRoot.querySelector('[data-minute]').style.setProperty('--angle', `${minute * 6}deg`);
+    const seconds = Number(second) + now.getMilliseconds() / 1000;
+    const minutes = Number(minute) + seconds / 60;
+    const hours = (Number(hour) % 12) + minutes / 60;
+    this.shadowRoot.querySelector('[data-hour]').style.setProperty('--angle', `${hours * 30}deg`);
+    this.shadowRoot.querySelector('[data-minute]').style.setProperty('--angle', `${minutes * 6}deg`);
     this.shadowRoot.querySelector('[data-second]').style.setProperty('--angle', `${seconds * 6}deg`);
     this.shadowRoot.querySelector('[data-second]').hidden = config.showSeconds !== true;
   }

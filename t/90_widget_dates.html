@@ -8,6 +8,7 @@
 <script type="module">
 import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
 import { formatDateDisplay } from '../www/fhem-cms/js/date-display.js';
+import { mountFreeform } from '../www/fhem-cms/js/fcui-freeform-view.js';
 
 const output = document.querySelector('#result');
 let checks = 0;
@@ -47,6 +48,35 @@ try {
   const clock = create({type:'fhem-clock',style:'date',showDate:true});
   check(clock.shadowRoot.querySelector('[data-date]').textContent.includes(formatDateDisplay(new Date())),
     'clock uses common calendar date');
+  clock.config = {...clock.config, style:'digital', showSeconds:false, showWeekday:true};
+  const winter = new Date('2026-11-14T23:30:00Z');
+  clock.updateTime(winter);
+  check(clock.shadowRoot.querySelector('[data-time]').textContent === '00:30'
+    && clock.shadowRoot.querySelector('[data-date]').textContent === 'Sonntag, 15.11.2026',
+    'digital clock uses Berlin midnight, date and weekday');
+  clock.config = {...clock.config, style:'analog', showSeconds:true};
+  const hands = () => ['hour','minute','second'].map(part =>
+    Number.parseFloat(clock.shadowRoot.querySelector(`[data-${part}]`).style.getPropertyValue('--angle')));
+  const handsMatch = (...expected) => hands().every((angle, index) => Math.abs(angle - expected[index]) < 0.0001);
+  clock.updateTime(new Date('2026-07-14T10:15:30Z'));
+  check(handsMatch(7.75, 93, 180)
+    && clock.shadowRoot.querySelector('[data-clock-label]').textContent.startsWith('Uhrzeit 12:15:30'),
+    'analog hands and accessible time agree in Berlin summer time');
+  clock.updateTime(winter);
+  check(handsMatch(15, 180, 0), 'analog hands agree at Berlin midnight');
+  const frameRoot = document.createElement('div');
+  mount.append(frameRoot);
+  const frame = mountFreeform(frameRoot, {widgets:[{id:clock.config.id,rect:{x:0,y:0,w:300,h:200}}]},
+    document.createElement('nav'), () => clock);
+  const secondHand = hands()[2];
+  await new Promise(resolve => setTimeout(resolve, 1250));
+  check(clock.isConnected && clock.timer !== null && Number.isFinite(hands()[2]) && hands()[2] !== secondHand,
+    'clock keeps ticking after Freeform reorders the mounted widget');
+  frame.destroy();
+  frameRoot.remove();
+  check(clock.timer === null, 'disconnect clears the clock timer');
+  mount.append(clock);
+  check(clock.timer !== null, 'reconnect in dashboard restarts the timer');
   const chart = create({type:'fhem-chart',range:'7d'});
   const now = Math.floor(Date.parse('2026-11-14T12:00:00Z') / 1000);
   chart.draw({points:[[now-86400*7,1],[now,2]],from:now-86400*7,to:now});
