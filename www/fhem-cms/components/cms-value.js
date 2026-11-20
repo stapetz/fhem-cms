@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { fittedContentCss, fitWidgetContent } from '../js/widget-content-fit.js';
 import { formatDateDisplay } from '../js/date-display.js';
 
@@ -312,7 +313,7 @@ class FHEMCMSValue extends HTMLElement {
     this.shadowRoot.querySelector('[data-icon-picker]').hidden = true;
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.setDialogError('');
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
     this.devices = [];
     this.fillReadings(this.widgetConfig.reading || undefined);
     try {
@@ -351,7 +352,7 @@ class FHEMCMSValue extends HTMLElement {
       filter.value = '';
     }
     if (!$('[data-picker]').open) {
-      $('[data-picker]').showModal();
+      showCmsModal($('[data-picker]'));
     }
     $('[data-picker-search]').focus();
     if (!this.devices || this.devices.length === 0) {

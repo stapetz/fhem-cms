@@ -1,3 +1,4 @@
+import { showCmsModal } from './modal-dialog.js';
 import { fetchEditableImage } from './asset-image.js';
 
 export async function editAssetImage(root, asset, signal) {
@@ -323,7 +324,7 @@ export async function editAssetImage(root, asset, signal) {
           finish(new File([blob], `${base}-variante.${type === 'image/jpeg' ? 'jpg' : 'png'}`, { type }));
         }, type, 0.9);
       });
-      dialog.showModal();
+      showCmsModal(dialog);
       if (signal.aborted) aborted();
     });
   } finally { dialog.remove(); URL.revokeObjectURL(url); }

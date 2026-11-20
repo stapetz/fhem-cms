@@ -1,3 +1,4 @@
+import { showCmsModal } from './modal-dialog.js';
 import { Schema5BackupPanel } from './fcui-schema5-backup-panel.js';
 import { Schema5MovePanel } from './fcui-schema5-move-panel.js';
 import { Schema5PagePanel } from './fcui-schema5-page-panel.js';
@@ -271,7 +272,7 @@ export class Schema5Editor {
       const close = container.querySelector('.cms-panel-close');
       if (close && !close.disabled) close.click();
     });
-    container.showModal();
+    showCmsModal(container);
     return container;
   }
 

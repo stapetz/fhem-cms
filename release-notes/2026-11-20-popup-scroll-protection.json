@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-20",
+  "version": "1.23.4-dev",
+  "title": "Scrollschutz fuer CMS-Popups",
+  "changes": [
+    "Scrollen am Rand von CMS-Dialogen und des Freeform-Popups bewegt die Seite dahinter nicht mehr. Refs #226."
+  ]
+}

@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { LINK_COLUMNS, MAX_LINKS, LINK_MEDIA, linkBounds, linkHref, validateLinkItems } from '../js/link-widget.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 
@@ -261,7 +262,7 @@ class FHEMCMSLink extends HTMLElement {
     this.$('[name=showTitle]').checked = this.config.showTitle !== false;
     this.$('[data-delete]').hidden = this.isNew;
     this.message('');
-    this.$('[data-dialog]').showModal();
+    showCmsModal(this.$('[data-dialog]'));
     const generation = ++this.generation;
     try {
       const [{ GridStack }] = await Promise.all([import('../js/fcui-runtime.js'), this.stylesReady]);

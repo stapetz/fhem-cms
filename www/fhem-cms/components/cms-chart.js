@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { isValidName } from '../js/fhem-client.js';
 import { formatDateDisplay } from '../js/date-display.js';
 import { widgetDesignCss } from '../js/widget-design.js';
@@ -350,7 +351,7 @@ class FHEMCMSChart extends HTMLElement {
     form.elements.source.value = this.widgetConfig.source || 'auto';
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.shadowRoot.querySelector('[data-error]').textContent = '';
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
     if (this.widgetConfig.device) {
       await this.loadReadings(this.widgetConfig.reading || undefined);
     } else {

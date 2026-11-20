@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { lookupValue, substituteIn } from '../js/freehtml.js';
 import { renderMarkdown } from '../js/markdown.js';
 import { MAX_HTML, contentCss, createEditor, editorCss, markdownToHtml, renderHtml } from '../js/richtext.js';
@@ -166,7 +167,7 @@ class FHEMCMSText extends HTMLElement {
     this.shadowRoot.querySelector('[data-editor]').replaceChildren(this.editor.element);
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.setDialogError('');
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
   }
 
   setDialogError(message) {

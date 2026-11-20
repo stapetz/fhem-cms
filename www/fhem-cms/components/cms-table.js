@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
@@ -263,7 +264,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
     if (container.children.length === 0) {
       await this.addRow();
     }
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
   }
 
   showAlias(name) {

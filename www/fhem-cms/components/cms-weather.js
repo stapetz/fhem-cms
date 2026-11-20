@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { createWidgetIconButton, widgetIconButtonCss } from '../js/widget-design.js';
@@ -878,7 +879,7 @@ class FHEMCMSWeather extends HTMLElement {
     if (!daily.length) dailySection.append(make('p', 'message', 'Keine Tagesvorhersage verfügbar.'));
     content.append(dailySection);
     content.append(make('p', 'source', 'Datenbasis: Deutscher Wetterdienst (DWD)'));
-    this.shadowRoot.querySelector('[data-modal]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-modal]'));
   }
 
   closeDetails() {
@@ -979,7 +980,7 @@ class FHEMCMSWeather extends HTMLElement {
     this.shadowRoot.querySelector('[data-error]').textContent = '';
     this.shadowRoot.querySelector('[data-delete]').hidden = isNew;
     this.updateSourceFields();
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
     void this.loadTemperatureStations(config.location, temp?.station);
     await this.loadWeatherDevices(config.device);
   }

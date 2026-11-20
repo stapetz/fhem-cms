@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { formatDateDisplay } from '../js/date-display.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
@@ -450,7 +451,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
     for (const selector of ['[data-detect]', '[data-shared-device]', '[data-add-section]']) {
       this.$(selector).disabled = true;
     }
-    this.$('[data-dialog]').showModal();
+    showCmsModal(this.$('[data-dialog]'));
     try {
       this.devices = await this.services.listAllDevices();
       if (revision !== this.dialogRevision || !this.isConnected) return;

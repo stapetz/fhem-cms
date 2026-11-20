@@ -1,3 +1,4 @@
+import { showCmsModal } from './modal-dialog.js';
 import { schema5GridItems } from './fcui-schema5-layout.js';
 import { Schema5LivePage } from './fcui-schema5-live.js';
 import { mountSchema5Widgets } from './fcui-schema5-widgets.js';
@@ -227,7 +228,7 @@ export class Schema5View {
         this.live.snapshots);
       const stopNavigation = cmsPageCanvas(this.config) ? null : observeSchema5Navigation(navigation, () => getComputedStyle(grid).display !== 'flex');
       this.modal = { dialog, view, stopNavigation, originalFocus };
-      dialog.showModal();
+      showCmsModal(dialog);
       close.focus();
       const current = this.config.pages.find(entry => entry.id === this.current);
       await this.live.setWidgets([...current.widgets, ...page.widgets]);

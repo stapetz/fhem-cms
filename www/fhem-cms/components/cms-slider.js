@@ -1,3 +1,4 @@
+import { showCmsModal } from '../js/modal-dialog.js';
 import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
@@ -197,7 +198,7 @@ class FHEMCMSlider extends HTMLElement {
     } catch (error) {
       this.shadowRoot.querySelector('[data-error]').textContent = `Devices konnten nicht geladen werden: ${error.message}`;
     }
-    this.shadowRoot.querySelector('[data-dialog]').showModal();
+    showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
   }
 
   async pickDevice() {

@@ -1,3 +1,4 @@
+import { showCmsModal } from './modal-dialog.js';
 import { createWidgetElement, dataFor, devicesOf, groupSnapshots, isLiveWidget } from './widget-factory.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { createCmsAdminMenuLinks } from './cms-admin-link.js';
@@ -512,7 +513,7 @@ export class CmsPage {
       this.setStatus('Seiteneinstellungen gespeichert');
     }));
     document.body.append(dialog);
-    dialog.showModal();
+    showCmsModal(dialog);
   }
 
   // Rechnet die Positionen aller Seiten auf Modus und Rastergröße der neuen Einstellungen um.
@@ -696,7 +697,7 @@ export class CmsPage {
         finish(null);
       });
       document.body.append(dialog);
-      dialog.showModal();
+      showCmsModal(dialog);
       inputs.label.focus();
     });
   }
@@ -788,7 +789,7 @@ export class CmsPage {
     body.append(label);
     actions.append(this.button('Abbrechen', () => finish(null)), this.button('Verschieben', () => finish(select.value)));
     document.body.append(dialog);
-    dialog.showModal();
+    showCmsModal(dialog);
     select.focus();
     return result;
   }
@@ -846,7 +847,7 @@ export class CmsPage {
       finish({ moves });
     }));
     document.body.append(dialog);
-    dialog.showModal();
+    showCmsModal(dialog);
     return result;
   }
 
@@ -942,7 +943,7 @@ export class CmsPage {
         finish(null);
       });
       document.body.append(dialog);
-      dialog.showModal();
+      showCmsModal(dialog);
       input.select();
     });
   }
@@ -984,7 +985,7 @@ export class CmsPage {
       close();
     });
     document.body.append(dialog);
-    dialog.showModal();
+    showCmsModal(dialog);
 
     let names;
     try {
@@ -1093,7 +1094,7 @@ export class CmsPage {
     });
     dialog.append(form);
     document.body.append(dialog);
-    dialog.showModal();
+    showCmsModal(dialog);
   }
 
   // Verschiebt Kacheln aller Seiten, die mit der Navigation überlappen, nach unten.
@@ -1320,7 +1321,7 @@ export class CmsPage {
     });
     fill();
     document.body.append(dialog);
-    dialog.showModal();
+    showCmsModal(dialog);
   }
 
   devices() {

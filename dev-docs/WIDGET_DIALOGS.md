@@ -1,5 +1,12 @@
 # Widget-Konfigurationsdialoge
 
+Native Modaldialoge mit `showCmsModal(dialog)` aus
+[`modal-dialog.js`](../www/fhem-cms/js/modal-dialog.js) öffnen. Der Dialog
+bleibt ein Scrollcontainer (`overflow: auto` oder bei einem inneren
+Scrollbereich `overflow: hidden`), damit Scrollen am Dialogrand nicht auf
+die CMS-Seite übergeht. Für nichtmodale Popups wie die Freeform-Eigenschaften
+gilt `overscroll-behavior: contain` direkt am Popup.
+
 ## Bestandsaufnahme (Refs #165)
 
 Die Dialoge enthalten unterschiedliche Aufgaben und werden nicht pauschal in
