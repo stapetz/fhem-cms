@@ -1,4 +1,4 @@
-UPD 2026-11-20_06:54:39 184158 FHEM/01_FHEMCMS.pm
+UPD 2026-11-20_07:11:05 184158 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-20_06:26:48 29073 FHEM/lib/FHEMCMS/Weather.pm
@@ -43,7 +43,7 @@ UPD 2026-11-20_02:47:40 7671 www/fhem-cms/js/device-preview.js
 UPD 2026-11-13_07:06:17 2398 www/fhem-cms/js/device-suggestions.js
 UPD 2026-11-14_16:12:23 4924 www/fhem-cms/js/device-widget-suggestions.js
 UPD 2026-11-14_18:16:49 1731 www/fhem-cms/js/dialog-groups.js
-UPD 2026-11-20_03:45:36 12889 www/fhem-cms/js/fcui-freeform-edit.js
+UPD 2026-11-20_07:11:05 12977 www/fhem-cms/js/fcui-freeform-edit.js
 UPD 2026-11-20_04:40:33 6282 www/fhem-cms/js/fcui-freeform-layout.js
 UPD 2026-11-20_04:59:18 7964 www/fhem-cms/js/fcui-freeform-view.js
 UPD 2026-11-13_17:56:27 150460 www/fhem-cms/js/fcui-map-runtime.js
@@ -79,7 +79,7 @@ UPD 2026-11-20_06:54:39 5043 www/fhem-cms/js/icon-picker.js
 UPD 2026-11-08_11:00:11 7487 www/fhem-cms/js/layout.js
 UPD 2026-11-12_17:07:27 5798 www/fhem-cms/js/link-widget.js
 UPD 2026-10-31_10:55:33 3145 www/fhem-cms/js/markdown.js
-UPD 2026-11-20_06:54:39 189 www/fhem-cms/js/modal-dialog.js
+UPD 2026-11-20_07:11:05 1851 www/fhem-cms/js/modal-dialog.js
 UPD 2026-11-20_06:54:39 14662 www/fhem-cms/js/placeholder-picker.js
 UPD 2026-11-10_14:35:39 37387 www/fhem-cms/js/richtext.js
 UPD 2026-11-13_11:48:14 1419 www/fhem-cms/js/select-commands.js
