@@ -11,6 +11,12 @@
 - Der Canvas nutzt im Phone- und Tablet-Querformat die Breite. Refs #216.
 - Laengere Seiten scrollen vertikal; das Hochformat bleibt unveraendert.
 
+2026-11-20 - 1.20.10-dev: Mobile Canvas-Raender, Hintergrund und
+Lesereihenfolge
+- Querformat nutzt die sicheren Displayraender. Refs #216.
+- Der Seitenhintergrund bleibt auch im mobilen Stapel sichtbar.
+- Ueberlappende Widget-Zeilen werden von links nach rechts gelesen.
+
 2026-11-20 - 1.20.3-dev: Seiteneinstellungen und Tablet-Querformat
 - Seiteneinstellungen oeffnen wieder im Browser. Refs #216.
 - Freeform im Tablet-Querformat passt das ganze Canvas proportional ein.
