@@ -838,14 +838,23 @@ test('editor tools require activation and Freeform navigation supports real poin
           const burger = document.querySelector('.cms-freeform-compact-navigation .cms-nav-burger');
           const links = [...viewport.querySelectorAll('.cms-freeform-navigation .cms-nav-link')];
           const bounds = viewport.getBoundingClientRect();
+          const background = getComputedStyle(viewport);
           resolve({width: viewport.clientWidth, canvasWidth: canvas.width, bottom: canvas.bottom,
-            left: bounds.left, frameBottom: bounds.bottom, image: getComputedStyle(viewport).backgroundImage,
+            left: bounds.left, frameBottom: bounds.bottom, image: background.backgroundImage,
+            imageSize: background.backgroundSize, imagePosition: background.backgroundPosition,
+            imageRepeat: background.backgroundRepeat,
             horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth
               || viewport.scrollWidth > viewport.clientWidth,
             stacked: viewport.classList.contains('cms-freeform-stack'), burger: burger?.offsetHeight ?? 0,
             targets: links.map(link => link.getBoundingClientRect().height)});
         }, 120))`, awaitPromise:true, returnByValue:true});
         return result.value;
+    };
+    const assertPortraitBackground = view => {
+      assert.match(view.image, /data:image\/svg\+xml/);
+      assert.equal(view.imageSize, 'cover');
+      assert.equal(view.imagePosition, '50% 50%');
+      assert.equal(view.imageRepeat, 'no-repeat');
     };
     const finishResponsive = command => command('Runtime.evaluate', {expression:
       `Object.assign(document.querySelector('#result'), {textContent:'{}'}).dataset.result='pass'`});
@@ -864,12 +873,14 @@ test('editor tools require activation and Freeform navigation supports real poin
       assert.equal(desktop.image, 'none', 'desktop keeps the background on the canvas');
       const tallLandscape = await resize(1000, 990);
       assert.match(tallLandscape.image, /data:image\/svg\+xml/);
+      assert.equal(tallLandscape.imagePosition, '50% 0%');
       assert.ok(tallLandscape.bottom < 990 && tallLandscape.frameBottom >= 990, 'background fills below a short canvas');
       const portrait = await resize(820, 1180);
       assert.ok(portrait.stacked && portrait.burger >= 44);
+      assertPortraitBackground(portrait);
       const phone = await resize(430, 932);
       assert.ok(phone.stacked && Math.abs(phone.width - phone.canvasWidth) < 1 && phone.burger >= 44);
-      assert.match(phone.image, /data:image\/svg\+xml/, 'portrait stack retains its page image');
+      assertPortraitBackground(phone);
       await command('Runtime.evaluate', {expression:
         `document.querySelector('.cms-nav-link').textContent = 'Sehr langer Seitenname '.repeat(30)`});
       const cramped = await resize(932, 430);
@@ -890,7 +901,7 @@ test('editor tools require activation and Freeform navigation supports real poin
         && !landscape.horizontalOverflow, 'iPad Air: shared Grid canvas fills the width and shows its links');
       const portrait = await measure(command, 820, 1180);
       assert.ok(portrait.stacked && !portrait.horizontalOverflow);
-      assert.match(portrait.image, /data:image\/svg\+xml/, 'shared Grid stack retains its page image');
+      assertPortraitBackground(portrait);
       await finishResponsive(command);
     });
     const mobile = await browserResult(profile, mobileUrl, child, undefined, setViewport(820, 1180));

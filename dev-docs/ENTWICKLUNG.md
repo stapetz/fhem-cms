@@ -41,8 +41,9 @@ CSS-Pixel Schrift lesbar sind. Andernfalls erscheint das unskalierte Menü.
 Die automatische Skalierung füllt am Desktop die verfügbare Breite;
 im mobilen Querformat gilt das unabhängig von der Desktop-Skalierung.
 Der gemeinsame Rahmen reicht dort bis zu den sicheren Displayrändern; das
-Seitenbild füllt auch Platz unter dem Canvas. Im Hochformat bleibt es beim
-Stapeln sichtbar. Freeform-Stapel lesen vertikal überlappende Reihen von
+Seitenbild füllt auch Platz unter dem Canvas. Im Hochformat wird es in Raster
+und Freeform mittig und proportional auf die Fläche zugeschnitten, ohne
+Wiederholung. Freeform-Stapel lesen vertikal überlappende Reihen von
 links nach rechts, ohne die Pixelpositionen zu ändern.
 Layouts oberhalb der Fensterhöhe scrollen vertikal. Bis 1100 CSS-Pixel Fensterbreite
 greift auch ohne Geräte-Vorschau das Mobilverhalten. Beim Wechsel vom Raster

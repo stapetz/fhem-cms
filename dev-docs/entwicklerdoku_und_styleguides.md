@@ -69,8 +69,10 @@ Standard. Datenvertrag und Migration stehen in der
   gemeinsame Canvas proportional die volle verfügbare Breite; längere
   Inhalte scrollen vertikal, ohne seitlich zu scrollen. Die Hauptansicht
   reicht im Querformat bis zu den sicheren Displayrändern; das Hintergrundbild
-  deckt auch den freien Bereich unter einem kürzeren Canvas ab. Im Hochformat stapelt
-  der Mobilmodus „Stapeln“; „Pixel-Layout behalten“ passt ohne seitliches
+  deckt auch den freien Bereich unter einem kürzeren Canvas ab. Im Hochformat
+  füllt das Hintergrundbild die Fläche ohne Wiederholung und wird mittig
+  zugeschnitten. Der Mobilmodus „Stapeln“ stapelt die Widgets;
+  „Pixel-Layout behalten“ passt ohne seitliches
   Scrollen ein. „Automatisch“ füllt am Desktop proportional die Browserbreite;
   höhere Seiten scrollen vertikal. Die gespeicherten Koordinaten bleiben unverändert. Im Pixelmodus
   gibt es kein automatisches Anordnen. Der mobile Freeform-Stapel zeigt das
