@@ -188,6 +188,34 @@ if (child) {
     dialog.querySelector('.cms-panel-close').click();
     check(outcome.requiresReload === false && writes === 0, 'cancel leaves the draft unchanged');
     check(!dialog.querySelector('iframe'), 'preview is disposed on close');
+    const shared = structuredClone(config);
+    shared.schemaVersion = 6;
+    Object.assign(shared.settings, {sharedFreeformSize: true, sharedBackground: true});
+    for (const page of shared.pages) {
+      page.layoutMode = 'freeform';
+      page.canvas = {width: 820, height: 1180};
+    }
+    shared.pages[1].widgets[0].rect = {x: 0, y: 80, w: 400, h: 220};
+    let saved;
+    new Schema5PagePanel({ root: dialog, pageId: 'room', token: 'test', freeformSupported: true,
+      controller: {snapshot: () => ({live: shared, token: 'test'}), saveDraft: async candidate => { saved = candidate; }},
+      onClose: () => {} });
+    dialog.showModal();
+    const options = dialog.querySelector('.cms-freeform-options');
+    check(options.textContent.includes('Seite erbt Größeneinstellungen von der Startseite (820 × 1180 px).')
+      && !options.querySelector('.cms-freeform-preset, .cms-freeform-dimension') && !options.hidden,
+    'inherited dimensions replace the local size controls');
+    const background = dialog.querySelector('.cms-page-background-controls');
+    check(background.textContent.includes('Bild wird von der Startseite geerbt.') && !background.querySelector('button'),
+      'inherited background replaces local image controls');
+    const [scaling] = options.querySelectorAll('select');
+    scaling.value = 'width';
+    scaling.dispatchEvent(new Event('change'));
+    [...dialog.querySelectorAll('button')].find(button => button.textContent === 'Speichern').click();
+    await until(() => saved, 'inherited page settings did not save');
+    check(saved.pages[1].canvas.width === 820 && saved.pages[1].canvas.height === 1180
+      && saved.pages[1].canvas.scaling === 'width' && saved.pages[1].background === second,
+    'saving local scaling preserves inherited dimensions and the stored local image');
     result.dataset.result = 'pass';
     result.textContent = JSON.stringify({ checks });
   } catch (error) {

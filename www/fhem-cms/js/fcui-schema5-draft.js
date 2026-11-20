@@ -1,7 +1,7 @@
 import { applySchema5GridItems, reflowSchema5Widget, schema5GridItems } from './fcui-schema5-layout.js';
 import { fitLinkWidget } from './link-widget.js';
 import { normalizeWidgetIds, uniqueWidgetId, widgetIds } from './widget-ids.js';
-import { fitFreeformRect, freeformStartRect, isFreeform } from './fcui-freeform-layout.js';
+import { fitFreeformRect, freeformStartRect, isFreeform, syncSharedFreeformSize } from './fcui-freeform-layout.js';
 
 export class WidgetLayoutError extends Error {}
 
@@ -300,6 +300,7 @@ export class Schema5DraftController {
       throw new Error('Ungültige Seitenreihenfolge');
     }
     candidate.pages = ids.map((id) => pages.get(id));
+    syncSharedFreeformSize(candidate);
     return this.saveDraft(candidate, expectedToken);
   }
 
@@ -312,6 +313,7 @@ export class Schema5DraftController {
     if (candidate.pages.length === 1) throw new Error('Die letzte Seite darf nicht gelöscht werden');
     if (candidate.pages[index].widgets.length) throw new Error('Seite enthält Widgets');
     candidate.pages.splice(index, 1);
+    syncSharedFreeformSize(candidate);
     if (candidate.navigation.items) {
       candidate.navigation.items = candidate.navigation.items.filter((item) => item.page !== pageId);
       if (!candidate.navigation.items.length) delete candidate.navigation.items;

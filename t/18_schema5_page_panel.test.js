@@ -369,9 +369,20 @@ test('freeform presets resize only freeform pages proportionally from the open b
     assert.deepEqual(f.controller.snapshot().draft.pages[0], expectedStart);
     assert.deepEqual(f.controller.snapshot().draft.pages[1], expectedOther);
     assert.deepEqual(f.controller.snapshot().draft.pages[2], f.live.pages[2]);
+    assert.equal(f.controller.snapshot().draft.settings.sharedFreeformSize, true);
     panel.close();
 
     const updated = await f.controller.reload();
+    const inheritedRoot = new Element('section');
+    const inherited = new Schema5PagePanel({
+      root: inheritedRoot, controller: f.controller, pageId: 'b', token: updated.token,
+      browser: {confirm: () => true}, onClose: () => {}, freeformSupported: true,
+    });
+    const inheritedNodes = descendants(inheritedRoot);
+    assert.ok(inheritedNodes.some(node => node.textContent?.includes('Seite erbt Größeneinstellungen von der Startseite')));
+    assert.ok(!inheritedNodes.some(node => ['cms-freeform-preset', 'cms-freeform-dimension'].includes(node.className)));
+    assert.equal(inheritedNodes.filter(node => node.className === 'cms-freeform-advanced').length, 3);
+    inherited.close();
     const nextRoot = new Element('section');
     const next = new Schema5PagePanel({
       root: nextRoot, controller: f.controller, pageId: 'a', token: updated.token,
@@ -379,7 +390,9 @@ test('freeform presets resize only freeform pages proportionally from the open b
     });
     const nextDescendants = node => [node, ...node.children.flatMap(nextDescendants)];
     const nextByClass = name => nextDescendants(nextRoot).find(node => node.className === name);
-    nextByClass('cms-freeform-apply-all').children[0].checked = false;
+    const shared = nextByClass('cms-freeform-apply-all').children[0];
+    assert.equal(shared.checked, true, 'inheritance stays enabled across reloads');
+    shared.checked = false;
     const nextPreset = nextByClass('cms-freeform-preset').children[0];
     nextPreset.value = 'iphone-13';
     nextPreset.fire('change');
@@ -387,6 +400,7 @@ test('freeform presets resize only freeform pages proportionally from the open b
     assert.equal(f.controller.snapshot().draft.pages[0].canvas.width, 390);
     assert.equal(f.controller.snapshot().draft.pages[1].canvas.width, 1280,
       'without the Start-page checkbox other Freeform pages remain unchanged');
+    assert.equal(f.controller.snapshot().draft.settings.sharedFreeformSize, undefined);
     assert.equal(nextRoot.children.length, 0);
 
     const nonStart = new Element('section');
@@ -422,12 +436,12 @@ test('liquid glass uses a reversible start-page background without changing indi
     const first = `media/${'a'.repeat(32)}.png`;
     const second = `media/${'b'.repeat(32)}.jpg`;
     const root = new Element('section');
-    let selected = first;
+    f.live.pages[1].background = second;
     let preview;
     const services = {
       pickAsset: async ({ mode }) => {
         assert.equal(mode, 'image');
-        return { href: selected, name: 'Beispiel' };
+        return { href: first, name: 'Beispiel' };
       },
       createSettingsPreview: ({ pageId }) => {
         preview = { element: new Element('section'), update(config) {
@@ -457,14 +471,11 @@ test('liquid glass uses a reversible start-page background without changing indi
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[0].background, first);
     assert.equal(f.controller.snapshot().draft.settings.sharedBackground, true);
-
-    selected = second;
     open('b');
-    assert.equal(root.children[3].children[4].children[2].textContent, 'Hintergrundbild für aktuelle Seite „B“: ');
+    const inherited = root.children[3].children[4];
+    assert.equal(inherited.children[0].textContent, 'Bild wird von der Startseite geerbt.');
+    assert.ok(inherited.children.every(node => node.tag !== 'button'));
     assert.equal(preview.background, first);
-    await root.children[3].children[4].children[0].fire('click');
-    assert.equal(preview.background, first,
-      'individual image does not replace the active shared preview');
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[1].background, second);
 

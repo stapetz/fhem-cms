@@ -44,6 +44,7 @@ like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $gridState->{token}, 1), qr/min
 $next->{pages}[0]{layoutMode} = 'freeform';
 $next->{pages}[0]{background} = "media/$mediaName";
 $next->{pages}[0]{canvas} = {width => 200, height => 200};
+$next->{settings}{sharedFreeformSize} = JSON::PP::true;
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $initial->{token}, 1), qr/veraltet/, 'stale upgrade refused');
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $gridState->{token}), qr/schemaVersion/, 'old writer cannot introduce schema 6');
 my $bad = $json->decode($json->encode($next));
