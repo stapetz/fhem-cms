@@ -839,8 +839,12 @@ test('editor tools require activation and Freeform navigation supports real poin
       };
       const desktop = await measure(1440, 800);
       assert.ok(Math.abs(desktop.width - desktop.canvasWidth) < 1 && desktop.bottom > 800 && !desktop.burger);
-      const landscape = await measure(1000, 700);
-      assert.ok(!landscape.stacked && landscape.bottom <= 700 && landscape.burger >= 44);
+      for (const [width, height] of [[932, 430], [1100, 760]]) {
+        const landscape = await measure(width, height);
+        assert.ok(!landscape.stacked && Math.abs(landscape.width - landscape.canvasWidth) < 1
+          && landscape.bottom > height && landscape.burger >= 44,
+        `${width} × ${height}: full width, vertical overflow and unscaled navigation`);
+      }
       const portrait = await measure(820, 1180);
       assert.ok(portrait.stacked && portrait.burger >= 44);
       const phone = await measure(390, 844);
@@ -848,7 +852,7 @@ test('editor tools require activation and Freeform navigation supports real poin
       const restored = await measure(1440, 800);
       assert.deepEqual(restored, desktop);
       await command('Runtime.evaluate', {expression:
-        `Object.assign(document.querySelector('#result'), {textContent:'{"checks":5}'}).dataset.result='pass'`});
+        `Object.assign(document.querySelector('#result'), {textContent:'{"checks":6}'}).dataset.result='pass'`});
     });
     const mobile = await browserResult(profile, mobileUrl, child, undefined, setViewport(820, 1180));
     assert.ok(mobile.checks > 1000);
