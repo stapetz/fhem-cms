@@ -170,6 +170,20 @@ if (child) {
       'selected image was not applied to preview');
     check(frameDocument().documentElement.style.getPropertyValue('--cms-page-image').includes(first),
       'choosing another background updates the actual page preview');
+    const mode = dialog.querySelector('.cms-freeform-mode select');
+    mode.value = 'freeform';
+    mode.dispatchEvent(new Event('change'));
+    const preset = selectWith('ipad-air');
+    for (const [id, width, height, type] of [
+      ['ipad-air', 820, 1180, 'tablet'], ['iphone-15', 393, 852, 'mobile'], ['desktop-1280', 1280, 720, 'desktop'],
+    ]) {
+      preset.value = id;
+      preset.dispatchEvent(new Event('change'));
+      await until(() => frameDocument()?.querySelector('.cms-freeform-canvas')
+        && frame.contentWindow.innerWidth === width && frame.contentWindow.innerHeight === height
+        && new URL(frame.contentWindow.location.href).searchParams.get('cms-device') === type,
+      `${id}: settings preview does not use the selected viewport`);
+    }
     check(JSON.stringify(config) === original && writes === 0, 'preview never mutates or saves the original');
     dialog.querySelector('.cms-panel-close').click();
     check(outcome.requiresReload === false && writes === 0, 'cancel leaves the draft unchanged');

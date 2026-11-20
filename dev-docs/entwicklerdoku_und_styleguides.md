@@ -47,7 +47,8 @@ Standard. Datenvertrag und Migration stehen in der
   Bilddetails und Widget-Koordinaten beim Skalieren deckungsgleich bleiben.
   `fit` passt proportional in den verfügbaren Bereich, `width` füllt
   proportional die Breite und scrollt bei Bedarf vertikal, `none` zeigt
-  1:1 mit Scrollmöglichkeit. Skalierung und Scrollfläche gemeinsam prüfen;
+  höchstens 1:1 in der Ansicht (bei Platzmangel wird verkleinert). Der Editor
+  lässt 1:1-Arbeit mit horizontalem Scrollen zu. Skalierung und Scrollfläche gemeinsam prüfen;
   reine CSS-Transformation ändert das Layoutmaß nicht.
 - Seiteneinstellungen: „Raster (Standard)“ und „Frei (Pixelgenau)“ als
   beschriftete Auswahl; für Freeform Maße, Presets (`1280×800`, `1920×1080`),
@@ -60,9 +61,14 @@ Standard. Datenvertrag und Migration stehen in der
   erneuter Klick deaktiviert sie. Kein separates Verschiebesymbol. Während
   der Größenänderung zeigt das Widget Breite und Höhe in Pixeln. Mobile
   Stapel-Widgets wachsen mit ihrem Inhalt statt ihn in kleinen Boxen zu scrollen.
-- Auf Tablets im Querformat wird das gesamte Freeform-Canvas proportional
-  eingepasst, auch bei gespeicherter 1:1-Skalierung. Im Hochformat gilt
-  weiterhin der gewählte Mobilmodus.
+- Auf Phones, Tablets und schmalen Browserfenstern im Querformat wird das
+  gesamte Freeform-Canvas proportional eingepasst. Im Hochformat stapelt
+  der Mobilmodus „Stapeln“; „Pixel-Layout behalten“ passt ohne seitliches
+  Scrollen ein. „Browserfläche ausnutzen“ passt das Canvas proportional in
+  die verfügbare Fläche ein, ohne Koordinaten zu ändern. Im Pixelmodus
+  gibt es kein automatisches Anordnen.
+- Die Geräteauswahl steht über Breite und Höhe. Die Einstellungs-Vorschau
+  verwendet die CSS-Pixelgröße und Geräteklasse der gewählten Vorgabe.
 - Freeform: Am Widget eine beschriftete Eingabeleiste für
   `X`, `Y`, Breite, Höhe, Ebene und „Auf Mobilgeräten ausblenden“ anbieten.
   Pfeile verschieben bei Editor-Fokus um 1, mit Shift um 10 Canvas-Pixel.
