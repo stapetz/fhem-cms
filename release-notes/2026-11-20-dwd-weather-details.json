@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-20",
+  "version": "1.21.1-dev",
+  "title": "DWD-Wetterdetails ueber das Info-Symbol",
+  "changes": [
+    "DWD-Wetter laesst sich ueber Widget hinzufuegen konfigurieren und als Entwurf speichern.",
+    "Info-Symbol am Widget oeffnet Warnungen, Messwerte und erweiterte Wettervorhersagen. Refs #220.",
+    "Die Anwenderdoku erklaert die Online-Anzeige und FHEM-Readings fuer Automatisierungen."
+  ]
+}

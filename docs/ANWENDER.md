@@ -679,17 +679,19 @@ Anrufdaten sind persönlich: Zugriff auf CMS und FHEMWEB entsprechend schützen.
 
 ### DWD-Wetter
 
-Im Bearbeitungsmodus unter **Widget hinzufügen → DWD-Wetter** entweder einen
-Ort oder eine Postleitzahl suchen und einen Treffer auswählen, oder ein bereits
-eingerichtetes FHEM-Gerät vom Typ `DWD_OpenData` wählen. Die Online-Quelle
-benötigt keinen API-Schlüssel: Die Ortssuche läuft über Open-Meteo,
-Koordinaten werden für Wetter und Warnungen an Bright Sky übermittelt. Bei
-der lokalen Quelle fragt das CMS keine externen Dienste ab.
-Falls der Suchdienst eine deutsche Postleitzahl nicht kennt, suchen Sie nach
-dem Ortsnamen.
+Unter **Widget hinzufügen → DWD-Wetter** wählen Sie die Quelle je nach Zweck:
+
+- **Nur im CMS anzeigen:** Nutzen Sie die Online-Quelle ohne FHEM-Gerät und
+  ohne API-Schlüssel. Suchen Sie nach einem Ort oder einer Postleitzahl. Die
+  Suche läuft über Open-Meteo; Bright Sky liefert DWD-Wetter und Warnungen für
+  die ausgewählten Koordinaten. Falls die PLZ fehlt, suchen Sie nach dem Ort.
+- **Readings in FHEM weiterverwenden:** Wenn Sie beispielsweise eine Automation
+  über Wetter-Readings steuern, richten Sie ein `DWD_OpenData`-Gerät in FHEM ein
+  und wählen dasselbe Gerät im Widget. Das CMS liest die vorhandenen Readings
+  und stellt für diese Quelle keine eigenen externen Anfragen.
 
 Die Kachel zeigt je nach Einstellung aktuelles Wetter, bis zu acht
-Vorhersagetage und amtliche DWD-Warnungen. Mit **Details** öffnen Sie verfügbare
+Vorhersagetage und amtliche DWD-Warnungen. Das **ⓘ** am Widget öffnet verfügbare
 Messwerte, Warntexte, die Vorhersage für die nächsten 48 Stunden und
 bis zu zehn Tage. Welche Werte verfügbar sind, hängt von der Quelle ab.
 Ein `DWD_OpenData`-Gerät liefert Vorhersagen; daraus abgeleitete aktuelle

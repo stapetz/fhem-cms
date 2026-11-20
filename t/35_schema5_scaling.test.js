@@ -117,7 +117,7 @@ for (const [name, fixtures] of [
   ['shared German dates render across widget types without rewriting source data',
     [['90_widget_dates.html', 19]]],
   ['DWD weather renders responsive tiles, details and editor',
-    [['95_weather.html', 15]]],
+    [['95_weather.html', 25]]],
   ['VolvoConnect renders module groups and preserves responsive live vehicle data',
     [['88_volvoconnect.html', 400]]],
   ['VolvoConnect popup reorders cards by pointer and saves only the editor draft',
