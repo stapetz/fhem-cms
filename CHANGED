@@ -39,6 +39,10 @@
 - Telefon und Tablet zeigen das Hintergrundbild mittig und proportional
   beschnitten. Refs #216.
 
+2026-11-20 - 1.23.4-dev: Scrollschutz fuer CMS-Popups
+- Scrollen am Rand von CMS-Dialogen und des Freeform-Popups bewegt die Seite
+  dahinter nicht mehr. Refs #226.
+
 2026-11-20 - 1.20.9-dev: Volle Breite im mobilen Querformat
 - Der Canvas nutzt im Phone- und Tablet-Querformat die Breite. Refs #216.
 - Laengere Seiten scrollen vertikal; das Hochformat bleibt unveraendert.
