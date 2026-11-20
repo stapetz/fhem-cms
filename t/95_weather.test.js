@@ -17,7 +17,25 @@ const {
   formatTime,
   weatherTitle,
   weatherConfig,
+  selectTemperature,
 } = await import('../www/fhem-cms/components/cms-weather.js');
+
+test('temperature selects the closest recent measurement, supports fixed stations and labels fallback', () => {
+  const now = Date.parse('2026-11-20T05:30:00Z');
+  const sample = (temp, ago) => ({ temp, timestamp: new Date(now - ago * 60000).toISOString() });
+  const stations = [
+    { id: 'dwd:04078', name: 'Rastede', distance: 11480, ...sample(3, 91) },
+    { id: 'dwd:02355', name: 'Hude', distance: 14200, ...sample(0, 25) },
+    { id: 'dwd:00044', name: 'Großenkneten', distance: 23000, ...sample(1.9, 5) },
+  ];
+  assert.equal(selectTemperature(null, stations, null, now).temp, 0);
+  assert.equal(selectTemperature({ mode: 'station', station: 'dwd:00044' }, stations, null, now).temp, 1.9);
+  assert.equal(selectTemperature({ mode: 'station', station: 'dwd:04078' }, stations, null, now).fallback, true);
+  const sensor = { mode: 'sensor', device: 'Garden', reading: 'temperature' };
+  assert.equal(selectTemperature(sensor, stations, sample(-2.2, 1), now).temp, -2.2);
+  assert.equal(selectTemperature(sensor, stations, sample(9, 91), now).fallback, true);
+  assert.equal(selectTemperature(sensor, [], sample(9, -1), now), null);
+});
 
 test('weather client builds the supported Bright Sky and DWD device commands', async () => {
   const client = new FhemClient('CMS', 'http://fhem.example/fhem');

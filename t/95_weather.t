@@ -29,6 +29,13 @@ my $config = {schemaVersion => 6, settings => {layoutMode => 'grid', gridColumns
     navigation => {orientation => 'horizontal', grid => {col => 1, row => 1, w => 48, h => 1}},
     pages => [{id => 'start', title => 'Start', widgets => [$weather]}]};
 is(FHEMCMS_ValidateConfig($config, 6), undef, 'weather config accepted in grid');
+$weather->{config}{temperatureSource} = {mode => 'sensor', device => 'Garden', reading => 'temperature'};
+is(FHEMCMS_ValidateConfig($config, 6), undef, 'sensor accepted');
+$weather->{config}{temperatureSource} = {mode => 'station', station => 'dwd:04078'};
+is(FHEMCMS_ValidateConfig($config, 6), undef, 'station accepted');
+$weather->{config}{temperatureSource}{station} = 'dwd:04078&x=1';
+like(FHEMCMS_ValidateConfig($config, 6), qr/Temperaturstation/, 'reject malformed station');
+delete($weather->{config}{temperatureSource});
 $config->{pages}[0]{layoutMode} = 'freeform';
 $config->{pages}[0]{canvas} = {width => 1280, height => 800, scaling => 'fit', snapGrid => 5, mobileBehavior => 'stack'};
 $weather->{rect} = {x => 0, y => 0, w => 320, h => 240};
@@ -116,4 +123,35 @@ is($local->{daily}[0]{tempMin}, 2, 'uses DWD daily minimum');
 is($local->{alerts}[0]{event}, 'Böen', 'device warning localized');
 is($local->{alerts}[0]{severity}, 'severe', 'device severity normalized');
 is(scalar @requests, 0, 'local source makes no network requests');
+my $stamp = FHEMCMS_WeatherISO(time() - 90);
+$defs{Garden} = {READINGS => {temperature => {VAL => 0, TIME => $stamp},
+    old => {VAL => 17, TIME => FHEMCMS_WeatherISO(time() - 5401)}}};
+is($get->('weathertemperature', 'Garden', 'temperature')->{temp}, 0, 'accept fresh local zero');
+ok($get->('weathertemperature', 'Garden', 'old')->{unavailable}, 'reject stale reading');
+ok($get->('weathertemperature', 'Garden', 'missing')->{unavailable}, 'missing reading unavailable');
+is(scalar @requests, 0, 'thermometer causes no upstream requests');
+ok($get->('weatherstations', 53.14, 8.21)->{loading}, 'station discovery is asynchronous');
+like($requests[0]{url}, qr{/sources\?lat=53.14000&lon=8.21000}, 'discovery searches around selected coordinates');
+$respond->(shift @requests, {sources => [
+    {id => 91, dwd_station_id => '00090', station_name => 'Historic', last_record => $past,
+        observation_type => 'historical', distance => 2000},
+    {id => 12, dwd_station_id => '04078', station_name => 'Rastede', last_record => $stamp,
+        observation_type => 'synop', distance => 11480},
+    {id => 13, dwd_station_id => '02355', station_name => 'Hude', last_record => $stamp,
+        observation_type => 'synop', distance => 14200},
+]});
+is(scalar @requests, 2, 'only nearby SYNOP sources queried');
+like($requests[0]{url}, qr{/synop\?source_id=12&}, 'fetch actual observations from the station, not blended conditions');
+$respond->(shift @requests, {weather => [
+    {source_id => 13, temperature => 18, timestamp => $stamp},
+    {source_id => 12, temperature => undef, timestamp => $stamp},
+]});
+$respond->(shift @requests, {weather => [
+    {source_id => 13, temperature => 1.4, timestamp => FHEMCMS_WeatherISO(time() - 300)},
+    {source_id => 13, temperature => 0, timestamp => $stamp},
+]});
+my $stations = $get->('weatherstations', 53.14, 8.21)->{stations};
+is_deeply([map { $_->{id} } @$stations], ['dwd:04078', 'dwd:02355'], 'stable station ids, distance order');
+ok(!exists($stations->[0]{temp}), 'no temperature borrowed from another source');
+is($stations->[1]{temp}, 0, 'latest actual measurement preserved');
 done_testing();

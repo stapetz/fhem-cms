@@ -36,7 +36,7 @@ sub FHEMCMS_WeatherText {
 sub FHEMCMS_ValidateWeather {
     my ($config, $exact) = @_;
     my $err = $exact->($config, 'Wetterkonfiguration', ['dataSource'],
-        [qw(location device customTitle forecastDays showAlertsBanner showCurrentDetails enableDetailPopup)]);
+        [qw(location device customTitle forecastDays showAlertsBanner showCurrentDetails enableDetailPopup temperatureSource)]);
     return $err if ($err);
     my $source = $config->{dataSource} // '';
     return 'Ungueltige Wetter-Datenquelle' if (ref($source) || ($source ne 'fhem_dwd' && $source ne 'brightsky'));
@@ -56,6 +56,22 @@ sub FHEMCMS_ValidateWeather {
             || ref($location->{country}) || $location->{country} !~ /\A[A-Z]{2}\z/);
     } else {
         return 'Ungueltiges Wetter-Device' if (exists($config->{location}) || ref($config->{device}) || !FHEMCMS_ValidName($config->{device}));
+    }
+    if (exists($config->{temperatureSource})) {
+        my $temp = $config->{temperatureSource};
+        return 'Ungueltige Temperaturquelle' if ($source ne 'brightsky' || ref($temp) ne 'HASH');
+        if (($temp->{mode} // '') eq 'station') {
+            $err = $exact->($temp, 'Temperaturquelle', [qw(mode station)], []);
+            return $err if ($err);
+            return 'Ungueltige Temperaturstation' if (ref($temp->{station}) || ($temp->{station} // '') !~ /\A(?:dwd:\d{5}|wmo:[A-Z0-9]{5})\z/);
+        } elsif (($temp->{mode} // '') eq 'sensor') {
+            $err = $exact->($temp, 'Temperaturquelle', [qw(mode device reading)], []);
+            return $err if ($err);
+            return 'Ungueltiger Temperatursensor' unless (!ref($temp->{device}) && FHEMCMS_ValidName($temp->{device})
+                && !ref($temp->{reading}) && ($temp->{reading} // '') =~ /\A[A-Za-z0-9_.-]{1,128}\z/);
+        } else {
+            return 'Ungueltige Temperaturquelle';
+        }
     }
     return 'Ungueltiger Wetter-Titel' if (exists($config->{customTitle}) && (!defined($config->{customTitle})
         || ref($config->{customTitle}) || $config->{customTitle} !~ /\A[^\x00-\x1f\x7f]{0,64}\z/));
@@ -397,8 +413,86 @@ sub FHEMCMS_WeatherCached {
     return $entry->{pending} ? {loading => JSON::PP::true} : {error => 'Wetterquelle derzeit nicht erreichbar'};
 }
 
+sub FHEMCMS_WeatherTemperature {
+    my ($raw, $stamp, $now) = @_;
+    my $value = FHEMCMS_WeatherNumber($raw);
+    my $epoch = FHEMCMS_WeatherEpoch($stamp);
+    return if (!defined($value) || $value < -100 || $value > 100 || !defined($epoch)
+        || $epoch < $now - 5400 || $epoch > $now);
+    return {temp => $value, timestamp => FHEMCMS_WeatherISO($epoch)};
+}
+
+sub FHEMCMS_WeatherStations {
+    my ($lat, $lon, $done) = @_;
+    my $now = time();
+    my $from = FHEMCMS_WeatherISO($now - 5400);
+    my $to = FHEMCMS_WeatherISO($now);
+    my $base = 'https://api.brightsky.dev/';
+    FHEMCMS_WeatherHTTP("${base}sources?lat=$lat&lon=$lon&max_dist=50000", sub {
+        my ($json) = @_;
+        return $done->() if (ref(($json // {})->{sources}) ne 'ARRAY');
+        my (@stations, %seen);
+        for my $raw (@{$json->{sources}}) {
+            next if (ref($raw) ne 'HASH' || ($raw->{observation_type} // '') ne 'synop');
+            my $distance = FHEMCMS_WeatherNumber($raw->{distance});
+            my $last = FHEMCMS_WeatherEpoch($raw->{last_record});
+            my $sourceId = $raw->{id} // '';
+            next unless (defined($distance) && $distance >= 0 && $distance <= 50000
+                && defined($last) && $last >= $now - 5400 && $sourceId =~ /\A\d{1,12}\z/);
+            my $id = ($raw->{dwd_station_id} // '') =~ /\A\d{5}\z/ ? "dwd:$raw->{dwd_station_id}"
+                : ($raw->{wmo_station_id} // '') =~ /\A[A-Z0-9]{5}\z/ ? "wmo:$raw->{wmo_station_id}" : '';
+            my $name = FHEMCMS_WeatherText($raw->{station_name}, 120);
+            next if (!$id || !$name || $seen{$id}++);
+            push(@stations, {id => $id, name => $name, distance => $distance, sourceId => $sourceId});
+            last if (@stations == 8);
+        }
+        return $done->({stations => []}) if (!@stations);
+        my $pending = scalar(@stations);
+        my $failed = 0;
+        for my $station (@stations) {
+            my $sourceId = delete($station->{sourceId});
+            FHEMCMS_WeatherHTTP("${base}synop?source_id=$sourceId&date=$from&last_date=$to", sub {
+                my ($reply) = @_;
+                my $rows = ($reply // {})->{weather};
+                if (ref($rows) eq 'ARRAY') {
+                    for my $row (@$rows) {
+                        next if (ref($row) ne 'HASH' || ($row->{source_id} // '') ne $sourceId);
+                        my $measurement = FHEMCMS_WeatherTemperature(@{$row}{qw(temperature timestamp)}, $now);
+                        next if (!$measurement || $measurement->{timestamp} le ($station->{timestamp} // ''));
+                        @{$station}{qw(temp timestamp)} = @{$measurement}{qw(temp timestamp)};
+                    }
+                } else {
+                    $failed++;
+                    $station->{unavailable} = JSON::PP::true;
+                }
+                return if (--$pending);
+                return $done->() if ($failed == @stations);
+                $done->({stations => \@stations}, $failed);
+            });
+        }
+    });
+}
+
 sub FHEMCMS_WeatherGet {
     my ($hash, $command, @args) = @_;
+    if ($command eq 'weathertemperature') {
+        my ($device, $reading) = @args;
+        return 'Ungueltiges Temperatur-Reading' if (@args != 2 || !FHEMCMS_ValidName($device)
+            || $reading !~ /\A[A-Za-z0-9_.-]{1,128}\z/);
+        my $raw = $main::defs{$device}{READINGS}{$reading} if (exists($main::defs{$device}));
+        return $weatherJSON->encode({unavailable => JSON::PP::true}) if (ref($raw) ne 'HASH');
+        return $weatherJSON->encode(FHEMCMS_WeatherTemperature(@{$raw}{qw(VAL TIME)}, time())
+            // {unavailable => JSON::PP::true});
+    }
+    if ($command eq 'weatherstations') {
+        my @coords = @args == 2 ? FHEMCMS_WeatherCoords(@args) : ();
+        return 'Ungueltige Wetter-Koordinaten' if (!@coords);
+        my ($lat, $lon) = map { sprintf('%.5f', $_ == 0 ? 0 : $_) } @coords;
+        return $weatherJSON->encode(FHEMCMS_WeatherCached($hash, 'stations', "$lat,$lon", sub {
+            my (undef, $done) = @_;
+            FHEMCMS_WeatherStations($lat, $lon, $done);
+        }));
+    }
     if ($command eq 'weatherdevices') {
         return 'weatherdevices erwartet keine Parameter' if (@args);
         return $weatherJSON->encode({devices => [sort grep { FHEMCMS_ValidName($_)

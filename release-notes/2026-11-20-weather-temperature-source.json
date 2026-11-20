@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-20",
+  "version": "1.22.0-dev",
+  "title": "DWD-Wetter: Messstation oder eigenes Thermometer",
+  "changes": [
+    "DWD Online zeigt fuer die Ist-Temperatur die tatsaechliche Messquelle; alternativ eine DWD-Station oder ein FHEM-Thermometer waehlen. Refs #221."
+  ]
+}

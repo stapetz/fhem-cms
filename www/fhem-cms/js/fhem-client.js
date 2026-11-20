@@ -335,6 +335,22 @@ export class FhemClient {
     return result;
   }
 
+  async weatherStations({ lat, lon }) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      throw new Error('Ungültiger Wetterort');
+    }
+    return this.parseJsonResult(await this.command(`get ${this.cmsDevice} weatherstations ${lat.toFixed(5)} ${lon.toFixed(5)}`),
+      'Messstationen konnten nicht geladen werden');
+  }
+
+  async weatherTemperature({ device, reading }) {
+    if (!isValidName(device) || typeof reading !== 'string' || !/^[A-Za-z0-9_.-]{1,128}$/.test(reading)) {
+      throw new Error('Ungültiges Temperatur-Reading');
+    }
+    return this.parseJsonResult(await this.command(`get ${this.cmsDevice} weathertemperature ${device} ${reading}`),
+      'Temperatur-Reading konnte nicht geladen werden');
+  }
+
   async weatherGeocode(query) {
     const normalizedQuery = typeof query === 'string' ? query.trim() : '';
     if (typeof query !== 'string' || normalizedQuery.length < 2 || normalizedQuery.length > 80
