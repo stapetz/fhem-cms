@@ -119,7 +119,7 @@ for (const [name, fixtures] of [
   ['DWD weather renders responsive tiles, details and editor',
     [['95_weather.html', 42], ['95_weather.html?width=820', 42], ['95_weather.html?width=390', 42]]],
   ['CMS popups contain scroll without moving the page',
-    [['96_popup_scroll.html', 7]]],
+    [['96_popup_scroll.html', 10]]],
   ['VolvoConnect renders module groups and preserves responsive live vehicle data',
     [['88_volvoconnect.html', 400]]],
   ['VolvoConnect popup reorders cards by pointer and saves only the editor draft',
@@ -232,8 +232,11 @@ for (const [name, fixtures] of [
           };
           await evaluate('window.popupScroll.open()');
           const initial = await position('page');
+          assert.equal(await evaluate('window.popupScroll.touchBlocked(-40)'), true, 'touch at top is blocked');
+          assert.equal(await evaluate('window.popupScroll.touchBlocked(40)'), false, 'touch into content is allowed');
           await wheel('inner', 3000);
           assert.ok(await position('inner') > 0, 'dialog content itself scrolls');
+          assert.equal(await evaluate('window.popupScroll.touchBlocked(40)'), true, 'touch at bottom is blocked');
           await wheel('inner', 800);
           assert.equal(await position('page'), initial, 'bottom of modal does not scroll page');
           await wheel('inner', -3000);
