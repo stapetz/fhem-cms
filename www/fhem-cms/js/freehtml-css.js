@@ -13,7 +13,7 @@ const PROPERTIES = new Set(`display box-sizing width height min-width max-width 
   gap row-gap column-gap flex flex-direction flex-wrap flex-flow flex-grow flex-shrink flex-basis
   justify-content justify-items justify-self align-content align-items align-self place-content place-items place-self order
   position top right bottom left inset inset-inline inset-block z-index overflow overflow-x overflow-y
-  transform transform-origin transform-style perspective perspective-origin backface-visibility
+  transform transform-origin transform-style perspective perspective-origin backface-visibility offset-path offset-distance offset-rotate
   animation animation-name animation-duration animation-delay animation-timing-function animation-iteration-count
   animation-direction animation-fill-mode animation-play-state transition transition-property transition-duration
   transition-delay transition-timing-function scroll-behavior scroll-snap-type scroll-snap-align scroll-snap-stop

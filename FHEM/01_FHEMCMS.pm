@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.23.7-dev';
+our $FHEMCMS_VERSION = '1.23.8-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1646,7 +1646,7 @@ sub FHEMCMS_FreeHtmlCssStructure {
         gap row-gap column-gap flex flex-direction flex-wrap flex-flow flex-grow flex-shrink flex-basis
         justify-content justify-items justify-self align-content align-items align-self place-content place-items place-self order
         position top right bottom left inset inset-inline inset-block z-index overflow overflow-x overflow-y
-        transform transform-origin transform-style perspective perspective-origin backface-visibility
+        transform transform-origin transform-style perspective perspective-origin backface-visibility offset-path offset-distance offset-rotate
         animation animation-name animation-duration animation-delay animation-timing-function animation-iteration-count
         animation-direction animation-fill-mode animation-play-state transition transition-property transition-duration
         transition-delay transition-timing-function scroll-behavior scroll-snap-type scroll-snap-align scroll-snap-stop
@@ -1769,7 +1769,7 @@ sub FHEMCMS_FreeHtmlExtraAttribute {
         if ($tag eq 'a' && $name eq 'rel');
     return length($value) <= 200 if ($tag eq 'img' && $name eq 'alt');
     return $value =~ /\A[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?\z/
-        if (($tag eq 'img' || $tag eq 'svg' || $tag eq 'rect' || $tag eq 'iframe') && ($name eq 'width' || $name eq 'height'));
+        if (($tag eq 'img' || $tag eq 'svg' || $tag eq 'rect' || $tag eq 'mask' || $tag eq 'use' || $tag eq 'iframe') && ($name eq 'width' || $name eq 'height'));
     if ($tag eq 'iframe' && $name eq 'src') {
         return 1 if ($value =~ /\A\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+\s*\}\}\z/);
         $value =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)))*\s*\}\}}{0}g
@@ -1780,8 +1780,13 @@ sub FHEMCMS_FreeHtmlExtraAttribute {
     return $value eq '0' if ($tag eq 'iframe' && $name eq 'frameborder');
     return $value eq 'yes' || $value eq 'no' || $value eq 'auto' if ($tag eq 'iframe' && $name eq 'scrolling');
     return $value eq 'http://www.w3.org/2000/svg' if ($tag eq 'svg' && $name eq 'xmlns');
-    if ($tag =~ /\A(?:svg|g|path|rect|circle|ellipse|line|polyline|polygon|text|tspan|defs|lineargradient|radialgradient|stop|title|desc)\z/
-        && $name =~ /\A(?:viewbox|preserveaspectratio|d|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|points|transform|fill|stroke|stroke-width|fill-rule|fill-opacity|stroke-opacity|stroke-linecap|stroke-linejoin|stroke-dasharray|stroke-dashoffset|opacity|text-anchor|dominant-baseline|font-size|font-weight|offset|stop-color|stop-opacity|gradientunits|gradienttransform|spreadmethod)\z/) {
+    return $value =~ /\A\#[A-Za-z][A-Za-z0-9_-]{0,63}\z/ if ($tag eq 'use' && $name eq 'href');
+    if ($tag =~ /\A(?:svg|g|path|rect|circle|ellipse|line|polyline|polygon|text|tspan|defs|lineargradient|radialgradient|stop|clippath|mask|use|title|desc)\z/
+        && $name =~ /\A(?:viewbox|preserveaspectratio|d|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|points|transform|fill|stroke|stroke-width|fill-rule|fill-opacity|stroke-opacity|stroke-linecap|stroke-linejoin|stroke-dasharray|stroke-dashoffset|opacity|text-anchor|dominant-baseline|font-size|font-weight|offset|stop-color|stop-opacity|gradientunits|gradienttransform|spreadmethod|letter-spacing|clip-path|mask|clippathunits|maskunits|maskcontentunits)\z/) {
+        if ($value =~ /\{\{/) {
+            return 0 if ($name !~ /\A(?:transform|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|stroke-dasharray|stroke-dashoffset|letter-spacing|opacity|fill-opacity|stroke-opacity)\z/);
+            $value =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)))*\s*\}\}}{0}g;
+        }
         return length($value) <= 4000 && $value !~ /[<>&\\{}]/
             && ($value !~ /url\s*\(/i || $value =~ /\Aurl\(\#[A-Za-z][A-Za-z0-9_-]{0,63}\)\z/)
             && $value !~ /\@import|expression|behavior|binding|javascript:/i;
@@ -1798,7 +1803,7 @@ sub FHEMCMS_ValidateFreeHtml {
     my %tags = map { $_ => 1 } qw(div span p h1 h2 h3 h4 strong b em i u small br hr ul ol li
         table thead tbody tr th td style h5 h6 section article header footer main aside nav figure figcaption
         details summary dl dt dd pre code blockquote sub sup mark caption tfoot a img svg g path rect circle
-        ellipse line polyline polygon text tspan defs lineargradient radialgradient stop title desc iframe);
+        ellipse line polyline polygon text tspan defs lineargradient radialgradient stop clippath mask use title desc iframe);
     my %attrs = map { $_ => 1 } qw(class style title colspan rowspan data-cms-class device reading filter);
 
     $html =~ s/<!--(?:(?!-->).)*-->//gs;

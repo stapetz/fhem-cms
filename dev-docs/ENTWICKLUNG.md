@@ -33,6 +33,13 @@ Verfügbarkeitsstatus. Externe Texte werden ausschließlich als Text eingefügt.
 
 ## Freeform-Seiten (Schema 6, geplant)
 
+Freies HTML unterstützt numerische Readings in SVG-Geometrie, lokale SVG-`use`-Ziele
+innerhalb desselben SVG sowie Clip-Pfade und Masken. CSS erlaubt zusätzlich
+Motion-Path-Eigenschaften. Eigene und importierte Styles bleiben aus
+Kompatibilitätsgründen im gleichen Shadow-DOM wie der Widget-Rahmen und können
+diesen beeinflussen. `t/79_freehtml_policy.test.js` und `t/78_freehtml.html`
+prüfen Policy, Live-Updates und die Ablehnung externer SVG-Referenzen.
+
 Widgetdialoge übernehmen die ursprüngliche Freeform-Geometrie und ein vorhandenes
 Raster aus der Bearbeitungssitzung, auch wenn der Dialog nur Widget-Inhalte
 zurückgibt. `t/21_schema5_widget_session.test.js` und `t/78_freehtml.html`
