@@ -994,6 +994,10 @@ SVG-Paintattribute erlauben lokale
 Sanitizing durch denselben Helper bestimmt. Backendpruefung in
 `t/01_fhemcms.t` und Browserchecks in `t/78_freehtml.html` ueber den
 vorhandenen Runner. Keine KI-Integration aus #188 implementiert.
+SVG-`pattern` unterstuetzt dieselben geprueften SVG-Attribute im Client und
+Backend. CSS erlaubt weitere passive Typografie-, Spalten-, Rahmen- und
+Transformations-Eigenschaften sowie mathematische Funktionen; die bestehenden
+URL-, z-index- und Aktivinhaltsbeschraenkungen bleiben bestehen.
 `t/fixtures/volvo_dashboard.html` enthaelt das vollstaendige gemeldete
 Volvo-Dashboard; ausschliesslich die unvollstaendige Karten-URL wurde zu
 einer Einbettungs-URL mit numerischen Koordinaten korrigiert.

@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.23.11-dev';
+our $FHEMCMS_VERSION = '1.23.12-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1654,13 +1654,23 @@ sub FHEMCMS_FreeHtmlCssStructure {
         box-shadow filter backdrop-filter -webkit-backdrop-filter cursor pointer-events user-select -webkit-user-select
         object-fit object-position aspect-ratio visibility isolation mix-blend-mode clip-path
         fill fill-rule fill-opacity stroke stroke-width stroke-opacity stroke-linecap stroke-linejoin stroke-dasharray
-        stroke-dashoffset text-anchor dominant-baseline paint-order vector-effect stop-color stop-opacity);
+        stroke-dashoffset text-anchor dominant-baseline paint-order vector-effect stop-color stop-opacity
+        border-inline border-inline-start border-inline-end border-block border-block-start border-block-end
+        border-start-start-radius border-start-end-radius border-end-start-radius border-end-end-radius
+        font-stretch font-kerning font-feature-settings font-variation-settings
+        text-indent text-decoration-line text-decoration-thickness text-underline-offset text-wrap text-orientation
+        hyphens writing-mode direction unicode-bidi
+        columns column-count column-width column-rule column-rule-width column-rule-style column-rule-color
+        column-span break-before break-after break-inside
+        float clear background-attachment background-position-x background-position-y
+        translate rotate scale clip-rule stroke-miterlimit shape-rendering color-interpolation);
     my %functions = map { lc($_) => 1 } qw(url var calc min max clamp rgb rgba hsl hsla hwb lab lch oklab oklch color color-mix
         linear-gradient radial-gradient conic-gradient repeating-linear-gradient repeating-radial-gradient repeating-conic-gradient
         repeat minmax fit-content translate translateX translateY translateZ translate3d scale scaleX scaleY scaleZ scale3d
         rotate rotateX rotateY rotateZ rotate3d skew skewX skewY matrix matrix3d perspective
         cubic-bezier steps linear blur brightness contrast drop-shadow grayscale hue-rotate invert opacity saturate sepia
-        inset circle ellipse polygon path);
+        inset circle ellipse polygon path
+        abs sign mod rem round sin cos tan asin acos atan atan2 pow sqrt hypot);
     my (@tokens, @stack, @brackets);
     my ($text, $quote) = ('', '');
     for my $char (split(//, $css)) {
@@ -1785,7 +1795,7 @@ sub FHEMCMS_FreeHtmlExtraAttribute {
     return $value eq 'yes' || $value eq 'no' || $value eq 'auto' if ($tag eq 'iframe' && $name eq 'scrolling');
     return $value eq 'http://www.w3.org/2000/svg' if ($tag eq 'svg' && $name eq 'xmlns');
     return $value =~ /\A\#[A-Za-z][A-Za-z0-9_-]{0,63}\z/ if ($tag eq 'use' && $name eq 'href');
-    if ($tag =~ /\A(?:svg|g|path|rect|circle|ellipse|line|polyline|polygon|text|tspan|defs|lineargradient|radialgradient|stop|clippath|mask|use|title|desc)\z/
+    if ($tag =~ /\A(?:svg|g|path|rect|circle|ellipse|line|polyline|polygon|text|tspan|defs|lineargradient|radialgradient|stop|clippath|mask|use|pattern|title|desc)\z/
         && $name =~ /\A(?:viewbox|preserveaspectratio|d|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|points|transform|fill|stroke|stroke-width|fill-rule|fill-opacity|stroke-opacity|stroke-linecap|stroke-linejoin|stroke-dasharray|stroke-dashoffset|opacity|text-anchor|dominant-baseline|font-size|font-weight|offset|stop-color|stop-opacity|gradientunits|gradienttransform|spreadmethod|letter-spacing|clip-path|mask|clippathunits|maskunits|maskcontentunits|patternunits|patterncontentunits|patterntransform)\z/) {
         if ($value =~ /\{\{/) {
             return 0 if ($name !~ /\A(?:transform|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|stroke-dasharray|stroke-dashoffset|letter-spacing|opacity|fill-opacity|stroke-opacity)\z/);

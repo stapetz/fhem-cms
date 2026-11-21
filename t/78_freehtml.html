@@ -70,6 +70,21 @@ try {
   const patternSvg = renderTemplate(sanitize(patternSource), () => '').querySelector('svg');
   check(patternSvg.querySelector('pattern')?.namespaceURI === 'http://www.w3.org/2000/svg', 'SVG pattern survives sanitizer');
   check(patternSvg.querySelector('rect').getAttribute('fill') === 'url(#dots)', 'SVG pattern is applied through a local reference');
+  const requestedCss = '.pv{fill:url(#gpv);stroke:#93c5fd}.wl{fill:url(#gwall);stroke:rgba(255,255,255,.92);stroke-width:2}';
+  const requestedSvg = `<style>${requestedCss}</style><svg viewBox="0 0 20 20"><defs><linearGradient id="gpv"><stop offset="0%" stop-color="red"/></linearGradient><radialGradient id="gwall"><stop offset="0%" stop-color="blue"/></radialGradient><pattern id="p" width="10" height="10" viewBox="0 0 10 10" patternTransform="rotate(45)" style="opacity:1"><path id="lf" d="M0 0L10 10"/></pattern></defs><rect class="pv" width="10" height="10"/><g class="wl"><use href="#lf"/></g></svg>`;
+  check(checkSource(requestedSvg) === null, 'requested CSS and SVG definitions validate together');
+  const requestedRendered = renderTemplate(sanitize(requestedSvg), () => '');
+  check(requestedRendered.querySelector('style').textContent === requestedCss, 'requested SVG CSS survives sanitizing');
+  check(requestedRendered.querySelector('pattern').getAttribute('patternTransform') === 'rotate(45)', 'SVG pattern transform survives');
+  check(requestedRendered.querySelector('pattern').getAttribute('style') === 'opacity:1', 'SVG inline style survives');
+  check(requestedRendered.querySelector('use').getAttribute('href') === '#lf', 'SVG use retains same-SVG reference');
+  const requestedHost = document.createElement('div');
+  document.body.append(requestedHost);
+  requestedHost.attachShadow({ mode: 'open' }).append(requestedRendered);
+  check(getComputedStyle(requestedHost.shadowRoot.querySelector('.pv')).fill.includes('#gpv'), 'requested SVG gradient CSS is applied');
+  check(getComputedStyle(requestedHost.shadowRoot.querySelector('.wl')).stroke === 'rgba(255, 255, 255, 0.92)',
+    'requested SVG rgba stroke CSS is applied');
+  requestedHost.remove();
   const rectangle = '<svg viewBox="0 0 100 100"><rect width="100%" height="12.5px" rx="2"/></svg>';
   check(checkSource(rectangle) === null, 'SVG rectangle dimensions validate');
   const renderedRectangle = renderTemplate(sanitize(rectangle), () => '').querySelector('rect');
