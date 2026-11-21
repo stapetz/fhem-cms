@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.23.5-dev';
+our $FHEMCMS_VERSION = '1.23.6-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1769,7 +1769,7 @@ sub FHEMCMS_FreeHtmlExtraAttribute {
         if ($tag eq 'a' && $name eq 'rel');
     return length($value) <= 200 if ($tag eq 'img' && $name eq 'alt');
     return $value =~ /\A[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?\z/
-        if (($tag eq 'img' || $tag eq 'svg' || $tag eq 'iframe') && ($name eq 'width' || $name eq 'height'));
+        if (($tag eq 'img' || $tag eq 'svg' || $tag eq 'rect' || $tag eq 'iframe') && ($name eq 'width' || $name eq 'height'));
     if ($tag eq 'iframe' && $name eq 'src') {
         return 1 if ($value =~ /\A\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+\s*\}\}\z/);
         $value =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)))*\s*\}\}}{0}g

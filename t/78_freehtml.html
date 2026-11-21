@@ -5,6 +5,8 @@
 <script type="module">
 import { checkSource, extractDevices, isSafeCss, renderTemplate, sanitize } from '../www/fhem-cms/js/freehtml.js';
 import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { Schema5WidgetSession } from '../www/fhem-cms/js/fcui-schema5-widget-session.js';
 const output = document.querySelector('#result');
 let checks = 0;
 const check = (value, message) => { if (!value) throw new Error(message); checks++; };
@@ -58,6 +60,47 @@ try {
   check(renderedSvg.querySelector('linearGradient'), 'SVG mixed-case tag preserved');
   check(renderedSvg.querySelector('svg').getAttribute('viewBox') === '0 0 100 100', 'SVG mixed-case attribute preserved');
   check(renderedSvg.querySelector('text').textContent === 'on', 'SVG text receives readings');
+  const rectangle = '<svg viewBox="0 0 100 100"><rect width="100%" height="12.5px" rx="2"/></svg>';
+  check(checkSource(rectangle) === null, 'SVG rectangle dimensions validate');
+  const renderedRectangle = renderTemplate(sanitize(rectangle), () => '').querySelector('rect');
+  check(renderedRectangle.getAttribute('width') === '100%' && renderedRectangle.getAttribute('height') === '12.5px',
+    'SVG rectangle dimensions survive sanitizing and rendering');
+  const unsafeRectangle = sanitize('<svg><rect width="url(https://example.test/x)" height="-1"/></svg>').querySelector('rect');
+  check(!unsafeRectangle.hasAttribute('width') && !unsafeRectangle.hasAttribute('height'), 'unsafe SVG dimensions removed');
+  const live = { schemaVersion: 6, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'home', title: 'Start', layoutMode: 'freeform', canvas: { width: 800, height: 600 }, widgets: [] }] };
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async draft => { state = { live, draft, token: 'b'.repeat(64) }; },
+    publish: async () => {}, discard: async () => {},
+  });
+  await controller.reload();
+  const freeWidget = { id: 'h1', type: 'fhem-html', html: '', devices: [],
+    rect: { x: 20, y: 30, w: 240, h: 140, z: 1 } };
+  const session = new Schema5WidgetSession({ controller, pageId: 'home', token: state.token, widget: freeWidget, action: 'create' });
+  const freeHost = createWidgetElement(session.widget, session.services({}), new Map(), false);
+  document.body.append(freeHost);
+  freeHost.openConfig({ isNew: true });
+  freeHost.shadowRoot.querySelector('[name="title"]').value = 'Titel';
+  await freeHost.onSave();
+  check(state.draft?.pages[0].widgets[0].title === 'Titel', 'real empty HTML dialog saves title');
+  check(JSON.stringify(state.draft.pages[0].widgets[0].rect) === JSON.stringify(freeWidget.rect),
+    'real HTML dialog preserves freeform position');
+  check(!Object.hasOwn(state.draft.pages[0].widgets[0], 'grid'), 'real HTML dialog does not save an empty grid');
+  freeHost.remove();
+  const savedWidget = state.draft.pages[0].widgets[0];
+  const editSession = new Schema5WidgetSession({ controller, pageId: 'home', token: state.token, widget: savedWidget, action: 'update' });
+  const editHost = createWidgetElement(editSession.widget, editSession.services({}), new Map(), false);
+  document.body.append(editHost);
+  editHost.openConfig();
+  editHost.shadowRoot.querySelector('[name="html"]').value = rectangle;
+  await editHost.onSave();
+  check(state.draft.pages[0].widgets[0].html === rectangle, 'real HTML dialog saves SVG rectangle');
+  check(JSON.stringify(state.draft.pages[0].widgets[0].rect) === JSON.stringify(freeWidget.rect),
+    'editing HTML preserves freeform position');
+  editHost.remove();
   check(checkSource('<details id="more"><summary>Details</summary><figure><figcaption>PV</figcaption></figure></details>') === null, 'passive structure is allowed');
   const link = renderTemplate(sanitize('<a href="https://example.test/" target="_blank">Link</a>'), () => '');
   check(link.querySelector('a').getAttribute('rel') === 'noopener noreferrer', 'links cannot control opener');

@@ -106,18 +106,31 @@ export class Schema5WidgetSession {
     }
   }
 
+  #withPlacement(widget) {
+    const candidate = structuredClone(widget);
+    if (this.#widget.rect) {
+      candidate.rect = structuredClone(this.#widget.rect);
+      if (this.#widget.grid === undefined) delete candidate.grid;
+      else candidate.grid = structuredClone(this.#widget.grid);
+      if (this.#widget.hideOnMobile === undefined) delete candidate.hideOnMobile;
+      else candidate.hideOnMobile = this.#widget.hideOnMobile;
+    }
+    return candidate;
+  }
+
   #preview(widget) {
     return this.#change(() => {
       this.#validateWidget(widget);
-      return this.#controller.previewWidget(this.#pageId, widget, this.#token, this.#action);
+      return this.#controller.previewWidget(this.#pageId, this.#withPlacement(widget), this.#token, this.#action);
     }, false);
   }
 
   #save(widget, approvedLayout) {
     return this.#change(() => {
       this.#validateWidget(widget);
-      const candidate = structuredClone(widget);
+      const candidate = this.#withPlacement(widget);
       if (this.#action === 'create' && candidate.type === 'fhem-calllist'
+        && !candidate.rect
         && Number.isInteger(candidate.limit) && candidate.limit >= 1 && candidate.limit <= 20) {
         const state = this.#controller.snapshot();
         const scale = Number((state.draft || state.live).settings.gridColumns) / 12;

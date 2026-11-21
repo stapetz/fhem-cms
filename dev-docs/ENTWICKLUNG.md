@@ -33,6 +33,12 @@ Verfügbarkeitsstatus. Externe Texte werden ausschließlich als Text eingefügt.
 
 ## Freeform-Seiten (Schema 6, geplant)
 
+Widgetdialoge übernehmen die ursprüngliche Freeform-Geometrie und ein vorhandenes
+Raster aus der Bearbeitungssitzung, auch wenn der Dialog nur Widget-Inhalte
+zurückgibt. `t/21_schema5_widget_session.test.js` und `t/78_freehtml.html`
+prüfen Anlegen und Bearbeiten; die HTML-Policy-Fixture prüft SVG-Rechteckmaße
+in Browser und Perl einschließlich ungültiger Werte.
+
 Abnahmenachtrag (Refs #216): Die Seitennavigation gehört im Freeform-Modus
 zum Canvas. Im mobilen Hochformat erscheint das unskalierte Burger-Menü.
 Im Querformat bleiben die Links im Canvas, sofern sie ohne Umbruch passen

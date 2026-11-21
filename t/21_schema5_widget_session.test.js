@@ -64,6 +64,74 @@ test('dialog services bind identity, page, geometry and a single action', async 
   assert.equal(writes, 1);
 });
 
+test('freeform dialogs preserve placement for new and existing widgets without a grid', async () => {
+  for (const withGrid of [false, true]) {
+    const live = config();
+    live.schemaVersion = 6;
+    live.pages[0].layoutMode = 'freeform';
+    live.pages[0].canvas = { width: 800, height: 600 };
+    live.pages[0].widgets = [];
+    let state = { live, draft: null, token: 'a'.repeat(64) };
+    const controller = new Schema5DraftController({
+      read: async () => structuredClone(state),
+      save: async draft => { state = { live, draft, token: 'b'.repeat(64) }; },
+      publish: async () => {}, discard: async () => {},
+    });
+    await controller.reload();
+    const rect = { x: 40, y: 30, w: 240, h: 140, z: 2 };
+    const grid = { col: 1, row: 2, w: 4, h: 3 };
+    const widget = { id: 'h1', type: 'fhem-html', html: '', devices: [], rect,
+      hideOnMobile: true, ...(withGrid ? { grid } : {}) };
+    const create = open(controller, 'one', state.token, widget, 'create');
+    await create.services({}).saveWidget({ id: 'h1', type: 'fhem-html', html: '', devices: [],
+      title: 'Titel', grid: { ...widget.grid } });
+    let saved = controller.snapshot().draft.pages[0].widgets[0];
+    assert.deepEqual(saved.rect, rect);
+    assert.equal(saved.hideOnMobile, true);
+    assert.deepEqual(saved.grid, withGrid ? grid : undefined);
+    assert.equal(saved.title, 'Titel');
+
+    const edit = open(controller, 'one', state.token, saved);
+    await edit.services({}).saveWidget({ id: 'h1', type: 'fhem-html', html: '<p>Text</p>',
+      devices: [], grid: { ...saved.grid } });
+    saved = controller.snapshot().draft.pages[0].widgets[0];
+    assert.deepEqual(saved.rect, rect);
+    assert.equal(saved.hideOnMobile, true);
+    assert.deepEqual(saved.grid, withGrid ? grid : undefined);
+    assert.equal(saved.html, '<p>Text</p>');
+    const backend = spawnSync('perl', ['-MJSON::PP', '-e', `
+      require './FHEM/01_FHEMCMS.pm';
+      local $/; my $config = decode_json(<STDIN>);
+      my $error = FHEMCMS_ValidateConfig($config, 6);
+      die $error if defined($error);
+    `], { input: JSON.stringify(state.draft), encoding: 'utf8', timeout: 10000 });
+    assert.equal(backend.status, 0, backend.stderr);
+
+    const invalid = open(controller, 'one', state.token, saved);
+    await assert.rejects(invalid.services({}).saveWidget({ ...saved, rect: { ...rect, x: 41 } }), /Raster wurde verändert/);
+  }
+});
+
+test('new freeform call list does not require or generate a grid', async () => {
+  const live = config();
+  live.schemaVersion = 6;
+  live.pages[0].layoutMode = 'freeform';
+  live.pages[0].canvas = { width: 800, height: 600 };
+  live.pages[0].widgets = [];
+  let state = { live, draft: null, token: 'a'.repeat(64) };
+  const controller = new Schema5DraftController({
+    read: async () => structuredClone(state),
+    save: async draft => { state = { live, draft, token: 'b'.repeat(64) }; },
+    publish: async () => {}, discard: async () => {},
+  });
+  await controller.reload();
+  const widget = { id: 'a1', type: 'fhem-calllist', device: 'Calls', limit: 5, columns: ['state'],
+    rect: { x: 0, y: 0, w: 240, h: 140 } };
+  const session = open(controller, 'one', state.token, widget, 'create');
+  await session.services({}).saveWidget({ ...widget, rect: undefined, grid: {} });
+  assert.deepEqual(controller.snapshot().draft.pages[0].widgets[0], widget);
+});
+
 test('new call list height follows count and density without changing existing widget geometry', async () => {
   for (const columns of [12, 24, 48, 96, 192]) {
     for (const limit of [1, 5, 10, 20]) {
