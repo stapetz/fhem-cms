@@ -26,8 +26,8 @@ test('frontend and backend implement the same positive CSS and URL policy', () =
   }
 });
 
-test('backend accepts exactly 30000 Unicode characters and rejects 30001', () => {
-  const sources = ['x', 'ä', '😀'].flatMap(char => [char.repeat(30000), char.repeat(30001)]);
+test('backend accepts exactly 50000 Unicode characters and rejects 50001', () => {
+  const sources = ['x', 'ä', '😀'].flatMap(char => [char.repeat(50000), char.repeat(50001)]);
   const result = spawnSync('perl', ['-MJSON::PP', '-e', `
     require './FHEM/01_FHEMCMS.pm';
     local $/; my $sources = decode_json(<STDIN>);

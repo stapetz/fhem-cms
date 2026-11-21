@@ -12,9 +12,9 @@ let checks = 0;
 const check = (value, message) => { if (!value) throw new Error(message); checks++; };
 try {
   for (const char of ['x', 'ä', '😀']) {
-    const atLimit = char.repeat(30000);
-    check(checkSource(atLimit) === null, 'HTML accepts 30000 Unicode characters');
-    check(checkSource(atLimit + char)?.includes('aktuell 30001'), 'HTML rejects 30001 Unicode characters');
+    const atLimit = char.repeat(50000);
+    check(checkSource(atLimit) === null, 'HTML accepts 50000 Unicode characters');
+    check(checkSource(atLimit + char)?.includes('aktuell 50001'), 'HTML rejects 50001 Unicode characters');
   }
   const solar = `<div style="font-family: system-ui, -apple-system, sans-serif; color: inherit; display: flex; flex-direction: column; gap: 14px;">
     <!-- Kopfzeile -->
@@ -160,9 +160,9 @@ try {
   const limitHost = createWidgetElement(limitSession.widget, limitSession.services({}), new Map(), false);
   document.body.append(limitHost);
   limitHost.openConfig();
-  limitHost.shadowRoot.querySelector('[name="html"]').value = '😀'.repeat(30000);
+  limitHost.shadowRoot.querySelector('[name="html"]').value = '😀'.repeat(50000);
   await limitHost.onSave();
-  check(state.draft.pages[0].widgets[0].html === '😀'.repeat(30000), 'widget dialog saves 30000 Unicode characters');
+  check(state.draft.pages[0].widgets[0].html === '😀'.repeat(50000), 'widget dialog saves 50000 Unicode characters');
   limitHost.remove();
   check(checkSource('<details id="more"><summary>Details</summary><figure><figcaption>PV</figcaption></figure></details>') === null, 'passive structure is allowed');
   const link = renderTemplate(sanitize('<a href="https://example.test/" target="_blank">Link</a>'), () => '');

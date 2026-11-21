@@ -591,9 +591,9 @@ FHEMCMS_Define($pHash, "$pName FHEMCMS");
         $w->{html} = $bad;
         isnt(FHEMCMS_ValidateConfig($hcfg), undef, "fhem-html rejects: $bad");
     }
-    $w->{html} = 'x' x 30000;
+    $w->{html} = 'x' x 50000;
     is(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html accepts the maximum html length');
-    $w->{html} = 'x' x 30001;
+    $w->{html} = 'x' x 50001;
     isnt(FHEMCMS_ValidateConfig($hcfg), undef, 'fhem-html rejects too long html');
     $w->{html} = 'ok';
     for my $devices ('Temp', ['a b'], [map { "D$_" } 1 .. 21], ['A', 'A']) {

@@ -1,7 +1,7 @@
 // Freies HTML mit Platzhaltern (S31): strikte Allowlist, kein Skript, Werte werden nur als Text eingesetzt.
 import { validateCssStructure } from './freehtml-css.js';
 import { formatDateDisplay } from './date-display.js';
-export const MAX_FREE_HTML = 30000;
+export const MAX_FREE_HTML = 50000;
 export const MAX_FREE_DEVICES = 20;
 
 const TAGS = new Set(['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'strong', 'b', 'em', 'i', 'u', 'small', 'br', 'hr',
