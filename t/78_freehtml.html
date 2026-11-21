@@ -85,6 +85,14 @@ try {
   check(getComputedStyle(requestedHost.shadowRoot.querySelector('.wl')).stroke === 'rgba(255, 255, 255, 0.92)',
     'requested SVG rgba stroke CSS is applied');
   requestedHost.remove();
+  const generatedContent = '<style>.wd::after{content:"N"}.sw[title^="3"] ~ .et .wd::after{content:"NO"}</style><div><i class="sw" title="30"></i><div class="et"><span class="wd"></span></div></div>';
+  check(checkSource(generatedContent) === null, 'CSS generated content and attribute selectors validate');
+  const contentHost = document.createElement('div');
+  document.body.append(contentHost);
+  contentHost.attachShadow({ mode: 'open' }).append(renderTemplate(sanitize(generatedContent), () => ''));
+  check(getComputedStyle(contentHost.shadowRoot.querySelector('.wd'), '::after').content === '"NO"',
+    'CSS generated content applies in widget shadow DOM');
+  contentHost.remove();
   const rectangle = '<svg viewBox="0 0 100 100"><rect width="100%" height="12.5px" rx="2"/></svg>';
   check(checkSource(rectangle) === null, 'SVG rectangle dimensions validate');
   const renderedRectangle = renderTemplate(sanitize(rectangle), () => '').querySelector('rect');

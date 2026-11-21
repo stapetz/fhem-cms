@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.23.12-dev';
+our $FHEMCMS_VERSION = '1.23.13-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1658,7 +1658,7 @@ sub FHEMCMS_FreeHtmlCssStructure {
         border-inline border-inline-start border-inline-end border-block border-block-start border-block-end
         border-start-start-radius border-start-end-radius border-end-start-radius border-end-end-radius
         font-stretch font-kerning font-feature-settings font-variation-settings
-        text-indent text-decoration-line text-decoration-thickness text-underline-offset text-wrap text-orientation
+        content text-indent text-decoration-line text-decoration-thickness text-underline-offset text-wrap text-orientation
         hyphens writing-mode direction unicode-bidi
         columns column-count column-width column-rule column-rule-width column-rule-style column-rule-color
         column-span break-before break-after break-inside

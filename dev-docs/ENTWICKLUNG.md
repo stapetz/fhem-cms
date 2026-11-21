@@ -998,6 +998,8 @@ SVG-`pattern` unterstuetzt dieselben geprueften SVG-Attribute im Client und
 Backend. CSS erlaubt weitere passive Typografie-, Spalten-, Rahmen- und
 Transformations-Eigenschaften sowie mathematische Funktionen; die bestehenden
 URL-, z-index- und Aktivinhaltsbeschraenkungen bleiben bestehen.
+Die CSS-Eigenschaft `content` erlaubt auch Text in Pseudoelementen; sie wird
+wie andere CSS-Werte auf erlaubte Funktionen und URLs geprueft.
 `t/fixtures/volvo_dashboard.html` enthaelt das vollstaendige gemeldete
 Volvo-Dashboard; ausschliesslich die unvollstaendige Karten-URL wurde zu
 einer Einbettungs-URL mit numerischen Koordinaten korrigiert.
