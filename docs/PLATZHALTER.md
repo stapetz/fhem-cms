@@ -218,7 +218,7 @@ Externe Bilder verursachen Netzwerkanfragen an den Bildanbieter, übertragen
 aber keinen Seiten-Referrer. Neue Tabs erhalten keinen Zugriff auf den
 öffnenden CMS-Tab. `javascript:`, `data:`, protokollrelative URLs (`//...`)
 und eingebettete ausführbare Inhalte bleiben gesperrt.
-- Höchstens 20 000 Zeichen.
+- Höchstens 30 000 Unicode-Zeichen im HTML-Code. Die Gesamtgröße der CMS-Konfiguration bleibt unabhängig davon begrenzt.
 
 ## Häufige Fragen
 

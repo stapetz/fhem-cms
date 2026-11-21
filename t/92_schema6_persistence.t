@@ -108,4 +108,21 @@ is($restored->{token}, $gridState->{token}, 'offline rollback restores identical
 my ($restoredMedia) = FHEMCMS_ReadFile($mediaPath);
 is($restoredMedia, $snapshotMedia, 'offline rollback restores media bytes');
 
+my $longDraft = $json->decode($json->encode($restored->{draft}));
+my $longHtml = chr(0x1f600) x 30000;
+push(@{$longDraft->{pages}[0]{widgets}}, {
+    id => 'longhtml', type => 'fhem-html', html => $longHtml, devices => [],
+    grid => {col => 1, row => 10, w => 4, h => 3},
+});
+is(FHEMCMS_WriteVersion5Draft($dataDir, $longDraft, $restored->{token}, 1), undef,
+    '30000 Unicode characters can be saved in a free HTML widget');
+my ($longState, $longError) = FHEMCMS_ReadVersion5State($dataDir, 1);
+is($longError, undef, 'long HTML draft can be reloaded');
+is($longState->{draft}{pages}[0]{widgets}[-1]{html}, $longHtml, 'long HTML survives the draft round trip');
+$longDraft->{pages}[0]{widgets}[-1]{html} .= 'x';
+like(FHEMCMS_WriteVersion5Draft($dataDir, $longDraft, $longState->{token}, 1), qr/zu lang/,
+    '30001 characters are rejected by the draft writer');
+my ($afterLongError) = FHEMCMS_ReadVersion5State($dataDir, 1);
+is($afterLongError->{token}, $longState->{token}, 'rejected oversized HTML does not modify the draft');
+
 done_testing();

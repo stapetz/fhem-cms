@@ -11,6 +11,11 @@ const output = document.querySelector('#result');
 let checks = 0;
 const check = (value, message) => { if (!value) throw new Error(message); checks++; };
 try {
+  for (const char of ['x', 'ä', '😀']) {
+    const atLimit = char.repeat(30000);
+    check(checkSource(atLimit) === null, 'HTML accepts 30000 Unicode characters');
+    check(checkSource(atLimit + char)?.includes('aktuell 30001'), 'HTML rejects 30001 Unicode characters');
+  }
   const solar = `<div style="font-family: system-ui, -apple-system, sans-serif; color: inherit; display: flex; flex-direction: column; gap: 14px;">
     <!-- Kopfzeile -->
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(128,128,128,0.25); padding-bottom: 8px;">
@@ -101,6 +106,15 @@ try {
   check(JSON.stringify(state.draft.pages[0].widgets[0].rect) === JSON.stringify(freeWidget.rect),
     'editing HTML preserves freeform position');
   editHost.remove();
+  const limitSession = new Schema5WidgetSession({ controller, pageId: 'home', token: state.token,
+    widget: state.draft.pages[0].widgets[0], action: 'update' });
+  const limitHost = createWidgetElement(limitSession.widget, limitSession.services({}), new Map(), false);
+  document.body.append(limitHost);
+  limitHost.openConfig();
+  limitHost.shadowRoot.querySelector('[name="html"]').value = '😀'.repeat(30000);
+  await limitHost.onSave();
+  check(state.draft.pages[0].widgets[0].html === '😀'.repeat(30000), 'widget dialog saves 30000 Unicode characters');
+  limitHost.remove();
   check(checkSource('<details id="more"><summary>Details</summary><figure><figcaption>PV</figcaption></figure></details>') === null, 'passive structure is allowed');
   const link = renderTemplate(sanitize('<a href="https://example.test/" target="_blank">Link</a>'), () => '');
   check(link.querySelector('a').getAttribute('rel') === 'noopener noreferrer', 'links cannot control opener');

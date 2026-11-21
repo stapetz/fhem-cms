@@ -26,6 +26,17 @@ test('frontend and backend implement the same positive CSS and URL policy', () =
   }
 });
 
+test('backend accepts exactly 30000 Unicode characters and rejects 30001', () => {
+  const sources = ['x', 'ä', '😀'].flatMap(char => [char.repeat(30000), char.repeat(30001)]);
+  const result = spawnSync('perl', ['-MJSON::PP', '-e', `
+    require './FHEM/01_FHEMCMS.pm';
+    local $/; my $sources = decode_json(<STDIN>);
+    print encode_json([map { defined(FHEMCMS_ValidateFreeHtml($_)) ? JSON::PP::false : JSON::PP::true } @$sources]);
+  `], { input: JSON.stringify(sources), encoding: 'utf8', timeout: 10000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), [true, false, true, false, true, false]);
+});
+
 test('CSS property and function allowlists remain identical in Perl and JavaScript', () => {
   const js = readFileSync(new URL('../www/fhem-cms/js/freehtml-css.js', import.meta.url), 'utf8');
   const perl = readFileSync(new URL('../FHEM/01_FHEMCMS.pm', import.meta.url), 'utf8');
