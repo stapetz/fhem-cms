@@ -92,7 +92,7 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 - Struktur: `div span p h1 h2 h3 h4 h5 h6 strong b em i u small br hr ul ol li section article header footer main aside nav figure figcaption details summary dl dt dd pre code blockquote sub sup mark`
 - Tabellen: `table thead tbody tfoot tr th td caption`
 - Medien/Navigation: `img a iframe`
-- SVG: `svg g path rect circle ellipse line polyline polygon text tspan defs linearGradient radialGradient stop clipPath mask use title desc`; außerdem `<style>`. `use` akzeptiert ausschließlich `href="#id"` und ein Ziel innerhalb desselben SVG.
+- SVG: `svg g path rect circle ellipse line polyline polygon text tspan defs linearGradient radialGradient stop clipPath mask pattern use title desc`; außerdem `<style>`. `pattern` und `use` akzeptieren nur lokale Referenzen.
 - SVG-Rechtecke (`rect`) unterstützen `width` und `height` mit nichtnegativen Zahlen und optional `px`, `em`, `rem` oder `%`.
 - Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class device reading filter`, außerdem `id`, passive `data-*`-/ARIA-Attribute, `role` und passende Link-/Bild-/SVG-Attribute.
 - `title`, `alt`, ARIA-Attribute und `data-*` dürfen Live-Platzhalter enthalten. Sie werden als Attributtext gesetzt, niemals als HTML. `data-cms-*` ist intern reserviert; die dokumentierte Ausnahme `data-cms-class` bleibt erhalten.
