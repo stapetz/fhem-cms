@@ -34,7 +34,7 @@ export function isSafeMapUrl(value) {
     && /^https:\/\/(?:www\.)?openstreetmap\.org\/export\/embed\.html(?:\?[A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/.test(value);
 }
 
-const NUMERIC_PLACEHOLDER = /\{\{\s*([A-Za-z0-9_.-]+):(@?[A-Za-z0-9_.-]+)((?:\s*\|\s*(?:int|round\([0-6]\)))*)\s*\}\}/g;
+const NUMERIC_PLACEHOLDER = /\{\{\s*([A-Za-z0-9_.-]+):(@?[A-Za-z0-9_.-]+)((?:\s*\|\s*(?:int|round\([0-6]\)|default\(-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)\)))*)\s*\}\}/g;
 
 function numericTemplate(text) {
   return text.replace(NUMERIC_PLACEHOLDER, '0');
@@ -54,16 +54,27 @@ function resolveNumericTemplate(text, lookup, coordinate = false) {
   let valid = true;
   const value = text.replace(NUMERIC_PLACEHOLDER, (_match, device, reading, filters) => {
     const raw = lookup(device, reading);
-    if (raw === null || raw === undefined || !/^-?[0-9]+(?:\.[0-9]+)?$/.test(String(raw))) {
+    const rawValue = raw === null || raw === undefined ? '' : String(raw);
+    const hasNumericDefault = /(?:^|\|)\s*default\(-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)\)/.test(filters);
+    if (rawValue === '' && !hasNumericDefault) {
       valid = false;
       return '';
     }
-    const number = Number(raw);
+    if (rawValue !== '' && !/^-?[0-9]+(?:\.[0-9]+)?$/.test(rawValue)) {
+      valid = false;
+      return '';
+    }
+    const resolved = formatValue(rawValue, filters);
+    if (!/^-?[0-9]+(?:\.[0-9]+)?$/.test(resolved)) {
+      valid = false;
+      return '';
+    }
+    const number = Number(resolved);
     if (!Number.isFinite(number) || (coordinate && Math.abs(number) > (/latitude/i.test(reading) ? 90 : 180))) {
       valid = false;
       return '';
     }
-    return formatValue(raw, filters);
+    return resolved;
   });
   return valid ? value : null;
 }

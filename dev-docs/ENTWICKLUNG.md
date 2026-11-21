@@ -959,9 +959,10 @@ Weitere Diagrammfeatures aus #170 sind nicht enthalten.
 
 `freehtml.js` und
 `FHEMCMS_ValidateFreeHtml` erlauben Kommentare, passive HTML-Struktur,
-Links/Bilder sowie eine statische SVG-Teilmenge. SVG-Namespace und gemischte
-Tag-/Attributschreibweisen bleiben beim Sanitizing erhalten; `foreignObject`,
-`use`, Skripte, Animationen und Eventhandler bleiben gesperrt.
+Links/Bilder sowie SVG mit lokalen Definitionen und Referenzen. SVG-Namespace
+und gemischte Tag-/Attributschreibweisen bleiben beim Sanitizing erhalten;
+`foreignObject`, Skripte, Animationselemente und Eventhandler bleiben gesperrt.
+`use` ist nur mit einem Fragmentziel innerhalb desselben SVG erlaubt.
 Bild-/Linkquellen erlauben lokale Pfade oder HTTP/HTTPS sowie genau einen
 ungefilterten Reading-Platzhalter als gesamten Attributwert. Unaufgeloeste
 URLs werden nur als Template-Metadaten gehalten; erst nach Substitution
@@ -978,7 +979,9 @@ einzelne URL-Readings; keine Anbieter-/Hostliste. Der Sanitizer setzt `sandbox=a
 `referrerpolicy=no-referrer`, standardmaessig lazy loading; keine
 srcdoc-/Sandbox-/Berechtigungsattribute aus dem Quelltext.
 Numerische Reading-Platzhalter in Inline-Styles und im Querystring von OSM-URLs
-werden mit `int`/`round(0..6)` unterstuetzt. Templates setzen vor Aufloesung kein
+werden mit `int`, `round(0..6)` und numerischem `default(Zahl)` fuer fehlende
+oder leere Werte unterstuetzt. SVG-Geometrieattribute akzeptieren ebenfalls
+gepruefte numerische Readings. Templates setzen vor Aufloesung kein
 Style-/Quellattribut; rohe Readingwerte muessen endliche Dezimalzahlen sein,
 Koordinaten innerhalb -90..90 (Latitude) bzw. -180..180 liegen.
 Fehler werden sichtbar gemeldet, alte Werte nicht wiederverwendet.
