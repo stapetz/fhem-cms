@@ -1,0 +1,125 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<main id="mount"></main><pre id="result">RUNNING</pre>
+<script type="module">
+import { mountFreeform } from '../www/fhem-cms/js/fcui-freeform-view.js';
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+const mount = document.querySelector('#mount');
+const result = document.querySelector('#result');
+const snapshot = [{name:'Garten', readings:{temperature:'1.5', desiredTemperature:'18.5', valve:'15'}, sets:''}];
+const snapshots = new Map([['Garten', snapshot]]);
+const icon = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"%3E%3Cpath d="M1 1h8v8H1z"/%3E%3C/svg%3E';
+const services = {iconUrl:() => icon};
+const specs = [
+  {id:'value', type:'fhem-value', device:'Garten', reading:'temperature', unit:'°C', title:'Garten', icon:'test'},
+  {id:'thermostat', type:'thermostat', device:'Garten', title:'Terrassenseite',
+    readings:{actual:'temperature', target:'desiredTemperature', valve:'valve'}},
+];
+let checks = 0;
+const measurements = [];
+const check = (condition, message) => {if (!condition) throw new Error(message); checks++;};
+const settle = () => new Promise(resolve => setTimeout(resolve, 150));
+const valueMetrics = host => {
+  const root = host.shadowRoot;
+  const area = root.querySelector('.main').getBoundingClientRect();
+  const group = root.querySelector('[data-fit-content]').getBoundingClientRect();
+  return {font:parseFloat(getComputedStyle(root.querySelector('.main')).fontSize),
+    ratio:Math.max(group.width/area.width, group.height/area.height),
+    widthRatio:group.width/area.width, heightRatio:group.height/area.height};
+};
+try {
+  for (const [width,height] of [[170,200],[680,800]]) for (const viewOnly of [true,false]) {
+    const direct = createWidgetElement(specs[0], services, snapshots, viewOnly);
+    direct.style.cssText = `display:block;width:${width}px;height:${height}px`;
+    mount.append(direct);
+    await settle();
+    const baseline = valueMetrics(direct);
+    check(baseline.ratio >= .9 && baseline.ratio <= 1.01, `${width}: baseline fills available area`);
+    for (const scale of [.25,.5,1,1.5]) {
+      const root = document.createElement('div');
+      root.style.width = `${1000 * scale}px`;
+      mount.append(root);
+      const page = {canvas:{width:1000,height:1000,scaling:'width',mobileBehavior:'fit'},
+        widgets:[{...specs[0],rect:{x:0,y:0,w:width,h:height}},
+          {...specs[1],rect:{x:0,y:height,w:440,h:320}}]};
+      const view = mountFreeform(root,page,document.createElement('nav'),
+        id => createWidgetElement(specs.find(item => item.id === id),services,snapshots,viewOnly), {editing:true});
+      await settle();
+      const host = view.wrappers.get('value').querySelector('cms-value');
+      const value = valueMetrics(host);
+      const thermostat = view.wrappers.get('thermostat').querySelector('cms-thermostat');
+      const label = thermostat.shadowRoot.querySelector('.box .label');
+      const pct = thermostat.shadowRoot.querySelector('[data-valve-text]');
+      measurements.push({width,height,scale,viewOnly,baseline,value,label:parseFloat(getComputedStyle(label).fontSize),
+        pct:parseFloat(getComputedStyle(pct).fontSize)});
+      check(Math.abs(view.getScale() - scale) < .001, `actual Freeform scale ${scale}`);
+      check(Math.abs(value.font - baseline.font) <= 1, `${width}/${scale}: font invariant ${value.font}/${baseline.font}`);
+      check(value.ratio >= .9 && value.ratio <= 1.01, `${width}/${scale}: value fills area ${value.ratio}`);
+      check(value.widthRatio <= 1.01 && value.heightRatio <= 1.01, `${width}/${scale}: no overflow`);
+      check(parseFloat(getComputedStyle(label).fontSize) >= 18, `${width}/${scale}: thermostat details readable`);
+      check(parseFloat(getComputedStyle(pct).fontSize) >= 16, `${width}/${scale}: valve percentage readable`);
+      view.destroy();
+      root.remove();
+    }
+    direct.remove();
+  }
+  for (const spec of [
+    {id:'switch',type:'fhem-switch',device:'Garten',reading:'temperature',on:'on',off:'off'},
+    {id:'button',type:'fhem-button',device:'Garten',command:'on'},
+    {id:'icon',type:'fhem-icon',device:'Garten',reading:'temperature',states:[{value:'1.5',icon:'test',color:'#ffffff'}]},
+  ]) {
+    const direct = createWidgetElement(spec, services, snapshots, true);
+    direct.style.cssText = 'display:block;width:300px;height:200px';
+    mount.append(direct);
+    await settle();
+    const baseline = valueMetrics(direct);
+    for (const scale of [.25,1.5]) {
+      const root = document.createElement('div');
+      root.style.width = `${1000 * scale}px`;
+      mount.append(root);
+      const view = mountFreeform(root,{canvas:{width:1000,height:1000,scaling:'width'},
+        widgets:[{...spec,rect:{x:0,y:0,w:300,h:200}}]},document.createElement('nav'),
+      () => createWidgetElement(spec,services,snapshots,true),{editing:true});
+      await settle();
+      const value = valueMetrics(view.wrappers.get(spec.id).firstElementChild);
+      check(Math.abs(value.font-baseline.font) <= 1, `${spec.id}/${scale}: font invariant`);
+      check(value.ratio >= .9 && value.ratio <= 1.01, `${spec.id}/${scale}: content fills area`);
+      view.destroy();
+      root.remove();
+    }
+    direct.remove();
+  }
+  const direct = createWidgetElement(specs[0],services,snapshots,true);
+  direct.style.cssText = 'display:block;width:680px;height:800px';
+  mount.append(direct);
+  const resizeRoot = document.createElement('div');
+  resizeRoot.style.width = '1000px';
+  mount.append(resizeRoot);
+  const resizedView = mountFreeform(resizeRoot,{canvas:{width:1000,height:1000,scaling:'width'},
+    widgets:[{...specs[0],rect:{x:0,y:0,w:680,h:800}}]},document.createElement('nav'),
+  () => createWidgetElement(specs[0],services,snapshots,true),{editing:true});
+  const resized = resizedView.wrappers.get('value').firstElementChild;
+  for (const [scale, reading] of [[.25,'1.5'],[1.5,'-12.345'],[.5,'1.5']]) {
+    resizeRoot.style.width = `${1000 * scale}px`;
+    const data = [{name:'Garten',readings:{temperature:reading}}];
+    direct.data = data;
+    resized.data = data;
+    await settle();
+    const baseline = valueMetrics(direct);
+    const value = valueMetrics(resized);
+    check(Math.abs(resizedView.getScale()-scale) < .001, `live resize scale ${scale}`);
+    check(Math.abs(value.font-baseline.font) <= 1, `live resize/update font invariant ${scale}`);
+    check(value.ratio >= .9 && value.ratio <= 1.01, `live resize/update fills area ${scale}`);
+  }
+  resizedView.destroy();
+  resizeRoot.remove();
+  direct.remove();
+  result.dataset.result = 'pass';
+  result.textContent = JSON.stringify({checks, measurements});
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = `${error.stack}\n${JSON.stringify(measurements)}`;
+}
+</script>

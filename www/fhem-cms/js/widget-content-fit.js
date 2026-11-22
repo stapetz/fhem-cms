@@ -44,8 +44,10 @@ export function fitWidgetContent(host) {
     for (let attempt = 0; attempt < 3; attempt++) {
       const actual = content.getBoundingClientRect();
       const correction = Math.min(1,
-        available.width / Math.max(actual.width, area.scrollWidth),
-        available.height / Math.max(actual.height, area.scrollHeight));
+        available.width / actual.width,
+        available.height / actual.height,
+        area.clientWidth / area.scrollWidth,
+        area.clientHeight / area.scrollHeight);
       if (correction >= 1 || size <= 12) break;
       size = Math.max(12, size * correction * 0.98);
       area.style.fontSize = `${size}px`;
