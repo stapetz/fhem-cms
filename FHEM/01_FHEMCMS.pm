@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.24.1-dev';
+our $FHEMCMS_VERSION = '1.24.2-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1746,6 +1746,7 @@ sub FHEMCMS_FreeHtmlCssStructure {
 
 sub FHEMCMS_FreeHtmlCss {
     my ($css) = @_;
+    $css =~ s/<!--(?:(?!-->).)*-->//gs;
     $css =~ s/&quot;/"/g;
     $css =~ s/&#39;/'/g;
     $css =~ s/&amp;/&/g;

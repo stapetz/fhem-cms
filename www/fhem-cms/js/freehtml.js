@@ -146,9 +146,13 @@ const READING_ATTR = /^@?[A-Za-z0-9_.-]{1,64}$/;
 const FILTER_ATTR = /^\s*(?:[a-z]+(?:\([^()|{}"<>]{0,80}\))?(?:\s*\|\s*[a-z]+(?:\([^()|{}"<>]{0,80}\))?)*)?\s*$/;
 const FORBIDDEN_CSS = /expression\s*\(|(?:^|[;{])\s*(?:behavior|-moz-binding)\s*:|javascript:|[<\\]/i;
 
+export function normalizeFreeHtmlCss(text) {
+  return text.replace(/<!--(?:(?!-->).)*-->/gs, '').replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
 export function isSafeCss(text) {
   if (typeof text !== 'string') return false;
-  const css = numericTemplate(text.replace(/\/\*[\s\S]*?\*\//g, ''));
+  const css = numericTemplate(normalizeFreeHtmlCss(text));
   if (css.includes('{{')) return false;
   if (/\/\*|\*\//.test(css) || FORBIDDEN_CSS.test(css)) return false;
   let valid = true;
@@ -271,7 +275,7 @@ function cleanChildren(source, target) {
         if (name === 'class' && /^[A-Za-z0-9_\- ]{0,200}$/.test(value)) {
           element.setAttribute('class', value);
         } else if (name === 'style' && isSafeCss(value)) {
-          element.setAttribute(value.includes('{{') ? 'data-cms-style-template' : 'style', value);
+          element.setAttribute(value.includes('{{') ? 'data-cms-style-template' : 'style', normalizeFreeHtmlCss(value));
         } else if (name === 'title') {
           element.setAttribute('title', value.slice(0, 200));
         } else if ((name === 'colspan' || name === 'rowspan') && /^[1-9][0-9]?$/.test(value)) {
@@ -304,7 +308,7 @@ function cleanChildren(source, target) {
       }
       if (node.localName === 'style') {
         element.textContent = isSafeCss(node.textContent) && !node.textContent.includes('{{')
-          ? node.textContent.replace(/url\s*\(\s*(?:"[^"]*"|'[^']*'|[^()\s"']+)\s*\)|"[^"]*"|'[^']*'|:target(?![A-Za-z0-9_-])/gi,
+          ? normalizeFreeHtmlCss(node.textContent).replace(/url\s*\(\s*(?:"[^"]*"|'[^']*'|[^()\s"']+)\s*\)|"[^"]*"|'[^']*'|:target(?![A-Za-z0-9_-])/gi,
             token => token.startsWith(':') ? '[data-cms-fragment-target]' : token) : '';
       } else if (tag !== 'iframe') {
         cleanChildren(node, element);
