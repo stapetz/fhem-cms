@@ -262,10 +262,11 @@ try {
   await new Promise(resolve => requestAnimationFrame(resolve));
   smilSvg.pauseAnimations();
   smilSvg.setCurrentTime(0);
-  smilSvg.querySelector('animate').beginElement();
-  smilSvg.setCurrentTime(0.5);
-  smilSvg.querySelector('circle').getBBox();
   await new Promise(resolve => requestAnimationFrame(resolve));
+  const initialSmilWidth = smilSvg.querySelector('circle').getBBox().width;
+  smilSvg.setCurrentTime(0.5);
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  check(Math.abs(initialSmilWidth - 20) < 0.1, 'SVG animate starts at its declared geometry');
   check(Math.abs(smilSvg.querySelector('circle').getBBox().width - 30) < 0.1,
     'SVG animate actually changes geometry');
   smilHost.remove();
