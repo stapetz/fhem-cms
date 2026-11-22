@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.23.10-dev';
+our $FHEMCMS_VERSION = '1.23.11-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -33,7 +33,7 @@ our %FHEMCMS_LAST_REFRESH;
 our %FHEMCMS_PURGED;
 our $FHEMCMS_USAGE_BACKUPS = 20;
 our $FHEMCMS_MAX_HTML = 50000;
-our $FHEMCMS_MAX_FREE_HTML = 30000;
+our $FHEMCMS_MAX_FREE_HTML = 50000;
 our $FHEMCMS_MAX_MEDIA_BYTES = 3145728;
 our $FHEMCMS_MAX_MEDIA_FILES = 200;
 our $FHEMCMS_MAX_ICONS = 5000;

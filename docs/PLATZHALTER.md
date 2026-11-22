@@ -89,6 +89,7 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 
 ## Erlaubter Code
 
+- Der Freehtml-Code darf höchstens **50.000 Unicode-Zeichen** umfassen.
 - Struktur: `div span p h1 h2 h3 h4 h5 h6 strong b em i u small br hr ul ol li section article header footer main aside nav figure figcaption details summary dl dt dd pre code blockquote sub sup mark`
 - Tabellen: `table thead tbody tfoot tr th td caption`
 - Medien/Navigation: `img a iframe`
