@@ -338,8 +338,10 @@ stabilen Versionsangaben bleiben unverändert.
   CSS-Erweiterung und Inhalte.
 * '''SVG-Animation (#236):''' Passive XML-Animationen für SVG-Geometrie werden
   unterstützt; ausführbare Skripte sind damit nicht freigegeben.
-* '''Zentrale CMS-Verwaltung (#237):''' Konfigurationen lassen sich als JSON
-  für Entwürfe importieren und exportieren.
+* '''Zentrale CMS-Verwaltung (#237):''' Bestand, Purgen/Löschen und
+  JSON-Import als Entwurf sowie Export direkt je CMS-Bestandszeile.
+  Es gibt keine globale CMS-Auswahl. Seiten- und Darstellungseinstellungen
+  bleiben im jeweiligen CMS; JSON-Transfer entfällt dort im Dateimenü.
 * '''Kiosk (#238):''' Eine entsprechend konfigurierte Live-Seite erscheint ohne
   Navigation; ihre URL lässt sich kopieren. Die Seitennavigation für andere als
   die Startseite bleibt im Editor bearbeitbar.
