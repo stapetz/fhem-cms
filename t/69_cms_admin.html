@@ -45,11 +45,56 @@ try {
       return selection.map(item => ({...item, ok: true, message: 'Erledigt'}));
     },
   };
+  const config = {
+    schemaVersion: 5, theme: 'dark', settings: {layoutMode: 'grid', gridColumns: 12},
+    navigation: {orientation: 'horizontal', grid: {col: 1, row: 1, w: 12, h: 1}},
+    pages: [{id: 'home', title: 'Home', widgets: []}],
+  };
+  let configState = {live: config, draft: null, token: 'b'.repeat(64)};
+  const controller = {
+    snapshot: () => structuredClone(configState),
+    reload: async () => structuredClone(configState),
+    saveDraft: async (candidate, token) => {
+      if (token !== configState.token) throw new Error('Zustand ist veraltet');
+      configState = {...configState, draft: structuredClone(candidate), token: 'c'.repeat(64)};
+      return structuredClone(configState);
+    },
+  };
+  const loadedDevices = [];
+  const createSession = async device => {
+    loadedDevices.push(device);
+    return {controller, schemaVersion: 5, state: structuredClone(configState)};
+  };
+  let closeCalls = 0;
+  const exportedBlobs = [];
+  const browser = {
+    closed: false,
+    close: () => { closeCalls++; },
+    setTimeout: frame.contentWindow.setTimeout.bind(frame.contentWindow),
+    Blob: frame.contentWindow.Blob,
+    URL: {
+      createObjectURL: blob => {
+        exportedBlobs.push(blob);
+        return 'blob:cms-admin-test';
+      },
+      revokeObjectURL: () => {},
+    },
+  };
   let reloads = 0;
-  await mountCmsAdmin(body, client, () => { reloads++; });
+  await mountCmsAdmin(body, client, () => { reloads++; }, browser, createSession);
   const $ = selector => doc.querySelector(selector);
   check(doc.title === 'Globale FHEM-CMS Administration' && $('h1').textContent === doc.title,
     'page heading and browser title use the global administration name');
+  check([...doc.querySelectorAll('.cms-admin-toolbar .cms-menu summary')].map(node => node.textContent).join(',')
+    === 'Datei,Bearbeiten' && $('#configuration').querySelector('h2').textContent === 'CMS-Konfiguration',
+  'central admin has matching File/Edit menus and a separate configuration area');
+  check($('#configuration-device').disabled === false && $('#import-config').disabled
+    && $('#export-config').disabled, 'configuration actions wait until a CMS is selected');
+  const anchorClick = frame.contentWindow.HTMLAnchorElement.prototype.click;
+  const anchorDownloads = [];
+  frame.contentWindow.HTMLAnchorElement.prototype.click = function click() {
+    anchorDownloads.push({name: this.download, href: this.href});
+  };
   const openLink = $('#devices a');
   const openStyle = frame.contentWindow.getComputedStyle(openLink);
   check(openLink.classList.contains('cms-button') && openStyle.textDecorationLine === 'none'
@@ -125,6 +170,47 @@ try {
   check($('input[value="Foreign"]').disabled, 'foreign structures cannot be selected');
   check($('#delete-devices').disabled && $('#delete-orphans').disabled, 'no preselection');
   check($('#devices a').getAttribute('href') === '/custom/fhem-cms/Keep/index.html?mode=edit', 'device link uses FHEMWEB prefix');
+  $('#edit-menu').open = true;
+  $('#configuration-device').value = 'Keep';
+  $('#configuration-device').dispatchEvent(new Event('change'));
+  await wait(() => !$('#import-config').disabled);
+  check(loadedDevices.join() === 'Keep' && $('#configuration-name').textContent === 'Keep'
+    && $('#configuration-schema').textContent === '5', 'selection loads the chosen versioned configuration');
+  $('#export-config').click();
+  check(exportedBlobs.length === 1 && anchorDownloads[0].name === 'Keep-config.json'
+    && JSON.parse(await exportedBlobs[0].text()).pages[0].id === 'home',
+  'export downloads the selected live configuration as JSON');
+  const imported = structuredClone(config);
+  imported.pages[0].title = 'Imported';
+  const fileInput = $('#config-file');
+  Object.defineProperty(fileInput, 'files', {configurable: true, value: [
+    new frame.contentWindow.File([JSON.stringify(imported)], 'import.json', {type: 'application/json'}),
+  ]});
+  fileInput.dispatchEvent(new Event('change'));
+  await wait(() => $('#import-confirmation').open);
+  check($('#import-file-name').textContent.includes('import.json')
+    && $('#import-confirmation').textContent.includes('Live-Konfiguration bleibt unverändert'),
+  'import confirmation explains draft replacement and unchanged live data');
+  $('#import-confirmation button[value="import"]').click();
+  await wait(() => $('#configuration-state').textContent.includes('Entwurf vorhanden'));
+  check(configState.draft.pages[0].title === 'Imported'
+    && $('#configuration-status').textContent.includes('Live-Konfiguration blieb unverändert'),
+  'JSON import saves a draft only and reports the result');
+  $('#export-config').click();
+  check(JSON.parse(await exportedBlobs.at(-1).text()).pages[0].title === 'Imported',
+    'export prefers an existing draft over live configuration');
+  const editMenu = $('#edit-menu');
+  editMenu.open = true;
+  doc.body.dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true}));
+  check(!editMenu.open && closeCalls === 0, 'Escape closes an open menu before attempting to close the page');
+  doc.body.dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true}));
+  await new Promise(resolve => setTimeout(resolve, 120));
+  check(closeCalls === 1 && $('#status').textContent.includes('nicht skriptgesteuert geöffnet'),
+    'Escape attempts to close and visibly reports browser restrictions');
+  $('#close-window').click();
+  check(closeCalls === 2 && $('#close-window').getAttribute('aria-label') === 'Fenster schließen',
+    'top-right close control uses the same browser close behavior');
+  frame.contentWindow.HTMLAnchorElement.prototype.click = anchorClick;
   const select = name => {
     const input = $(`input[value="${name}"]`);
     input.checked = true;

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { CmsAdminClient, validateInventory } from '../www/fhem-cms/js/cms-admin.js';
+import {
+  CmsAdminClient, createCmsConfigurationSession, requestAdminClose, validateInventory,
+} from '../www/fhem-cms/js/cms-admin.js';
 import { applyCmsAdminAppearance, createCmsAdminMenuLinks } from '../www/fhem-cms/js/cms-admin-link.js';
 import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
 
@@ -105,4 +107,59 @@ test('admin client uses FHEMWEB prefix, fresh CSRF and one non-retried destructi
     globalThis.fetch = async () => Response.json({error: 'Bestand ist veraltet'});
     await assert.rejects(client.inventory(), /veraltet/);
   } finally { globalThis.fetch = previous; }
+});
+
+test('admin configuration uses schema 5/6 draft controllers and rejects older schemas', async () => {
+  const previous = globalThis.fetch;
+  const calls = [];
+  let version = 5;
+  const config = {
+    schemaVersion: 5, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
+    navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+    pages: [{ id: 'one', title: 'Home', widgets: [] }],
+  };
+  const state = { live: config, draft: null, token: 'b'.repeat(64) };
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', {headers: {'X-FHEM-csrfToken': 'fresh'}});
+    const command = options.body.get('cmd');
+    calls.push(command);
+    if (command === 'get CMS layoutformat') {
+      return Response.json({schemaVersion: version, ...(version === 6 ? {freeform: true} : {})});
+    }
+    if (command === `get CMS ${version === 6 ? 'version6state' : 'version5state'}`) {
+      const live = {...config, schemaVersion: version};
+      return Response.json({...state, live});
+    }
+    throw new Error(`Unexpected FHEM command: ${command}`);
+  };
+  try {
+    const base = new URL('https://example.test/fhem/');
+    const schema5 = await createCmsConfigurationSession('CMS', base);
+    assert.equal(schema5.schemaVersion, 5);
+    assert.equal(schema5.controller.snapshot().live.schemaVersion, 5);
+    assert.deepEqual(calls, ['get CMS layoutformat', 'get CMS version5state']);
+    version = 6;
+    calls.length = 0;
+    const schema6 = await createCmsConfigurationSession('CMS', base);
+    assert.equal(schema6.schemaVersion, 6);
+    assert.equal(schema6.controller.snapshot().live.schemaVersion, 6);
+    assert.deepEqual(calls, ['get CMS layoutformat', 'get CMS version6state']);
+    version = 4;
+    calls.length = 0;
+    await assert.rejects(createCmsConfigurationSession('CMS', base), /Schema 5 oder 6/);
+    assert.deepEqual(calls, ['get CMS layoutformat']);
+    await assert.rejects(createCmsConfigurationSession('../CMS', base), /Device-Name/);
+  } finally { globalThis.fetch = previous; }
+});
+
+test('admin close notifies when browser refuses to close a non-script-opened page', async () => {
+  let callback;
+  let closes = 0;
+  let warning = '';
+  requestAdminClose({ closed: false, close: () => { closes++; },
+    setTimeout: fn => { callback = fn; } }, text => { warning = text; });
+  assert.equal(closes, 1);
+  assert.equal(warning, '');
+  callback();
+  assert.match(warning, /nicht skriptgesteuert geöffnet/);
 });
