@@ -87,6 +87,22 @@ Nach einem Update die Verwaltungsseite neu laden. Ihre CSS- und
 JavaScript-Einstiegsdateien tragen eine Versionskennung gegen veraltete
 Browsercaches.
 
+- Die Administration startet weiterhin mit dem CMS-/Dateibestand. Unter
+  **Bearbeiten** ein CMS-Device auswählen, um dessen Schema-5- oder
+  Schema-6-Konfiguration zu laden. Unter **Datei** lässt sich die Konfiguration
+  als JSON exportieren; wenn ein Entwurf vorhanden ist, wird dieser exportiert,
+  sonst der Live-Stand. Medien sind nicht enthalten.
+- **JSON als Entwurf importieren** prüft die Datei mit den vorhandenen
+  Schema-Controllern und ersetzt nach Bestätigung nur den Entwurf. Die
+  Live-Konfiguration bleibt unverändert; Medien werden nicht importiert.
+  Dateien über 1 MiB, ungültige Konfigurationen und abgelehnte oder veraltete
+  Zustandskennungen werden mit einem Fehler angezeigt. Nach einem Konflikt
+  zuerst **Konfiguration neu laden** und den Import prüfen.
+- **×** oben rechts und `Esc` versuchen, die Verwaltungsseite zu schließen.
+  Browser erlauben `window.close()` häufig nur für skriptgesteuert geöffnete
+  Fenster. Wird das Schließen blockiert, erscheint ein Hinweis und der Tab muss
+  manuell geschlossen werden. Der vorhandene Link aus dem CMS öffnet die
+  Administration weiterhin wie bisher in einem neuen Tab.
 - CMS-Devices per Checkbox auswaehlen und **Purge + Delete** starten.
 - Der Bestaetigungsdialog nennt alle ausgewaehlten Devices. Erst die Eingabe
   `DELETE` gibt die unwiderrufliche Loeschung frei.

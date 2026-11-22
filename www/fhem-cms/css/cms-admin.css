@@ -3,11 +3,76 @@
   margin: auto;
   padding: 1rem;
 }
+.cms-admin-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.cms-admin-header h1 {
+  margin-block-start: 0.4rem;
+  padding-inline-end: 4rem;
+}
+.cms-admin-close {
+  position: fixed;
+  top: .5rem;
+  right: max(1rem, calc((100vw - 72rem) / 2));
+  z-index: 30;
+  flex: 0 0 auto;
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.cms-admin-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin-block-end: 1rem;
+}
+.cms-admin-toolbar .cms-menu-items label {
+  padding: .35rem .5rem;
+}
+.cms-admin-toolbar select {
+  min-height: 44px;
+  max-width: min(22rem, calc(100vw - 3rem));
+  box-sizing: border-box;
+  padding: .45rem .6rem;
+  border: 1px solid var(--cms-border);
+  border-radius: .4rem;
+  color: var(--cms-text);
+  background: var(--cms-surface);
+  font: inherit;
+}
+.cms-admin-toolbar .cms-menu-items .cms-button {
+  min-height: 44px;
+}
 .cms-admin section {
   margin-block: 2rem;
 }
+#configuration-details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: .35rem .75rem;
+  margin: 1rem 0;
+}
+#configuration-details[hidden] {
+  display: none;
+}
+#configuration-details dt {
+  color: var(--cms-muted);
+}
+#configuration-details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 :root[data-cms-theme="liquid-glass"] .cms-admin article,
-:root[data-cms-theme="liquid-glass"] #confirmation {
+:root[data-cms-theme="liquid-glass"] #confirmation,
+:root[data-cms-theme="liquid-glass"] #import-confirmation {
   background: rgb(19 34 52 / var(--cms-liquid-opacity, .88));
   -webkit-backdrop-filter: blur(var(--cms-liquid-blur, 14.1px));
   backdrop-filter: blur(var(--cms-liquid-blur, 14.1px));
@@ -73,7 +138,8 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-#confirmation {
+#confirmation,
+#import-confirmation {
   max-width: min(36rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
   overflow: auto;
@@ -93,6 +159,29 @@
 #confirmation::backdrop {
   background: #000a;
 }
+#import-confirmation::backdrop {
+  background: #000a;
+}
+[role="status"][data-error] {
+  font-weight: 600;
+}
 [data-error] {
   color: var(--cms-danger, #ff9999);
+}
+
+@media (max-width: 30rem) {
+  .cms-admin {
+    padding: .75rem;
+  }
+  .cms-admin-header h1 {
+    font-size: 1.35rem;
+  }
+  .cms-admin-toolbar .cms-menu-items {
+    max-width: calc(100vw - 2rem);
+    white-space: normal;
+  }
+  .cms-admin-toolbar .cms-menu-items .cms-button {
+    min-width: 0;
+    white-space: normal;
+  }
 }
