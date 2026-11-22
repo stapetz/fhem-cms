@@ -21,13 +21,23 @@ const PROPERTIES = new Set(`display box-sizing width height min-width max-width 
   box-shadow filter backdrop-filter -webkit-backdrop-filter cursor pointer-events user-select -webkit-user-select
   object-fit object-position aspect-ratio visibility isolation mix-blend-mode clip-path
   fill fill-rule fill-opacity stroke stroke-width stroke-opacity stroke-linecap stroke-linejoin stroke-dasharray
-  stroke-dashoffset text-anchor dominant-baseline paint-order vector-effect stop-color stop-opacity`.split(/\s+/));
+  stroke-dashoffset text-anchor dominant-baseline paint-order vector-effect stop-color stop-opacity
+  border-inline border-inline-start border-inline-end border-block border-block-start border-block-end
+  border-start-start-radius border-start-end-radius border-end-start-radius border-end-end-radius
+  font-stretch font-kerning font-feature-settings font-variation-settings
+  text-indent text-decoration-line text-decoration-thickness text-underline-offset text-wrap text-orientation
+  hyphens writing-mode direction unicode-bidi
+  columns column-count column-width column-rule column-rule-width column-rule-style column-rule-color
+  column-span break-before break-after break-inside
+  float clear background-attachment background-position-x background-position-y
+  translate rotate scale clip-rule stroke-miterlimit shape-rendering color-interpolation`.split(/\s+/));
 const FUNCTIONS = new Set(`url var calc min max clamp rgb rgba hsl hsla hwb lab lch oklab oklch color color-mix
   linear-gradient radial-gradient conic-gradient repeating-linear-gradient repeating-radial-gradient repeating-conic-gradient
   repeat minmax fit-content translate translateX translateY translateZ translate3d scale scaleX scaleY scaleZ scale3d
   rotate rotateX rotateY rotateZ rotate3d skew skewX skewY matrix matrix3d perspective
   cubic-bezier steps linear blur brightness contrast drop-shadow grayscale hue-rotate invert opacity saturate sepia
-  inset circle ellipse polygon path`.toLowerCase().split(/\s+/));
+  inset circle ellipse polygon path
+  abs sign mod rem round sin cos tan asin acos atan atan2 pow sqrt hypot`.toLowerCase().split(/\s+/));
 
 export function validateCssStructure(css) {
   const tokens = [];
