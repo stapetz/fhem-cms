@@ -1,4 +1,4 @@
-import { checkSource, isSafeCss, isSafeHtmlUrl, MAX_FREE_HTML, normalizeFreeHtmlCss } from './freehtml.js';
+import { checkSource, extraAttributeAllowed, isSafeCss, isSafeHtmlUrl, MAX_FREE_HTML, normalizeFreeHtmlCss } from './freehtml.js';
 import { validateCssStructureDetailed } from './freehtml-css.js';
 
 const NUMERIC_PLACEHOLDER = /\{\{\s*([A-Za-z0-9_.-]+):(@?[A-Za-z0-9_.-]+)((?:\s*\|\s*(?:int|round\([0-6]\)|default\(-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)\)))*)\s*\}\}/g;
@@ -64,7 +64,7 @@ function trimmedOffsets(value, offsets) {
   const trimmed = value.trim();
   return {
     value: trimmed,
-    start: offsets[leading] ?? offsets[0],
+    start: offsets[leading]?.[0] ?? offsets[0]?.[0],
     end: offsets[leading + trimmed.length - 1] ? offsets[leading + trimmed.length - 1][1] : offsets.at(-1)?.[1],
   };
 }
@@ -354,8 +354,8 @@ function locateKnownFailure(source, message) {
   const findToken = (element) => {
     for (let index = tokenIndex; index < tokens.length; index++) {
       const token = tokens[index];
-      if (token.name !== element.localName) continue;
-      const matches = [...element.attributes].every((attribute) => sourceAttr(token, attribute.name));
+      if (token.name !== element.localName.toLowerCase()) continue;
+      const matches = [...element.attributes].every((attribute) => sourceAttr(token, attribute.name.toLowerCase()));
       if (!matches) continue;
       tokenIndex = index + 1;
       return token;
@@ -372,13 +372,14 @@ function locateKnownFailure(source, message) {
     }
     for (const attribute of element.attributes) {
       const name = attribute.name;
-      const sourceAttribute = sourceAttr(token, name);
+      const sourceAttribute = sourceAttr(token, name.toLowerCase());
       if (!sourceAttribute) continue;
       if (tag === 'iframe' && name === 'src' && message === 'Die Einbettung benötigt eine HTTP-/HTTPS-URL oder einen lokalen Pfad.'
-        && !isSafeHtmlUrl(attribute.value)) {
+        && !extraAttributeAllowed(tag, name, attribute.value)) {
         return result(source, message, sourceAttribute.valueStart, sourceAttribute.valueEnd, 'html-attribute-value');
       }
-      if (message === `Das Attribut „${name}“ ist nicht erlaubt (Element <${tag}>)`) {
+      if (message === `Das Attribut „${name}“ ist nicht erlaubt (Element <${tag}>)`
+        && !extraAttributeAllowed(tag, name, attribute.value)) {
         return result(source, message, sourceAttribute.nameStart, sourceAttribute.nameEnd, 'html-attribute');
       }
       if (name === 'style' && message === 'Das style-Attribut enthält nicht erlaubte CSS-Eigenschaften oder Werte (z-index maximal 100).'

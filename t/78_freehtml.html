@@ -385,6 +385,14 @@ try {
     && entityStyle.slice(entityDiagnostic.start, entityDiagnostic.end) === '101',
   'quoted greater-than and attribute entities retain source positions');
   const repeatedTag = '<!-- <script> --><div><script src=x>' + '</scr' + 'ipt></div>';
+  const repeatedHref = '<svg><defs><linearGradient id="gradient"/></defs><use href="#gradient"/><use href="https://example.test/external.svg"/></svg>';
+  const repeatedHrefDiagnostic = diagnoseFreeHtml(repeatedHref);
+  check(repeatedHrefDiagnostic.start === repeatedHref.lastIndexOf('href='),
+    'attribute diagnostics skip an earlier allowed occurrence and preserve mixed-case SVG positions');
+  const conditionSource = '<div data-cms-class="Test:state=on:active; invalid"></div>';
+  const conditionDiagnostic = diagnoseFreeHtml(conditionSource);
+  check(conditionSource.slice(conditionDiagnostic.start, conditionDiagnostic.end) === 'invalid',
+    'condition diagnostics highlight the exact invalid condition rather than its whole attribute');
   const repeatedDiagnostic = diagnoseFreeHtml(repeatedTag);
   check(repeatedDiagnostic?.reason === 'html-element'
     && repeatedTag.slice(repeatedDiagnostic.start, repeatedDiagnostic.end) === 'script'
@@ -415,7 +423,7 @@ try {
     && window.freeHtmlDiagnosticExecuted !== true,
   'untrusted diagnostic source is rendered as marked text, never as HTML');
   diagnosticWidget.shadowRoot.querySelector('[data-diagnostic-jump]').click();
-  check(document.activeElement === diagnosticWidget && editor.matches(':focus')
+  check(document.activeElement === diagnosticWidget && diagnosticWidget.shadowRoot.activeElement === editor
     && editor.value.slice(editor.selectionStart, editor.selectionEnd) === 'onerror',
   'diagnostic jump focuses the editor and selects the offending token');
   editor.value = '<div>valid</div>';

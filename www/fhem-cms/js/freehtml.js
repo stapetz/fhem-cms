@@ -80,7 +80,7 @@ function resolveNumericTemplate(text, lookup, coordinate = false) {
   return valid ? value : null;
 }
 
-function extraAttributeAllowed(tag, name, value) {
+export function extraAttributeAllowed(tag, name, value) {
   name = name.toLowerCase();
   if (tag === 'animate') {
     if (name === 'attributename') return /^(?:x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|width|height|d|points|opacity|fill|stroke|fill-opacity|stroke-opacity|stroke-width|stroke-dasharray|stroke-dashoffset|font-size|letter-spacing|stop-color|stop-opacity)$/.test(value);
