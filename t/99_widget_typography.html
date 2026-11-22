@@ -55,6 +55,15 @@ const measurements=[];
 const check=(condition,message) => {if(!condition) throw new Error(message); checks++;};
 const settle=() => new Promise(resolve => setTimeout(resolve,180));
 const font=element => parseFloat(getComputedStyle(element).fontSize);
+// A dynamically appearing classic scrollbar can make clientWidth differ from the cqi reference.
+const containerUnit=(container) => {
+  const probe=document.createElement('span');
+  probe.style.cssText='position:absolute;visibility:hidden;pointer-events:none;width:10cqi;height:0;padding:0;border:0';
+  container.append(probe);
+  const width=parseFloat(getComputedStyle(probe).width);
+  probe.remove();
+  return width;
+};
 const measure=(host,layout,width,scale=1) => {
   const root=host.shadowRoot, tile=root.querySelector('.tile');
   if(host.localName==='cms-html') {
@@ -63,9 +72,8 @@ const measure=(host,layout,width,scale=1) => {
   }
   if(host.localName==='cms-text') {
     const body=font(root.querySelector('[data-body]'));
-    const tileCss=getComputedStyle(tile);
-    const inner=tile.clientWidth-parseFloat(tileCss.paddingLeft)-parseFloat(tileCss.paddingRight);
-    const expected=Math.max(18,Math.min(24,inner*.045),Math.min(inner*.1,18/scale));
+    const unit=containerUnit(tile);
+    const expected=Math.max(18,Math.min(24,unit*.45),Math.min(unit,18/scale));
     check(Math.abs(body-expected)<.1,`${layout}: responsive richtext default ${body}/${expected}`);
     check(Math.abs(font(root.querySelector('[data-body] h2'))-body*1.2)<.01,`${layout}: richtext heading relative`);
     const authored=document.createElement('span');
@@ -92,13 +100,12 @@ const measure=(host,layout,width,scale=1) => {
   const label=selector && root.querySelector(selector);
   if(label) {
     const ratio=font(label)/base;
-    const tileCss=getComputedStyle(tile);
-    const inner=tile.clientWidth-parseFloat(tileCss.paddingLeft)-parseFloat(tileCss.paddingRight);
+    const unit=containerUnit(tile);
     const expectedRatio=host.localName==='cms-thermostat'?1.125:host.localName==='cms-solar-energy'?
-      .9*Math.max(16,base*.84,Math.min(inner*.08,16/scale))/base:host.localName==='cms-solarflow'?16/base:
-      host.localName==='cms-calllist'?Math.max(base*1.125,Math.min(inner*.1,18/scale))/base:
+      .9*Math.max(16,base*.84,Math.min(unit*.8,16/scale))/base:host.localName==='cms-solarflow'?16/base:
+      host.localName==='cms-calllist'?Math.max(base*1.125,Math.min(unit,18/scale))/base:
       host.localName==='cms-link'?1.2:1;
-    check(Math.abs(ratio-expectedRatio)<.01,`${host.localName}: label ${font(label)} relative to ${base}`);
+    check(Math.abs(ratio-expectedRatio)<.01,`${layout}/${width}/${scale}/${host.localName}: label ${font(label)} relative to ${base}, expected ${expectedRatio*base}`);
   }
   if(host.localName==='cms-calllist') {
     const table=root.querySelector('table');
@@ -119,6 +126,25 @@ const measure=(host,layout,width,scale=1) => {
     } else {
       check(cells.some(cell => getComputedStyle(cell,'::before').content.includes('Name')),
         `${layout}: narrow cards retain visible column labels`);
+    }
+    if(layout==='freeform' && width===400 && scale===.25) {
+      const style=document.createElement('style');
+      style.textContent='.tile::-webkit-scrollbar { width:15px; }';
+      root.append(style);
+      const tall=document.createElement('span');
+      tall.style.cssText='position:absolute;top:0;width:0;height:2000px;visibility:hidden';
+      tile.append(tall);
+      const css=getComputedStyle(tile);
+      const gutter=tile.offsetWidth-tile.clientWidth-parseFloat(css.borderLeftWidth)-parseFloat(css.borderRightWidth);
+      const unit=containerUnit(tile);
+      const oldUnit=(tile.clientWidth-parseFloat(css.paddingLeft)-parseFloat(css.paddingRight))*.1;
+      const expected=Math.max(base*1.125,Math.min(unit,18/scale));
+      check(gutter>=14,`${layout}: classic scrollbar gutter is present`);
+      check(Math.abs(unit-oldUnit)>1,`${layout}: scrollbar makes clientWidth unsuitable for container units`);
+      check(Math.abs(font(table)-expected)<.1,
+        `${layout}: scaled font uses actual container units with a classic scrollbar`);
+      tall.remove();
+      style.remove();
     }
   }
   if(host.localName==='cms-solarflow') {
