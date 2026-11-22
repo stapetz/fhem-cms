@@ -41,6 +41,7 @@ function checkFlowGeometry(host, label) {
   }
 }
 const root = document.querySelector('#grid');
+const flowFontHeights = {};
 const source = (device, reading) => ({ device, reading });
 const core = { pv: source('PV', 'power'), home: source('Home', 'load'),
   grid: source('Grid', 'power'), battery: source('Battery', 'power'), soc: source('Battery', 'soc'),
@@ -147,6 +148,30 @@ try {
         'desktop yield rows align even when the heading total wraps');
       check($('.flow').clientHeight <= 370 && $('.node').getBoundingClientRect().width <= 181,
         `flow remains compact with room for labels and border-to-border connections: ${$('.flow').clientHeight}`);
+      for (const family of ['Arial, sans-serif', 'Georgia, serif', 'monospace']) {
+        $('.flow').style.fontFamily = family;
+        await pause(120);
+        const flow = $('.flow');
+        flowFontHeights[family] = flow.clientHeight;
+        check(flow.clientHeight <= 370, `${family}: flow remains at most 370px: ${flow.clientHeight}`);
+        checkFlowGeometry(host, family);
+        for (const key of ['pv', 'bat', 'home', 'grid']) {
+          const station = $(`[data-station="${key}"]`).getBoundingClientRect();
+          for (const element of host.shadowRoot.querySelectorAll(`[data-station="${key}"] .label, [data-power="${key}"], [data-note="${key}"]`)) {
+            const box = element.getBoundingClientRect();
+            check(box.top >= station.top && box.bottom <= station.bottom && box.left >= station.left && box.right <= station.right
+              && element.scrollHeight <= element.clientHeight + 1 && element.scrollWidth <= element.clientWidth + 1,
+            `${family}/${key}: all text is visible inside its station`);
+          }
+        }
+        const powers = ['bat', 'home', 'grid'].map(key => $(`[data-power="${key}"]`).getBoundingClientRect());
+        check(powers.every(box => Math.abs(box.top - powers[0].top) < 1),
+          `${family}: lower station values stay aligned`);
+        check($('progress').getBoundingClientRect().top >= $('[data-note="bat"]').getBoundingClientRect().bottom,
+          `${family}: battery bar does not overlap its explanation`);
+      }
+      $('.flow').style.removeProperty('font-family');
+      await pause(120);
       const lower = ['bat', 'home', 'grid'].map(key => $(`.${key}`).getBoundingClientRect());
       check(lower.every(box => Math.abs(box.top - lower[0].top) < 1
         && Math.abs(box.bottom - lower[0].bottom) < 1), 'desktop station frames align across browsers');
@@ -334,7 +359,7 @@ try {
   check(extraDay.value === '', 'manually cleared yield source remains empty');
   host.closeConfig(false);
   host.config = widget;
-  output.dataset.result = 'pass'; output.textContent = JSON.stringify({ checks });
+  output.dataset.result = 'pass'; output.textContent = JSON.stringify({ checks, flowFontHeights });
 } catch (error) {
   output.dataset.result = 'fail'; output.textContent = `${error.message}\n${error.stack}`;
 } finally {

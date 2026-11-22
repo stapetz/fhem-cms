@@ -64,10 +64,10 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .badge { padding: 3px 10px; border-radius: 20px; font-size: .9em; font-weight: 600;
           color: #10b981; background: rgba(16,185,129,.16); border: 1px solid rgba(16,185,129,.35); }
         .flow { ${detailCardCss} display: grid; grid-template-columns: repeat(3,minmax(0,1fr));
-          grid-template-rows: auto 80px auto auto auto; position: relative; flex: none;
+          grid-template-rows: auto 68px auto auto auto; position: relative; flex: none;
           align-items: center; justify-items: center; padding: 16px 10px 28px; column-gap: 8px;
           font-size: max(1rem, .75em); line-height: 1.2; }
-        .node { min-width: 0; width: 100%; max-width: 180px; padding: 10px 12px; border: 1.5px solid var(--station-color);
+        .node { min-width: 0; width: 100%; max-width: 180px; padding: 10px 4px; border: 1.5px solid var(--station-color);
           border-radius: 12px; text-align: center; position: relative; z-index: 1;
           background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
         .pv { grid-column: 2; grid-row: 1; --station-color: #f59e0b; }

@@ -722,6 +722,7 @@ for (const [name, fixtures] of [
             ? command => command('Emulation.setTouchEmulationEnabled', { enabled: true }) : undefined);
       assert.ok(data.checks >= minimum, `${fixture}: complete regression coverage (${data.checks})`);
       console.log(`${fixture}: ${data.checks} browser checks`);
+      if (fixture.startsWith('85_solar_energy.html')) console.log(`Solar flow font heights: ${JSON.stringify(data.flowFontHeights)}`);
       if (fixture.startsWith('99_widget_typography.html')) {
         console.log(JSON.stringify(data.measurements.filter(row =>
           row.scale === 1 && ['cms-table', 'cms-thermostat', 'cms-solar-energy'].includes(row.widget))));
