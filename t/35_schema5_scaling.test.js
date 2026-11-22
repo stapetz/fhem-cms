@@ -127,7 +127,7 @@ for (const [name, fixtures] of [
       ['89_volvoconnect_order.html?touch=1', 20], ['89_volvoconnect_order.html?columns=96&inline=1',20],
       ['89_volvoconnect_order.html?columns=192',20]]],
   ['widget titles inherit alignment and compact contents fill their available area',
-    [['97_widget_responsive.html', 19], ['36_widget_titles.html', 180], ['37_widget_content.html', 600],
+    [['98_freeform_widget_scaling.html', 121], ['97_widget_responsive.html', 19], ['36_widget_titles.html', 180], ['37_widget_content.html', 600],
       ['39_action_presentation.html', 40], ['40_navigation_orientation.html', 70],
       ['42_richtext_selection.html', 85], ['43_auto_arrange.html', 84],
       ['64_widget_hierarchy.html', 80],

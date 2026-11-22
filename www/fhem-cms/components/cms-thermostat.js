@@ -225,13 +225,14 @@ class FHEMCMSThermostat extends HTMLElement {
           grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
           flex: none; align-content: start; }
         .tile .box { ${detailCardCss} gap: 8px; overflow: visible; }
-        .tile .label { font-size: clamp(1rem, 3cqw, 1.5rem); color: inherit; opacity: .72;
+        .tile .label { font-size: clamp(1.125rem, 4cqw, 1.5rem); color: inherit; opacity: .85;
           letter-spacing: normal; text-transform: none; white-space: normal; }
         .tile .num { font-size: clamp(2rem, 9cqw, 4rem); font-weight: 800; white-space: normal; overflow-wrap: anywhere; }
         .tile .ist .num { color: #3b82f6; }
         .tile .soll .num { color: #f59e0b; }
         .tile .unit { color: inherit; }
         .tile .foot { padding: 0; margin: 0; flex-wrap: wrap; font-size: clamp(1rem, 3cqw, 1.5rem); }
+        .tile .valve span.pct { font-size: clamp(1rem, 3cqw, 1.5rem); }
         .tile .foot select { min-height: 48px; min-width: 0; max-width: 100%; font: inherit; }
         .tile .status { padding: 0; font-size: clamp(1rem, 3cqw, 1.5rem); }
         .tile input[type="range"] { min-height: 48px; }
