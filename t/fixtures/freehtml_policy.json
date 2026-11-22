@@ -1,5 +1,9 @@
 {
   "css": [
+    [".panel{color:red}<!-- === BOX END === -->\n<!-- === NEXT BOX START === -->.value{font-size:2rem}", true],
+    [".panel{color:red}<!-- <script>alert(1)</script> -->.value{font-size:2rem}", true],
+    [".panel{color:red}<!-- unfinished", false],
+    [".panel{color:red}<!-- note -->.value{not-a-css-property:1}", false],
     ["padding: 6px 4px; text-align: right; font-variant-numeric: tabular-nums;", true],
     [".panel{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}", true],
     [".panel{--accent:#10b981;color:var(--accent);box-shadow:0 2px 8px #000;backdrop-filter:blur(4px)}", true],
@@ -72,6 +76,7 @@
     ["https://example.test/\" onload=\"x", false]
   ],
   "html": [
+    ["<style>.panel{color:red}<!-- === BOX END === -->\n<!-- === NEXT BOX START === -->.value{font-size:2rem}</style><div class=\"panel value\">Value</div>", true],
     ["<div id=\"vehicle\" data-map=\"vehicle\" data-latitude=\"{{Sensor:latitude}}\" data-longitude=\"{{Sensor:longitude}}\" data-zoom=\"16\" style=\"height:175px;width:100%\"></div>", true],
     ["<table><tbody><tr><td style=\"padding: 6px 4px; text-align: right; font-variant-numeric: tabular-nums;\">123</td></tr></tbody></table>", true],
     ["<iframe src=\"http://grafana.local:3000/panel\" width=\"100%\" height=\"300\" loading=\"lazy\"></iframe>", true],
