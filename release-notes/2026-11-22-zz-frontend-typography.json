@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-22",
+  "version": "1.24.3-dev",
+  "title": "Aktueller Browserstand und responsive Widgetschrift",
+  "changes": [
+    "CMS-Einstieg revalidiert gecachtes HTML vor dem Laden; alle transitiven Module verwenden den aktuellen Assetstand. Refs #242.",
+    "FHEMWEB-Startlinks mit Assettoken; HTML-Dialog zeigt die geladene Codepruefungsversion. Refs #242.",
+    "Responsive Grundschrift und relative Standardwidgettexte gemaess Styleguide und CSS-Empfehlungen. Refs #239.",
+    "Eigene Freehtml-/Richtext-CSS bleibt erhalten. Nur dev, Geraeteabnahme ausstehend."
+  ]
+}
