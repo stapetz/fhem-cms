@@ -808,6 +808,12 @@ Bei schmaleren Kacheln bleibt die natürliche Kartenhöhe erhalten.
 Das Solar-Flussbild bleibt unter 370px, die Summenleiste unter 90px im
 bestehenden Referenztest; kompaktere interne Summenabstände gleichen die
 größere Schrift aus, ohne die äußeren Widget-/Rasterabstände zu ändern.
+Die Stationen reservieren horizontal 4px statt 12px Innenabstand. So bleibt
+auch bei abweichenden Linux-/Arial-Schriftmetriken mehr Breite für lesbare
+Beschriftungen; der vertikale Verbindungskorridor ist 68px statt 80px hoch und
+bietet zusätzliche Reserve gegenüber dem 370px-Limit. Der Referenztest misst
+zusätzlich Arial, Georgia und Monospace einschließlich Textüberlauf,
+Stationsausrichtung und Flussverbindungen.
 Die Wetterkachel bricht Temperatur-/Symbolgruppen bei Platzmangel um;
 unter 200px Containerbreite wird die Vorhersage zur zweispaltigen Liste,
 statt mit größeren Texten horizontal überzulaufen.
