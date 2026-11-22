@@ -50,6 +50,22 @@
 .cms-admin-toolbar .cms-menu-items .cms-button {
   min-height: 44px;
 }
+.cms-admin-toolbar .cms-menu-items p {
+  max-width: min(22rem, calc(100vw - 3rem));
+  margin: .35rem .5rem;
+  white-space: normal;
+}
+.cms-admin .cms-admin-toolbar .cms-menu-items a.cms-button {
+  display: flex;
+  justify-self: stretch;
+  justify-content: flex-start;
+  grid-column: auto;
+  grid-row: auto;
+  white-space: normal;
+}
+.cms-admin .cms-admin-toolbar .cms-menu-items a[hidden] {
+  display: none;
+}
 .cms-admin section {
   margin-block: 2rem;
 }

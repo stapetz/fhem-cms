@@ -1,8 +1,8 @@
-import { showCmsModal } from './modal-dialog.js';
-import { FhemClient, isValidName } from './fhem-client.js';
-import { createSchema5Transport } from './fcui-schema5-transport.js';
-import { Schema5DraftController } from './fcui-schema5-draft.js';
-import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261113-5';
+import { showCmsModal } from './modal-dialog.js?v=admin-20261122-2';
+import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261122-2';
+import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261122-2';
+import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261122-2';
+import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261122-2';
 
 const CONFIG_LIMIT = 1048576;
 
@@ -122,6 +122,16 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
     $('#import-config').disabled = !configReady;
     $('#export-config').disabled = !configReady;
     $('#configuration-status').setAttribute('aria-busy', String(configurationBusy));
+    const device = deviceSelect.value;
+    for (const link of root.querySelectorAll('.cms-editor-link')) {
+      link.hidden = !device || !inventory;
+      if (!link.hidden) {
+        link.href = `${client.base.pathname.replace(/\/$/, '')}/fhem-cms/${encodeURIComponent(device)}/index.html?mode=edit`;
+      } else {
+        link.removeAttribute('href');
+      }
+    }
+    root.querySelectorAll('.cms-editor-hint').forEach(hint => { hint.hidden = !!device && !!inventory; });
   };
   const message = (text, error = false) => {
     status.textContent = text;
@@ -374,6 +384,13 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
   $('#close-window').addEventListener('click', closeWindow);
   root.addEventListener('keydown', event => {
     if (event.key !== 'Escape' || event.defaultPrevented) return;
+    const activeDialog = event.target.closest?.('dialog[open]') || root.querySelector('dialog[open]');
+    if (activeDialog) {
+      event.preventDefault();
+      if (activeDialog === importDialog) pendingImport = null;
+      activeDialog.close('cancel');
+      return;
+    }
     const openMenu = root.querySelector('.cms-menu[open]');
     if (openMenu) {
       event.preventDefault();
@@ -381,7 +398,6 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
       openMenu.querySelector('summary').focus();
       return;
     }
-    if (root.querySelector('dialog[open]')) return;
     event.preventDefault();
     closeWindow();
   });

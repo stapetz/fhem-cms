@@ -1,10 +1,24 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import {
   CmsAdminClient, createCmsConfigurationSession, requestAdminClose, validateInventory,
 } from '../www/fhem-cms/js/cms-admin.js';
 import { applyCmsAdminAppearance, createCmsAdminMenuLinks } from '../www/fhem-cms/js/cms-admin-link.js';
 import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
+
+test('admin entry points and directly imported helpers have matching cache versions', async () => {
+  const html = await readFile(new URL('../www/fhem-cms/admin.html', import.meta.url), 'utf8');
+  const script = await readFile(new URL('../www/fhem-cms/js/cms-admin.js', import.meta.url), 'utf8');
+  const version = html.match(/js\/cms-admin\.js\?v=([^"]+)/)?.[1];
+  assert.ok(version);
+  for (const asset of ['css/fhem-cms.css', 'css/cms-admin.css']) {
+    assert.ok(html.includes(`${asset}?v=${version}`), asset);
+  }
+  const imports = [...script.matchAll(/from '\.\/([^']+)'/g)];
+  assert.equal(imports.length, 5);
+  for (const [, path] of imports) assert.ok(path.endsWith(`?v=${version}`), path);
+});
 
 test('administration accepts bounded themes and local CMS backgrounds and rejects injected appearance', () => {
   const styles = new Map();

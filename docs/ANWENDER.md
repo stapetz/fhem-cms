@@ -90,6 +90,11 @@ Browsercaches.
   Schema-6-Konfiguration zu laden. Unter **Datei** lässt sich die Konfiguration
   als JSON exportieren; wenn ein Entwurf vorhanden ist, wird dieser exportiert,
   sonst der Live-Stand. Medien sind nicht enthalten.
+- Die Menüs **Konfiguration**, **Seiten** und **Darstellung** führen zum
+  bestehenden Editor des ausgewählten CMS. Dort die gewünschte Seite und
+  **Bearbeiten → Seiteneinstellungen** wählen; Widgets, Sicherungen und Medien
+  bleiben über die vorhandenen Editor-Menüs zugänglich. Die einzelnen
+  Einstellungen werden nicht direkt in der Administration bearbeitet.
 - **JSON als Entwurf importieren** prüft die Datei mit den vorhandenen
   Schema-Controllern und ersetzt nach Bestätigung nur den Entwurf. Die
   Live-Konfiguration bleibt unverändert; Medien werden nicht importiert.
