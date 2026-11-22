@@ -136,7 +136,7 @@ class FHEMCMSCallList extends HTMLElement {
           background: rgba(128,128,128,.08); border-spacing: 0; border-collapse: separate; }
         .tile th, .tile td { padding: .2em .25em; vertical-align: middle; border-bottom: 1px solid rgba(128,128,128,.1); }
         .tile th { color: inherit; font-size: .85em; font-weight: 700; }
-        .tile th[data-column=state] { width:3.5em; }
+        .tile th[data-column=state] { width:3.5em; white-space:nowrap; font-size:min(.85em, 6cqi); }
         .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=state] { width:14%; }
         .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=timestamp] { width:36%; }
         .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=duration] { width:20%; }
@@ -305,7 +305,8 @@ class FHEMCMSCallList extends HTMLElement {
       const th = document.createElement('th');
       th.scope = 'col';
       th.dataset.column = column;
-      th.textContent = LABELS.get(column) || column;
+      th.textContent = column === 'state' ? 'Art' : (LABELS.get(column) || column);
+      if (column === 'state') th.setAttribute('aria-label', LABELS.get(column));
       return th;
     }));
     updateWidgetDom(head, nextHead);
