@@ -1032,10 +1032,12 @@ sub FHEMCMS_ValidateConfig {
 
     my %pageIds;
     for my $page (@{$config->{pages}}) {
-        my @pageFields = $fcui ? ('background') : ();
+        my @pageFields = $fcui ? ('background', 'kiosk') : ();
         push(@pageFields, 'layoutMode', 'canvas', 'navigationRect') if ($targetSchema == 6);
         $err = $exact->($page, 'Seite', ['id', 'title', 'widgets'], \@pageFields);
         return $err if ($err);
+        return 'Ungueltiger Kioskmodus der Seite'
+            if (exists($page->{kiosk}) && !$isBool->($page->{kiosk}));
         return 'Ungueltiger Layoutmodus der Seite'
             if (exists($page->{layoutMode}) && (!defined($page->{layoutMode}) || ref($page->{layoutMode})
                 || $page->{layoutMode} !~ /\A(?:grid|freeform)\z/));

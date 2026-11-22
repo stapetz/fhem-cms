@@ -26,6 +26,21 @@ my $config = {
     ],
 };
 my $bytes = $json->encode($config);
+for my $schema (5, 6) {
+    my $kiosk = $json->decode($bytes);
+    if ($schema == 5) {
+        pop(@{$kiosk->{pages}});
+        $kiosk->{schemaVersion} = 5;
+    }
+    for my $value (JSON::PP::true, JSON::PP::false) {
+        $kiosk->{pages}[0]{kiosk} = $value;
+        is(FHEMCMS_ValidateConfig($kiosk, $schema), undef, "schema $schema accepts boolean kiosk setting");
+    }
+    for my $value (1, 'true', undef, {}) {
+        $kiosk->{pages}[0]{kiosk} = $value;
+        like(FHEMCMS_ValidateConfig($kiosk, $schema), qr/Kioskmodus/, "schema $schema rejects non-boolean kiosk");
+    }
+}
 is(FHEMCMS_ValidateConfig($config, 6), undef, 'mixed pages, allowed overlap and exact canvas-edge placement');
 is($json->encode($config), $bytes, 'validation does not rewrite defaults or remembered grid positions');
 my $legacy = $json->decode($bytes);
