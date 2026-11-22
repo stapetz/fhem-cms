@@ -9,9 +9,9 @@ const TAGS = new Set(['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'strong', 'b',
   'h5', 'h6', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'figure', 'figcaption',
   'details', 'summary', 'dl', 'dt', 'dd', 'pre', 'code', 'blockquote', 'sub', 'sup', 'mark',
   'caption', 'tfoot', 'a', 'img', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line',
-  'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'pattern', 'title', 'desc', 'iframe']);
+  'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'pattern', 'animate', 'title', 'desc', 'iframe']);
 const SVG_TAGS = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
-  'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'pattern', 'title', 'desc']);
+  'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'pattern', 'animate', 'title', 'desc']);
 const SVG_ATTRIBUTES = new Set(['viewbox', 'preserveaspectratio', 'd', 'x', 'y', 'x1', 'y1', 'x2', 'y2',
   'cx', 'cy', 'r', 'rx', 'ry', 'dx', 'dy', 'points', 'transform', 'fill', 'stroke', 'stroke-width',
   'fill-rule', 'fill-opacity', 'stroke-opacity', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray',
@@ -82,6 +82,25 @@ function resolveNumericTemplate(text, lookup, coordinate = false) {
 
 function extraAttributeAllowed(tag, name, value) {
   name = name.toLowerCase();
+  if (tag === 'animate') {
+    if (name === 'attributename') return /^(?:x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|width|height|d|points|opacity|fill|stroke|fill-opacity|stroke-opacity|stroke-width|stroke-dasharray|stroke-dashoffset|font-size|letter-spacing|stop-color|stop-opacity)$/.test(value);
+    if (name === 'attributetype') return value === 'XML' || value === 'CSS' || value === 'auto';
+    if (['from', 'to', 'by', 'values'].includes(name)) {
+      return value.length <= 4000 && /^[A-Za-z0-9#.,;%()+\s-]+$/.test(value)
+        && !/url|expression|behavior|binding|javascript/i.test(value);
+    }
+    if (['begin', 'end', 'dur', 'repeatdur', 'min', 'max'].includes(name)) {
+      return /^(?:indefinite|-?[0-9]+(?:\.[0-9]+)?(?:ms|s|min|h)?|[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?(?:\.[0-9]+)?)$/.test(value);
+    }
+    if (name === 'repeatcount') return /^(?:indefinite|[0-9]+(?:\.[0-9]+)?)$/.test(value);
+    if (name === 'fill') return value === 'freeze' || value === 'remove';
+    if (name === 'calcmode') return ['discrete', 'linear', 'paced', 'spline'].includes(value);
+    if (name === 'additive') return value === 'replace' || value === 'sum';
+    if (name === 'accumulate') return value === 'none' || value === 'sum';
+    if (name === 'restart') return ['always', 'whenNotActive', 'never'].includes(value);
+    if (['keytimes', 'keysplines', 'keypoints'].includes(name)) return value.length <= 4000 && /^[0-9.;\s]+$/.test(value);
+    if (name === 'href' || name === 'transform') return false;
+  }
   if (name === 'id') return /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value);
   if (name.startsWith('data-cms-')) return false;
   if (/^(?:aria-[a-z-]+|data-[a-z0-9-]+|role)$/.test(name)) return value.length <= 200;

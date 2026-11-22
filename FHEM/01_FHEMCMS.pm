@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.23.13-dev';
+our $FHEMCMS_VERSION = '1.24.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1767,6 +1767,22 @@ sub FHEMCMS_FreeHtmlCss {
 
 sub FHEMCMS_FreeHtmlExtraAttribute {
     my ($tag, $name, $value) = @_;
+    if ($tag eq 'animate') {
+        return $value =~ /\A(?:x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|width|height|d|points|opacity|fill|stroke|fill-opacity|stroke-opacity|stroke-width|stroke-dasharray|stroke-dashoffset|font-size|letter-spacing|stop-color|stop-opacity)\z/ if ($name eq 'attributename');
+        return $value =~ /\A(?:XML|CSS|auto)\z/ if ($name eq 'attributetype');
+        return length($value) <= 4000 && $value =~ /\A[A-Za-z0-9#.,;%()+\s-]+\z/
+            && $value !~ /url|expression|behavior|binding|javascript/i if ($name =~ /\A(?:from|to|by|values)\z/);
+        return $value =~ /\A(?:indefinite|-?[0-9]+(?:\.[0-9]+)?(?:ms|s|min|h)?|[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?(?:\.[0-9]+)?)\z/
+            if ($name =~ /\A(?:begin|end|dur|repeatdur|min|max)\z/);
+        return $value =~ /\A(?:indefinite|[0-9]+(?:\.[0-9]+)?)\z/ if ($name eq 'repeatcount');
+        return $value =~ /\A(?:freeze|remove)\z/ if ($name eq 'fill');
+        return $value =~ /\A(?:discrete|linear|paced|spline)\z/ if ($name eq 'calcmode');
+        return $value =~ /\A(?:replace|sum)\z/ if ($name eq 'additive');
+        return $value =~ /\A(?:none|sum)\z/ if ($name eq 'accumulate');
+        return $value =~ /\A(?:always|whenNotActive|never)\z/ if ($name eq 'restart');
+        return length($value) <= 4000 && $value =~ /\A[0-9.;\s]+\z/ if ($name =~ /\A(?:keytimes|keysplines|keypoints)\z/);
+        return 0 if ($name eq 'href' || $name eq 'transform');
+    }
     return $value =~ /\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/ if ($name eq 'id');
     return 0 if ($name =~ /\Adata-cms-/);
     return length($value) <= 200 if ($name =~ /\A(?:aria-[a-z-]+|data-[a-z0-9-]+|role)\z/);
@@ -1817,7 +1833,7 @@ sub FHEMCMS_ValidateFreeHtml {
     my %tags = map { $_ => 1 } qw(div span p h1 h2 h3 h4 strong b em i u small br hr ul ol li
         table thead tbody tr th td style h5 h6 section article header footer main aside nav figure figcaption
         details summary dl dt dd pre code blockquote sub sup mark caption tfoot a img svg g path rect circle
-        ellipse line polyline polygon text tspan defs lineargradient radialgradient stop clippath mask use pattern title desc iframe);
+        ellipse line polyline polygon text tspan defs lineargradient radialgradient stop clippath mask use pattern animate title desc iframe);
     my %attrs = map { $_ => 1 } qw(class style title colspan rowspan data-cms-class device reading filter);
 
     $html =~ s/<!--(?:(?!-->).)*-->//gs;

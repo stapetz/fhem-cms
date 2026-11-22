@@ -33,6 +33,12 @@ Verfügbarkeitsstatus. Externe Texte werden ausschließlich als Text eingefügt.
 
 ## Freeform-Seiten (Schema 6, geplant)
 
+Freies HTML erlaubt `animate` fuer passive SVG-Geometrie-, Farb- und
+Opazitaetsanimationen mit Zeitangaben, Wiederholung und Interpolation.
+Zielattribute wie `href`, `style` und Ereignisse sind nicht freigegeben (Refs #236).
+Fuer SVG-Geometrieanimationen empfiehlt sich `attributeType="XML"`, damit
+der Browser sie nicht als CSS-Geometrieeigenschaft behandelt.
+
 Freies HTML unterstützt numerische Readings in SVG-Geometrie, lokale SVG-`use`-Ziele
 innerhalb desselben SVG sowie Clip-Pfade und Masken. CSS erlaubt zusätzlich
 Motion-Path-Eigenschaften. Eigene und importierte Styles bleiben aus

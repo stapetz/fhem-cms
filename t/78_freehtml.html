@@ -251,6 +251,24 @@ try {
   const badge = animated.shadowRoot.querySelector('.badge').getBoundingClientRect();
   check(badge.left >= bounds.left && badge.right <= bounds.right, 'fixed badge remains in widget rather than viewport');
   animated.remove();
+  const smil = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="10"><animate attributeName="r" attributeType="XML" values="10;20;10" dur="2s" repeatCount="indefinite"/></circle></svg>';
+  check(checkSource(smil) === null, 'passive SVG animate validates');
+  const smilHost = document.createElement('div');
+  smilHost.style.cssText = 'position:fixed;inset:0;width:100px;height:100px';
+  document.body.append(smilHost);
+  smilHost.attachShadow({ mode: 'open' }).append(renderTemplate(sanitize(smil), () => ''));
+  const smilSvg = smilHost.shadowRoot.querySelector('svg');
+  check(smilSvg.querySelector('animate').getAttribute('attributeName') === 'r', 'SMIL animation target survives sanitizing');
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  smilSvg.pauseAnimations();
+  smilSvg.setCurrentTime(0);
+  smilSvg.querySelector('animate').beginElement();
+  smilSvg.setCurrentTime(0.5);
+  smilSvg.querySelector('circle').getBBox();
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  check(Math.abs(smilSvg.querySelector('circle').getBBox().width - 30) < 0.1,
+    'SVG animate actually changes geometry');
+  smilHost.remove();
   const dashboard = await (await fetch('fixtures/volvo_dashboard.html')).text();
   check(checkSource(dashboard) === null, 'complete reported Volvo dashboard validates with corrected map source');
   const values = {
