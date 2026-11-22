@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<main class="cms-shell"><div id="root" class="grid-stack cms-schema5-grid" style="width: 800px"></div></main>
+<p id="status"></p><output id="result">pending</output>
+<script type="module">
+  import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+  import { Schema5View } from '../www/fhem-cms/js/fcui-schema5-view.js';
+  const root = document.querySelector('#root');
+  const result = document.querySelector('#result');
+  const config = {schemaVersion:5, settings:{layoutMode:'grid',gridColumns:12},
+    navigation:{orientation:'horizontal',grid:{col:1,row:1,w:12,h:1}},
+    pages:[{id:'start',title:'Start',widgets:[]}, {id:'kiosk',title:'Kiosk',kiosk:true,widgets:[]}]};
+  const params = new URLSearchParams(location.search);
+  const editing = params.get('mode') === 'edit';
+  const freeform = params.get('layout') === 'freeform';
+  if (freeform) {
+    const canvas = {width:1000, height:800, scaling:'width'};
+    config.schemaVersion = 6;
+    config.settings.pageCanvas = canvas;
+    Object.assign(config.pages[1], {layoutMode:'freeform', canvas});
+  }
+  let edited = false;
+  const editor = editing && {onEdit:(_pageId, id) => { edited = id === '__nav'; }, onChange:() => {},
+    onFreeformChange:() => {}};
+  const client = {jsonlist:async () => [], subscribe:() => {}, unsubscribe:() => {}};
+  const check = (condition, message) => { if (!condition) throw new Error(message); };
+  try {
+    const view = new Schema5View({GridStack, root, status:document.querySelector('#status'),
+      config, client, services:{}, browser:window, editing:editor});
+    await view.start();
+    check(view.current === 'kiosk', 'direct hash route');
+    const nav = root.querySelector(freeform ? '.cms-freeform-navigation' : '.cms-responsive-navigation');
+    check(Boolean(nav), 'navigation mounted');
+    if (editing) {
+      check(!root.hasAttribute('data-kiosk') && getComputedStyle(nav).display !== 'none', 'editor navigation visible');
+      check(nav.querySelector('.cms-nav-kioskpage'), 'editor kiosk marker');
+      nav.querySelector('.cms-widget-config').click();
+      check(edited, 'navigation editing on non-start page');
+    } else {
+      check(root.hasAttribute('data-kiosk') && root.querySelector('.cms-nav').getClientRects().length === 0, 'live kiosk navigation hidden');
+      await view.showPage('start');
+      check(!root.hasAttribute('data-kiosk'), 'navigation restored on ordinary page');
+      check(root.querySelector('.cms-nav').getClientRects().length > 0, 'ordinary navigation visible');
+    }
+    view.stop();
+    result.dataset.result = 'pass';
+    result.textContent = editing ? 'editor pass' : 'live pass';
+  } catch (error) {
+    result.dataset.result = 'fail';
+    result.textContent = `fail: ${error.message}`;
+  }
+</script>
+</html>

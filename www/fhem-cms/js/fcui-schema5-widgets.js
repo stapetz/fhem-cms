@@ -105,7 +105,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     const entries = pixel ? Array.from(freeform.wrappers)
       : Array.from(gridRoot.children, wrapper => [wrapper.gridstackNode?.id, wrapper])
         .filter(([id]) => !frame || id !== '__nav');
-    if (frame && pageId === config.pages[0].id) entries.unshift(['__nav', frame.navBox]);
+    if (frame) entries.unshift(['__nav', frame.navBox]);
     for (const [id, wrapper] of entries) {
       const widget = widgets.get(id);
       const gridItem = Boolean(grid && wrapper !== frame?.navBox);
@@ -200,8 +200,8 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       if (!destroyed) editing.onChange(grid.save(false));
     });
   }
-  const stopEditor = frame && editing?.onFreeformChange && (pixel || pageId === config.pages[0].id)
-    ? mountFreeformEditor(root, framePage, frame, editing, navigation, pageId === config.pages[0].id) : null;
+  const stopEditor = frame && editing?.onFreeformChange
+    ? mountFreeformEditor(root, framePage, frame, editing, navigation, true) : null;
   return {
     measureGrid() {
       if (!grid || !editing) return undefined;

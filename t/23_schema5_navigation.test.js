@@ -42,6 +42,37 @@ if ($operation eq 'read') {
 print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error});
 `;
 
+test('kiosk selection is page-specific, cancellable and saved only to the draft', async () => {
+  const previous = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const live = { schemaVersion: 5, settings: { layoutMode: 'grid', gridColumns: 12 },
+      navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
+      pages: [{ id: 'one', title: 'Eins', widgets: [] }, { id: 'two', title: 'Zwei', widgets: [] }] };
+    let saved;
+    const controller = { snapshot: () => ({live: structuredClone(live), draft: null, token: 'token'}),
+      saveDraft: async candidate => { saved = candidate; return {}; } };
+    const root = new Element('section');
+    let confirmations = 0;
+    const panel = new Schema5NavigationPanel({ root, controller, token: 'token',
+      browser: {confirm: () => { confirmations += 1; return false; }}, onClose: () => {} });
+    const rows = root.children[3].children[2].children;
+    const checkbox = rows[2].children[9].children[0];
+    assert.equal(checkbox.checked, false);
+    assert.match(checkbox.attributes['aria-label'], /Kioskmodus/);
+    checkbox.checked = true;
+    checkbox.fire('change');
+    root.children[4].children[0].fire('click');
+    assert.equal(confirmations, 1);
+    assert.equal(saved, undefined);
+    await root.children[4].children[1].fire('click');
+    assert.equal(saved.pages[1].kiosk, true);
+    assert.equal(saved.pages[0].kiosk, undefined);
+    assert.equal(live.pages[1].kiosk, undefined);
+    panel.close();
+  } finally { globalThis.document = previous; }
+});
+
 test('navigation panel manages pages, order, shared sizes and files against real Perl', async () => {
   const previous = globalThis.document;
   globalThis.document = { createElement: (tag) => new Element(tag) };
