@@ -80,7 +80,7 @@ function extraAttributeAllowed(tag, name, value) {
   if ((tag === 'iframe' || tag === 'img') && name === 'loading') return value === 'lazy' || value === 'eager';
   if (tag === 'iframe' && name === 'frameborder') return value === '0';
   if (tag === 'iframe' && name === 'scrolling') return value === 'yes' || value === 'no' || value === 'auto';
-  if ((tag === 'img' || tag === 'svg' || tag === 'iframe') && (name === 'width' || name === 'height')) {
+  if ((tag === 'img' || tag === 'svg' || tag === 'rect' || tag === 'iframe') && (name === 'width' || name === 'height')) {
     return /^[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?$/.test(value);
   }
   if (tag === 'svg' && name === 'xmlns') return value === 'http://www.w3.org/2000/svg';

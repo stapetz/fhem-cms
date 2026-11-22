@@ -93,6 +93,7 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 - Tabellen: `table thead tbody tfoot tr th td caption`
 - Medien/Navigation: `img a iframe`
 - SVG: `svg g path rect circle ellipse line polyline polygon text tspan defs linearGradient radialGradient stop title desc`; außerdem `<style>`.
+- SVG-Rechtecke (`rect`) unterstützen `width` und `height` mit nichtnegativen Zahlen und optional `px`, `em`, `rem` oder `%`.
 - Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class device reading filter`, außerdem `id`, passive `data-*`-/ARIA-Attribute, `role` und passende Link-/Bild-/SVG-Attribute.
 - `title`, `alt`, ARIA-Attribute und `data-*` dürfen Live-Platzhalter enthalten. Sie werden als Attributtext gesetzt, niemals als HTML. `data-cms-*` ist intern reserviert; die dokumentierte Ausnahme `data-cms-class` bleibt erhalten.
 - **Zusätzlich erlaubt ab 1.11.0:** HTML-Kommentare, passive Struktur wie `section`, `figure`, `details/summary`, `pre/code`, Links und Bilder sowie statisches SVG mit Formen, Pfaden, Text und lokalen Verläufen. Flex-/Grid-Layout und Farben bleiben möglich.
