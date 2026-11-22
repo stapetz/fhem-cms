@@ -40,64 +40,137 @@ const FUNCTIONS = new Set(`url var calc min max clamp rgb rgba hsl hsla hwb lab 
   abs sign mod rem round sin cos tan asin acos atan atan2 pow sqrt hypot`.toLowerCase().split(/\s+/));
 
 export function validateCssStructure(css) {
+  return validateCssStructureDetailed(css) === null;
+}
+
+export function validateCssStructureDetailed(css) {
   const tokens = [];
   let text = '';
+  let textStart = 0;
   let quote = '';
+  let quoteStart = -1;
   const brackets = [];
-  for (const char of css) {
+  const trimmedRange = (value, start) => {
+    const leading = value.length - value.trimStart().length;
+    const trimmed = value.trim();
+    return { value: trimmed, start: start + leading, end: start + leading + trimmed.length };
+  };
+  for (let index = 0; index < css.length; index++) {
+    const char = css[index];
     if (quote) {
       text += char;
       if (char === quote) quote = '';
     } else if (char === '"' || char === "'") {
       quote = char;
+      quoteStart = index;
       text += char;
     } else if (char === '(' || char === '[') {
-      brackets.push(char);
+      brackets.push({ char, start: index });
       text += char;
     } else if (char === ')' || char === ']') {
-      if (brackets.pop() !== (char === ')' ? '(' : '[')) return false;
+      if (brackets.pop()?.char !== (char === ')' ? '(' : '[')) {
+        return { reason: 'unmatched-bracket', start: index, end: index + 1 };
+      }
       text += char;
     } else if (!brackets.length && '{};'.includes(char)) {
-      tokens.push([char, text.trim()]);
+      const range = trimmedRange(text, textStart);
+      tokens.push({ delimiter: char, ...range, delimiterStart: index });
       text = '';
+      textStart = index + 1;
     } else text += char;
   }
-  if (quote || brackets.length) return false;
-  if (text.trim()) tokens.push([';', text.trim()]);
+  if (quote) return { reason: 'unclosed-quote', start: quoteStart, end: quoteStart + 1 };
+  if (brackets.length) {
+    const bracket = brackets.at(-1);
+    return { reason: 'unclosed-bracket', start: bracket.start, end: bracket.start + 1 };
+  }
+  const range = trimmedRange(text, textStart);
+  if (range.value) tokens.push({ delimiter: ';', ...range, delimiterStart: css.length });
   const stack = [];
-  const declaration = (value) => {
-    if (!value) return true;
+  const declaration = (token) => {
+    const { value } = token;
+    if (!value) return null;
     const match = /^([A-Za-z-][A-Za-z0-9_-]*)\s*:\s*(.+)$/s.exec(value);
-    if (!match) return false;
+    if (!match) return { reason: 'invalid-declaration', start: token.start, end: token.end };
     const name = match[1].toLowerCase();
+    const nameStart = token.start + match.index;
+    const bodyStart = token.start + match[1].length + match[0].slice(match[1].length).indexOf(match[2]);
+    const nameEnd = nameStart + match[1].length;
     const body = match[2].replace(/\s*!important\s*$/i, '').trim();
-    if (!PROPERTIES.has(name) && !/^--[A-Za-z0-9_-]{1,64}$/.test(name)) return false;
-    if (name === 'z-index' && !(body === 'auto' || (/^-?[0-9]+$/.test(body) && Number(body) <= 100))) return false;
-    const plain = body.replace(/"[^"]*"|'[^']*'/g, '');
-    if (/[@{}]/.test(plain)) return false;
-    for (const call of plain.matchAll(/([A-Za-z-][A-Za-z0-9-]*)\s*\(/g)) {
-      if (!FUNCTIONS.has(call[1].toLowerCase())) return false;
+    if (!PROPERTIES.has(name) && !/^--[A-Za-z0-9_-]{1,64}$/.test(name)) {
+      return { reason: 'unknown-property', token: match[1], start: nameStart, end: nameEnd };
     }
-    return true;
+    if (name === 'z-index' && !(body === 'auto' || (/^-?[0-9]+$/.test(body) && Number(body) <= 100))) {
+      const valueStart = bodyStart + match[2].length - match[2].trimStart().length;
+      return { reason: 'invalid-z-index', token: body, start: valueStart, end: valueStart + body.length };
+    }
+    let plain = '';
+    const plainOffsets = [];
+    let cursor = 0;
+    for (const quoted of match[2].matchAll(/"[^"]*"|'[^']*'/g)) {
+      for (let offset = cursor; offset < quoted.index; offset++) {
+        plain += match[2][offset];
+        plainOffsets.push(bodyStart + offset);
+      }
+      cursor = quoted.index + quoted[0].length;
+    }
+    for (let offset = cursor; offset < match[2].length; offset++) {
+      plain += match[2][offset];
+      plainOffsets.push(bodyStart + offset);
+    }
+    const invalidChar = /[@{}]/.exec(plain);
+    if (invalidChar) {
+      const start = plainOffsets[invalidChar.index];
+      return { reason: 'invalid-value-token', token: plain[invalidChar.index], start, end: start + 1 };
+    }
+    for (const call of plain.matchAll(/([A-Za-z-][A-Za-z0-9-]*)\s*\(/g)) {
+      if (!FUNCTIONS.has(call[1].toLowerCase())) {
+        const start = plainOffsets[call.index];
+        return { reason: 'unknown-function', token: call[1], start, end: start + call[1].length };
+      }
+    }
+    return null;
   };
-  for (const [delimiter, value] of tokens) {
+  for (const token of tokens) {
+    const { delimiter, value } = token;
     const context = stack.at(-1);
     if (delimiter === '{') {
-      if (context === 'declarations') return false;
-      if (/^@(?:media|supports|container|layer)\b/i.test(value)) stack.push('rules');
-      else if (/^@(?:-webkit-)?keyframes\s+[A-Za-z_][A-Za-z0-9_-]*$/i.test(value)) stack.push('keyframes');
+      if (context?.type === 'declarations') {
+        return { reason: 'nested-rule-in-declarations', start: token.start, end: token.end || token.delimiterStart + 1 };
+      }
+      if (/^@(?:media|supports|container|layer)\b/i.test(value)) stack.push({ type: 'rules', start: token.delimiterStart });
+      else if (/^@(?:-webkit-)?keyframes\s+[A-Za-z_][A-Za-z0-9_-]*$/i.test(value)) {
+        stack.push({ type: 'keyframes', start: token.delimiterStart });
+      }
       else if (value && !value.startsWith('@') && !/:host(?:-context)?\b/i.test(value)
-        && (context !== 'keyframes' || /^(?:(?:from|to|[0-9]+(?:\.[0-9]+)?%)\s*,?\s*)+$/i.test(value))) {
-        stack.push('declarations');
-      } else return false;
+        && (context?.type !== 'keyframes' || /^(?:(?:from|to|[0-9]+(?:\.[0-9]+)?%)\s*,?\s*)+$/i.test(value))) {
+        stack.push({ type: 'declarations', start: token.delimiterStart });
+      } else {
+        return { reason: 'invalid-rule', start: token.start, end: token.end || token.delimiterStart + 1 };
+      }
     } else if (delimiter === '}') {
-      if (!stack.length || (context === 'declarations' ? !declaration(value) : value !== '')) return false;
+      if (!stack.length) return { reason: 'unmatched-brace', start: token.delimiterStart, end: token.delimiterStart + 1 };
+      if (context.type === 'declarations') {
+        const problem = declaration(token);
+        if (problem) return problem;
+      } else if (value !== '') {
+        return { reason: 'unexpected-rule-content', start: token.start, end: token.end };
+      }
       stack.pop();
-    } else if (context === 'declarations') {
-      if (!declaration(value)) return false;
+    } else if (context?.type === 'declarations') {
+      const problem = declaration(token);
+      if (problem) return problem;
     } else if (value && !/^@import\s+"cms-validated-resource"(?:\s+[^{};]+)?$/i.test(value)) {
-      if (stack.length || tokens.some(([kind]) => kind === '{' || kind === '}') || !declaration(value)) return false;
+      if (stack.length || tokens.some((entry) => entry.delimiter === '{' || entry.delimiter === '}')) {
+        return { reason: 'declaration-outside-rule', start: token.start, end: token.end };
+      }
+      const problem = declaration(token);
+      if (problem) return problem;
     }
   }
-  return !stack.length;
+  if (stack.length) {
+    const open = stack.at(-1);
+    return { reason: 'unclosed-rule', start: open.start, end: open.start + 1 };
+  }
+  return null;
 }

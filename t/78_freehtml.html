@@ -4,6 +4,7 @@
 <pre id="result">RUNNING</pre>
 <script type="module">
 import { checkSource, extractDevices, isSafeCss, renderTemplate, sanitize } from '../www/fhem-cms/js/freehtml.js';
+import { diagnoseFreeHtml } from '../www/fhem-cms/js/freehtml-diagnostics.js';
 import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
 import { Schema5WidgetSession } from '../www/fhem-cms/js/fcui-schema5-widget-session.js';
@@ -362,6 +363,74 @@ try {
   anchors.shadowRoot.querySelector('a[href="#missing"]').click();
   check(anchors.shadowRoot.querySelector('[data-cms-fragment-warning]'), 'missing widget anchor explicitly reported');
   anchors.remove();
+  for (const [source, token, reason] of [
+    ['<div style="border-mystery: 1px"></div>', 'border-mystery', 'unknown-property'],
+    ['<div style="color: mystery-fn(1)"></div>', 'mystery-fn', 'unknown-function'],
+    ['<div style="z-index: 101"></div>', '101', 'invalid-z-index'],
+    ['<div style="color: @invalid"></div>', '@', 'invalid-value-token'],
+  ]) {
+    const diagnostic = diagnoseFreeHtml(source);
+    check(diagnostic?.reason === reason && source.slice(diagnostic.start, diagnostic.end) === token,
+      `CSS ${reason} highlights its exact token`);
+  }
+  check(!isSafeCss('.x{color:red;.y{z-index:1}}'), 'nested CSS rules inside declarations remain rejected');
+  const commentedCss = '<style><!-- <img onerror="x"> --> /* z-index: 101; */\r\n.box{border-mystery:1px}</style>';
+  const commentedDiagnostic = diagnoseFreeHtml(commentedCss);
+  check(commentedDiagnostic?.reason === 'unknown-property'
+    && commentedCss.slice(commentedDiagnostic.start, commentedDiagnostic.end) === 'border-mystery',
+  `CSS diagnostics skip HTML and CSS comments while preserving original offsets: ${JSON.stringify(commentedDiagnostic)}`);
+  const entityStyle = '<div title="a > b" style="color:red&#59; z-index:101"></div>';
+  const entityDiagnostic = diagnoseFreeHtml(entityStyle);
+  check(entityDiagnostic?.reason === 'invalid-z-index'
+    && entityStyle.slice(entityDiagnostic.start, entityDiagnostic.end) === '101',
+  'quoted greater-than and attribute entities retain source positions');
+  const repeatedTag = '<!-- <script> --><div><script src=x>' + '</scr' + 'ipt></div>';
+  const repeatedDiagnostic = diagnoseFreeHtml(repeatedTag);
+  check(repeatedDiagnostic?.reason === 'html-element'
+    && repeatedTag.slice(repeatedDiagnostic.start, repeatedDiagnostic.end) === 'script'
+    && repeatedDiagnostic.start === repeatedTag.lastIndexOf('<script') + 1,
+  'repeated tags in comments and markup resolve to the actual offending occurrence');
+  const multiline = '<p>😀\r\n<div style="z-index:101"></div>';
+  const multilineDiagnostic = diagnoseFreeHtml(multiline);
+  const errorLine = multiline.slice(multiline.lastIndexOf('\n') + 1, multilineDiagnostic.start);
+  check(multilineDiagnostic.line === 2 && multilineDiagnostic.column === [...errorLine].length + 1,
+    'diagnostic line and Unicode column handle CRLF');
+  const minified = `<div title="${'x'.repeat(300)}" style="border-mystery:1px"></div>`;
+  const minifiedDiagnostic = diagnoseFreeHtml(minified);
+  check(minifiedDiagnostic.context.length <= 180 && minifiedDiagnostic.context.includes('border-mystery'),
+    'long minified-line context stays bounded around the highlighted token');
+
+  const diagnosticWidget = document.createElement('cms-html');
+  diagnosticWidget.config = { id: 'diagnostic', type: 'fhem-html', html: '', devices: [], grid: { col: 1, row: 1, w: 1, h: 1 } };
+  diagnosticWidget.services = { saveWidget: async () => {} };
+  document.body.append(diagnosticWidget);
+  diagnosticWidget.openConfig();
+  const editor = diagnosticWidget.shadowRoot.querySelector('[name="html"]');
+  const diagnosticPanel = diagnosticWidget.shadowRoot.querySelector('[data-diagnostic]');
+  editor.value = '<img src=x onerror="window.freeHtmlDiagnosticExecuted=true">';
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  check(diagnosticPanel.querySelector('img') === null
+    && diagnosticPanel.querySelector('pre').textContent.includes('<img')
+    && diagnosticPanel.querySelector('mark').textContent === 'onerror'
+    && window.freeHtmlDiagnosticExecuted !== true,
+  'untrusted diagnostic source is rendered as marked text, never as HTML');
+  diagnosticWidget.shadowRoot.querySelector('[data-diagnostic-jump]').click();
+  check(document.activeElement === diagnosticWidget && editor.matches(':focus')
+    && editor.value.slice(editor.selectionStart, editor.selectionEnd) === 'onerror',
+  'diagnostic jump focuses the editor and selects the offending token');
+  editor.value = '<div>valid</div>';
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  check(diagnosticPanel.hidden, 'valid input clears stale diagnostics');
+  diagnosticWidget.services.saveWidget = async () => { throw new Error('<img src=x onerror="x">'); };
+  await diagnosticWidget.onSave();
+  check(diagnosticWidget.shadowRoot.querySelector('[data-dialog-error]').textContent.includes('Keine genaue Quellposition')
+    && diagnosticWidget.shadowRoot.querySelector('[data-dialog-error] img') === null,
+  'backend errors use an explicit positionless fallback and remain text');
+  editor.value = '<img>';
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  check(diagnosticWidget.shadowRoot.querySelector('[data-dialog-error]').textContent === '',
+    'new input clears stale save errors');
+  diagnosticWidget.remove();
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({ checks });
 } catch (error) {
