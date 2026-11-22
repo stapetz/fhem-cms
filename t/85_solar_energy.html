@@ -132,7 +132,16 @@ try {
     if (width === 761) {
       check(cards.every(card => Math.abs(card.top - cards[0].top) < 1),
         'reference desktop width: all three yield cards in one row, not two plus one');
-      check(cards.every(card => card.height <= 210), `yield cards retain compact original height: ${cards.map(card => card.height)}`);
+      check(cards.every(card => card.height <= 210), `yield cards retain compact original height: ${cards.map(card => card.height)}; tile ${$('.tile').clientWidth}`);
+      for (const list of host.shadowRoot.querySelectorAll('.yield dl')) {
+        check(list.children.length === 5 && list.scrollHeight > list.clientHeight,
+          'larger desktop yield rows remain complete in their bounded scroll area');
+        list.scrollTop = list.scrollHeight;
+        const last = list.lastElementChild.getBoundingClientRect(), bounds = list.getBoundingClientRect();
+        check(last.bottom <= bounds.bottom + 1 && last.top >= bounds.top,
+          'last yield row is reachable without enlarging the compact card');
+        list.scrollTop = 0;
+      }
       const firstRows = [...host.shadowRoot.querySelectorAll('.yield .row:first-child')].map(e => e.getBoundingClientRect());
       check(firstRows.every(row => Math.abs(row.top - firstRows[0].top) < 1),
         'desktop yield rows align even when the heading total wraps');

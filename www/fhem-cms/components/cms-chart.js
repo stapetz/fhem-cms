@@ -88,7 +88,7 @@ class FHEMCMSChart extends HTMLElement {
         .line { fill: none; stroke: var(--cms-accent, #8fd0a8); stroke-width: 1.6; stroke-linejoin: round; }
         text { fill: var(--cms-muted, #a5c9b2); font-size: 9px; }
         .message { position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
-          color: var(--cms-muted, #a5c9b2); font-size: 0.85rem; padding: 0.5rem; }
+          color: var(--cms-muted, #a5c9b2); font-size: 1em; padding: 0.5rem; }
         .message[data-error] { color: var(--cms-danger, #ffb4a8); }
         ${widgetStatusStyles}
         .stats { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; color: var(--cms-muted, #a5c9b2); font-size: 0.75rem;
@@ -124,12 +124,12 @@ class FHEMCMSChart extends HTMLElement {
         ${widgetDesignCss}
         .tile header { flex-wrap: wrap; }
         .tile .controls { flex-wrap: wrap; min-width: 0; }
-        .tile .controls select { min-height: 48px; max-width: 100%; font-size: clamp(1rem, 3cqw, 1.5rem); }
+        .tile .controls select { min-height: 48px; max-width: 100%; font-size: 1em; }
         .tile .plot { flex: 1 0 160px; min-height: 160px; border-radius: 14px;
           background: rgba(128,128,128,.08); border: 1px solid rgba(128,128,128,.18); }
         .tile .plot > svg { position: absolute; inset: 0; }
-        .tile .stats { color: inherit; font-size: clamp(1rem, 3cqw, 1.5rem); }
-        .tile text { fill: currentColor; }
+        .tile .stats { color: inherit; font-size: 1em; }
+        .tile text { fill: currentColor; font-size: .65em; }
         .tile .line { stroke: #3b82f6; }
         .tile .band { fill: #3b82f6; }
       </style>

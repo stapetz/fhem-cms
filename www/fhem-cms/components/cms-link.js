@@ -1,6 +1,7 @@
 import { showCmsModal } from '../js/modal-dialog.js';
 import { LINK_COLUMNS, MAX_LINKS, LINK_MEDIA, linkBounds, linkHref, validateLinkItems } from '../js/link-widget.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
+import { widgetTypographyCss } from '../js/widget-design.js';
 
 function node(tag, text) {
   const result = document.createElement(tag);
@@ -55,7 +56,7 @@ class FHEMCMSLink extends HTMLElement {
         .link-tile:active { transform:scale(.96); }
         .link-tile img { display:block; flex:1; min-height:0; width:100%; object-fit:cover; }
         .link-text { flex:none; margin:0; padding:.25em .4em; text-align:center; overflow-wrap:anywhere;
-          font-size:clamp(10px, min(15cqh,8cqw),32px); line-height:1.15; }
+          font-size:1.2em; line-height:1.35; }
         .link-tile[data-position="below"] .link-text { order:1; }
         .link-tile[data-position="overlay"] .link-text { position:absolute; z-index:1; top:0; left:0; right:0;
           background:rgb(0 0 0 / .6); color:#fff; }
@@ -108,6 +109,7 @@ class FHEMCMSLink extends HTMLElement {
         @media (max-width:650px) {
           .editor,.layout-comparison { grid-template-columns:minmax(0,1fr); }
         }
+        ${widgetTypographyCss}
       </style>
       <article class="tile">
         <header><h3 data-title></h3><button type="button" data-open-config aria-label="LinkWidget konfigurieren">⚙</button></header>
