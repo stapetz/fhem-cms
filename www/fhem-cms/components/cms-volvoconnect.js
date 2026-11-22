@@ -76,12 +76,12 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .tile[data-stale] { opacity:.65; border-style:dashed; }
         [data-content], [data-detail-content], [data-inline-content] { display:grid; gap:16px; min-width:0; }
         .identity { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; }
-        .identity h4 { font-size:1.45rem; margin:0; }
+        .identity h4 { font-size:1.45em; margin:0; }
         .identity small { opacity:.75; }
-        .tile .identity small { font-size:clamp(1rem,3cqi,1.5rem); }
+        .tile .identity small { font-size:1em; }
         .badge { background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.35);
           border-radius:20px; padding:4px 12px; font-size:.8rem; }
-        .tile .badge { font-size:clamp(1rem,3cqi,1.5rem); }
+        .tile .badge { font-size:1em; }
         .badge[data-error] { border-color:var(--cms-danger,#ef4444); }
         .top { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));
           gap:16px; align-items:start; }
@@ -138,22 +138,22 @@ class FHEMCMSVolvoConnect extends HTMLElement {
           .top[data-float] .card-body { overflow:visible; flex:none; }
         }
         .card { ${detailCardCss} min-width:0; overflow-wrap:anywhere; }
-        .card h4 { margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid rgba(128,128,128,.2); font-size:.95rem; }
+        .card h4 { margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid rgba(128,128,128,.2); font-size:1em; }
         .hero-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
         .hero-heading h4 { border:0; padding:0; }
         .hero-tools { display:flex; align-items:center; gap:6px; margin-left:auto; }
-        .connected { color:var(--cms-success,#10b981); font-size:.9rem; }
+        .connected { color:var(--cms-success,#10b981); font-size:.95em; }
         .hero { display:flex; flex-direction:column; gap:14px; }
         .hero h4 { margin:0; }
         .summary { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px; }
-        .soc { color:#10b981; font-size:clamp(2rem,7cqi,2.8rem); font-weight:800; line-height:1.1; }
-        .range { text-align:right; color:var(--cms-accent,#3b82f6); font-size:clamp(1.3rem,5cqi,1.8rem); font-weight:700; }
-        .range small { display:block; font-size:.78rem; font-weight:400; color:var(--cms-text,inherit); }
+        .soc { color:#10b981; font-size:2em; font-weight:800; line-height:1.1; }
+        .range { text-align:right; color:var(--cms-accent,#3b82f6); font-size:1.5em; font-weight:700; }
+        .range small { display:block; font-size:.6em; font-weight:400; color:var(--cms-text,inherit); }
         .charge { height:14px; border-radius:99px; overflow:hidden; background:rgba(128,128,128,.22); }
         .charge div { height:100%; background:linear-gradient(90deg,#10b981,#34d399); border-radius:inherit; }
         dl { margin:0; display:grid; gap:6px; }
         .row { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 10px;
-          border-bottom:1px solid rgba(128,128,128,.1); padding-bottom:5px; font-size:.88rem; min-width:0; }
+          border-bottom:1px solid rgba(128,128,128,.1); padding-bottom:5px; font-size:.95em; min-width:0; }
         .row:last-child { border-bottom:0; }
         dt { opacity:.75; } dd { margin:0; font-weight:650; text-align:right; overflow-wrap:anywhere; max-width:100%; }
         .reading-icon,.status-icon { display:inline-block; min-width:1.4em; text-align:center; margin-right:4px; }
@@ -168,14 +168,14 @@ class FHEMCMSVolvoConnect extends HTMLElement {
           scroll-snap-type:x mandatory; scrollbar-width:thin; }
         figure { flex:0 0 100%; width:100%; min-width:0; margin:0; scroll-snap-align:start; text-align:center; }
         figure img { display:block; width:100%; max-width:100%; height:180px; object-fit:contain; object-position:center; }
-        figcaption { font-size:.8rem; opacity:.75; margin-top:6px; }
+        figcaption { font-size:.9em; opacity:.75; margin-top:6px; }
         .map { height:175px; margin-bottom:10px; border-radius:10px; overflow:hidden; }
         .actions { display:flex; flex-wrap:wrap; gap:8px; }
         [data-actions-content] { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr)); gap:12px; }
         .card[data-concealed] { opacity:.55; border-style:dashed; }
         button { min-width:48px; min-height:48px; }
         button:active { transform:scale(.96); }
-        footer { display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:space-between; font-size:.76rem; opacity:.7; }
+        footer { display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:space-between; font-size:.9em; opacity:.7; }
         button,input { font:inherit; color:inherit; background:var(--cms-surface-raised,#2a3b32);
           border:1px solid var(--cms-border,#43564a); border-radius:.5rem; padding:.45rem .65rem; }
         button { cursor:pointer; }

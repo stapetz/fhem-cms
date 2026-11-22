@@ -35,7 +35,15 @@ export function fitWidgetContent(host) {
     area.style.fontSize = `${referenceSize}px`;
     content.style.minWidth = '0';
     content.style.minHeight = '0';
+    const maxWidth = content.style.maxWidth;
+    const whiteSpace = area.style.getPropertyValue('--cms-widget-fit-white-space');
+    content.style.maxWidth = 'none';
+    area.style.setProperty('--cms-widget-fit-white-space', 'nowrap');
     const natural = content.getBoundingClientRect();
+    if (maxWidth) content.style.maxWidth = maxWidth;
+    else content.style.removeProperty('max-width');
+    if (whiteSpace) area.style.setProperty('--cms-widget-fit-white-space', whiteSpace);
+    else area.style.removeProperty('--cms-widget-fit-white-space');
     content.style.removeProperty('min-width');
     content.style.removeProperty('min-height');
     if (!natural.width || !natural.height) return;

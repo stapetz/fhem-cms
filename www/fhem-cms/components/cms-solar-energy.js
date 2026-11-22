@@ -56,16 +56,17 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         h3, p { margin: 0; }
         [hidden] { display: none !important; }
         ${widgetDesignCss}
-        .tile { container-type: inline-size; padding: 16px; line-height: 1.3; }
+        .tile { container-type: inline-size; padding: 16px; line-height: 1.35; }
         .tile > * { flex-shrink: 0; }
         .tile header h3[data-title] { line-height: 1.3; }
         .tile[data-stale] { opacity: .65; border-style: dashed; }
         header { flex-wrap: wrap; }
-        .badge { padding: 3px 10px; border-radius: 20px; font-size: .8rem; font-weight: 600;
+        .badge { padding: 3px 10px; border-radius: 20px; font-size: .9em; font-weight: 600;
           color: #10b981; background: rgba(16,185,129,.16); border: 1px solid rgba(16,185,129,.35); }
         .flow { ${detailCardCss} display: grid; grid-template-columns: repeat(3,minmax(0,1fr));
           grid-template-rows: auto 80px auto auto auto; position: relative; flex: none;
-          align-items: center; justify-items: center; padding: 16px 10px 28px; column-gap: 8px; }
+          align-items: center; justify-items: center; padding: 16px 10px 28px; column-gap: 8px;
+          font-size: max(1rem, .75em); line-height: 1.2; }
         .node { min-width: 0; width: 100%; max-width: 180px; padding: 10px 12px; border: 1.5px solid var(--station-color);
           border-radius: 12px; text-align: center; position: relative; z-index: 1;
           background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
@@ -73,9 +74,9 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .bat { grid-column: 1; grid-row: 3 / span 3; --station-color: #10b981; }
         .home { grid-column: 2; grid-row: 3 / span 3; --station-color: #3b82f6; }
         .grid { grid-column: 3; grid-row: 3 / span 3; --station-color: #8b5cf6; }
-        .node strong { display: block; font-size: 1.4rem; margin: 3px 0; color: var(--station-color); }
-        .node small { display: block; font-size: clamp(.85rem, 1.8cqi, 1.2rem); opacity: .78; }
-        .node .label { display: block; font-size: clamp(.85rem, 1.8cqi, 1.2rem); text-transform: uppercase; opacity: .8; }
+        .node strong { display: block; font-size: 1.4em; margin: 3px 0; color: var(--station-color); }
+        .node small { display: block; font-size: .9em; opacity: .78; }
+        .node .label { display: block; font-size: .9em; text-transform: uppercase; opacity: .8; }
         .node:not(.pv) { align-self: stretch; display: grid; grid-template-rows: subgrid; padding-bottom: 20px; }
         .node:not(.pv) .label { grid-row: 1; display: flex; align-items: center; justify-content: center; }
         .node:not(.pv) strong { grid-row: 2; }
@@ -104,22 +105,31 @@ class FHEMCMSSolarEnergy extends HTMLElement {
           overflow-wrap: anywhere; }
         .yield h4 small { font-size: .8em; opacity: .7; white-space: nowrap; }
         .yield dl { margin: 0; display: grid; gap: 1px; align-content: start; }
-        .yield .row { display: flex; justify-content: space-between; gap: 8px; font-size: clamp(1rem, 2cqi, 1.5rem);
+        .yield .row { display: flex; justify-content: space-between; gap: 8px; font-size: 1em;
           border-bottom: 1px solid rgba(128,128,128,.1); padding: 0; overflow-wrap: anywhere; }
         .yield .row:last-child { border: 0; }
         dt { opacity: .75; }
         dd { margin: 0; font-weight: 700; text-align: right; }
         .totals { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,140px),1fr)); gap: 10px;
-          padding: 10px; border-radius: 12px; border: 1px solid rgba(245,158,11,.3); background: rgba(245,158,11,.1); text-align: center; }
+          padding: 10px; border-radius: 12px; border: 1px solid rgba(245,158,11,.3); background: rgba(245,158,11,.1); text-align: center;
+          font-size: max(1rem, .75em); }
         .total { padding: 8px 4px; border-radius: 8px; background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
-        .total span { display: block; opacity: .8; font-size: clamp(.85rem, 1.8cqi, 1.2rem); text-transform: uppercase; }
-        .total strong { display: block; font-size: 1.25rem; margin-top: 2px; color: #f59e0b; }
+        .total span { display: block; opacity: .8; font-size: .9em; text-transform: uppercase; }
+        .total strong { display: block; font-size: 1.25em; margin-top: 2px; color: #f59e0b; }
         .total:last-child { border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.12); }
+        @container (min-width: 601px) {
+          /* Shared subgrid tracks retain the 210px card, including the 12px gap. */
+          .sections { grid-auto-rows: minmax(0, 70px) minmax(0, 128px); }
+          .yield { min-height: 0; }
+          .yield h4 { min-height: 0; margin-bottom: 0; padding-bottom: 0; line-height: 1.1; overflow: auto; }
+          .yield dl { min-height: 0; overflow: auto; }
+          .total { padding-block: 2px; line-height: 1.1; }
+        }
         @container (max-width: 600px) {
           .flow { padding: 12px 4px 28px; grid-template-rows: auto 60px auto auto auto; }
           .node { padding: 8px 3px; }
-          .node strong { font-size: clamp(.85rem, 5cqi, 1.4rem); }
-          .node .label, .node small { font-size: clamp(.85rem, 1.8cqi, 1.2rem); }
+          .node strong { font-size: 1.25em; }
+          .node .label, .node small { font-size: .9em; }
           .node:not(.pv) { padding-bottom: 18px; }
           progress { position: absolute; bottom: 8px; left: 3px; width: calc(100% - 6px); margin: 0; }
           .tile header { flex-wrap: wrap; }

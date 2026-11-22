@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { access, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
@@ -114,6 +113,8 @@ async function testServer() {
 }
 
 for (const [name, fixtures] of [
+  ['standard widget typography grows in actual Grid and scaled Freeform without changing authored content',
+    [['99_widget_typography.html', 1000], ['99_widget_typography.html?mode=preview&cms-device=mobile', 1000]]],
   ['shared German dates render across widget types without rewriting source data',
     [['90_widget_dates.html', 19]]],
   ['DWD weather renders responsive tiles, details and editor',
@@ -198,7 +199,7 @@ for (const [name, fixtures] of [
   timeout: 90000,
 }, async () => {
   const server = await testServer();
-  const profile = await mkdtemp(join(tmpdir(), 'cms-titles-'));
+  const profile = await mkdtemp(join(root, 't/.cms-titles-'));
   const child = spawn(chrome, ['--headless=new', '--no-first-run', '--no-default-browser-check',
     '--disable-background-networking', '--remote-debugging-address=127.0.0.1',
     '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--window-size=1440,1000', 'about:blank']);
@@ -723,6 +724,10 @@ for (const [name, fixtures] of [
             ? command => command('Emulation.setTouchEmulationEnabled', { enabled: true }) : undefined);
       assert.ok(data.checks >= minimum, `${fixture}: complete regression coverage (${data.checks})`);
       console.log(`${fixture}: ${data.checks} browser checks`);
+      if (fixture.startsWith('99_widget_typography.html')) {
+        console.log(JSON.stringify(data.measurements.filter(row =>
+          row.scale === 1 && ['cms-table', 'cms-thermostat', 'cms-solar-energy'].includes(row.widget))));
+      }
     }
   } catch (error) {
     throw new Error(`${error.message}\nChrome stderr:\n${stderr}`, { cause: error });
@@ -740,7 +745,7 @@ test('editor tools require activation and Freeform navigation supports real poin
   timeout: 45000,
 }, async () => {
   const server = await testServer();
-  const profile = await mkdtemp(join(tmpdir(), 'cms-hover-'));
+  const profile = await mkdtemp(join(root, 't/.cms-hover-'));
   const child = spawn(chrome, ['--headless=new', '--no-first-run', '--no-default-browser-check',
     '--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4',
     '--disable-background-networking', '--remote-debugging-address=127.0.0.1',
@@ -962,7 +967,7 @@ test('real editor pointer drag and resize preserve appearance on a full-width ca
   timeout: 45000,
 }, async () => {
   const server = await testServer();
-  const profile = await mkdtemp(join(tmpdir(), 'cms-editor-'));
+  const profile = await mkdtemp(join(root, 't/.cms-editor-'));
   await mkdir(join(profile, 'Default'));
   await writeFile(join(profile, 'Default', 'Preferences'), JSON.stringify({
     partition: { default_zoom_level: { x: Math.log(1.25) / Math.log(1.2) } },
@@ -1069,7 +1074,7 @@ test('real browser zoom and resizing scale widgets and navigation without writes
   timeout: 180000,
 }, async () => {
   const server = await testServer();
-  const profiles = await mkdtemp(join(tmpdir(), 'cms-scaling-'));
+  const profiles = await mkdtemp(join(root, 't/.cms-scaling-'));
   try {
     const results = new Map();
     for (const [zoom, windowWidth] of [[1, 1440], [0.8, 1440], [1.25, 1440], [2, 1440], [2, 600]]) {

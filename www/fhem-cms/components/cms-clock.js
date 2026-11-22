@@ -1,6 +1,7 @@
 import { showCmsModal } from '../js/modal-dialog.js';
 import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
 import { formatDateDisplay } from '../js/date-display.js';
+import { widgetTypographyCss } from '../js/widget-design.js';
 
 const STYLES = ['digital', 'date', 'analog'];
 const timeFormatter = new Intl.DateTimeFormat('de-DE', {
@@ -48,7 +49,7 @@ class FHEMCMSClock extends HTMLElement {
           font-variant-numeric: tabular-nums; line-height: 1.1; }
         /* Ohne Datum/Wochentag füllt die Uhr das Widget aus. */
         .content[data-time-only] .time { font-size: max(12px, min(72cqh, 22cqw)); }
-        .date { color: inherit; font-size: clamp(1rem, 3cqw, 1.5rem); opacity: .72; overflow-wrap: anywhere; max-width: 100%; }
+        .date { color: inherit; font-size: 1em; opacity: .72; overflow-wrap: anywhere; max-width: 100%; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
         .face-area { width: 100%; height: 100%; min-height: 0; display: grid; place-items: center; container-type: size; }
         .face { position: relative; width: min(100cqh, 100cqw); aspect-ratio: 1; overflow: clip;
@@ -94,6 +95,7 @@ class FHEMCMSClock extends HTMLElement {
         .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { min-height: 1.2em; margin: 0; color: var(--cms-danger, #ffb4a8); }
+        ${widgetTypographyCss}
       </style>
       <article class="tile">
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="Uhr konfigurieren">⚙</button>

@@ -220,21 +220,21 @@ class FHEMCMSThermostat extends HTMLElement {
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
         ${widgetDesignCss}
-        .tile .body { height: auto; min-height: var(--cms-widget-body-min-height, 100%); flex: 1; gap: 14px; font-size: clamp(1rem, 3cqw, 1.5rem); }
+        .tile .body { height: auto; min-height: var(--cms-widget-body-min-height, 100%); flex: 1; gap: 14px; font-size: 1em; }
         .tile .boxes { margin: 0; padding: 0; gap: 14px;
           grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
           flex: none; align-content: start; }
         .tile .box { ${detailCardCss} gap: 8px; overflow: visible; }
-        .tile .label { font-size: clamp(1.125rem, 4cqw, 1.5rem); color: inherit; opacity: .85;
+        .tile .label { font-size: 1.125em; color: inherit; opacity: .85;
           letter-spacing: normal; text-transform: none; white-space: normal; }
-        .tile .num { font-size: clamp(2rem, 9cqw, 4rem); font-weight: 800; white-space: normal; overflow-wrap: anywhere; }
+        .tile .num { font-size: clamp(2em, 9cqi, 3em); font-weight: 800; white-space: normal; overflow-wrap: anywhere; }
         .tile .ist .num { color: #3b82f6; }
         .tile .soll .num { color: #f59e0b; }
         .tile .unit { color: inherit; }
-        .tile .foot { padding: 0; margin: 0; flex-wrap: wrap; font-size: clamp(1rem, 3cqw, 1.5rem); }
-        .tile .valve span.pct { font-size: clamp(1rem, 3cqw, 1.5rem); }
+        .tile .foot { padding: 0; margin: 0; flex-wrap: wrap; font-size: 1em; }
+        .tile .valve span.pct { font-size: 1em; }
         .tile .foot select { min-height: 48px; min-width: 0; max-width: 100%; font: inherit; }
-        .tile .status { padding: 0; font-size: clamp(1rem, 3cqw, 1.5rem); }
+        .tile .status { padding: 0; font-size: 1em; }
         .tile input[type="range"] { min-height: 48px; }
       </style>
       <article class="tile" data-tile>
@@ -331,33 +331,10 @@ class FHEMCMSThermostat extends HTMLElement {
       filter.addEventListener('input', () => this.renderPickerRows());
     }
     this.render();
-    this.fitObserver = new ResizeObserver(() => this.fitText());
-    this.fitObserver.observe(this.shadowRoot.querySelector('[data-tile]'));
   }
 
   disconnectedCallback() {
     window.clearTimeout(this.sendTimer);
-    this.fitObserver?.disconnect();
-  }
-
-  // Schriftgröße in px aus der Kachelgröße (wie die CSS-Formel), unabhängig von der Container-Query-Auswertung des Browsers; danach Fit-Prüfung.
-  fitText() {
-    const tile = this.shadowRoot.querySelector('[data-tile]');
-    const body = tile?.querySelector('.body');
-    if (!body) {
-      return;
-    }
-    const { clientWidth: w, clientHeight: h } = tile;
-    if (!w || !h) {
-      return;
-    }
-    let size = w / h < 1.7 ? Math.min(0.065 * h, 0.058 * w) : Math.min(0.092 * h, 0.036 * w);
-    size = Math.max(4, size);
-    body.style.fontSize = `${size}px`;
-    for (let i = 0; i < 12 && size > 4 && body.scrollHeight > body.clientHeight + 1; i += 1) {
-      size = Math.max(4, size * 0.96);
-      body.style.fontSize = `${size}px`;
-    }
   }
 
   set config(value) {

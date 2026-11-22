@@ -5,6 +5,7 @@ import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js'
 import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
 import { formatDateDisplay } from '../js/date-display.js';
+import { widgetTypographyCss } from '../js/widget-design.js';
 
 const MAX_ROWS = 40;
 
@@ -47,9 +48,9 @@ class FHEMCMSReadingsTable extends HTMLElement {
         .table-card { flex: 1; min-height: 4rem; overflow: auto;
           background: rgba(128,128,128,.08); border: 1px solid rgba(128,128,128,.18);
           border-radius: 14px; padding: 14px; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: clamp(1rem, 3cqw, 1.5rem); }
-        th, td { padding: 8px 0; border-bottom: 1px solid rgba(128,128,128,.1);
-          text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 1em; }
+        th, td { padding: .4em 0; border-bottom: 1px solid rgba(128,128,128,.1);
+          text-align: left; vertical-align: middle; overflow-wrap: anywhere; }
         th:first-child, td:first-child { padding-right: 14px; }
         thead th { border-bottom-color: rgba(128,128,128,.2); }
         tbody tr:last-child td { border-bottom: 0; }
@@ -102,6 +103,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
         ${unitInputCss}
+        ${widgetTypographyCss}
       </style>
       <article class="tile" data-tile>
         <header data-header hidden><h3 data-title></h3></header>

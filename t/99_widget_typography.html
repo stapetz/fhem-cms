@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="de" data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Standard widget typography in actual Grid and Freeform layouts</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<style>.grid-stack-animate,.grid-stack-item{transition:none!important} #result{white-space:pre-wrap}</style>
+<main id="mount"></main><pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+import { mountFreeform } from '../www/fhem-cms/js/fcui-freeform-view.js';
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+const mount = document.querySelector('#mount'), output = document.querySelector('#result');
+const source = reading => ({device:'Demo',reading});
+const specs = [
+  {type:'fhem-table',rows:[{device:'Demo',reading:'power',label:'Leistung',unit:'W'}]},
+  {type:'fhem-calllist',device:'Demo',limit:5,columns:['state','party','timestamp','duration']},
+  {type:'fhem-clock',style:'analog',showDate:true},
+  {type:'thermostat',device:'Demo',readings:{actual:'temperature',target:'desiredTemperature',valve:'pct'}},
+  {type:'fhem-slider',device:'Demo',command:'pct',reading:'pct'},
+  {type:'fhem-select',device:'Demo',command:'mode',reading:'mode',mode:'dropdown'},
+  {type:'fhem-chart',device:'Demo',reading:'temperature'},
+  {type:'fhem-link',links:[{id:'one',kind:'internal',page:'start',text:'Details',textPosition:'above',
+    showText:true,target:'self',grid:{col:1,row:1,w:6,h:3}}]},
+  {type:'fhem-solar-energy',readings:Object.fromEntries(
+    ['pv','home','grid','battery','soc','day','month','year','total'].map(key => [key,source(key)]))},
+  {type:'fhem-solarflow',device:'Demo',readings:{pv:'pv',home:'home',grid:'grid',battery:'battery',soc:'soc'}},
+  {type:'fhem-volvoconnect',device:'Demo'},
+  {type:'weather',config:{dataSource:'fhem_dwd',device:'Demo',forecastDays:4,showCurrentDetails:true}},
+  {type:'fhem-value',device:'Demo',reading:'temperature',unit:'°C'},
+  {type:'fhem-switch',device:'Demo',reading:'state',on:'on',off:'off',showLabel:true,label:'Licht'},
+  {type:'fhem-button',device:'Demo',command:'on',showLabel:true,label:'Start'},
+  {type:'fhem-icon',device:'Demo',reading:'state',states:[{value:'on',icon:'test'}]},
+  {type:'fhem-html',devices:[],html:'<p style="font-size:11px">Eigener Text</p>'},
+  {type:'text',html:'<h2>Eigener Text</h2>'},
+].map((spec,i) => ({...spec,id:`w${i}`,title:'Messwerte'}));
+const readings = {state:'on',temperature:'21.5',desiredTemperature:'22',pct:'40',mode:'eco',
+  power:'1250',pv:'1250',home:'800',grid:'200',battery:'250',soc:'65',
+  day:'12',month:'120',year:'1200',total:'12345',state_batteryChargeLevel:'83',state_electricRange:'320',
+  state_chargingStatus:'DONE',vehicle_descriptions_model:'Volvo EX40'};
+for (let i=1;i<=5;i++) Object.assign(readings,{[`${i}-state`]:'=>',[`${i}-name`]:'Demo',
+  [`${i}-timestamp`]:'22.11.26 12:00',[`${i}-duration`]:'00:01'});
+const snapshots = new Map([['Demo',[{name:'Demo',readings,
+  sets:'on:noArg off:noArg pct:slider,0,1,100 mode:eco,comfort'}]]]);
+const services = {history:async () => ({points:[]}),pages:[{id:'start',title:'Start'}],
+  weather:async () => ({source:'fhem_dwd',stationName:'Demo',updatedAt:new Date().toISOString(),
+    current:{timestamp:new Date().toISOString(),temp:12,humidity:85,windSpeed:18,condition:'cloudy',icon:'cloudy'},
+    alerts:[],hourly:[],daily:[{date:'2026-11-22',tempMin:5,tempMax:12,precipitationSum:1,
+      precipitationProbabilityMax:45,icon:'cloudy'}]}),
+  iconUrl:() => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"%3E%3Cpath d="M1 1h8v8H1z"/%3E%3C/svg%3E'};
+let checks=0;
+const measurements=[];
+const check=(condition,message) => {if(!condition) throw new Error(message); checks++;};
+const settle=() => new Promise(resolve => setTimeout(resolve,180));
+const font=element => parseFloat(getComputedStyle(element).fontSize);
+const measure=(host,layout,width,scale=1) => {
+  const root=host.shadowRoot, tile=root.querySelector('.tile');
+  if(host.localName==='cms-html') {
+    check(font(root.querySelector('[data-content] p'))===11,`${layout}: authored HTML remains 11px`);
+    return;
+  }
+  if(host.localName==='cms-text') {
+    check(Math.abs(font(root.querySelector('[data-body] h2'))-19.2)<.01,`${layout}: richtext heading unchanged`);
+    return;
+  }
+  const base=font(tile), logicalWidth=host.clientWidth;
+  const expected=Math.max(16,Math.min(24,logicalWidth*.045));
+  check(Math.abs(base-expected)<.1,`${layout}/${host.localName}/${width}/${scale}: base ${base}, expected ${expected}`);
+  if(width>=400) check(base>16,`${layout}/${host.localName}: body exceeds previous 16px baseline`);
+  check(Math.abs(parseFloat(getComputedStyle(tile).lineHeight)/base-1.35)<.01,
+    `${host.localName}: shared line height`);
+  const selector={
+    'cms-table':'td','cms-calllist':'td:not(.status)','cms-clock':'.date','cms-thermostat':'.box .label',
+    'cms-slider':'.range','cms-select':'.choices select','cms-chart':'.stats',
+    'cms-link':'.link-text','cms-solar-energy':'.node .label','cms-volvoconnect':'.card h4',
+    'cms-solarflow':'.value','cms-weather':'.condition',
+  }[host.localName];
+  const label=selector && root.querySelector(selector);
+  if(label) {
+    const ratio=font(label)/base;
+    const expectedRatio=host.localName==='cms-thermostat'?1.125:host.localName==='cms-solar-energy'?
+      .9*Math.max(16,base*.75)/base:
+      host.localName==='cms-link'?1.2:1;
+    check(Math.abs(ratio-expectedRatio)<.01,`${host.localName}: label ${font(label)} relative to ${base}`);
+  }
+  const area=root.querySelector('.main'), fitted=root.querySelector('[data-fit-content]');
+  if(area && fitted) {
+    const a=area.getBoundingClientRect(), f=fitted.getBoundingClientRect();
+    check(Math.max(f.width/a.width,f.height/a.height)>=.9,
+      `${layout}/${host.localName}/${width}/${scale}: limiting axis fills 90%: ${f.width}x${f.height}/${a.width}x${a.height}; font ${font(area)}`);
+    check(f.width<=a.width+1 && f.height<=a.height+1,`${layout}/${host.localName}: fitted content does not overflow`);
+  }
+  check(tile.scrollWidth<=tile.clientWidth+1,`${layout}/${host.localName}/${width}: no horizontal overflow`);
+  const primarySelector={'cms-thermostat':'.num','cms-slider':'.value','cms-weather':'.temp',
+    'cms-solar-energy':'.node strong','cms-volvoconnect':'.soc'}[host.localName];
+  const primary=primarySelector && root.querySelector(primarySelector);
+  if(primary && ['cms-thermostat','cms-slider','cms-weather'].includes(host.localName)) {
+    check(font(primary)>=base*(host.localName==='cms-weather'?2.5:2)-.01,
+      `${host.localName}: relative primary value remains prominent`);
+  }
+  measurements.push({layout,widget:host.localName,width,scale,logicalWidth,body:base,
+    label:label?font(label):null,primary:primary?font(primary):null});
+};
+try {
+  for(const width of [180,400,600]) {
+    const grid=document.createElement('div');
+    grid.className='grid-stack cms-schema5-grid'; grid.style.width=`${width}px`; mount.append(grid);
+    const config={schemaVersion:5,settings:{layoutMode:'grid',gridColumns:12},
+      navigation:{grid:{col:1,row:1,w:12,h:1}},pages:[{id:'start',widgets:specs.map((spec,i) =>
+        ({...spec,grid:{col:1,row:2+i*30,w:12,h:30}}))}]};
+    const original=JSON.stringify(config);
+    const view=mountSchema5Widgets(GridStack,grid,config,'start',document.createElement('nav'),services,snapshots);
+    try {
+      await settle();
+      const hosts=[...grid.querySelectorAll('.grid-stack-item-content > *')].filter(host => host.shadowRoot);
+      check(hosts.length===18,`all standard and authored-content widgets mounted in Grid: ${hosts.map(host=>host.localName)}`);
+      hosts.forEach(host => measure(host,'grid',width));
+      check(JSON.stringify(config)===original,'typography never mutates grid coordinates or gaps');
+      if(new URLSearchParams(location.search).get('cms-device')==='mobile') {
+        for(const name of ['cms-table','cms-clock']) {
+          const host=grid.querySelector(name), tile=host.shadowRoot.querySelector('.tile');
+          check(tile.clientHeight>100,`${name}: natural mobile height does not collapse`);
+          check(tile.scrollHeight<=tile.clientHeight+1,`${name}: mobile body is not clipped`);
+        }
+      }
+    } finally {view.destroy();grid.remove();}
+    for(const scale of [.25,.5,1,1.5]) {
+      const root=document.createElement('div');root.style.width=`${1000*scale}px`;mount.append(root);
+      const page={canvas:{width:1000,height:specs.length*800,scaling:'width',mobileBehavior:'fit'},
+        widgets:specs.map((spec,i) => ({...spec,rect:{x:0,y:i*800,w:width,h:800}}))};
+      const original=JSON.stringify(page);
+      const view=mountFreeform(root,page,document.createElement('nav'),
+        id => createWidgetElement(specs.find(spec => spec.id===id),services,snapshots,true),{editing:true});
+      try {
+        await settle();
+        check(Math.abs(view.getScale()-scale)<.001,`actual Freeform scale ${scale}`);
+        for(const wrapper of view.wrappers.values()) measure(wrapper.firstElementChild,'freeform',width,scale);
+        check(JSON.stringify(page)===original,'typography never mutates Freeform rectangles');
+      } finally {view.destroy();root.remove();}
+    }
+  }
+  output.dataset.result='pass';output.textContent=JSON.stringify({checks,measurements});
+} catch(error) {
+  output.dataset.result='fail';output.textContent=`${error.stack}\n${JSON.stringify(measurements)}`;
+}
+</script>

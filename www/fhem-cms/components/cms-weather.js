@@ -1,7 +1,7 @@
 import { showCmsModal } from '../js/modal-dialog.js';
 import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
-import { createWidgetIconButton, widgetIconButtonCss } from '../js/widget-design.js';
+import { createWidgetIconButton, widgetIconButtonCss, widgetTypographyCss } from '../js/widget-design.js';
 
 const STATION_ID = /^(?:dwd:\d{5}|wmo:[A-Z0-9]{5})$/;
 const READING = /^[A-Za-z0-9_.-]{1,128}$/;
@@ -363,11 +363,12 @@ class FHEMCMSWeather extends HTMLElement {
         header h3 { min-width:0; }
         h3 { margin:0; font-size:clamp(.95rem,5cqi,1.3rem); overflow-wrap:anywhere; }
         .tile header h3 { font-size:clamp(1.4rem,4cqi,2rem); }
-        .updated { margin-left:auto; color:var(--cms-muted,#a5c9b2); font-size:.75rem; white-space:nowrap; }
-        .badge { flex:none; border-radius:99px; padding:.15rem .45rem; font-size:.72rem; font-weight:700; color:#241500; }
+        .updated { margin-left:auto; max-width:100%; color:var(--cms-muted,#a5c9b2); font-size:.9em; overflow-wrap:anywhere; }
+        .badge { flex:none; border-radius:99px; padding:.15rem .45rem; font-size:.9em; font-weight:700; color:#241500; }
         .badge.minor { background:#ffeb3b; } .badge.moderate { background:#ff9800; }
         .badge.severe { background:#f44336; color:white; } .badge.extreme { background:#7e57c2; color:white; }
-        .current { display:flex; align-items:center; gap:clamp(.5rem,3cqi,1rem); min-width:0; padding:.5rem 0; }
+        .current { display:flex; flex-wrap:wrap; align-items:center; gap:clamp(.5rem,3cqi,1rem); min-width:0; padding:.5rem 0; }
+        .current > div { min-width:0; max-width:100%; overflow-wrap:anywhere; }
         .weather-icon { width:clamp(2.4rem,14cqi,4.2rem); height:auto; flex:none; overflow:visible; }
         .is-large { width:4.5rem; }
         .icon-sun,.icon-star { fill:#ffd54f; } .icon-moon { fill:#d7e3ff; }
@@ -375,19 +376,19 @@ class FHEMCMSWeather extends HTMLElement {
         .icon-cloud { fill:#aebdc6; stroke:#dbe4e9; stroke-width:1.5; }
         .icon-rain,.icon-fog { stroke:#64b5f6; } .icon-snow { fill:none; stroke:#b3e5fc; stroke-width:2; stroke-linecap:round; }
         .icon-lightning { fill:#ffca28; stroke:#ffca28; stroke-width:1; }
-        .temp { font-size:clamp(2rem,14cqi,4rem); line-height:1; font-weight:750; font-variant-numeric:tabular-nums; }
-        .condition { color:var(--cms-muted-strong,#c4d0c8); font-size:clamp(1rem,3cqi,1.5rem); }
+        .temp { font-size:clamp(2.5em,14cqi,3em); line-height:1; font-weight:750; font-variant-numeric:tabular-nums; }
+        .condition { color:var(--cms-muted-strong,#c4d0c8); font-size:1em; }
         .forecast-place,.current-origin { margin:.2rem 0 0; color:var(--cms-muted-strong,#c4d0c8);
-          font-size:clamp(1rem,3cqi,1.5rem); overflow-wrap:anywhere; }
-        .details { display:flex; flex-wrap:wrap; gap:.25rem .8rem; color:var(--cms-muted-strong,#c4d0c8); font-size:clamp(1rem,3cqi,1.5rem); }
-        .message { margin:.3rem 0; color:var(--cms-muted,#a5c9b2); font-size:clamp(1rem,3cqi,1.5rem); overflow-wrap:anywhere; }
+          font-size:1em; overflow-wrap:anywhere; }
+        .details { display:flex; flex-wrap:wrap; gap:.25rem .8rem; color:var(--cms-muted-strong,#c4d0c8); font-size:1em; }
+        .message { margin:.3rem 0; color:var(--cms-muted,#a5c9b2); font-size:1em; overflow-wrap:anywhere; }
         .message.alert-unavailable { color:#ffcc80; }
         .forecast { display:grid; grid-template-columns:repeat(var(--forecast-count,3),minmax(0,1fr)); gap:.35rem; margin:.45rem 0; }
         .day { min-width:0; display:grid; justify-items:center; gap:.15rem; padding:.35rem .15rem;
           border-radius:.6rem; background:color-mix(in srgb,var(--cms-surface-raised,#2a3b32) 75%,transparent); text-align:center; }
         .day .weather-icon { width:2.4rem; }
-        .day-name,.day-precip { font-size:clamp(.9rem,2.5cqi,1.25rem); color:var(--cms-muted,#a5c9b2); }
-        .day-temp { font-size:clamp(.9rem,2.5cqi,1.25rem); font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .day-name,.day-precip { font-size:.95em; color:var(--cms-muted,#a5c9b2); }
+        .day-temp { font-size:.95em; font-variant-numeric:tabular-nums; white-space:nowrap; }
         ${widgetIconButtonCss}
         [data-detail] { position:absolute; top:.4rem; right:.4rem; }
         dialog { width:min(94vw,60rem); max-width:60rem; max-height:min(92dvh,60rem); overflow:auto;
@@ -455,10 +456,16 @@ class FHEMCMSWeather extends HTMLElement {
           .day .weather-icon { width:2rem; grid-row:span 2; }
           .day-precip { align-self:end; }
         }
+        @container weather (max-width:199px) {
+          .day { grid-template-columns:2.4rem minmax(0,1fr); }
+          .day-precip { grid-column:2; }
+          .day-temp { white-space:normal; overflow-wrap:anywhere; }
+        }
         @media (max-width:639px) {
           dialog { width:100vw; max-width:none; height:100dvh; max-height:100dvh; margin:0;
             border-radius:0; padding:calc(env(safe-area-inset-top) + .75rem) .75rem calc(env(safe-area-inset-bottom) + .75rem); }
         }
+        ${widgetTypographyCss}
       </style>
       <article class="tile" data-tile>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="DWD-Wetter konfigurieren">⚙</button>

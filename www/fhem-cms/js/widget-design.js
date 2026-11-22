@@ -1,3 +1,16 @@
+export const widgetTypographyCss = `
+  :host(:not(cms-html):not(cms-text)) { container-type: inline-size; }
+  :host(:not(cms-html):not(cms-text)) .tile {
+    /* The host supplies the inline axis; a tile cannot query its own width. */
+    font-size: clamp(1rem, 4.5cqi, 1.5rem); line-height: 1.35;
+  }
+  :host(:not(cms-html):not(cms-text)) .tile header { font-size: 1em; }
+  :host(:not(cms-html):not(cms-text)) .tile header h3[data-title] {
+    font-size: clamp(1.4rem, 1.4em, 2rem); line-height: 1.2;
+  }
+  :host(:not(cms-html):not(cms-text)) .tile > :is(.status, .range, .msg) { font-size: 1em; }
+`;
+
 export const widgetDesignCss = `
   .tile {
     position: relative; display: flex; flex-direction: column; gap: 14px;
@@ -34,6 +47,7 @@ export const widgetDesignCss = `
   }
   .tile > .msg { position: relative; inset: auto; flex: none; }
   .tile > .msg:empty, .tile > .status:empty { display: none; }
+  ${widgetTypographyCss}
 `;
 
 export const detailCardCss = `

@@ -2,6 +2,7 @@ import { showCmsModal } from '../js/modal-dialog.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { suggestedSolarSource } from '../js/solar-energy-suggestions.js';
+import { widgetTypographyCss } from '../js/widget-design.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MAX_POWER = 3000;
@@ -177,8 +178,8 @@ class FHEMCMSSolarFlow extends HTMLElement {
         [data-state="red"] { --station-color: #ef4444; }
         [data-state="green"] { --station-color: #10b981; }
         [data-ring] { fill: rgba(128,128,128,.08); stroke: var(--station-color); stroke-width: 2; }
-        .value { fill: currentColor; font-size: 16px; font-weight: 700; text-anchor: middle; }
-        .soc { fill: currentColor; font-size: 11px; text-anchor: middle; }
+        .value { fill: currentColor; font-size: 1em; font-weight: 700; text-anchor: middle; }
+        .soc { fill: currentColor; font-size: .7em; text-anchor: middle; }
         .icon { fill: none; color: var(--station-color); stroke: currentColor; stroke-width: 2.4;
           stroke-linecap: round; stroke-linejoin: round; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -215,6 +216,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a9a8f' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
+        ${widgetTypographyCss}
       </style>
       <article class="tile">
         <header data-header hidden><h3 data-title></h3></header>

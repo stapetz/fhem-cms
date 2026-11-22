@@ -122,16 +122,17 @@ class FHEMCMSCallList extends HTMLElement {
         [data-message]:empty { display:none; }
         [hidden] { display:none !important; }
         ${widgetDesignCss}
-        .tile table { font-size: clamp(1rem, 3cqw, 1.5rem); table-layout: fixed; color: inherit;
+        .tile table { font-size: 1em; table-layout: fixed; color: inherit;
           border: 1px solid rgba(128,128,128,.18); border-radius: 14px;
           background: rgba(128,128,128,.08); border-spacing: 0; border-collapse: separate; }
-        .tile th, .tile td { padding: 6px 8px; border-bottom: 1px solid rgba(128,128,128,.1); }
+        .tile th, .tile td { padding: .3em .4em; vertical-align: middle; border-bottom: 1px solid rgba(128,128,128,.1); }
         .tile th { color: inherit; font-weight: 700; }
         .tile th[data-column=state] { width:3.5em; }
         .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=state] { width:17%; }
         .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=timestamp] { width:36%; }
         .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=duration] { width:23%; }
         .tile .status svg { display:block; width:1.4em; height:1.4em; }
+        .tile [data-message] { font-size: 1em; }
       </style>
       <article class="tile" data-tile>
         <button type="button" class="gear" data-open-config aria-label="Anrufliste konfigurieren">⚙</button>

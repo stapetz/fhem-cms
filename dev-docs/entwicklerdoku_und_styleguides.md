@@ -771,6 +771,66 @@ Scroll-/Fokus-Ruecksetzung. Eingebettete Frames, Karten, Animationen und
 aufgeklappte Details bleiben erhalten. Pruefung aller 16 Widgettypen mit
 `t/86_mobile_widgets.html`, anschliessend echte Safari-Geraeteabnahme.
 
+#### Responsive Standardwidget-Typografie (dev, Refs #239)
+
+`widgetTypographyCss` in `js/widget-design.js` ersetzt die festen
+Inhaltsschriftgrößen der Standardwidgets. Der Custom-Element-Host ist ein
+Inline-Size-Container; **innerhalb des Shadow-DOMs** erhält `.tile`
+`font-size: clamp(1rem, 4.5cqi, 1.5rem)` und `line-height: 1.35`.
+Die Kachel darf ihre eigene Breite nicht als Container für ihre Basisschrift
+verwenden. Ihre bestehende Größen-/Inline-Containment-Regel bleibt erhalten,
+insbesondere für natürliche mobile Höhen und die analoge Uhr.
+
+Bei 180/400/600px logischer Widgetbreite ergeben sich 16/18/24px
+Basisschrift, Titel bleiben zwischen 22.4 und 32px. Die Untergrenze von 16px
+bewahrt die bisherige Lesbarkeit kleiner Kacheln. 4.5cqi statt des vorgeschlagenen
+3.6cqi vergrößert auch mittlere 400px-Kacheln gegenüber der bisherigen
+16px-Basis. Rasterinnenabstände reduzieren die tatsächlich verfügbare Breite:
+im getesteten 400px-Raster sind es rund 386px und 17.36px Basisschrift.
+
+Tabellen, Listen, Auswahlfelder, Status und Detailwerte erben diese Basis
+über `em`; sekundäre Labels verwenden meist .9–.95em, Thermostatlabels
+1.125em. Das kompakte Solar-Flussbild und die Summenleiste verwenden eine
+relative Zwischenbasis `max(1rem, .75em)` (16–18px), deren Labels .9em:
+14.4–16.2px statt zuvor 13.6px. Hauptwerte behalten ihre relative Hervorhebung. SVG-Diagrammtexte
+verwenden relative Größen passend zu ihrem Koordinatensystem.
+Tabellenzellen erhalten relative vertikale Abstände und mittige Ausrichtung.
+Lange Inhalte umbrechen; bei festen Desktophöhen wird gescrollt statt die
+gesamte Thermostatbeschriftung per JavaScript bis auf 4px zu verkleinern.
+Bestehende Raster, Freeform-Rechtecke, Abstände und Anfangskonfigurationen
+(insbesondere fünf Anrufzeilen) werden nicht geändert. Größere Texte können
+in niedrigen Bestandskacheln zusätzliche Scrollhöhe benötigen.
+Solar-Ertragskarten bleiben oberhalb 600px Containerbreite maximal 210px hoch:
+gemeinsame Subgrid-Zeilen reservieren 70px für die Überschrift und 128px für
+die Ertragsliste plus den bestehenden 12px Abstand. Die vergrößerten
+Ertragszeilen scrollen innerhalb ihrer Liste, alle Werte bleiben erreichbar.
+Bei schmaleren Kacheln bleibt die natürliche Kartenhöhe erhalten.
+Das Solar-Flussbild bleibt unter 370px, die Summenleiste unter 90px im
+bestehenden Referenztest; kompaktere interne Summenabstände gleichen die
+größere Schrift aus, ohne die äußeren Widget-/Rasterabstände zu ändern.
+Die Wetterkachel bricht Temperatur-/Symbolgruppen bei Platzmangel um;
+unter 200px Containerbreite wird die Vorhersage zur zweispaltigen Liste,
+statt mit größeren Texten horizontal überzulaufen.
+
+Wert, Schalter, Taster und Symbol behalten die messende Inhaltsanpassung
+mit mindestens 90 Prozent Ausnutzung der knapperen Achse. Die Referenzmessung
+erfolgt unbeschränkt und einzeilig; anschließend werden mobile Umbruch- und
+Breitengrenzen wiederhergestellt. Dadurch verfälscht ein Umbruch der großen
+Referenzschrift nicht die endgültige Schriftgröße.
+Freies HTML und Richtext sind ausdrücklich von der Basisskalierung
+ausgenommen: selbst verfasste Größen, insbesondere Inline-CSS, bleiben erhalten.
+Dialoge erhalten keine neue globale Basisschrift.
+
+Regression: `t/99_widget_typography.html` misst alle 16 Standardwidgets plus
+HTML-/Richtextreferenzen im echten Grid und Freeform bei 180/400/600px und
+Freeform-Skalierungen .25/.5/1/1.5; die mobile Vorschau prüft zusätzlich
+unkollabierte natürliche Tabellen-/Uhrhöhen. Basisschrift, relative Labels,
+90-Prozent-Inhaltsfit, horizontaler Überlauf und unveränderte Konfigurationen
+werden numerisch geprüft. Aufruf:
+`node --test --test-name-pattern='standard widget typography' t/35_schema5_scaling.test.js`.
+Die bestehenden Titel-/Fit-, Theme-, Mobile-, Anruflisten-, Solar-Kompaktheits-
+und Volvo-Tests gelten mit unveränderten Grenzwerten weiter.
+
 #### Themevertrag für alle bestehenden und künftigen Widgets (Refs #198)
 
 - Detail- und Aktionsbuttons verwenden wie VolvoConnect
