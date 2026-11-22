@@ -2,9 +2,9 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
-**Aktuelle stabile Version: 1.12.0**
+**Aktuelle stabile Version: 1.13.0**
 
-## Entwicklungsstand auf dev (noch nicht auf main veröffentlicht)
+## Neu in 1.13.0
 
 - Freehtml bewahrt die Freeform-Geometrie auch beim Speichern leerer Inhalte;
   SVG-Rechtecke unterstützen Breite und Höhe (Issue #228).
@@ -28,10 +28,13 @@ Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freie
   sowie grafische Anrufsymbole (#239). Eigene HTML-/Text-CSS-Größen bleiben erhalten.
 - Ausgewogene SolarFlow-Kreiswerte, größere native Anruflistentexte und
   lesbare Solarübersicht sowie responsive Standardtextgröße im Textbaustein
-  für Desktop, Tablet und Phone (#239). Freehtml bleibt unverändert.
+  für Desktop, Tablet und Phone (#239). Eigene Freehtml-Layouts werden
+  durch diese Standardwidget-Typografie nicht verändert.
+- CMS-Startseiten revalidieren ihren Browsercache vor dem Laden; der
+  HTML-Dialog zeigt den tatsächlich geladenen Codeprüfungsstand (#242).
 
-Release-Zuordnung und Abnahme werden in #240 und den Einzelissues verfolgt.
-Diese Liste ist keine Freigabe oder Veröffentlichung auf `main`.
+Releaseumfang: #228–242. Die abgenommenen Änderungen einschließlich Kiosk
+und der Release-Dokumentation (#240) werden gemeinsam veröffentlicht.
 
 ## Neu in 1.12.0
 

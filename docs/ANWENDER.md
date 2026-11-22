@@ -237,6 +237,22 @@ Geräte lassen sich später im Editor hinzufügen.
   sowie die globale FHEM-CMS Administration, wenn freigegeben.
 - **Einfügen:** Widget hinzufügen (mit Suche) oder Gerät hinzufügen. Vorhandene Widgets lassen sich direkt am Widget duplizieren.
 
+### Kioskseiten (seit 1.13.0)
+
+In den Navigationseinstellungen kann jede Seite mit **Im Kioskmodus anzeigen**
+markiert werden. Navigationseinstellungen sind auf allen Seiten erreichbar.
+Kioskseiten zeigen live keine CMS-Navigation; im Editor bleibt der
+Navigationspunkt sichtbar und farblich hervorgehoben.
+Unter **Bearbeiten → Seiteneinstellungen** der gewünschten Seite stehen
+**Direkte Live-URL dieser Seite** und **Live-URL kopieren** bereit.
+Die Einstellung zunächst im Entwurf speichern und anschließend unter
+**Datei → Entwurf veröffentlichen** freigeben.
+Die kopierte URL ohne Bearbeitungsmodus normal öffnen; ein zusätzlicher
+Kioskparameter ist nicht nötig. Kiosk blendet die CMS-Navigation aus,
+aktiviert aber nicht automatisch den Browser-Vollbildmodus.
+
+### Gemeinsame Darstellung und Vorschau
+
 Die Größe und Skalierung für alle Raster- und Freeform-Seiten stellst du unter
 **Seiteneinstellungen** auf der Startseite ein. Auch die Position und Größe
 der Navigation bearbeitest du dort direkt an der Navigation. Andere Seiten

@@ -413,7 +413,7 @@ try {
   diagnosticWidget.services = { saveWidget: async () => {} };
   document.body.append(diagnosticWidget);
   diagnosticWidget.openConfig();
-  check(diagnosticWidget.shadowRoot.querySelector('[data-frontend-version]').textContent.includes('1.24.4-dev'),
+  check(diagnosticWidget.shadowRoot.querySelector('[data-frontend-version]').textContent.includes('1.13.0'),
     'HTML dialog reports the loaded code-checking component version');
   const editor = diagnosticWidget.shadowRoot.querySelector('[name="html"]');
   const diagnosticPanel = diagnosticWidget.shadowRoot.querySelector('[data-diagnostic]');

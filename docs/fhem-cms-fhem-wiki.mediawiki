@@ -11,7 +11,7 @@
 | Inoffizielles Modul; Installation aus externer Updatequelle.
 |- style="background-color:#FFFFFF"
 | Aktuelle stabile Version
-| [https://github.com/stapetz/fhem-cms/releases/tag/v1.12.0 1.12.0]
+| [https://github.com/stapetz/fhem-cms/releases/tag/v1.13.0 1.13.0]
 |- style="background-color:#EFEFFF"
 ! colspan="2" | Details
 |- style="background-color:#FFFFFF"
@@ -323,11 +323,9 @@ keine Kamera-Aussparung; dafür bleibt die Prüfung auf dem echten Gerät nötig
 
 Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Browserzoom. Die Geräte-Vorschau hilft dabei, ersetzt aber nicht jeden Test auf dem Zielgerät.
 
-== Entwicklungsstand auf dev (noch nicht main) ==
+== Neu in Version 1.13.0 ==
 
-Die folgenden Änderungen sind Entwicklungsstand und noch kein veröffentlichter
-main-Release. Geräte- und FHEM-Prüfungen stehen noch aus; die bisher genannten
-stabilen Versionsangaben bleiben unverändert.
+Die folgenden abgenommenen Änderungen sind Bestandteil des Releases 1.13.0.
 
 * '''Freies HTML und SVG (#228–235):''' Das Freeform-Layout bleibt auch bei
   leerem HTML erhalten. SVG-Rechtecke unterstützen Breite und Höhe; freies HTML
@@ -347,10 +345,15 @@ stabilen Versionsangaben bleiben unverändert.
   die Startseite bleibt im Editor bearbeitbar.
 * '''Widgetgrößen und Anrufliste (#239):''' Siehe den folgenden Hinweis in der
   Widgetübersicht.
+* '''Präzise HTML-Diagnose (#241):''' Ablehnungen zeigen Zeile/Spalte und einen
+  begrenzten Codeausschnitt mit markierter Problemstelle. HTML-Blockkommentare
+  innerhalb von CSS werden akzeptiert.
+* '''Browserstand (#242):''' CMS-Startseiten revalidieren den Browsercache;
+  der HTML-Dialog zeigt die tatsächlich geladene Codeprüfungsversion.
 
 == Widgetübersicht ==
 
-'''Entwicklungsstand auf dev (noch nicht main, #239):''' Schalter ohne Beschriftung
+'''Seit Version 1.13.0 (#239):''' Schalter ohne Beschriftung
 nutzen die verfügbare Inhaltsfläche für ihr Symbol; analoge Uhren füllen den
 verbleibenden Platz quadratisch unter Berücksichtigung von Titel und Datum.
 Titel und Texte der Standardwidgets passen sich an die Kachelbreite an.
@@ -362,7 +365,7 @@ Richtext-Import-/Speicherfilter bleibt unverändert.
 Freies HTML wird bei dieser Layoutnachbesserung nicht verändert.
 Die Anrufliste kennzeichnet ein- und ausgehende sowie verpasste Anrufe mit
 lokalen Symbolen und zugänglichen Statusbezeichnungen. Kleine Kacheln können
-Inhalte weiterhin intern scrollen. Die Geräteprüfung steht noch aus.
+Inhalte weiterhin intern scrollen.
 
 '''Konfigurationsdialoge (ab 1.11.0):''' Alle Widgettypen verwenden dieselbe Desktopbreite bis 1100 Pixel, auf kleinen Bildschirmen responsiv. Die Höhe folgt dem Inhalt; lange Formulare bleiben scrollbar. Geräte- und Medienauswahldialoge behalten eigene Größen. Tabellen-Einheiten und Vorschläge stehen über die volle Breite in einer eigenen Zeile unter den übrigen Feldern, im Ein- und Mehr-Device-Modus.
 
