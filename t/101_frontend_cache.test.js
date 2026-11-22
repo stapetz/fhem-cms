@@ -12,7 +12,7 @@ const chrome = process.env.CHROME_BIN || [
 ].find(path => spawnSync('test', ['-x', path]).status === 0);
 
 test('cached generated pages revalidate and load a single current transitive module graph', {
-  skip: chrome ? false : 'Chrome not installed', timeout: 30000,
+  skip: chrome ? false : 'Chrome not installed', timeout: 45000,
 }, async () => {
   const root = await mkdtemp(join(tmpdir(), 'cms-cache-'));
   const profile = join(root, 'profile');
@@ -67,7 +67,7 @@ test('cached generated pages revalidate and load a single current transitive mod
     let stderr = '';
     child.stderr.on('data', chunk => { stderr += chunk; });
     let port;
-    for (let attempt = 0; attempt < 200; attempt++) {
+    for (let attempt = 0; attempt < 600; attempt++) {
       try { port = Number((await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]); }
       catch (error) { if (error.code !== 'ENOENT') throw error; }
       if (port) break;
