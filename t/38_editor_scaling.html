@@ -57,11 +57,17 @@ try {
   let commands = 0;
   const root = document.querySelector('#editor');
   editor = new Schema5Editor({ GridStack, root, controller, browser: window,
-    services: { iconUrl: () => '', setCommand: async () => { commands += 1; } },
+    services: { freeformSupported: true, iconUrl: () => '', setCommand: async () => { commands += 1; } },
     client: { jsonlist: async () => [{ name: 'Test', readings: { state: '21' } }],
       subscribe() {}, unsubscribe() {} } });
   await editor.start();
   await settle();
+  const menuButtons = [...root.querySelectorAll('.cms-toolbar button')].map(button => button.textContent);
+  check(!menuButtons.some(text => /JSON/.test(text)), 'CMS editor leaves JSON transfers exclusively to administration');
+  for (const label of ['Entwurf veröffentlichen', 'Entwurf verwerfen', 'Sicherungen / Wiederherstellung', 'Assetmanager', 'Seiteneinstellungen']) {
+    check(menuButtons.some(text => text.startsWith(label)), `${label} remains in the CMS editor`);
+  }
+  check(!root.querySelector('.cms-toolbar input[type="file"]'), 'CMS editor has no hidden JSON import control');
   const appearance = () => {
     const widget = root.querySelector('cms-value');
     check(document.documentElement.dataset.cmsTheme === 'light', 'editor retains theme');

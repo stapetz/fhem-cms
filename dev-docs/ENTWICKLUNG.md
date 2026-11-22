@@ -35,11 +35,13 @@ Verfügbarkeitsstatus. Externe Texte werden ausschließlich als Text eingefügt.
 
 Die bestehende `admin.html` ist der zentrale Einstieg fuer administrative
 Aufgaben. Ihre Startansicht bleibt die Bestandsliste der CMS-Devices und
-verwaisten Dateien. Neue administrative Funktionen werden dort in die
-obere Menuestruktur eingebunden, statt separate Verwaltungsseiten oder
-parallele Konfigurations-/Speichermechanismen einzufuehren.
+verwaisten Dateien. Der globale Umfang ist Bestand, Purgen/Loeschen und
+JSON-Import/Export. Es gibt keine globale CMS-Auswahl und keine Seiten-,
+Darstellungs- oder Konfigurationsdialoge und keinen eingebetteten Editor.
+JSON-Aktionen werden direkt in der Bestandszeile des jeweiligen CMS angeboten.
 JSON-Import verwendet den bestehenden Entwurfspfad; Live wird dadurch
-nicht ueberschrieben. Die bestehenden CMS-Editorfunktionen bleiben erhalten.
+nicht ueberschrieben. Die lokalen CMS-Bearbeitungsmenues bleiben erhalten,
+enthalten aber keine JSON-Import-/Exportpunkte mehr.
 X und Escape versuchen das Fenster zu schliessen; Browserbeschraenkungen
 muessen sichtbar gemeldet werden. Offene Dialoge haben bei Escape Vorrang.
 
@@ -110,9 +112,9 @@ gemeinsamen Rahmen, ohne die Navigation mitzubewegen. Die frühere Option
 Implementierung auf `dev` (Phase 1): Der Editor aktiviert Freeform pro Seite
 unter „Seiteneinstellungen“. `layoutformat` meldet die Unterstützung; der
 Browser verwendet dann `version6state` und `version6draft`, welche auch
-Schema 5 bedienen. Alte `version5`-Befehle bleiben unverändert. „Datei“
-bietet JSON-Import als Entwurf und Export des aktuellen Entwurfs bzw.
-Live-Stands, jeweils ohne Mediendateien. Der Editor bietet keine
+Schema 5 bedienen. Alte `version5`-Befehle bleiben unverändert. Die globale
+Administration bietet je CMS JSON-Import als Entwurf und Export des aktuellen
+Entwurfs bzw. Live-Stands, jeweils ohne Mediendateien. Der Editor bietet keine
 Widget-Vorlagen an; vorhandene Widgets lassen sich direkt duplizieren.
 Bestehende Vorlagendaten werden nicht gelöscht. Prüfungen: `prove -l t/91_schema6_validation.t
 t/92_schema6_persistence.t` und `node --test t/93_freeform.test.js`.

@@ -74,8 +74,6 @@ export class Schema5Editor {
   #layoutSaving = false;
   #layoutSavePromise = Promise.resolve();
   #freeformSelection;
-  #configImport;
-  #configExport;
 
   constructor({ GridStack, root, controller, client, services, browser = window,
     adminMenuEnabled = client?.adminMenuEnabled === true }) {
@@ -152,26 +150,6 @@ export class Schema5Editor {
     this.#previewToggle.className = 'cms-button cms-grid-toggle';
     this.#previewToggle.setAttribute('aria-pressed', 'false');
     const fileActions = [this.#publish, this.#discard, this.#backup, this.#assets];
-    if (services.freeformSupported) {
-      this.#configImport = document.createElement('button');
-      this.#configExport = document.createElement('button');
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'application/json,.json';
-      input.hidden = true;
-      this.#toolbar.append(input);
-      this.#configImport.type = this.#configExport.type = 'button';
-      this.#configImport.textContent = 'JSON als Entwurf importieren';
-      this.#configExport.textContent = 'Konfiguration als JSON exportieren';
-      this.#configImport.addEventListener('click', () => input.click());
-      input.addEventListener('change', () => {
-        const [file] = input.files;
-        input.value = '';
-        if (file) void this.#importConfig(file);
-      });
-      this.#configExport.addEventListener('click', () => this.#exportConfig());
-      fileActions.push(this.#configImport, this.#configExport);
-    }
     this.#menu('Datei', fileActions);
     this.#menu('Bearbeiten', [this.#page, ...createCmsAdminMenuLinks({ adminMenuEnabled })]);
     this.#menu('Einfügen', [this.#widgets, this.#addDevice]);
@@ -277,8 +255,6 @@ export class Schema5Editor {
   }
 
   #setActions(enabled, hasDraft) {
-    if (this.#configImport) this.#configImport.disabled = !enabled;
-    if (this.#configExport) this.#configExport.disabled = !enabled;
     this.#page.disabled = !enabled;
     this.#widgets.disabled = !enabled;
     this.#addDevice.disabled = !enabled;
@@ -525,40 +501,6 @@ export class Schema5Editor {
     } finally {
       this.#layoutSaving = false;
     }
-  }
-
-  async #importConfig(file) {
-    if (!this.#active || this.#suspended || this.#configImport.disabled) return;
-    const generation = this.#generation;
-    try {
-      if (file.size > 1048576) throw new Error('Die JSON-Datei ist größer als 1 MiB.');
-      const candidate = JSON.parse(await file.text());
-      if (!this.#active || this.#suspended || generation !== this.#generation || this.#configImport.disabled) return;
-      if (!this.#browser.confirm('JSON als Entwurf übernehmen? Der bisherige Entwurf wird ersetzt; Medien werden nicht importiert.')) return;
-      const state = this.#controller.snapshot();
-      const next = ++this.#generation;
-      this.#view.lock();
-      this.#setActions(false, false);
-      const result = await this.#controller.saveDraft(candidate, state.token);
-      await this.#display(result, next);
-    } catch (error) {
-      if (this.#active && !this.#suspended) {
-        this.#status.setAttribute('data-error', '');
-        this.#status.textContent = `Import fehlgeschlagen: ${error.message}`;
-        if (this.#configImport.disabled) this.#reloadButton.hidden = false;
-      }
-    }
-  }
-
-  #exportConfig() {
-    if (!this.#active || this.#suspended || this.#configExport.disabled) return;
-    const state = this.#controller.snapshot();
-    const url = URL.createObjectURL(new Blob([JSON.stringify(state.draft || state.live, null, 2)], {type: 'application/json'}));
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = 'fhem-cms-config.json';
-    anchor.click();
-    this.#browser.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   #error(error) {

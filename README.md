@@ -15,8 +15,10 @@ Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freie
   `content` für Pseudoelemente sind erlaubt (#232, #234, #235).
 - Passive SVG-`animate`-Animationen sind erlaubt; für Geometrie empfiehlt sich
   `attributeType="XML"` (#236).
-- Die bestehende globale Administration erhält Menüs und JSON-Import als
-  Entwurf sowie Konfigurationsexport (#237).
+- Die globale Administration bietet Bestand, Purgen/Löschen und JSON-Import
+  als Entwurf sowie Export direkt je CMS-Bestandszeile, ohne globale CMS-Auswahl.
+  Seiten- und Darstellungseinstellungen bleiben im jeweiligen CMS;
+  JSON-Transfer entfällt dort im Dateimenü (#237).
 - Kioskseiten blenden live die Navigation aus, bleiben im Editor markiert
   erreichbar und bieten eine kopierbare Live-URL. Navigationseinstellungen
   sind auf jeder Seite erreichbar (#238).
