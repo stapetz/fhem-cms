@@ -323,6 +323,29 @@ keine Kamera-Aussparung; dafür bleibt die Prüfung auf dem echten Gerät nötig
 
 Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Browserzoom. Die Geräte-Vorschau hilft dabei, ersetzt aber nicht jeden Test auf dem Zielgerät.
 
+== Entwicklungsstand auf dev (noch nicht main) ==
+
+Die folgenden Änderungen sind Entwicklungsstand und noch kein veröffentlichter
+main-Release. Geräte- und FHEM-Prüfungen stehen noch aus; die bisher genannten
+stabilen Versionsangaben bleiben unverändert.
+
+* '''Freies HTML und SVG (#228–235):''' Das Freeform-Layout bleibt auch bei
+  leerem HTML erhalten. SVG-Rechtecke unterstützen Breite und Höhe; freies HTML
+  erlaubt bis zu 50.000 Unicode-Zeichen. Numerische Readings können geeignete
+  SVG-Werte und CSS-Variablen dynamisch belegen; numerische Standardwerte sind
+  möglich. Dazu gehören lokale <code>use</code>-, <code>clipPath</code>- und
+  <code>mask</code>-Referenzen sowie Bewegungspfade. SVG-Patterns unterstützen
+  CSS-Erweiterung und Inhalte.
+* '''SVG-Animation (#236):''' Passive XML-Animationen für SVG-Geometrie werden
+  unterstützt; ausführbare Skripte sind damit nicht freigegeben.
+* '''Zentrale CMS-Verwaltung (#237):''' Konfigurationen lassen sich als JSON
+  für Entwürfe importieren und exportieren.
+* '''Kiosk (#238):''' Eine entsprechend konfigurierte Live-Seite erscheint ohne
+  Navigation; ihre URL lässt sich kopieren. Die Seitennavigation für andere als
+  die Startseite bleibt im Editor bearbeitbar.
+* '''Widgetgrößen und Anrufliste (#239):''' Siehe den folgenden Hinweis in der
+  Widgetübersicht.
+
 == Widgetübersicht ==
 
 '''Entwicklungsstand auf dev (noch nicht main, #239):''' Schalter ohne Beschriftung
