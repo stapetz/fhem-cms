@@ -90,6 +90,9 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 ## Erlaubter Code
 
 - Der Freehtml-Code darf höchstens **50.000 Unicode-Zeichen** umfassen.
+- Vollständige HTML-Blockkommentare wie `<!-- === BOX START === -->` sind
+  auch innerhalb eines `<style>`-Elements erlaubt. Beim Rendern werden sie
+  entfernt; der gespeicherte Quelltext bleibt unverändert.
 - Struktur: `div span p h1 h2 h3 h4 h5 h6 strong b em i u small br hr ul ol li section article header footer main aside nav figure figcaption details summary dl dt dd pre code blockquote sub sup mark`
 - Tabellen: `table thead tbody tfoot tr th td caption`
 - Medien/Navigation: `img a iframe`
@@ -237,7 +240,13 @@ und eingebettete ausführbare Inhalte bleiben gesperrt.
 
 **Warum steht dort `–`?** Das Device oder Reading existiert nicht, oder es hat (noch) keinen Wert. Mit `default(…)` legst du einen eigenen Ersatztext fest.
 
-**Warum wird mein Code abgelehnt?** Meist ein nicht erlaubtes Element oder ein Attribut in einfachen statt doppelten Anführungszeichen. Schreibe `class="x"`, nicht `class='x'`.
+**Warum wird mein Code abgelehnt?** Der Dialog zeigt den Grund, die Zeile
+und einen begrenzten Codeausschnitt mit markierter Problemstelle.
+Die Markierung bezieht sich auf den eingegebenen Quelltext; auch bei langen
+Zeilen wird nicht der gesamte Code ausgegeben. Korrigiere die markierte
+Stelle; gültiger Code benötigt keine Bestätigung zum Umgehen des Sanitizers.
+Für gespeicherte Attribute weiterhin doppelte Anführungszeichen verwenden:
+`class="x"`, nicht `class='x'`.
 
 ## Beispiele
 
