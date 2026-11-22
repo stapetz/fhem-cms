@@ -1,5 +1,6 @@
 import { showCmsModal } from '../js/modal-dialog.js';
 import { MAX_FREE_DEVICES, checkSource, elementText, extractDevices, lookupValue, placeholderText, renderTemplate, sanitize } from '../js/freehtml.js';
+import { diagnoseFreeHtml } from '../js/freehtml-diagnostics.js';
 import { openPlaceholderPicker } from '../js/placeholder-picker.js';
 import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
 import { renderVehicleMaps } from '../js/vehicle-map.js';
@@ -82,6 +83,10 @@ class FHEMCMSHtml extends HTMLElement {
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { margin: 0; color: var(--cms-danger, #ffb4a8); min-height: 1.2em; }
+        .diagnostic { border-left: 3px solid var(--cms-danger, #ffb4a8); padding-left: 0.65rem; }
+        .diagnostic p { margin: 0 0 0.35rem; }
+        .diagnostic pre { max-width: 100%; max-height: 7em; margin: 0 0 0.4rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .diagnostic mark { color: inherit; background: color-mix(in srgb, var(--cms-danger, #ffb4a8) 35%, transparent); }
         ${widgetDesignCss}
         .tile .content { height: auto; min-height: 0; flex: 1; padding: 0;
           overflow: var(--cms-widget-overflow, auto); }
@@ -101,6 +106,11 @@ class FHEMCMSHtml extends HTMLElement {
           <label>HTML-Code
             <textarea name="html" spellcheck="false" autocomplete="off" placeholder="${EXAMPLE.replace(/"/g, '&quot;')}"></textarea>
           </label>
+          <div class="diagnostic" data-diagnostic role="alert" hidden>
+            <p data-diagnostic-message></p>
+            <pre data-diagnostic-context></pre>
+            <button type="button" data-diagnostic-jump>Zur Stelle im Code</button>
+          </div>
           <div class="row"><button type="button" data-insert-placeholder>Platzhalter suchen und einfügen …</button></div>
           <details>
             <summary>Platzhalter-Hilfe</summary>
@@ -142,7 +152,18 @@ class FHEMCMSHtml extends HTMLElement {
       event.preventDefault();
       this.onSave();
     });
-    $('[data-form]').elements.html.addEventListener('input', () => this.showDevices());
+    $('[data-form]').elements.html.addEventListener('input', () => {
+      this.showDevices();
+      this.updateDiagnostics();
+      this.setDialogError('');
+    });
+    $('[data-diagnostic-jump]').addEventListener('click', () => {
+      const diagnostic = this.diagnostic;
+      if (!diagnostic || diagnostic.start === null) return;
+      const area = $('[data-form]').elements.html;
+      area.focus();
+      area.setSelectionRange(diagnostic.start, diagnostic.end);
+    });
     $('[data-insert-placeholder]').addEventListener('click', () => this.insertPlaceholder());
     $('[data-content]').addEventListener('click', (event) => {
       const link = event.target.closest('a[href^="#"]');
@@ -282,11 +303,43 @@ class FHEMCMSHtml extends HTMLElement {
     this.shadowRoot.querySelector('[data-delete]').hidden = this.isNew;
     this.showDevices();
     this.setDialogError('');
+    this.updateDiagnostics();
     showCmsModal(this.shadowRoot.querySelector('[data-dialog]'));
   }
 
   setDialogError(message) {
     this.shadowRoot.querySelector('[data-dialog-error]').textContent = message;
+  }
+
+  updateDiagnostics() {
+    const form = this.shadowRoot.querySelector('[data-form]');
+    const area = form.elements.html;
+    const panel = this.shadowRoot.querySelector('[data-diagnostic]');
+    const message = this.shadowRoot.querySelector('[data-diagnostic-message]');
+    const context = this.shadowRoot.querySelector('[data-diagnostic-context]');
+    const jump = this.shadowRoot.querySelector('[data-diagnostic-jump]');
+    const diagnostic = diagnoseFreeHtml(area.value);
+    this.diagnostic = diagnostic;
+    panel.hidden = !diagnostic;
+    context.replaceChildren();
+    if (!diagnostic) return null;
+
+    message.textContent = diagnostic.start === null
+      ? `Keine verlässliche Quellposition verfügbar: ${diagnostic.message}`
+      : `Zeile ${diagnostic.line}, Spalte ${diagnostic.column}: ${diagnostic.message}`;
+    jump.hidden = diagnostic.start === null;
+    if (diagnostic.start !== null) {
+      const beforeEnd = Math.max(diagnostic.contextStart, Math.min(diagnostic.start, diagnostic.contextEnd));
+      const markEnd = Math.max(beforeEnd, Math.min(diagnostic.end, diagnostic.contextEnd));
+      const before = document.createTextNode(diagnostic.context.slice(0, beforeEnd - diagnostic.contextStart));
+      const mark = document.createElement('mark');
+      mark.textContent = diagnostic.context.slice(beforeEnd - diagnostic.contextStart, markEnd - diagnostic.contextStart);
+      const after = document.createTextNode(diagnostic.context.slice(markEnd - diagnostic.contextStart));
+      context.append(before, mark, after);
+    } else {
+      context.textContent = diagnostic.message;
+    }
+    return diagnostic;
   }
 
   collectWidget() {
@@ -316,6 +369,7 @@ class FHEMCMSHtml extends HTMLElement {
 
   async onSave() {
     const save = this.shadowRoot.querySelector('[data-save]');
+    this.updateDiagnostics();
     try {
       const widget = this.collectWidget();
       save.disabled = true;
@@ -323,7 +377,10 @@ class FHEMCMSHtml extends HTMLElement {
       this.isNew = false;
       this.closeDialog(false);
     } catch (error) {
-      this.setDialogError(error.message || 'Speichern fehlgeschlagen');
+      const diagnostic = this.diagnostic;
+      this.setDialogError(diagnostic
+        ? ''
+        : `Keine genaue Quellposition verfügbar: ${error.message || 'Speichern fehlgeschlagen'}`);
     } finally {
       save.disabled = false;
     }
