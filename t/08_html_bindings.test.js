@@ -21,7 +21,7 @@ test('free HTML devices receive snapshots, channel readings and live subscriptio
     clearInterval() {},
     clearTimeout() {},
   };
-  globalThis.document = { addEventListener() {} };
+  globalThis.document = { readyState: 'loading', addEventListener() {} };
   globalThis.HTMLElement = class {};
   const registry = new Map();
   globalThis.customElements = {
