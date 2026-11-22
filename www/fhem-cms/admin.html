@@ -3,8 +3,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Globale FHEM-CMS Administration</title>
-<link rel="stylesheet" href="css/fhem-cms.css?v=admin-20261122-2">
-<link rel="stylesheet" href="css/cms-admin.css?v=admin-20261122-2">
+<link rel="stylesheet" href="css/fhem-cms.css?v=admin-20261122-3">
+<link rel="stylesheet" href="css/cms-admin.css?v=admin-20261122-3">
 <main class="cms-admin">
   <header class="cms-admin-header">
     <h1>Globale FHEM-CMS Administration</h1>
@@ -32,25 +32,24 @@
     <details class="cms-menu">
       <summary class="cms-button">Konfiguration</summary>
       <div class="cms-menu-items" role="group" aria-label="Konfiguration">
-        <p>Im CMS-Editor: Widgets, Sicherungen und Medien.</p>
-        <a class="cms-button cms-editor-link" hidden>CMS-Editor &ouml;ffnen</a>
-        <p class="cms-editor-hint">Zuerst unter Bearbeiten ein CMS ausw&auml;hlen.</p>
+        <button class="cms-button" id="open-settings" type="button" disabled>Einstellungen bearbeiten …</button>
+        <button class="cms-button" id="open-editor" type="button" disabled>CMS-Editor einbetten …</button>
       </div>
     </details>
     <details class="cms-menu">
       <summary class="cms-button">Seiten</summary>
       <div class="cms-menu-items" role="group" aria-label="Seiten">
-        <p>Im CMS-Editor: Seite w&auml;hlen und Seiteneinstellungen &ouml;ffnen.</p>
-        <a class="cms-button cms-editor-link" hidden>CMS-Editor f&uuml;r Seiten &ouml;ffnen</a>
-        <p class="cms-editor-hint">Zuerst unter Bearbeiten ein CMS ausw&auml;hlen.</p>
+        <label for="configuration-page">Seite ausw&auml;hlen</label>
+        <select id="configuration-page" disabled></select>
+        <button class="cms-button" id="open-page-settings" type="button" disabled>Seiteneinstellungen …</button>
+        <button class="cms-button" id="open-navigation" type="button" disabled>Seiten und Navigation bearbeiten …</button>
+        <button class="cms-button" id="open-pages-editor" type="button" disabled>CMS-Editor einbetten …</button>
       </div>
     </details>
     <details class="cms-menu">
       <summary class="cms-button">Darstellung</summary>
       <div class="cms-menu-items" role="group" aria-label="Darstellung">
-        <p>Im CMS-Editor: Darstellung in den Seiteneinstellungen &auml;ndern.</p>
-        <a class="cms-button cms-editor-link" hidden>CMS-Editor f&uuml;r Darstellung &ouml;ffnen</a>
-        <p class="cms-editor-hint">Zuerst unter Bearbeiten ein CMS ausw&auml;hlen.</p>
+        <button class="cms-button" id="open-appearance" type="button" disabled>Darstellung und Hintergrund …</button>
       </div>
     </details>
   </nav>
@@ -71,7 +70,7 @@
   <section id="configuration" aria-labelledby="configuration-heading">
     <h2 id="configuration-heading">CMS-Konfiguration</h2>
     <p id="configuration-status" role="status" aria-live="polite">W&auml;hle unter Bearbeiten ein CMS-Device aus.</p>
-    <p>Einzelne Einstellungen werden im bestehenden CMS-Editor bearbeitet; die Men&uuml;s oben f&uuml;hren dorthin.</p>
+    <p>Seite und Darstellung lassen sich hier als Entwurf bearbeiten. Der eingebettete CMS-Editor bietet weitere Aktionen.</p>
     <dl id="configuration-details" hidden>
       <dt>Device</dt><dd id="configuration-name"></dd>
       <dt>Schema</dt><dd id="configuration-schema"></dd>
@@ -110,5 +109,16 @@
     </div>
   </form>
 </dialog>
-<script type="module" src="js/cms-admin.js?v=admin-20261122-2"></script>
+<dialog id="settings-dialog" class="cms-editor-panel cms-editor-dialog" data-panel="page" aria-label="Seiteneinstellungen">
+  <div id="settings-panel"></div>
+</dialog>
+<dialog id="embedded-editor" aria-label="Eingebetteter CMS-Editor">
+  <div class="cms-embedded-header">
+    <h2>CMS-Editor</h2>
+    <button class="cms-button" id="close-editor" type="button">Editor schlie&szlig;en</button>
+  </div>
+  <p>Seiten und Navigation &uuml;ber die Navigation, Widgets &uuml;ber Einf&uuml;gen bearbeiten. Ver&ouml;ffentlichen und Sicherungswiederherstellung wirken wie im CMS-Editor.</p>
+  <iframe title="CMS-Editor" id="editor-frame"></iframe>
+</dialog>
+<script type="module" src="js/cms-admin.js?v=admin-20261122-3"></script>
 </html>

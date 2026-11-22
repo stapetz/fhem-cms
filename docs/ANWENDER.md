@@ -92,11 +92,23 @@ Browsercaches.
   Schema-6-Konfiguration zu laden. Unter **Datei** lässt sich die Konfiguration
   als JSON exportieren; wenn ein Entwurf vorhanden ist, wird dieser exportiert,
   sonst der Live-Stand. Medien sind nicht enthalten.
-- Die Menüs **Konfiguration**, **Seiten** und **Darstellung** führen zum
-  bestehenden Editor des ausgewählten CMS. Dort die gewünschte Seite und
-  **Bearbeiten → Seiteneinstellungen** wählen; Widgets, Sicherungen und Medien
-  bleiben über die vorhandenen Editor-Menüs zugänglich. Die einzelnen
-  Einstellungen werden nicht direkt in der Administration bearbeitet.
+- Unter **Seiten** die Seite auswählen. **Seiteneinstellungen** und
+  **Darstellung** öffnen den bestehenden Dialog direkt in der Administration.
+  Theme, Raster, Widgettitel und Hintergrund werden ausschließlich als Entwurf
+  gespeichert; Abbrechen verwirft nicht gespeicherte Eingaben. Die Umstellung
+  zwischen Raster und Freeform benötigt die Messungen des CMS-Editors und ist
+  im Administrationsdialog nicht verfügbar.
+- **Seiten und Navigation bearbeiten** öffnet die vorhandene
+  Seitenverwaltung in der Administration: Seitentitel, Dateinamen,
+  Reihenfolge, Kioskmodus und Navigationsbeschriftung werden als Entwurf
+  gespeichert. Eine Änderung der Navigationsausrichtung benötigt die
+  Navigationsmessung im eingebetteten Editor und wird hier ausdrücklich
+  abgewiesen.
+- **CMS-Editor einbetten** öffnet den gewohnten Editor innerhalb der
+  Administration, einschließlich Seiten-/Navigationsverwaltung, Widgets,
+  Medien und Sicherungen. Dort sind auch Veröffentlichung und Wiederherstellung
+  möglich; diese wirken wie im normalen Editor auf den Live-Stand. Nach dem
+  Schließen wird der Konfigurationszustand der Administration neu geladen.
 - **JSON als Entwurf importieren** prüft die Datei mit den vorhandenen
   Schema-Controllern und ersetzt nach Bestätigung nur den Entwurf. Die
   Live-Konfiguration bleibt unverändert; Medien werden nicht importiert.
