@@ -106,8 +106,14 @@ const measure=(host,layout,width,scale=1) => {
     check(cells.length===20,`${layout}: all five calls and four columns remain available`);
     check(cells.every(cell => cell.scrollWidth<=cell.clientWidth+1),
       `${layout}/${width}/${scale}: call-list text does not clip horizontally: ${cells.filter(cell => cell.scrollWidth>cell.clientWidth+1).map(cell => `${cell.dataset.column} ${cell.scrollWidth}/${cell.clientWidth}`)}`);
+    check(tile.scrollWidth<=tile.clientWidth+1,`${layout}/${width}/${scale}: call list has no horizontal overflow`);
+    const state=root.querySelector('th[data-column=state]');
+    check(state.textContent==='Art' && state.getAttribute('aria-label')==='Status',
+      `${layout}: concise visible status heading retains its accessible label`);
     if(width*scale>=280) check(font(table)*scale>=17.9,`${layout}: calls remain 18px on screen`);
     if(getComputedStyle(table).display!=='block') {
+      check(state.scrollWidth<=state.clientWidth+1 && getComputedStyle(state).whiteSpace==='nowrap',
+        `${layout}/${width}/${scale}: status heading fits on one line`);
       const party=root.querySelector('th[data-column=party]').getBoundingClientRect();
       check(party.width/table.getBoundingClientRect().width>=.29,`${layout}: callers have at least 29% of table width`);
     } else {
