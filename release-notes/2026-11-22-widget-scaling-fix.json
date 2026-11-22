@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-22",
+  "version": "1.24.1-dev",
+  "title": "Widget-Schrift und globale Administration korrigiert",
+  "changes": [
+    "Widget-Schriftgroessen auch auf skalierten Canvas korrekt bemessen. Refs #239.",
+    "Globale Administration auf Bestand, Purgen/Loeschen und JSON-Transfers je CMS-Zeile begrenzt. Refs #237.",
+    "Keine globale CMS-Auswahl oder Seiteneinstellungen; JSON-Transfer aus CMS-Dateimenues entfernt. Refs #237.",
+    "Nur dev; Geraeteabnahme und Freigabe fuer main stehen aus. Refs #240."
+  ]
+}
