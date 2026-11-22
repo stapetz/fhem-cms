@@ -31,6 +31,29 @@ Minuten ausgelegte Cache fasst parallele Anfragen zusammen; bei einem Ausfall
 bleibt der vorige Stand gekennzeichnet sichtbar. Warnungen haben einen eigenen
 Verfügbarkeitsstatus. Externe Texte werden ausschließlich als Text eingefügt.
 
+## Zentrale Administration und Kioskseiten (Refs #237, #238)
+
+Die bestehende `admin.html` ist der zentrale Einstieg fuer administrative
+Aufgaben. Ihre Startansicht bleibt die Bestandsliste der CMS-Devices und
+verwaisten Dateien. Neue administrative Funktionen werden dort in die
+obere Menuestruktur eingebunden, statt separate Verwaltungsseiten oder
+parallele Konfigurations-/Speichermechanismen einzufuehren.
+JSON-Import verwendet den bestehenden Entwurfspfad; Live wird dadurch
+nicht ueberschrieben. Die bestehenden CMS-Editorfunktionen bleiben erhalten.
+X und Escape versuchen das Fenster zu schliessen; Browserbeschraenkungen
+muessen sichtbar gemeldet werden. Offene Dialoge haben bei Escape Vorrang.
+
+`page.kiosk` ist in Schema 5 und 6 ein optionaler echter JSON-Boolean.
+Ohne Flag bleibt das bisherige Navigationsverhalten erhalten. Mit `true`
+wird die Seite live ohne CMS-Navigation dargestellt, unabhaengig davon,
+wie ihre URL geoeffnet wurde. Im Editor bleibt der Navigationspunkt
+sichtbar und wird gesondert markiert. Die Seiteneinstellungen zeigen
+die Live-URL der aktuellen Seite und erlauben das Kopieren; fehlender
+Clipboard-Zugriff wird explizit gemeldet. Das Flag wird wie andere
+Seiteneinstellungen zuerst im Entwurf gespeichert.
+Navigationseinstellungen sind auf jeder CMS-Seite erreichbar;
+gemeinsame Canvas-Einstellungen bleiben der Startseite zugeordnet.
+
 ## Freeform-Seiten (Schema 6, geplant)
 
 Freies HTML erlaubt `animate` fuer passive SVG-Geometrie-, Farb- und

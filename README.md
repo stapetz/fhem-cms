@@ -4,6 +4,28 @@ Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freie
 
 **Aktuelle stabile Version: 1.12.0**
 
+## Entwicklungsstand auf dev (noch nicht auf main veröffentlicht)
+
+- Freehtml bewahrt die Freeform-Geometrie auch beim Speichern leerer Inhalte;
+  SVG-Rechtecke unterstützen Breite und Höhe (Issue #228).
+- Freehtml erlaubt jetzt bis zu 50.000 Unicode-Zeichen (#229, #233).
+- Numerische SVG-Readings, lokale SVG-Referenzen, Clip-Pfade, Masken,
+  Motion-Paths und numerische CSS-Standardwerte sind unterstützt (#230, #231).
+- SVG-Patterns und weitere passive CSS-Eigenschaften einschließlich
+  `content` für Pseudoelemente sind erlaubt (#232, #234, #235).
+- Passive SVG-`animate`-Animationen sind erlaubt; für Geometrie empfiehlt sich
+  `attributeType="XML"` (#236).
+- Die bestehende globale Administration erhält Menüs und JSON-Import als
+  Entwurf sowie Konfigurationsexport (#237).
+- Kioskseiten blenden live die Navigation aus, bleiben im Editor markiert
+  erreichbar und bieten eine kopierbare Live-URL. Navigationseinstellungen
+  sind auf jeder Seite erreichbar (#238).
+- Größere, mit dem Widget skalierende Standardinhalte, Schaltericons und Uhr
+  sowie grafische Anrufsymbole (#239). Eigene HTML-/Text-CSS-Größen bleiben erhalten.
+
+Release-Zuordnung und Abnahme werden in #240 und den Einzelissues verfolgt.
+Diese Liste ist keine Freigabe oder Veröffentlichung auf `main`.
+
 ## Neu in 1.12.0
 
 - Pixelgenaues Freeform-Layout (Schema 6) als Alternative zum Raster, mit gemeinsamen Seitengrößen und Navigation.
