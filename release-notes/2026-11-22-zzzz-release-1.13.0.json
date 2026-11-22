@@ -1,0 +1,22 @@
+{
+  "date": "2026-11-22",
+  "version": "1.13.0",
+  "title": "Freies HTML, zentrale Administration, Kiosk und lesbare Widgets",
+  "changes": [
+    "S228 - Freies HTML: Freeform-Speicherung und SVG-Rechteckmasse reparieren.",
+    "S229 - Freies HTML: Zeichenlimit zunaechst auf 30000 erhoehen.",
+    "S230 - Freies HTML: dynamische SVG-Bindungen und Motion-Path unterstuetzen.",
+    "S231 - Numerische default()-Filter in CSS-Readings erlauben.",
+    "S232 - Lokale SVG-pattern-Elemente erlauben.",
+    "S233 - Endgueltiges HTML-Limit auf 50000 Unicode-Zeichen anheben.",
+    "S234 - Passive CSS-Gestaltung erweitern und SVG-Pattern angleichen.",
+    "S235 - CSS content fuer Pseudoelemente erlauben.",
+    "S236 - Passive SVG animate-Elemente erlauben, keine Skriptausfuehrung.",
+    "S237 - Zentrale Administration: Bestand, Purge/Delete und JSON-Transfer je CMS.",
+    "S238 - Kioskseiten mit kopierbarer Live-URL; Navigation auf allen Seiten bearbeiten.",
+    "S239 - Lesbare Standardwidgets, skalierende Schalter/Uhr und Anrufsymbole.",
+    "S240 - Release-Nachverfolgung mit README, Anwenderhandbuch und Wiki.",
+    "S241 - HTML-Kommentare in CSS erlauben; Ablehnungen im Quelltext markieren.",
+    "S242 - Browsercache revalidieren und geladene Codepruefungsversion anzeigen."
+  ]
+}
