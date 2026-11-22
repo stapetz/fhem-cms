@@ -221,6 +221,7 @@ aber keinen Seiten-Referrer. Neue Tabs erhalten keinen Zugriff auf den
 öffnenden CMS-Tab. `javascript:`, `data:`, protokollrelative URLs (`//...`)
 und eingebettete ausführbare Inhalte bleiben gesperrt.
 - Höchstens 30 000 Unicode-Zeichen im HTML-Code. Die Gesamtgröße der CMS-Konfiguration bleibt unabhängig davon begrenzt.
+- Numerische Platzhalter in Inline-CSS dürfen `int`, `round(0)` bis `round(6)` und `default(Zahl)` verwenden. Der numerische Standardwert greift nur bei einem fehlenden oder leeren Reading; ungültige Werte werden nicht in CSS eingesetzt.
 
 ## Häufige Fragen
 

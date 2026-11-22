@@ -43,6 +43,10 @@
     [".panel{color:rgb(1,2,3}", false],
     [".panel{color:\"unterminated}", false],
     ["width:{{Sensor:value|int}}%", true],
+    ["--sun-pos:{{DWD:fc0_sunPct|default(50)}}%;--h:{{DWD:fc0_hour|default(14)}};--m:{{DWD:fc0_min|default(43)}}", true],
+    ["--sun-pos:{{DWD:value|default(-12.5)}}%", true],
+    ["--x:{{DWD:value|default(javascript:alert(1))}}", false],
+    ["--x:{{DWD:value|default(1);color:red}}", false],
     ["width:{{Sensor:value|prefix(1)}}%", false]
   ],
   "urls": [
@@ -90,6 +94,8 @@
     ["<div data-cms-style-template=\"position:fixed;z-index:1000\"></div>", false],
     ["<div data-cms-url-src=\"javascript:x\"></div>", false],
     ["<div style=\"z-index:101\"></div>", false],
+    ["<div class=\"efw\" id=\"root\" style=\"--sun-pos:{{DWD:fc0_sunPct|default(50)}}%;--h:{{DWD:fc0_hour|default(14)}};--m:{{DWD:fc0_min|default(43)}}\"></div>", true],
+    ["<div style=\"--x:{{DWD:value|default(javascript:alert(1))}}\"></div>", false],
     ["<style>.panel{unknown-property:1}</style>", false],
     ["<form><input></form>", false]
   ]

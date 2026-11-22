@@ -106,6 +106,16 @@ try {
   document.body.append(styled);
   check(getComputedStyle(styled.querySelector('.sun')).transform === 'matrix(1, 0, 0, 1, 25, 0)', 'custom property applies live CSS transform');
   styled.remove();
+  const sunStyle = '<div class="efw" id="root" style="--sun-pos:{{DWD:fc0_sunPct|default(50)}}%;--h:{{DWD:fc0_hour|default(14)}};--m:{{DWD:fc0_min|default(43)}}"></div>';
+  check(checkSource(sunStyle) === null, 'numeric default filters validate in CSS custom properties');
+  const sunTemplate = sanitize(sunStyle);
+  const defaults = renderTemplate(sunTemplate, () => null).querySelector('#root');
+  check(defaults.getAttribute('style') === '--sun-pos:50%;--h:14;--m:43', 'missing readings resolve to numeric CSS defaults');
+  const readings = renderTemplate(sunTemplate, (_device, reading) =>
+    ({fc0_sunPct: '72', fc0_hour: '8', fc0_min: '5'})[reading]).querySelector('#root');
+  check(readings.getAttribute('style') === '--sun-pos:72%;--h:8;--m:5', 'numeric CSS defaults defer to present readings');
+  const unsafeStyle = renderTemplate(sunTemplate, () => 'javascript:alert(1)').querySelector('#root');
+  check(!unsafeStyle.hasAttribute('style'), 'unsafe reading cannot enter CSS through numeric default');
   const live = { schemaVersion: 6, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
     navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
     pages: [{ id: 'home', title: 'Start', layoutMode: 'freeform', canvas: { width: 800, height: 600 }, widgets: [] }] };

@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.23.8-dev';
+our $FHEMCMS_VERSION = '1.23.9-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1739,7 +1739,7 @@ sub FHEMCMS_FreeHtmlCss {
     $css =~ s/&amp;/&/g;
     return 0 if ($css =~ /&(?:\#[0-9]+|\#x[0-9a-f]+|[a-z]+);/i);
     $css =~ s{/\*.*?\*/}{}gs;
-    $css =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)))*\s*\}\}}{0}g;
+    $css =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)|default\(-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)\)))*\s*\}\}}{0}g;
     return 0 if ($css =~ m~/\*|\*/|\{\{|expression\s*\(|(?:\A|[;{])\s*(?:behavior|-moz-binding)\s*:|javascript:|[<\\]~i);
     my $valid = 1;
     $css =~ s{url\s*\(\s*(?:"([^"]*)"|'([^']*)'|([^()\s"']+))\s*\)}{
@@ -1785,7 +1785,7 @@ sub FHEMCMS_FreeHtmlExtraAttribute {
         && $name =~ /\A(?:viewbox|preserveaspectratio|d|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|points|transform|fill|stroke|stroke-width|fill-rule|fill-opacity|stroke-opacity|stroke-linecap|stroke-linejoin|stroke-dasharray|stroke-dashoffset|opacity|text-anchor|dominant-baseline|font-size|font-weight|offset|stop-color|stop-opacity|gradientunits|gradienttransform|spreadmethod|letter-spacing|clip-path|mask|clippathunits|maskunits|maskcontentunits)\z/) {
         if ($value =~ /\{\{/) {
             return 0 if ($name !~ /\A(?:transform|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|dx|dy|stroke-dasharray|stroke-dashoffset|letter-spacing|opacity|fill-opacity|stroke-opacity)\z/);
-            $value =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)))*\s*\}\}}{0}g;
+            $value =~ s{\{\{\s*[A-Za-z0-9_.-]+:\@?[A-Za-z0-9_.-]+(?:\s*\|\s*(?:int|round\([0-6]\)|default\(-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)\)))*\s*\}\}}{0}g;
         }
         return length($value) <= 4000 && $value !~ /[<>&\\{}]/
             && ($value !~ /url\s*\(/i || $value =~ /\Aurl\(\#[A-Za-z][A-Za-z0-9_-]{0,63}\)\z/)
