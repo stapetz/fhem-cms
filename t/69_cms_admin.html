@@ -50,22 +50,33 @@ try {
     navigation: {orientation: 'horizontal', grid: {col: 1, row: 1, w: 12, h: 1}},
     pages: [{id: 'home', title: 'Home', widgets: []}],
   };
-  let configState = {live: config, draft: null, token: 'b'.repeat(64)};
-  let failSave = false;
-  const controller = {
-    snapshot: () => structuredClone(configState),
-    reload: async () => structuredClone(configState),
-    saveDraft: async (candidate, token) => {
-      if (failSave) throw new Error('Zustand ist veraltet');
-      if (token !== configState.token) throw new Error('Zustand ist veraltet');
-      configState = {...configState, draft: structuredClone(candidate), token: 'c'.repeat(64)};
-      return structuredClone(configState);
-    },
+  const states = {
+    Keep: {live: structuredClone(config), draft: null, token: 'b'.repeat(64)},
+    Drop: {live: {...structuredClone(config), theme: 'light'}, draft: null, token: 'd'.repeat(64)},
   };
+  let failSave = '';
+  let failLoad = false;
+  let saves = 0;
   const loadedDevices = [];
   const createSession = async device => {
     loadedDevices.push(device);
-    return {controller, schemaVersion: 5, state: structuredClone(configState)};
+    if (failLoad) throw new Error('Zugriff verweigert');
+    const state = structuredClone(states[device]);
+    const controller = {
+      saveDraft: async (candidate, token) => {
+        saves++;
+        if (token !== states[device].token) throw new Error('Zustand ist veraltet');
+        if (failSave === 'uncertain') {
+          states[device].draft = structuredClone(candidate);
+          throw new Error('Antwort verloren');
+        }
+        if (failSave) throw new Error('Zugriff verweigert');
+        states[device].draft = structuredClone(candidate);
+        states[device].token = 'c'.repeat(64);
+        return structuredClone(states[device]);
+      },
+    };
+    return {controller, schemaVersion: 5, state};
   };
   let closeCalls = 0;
   const exportedBlobs = [];
@@ -88,13 +99,12 @@ try {
   const $ = selector => doc.querySelector(selector);
   check(doc.title === 'Globale FHEM-CMS Administration' && $('h1').textContent === doc.title,
     'page heading and browser title use the global administration name');
-  check([...doc.querySelectorAll('.cms-admin-toolbar .cms-menu summary')].map(node => node.textContent).join(',')
-    === 'Datei,Bearbeiten,Konfiguration,Seiten,Darstellung' && $('#configuration').querySelector('h2').textContent === 'CMS-Konfiguration',
-  'central admin has matching File/Edit menus and a separate configuration area');
-  check($('#open-settings').disabled && $('#open-editor').disabled,
-    'settings and embedded editor are unavailable until a device is selected');
-  check($('#configuration-device').disabled === false && $('#import-config').disabled
-    && $('#export-config').disabled, 'configuration actions wait until a CMS is selected');
+  check(!doc.querySelector('#configuration-device, #configuration-page, #settings-dialog, #embedded-editor, .cms-admin-toolbar'),
+    'inventory has no global CMS selection, settings panels, toolbar or embedded editor');
+  check(loadedDevices.length === 0, 'initial inventory never loads a CMS configuration');
+  check($('#devices').querySelectorAll('[data-config-action="import"]').length === 2
+    && $('#devices').querySelectorAll('[data-config-action="export"]').length === 2
+    && !$('#orphans').querySelector('[data-config-action]'), 'only device rows have JSON actions');
   const anchorClick = frame.contentWindow.HTMLAnchorElement.prototype.click;
   const anchorDownloads = [];
   frame.contentWindow.HTMLAnchorElement.prototype.click = function click() {
@@ -170,105 +180,86 @@ try {
   check(body.style.getPropertyValue('--cms-liquid-opacity') === '0.7',
     'appearance survives repeated initialization with the same URL context');
   applyCmsAdminAppearance(body, '#theme=dark');
-  check($('#devices').querySelectorAll('input').length === 2, 'active devices listed');
-  check($('#orphans').querySelectorAll('input').length === 2, 'orphans separately listed');
+  check($('#devices').querySelectorAll('input[data-kind]').length === 2, 'active devices listed');
+  check($('#orphans').querySelectorAll('input[data-kind]').length === 2, 'orphans separately listed');
   check($('input[value="Foreign"]').disabled, 'foreign structures cannot be selected');
   check($('#delete-devices').disabled && $('#delete-orphans').disabled, 'no preselection');
   check($('#devices a').getAttribute('href') === '/custom/fhem-cms/Keep/index.html?mode=edit', 'device link uses FHEMWEB prefix');
-  $('#edit-menu').open = true;
-  $('#configuration-device').value = 'Keep';
-  $('#configuration-device').dispatchEvent(new Event('change'));
-  await wait(() => !$('#import-config').disabled);
-  check(loadedDevices.join() === 'Keep' && $('#configuration-name').textContent === 'Keep'
-    && $('#configuration-schema').textContent === '5', 'selection loads the chosen versioned configuration');
-  check(!$('#open-settings').disabled && !$('#open-editor').disabled
-    && $('#configuration-page').value === 'home', 'selected CMS enables page settings and embedded editor');
-  $('#open-appearance').click();
-  check($('#settings-dialog').open && $('#settings-panel h2').textContent.includes('Home'),
-    'appearance opens the existing page panel inside administration');
-  const theme = [...$('#settings-panel').querySelectorAll('select')]
-    .find(select => [...select.options].some(option => option.value === 'light'));
-  theme.value = 'light';
-  theme.dispatchEvent(new Event('change'));
-  $('#settings-panel .cms-panel-close').click();
-  check(!$('#settings-dialog').open && configState.draft === null,
-    'cancel discards unsaved settings without creating a draft');
-  $('#open-page-settings').click();
-  const theme2 = [...$('#settings-panel').querySelectorAll('select')]
-    .find(select => [...select.options].some(option => option.value === 'light'));
-  theme2.value = 'light';
-  theme2.dispatchEvent(new Event('change'));
-  $('#settings-panel .cms-panel-save').click();
-  await wait(() => !$('#settings-dialog').open);
-  check(configState.draft.theme === 'light' && configState.live.theme === 'dark',
-    'page setting saves only to draft and leaves live unchanged');
-  failSave = true;
-  $('#open-settings').click();
-  $('#settings-panel .cms-panel-save').click();
-  await wait(() => $('#settings-panel [data-error]'));
-  check($('#settings-panel [data-error]').textContent.includes('veraltet')
-    && $('#settings-panel .cms-panel-save').disabled && configState.live.theme === 'dark',
-  'stale state remains an explicit error and blocks further writes');
-  $('#settings-panel .cms-panel-close').click();
-  check($('#configuration-status').textContent.includes('neu laden'), 'failed save requires an explicit reload');
-  failSave = false;
-  $('#refresh-config').click();
-  await wait(() => !$('#open-settings').disabled);
-  $('#open-navigation').click();
-  check($('#settings-dialog').open && $('#settings-panel h2').textContent === 'Navigation bearbeiten',
-    'navigation opens the existing panel inside administration');
-  const pageTitle = $('#settings-panel input[aria-label^="Seitentitel"]');
-  pageTitle.value = 'Geändert';
-  pageTitle.dispatchEvent(new Event('input'));
-  $('#settings-panel .cms-panel-save').click();
-  await wait(() => !$('#settings-dialog').open);
-  check(configState.draft.pages[0].title === 'Geändert' && configState.live.pages[0].title === 'Home',
-    'page title changes only the draft');
-  $('#open-navigation').click();
-  $('#settings-panel select').value = 'vertical';
-  $('#settings-panel .cms-panel-save').click();
-  check($('#settings-panel [data-error]')?.textContent.includes('eingebetteten CMS-Editor')
-    && configState.draft.navigation.orientation === 'horizontal',
-  'orientation changes require the editor measurements and never silently alter geometry');
-  $('#settings-panel .cms-panel-close').click();
-  $('#open-pages-editor').click();
-  check($('#embedded-editor').open
-    && $('#editor-frame').getAttribute('src').endsWith('/custom/fhem-cms/Keep/index.html?mode=edit#/home'),
-  'pages menu embeds selected CMS editor on the selected page');
-  $('#close-editor').click();
-  await wait(() => !$('#open-settings').disabled);
-  $('#export-config').click();
-  check(exportedBlobs.length === 1 && anchorDownloads[0].name === 'Keep-config.json'
-    && JSON.parse(await exportedBlobs[0].text()).pages[0].id === 'home',
-  'export downloads the selected live configuration as JSON');
+  const row = name => $(`input[data-kind="device"][value="${name}"]`).closest('article');
+  const exportRow = async name => {
+    const count = exportedBlobs.length;
+    row(name).querySelector('[data-config-action="export"]').click();
+    await wait(() => exportedBlobs.length > count && !$('#refresh').disabled);
+    return JSON.parse(await exportedBlobs.at(-1).text());
+  };
+  const importRow = async (name, value, filename = 'import.json') => {
+    const fileInput = row(name).querySelector('input[type="file"]');
+    Object.defineProperty(fileInput, 'files', {configurable: true, value: [
+      new frame.contentWindow.File([value], filename, {type: 'application/json'}),
+    ]});
+    fileInput.dispatchEvent(new Event('change'));
+  };
+  check((await exportRow('Drop')).theme === 'light' && loadedDevices.join() === 'Drop'
+    && anchorDownloads[0].name === 'Drop-config.json', 'export loads live state for the clicked device only');
+  check((await exportRow('Keep')).theme === 'dark' && loadedDevices.join() === 'Drop,Keep',
+    'each export freshly loads its own device');
   const imported = structuredClone(config);
   imported.pages[0].title = 'Imported';
-  const fileInput = $('#config-file');
-  Object.defineProperty(fileInput, 'files', {configurable: true, value: [
-    new frame.contentWindow.File([JSON.stringify(imported)], 'import.json', {type: 'application/json'}),
-  ]});
-  fileInput.dispatchEvent(new Event('change'));
+  await importRow('Keep', JSON.stringify(imported));
   await wait(() => $('#import-confirmation').open);
-  check($('#import-file-name').textContent.includes('import.json')
-    && $('#import-confirmation').textContent.includes('Live-Konfiguration bleibt unverändert'),
-  'import confirmation explains draft replacement and unchanged live data');
+  check($('#import-file-name').textContent.includes('Keep') && $('#refresh').disabled,
+    'import confirmation identifies clicked device and serializes actions');
+  $('#import-confirmation button[value="cancel"]').click();
+  await wait(() => !$('#refresh').disabled);
+  check(saves === 0 && states.Keep.draft === null, 'cancel leaves both live and draft unchanged');
+  await importRow('Keep', JSON.stringify(imported));
+  await wait(() => $('#import-confirmation').open);
+  $('#import-confirmation').dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown',
+    {key: 'Escape', bubbles: true, cancelable: true}));
+  check(!$('#import-confirmation').open && !$('#refresh').disabled && saves === 0 && closeCalls === 0,
+    'Escape cancels import and releases controls without closing the window');
+  await importRow('Keep', JSON.stringify(imported));
+  await wait(() => $('#import-confirmation').open);
   $('#import-confirmation button[value="import"]').click();
-  await wait(() => $('#configuration-state').textContent.includes('Entwurf vorhanden'));
-  check(configState.draft.pages[0].title === 'Imported'
-    && $('#configuration-status').textContent.includes('Live-Konfiguration blieb unverändert'),
-  'JSON import saves a draft only and reports the result');
-  $('#export-config').click();
-  check(JSON.parse(await exportedBlobs.at(-1).text()).pages[0].title === 'Imported',
-    'export prefers an existing draft over live configuration');
-  const editMenu = $('#edit-menu');
-  editMenu.open = true;
+  await wait(() => !$('#refresh').disabled);
+  check(states.Keep.draft.pages[0].title === 'Imported' && states.Keep.live.pages[0].title === 'Home'
+    && states.Drop.draft === null && $('#status').textContent.includes('Live-Konfiguration blieb unverändert'),
+  'import stores only a draft for the selected row');
+  check((await exportRow('Keep')).pages[0].title === 'Imported', 'export prefers draft over live');
+  await importRow('Drop', '{');
+  await wait(() => $('#status').hasAttribute('data-error'));
+  check(!$('#import-confirmation').open && saves === 1, 'invalid JSON reports error and does not write');
+  const readsBeforeOversize = loadedDevices.length;
+  await importRow('Drop', 'x'.repeat(1048577));
+  await wait(() => $('#status').textContent.includes('größer als 1 MiB'));
+  check(loadedDevices.length === readsBeforeOversize && saves === 1,
+    'oversized JSON is rejected before loading or writing a configuration');
+  await importRow('Drop', JSON.stringify(imported));
+  await wait(() => $('#import-confirmation').open);
+  states.Drop.token = 'e'.repeat(64);
+  $('#import-confirmation button[value="import"]').click();
+  await wait(() => !$('#refresh').disabled);
+  check($('#status').textContent.includes('veraltet') && states.Drop.draft === null,
+    'concurrent state change is rejected with a visible error');
+  failSave = 'uncertain';
+  await importRow('Drop', JSON.stringify(imported));
+  await wait(() => $('#import-confirmation').open);
+  $('#import-confirmation button[value="import"]').click();
+  await wait(() => !$('#refresh').disabled);
+  check($('#status').textContent.includes('könnte bereits gespeichert sein') && states.Drop.draft,
+    'uncertain write is not retried and instructs the user to inspect current state');
+  check((await exportRow('Drop')).pages[0].title === 'Imported', 'new export reads the possibly saved draft afresh');
+  failSave = '';
+  failLoad = true;
+  row('Drop').querySelector('[data-config-action="export"]').click();
+  await wait(() => $('#status').textContent.includes('Zugriff verweigert'));
+  check($('#status').hasAttribute('data-error') && !$('#refresh').disabled, 'read failure is explicit and unlocks controls');
+  failLoad = false;
   $('#confirmation').showModal();
   const modalEscape = new frame.contentWindow.KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true});
   $('#confirmation').dispatchEvent(modalEscape);
-  check(modalEscape.defaultPrevented && !$('#confirmation').open && editMenu.open && closeCalls === 0,
-    'Escape closes an active dialog without closing its underlying menu or window');
-  doc.body.dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true}));
-  check(!editMenu.open && closeCalls === 0, 'Escape closes an open menu before attempting to close the page');
+  check(modalEscape.defaultPrevented && !$('#confirmation').open && closeCalls === 0,
+    'Escape closes an active dialog without closing the window');
   doc.body.dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true}));
   await new Promise(resolve => setTimeout(resolve, 120));
   check(closeCalls === 1 && $('#status').textContent.includes('nicht skriptgesteuert geöffnet'),

@@ -16,7 +16,7 @@ test('admin entry points and directly imported helpers have matching cache versi
     assert.ok(html.includes(`${asset}?v=${version}`), asset);
   }
   const imports = [...script.matchAll(/from '\.\/([^']+)'/g)];
-  assert.equal(imports.length, 8);
+  assert.equal(imports.length, 5);
   for (const [, path] of imports) assert.ok(path.endsWith(`?v=${version}`), path);
 });
 
@@ -163,6 +163,60 @@ test('admin configuration uses schema 5/6 draft controllers and rejects older sc
     await assert.rejects(createCmsConfigurationSession('CMS', base), /Schema 5 oder 6/);
     assert.deepEqual(calls, ['get CMS layoutformat']);
     await assert.rejects(createCmsConfigurationSession('../CMS', base), /Device-Name/);
+  } finally { globalThis.fetch = previous; }
+});
+
+test('row sessions save drafts using CSRF and versioned tokens and never retry uncertain writes', async () => {
+  const previous = globalThis.fetch;
+  const config = {
+    schemaVersion: 5, theme: 'dark', settings: {layoutMode: 'grid', gridColumns: 12},
+    navigation: {orientation: 'horizontal', grid: {col: 1, row: 1, w: 12, h: 1}},
+    pages: [{id: 'home', title: 'Home', widgets: []}],
+  };
+  let state;
+  let version;
+  let failAnswer = false;
+  let writes = 0;
+  const seen = [];
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', {headers: {'X-FHEM-csrfToken': 'fresh'}});
+    assert.equal(options.body.get('fwcsrf'), 'fresh');
+    const command = options.body.get('cmd');
+    seen.push(command);
+    if (command === 'get CMS layoutformat') return Response.json({schemaVersion: version, freeform: version === 6});
+    if (command === `get CMS version${version}state`) return Response.json(state);
+    const parts = command.split(' ');
+    assert.deepEqual(parts.slice(0, 4), ['set', 'CMS', `version${version}draft`, 'save']);
+    writes++;
+    if (parts[4] !== state.token) return new Response('Zustand ist veraltet');
+    const candidate = JSON.parse(Buffer.from(parts[5], 'base64').toString('utf8'));
+    state = {...state, draft: candidate, token: 'c'.repeat(64)};
+    if (failAnswer) throw new Error('Antwort verloren');
+    return new Response('');
+  };
+  try {
+    for (version of [5, 6]) {
+      state = {live: {...structuredClone(config), schemaVersion: version}, draft: null, token: 'b'.repeat(64)};
+      const session = await createCmsConfigurationSession('CMS', 'https://example.test/fhem/');
+      const candidate = structuredClone(state.live);
+      candidate.pages[0].title = 'Entwurf';
+      const saved = await session.controller.saveDraft(candidate, session.state.token);
+      assert.equal(saved.draft.pages[0].title, 'Entwurf');
+      assert.equal(saved.live.pages[0].title, 'Home');
+      assert.ok(seen.some(command => command.startsWith(`set CMS version${version}draft save ${'b'.repeat(64)} `)));
+      const stale = await createCmsConfigurationSession('CMS', 'https://example.test/fhem/');
+      state.token = 'd'.repeat(64);
+      await assert.rejects(stale.controller.saveDraft(candidate, stale.state.token), /veraltet/);
+      const uncertain = await createCmsConfigurationSession('CMS', 'https://example.test/fhem/');
+      failAnswer = true;
+      const before = writes;
+      await assert.rejects(uncertain.controller.saveDraft(candidate, uncertain.state.token), /Antwort verloren/);
+      assert.equal(writes, before + 1);
+      assert.throws(() => uncertain.controller.snapshot(), /nicht geladen/);
+      failAnswer = false;
+      const recovered = await createCmsConfigurationSession('CMS', 'https://example.test/fhem/');
+      assert.equal(recovered.state.draft.pages[0].title, 'Entwurf');
+    }
   } finally { globalThis.fetch = previous; }
 });
 

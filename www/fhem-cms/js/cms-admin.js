@@ -1,11 +1,8 @@
-import { showCmsModal } from './modal-dialog.js?v=admin-20261122-3';
-import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261122-3';
-import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261122-3';
-import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261122-3';
-import { Schema5PagePanel } from './fcui-schema5-page-panel.js?v=admin-20261122-3';
-import { Schema5NavigationPanel } from './fcui-schema5-navigation.js?v=admin-20261122-3';
-import { createSchema5WidgetServices } from './widget-services.js?v=admin-20261122-3';
-import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261122-3';
+import { showCmsModal } from './modal-dialog.js?v=admin-20261122-4';
+import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261122-4';
+import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261122-4';
+import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261122-4';
+import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261122-4';
 
 const CONFIG_LIMIT = 1048576;
 
@@ -96,17 +93,8 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
   const status = $('#status');
   const dialog = $('#confirmation');
   const importDialog = $('#import-confirmation');
-  const settingsDialog = $('#settings-dialog');
-  const editorDialog = $('#embedded-editor');
-  const deviceSelect = $('#configuration-device');
-  const pageSelect = $('#configuration-page');
-  const importInput = $('#config-file');
   let inventory;
   let busy = false;
-  let configurationBusy = false;
-  let configurationInvalid = false;
-  let configurationSession;
-  let configurationGeneration = 0;
   let pendingImport;
   let selected = [];
   const element = (tag, text) => {
@@ -116,82 +104,68 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
   };
   const choices = kind => [...root.querySelectorAll(`input[data-kind="${kind}"]:checked`)];
   const actions = () => {
-    $('#refresh').disabled = busy || configurationBusy;
+    $('#refresh').disabled = busy;
     for (const kind of ['device', 'orphan']) {
       const count = choices(kind).length;
-      $(`#delete-${kind}s`).disabled = busy || configurationBusy || !count || count > 20;
+      $(`#delete-${kind}s`).disabled = busy || !count || count > 20;
     }
-    for (const input of root.querySelectorAll('input[data-kind]')) {
-      input.disabled = busy || configurationBusy || !!input.dataset.blocked;
-    }
-    deviceSelect.disabled = busy || configurationBusy || !inventory
-      || !inventory.items.some(item => item.kind === 'device');
-    const configReady = !!configurationSession && !configurationInvalid && !configurationBusy && !busy;
-    $('#refresh-config').disabled = !deviceSelect.value || configurationBusy || busy;
-    $('#import-config').disabled = !configReady;
-    $('#export-config').disabled = !configReady;
-    pageSelect.disabled = !configReady;
-    for (const id of ['open-settings', 'open-page-settings', 'open-appearance', 'open-navigation', 'open-editor', 'open-pages-editor']) {
-      $(`#${id}`).disabled = !configReady;
-    }
-    $('#configuration-status').setAttribute('aria-busy', String(configurationBusy));
+    for (const input of root.querySelectorAll('input[data-kind]')) input.disabled = busy || !!input.dataset.blocked;
+    for (const button of root.querySelectorAll('button[data-config-action]')) button.disabled = busy;
+    status.setAttribute('aria-busy', String(busy));
   };
   const message = (text, error = false) => {
     status.textContent = text;
     status.toggleAttribute('data-error', error);
     status.setAttribute('aria-busy', String(busy));
   };
-  const configurationMessage = (text, error = false) => {
-    const target = $('#configuration-status');
-    target.textContent = text;
-    target.toggleAttribute('data-error', error);
-    target.setAttribute('aria-busy', String(configurationBusy));
+  const begin = text => {
+    busy = true;
+    actions();
+    message(text);
   };
-  const renderConfiguration = () => {
-    const details = $('#configuration-details');
-    if (!configurationSession) {
-      details.hidden = true;
-      pageSelect.replaceChildren();
-      return;
-    }
-    const { state, schemaVersion } = configurationSession;
-    const config = state.draft || state.live;
-    const selectedPage = pageSelect.value;
-    pageSelect.replaceChildren(...config.pages.map(page => {
-      const option = element('option', page.title || page.id);
-      option.value = page.id;
-      return option;
-    }));
-    if (config.pages.some(page => page.id === selectedPage)) pageSelect.value = selectedPage;
-    details.hidden = false;
-    $('#configuration-name').textContent = deviceSelect.value;
-    $('#configuration-schema').textContent = String(config.schemaVersion || schemaVersion);
-    $('#configuration-state').textContent = state.draft
-      ? 'Entwurf vorhanden. Export verwendet den Entwurf.'
-      : 'Kein Entwurf vorhanden. Export verwendet die Live-Konfiguration.';
+  const finish = () => {
+    busy = false;
+    actions();
   };
-  const renderConfigurationDevices = () => {
-    const previous = deviceSelect.value;
-    const devices = inventory?.items.filter(item => item.kind === 'device') || [];
-    deviceSelect.replaceChildren(element('option', 'CMS-Device auswählen …'));
-    deviceSelect.firstElementChild.value = '';
-    for (const item of devices) {
-      const option = element('option', item.name);
-      option.value = item.name;
-      deviceSelect.append(option);
-    }
-    if (devices.some(item => item.name === previous)) {
-      deviceSelect.value = previous;
-    } else {
-      deviceSelect.value = '';
-      if (previous) {
-        configurationGeneration++;
-        configurationSession = null;
-        configurationBusy = false;
-        configurationMessage('Wähle unter Bearbeiten ein CMS-Device aus.');
+  const exportConfiguration = async device => {
+    if (busy) return;
+    begin(`Konfiguration für ${device} wird geladen …`);
+    try {
+      const { state } = await createSession(device, client.base);
+      const config = state.draft || state.live;
+      const url = browser.URL.createObjectURL(new browser.Blob([JSON.stringify(config, null, 2)],
+        { type: 'application/json' }));
+      const anchor = element('a');
+      anchor.href = url;
+      anchor.download = `${device}-config.json`;
+      anchor.hidden = true;
+      root.ownerDocument.body.append(anchor);
+      try { anchor.click(); }
+      finally {
+        anchor.remove();
+        browser.setTimeout(() => browser.URL.revokeObjectURL(url), 1000);
       }
+      message(`Konfiguration von ${device} exportiert (${state.draft ? 'Entwurf' : 'Live'}).`);
+    } catch (error) {
+      message(`Export für ${device} fehlgeschlagen: ${error.message}`, true);
+    } finally { finish(); }
+  };
+  const prepareImport = async (device, file) => {
+    if (!file || busy) return;
+    begin(`JSON für ${device} wird geprüft …`);
+    try {
+      if (file.size > CONFIG_LIMIT) throw new Error('Die JSON-Datei ist größer als 1 MiB.');
+      const candidate = JSON.parse(await file.text());
+      const { controller, state } = await createSession(device, client.base);
+      pendingImport = { device, candidate, controller, token: state.token };
+      $('#import-file-name').textContent = `${file.name || 'JSON-Datei'} wird als Entwurf für ${device} übernommen.`;
+      importDialog.returnValue = '';
+      showCmsModal(importDialog);
+    } catch (error) {
+      pendingImport = null;
+      message(`Import für ${device} fehlgeschlagen: ${error.message}`, true);
+      finish();
     }
-    renderConfiguration();
   };
   const render = () => {
     for (const kind of ['device', 'orphan']) {
@@ -215,6 +189,29 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
           link.className = 'cms-button';
           link.href = `${client.base.pathname.replace(/\/$/, '')}/fhem-cms/${encodeURIComponent(item.name)}/index.html?mode=edit`;
           row.append(link);
+          const configActions = element('div');
+          configActions.className = 'cms-admin-config-actions';
+          const importButton = element('button', 'JSON importieren …');
+          const exportButton = element('button', 'JSON exportieren');
+          const fileInput = element('input');
+          fileInput.type = 'file';
+          fileInput.accept = 'application/json,.json';
+          fileInput.hidden = true;
+          for (const [button, action] of [[importButton, 'import'], [exportButton, 'export']]) {
+            button.type = 'button';
+            button.className = 'cms-button';
+            button.dataset.configAction = action;
+            button.setAttribute('aria-label', `${button.textContent} für ${item.name}`);
+          }
+          importButton.addEventListener('click', () => { if (!busy) fileInput.click(); });
+          fileInput.addEventListener('change', () => {
+            const [file] = fileInput.files;
+            fileInput.value = '';
+            if (file) void prepareImport(item.name, file);
+          });
+          exportButton.addEventListener('click', () => { void exportConfiguration(item.name); });
+          configActions.append(importButton, exportButton, fileInput);
+          row.append(configActions);
         }
         if (item.blocked) row.append(element('p', `Gesperrt: ${item.blocked}`));
         const tree = element('details');
@@ -224,14 +221,11 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
         list.append(row);
       }
     }
-    renderConfigurationDevices();
     actions();
   };
   const refresh = async () => {
-    busy = true;
+    begin('CMS-Bestand wird geladen …');
     inventory = null;
-    actions();
-    message('CMS-Bestand wird geladen …');
     try {
       inventory = await client.inventory();
       render();
@@ -239,268 +233,50 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
     } catch (error) {
       $('#devices').replaceChildren();
       $('#orphans').replaceChildren();
-      renderConfigurationDevices();
       message(error.message, true);
-    } finally {
-      busy = false;
-      actions();
-      status.setAttribute('aria-busy', 'false');
-    }
+    } finally { finish(); }
   };
-  const selectConfiguration = async () => {
-    const device = deviceSelect.value;
-    const generation = ++configurationGeneration;
-    configurationSession = null;
-    configurationInvalid = false;
-    if (!device) {
-      configurationBusy = false;
-      renderConfiguration();
-      configurationMessage('Wähle unter Bearbeiten ein CMS-Device aus.');
-      actions();
+  $('#refresh').addEventListener('click', () => { if (!busy) void refresh(); });
+  const cancelImport = () => {
+    pendingImport = null;
+    importDialog.close('cancel');
+    message('JSON-Import abgebrochen.');
+    finish();
+  };
+  importDialog.querySelector('form').addEventListener('submit', async event => {
+    if (event.submitter?.value === 'cancel') {
+      event.preventDefault();
+      cancelImport();
       return;
     }
-    configurationBusy = true;
-    renderConfiguration();
-    configurationMessage(`Schema und Konfiguration von ${device} werden geladen …`);
-    actions();
-    try {
-      const session = await createSession(device, client.base);
-      if (generation !== configurationGeneration) return;
-      configurationSession = { ...session, device };
-      renderConfiguration();
-      configurationMessage(`Konfiguration für ${device} geladen.`);
-    } catch (error) {
-      if (generation === configurationGeneration) {
-        configurationMessage(`Konfiguration für ${device} konnte nicht geladen werden: ${error.message}`, true);
-      }
-    } finally {
-      if (generation === configurationGeneration) {
-        configurationBusy = false;
-        actions();
-      }
-    }
-  };
-  const refreshConfiguration = async () => {
-    if (!deviceSelect.value || configurationBusy || busy) return;
-    if (!configurationSession) return selectConfiguration();
-    const generation = configurationGeneration;
-    configurationBusy = true;
-    configurationMessage(`Konfiguration für ${configurationSession.device} wird neu geladen …`);
-    actions();
-    try {
-      const state = await configurationSession.controller.reload();
-      if (generation !== configurationGeneration) return;
-      configurationSession.state = state;
-      configurationInvalid = false;
-      renderConfiguration();
-      configurationMessage(`Konfiguration für ${configurationSession.device} neu geladen.`);
-    } catch (error) {
-      if (generation === configurationGeneration) {
-        configurationInvalid = true;
-        configurationMessage(`Neuladen fehlgeschlagen: ${error.message}`, true);
-      }
-    } finally {
-      if (generation === configurationGeneration) {
-        configurationBusy = false;
-        actions();
-      }
-    }
-  };
-  const prepareImport = async file => {
-    if (!file || !configurationSession || configurationBusy || busy) return;
-    const generation = configurationGeneration;
-    try {
-      if (file.size > CONFIG_LIMIT) throw new Error('Die JSON-Datei ist größer als 1 MiB.');
-      const candidate = JSON.parse(await file.text());
-      if (generation !== configurationGeneration || !configurationSession) return;
-      pendingImport = { candidate, generation };
-      $('#import-file-name').textContent = `${file.name || 'JSON-Datei'} wird als Entwurf für ${configurationSession.device} übernommen.`;
-      importDialog.returnValue = '';
-      showCmsModal(importDialog);
-    } catch (error) {
-      if (generation === configurationGeneration) {
-        configurationMessage(`Import fehlgeschlagen: ${error.message}`, true);
-      }
-    }
-  };
-  const importConfiguration = async pending => {
-    if (!pending || pending.generation !== configurationGeneration
-      || !configurationSession || configurationBusy || busy) return;
-    configurationBusy = true;
-    configurationMessage(`JSON wird als Entwurf für ${configurationSession.device} gespeichert …`);
-    actions();
-    try {
-      const state = configurationSession.controller.snapshot();
-      configurationSession.state = await configurationSession.controller.saveDraft(pending.candidate, state.token);
-      renderConfiguration();
-      configurationMessage(`JSON wurde als Entwurf für ${configurationSession.device} gespeichert. Die Live-Konfiguration blieb unverändert.`);
-    } catch (error) {
-      try { configurationSession.controller.snapshot(); }
-      catch { configurationInvalid = true; }
-      configurationMessage(`Import fehlgeschlagen: ${error.message}. Zustand neu laden und erneut prüfen.`, true);
-    } finally {
-      configurationBusy = false;
-      actions();
-    }
-  };
-  const exportConfiguration = () => {
-    if (!configurationSession || configurationBusy || busy) return;
-    try {
-      const state = configurationSession.controller.snapshot();
-      const config = state.draft || state.live;
-      const url = browser.URL.createObjectURL(new browser.Blob([JSON.stringify(config, null, 2)],
-        { type: 'application/json' }));
-      const anchor = root.ownerDocument.createElement('a');
-      anchor.href = url;
-      anchor.download = `${configurationSession.device}-config.json`;
-      anchor.hidden = true;
-      root.ownerDocument.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-      browser.setTimeout(() => browser.URL.revokeObjectURL(url), 1000);
-      configurationMessage(`Konfiguration von ${configurationSession.device} exportiert (${state.draft ? 'Entwurf' : 'Live'}).`);
-    } catch (error) {
-      configurationMessage(`Export fehlgeschlagen: ${error.message}`, true);
-    }
-  };
-  const editorUrl = device => new URL(
-    `${client.base.pathname.replace(/\/$/, '')}/fhem-cms/${encodeURIComponent(device)}/index.html?mode=edit`,
-    client.base);
-  const openSettings = (navigation = false) => {
-    if (!configurationSession || configurationBusy || busy) return;
-    const session = configurationSession;
-    try {
-      const state = session.controller.snapshot();
-      const panelBrowser = {
-        location: {href: editorUrl(session.device).href},
-        navigator: browser.navigator,
-        confirm: browser.confirm.bind(browser),
-      };
-      const panel = $('#settings-panel');
-      panel.replaceChildren();
-      const onClose = ({requiresReload}) => {
-        settingsDialog.close();
-        configurationBusy = false;
-        if (requiresReload) {
-          configurationInvalid = true;
-          configurationMessage('Entwurf nicht bestätigt. Bitte Konfiguration neu laden.', true);
-        } else {
-          session.state = session.controller.snapshot();
-          renderConfiguration();
-          configurationMessage(`Konfiguration für ${session.device} aktualisiert.`);
-        }
-        actions();
-      };
-      settingsDialog.dataset.panel = navigation ? 'navigation' : 'page';
-      settingsDialog.setAttribute('aria-label', navigation ? 'Navigation bearbeiten' : 'Seiteneinstellungen');
-      if (navigation) {
-        new Schema5NavigationPanel({
-          root: panel, controller: session.controller, token: state.token, browser: panelBrowser, onClose,
-          fitNavigation: () => {
-            throw new Error('Die Änderung der Ausrichtung benötigt den eingebetteten CMS-Editor mit Navigationsvorschau.');
-          },
-        });
-      } else {
-        new Schema5PagePanel({
-          root: panel, controller: session.controller, pageId: pageSelect.value, token: state.token,
-          browser: panelBrowser, onClose,
-          services: session.client ? createSchema5WidgetServices(session.client) : {},
-          // Grid-to-freeform conversion needs measurements from the live editor canvas.
-          freeformSupported: false,
-        });
-      }
-      configurationBusy = true;
-      actions();
-      showCmsModal(settingsDialog);
-    } catch (error) {
-      configurationBusy = false;
-      actions();
-      configurationMessage(`Seiteneinstellungen konnten nicht geöffnet werden: ${error.message}`, true);
-    }
-  };
-  const closeEditor = () => {
-    if (!browser.confirm('Editor schließen? Nicht gespeicherte Änderungen in geöffneten Dialogen gehen verloren.')) return;
-    $('#editor-frame').removeAttribute('src');
-    editorDialog.close();
-    configurationBusy = false;
-    actions();
-    void refreshConfiguration();
-  };
-  const openEditor = () => {
-    if (!configurationSession || configurationBusy || busy) return;
-    configurationBusy = true;
-    actions();
-    const url = editorUrl(configurationSession.device);
-    url.hash = `/${encodeURIComponent(pageSelect.value)}`;
-    $('#editor-frame').src = url.href;
-    showCmsModal(editorDialog);
-  };
-  $('#refresh').addEventListener('click', refresh);
-  deviceSelect.addEventListener('change', () => {
-    root.querySelectorAll('.cms-menu[open]').forEach(menu => { menu.open = false; });
-    void selectConfiguration();
-  });
-  $('#refresh-config').addEventListener('click', () => { void refreshConfiguration(); });
-  $('#import-config').addEventListener('click', () => importInput.click());
-  importInput.addEventListener('change', () => {
-    const [file] = importInput.files;
-    importInput.value = '';
-    if (file) void prepareImport(file);
-  });
-  $('#export-config').addEventListener('click', exportConfiguration);
-  for (const id of ['open-settings', 'open-page-settings', 'open-appearance']) {
-    $(`#${id}`).addEventListener('click', () => openSettings());
-  }
-  $('#open-navigation').addEventListener('click', () => openSettings(true));
-  for (const id of ['open-editor', 'open-pages-editor']) {
-    $(`#${id}`).addEventListener('click', openEditor);
-  }
-  $('#close-editor').addEventListener('click', closeEditor);
-  importDialog.querySelector('form').addEventListener('submit', event => {
     if (event.submitter?.value !== 'import') return;
     event.preventDefault();
     const pending = pendingImport;
+    if (!pending) return;
     pendingImport = null;
     importDialog.close('import');
-    void importConfiguration(pending);
+    message(`JSON wird als Entwurf für ${pending.device} gespeichert …`);
+    try {
+      await pending.controller.saveDraft(pending.candidate, pending.token);
+      message(`JSON wurde als Entwurf für ${pending.device} gespeichert. Die Live-Konfiguration blieb unverändert.`);
+    } catch (error) {
+      message(`Import für ${pending.device} nicht bestätigt: ${error.message}. Der Entwurf könnte bereits gespeichert sein. Vor einem erneuten Import den aktuellen Zustand per JSON-Export prüfen.`, true);
+    } finally { finish(); }
   });
-  importDialog.addEventListener('cancel', () => { pendingImport = null; });
-  root.querySelectorAll('.cms-menu').forEach(menu => menu.addEventListener('toggle', () => {
-    if (menu.open) {
-      root.querySelectorAll('.cms-menu[open]').forEach(other => {
-        if (other !== menu) other.open = false;
-      });
-    }
-  }));
-  root.querySelectorAll('.cms-menu .cms-button').forEach(button => button.addEventListener('click', () => {
-    root.querySelectorAll('.cms-menu[open]').forEach(menu => { menu.open = false; });
-  }));
-  const closeWindow = () => requestAdminClose(browser,
-    text => message(text, true));
+  importDialog.addEventListener('cancel', event => {
+    event.preventDefault();
+    cancelImport();
+  });
+  const closeWindow = () => requestAdminClose(browser, text => message(text, true));
   $('#close-window').addEventListener('click', closeWindow);
   root.addEventListener('keydown', event => {
     if (event.key !== 'Escape' || event.defaultPrevented) return;
     const activeDialog = event.target.closest?.('dialog[open]') || root.querySelector('dialog[open]');
     if (activeDialog) {
-      if (![settingsDialog, editorDialog, importDialog, dialog].includes(activeDialog)) return;
+      if (![importDialog, dialog].includes(activeDialog)) return;
       event.preventDefault();
-      if (activeDialog === settingsDialog) {
-        settingsDialog.querySelector('.cms-panel-close')?.click();
-        return;
-      }
-      if (activeDialog === editorDialog) {
-        closeEditor();
-        return;
-      }
-      if (activeDialog === importDialog) pendingImport = null;
-      activeDialog.close('cancel');
-      return;
-    }
-    const openMenu = root.querySelector('.cms-menu[open]');
-    if (openMenu) {
-      event.preventDefault();
-      openMenu.open = false;
-      openMenu.querySelector('summary').focus();
+      if (activeDialog === importDialog) cancelImport();
+      else activeDialog.close('cancel');
       return;
     }
     event.preventDefault();
@@ -522,9 +298,7 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
     event.preventDefault();
     if ($('#confirm-text').value !== 'DELETE' || busy || !inventory || !selected.length) return;
     dialog.close('delete');
-    busy = true;
-    actions();
-    message('Ausgewählte CMS werden bearbeitet …');
+    begin('Ausgewählte CMS werden bearbeitet …');
     $('#results').replaceChildren();
     let completed = false;
     try {
