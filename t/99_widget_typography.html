@@ -34,7 +34,7 @@ const specs = [
   {type:'fhem-button',device:'Demo',command:'on',showLabel:true,label:'Start'},
   {type:'fhem-icon',device:'Demo',reading:'state',states:[{value:'on',icon:'test'}]},
   {type:'fhem-html',devices:[],html:'<p style="font-size:11px">Eigener Text</p>'},
-  {type:'text',html:'<h2>Eigener Text</h2>'},
+  {type:'text',html:'<h2>Eigener Text</h2><p>Standardtext</p>'},
 ].map((spec,i) => ({...spec,id:`w${i}`,title:'Messwerte'}));
 const readings = {state:'on',temperature:'21.5',desiredTemperature:'22',pct:'40',mode:'eco',
   power:'1250',pv:'1250',home:'800',grid:'200',battery:'250',soc:'65',
@@ -62,7 +62,19 @@ const measure=(host,layout,width,scale=1) => {
     return;
   }
   if(host.localName==='cms-text') {
-    check(Math.abs(font(root.querySelector('[data-body] h2'))-19.2)<.01,`${layout}: richtext heading unchanged`);
+    const body=font(root.querySelector('[data-body]'));
+    const tileCss=getComputedStyle(tile);
+    const inner=tile.clientWidth-parseFloat(tileCss.paddingLeft)-parseFloat(tileCss.paddingRight);
+    const expected=Math.max(18,Math.min(24,inner*.045),Math.min(inner*.1,18/scale));
+    check(Math.abs(body-expected)<.1,`${layout}: responsive richtext default ${body}/${expected}`);
+    check(Math.abs(font(root.querySelector('[data-body] h2'))-body*1.2)<.01,`${layout}: richtext heading relative`);
+    const authored=document.createElement('span');
+    authored.textContent='Eigene Größe'; authored.style.fontSize='11px';
+    root.querySelector('[data-body] p').append(authored);
+    check(font(authored)===11,`${layout}: explicit rendered size is not overridden`);
+    authored.remove();
+    if(width*scale>=280) check(body*scale>=17.9,`${layout}: default richtext visible at scale ${scale}`);
+    measurements.push({layout,widget:host.localName,width,scale,body,screen:body*scale});
     return;
   }
   const base=font(tile), logicalWidth=host.clientWidth;
@@ -80,10 +92,45 @@ const measure=(host,layout,width,scale=1) => {
   const label=selector && root.querySelector(selector);
   if(label) {
     const ratio=font(label)/base;
+    const tileCss=getComputedStyle(tile);
+    const inner=tile.clientWidth-parseFloat(tileCss.paddingLeft)-parseFloat(tileCss.paddingRight);
     const expectedRatio=host.localName==='cms-thermostat'?1.125:host.localName==='cms-solar-energy'?
-      .9*Math.max(16,base*.75)/base:
+      .9*Math.max(16,base*.84,Math.min(inner*.08,16/scale))/base:host.localName==='cms-solarflow'?16/base:
+      host.localName==='cms-calllist'?Math.max(base*1.125,Math.min(inner*.1,18/scale))/base:
       host.localName==='cms-link'?1.2:1;
     check(Math.abs(ratio-expectedRatio)<.01,`${host.localName}: label ${font(label)} relative to ${base}`);
+  }
+  if(host.localName==='cms-calllist') {
+    const table=root.querySelector('table');
+    const cells=[...root.querySelectorAll('tbody td')];
+    check(cells.length===20,`${layout}: all five calls and four columns remain available`);
+    check(cells.every(cell => cell.scrollWidth<=cell.clientWidth+1),
+      `${layout}/${width}/${scale}: call-list text does not clip horizontally: ${cells.filter(cell => cell.scrollWidth>cell.clientWidth+1).map(cell => `${cell.dataset.column} ${cell.scrollWidth}/${cell.clientWidth}`)}`);
+    if(width*scale>=280) check(font(table)*scale>=17.9,`${layout}: calls remain 18px on screen`);
+    if(getComputedStyle(table).display!=='block') {
+      const party=root.querySelector('th[data-column=party]').getBoundingClientRect();
+      check(party.width/table.getBoundingClientRect().width>=.29,`${layout}: callers have at least 29% of table width`);
+    } else {
+      check(cells.some(cell => getComputedStyle(cell,'::before').content.includes('Name')),
+        `${layout}: narrow cards retain visible column labels`);
+    }
+  }
+  if(host.localName==='cms-solarflow') {
+    const value=root.querySelector('.value'), unit=value.querySelector('.unit');
+    const box=value.getBBox();
+    check(font(value)===16 && getComputedStyle(value).fontWeight==='500',`${layout}: restrained 16-unit solar value`);
+    check(font(unit)===12,`${layout}: solar unit is subordinate`);
+    check(box.x>=-46 && box.x+box.width<=46,`${layout}: solar value stays inside circle`);
+    measurements.push({layout,widget:'solarflow-value',width,scale,screen:16*value.getScreenCTM().a});
+  }
+  if(host.localName==='cms-solar-energy' && width*scale>=280) {
+    check(font(label)*scale>=14.3,`${layout}: solar label remains at least 14.3px on screen`);
+    for(const node of root.querySelectorAll('.node')) {
+      for(const text of node.querySelectorAll('.label,strong,small')) {
+        check(text.scrollWidth<=text.clientWidth+1 && text.scrollHeight<=text.clientHeight+1,
+          `${layout}: solar station text is not clipped`);
+      }
+    }
   }
   const area=root.querySelector('.main'), fitted=root.querySelector('[data-fit-content]');
   if(area && fitted) {

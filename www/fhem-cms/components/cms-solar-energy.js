@@ -64,9 +64,9 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .badge { padding: 3px 10px; border-radius: 20px; font-size: .9em; font-weight: 600;
           color: #10b981; background: rgba(16,185,129,.16); border: 1px solid rgba(16,185,129,.35); }
         .flow { ${detailCardCss} display: grid; grid-template-columns: repeat(3,minmax(0,1fr));
-          grid-template-rows: auto 68px auto auto auto; position: relative; flex: none;
-          align-items: center; justify-items: center; padding: 16px 10px 28px; column-gap: 8px;
-          font-size: max(1rem, .75em); line-height: 1.2; }
+          grid-template-rows: auto 40px auto auto auto; position: relative; flex: none;
+          align-items: center; justify-items: center; padding: 10px 10px 22px; column-gap: 8px;
+          font-size: max(1rem, .84em, min(8cqi, calc(1rem / var(--cms-freeform-scale, 1)))); line-height: 1.2; }
         .node { min-width: 0; width: 100%; max-width: 180px; padding: 10px 4px; border: 1.5px solid var(--station-color);
           border-radius: 12px; text-align: center; position: relative; z-index: 1;
           background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
@@ -76,7 +76,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .grid { grid-column: 3; grid-row: 3 / span 3; --station-color: #8b5cf6; }
         .node strong { display: block; font-size: 1.4em; margin: 3px 0; color: var(--station-color); }
         .node small { display: block; font-size: .9em; opacity: .78; }
-        .node .label { display: block; font-size: .9em; text-transform: uppercase; opacity: .8; }
+        .node .label { display: block; font-size: .9em; opacity: .8; }
         .node:not(.pv) { align-self: stretch; display: grid; grid-template-rows: subgrid; padding-bottom: 20px; }
         .node:not(.pv) .label { grid-row: 1; display: flex; align-items: center; justify-content: center; }
         .node:not(.pv) strong { grid-row: 2; }
@@ -128,6 +128,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         @container (max-width: 600px) {
           .flow { padding: 12px 4px 28px; grid-template-rows: auto 60px auto auto auto; }
           .node { padding: 8px 3px; }
+          .pv { width: min(180px, 250%); }
           .node strong { font-size: 1.25em; }
           .node .label, .node small { font-size: .9em; }
           .node:not(.pv) { padding-bottom: 18px; }
@@ -164,7 +165,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
             ${EDGES.map(([a, b]) => `<g data-edge="${a}-${b}"><path class="wire"/>
               <path class="energy" hidden/></g>`).join('')}
           </svg>
-          ${[['pv', '☀️ PV Erzeugung'], ['bat', '🔋 Speicher'], ['home', '🏠 Hausverbrauch'], ['grid', '⚡ Stromnetz']]
+          ${[['pv', '☀️ PV Erzeugung'], ['bat', '🔋 Speicher'], ['home', '🏠 Haus\u00adverbrauch'], ['grid', '⚡ Stromnetz']]
     .map(([key, label]) => `<div class="node ${key}" data-station="${key}"><span class="label">${label}</span>
               <strong data-power="${key}">–</strong><small data-note="${key}"></small>
               ${key === 'bat' ? '<progress max="100" aria-label="Speicher-Ladestand" hidden></progress>' : ''}</div>`).join('')}

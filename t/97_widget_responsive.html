@@ -79,8 +79,8 @@ try {
     'free HTML custom text size is preserved');
   const rich = create({type:'text', html:'<h2>Eigener Text</h2>'});
   rich.style.cssText = 'width:600px;height:300px';
-  check(parseFloat(getComputedStyle(rich.shadowRoot.querySelector('[data-body] h2')).fontSize) === 19.2,
-    'rich text heading size is preserved');
+  check(Math.abs(parseFloat(getComputedStyle(rich.shadowRoot.querySelector('[data-body] h2')).fontSize) - 28.8) < .01,
+    'rich text heading scales relative to the larger default');
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({checks, measurements});
 } catch (error) {
