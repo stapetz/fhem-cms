@@ -2089,7 +2089,7 @@ async function startSchema5Device(client, shell, card, isSuspended) {
   if (SETTINGS_PREVIEW && !isSuspended()) listenForSettingsPreview({ view });
 }
 
-document.addEventListener('DOMContentLoaded', async function () {
+async function initializeCms() {
   const card = document.querySelector('.cms-status');
   const shell = document.querySelector('.cms-shell');
   const meta = document.querySelector('meta[name="fhem-cms-device"]');
@@ -2140,4 +2140,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     card.setAttribute('data-error', '');
     card.textContent = `Konfiguration konnte nicht geladen werden: ${error.message || String(error)}`;
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeCms, { once: true });
+} else {
+  void initializeCms();
+}

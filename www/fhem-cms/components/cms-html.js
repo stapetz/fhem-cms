@@ -6,6 +6,7 @@ import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups
 import { renderVehicleMaps } from '../js/vehicle-map.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
+import { FRONTEND_VERSION } from '../js/frontend-version.js';
 
 const HELP_URL = 'https://github.com/stapetz/fhem-cms/blob/dev/docs/PLATZHALTER.md';
 const EXAMPLE = `<div class="box">
@@ -132,6 +133,7 @@ class FHEMCMSHtml extends HTMLElement {
             <p><a href="${HELP_URL}" target="_blank" rel="noopener noreferrer">Ausführliche Beschreibung (PLATZHALTER.md)</a></p>
           </details>
           <p class="hint" data-devices></p>
+          <p class="hint" data-frontend-version>Geladene Codeprüfung: ${FRONTEND_VERSION}</p>
           <p class="error" role="alert" data-dialog-error></p>
           <div class="actions">
             <button type="button" class="danger" data-delete>Widget löschen</button>

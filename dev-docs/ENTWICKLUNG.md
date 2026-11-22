@@ -71,6 +71,16 @@ Zeile/Spalte und einen begrenzten, als Text gerenderten Codeausschnitt mit
 markierter Problemstelle. Offsets muessen sich auf den Originalquelltext
 beziehen, nicht auf DOM-Serialisierung oder kommentarbereinigtes CSS.
 
+Die Modulversion in FHEM ist kein Nachweis fuer den Browserstand (Refs #242).
+Generierte CMS-Startseiten revalidieren ihr eigenes HTML mit `cache: no-store`
+vor dem Laden des Modulgraphen. Bei geaendertem Assettoken wird mit neuer URL
+geladen; Seitenhash und Bearbeitungsmodus bleiben erhalten. FHEMWEB-Startlinks
+tragen ebenfalls das Assettoken. Die Importmap versieht Einstieg und alle
+transitiven Komponenten mit demselben inhaltsabhaengigen Token.
+Der HTML-Dialog zeigt mit "Geladene Codepruefung" seine eigene Browserversion.
+`t/101_frontend_cache.test.js` prueft ein warm gecachtes Lesezeichen vor/nach
+Assetaenderung in echtem Chrome, einschliesslich transitiver Imports.
+
 Freies HTML unterstützt numerische Readings in SVG-Geometrie, lokale SVG-`use`-Ziele
 innerhalb desselben SVG sowie Clip-Pfade und Masken. CSS erlaubt zusätzlich
 Motion-Path-Eigenschaften. Eigene und importierte Styles bleiben aus

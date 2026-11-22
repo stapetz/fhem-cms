@@ -36,6 +36,7 @@ my @assets = (
     'www/fhem-cms/js/asset-manager.js',
     'www/fhem-cms/js/asset-contract.js',
     'www/fhem-cms/js/asset-exif.js',
+    'www/fhem-cms/js/frontend-version.js',
     'FHEM/lib/FHEMCMS/Assets.pm',
 );
 for my $asset (@assets) {
@@ -67,5 +68,10 @@ print {$css} "\n" or die "Cannot write test stylesheet: $!";
 close($css) or die "Cannot close test stylesheet: $!";
 my ($changed_css) = FHEMCMS_AssetInfo($root);
 isnt($changed_css, $changed_js, 'stylesheet changes invalidate the asset token');
+open(my $versionFile, '<', 'www/fhem-cms/js/frontend-version.js') or die $!;
+my $versionSource = do { local $/; <$versionFile> };
+close($versionFile) or die $!;
+like($versionSource, qr/FRONTEND_VERSION = '\Q$main::FHEMCMS_VERSION\E'/,
+    'visible browser version matches the deployed module version');
 
 done_testing();

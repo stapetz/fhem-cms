@@ -65,12 +65,15 @@ is(FHEMCMS_Get($hash, $name, 'url'),
     '/fhem/fhem-cms/CMS/index.html',
     'returns the test page URL');
 $FW_ME = '/fhem';
+my ($summaryToken) = FHEMCMS_AssetInfo(File::Spec->catdir($modPath, 'www', 'fhem-cms'));
 is(FHEMCMS_Summary('WEB', $name, 'FHEM CMS', {}),
-    '<a href="/fhem/fhem-cms/CMS/index.html?mode=edit" target="_blank" rel="noopener">CMS starten</a> <a href="/fhem/fhem-cms/CMS/index.html" target="_blank" rel="noopener">Zeige Homepage</a>',
+    '<a href="/fhem/fhem-cms/CMS/index.html?mode=edit&amp;cms-assets=' . $summaryToken
+        . '" target="_blank" rel="noopener">CMS starten</a> <a href="/fhem/fhem-cms/CMS/index.html?cms-assets='
+        . $summaryToken . '" target="_blank" rel="noopener">Zeige Homepage</a>',
     'renders a link to the device entry page in the FHEM room');
 $FW_ME = '/custom-fhem';
 like(FHEMCMS_Summary('WEB', $name, 'FHEM CMS', {}),
-    qr{href="/custom-fhem/fhem-cms/CMS/index\.html"},
+    qr{href="/custom-fhem/fhem-cms/CMS/index\.html\?},
     'uses the current FHEMWEB path for the link');
 $FW_ME = '/fhem';
 my $dataDir = File::Spec->catdir($modPath, 'fhem-cms-data', $name);
@@ -299,7 +302,9 @@ write_file(File::Spec->catfile($assetRoot, 'components', 'cms-widget.js'), 'widg
 is(FHEMCMS_Define({NAME => 'CMS'}, 'CMS FHEMCMS'), undef, 'redefines an existing device');
 my $first = read_file($pagePath);
 like($first, qr{fhem-cms\.css\?v=[0-9a-f]{10}"}, 'versions the stylesheet URL');
-like($first, qr{fhem-cms\.js\?v=[0-9a-f]{10}"}, 'versions the entry script URL');
+like($first, qr{import\('\.\./js/fhem-cms\.js\?v=[0-9a-f]{10}'\)}, 'versions the entry script URL');
+like($first, qr{cache: 'no-store'}, 'revalidates the generated start page before loading browser modules');
+like($first, qr{meta name="fhem-cms-version" content="\Q$FHEMCMS_VERSION\E"}, 'start page reports the generated frontend version');
 like($first, qr{"\.\./components/cms-widget\.js"\s*:\s*"\.\./components/cms-widget\.js\?v=[0-9a-f]{10}"},
     'maps component modules to versioned URLs');
 like($first, qr{"\.\./js/fhem-client\.js"\s*:\s*"\.\./js/fhem-client\.js\?v=[0-9a-f]{10}"},

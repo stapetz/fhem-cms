@@ -248,6 +248,12 @@ Stelle; gültiger Code benötigt keine Bestätigung zum Umgehen des Sanitizers.
 Für gespeicherte Attribute weiterhin doppelte Anführungszeichen verwenden:
 `class="x"`, nicht `class='x'`.
 
+**Ist die neue Codeprüfung geladen?** Unter den verwendeten Devices steht
+„Geladene Codeprüfung“ mit der Version der tatsächlich geladenen
+Browserkomponente. Die FHEM-Anzeige `VERSION` allein reicht dafür nicht.
+Nach einem Update und Neustart die CMS-Seite über den FHEMWEB-Startlink
+erneut öffnen; dieser trägt den aktuellen Assetstand.
+
 ## Beispiele
 
 ### 1. Einfache Werte
