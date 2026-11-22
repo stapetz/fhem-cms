@@ -32,7 +32,7 @@ class FHEMCMSReadingsTable extends HTMLElement {
         * { box-sizing: border-box; }
         .tile { position: relative; height: var(--cms-widget-height, 100%); overflow: var(--cms-widget-overflow, auto);
           font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-          color: inherit; display: flex; flex-direction: column; gap: 14px; padding: 8px;
+          color: inherit; display: flex; flex-direction: column; gap: 14px; padding: 8px; container-type: size;
           background: var(--cms-surface, #202e27); border: 1px solid var(--cms-frame, #7f8c84);
           border-radius: 1.4rem; }
         .tile[data-stale] { opacity: 0.65; }
@@ -40,13 +40,13 @@ class FHEMCMSReadingsTable extends HTMLElement {
         header { display: flex; justify-content: space-between; align-items: center;
           padding: 0 48px 8px 0; border-bottom: 1px solid rgba(128,128,128,.25); }
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 1.05rem; font-weight: 400; }
-        h3[data-title] { color: inherit; font-size: 1.4rem; font-weight: 700;
+        h3[data-title] { color: inherit; font-size: clamp(1.2rem, 4cqw, 2rem); font-weight: 700;
           overflow-wrap: anywhere; }
         header[hidden] { display: none; }
         .table-card { flex: 1; min-height: 4rem; overflow: auto;
           background: rgba(128,128,128,.08); border: 1px solid rgba(128,128,128,.18);
           border-radius: 14px; padding: 14px; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: .86rem; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: clamp(1rem, 3cqw, 1.5rem); }
         th, td { padding: 8px 0; border-bottom: 1px solid rgba(128,128,128,.1);
           text-align: left; vertical-align: top; overflow-wrap: anywhere; }
         th:first-child, td:first-child { padding-right: 14px; }

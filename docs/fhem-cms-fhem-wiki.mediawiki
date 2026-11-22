@@ -325,6 +325,15 @@ Prüfe vor der Veröffentlichung Desktop, Smartphone, Hoch-/Querformat und Brows
 
 == Widgetübersicht ==
 
+'''Entwicklungsstand auf dev (noch nicht main, #239):''' Schalter ohne Beschriftung
+nutzen die verfügbare Inhaltsfläche für ihr Symbol; analoge Uhren füllen den
+verbleibenden Platz quadratisch unter Berücksichtigung von Titel und Datum.
+Titel und Texte der Standardwidgets passen sich an die Kachelbreite an.
+Selbst definierte Schriftgrößen in Text und freiem HTML bleiben erhalten.
+Die Anrufliste kennzeichnet ein- und ausgehende sowie verpasste Anrufe mit
+lokalen Symbolen und zugänglichen Statusbezeichnungen. Kleine Kacheln können
+Inhalte weiterhin intern scrollen. Die Geräteprüfung steht noch aus.
+
 '''Konfigurationsdialoge (ab 1.11.0):''' Alle Widgettypen verwenden dieselbe Desktopbreite bis 1100 Pixel, auf kleinen Bildschirmen responsiv. Die Höhe folgt dem Inhalt; lange Formulare bleiben scrollbar. Geräte- und Medienauswahldialoge behalten eigene Größen. Tabellen-Einheiten und Vorschläge stehen über die volle Breite in einer eigenen Zeile unter den übrigen Feldern, im Ein- und Mehr-Device-Modus.
 
 '''Widget-IDs (ab 1.11.0):''' Schema-5-Widgets besitzen CMS-weit eindeutige IDs, auch nach Widget-/Seitenkopien und Vorlagenübernahme. Bestehende Duplikate werden beim nächsten Entwurfsspeichern oder Veröffentlichen eindeutig gemacht, ohne Inhalte, Raster oder Seitenlinks zu verlieren. Lesen allein verändert keine Dateien. Bisher kollidierende Widgets können zwischen Seiten verschoben werden; die Live-Konfiguration bleibt bis zur Veröffentlichung erhalten.

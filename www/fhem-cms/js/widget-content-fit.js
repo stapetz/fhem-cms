@@ -31,14 +31,15 @@ export function fitWidgetContent(host) {
     const available = area.getBoundingClientRect();
     if (!available.width || !available.height) return;
     // Measure the unwrapped group rather than a flex-shrunk value or label.
-    area.style.fontSize = '16px';
+    const referenceSize = 128;
+    area.style.fontSize = `${referenceSize}px`;
     content.style.minWidth = '0';
     content.style.minHeight = '0';
     const natural = content.getBoundingClientRect();
     content.style.removeProperty('min-width');
     content.style.removeProperty('min-height');
     if (!natural.width || !natural.height) return;
-    let size = Math.max(12, 16 * Math.min(available.width / natural.width, available.height / natural.height) * 0.98);
+    let size = Math.max(12, referenceSize * Math.min(available.width / natural.width, available.height / natural.height) * 0.98);
     area.style.fontSize = `${size}px`;
     for (let attempt = 0; attempt < 3; attempt++) {
       const actual = content.getBoundingClientRect();

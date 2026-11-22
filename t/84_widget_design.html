@@ -58,7 +58,8 @@ try {
         check(tile === identities[i], `${host.localName}: theme changes without remount`);
         check(getComputedStyle(tile).backgroundColor === expected.backgroundColor, `${host.localName}/${theme}: exact reference surface`);
         check(getComputedStyle(tile).color === expected.color && css.color === expected.color, `${host.localName}/${theme}: inherited text`);
-        check(css.fontWeight === '700' && css.fontSize === '22.4px', `${host.localName}: common readable title`);
+        check(css.fontWeight === '700' && parseFloat(css.fontSize) >= 19.2 && parseFloat(css.fontSize) <= 32,
+          `${host.localName}: common readable responsive title`);
         check(css.whiteSpace === 'normal', `${host.localName}: wrapping titles`);
       }
     }

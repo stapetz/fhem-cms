@@ -64,9 +64,11 @@ try {
       const tile = $('[data-tile]'), card = $('.table-card');
       const titleStyle = getComputedStyle($('[data-title]'));
       check(getComputedStyle(tile).fontFamily.startsWith('system-ui'), `${theme}/${width}: system font`);
-      check(titleStyle.fontSize === '22.4px' && titleStyle.fontWeight === '700',
-        `${theme}/${width}: title follows 1.4rem bold specification`);
-      check(getComputedStyle($('table')).fontSize === '13.76px', `${theme}/${width}: readable .86rem rows`);
+      check(parseFloat(titleStyle.fontSize) >= 19.2 && parseFloat(titleStyle.fontSize) <= 32 && titleStyle.fontWeight === '700',
+        `${theme}/${width}: title is bold and responsive`);
+      const rowSize = parseFloat(getComputedStyle($('table')).fontSize);
+      check(rowSize >= 16 && rowSize <= 24 && (width < 900 || rowSize >= 23),
+        `${theme}/${width}: readable responsive rows`);
       check(getComputedStyle(card).borderRadius === '14px' && getComputedStyle(card).padding === '14px',
         `${theme}/${width}: detail card specification`);
       check(tile.scrollWidth <= tile.clientWidth + 1 && card.scrollWidth <= card.clientWidth + 1,

@@ -93,9 +93,9 @@ class FHEMCMSlider extends HTMLElement {
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
         ${widgetHierarchyCss}
-        .tile .value { font-size: 2.7rem; font-weight: 800; color: inherit; flex-wrap: wrap; }
-        .tile .reading, .tile .range { color: inherit; font-size: .86rem; opacity: .72; }
-        .tile .status { font-size: .86rem; }
+        .tile .value { font-size: clamp(2rem, 9cqw, 4rem); font-weight: 800; color: inherit; flex-wrap: wrap; }
+        .tile .reading, .tile .range { color: inherit; font-size: clamp(1rem, 3cqw, 1.5rem); opacity: .72; }
+        .tile .status { font-size: clamp(1rem, 3cqw, 1.5rem); }
         .tile input[type="range"] { min-height: 48px; flex: none; }
       </style>
       <article class="tile" data-tile>

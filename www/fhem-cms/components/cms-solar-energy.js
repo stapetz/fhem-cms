@@ -74,8 +74,8 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .home { grid-column: 2; grid-row: 3; --station-color: #3b82f6; }
         .grid { grid-column: 3; grid-row: 3; --station-color: #8b5cf6; }
         .node strong { display: block; font-size: 1.4rem; margin: 3px 0; color: var(--station-color); }
-        .node small { display: block; font-size: .74rem; opacity: .78; }
-        .node .label { display: block; font-size: .74rem; text-transform: uppercase; opacity: .8; }
+        .node small { display: block; font-size: clamp(.85rem, 2.5cqi, 1.2rem); opacity: .78; }
+        .node .label { display: block; font-size: clamp(.85rem, 2.5cqi, 1.2rem); text-transform: uppercase; opacity: .8; }
         .node:not(.pv) { align-self: stretch; display: flex; flex-direction: column; padding-bottom: 20px; }
         .node:not(.pv) .label { min-height: 2.6em; display: flex; align-items: center; justify-content: center; }
         .node:not(.pv) small { min-height: 2.6em; margin-top: auto; }
@@ -103,7 +103,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
           overflow-wrap: anywhere; }
         .yield h4 small { font-size: .8em; opacity: .7; white-space: nowrap; }
         .yield dl { margin: 0; display: grid; gap: 5px; align-content: start; }
-        .yield .row { display: flex; justify-content: space-between; gap: 8px; font-size: .86rem;
+        .yield .row { display: flex; justify-content: space-between; gap: 8px; font-size: clamp(1rem, 3cqi, 1.5rem);
           border-bottom: 1px solid rgba(128,128,128,.1); padding: 2px 0; overflow-wrap: anywhere; }
         .yield .row:last-child { border: 0; }
         dt { opacity: .75; }
@@ -111,14 +111,14 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .totals { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,140px),1fr)); gap: 10px;
           padding: 10px; border-radius: 12px; border: 1px solid rgba(245,158,11,.3); background: rgba(245,158,11,.1); text-align: center; }
         .total { padding: 8px 4px; border-radius: 8px; background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
-        .total span { display: block; opacity: .8; font-size: .74rem; text-transform: uppercase; }
+        .total span { display: block; opacity: .8; font-size: clamp(.85rem, 2.5cqi, 1.2rem); text-transform: uppercase; }
         .total strong { display: block; font-size: 1.25rem; margin-top: 2px; color: #f59e0b; }
         .total:last-child { border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.12); }
         @container (max-width: 600px) {
           .flow { padding: 12px 4px 28px; grid-template-rows: auto 60px auto; }
           .node { padding: 8px 3px; }
           .node strong { font-size: clamp(.85rem, 5cqi, 1.4rem); }
-          .node .label, .node small { font-size: .65rem; }
+          .node .label, .node small { font-size: clamp(.85rem, 2.5cqi, 1.2rem); }
           .node:not(.pv) { padding-bottom: 18px; }
           .node:not(.pv) .label { min-height: 3.9em; display: flex; align-items: center; justify-content: center; }
           .node:not(.pv) small { min-height: 2.6em; margin-top: auto; }

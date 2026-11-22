@@ -17,7 +17,7 @@ export const widgetDesignCss = `
   .tile header[hidden] { display: none; }
   :host([view-only]) .tile header:has(> [data-title][hidden]):not(:has(.controls, .badge:not([hidden]))) { display: none; }
   .tile header h3[data-title] {
-    margin: 0; min-width: 0; font: 700 1.4rem/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    margin: 0; min-width: 0; font: 700 clamp(1.2rem, 4cqw, 2rem)/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color: inherit; white-space: normal; overflow-wrap: anywhere;
     overflow: visible; text-overflow: clip; text-align: var(--cms-widget-title-align, left);
   }
@@ -30,7 +30,7 @@ export const widgetDesignCss = `
   .tile button:active, .tile select:active { transform: scale(.96); }
   .tile button[data-fit-content] { min-width: 48px; min-height: 48px; }
   .tile > .status, .tile > .range, .tile > .msg {
-    font-size: .86rem; overflow-wrap: anywhere; white-space: normal;
+    font-size: clamp(1rem, 3cqw, 1.5rem); overflow-wrap: anywhere; white-space: normal;
   }
   .tile > .msg { position: relative; inset: auto; flex: none; }
   .tile > .msg:empty, .tile > .status:empty { display: none; }

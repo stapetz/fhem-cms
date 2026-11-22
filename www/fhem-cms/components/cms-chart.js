@@ -124,11 +124,11 @@ class FHEMCMSChart extends HTMLElement {
         ${widgetDesignCss}
         .tile header { flex-wrap: wrap; }
         .tile .controls { flex-wrap: wrap; min-width: 0; }
-        .tile .controls select { min-height: 48px; max-width: 100%; font-size: .86rem; }
+        .tile .controls select { min-height: 48px; max-width: 100%; font-size: clamp(1rem, 3cqw, 1.5rem); }
         .tile .plot { flex: 1 0 160px; min-height: 160px; border-radius: 14px;
           background: rgba(128,128,128,.08); border: 1px solid rgba(128,128,128,.18); }
         .tile .plot > svg { position: absolute; inset: 0; }
-        .tile .stats { color: inherit; font-size: .86rem; }
+        .tile .stats { color: inherit; font-size: clamp(1rem, 3cqw, 1.5rem); }
         .tile text { fill: currentColor; }
         .tile .line { stroke: #3b82f6; }
         .tile .band { fill: #3b82f6; }
