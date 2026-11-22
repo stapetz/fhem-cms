@@ -66,7 +66,10 @@ class FHEMCMSText extends HTMLElement {
         .danger { margin-right: auto; border-color: var(--cms-danger-border, #7f3b33); }
         .error { margin: 0; color: var(--cms-danger, #ffb4a8); min-height: 1.2em; }
         ${widgetDesignCss}
-        .tile .body { flex: 1; min-height: 0; font-size: 1rem; overflow-wrap: anywhere;
+        :host { container-type: inline-size; }
+        .tile .body { flex: 1; min-height: 0;
+          font-size: max(clamp(1.125rem, 4.5cqi, 1.5rem), min(10cqi, calc(1.125rem / var(--cms-freeform-scale, 1))));
+          line-height: 1.35; overflow-wrap: anywhere;
           overflow-y: var(--cms-widget-overflow, auto); }
         :host([view-only]) .tile header:not(:has(> [data-title]:not([hidden]))) { display: none; }
       </style>

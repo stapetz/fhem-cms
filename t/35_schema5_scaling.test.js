@@ -114,7 +114,9 @@ async function testServer() {
 
 for (const [name, fixtures] of [
   ['standard widget typography grows in actual Grid and scaled Freeform without changing authored content',
-    [['99_widget_typography.html', 1000], ['99_widget_typography.html?mode=preview&cms-device=mobile', 1000]]],
+    [['99_widget_typography.html?width=1440', 1000],
+      ['99_widget_typography.html?mode=preview&cms-device=tablet&width=768', 1000],
+      ['99_widget_typography.html?mode=preview&cms-device=mobile&width=390', 1000]]],
   ['shared German dates render across widget types without rewriting source data',
     [['90_widget_dates.html', 19]]],
   ['DWD weather renders responsive tiles, details and editor',
@@ -684,6 +686,11 @@ for (const [name, fixtures] of [
           ? command => command('Emulation.setEmulatedMedia', { features: [{
             name: 'prefers-reduced-motion', value: fixture.includes('reduced=1') ? 'reduce' : 'no-preference',
           }] })
+          : fixture.startsWith('99_widget_typography.html')
+          ? command => command('Emulation.setDeviceMetricsOverride', {
+            width:Number(new URLSearchParams(fixture.split('?')[1]).get('width') || 1440),
+            height:1000,deviceScaleFactor:1,mobile:fixture.includes('cms-device='),
+          })
           : fixture.startsWith('85_solar_energy.html') || fixture.startsWith('86_mobile_widgets.html')
           ? async command => {
             const mobile = fixture.startsWith('86_mobile_widgets.html');
@@ -728,6 +735,9 @@ for (const [name, fixtures] of [
       if (fixture.startsWith('99_widget_typography.html')) {
         console.log(JSON.stringify(data.measurements.filter(row =>
           row.scale === 1 && ['cms-table', 'cms-thermostat', 'cms-solar-energy'].includes(row.widget))));
+        console.log(`Feedback screen sizes: ${JSON.stringify(data.measurements.filter(row =>
+          row.layout === 'freeform' && row.width === 600 && [.5, 1].includes(row.scale)
+          && ['cms-calllist', 'cms-solar-energy', 'solarflow-value', 'cms-text'].includes(row.widget)))}`);
       }
     }
   } catch (error) {

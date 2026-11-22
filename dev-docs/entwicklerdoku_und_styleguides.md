@@ -790,10 +790,11 @@ im getesteten 400px-Raster sind es rund 386px und 17.36px Basisschrift.
 
 Tabellen, Listen, Auswahlfelder, Status und Detailwerte erben diese Basis
 über `em`; sekundäre Labels verwenden meist .9–.95em, Thermostatlabels
-1.125em. Das kompakte Solar-Flussbild und die Summenleiste verwenden eine
-relative Zwischenbasis `max(1rem, .75em)` (16–18px), deren Labels .9em:
-14.4–16.2px statt zuvor 13.6px. Hauptwerte behalten ihre relative Hervorhebung. SVG-Diagrammtexte
-verwenden relative Größen passend zu ihrem Koordinatensystem.
+1.125em. Das kompakte Solar-Energieflussbild verwendet mindestens 16px und
+bei großen Kacheln .84em der Basis (20.16px bei 24px Basis), seine Labels .9em.
+Die Summenleiste behält `max(1rem, .75em)`. Das unabhängige SolarFlow-SVG
+nutzt zurückhaltende 16 Koordinateneinheiten bei Gewicht 500 und eine 12er
+Einheit; seine tatsächliche Bildschirmgröße hängt vom SVG-Maßstab ab.
 Tabellenzellen erhalten relative vertikale Abstände und mittige Ausrichtung.
 Lange Inhalte umbrechen; bei festen Desktophöhen wird gescrollt statt die
 gesamte Thermostatbeschriftung per JavaScript bis auf 4px zu verkleinern.
@@ -810,7 +811,7 @@ bestehenden Referenztest; kompaktere interne Summenabstände gleichen die
 größere Schrift aus, ohne die äußeren Widget-/Rasterabstände zu ändern.
 Die Stationen reservieren horizontal 4px statt 12px Innenabstand. So bleibt
 auch bei abweichenden Linux-/Arial-Schriftmetriken mehr Breite für lesbare
-Beschriftungen; der vertikale Verbindungskorridor ist 68px statt 80px hoch und
+Beschriftungen; der vertikale Verbindungskorridor ist 40px statt 80px hoch und
 bietet zusätzliche Reserve gegenüber dem 370px-Limit. Der Referenztest misst
 zusätzlich Arial, Georgia und Monospace einschließlich Textüberlauf,
 Stationsausrichtung und Flussverbindungen.
@@ -823,12 +824,26 @@ mit mindestens 90 Prozent Ausnutzung der knapperen Achse. Die Referenzmessung
 erfolgt unbeschränkt und einzeilig; anschließend werden mobile Umbruch- und
 Breitengrenzen wiederhergestellt. Dadurch verfälscht ein Umbruch der großen
 Referenzschrift nicht die endgültige Schriftgröße.
-Freies HTML und Richtext sind ausdrücklich von der Basisskalierung
-ausgenommen: selbst verfasste Größen, insbesondere Inline-CSS, bleiben erhalten.
-Dialoge erhalten keine neue globale Basisschrift.
+Freies HTML bleibt vollständig ausgenommen. Der Textbaustein erhält für
+unformatierte Inhalte eine responsive Standardschrift von 18–24px; seine
+Überschriften bleiben relativ. CSS überschreibt keine explizite Inlinegröße.
+Der bestehende Richtext-Cleaner entfernt allerdings `font-size` bereits beim
+Import und Speichern; diese Änderung erweitert ausdrücklich nicht die
+Frontend-/Backend-Allowlist. Dialoge erhalten keine neue globale Basisschrift.
+
+Anrufliste, Solar-Stationen und Textbaustein berücksichtigen zusätzlich den
+Freeform-Skalierungsfaktor: Bei ausreichend breiten Kacheln werden bei 0.5
+Skalierung mindestens 18px für Anruftext/Textbaustein und 14.4px für
+Solarlabels auf dem Bildschirm erreicht. Die Kachelbreite begrenzt die
+Gegenvergrößerung, da eine 45px breite Kachel keine lesbaren mehrspaltigen
+Inhalte aufnehmen kann. Die Anrufliste gibt dem Namen mehr Platz; auf schmalen
+Kacheln erscheinen die semantischen Tabellendaten als beschriftete Zeilenkarten.
+Bei fester Desktop-Höhe bleiben mehr Inhalte durch Kachelscrollen erreichbar;
+auf Mobilgeräten wächst die Kachel mit ihrem Inhalt.
 
 Regression: `t/99_widget_typography.html` misst alle 16 Standardwidgets plus
-HTML-/Richtextreferenzen im echten Grid und Freeform bei 180/400/600px und
+HTML-/Richtextreferenzen im echten Grid und Freeform bei 180/400/600px,
+Browser-Viewports 390/768/1440px und
 Freeform-Skalierungen .25/.5/1/1.5; die mobile Vorschau prüft zusätzlich
 unkollabierte natürliche Tabellen-/Uhrhöhen. Basisschrift, relative Labels,
 90-Prozent-Inhaltsfit, horizontaler Überlauf und unveränderte Konfigurationen

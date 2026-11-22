@@ -13,6 +13,15 @@ const COLUMNS = [
 ];
 const DEFAULT_COLUMNS = ['state', 'party', 'timestamp', 'duration'];
 const LABELS = new Map(COLUMNS);
+const callListCardCss = `
+  .tile table, .tile tbody { display: block; }
+  .tile thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+  .tile tbody tr { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    padding:.35em; border-bottom:1px solid rgba(128,128,128,.1); }
+  .tile tbody td { display:block; min-width:0; border:0; padding:.15em .25em; }
+  .tile tbody td::before { content:attr(data-label); display:block; font-size:.8em; opacity:.75; }
+  .tile tbody td.status::before { content:none; }
+`;
 
 function safeText(value) {
   return typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 256) : '';
@@ -122,17 +131,23 @@ class FHEMCMSCallList extends HTMLElement {
         [data-message]:empty { display:none; }
         [hidden] { display:none !important; }
         ${widgetDesignCss}
-        .tile table { font-size: 1em; table-layout: fixed; color: inherit;
+        .tile table { font-size: max(1.125em, min(10cqi, calc(1.125rem / var(--cms-freeform-scale, 1)))); line-height:1.2; table-layout: fixed; color: inherit;
           border: 1px solid rgba(128,128,128,.18); border-radius: 14px;
           background: rgba(128,128,128,.08); border-spacing: 0; border-collapse: separate; }
-        .tile th, .tile td { padding: .3em .4em; vertical-align: middle; border-bottom: 1px solid rgba(128,128,128,.1); }
-        .tile th { color: inherit; font-weight: 700; }
+        .tile th, .tile td { padding: .2em .25em; vertical-align: middle; border-bottom: 1px solid rgba(128,128,128,.1); }
+        .tile th { color: inherit; font-size: .85em; font-weight: 700; }
         .tile th[data-column=state] { width:3.5em; }
-        .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=state] { width:17%; }
+        .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=state] { width:14%; }
         .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=timestamp] { width:36%; }
-        .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=duration] { width:23%; }
-        .tile .status svg { display:block; width:1.4em; height:1.4em; }
+        .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=duration] { width:20%; }
+        .tile .status svg { display:block; width:1.4em; max-width:100%; height:auto; aspect-ratio:1; }
         .tile [data-message] { font-size: 1em; }
+        @container (max-width: 320px) {
+          ${callListCardCss}
+        }
+        @media (max-width: 600px) {
+          @container (max-width: 400px) { ${callListCardCss} }
+        }
       </style>
       <article class="tile" data-tile>
         <button type="button" class="gear" data-open-config aria-label="Anrufliste konfigurieren">⚙</button>
@@ -299,6 +314,8 @@ class FHEMCMSCallList extends HTMLElement {
       const tr = document.createElement('tr');
       for (const column of columns) {
         const td = document.createElement('td');
+        td.dataset.column = column;
+        td.dataset.label = LABELS.get(column) || column;
         if (column === 'state') {
           const [symbol, label] = stateInfo(row.state);
           td.className = 'status';

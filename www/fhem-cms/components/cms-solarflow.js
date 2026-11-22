@@ -178,8 +178,9 @@ class FHEMCMSSolarFlow extends HTMLElement {
         [data-state="red"] { --station-color: #ef4444; }
         [data-state="green"] { --station-color: #10b981; }
         [data-ring] { fill: rgba(128,128,128,.08); stroke: var(--station-color); stroke-width: 2; }
-        .value { fill: currentColor; font-size: 1em; font-weight: 700; text-anchor: middle; }
-        .soc { fill: currentColor; font-size: .7em; text-anchor: middle; }
+        .value { fill: currentColor; font-size: 16px; font-weight: 500; text-anchor: middle; }
+        .value .unit { font-size: .75em; font-weight: 400; }
+        .soc { fill: currentColor; font-size: 11px; text-anchor: middle; }
         .icon { fill: none; color: var(--station-color); stroke: currentColor; stroke-width: 2.4;
           stroke-linecap: round; stroke-linejoin: round; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -509,7 +510,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
       return `<g transform="translate(${x} ${y})" data-station="${key}">
         <circle r="${STATION_R}" data-ring/>
         <g class="icon" transform="translate(0 -9) scale(0.85)">${ICONS[key]}${key === 'bat' ? [0, 1, 2, 3, 4].map((index) => `<rect data-segment="${index}" x="-8" y="${(10.8 - index * 6.8).toFixed(1)}" width="16" height="5.2" rx="1" fill="none" stroke="none"/>`).join('') : ''}</g>
-        <text class="value" y="${key === 'bat' ? 22 : 28}" data-value="${key}">–</text>
+        <text class="value" y="${key === 'bat' ? 22 : 28}" data-value="${key}"><tspan data-number>–</tspan><tspan class="unit" data-unit></tspan></text>
         ${key === 'bat' ? '<text class="soc" y="34" data-soc>–</text>' : ''}
       </g>`;
     };
@@ -551,7 +552,8 @@ class FHEMCMSSolarFlow extends HTMLElement {
     for (const station of ['pv', 'home', 'grid', 'bat']) {
       const text = root.querySelector(`[data-value="${station}"]`);
       if (text) {
-        text.textContent = formatPower(model.values[station]);
+        text.querySelector('[data-number]').textContent = model.values[station] === null ? '–' : String(Math.round(model.values[station]));
+        text.querySelector('[data-unit]').textContent = model.values[station] === null ? '' : 'W';
         text.toggleAttribute('hidden', !sourceOf(this.widgetConfig, station === 'bat' ? 'battery' : station));
       }
     }
