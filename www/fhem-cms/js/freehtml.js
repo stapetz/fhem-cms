@@ -9,15 +9,16 @@ const TAGS = new Set(['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'strong', 'b',
   'h5', 'h6', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'figure', 'figcaption',
   'details', 'summary', 'dl', 'dt', 'dd', 'pre', 'code', 'blockquote', 'sub', 'sup', 'mark',
   'caption', 'tfoot', 'a', 'img', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line',
-  'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'title', 'desc', 'iframe']);
+  'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'pattern', 'title', 'desc', 'iframe']);
 const SVG_TAGS = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
-  'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'title', 'desc']);
+  'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'pattern', 'title', 'desc']);
 const SVG_ATTRIBUTES = new Set(['viewbox', 'preserveaspectratio', 'd', 'x', 'y', 'x1', 'y1', 'x2', 'y2',
   'cx', 'cy', 'r', 'rx', 'ry', 'dx', 'dy', 'points', 'transform', 'fill', 'stroke', 'stroke-width',
   'fill-rule', 'fill-opacity', 'stroke-opacity', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray',
   'stroke-dashoffset', 'opacity', 'text-anchor', 'dominant-baseline', 'font-size', 'font-weight',
   'offset', 'stop-color', 'stop-opacity', 'gradientunits', 'gradienttransform', 'spreadmethod',
-  'letter-spacing', 'clip-path', 'mask', 'clippathunits', 'maskunits', 'maskcontentunits']);
+  'letter-spacing', 'clip-path', 'mask', 'clippathunits', 'maskunits', 'maskcontentunits',
+  'patternunits', 'patterncontentunits', 'patterntransform']);
 const NUMERIC_SVG_ATTRIBUTES = new Set(['transform', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry',
   'dx', 'dy', 'stroke-dasharray', 'stroke-dashoffset', 'letter-spacing', 'opacity', 'fill-opacity', 'stroke-opacity']);
 const URL_PLACEHOLDER = /^\{\{\s*[A-Za-z0-9_.-]+:@?[A-Za-z0-9_.-]+\s*\}\}$/;
@@ -96,6 +97,12 @@ function extraAttributeAllowed(tag, name, value) {
   if (tag === 'iframe' && name === 'scrolling') return value === 'yes' || value === 'no' || value === 'auto';
   if ((tag === 'img' || tag === 'svg' || tag === 'rect' || tag === 'mask' || tag === 'use' || tag === 'iframe') && (name === 'width' || name === 'height')) {
     return /^[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?$/.test(value);
+  }
+  if (tag === 'pattern' && (name === 'width' || name === 'height')) {
+    return /^(?:[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?|(?:0?\.)?[0-9]{1,3})$/.test(value);
+  }
+  if (tag === 'pattern' && ['patternunits', 'patterncontentunits'].includes(name)) {
+    return value === 'userSpaceOnUse' || value === 'objectBoundingBox';
   }
   if (tag === 'svg' && name === 'xmlns') return value === 'http://www.w3.org/2000/svg';
   if (tag === 'use' && name === 'href') return /^#[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value);
