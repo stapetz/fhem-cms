@@ -26,6 +26,9 @@ Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freie
   sind auf jeder Seite erreichbar (#238).
 - Größere, mit dem Widget skalierende Standardinhalte, Schaltericons und Uhr
   sowie grafische Anrufsymbole (#239). Eigene HTML-/Text-CSS-Größen bleiben erhalten.
+- Ausgewogene SolarFlow-Kreiswerte, größere native Anruflistentexte und
+  lesbare Solarübersicht sowie responsive Standardtextgröße im Textbaustein
+  für Desktop, Tablet und Phone (#239). Freehtml bleibt unverändert.
 
 Release-Zuordnung und Abnahme werden in #240 und den Einzelissues verfolgt.
 Diese Liste ist keine Freigabe oder Veröffentlichung auf `main`.

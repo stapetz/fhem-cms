@@ -354,7 +354,12 @@ stabilen Versionsangaben bleiben unverändert.
 nutzen die verfügbare Inhaltsfläche für ihr Symbol; analoge Uhren füllen den
 verbleibenden Platz quadratisch unter Berücksichtigung von Titel und Datum.
 Titel und Texte der Standardwidgets passen sich an die Kachelbreite an.
-Selbst definierte Schriftgrößen in Text und freiem HTML bleiben erhalten.
+SolarFlow-Kreiswerte sind zurückhaltender gewichtet; native Anruflisten,
+Solarübersichten und Textbausteine erhalten lesbare Standardgrößen auch
+bei verkleinertem Canvas. Explizite Formatierungen vorhandener Textinhalte
+werden durch die Standardgröße nicht überschrieben. Der bestehende
+Richtext-Import-/Speicherfilter bleibt unverändert.
+Freies HTML wird bei dieser Layoutnachbesserung nicht verändert.
 Die Anrufliste kennzeichnet ein- und ausgehende sowie verpasste Anrufe mit
 lokalen Symbolen und zugänglichen Statusbezeichnungen. Kleine Kacheln können
 Inhalte weiterhin intern scrollen. Die Geräteprüfung steht noch aus.
