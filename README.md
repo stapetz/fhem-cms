@@ -15,6 +15,8 @@ Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freie
   `content` für Pseudoelemente sind erlaubt (#232, #234, #235).
 - Passive SVG-`animate`-Animationen sind erlaubt; für Geometrie empfiehlt sich
   `attributeType="XML"` (#236).
+- HTML-Blockkommentare in CSS sind erlaubt. Freehtml-Ablehnungen zeigen
+  Zeile und einen Codeausschnitt mit markierter Problemstelle (#241).
 - Die globale Administration bietet Bestand, Purgen/Löschen und JSON-Import
   als Entwurf sowie Export direkt je CMS-Bestandszeile, ohne globale CMS-Auswahl.
   Seiten- und Darstellungseinstellungen bleiben im jeweiligen CMS;

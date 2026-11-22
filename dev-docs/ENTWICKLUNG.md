@@ -64,6 +64,13 @@ Zielattribute wie `href`, `style` und Ereignisse sind nicht freigegeben (Refs #2
 Fuer SVG-Geometrieanimationen empfiehlt sich `attributeType="XML"`, damit
 der Browser sie nicht als CSS-Geometrieeigenschaft behandelt.
 
+Vollstaendige HTML-Blockkommentare innerhalb von CSS werden wie serverseitig
+auch clientseitig akzeptiert und vor der CSS-Auswertung entfernt (Refs #241).
+Der gespeicherte HTML-Quelltext bleibt unveraendert. Freehtml-Diagnosen zeigen
+Zeile/Spalte und einen begrenzten, als Text gerenderten Codeausschnitt mit
+markierter Problemstelle. Offsets muessen sich auf den Originalquelltext
+beziehen, nicht auf DOM-Serialisierung oder kommentarbereinigtes CSS.
+
 Freies HTML unterstützt numerische Readings in SVG-Geometrie, lokale SVG-`use`-Ziele
 innerhalb desselben SVG sowie Clip-Pfade und Masken. CSS erlaubt zusätzlich
 Motion-Path-Eigenschaften. Eigene und importierte Styles bleiben aus

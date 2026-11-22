@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-22",
+  "version": "1.24.2-dev",
+  "title": "Freehtml-Kommentare und praezise Code-Diagnosen",
+  "changes": [
+    "HTML-Blockkommentare in style werden client- und serverseitig akzeptiert; gespeicherter Code bleibt erhalten. Refs #241.",
+    "Freehtml-Ablehnungen mit Zeile und begrenztem Codeausschnitt samt markierter Problemstelle. Refs #241.",
+    "Nur dev; Geraeteabnahme und main-Freigabe stehen aus."
+  ]
+}
