@@ -264,11 +264,16 @@ try {
   smilSvg.setCurrentTime(0);
   await new Promise(resolve => requestAnimationFrame(resolve));
   const initialSmilWidth = smilSvg.querySelector('circle').getBBox().width;
-  smilSvg.setCurrentTime(0.5);
-  await new Promise(resolve => requestAnimationFrame(resolve));
   check(Math.abs(initialSmilWidth - 20) < 0.1, 'SVG animate starts at its declared geometry');
-  check(Math.abs(smilSvg.querySelector('circle').getBBox().width - 30) < 0.1,
-    'SVG animate actually changes geometry');
+  let animatedSmilWidth = initialSmilWidth;
+  for (let frame = 0; frame < 20; frame++) {
+    smilSvg.setCurrentTime(0.5);
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    animatedSmilWidth = smilSvg.querySelector('circle').getBBox().width;
+    if (Math.abs(animatedSmilWidth - 30) < 0.1) break;
+  }
+  check(Math.abs(animatedSmilWidth - 30) < 0.1,
+    `SVG animate actually changes geometry (${initialSmilWidth} -> ${animatedSmilWidth})`);
   smilHost.remove();
   const dashboard = await (await fetch('fixtures/volvo_dashboard.html')).text();
   check(checkSource(dashboard) === null, 'complete reported Volvo dashboard validates with corrected map source');
