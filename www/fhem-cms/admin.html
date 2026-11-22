@@ -3,56 +3,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Globale FHEM-CMS Administration</title>
-<link rel="stylesheet" href="css/fhem-cms.css?v=admin-20261122-3">
-<link rel="stylesheet" href="css/cms-admin.css?v=admin-20261122-3">
+<link rel="stylesheet" href="css/fhem-cms.css?v=admin-20261122-4">
+<link rel="stylesheet" href="css/cms-admin.css?v=admin-20261122-4">
 <main class="cms-admin">
   <header class="cms-admin-header">
     <h1>Globale FHEM-CMS Administration</h1>
     <button class="cms-button cms-admin-close" id="close-window" type="button" aria-label="Fenster schließen" title="Fenster schließen">×</button>
   </header>
-  <nav class="cms-toolbar cms-admin-toolbar" aria-label="Administration">
-    <details class="cms-menu">
-      <summary class="cms-button">Datei</summary>
-      <div class="cms-menu-items" role="group" aria-label="Datei">
-        <button class="cms-button" id="import-config" type="button" disabled>JSON als Entwurf importieren …</button>
-        <button class="cms-button" id="export-config" type="button" disabled>Konfiguration als JSON exportieren</button>
-        <input id="config-file" type="file" accept="application/json,.json" hidden>
-      </div>
-    </details>
-    <details class="cms-menu" id="edit-menu">
-      <summary class="cms-button">Bearbeiten</summary>
-      <div class="cms-menu-items" role="group" aria-label="Bearbeiten">
-        <label for="configuration-device">CMS-Konfiguration auswählen</label>
-        <select id="configuration-device" disabled>
-          <option value="">CMS-Device auswählen …</option>
-        </select>
-        <button class="cms-button" id="refresh-config" type="button" disabled>Konfiguration neu laden</button>
-      </div>
-    </details>
-    <details class="cms-menu">
-      <summary class="cms-button">Konfiguration</summary>
-      <div class="cms-menu-items" role="group" aria-label="Konfiguration">
-        <button class="cms-button" id="open-settings" type="button" disabled>Einstellungen bearbeiten …</button>
-        <button class="cms-button" id="open-editor" type="button" disabled>CMS-Editor einbetten …</button>
-      </div>
-    </details>
-    <details class="cms-menu">
-      <summary class="cms-button">Seiten</summary>
-      <div class="cms-menu-items" role="group" aria-label="Seiten">
-        <label for="configuration-page">Seite ausw&auml;hlen</label>
-        <select id="configuration-page" disabled></select>
-        <button class="cms-button" id="open-page-settings" type="button" disabled>Seiteneinstellungen …</button>
-        <button class="cms-button" id="open-navigation" type="button" disabled>Seiten und Navigation bearbeiten …</button>
-        <button class="cms-button" id="open-pages-editor" type="button" disabled>CMS-Editor einbetten …</button>
-      </div>
-    </details>
-    <details class="cms-menu">
-      <summary class="cms-button">Darstellung</summary>
-      <div class="cms-menu-items" role="group" aria-label="Darstellung">
-        <button class="cms-button" id="open-appearance" type="button" disabled>Darstellung und Hintergrund …</button>
-      </div>
-    </details>
-  </nav>
   <p>CMS-Devices und verbliebene Dateistrukturen verwalten. Purge entfernt Konfigurationen, Sicherungen und Medien unwiderruflich. Danach wird das Device gel&ouml;scht.</p>
   <p>Verwaiste Verzeichnisse werden separat ausgew&auml;hlt. Fremde Dateien und Symlinks bleiben gesch&uuml;tzt. Maximal 20 Eintr&auml;ge pro Vorgang.</p>
   <button class="cms-button" id="refresh" type="button">Bestand aktualisieren</button>
@@ -66,16 +23,6 @@
     <h2 id="orphans-heading">Verwaiste Dateistrukturen</h2>
     <div id="orphans"></div>
     <button class="cms-button" id="delete-orphans" type="button" disabled>Ausgew&auml;hlte verwaiste Dateien bereinigen</button>
-  </section>
-  <section id="configuration" aria-labelledby="configuration-heading">
-    <h2 id="configuration-heading">CMS-Konfiguration</h2>
-    <p id="configuration-status" role="status" aria-live="polite">W&auml;hle unter Bearbeiten ein CMS-Device aus.</p>
-    <p>Seite und Darstellung lassen sich hier als Entwurf bearbeiten. Der eingebettete CMS-Editor bietet weitere Aktionen.</p>
-    <dl id="configuration-details" hidden>
-      <dt>Device</dt><dd id="configuration-name"></dd>
-      <dt>Schema</dt><dd id="configuration-schema"></dd>
-      <dt>Zustand</dt><dd id="configuration-state"></dd>
-    </dl>
   </section>
   <section aria-labelledby="results-heading">
     <h2 id="results-heading">Ergebnis je Eintrag</h2>
@@ -109,16 +56,5 @@
     </div>
   </form>
 </dialog>
-<dialog id="settings-dialog" class="cms-editor-panel cms-editor-dialog" data-panel="page" aria-label="Seiteneinstellungen">
-  <div id="settings-panel"></div>
-</dialog>
-<dialog id="embedded-editor" aria-label="Eingebetteter CMS-Editor">
-  <div class="cms-embedded-header">
-    <h2>CMS-Editor</h2>
-    <button class="cms-button" id="close-editor" type="button">Editor schlie&szlig;en</button>
-  </div>
-  <p>Seiten und Navigation &uuml;ber die Navigation, Widgets &uuml;ber Einf&uuml;gen bearbeiten. Ver&ouml;ffentlichen und Sicherungswiederherstellung wirken wie im CMS-Editor.</p>
-  <iframe title="CMS-Editor" id="editor-frame"></iframe>
-</dialog>
-<script type="module" src="js/cms-admin.js?v=admin-20261122-3"></script>
+<script type="module" src="js/cms-admin.js?v=admin-20261122-4"></script>
 </html>

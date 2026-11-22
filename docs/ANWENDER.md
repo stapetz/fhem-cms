@@ -85,34 +85,17 @@ Nach einem Update die Verwaltungsseite neu laden. Ihre CSS- und
 JavaScript-Einstiegsdateien tragen eine Versionskennung gegen veraltete
 Browsercaches.
 
-- Die Administration startet weiterhin mit dem CMS-/Dateibestand. Unter
-  **Bearbeiten** ein CMS-Device auswählen, um dessen Schema-5- oder
-  Schema-6-Konfiguration zu laden. Unter **Datei** lässt sich die Konfiguration
-  als JSON exportieren; wenn ein Entwurf vorhanden ist, wird dieser exportiert,
-  sonst der Live-Stand. Medien sind nicht enthalten.
-- Unter **Seiten** die Seite auswählen. **Seiteneinstellungen** und
-  **Darstellung** öffnen den bestehenden Dialog direkt in der Administration.
-  Theme, Raster, Widgettitel und Hintergrund werden ausschließlich als Entwurf
-  gespeichert; Abbrechen verwirft nicht gespeicherte Eingaben. Die Umstellung
-  zwischen Raster und Freeform benötigt die Messungen des CMS-Editors und ist
-  im Administrationsdialog nicht verfügbar.
-- **Seiten und Navigation bearbeiten** öffnet die vorhandene
-  Seitenverwaltung in der Administration: Seitentitel, Dateinamen,
-  Reihenfolge, Kioskmodus und Navigationsbeschriftung werden als Entwurf
-  gespeichert. Eine Änderung der Navigationsausrichtung benötigt die
-  Navigationsmessung im eingebetteten Editor und wird hier ausdrücklich
-  abgewiesen.
-- **CMS-Editor einbetten** öffnet den gewohnten Editor innerhalb der
-  Administration, einschließlich Seiten-/Navigationsverwaltung, Widgets,
-  Medien und Sicherungen. Dort sind auch Veröffentlichung und Wiederherstellung
-  möglich; diese wirken wie im normalen Editor auf den Live-Stand. Nach dem
-  Schließen wird der Konfigurationszustand der Administration neu geladen.
-- **JSON als Entwurf importieren** prüft die Datei mit den vorhandenen
-  Schema-Controllern und ersetzt nach Bestätigung nur den Entwurf. Die
-  Live-Konfiguration bleibt unverändert; Medien werden nicht importiert.
-  Dateien über 1 MiB, ungültige Konfigurationen und abgelehnte oder veraltete
-  Zustandskennungen werden mit einem Fehler angezeigt. Nach einem Konflikt
-  zuerst **Konfiguration neu laden** und den Import prüfen.
+- Die Verwaltung zeigt den CMS-/Dateibestand. In jeder CMS-Zeile stehen
+  **JSON importieren** und **JSON exportieren** für dieses Device; verwaiste
+  Verzeichnisse bieten diese Aktionen nicht an. Unterstützt werden Schema 5
+  und 6. Exportiert wird der aktuelle Entwurf, andernfalls der Live-Stand.
+  Medien sind nicht enthalten.
+- Der JSON-Import ersetzt nach Bestätigung ausschließlich den Entwurf, nicht
+  den Live-Stand. Medien werden nicht importiert. Dateien über 1 MiB,
+  ungültige Konfigurationen, Zugriffsfehler und veraltete Zustandskennungen
+  werden angezeigt. Ist eine Speicherung nicht bestätigt, kann sie dennoch
+  erfolgt sein: Vor einem erneuten Import den aktuellen Stand über den
+  JSON-Export prüfen. Jede Aktion lädt den Zustand des Devices erneut.
 - **×** oben rechts und `Esc` versuchen, die Verwaltungsseite zu schließen.
   Browser erlauben `window.close()` häufig nur für skriptgesteuert geöffnete
   Fenster. Wird das Schließen blockiert, erscheint ein Hinweis und der Tab muss
