@@ -37,6 +37,35 @@ test('backend accepts exactly 30000 Unicode characters and rejects 30001', () =>
   assert.deepEqual(JSON.parse(result.stdout), [true, false, true, false, true, false]);
 });
 
+test('backend persists and reloads a widget with SVG definitions and numeric readings', () => {
+  const html = cases.html.find(([source]) => source.includes('Clock:angle'))[0];
+  const result = spawnSync('perl', ['-MJSON::PP', '-MFile::Temp=tempdir', '-e', `
+    require './FHEM/01_FHEMCMS.pm';
+    local $/; my $html = decode_json(<STDIN>);
+    my $dir = tempdir(CLEANUP => 1);
+    my $config = {
+      schemaVersion => 5, theme => 'dark', settings => {layoutMode => 'grid', gridColumns => 12},
+      navigation => {orientation => 'horizontal', grid => {col => 1, row => 1, w => 12, h => 1}},
+      pages => [{id => 'home', title => 'Start', widgets => [
+        {id => 'h1', type => 'fhem-html', html => $html, devices => ['Clock', 'Battery'],
+         grid => {col => 1, row => 2, w => 4, h => 3}}
+      ]}]
+    };
+    open(my $file, '>:raw', "$dir/config.json") or die $!;
+    print {$file} JSON::PP->new->utf8->encode($config) or die $!;
+    close($file) or die $!;
+    my ($state, $error) = FHEMCMS_ReadVersion5State($dir);
+    die $error if defined($error);
+    my $writeError = FHEMCMS_WriteVersion5Draft($dir, $config, $state->{token});
+    die $writeError if defined($writeError);
+    ($state, $error) = FHEMCMS_ReadVersion5State($dir);
+    die $error if defined($error);
+    print encode_json($state->{draft}{pages}[0]{widgets}[0]{html});
+  `], { input: JSON.stringify(html), encoding: 'utf8', timeout: 10000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout), html);
+});
+
 test('CSS property and function allowlists remain identical in Perl and JavaScript', () => {
   const js = readFileSync(new URL('../www/fhem-cms/js/freehtml-css.js', import.meta.url), 'utf8');
   const perl = readFileSync(new URL('../FHEM/01_FHEMCMS.pm', import.meta.url), 'utf8');

@@ -72,6 +72,40 @@ try {
     'SVG rectangle dimensions survive sanitizing and rendering');
   const unsafeRectangle = sanitize('<svg><rect width="url(https://example.test/x)" height="-1"/></svg>').querySelector('rect');
   check(!unsafeRectangle.hasAttribute('width') && !unsafeRectangle.hasAttribute('height'), 'unsafe SVG dimensions removed');
+  const animatedSvg = '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"><defs><path id="tree" d="M0 0L10 10"/><clipPath id="crop"><rect width="50" height="50"/></clipPath><mask id="shade"><rect width="100%" height="100%" fill="white"/></mask></defs><g transform="rotate({{Clock:angle}}, 50, 50)" clip-path="url(#crop)" mask="url(#shade)"><use href="#tree"/><text letter-spacing="2">Test</text><circle stroke-dashoffset="{{Battery:state|int}}"/></g></svg>';
+  check(checkSource(animatedSvg) === null, 'dynamic SVG and local definitions are accepted');
+  check(extractDevices(animatedSvg).join() === 'Battery,Clock', 'SVG reading sources are subscribed');
+  const svgTemplate = sanitize(animatedSvg);
+  const svgReading = renderTemplate(svgTemplate, (_device, reading) => reading === 'angle' ? '45' : '12.8');
+  check(svgReading.querySelector('g').getAttribute('transform') === 'rotate(45, 50, 50)', `SVG transform resolves numeric reading: ${svgReading.innerHTML}`);
+  check(svgReading.querySelector('circle').getAttribute('stroke-dashoffset') === '12', 'SVG dash offset resolves numeric reading');
+  check(svgReading.querySelector('use').getAttribute('href') === '#tree', 'local SVG use resolves a target in the same SVG');
+  check(svgReading.querySelector('clipPath') && svgReading.querySelector('mask'), 'clipPath and mask keep SVG namespace and names');
+  const invalidSvgReading = renderTemplate(svgTemplate, () => '1) url(https://example.test/x)');
+  check(!invalidSvgReading.querySelector('g').hasAttribute('transform'), 'unsafe reading does not reach SVG transform');
+  check(invalidSvgReading.querySelector('[role="status"]'), 'invalid SVG reading reports a warning');
+  const foreignTarget = renderTemplate(sanitize('<svg><use href="#outside"/></svg><svg><path id="outside" d="M0 0"/></svg>'), () => '');
+  check(!foreignTarget.querySelector('use').hasAttribute('href'), 'SVG use cannot reference a different SVG');
+  check(foreignTarget.querySelector('[role="status"]'), 'missing local SVG use target reports a warning');
+  const dynamicWidget = createWidgetElement({ id: 'dynamic-svg', type: 'fhem-html', html: animatedSvg,
+    devices: ['Battery', 'Clock'] }, {}, new Map([['Clock', [{ readings: { angle: '10' } }]],
+    ['Battery', [{ readings: { state: '60' } }]]]), true);
+  document.body.append(dynamicWidget);
+  check(dynamicWidget.shadowRoot.querySelector('g').getAttribute('transform') === 'rotate(10, 50, 50)', 'widget displays SVG reading');
+  dynamicWidget.data = new Map([['Clock', [{ readings: { angle: '80' } }]], ['Battery', [{ readings: { state: '40' } }]]]);
+  check(dynamicWidget.shadowRoot.querySelector('g').getAttribute('transform') === 'rotate(80, 50, 50)', 'widget updates SVG transform');
+  check(dynamicWidget.shadowRoot.querySelector('circle').getAttribute('stroke-dashoffset') === '40', 'widget updates SVG dash offset');
+  check(dynamicWidget.shadowRoot.querySelector('use').getBBox().width === 10, 'local SVG use renders referenced geometry');
+  dynamicWidget.data = new Map([['Clock', [{ readings: { angle: 'javascript:1' } }]]]);
+  check(!dynamicWidget.shadowRoot.querySelector('g').hasAttribute('transform'), 'unsafe next reading removes previous SVG transform');
+  check(dynamicWidget.shadowRoot.querySelector('[data-content] [role="status"]'), 'invalid SVG update reports warning');
+  dynamicWidget.remove();
+  const dynamicStyle = '<style>.sun{transform:translateX(calc(var(--sun-x) * 1px));letter-spacing:2px}</style><div class="sun" style="--sun-x:{{Solar:position}}">Sun</div>';
+  check(checkSource(dynamicStyle) === null, 'numeric custom property and CSS transform validate');
+  const styled = renderTemplate(sanitize(dynamicStyle), () => '25');
+  document.body.append(styled);
+  check(getComputedStyle(styled.querySelector('.sun')).transform === 'matrix(1, 0, 0, 1, 25, 0)', 'custom property applies live CSS transform');
+  styled.remove();
   const live = { schemaVersion: 6, theme: 'dark', settings: { layoutMode: 'grid', gridColumns: 12 },
     navigation: { orientation: 'horizontal', grid: { col: 1, row: 1, w: 12, h: 1 } },
     pages: [{ id: 'home', title: 'Start', layoutMode: 'freeform', canvas: { width: 800, height: 600 }, widgets: [] }] };

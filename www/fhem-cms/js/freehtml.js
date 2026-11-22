@@ -9,14 +9,17 @@ const TAGS = new Set(['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'strong', 'b',
   'h5', 'h6', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'figure', 'figcaption',
   'details', 'summary', 'dl', 'dt', 'dd', 'pre', 'code', 'blockquote', 'sub', 'sup', 'mark',
   'caption', 'tfoot', 'a', 'img', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line',
-  'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'title', 'desc', 'iframe']);
+  'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'title', 'desc', 'iframe']);
 const SVG_TAGS = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
-  'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'title', 'desc']);
+  'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'title', 'desc']);
 const SVG_ATTRIBUTES = new Set(['viewbox', 'preserveaspectratio', 'd', 'x', 'y', 'x1', 'y1', 'x2', 'y2',
   'cx', 'cy', 'r', 'rx', 'ry', 'dx', 'dy', 'points', 'transform', 'fill', 'stroke', 'stroke-width',
   'fill-rule', 'fill-opacity', 'stroke-opacity', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray',
   'stroke-dashoffset', 'opacity', 'text-anchor', 'dominant-baseline', 'font-size', 'font-weight',
-  'offset', 'stop-color', 'stop-opacity', 'gradientunits', 'gradienttransform', 'spreadmethod']);
+  'offset', 'stop-color', 'stop-opacity', 'gradientunits', 'gradienttransform', 'spreadmethod',
+  'letter-spacing', 'clip-path', 'mask', 'clippathunits', 'maskunits', 'maskcontentunits']);
+const NUMERIC_SVG_ATTRIBUTES = new Set(['transform', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry',
+  'dx', 'dy', 'stroke-dasharray', 'stroke-dashoffset', 'letter-spacing', 'opacity', 'fill-opacity', 'stroke-opacity']);
 const URL_PLACEHOLDER = /^\{\{\s*[A-Za-z0-9_.-]+:@?[A-Za-z0-9_.-]+\s*\}\}$/;
 const WEB_URL = /^https?:\/\/(?:[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?|\[[0-9A-Fa-f:]+\])(?::[0-9]{1,5})?(?:[/?#][A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/;
 const LOCAL_URL = /^(?!\/\/)(?:\.{1,2}\/)*\/?(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*\/?(?:[?#][A-Za-z0-9._~:/?#@!$&'()*+,;=%-]*)?$/;
@@ -80,11 +83,16 @@ function extraAttributeAllowed(tag, name, value) {
   if ((tag === 'iframe' || tag === 'img') && name === 'loading') return value === 'lazy' || value === 'eager';
   if (tag === 'iframe' && name === 'frameborder') return value === '0';
   if (tag === 'iframe' && name === 'scrolling') return value === 'yes' || value === 'no' || value === 'auto';
-  if ((tag === 'img' || tag === 'svg' || tag === 'rect' || tag === 'iframe') && (name === 'width' || name === 'height')) {
+  if ((tag === 'img' || tag === 'svg' || tag === 'rect' || tag === 'mask' || tag === 'use' || tag === 'iframe') && (name === 'width' || name === 'height')) {
     return /^[0-9]{1,5}(?:\.[0-9]{1,3})?(?:px|em|rem|%)?$/.test(value);
   }
   if (tag === 'svg' && name === 'xmlns') return value === 'http://www.w3.org/2000/svg';
+  if (tag === 'use' && name === 'href') return /^#[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value);
   if (SVG_TAGS.has(tag) && SVG_ATTRIBUTES.has(name)) {
+    if (value.includes('{{')) {
+      if (!NUMERIC_SVG_ATTRIBUTES.has(name)) return false;
+      value = numericTemplate(value);
+    }
     return value.length <= 4000 && !/[<>&\\{}]/.test(value)
       && (!/url\s*\(/i.test(value) || /^url\(#[A-Za-z][A-Za-z0-9_-]{0,63}\)$/.test(value))
       && !/@import|expression|behavior|binding|javascript:/i.test(value);
@@ -242,6 +250,14 @@ function cleanChildren(source, target) {
         } else if (extraAttributeAllowed(tag, name, value)) {
           if (tag === 'a' && name === 'rel') {
             element.setAttribute('rel', [...new Set(['noopener', 'noreferrer', ...value.split(/\s+/).filter(Boolean)])].join(' '));
+            continue;
+          }
+          if (SVG_TAGS.has(tag) && NUMERIC_SVG_ATTRIBUTES.has(name.toLowerCase()) && value.includes('{{')) {
+            element.setAttribute(`data-cms-svg-${name.toLowerCase()}`, value);
+            continue;
+          }
+          if (tag === 'use' && name === 'href') {
+            element.setAttribute('data-cms-svg-href', value);
             continue;
           }
           element.setAttribute((URL_PLACEHOLDER.test(value) || (tag === 'iframe' && value.includes('{{')))
@@ -441,6 +457,34 @@ export function renderTemplate(template, lookup) {
       warning.textContent = 'Ungültiger oder fehlender numerischer Wert im Style-Reading';
       warning.setAttribute('role', 'status');
       element.after(warning);
+    }
+  }
+  for (const element of container.querySelectorAll('*')) {
+    for (const attribute of [...element.attributes]) {
+      if (!attribute.name.startsWith('data-cms-svg-') || attribute.name === 'data-cms-svg-href') continue;
+      const name = attribute.name.slice('data-cms-svg-'.length);
+      const value = resolveNumericTemplate(attribute.value, lookup);
+      if (value !== null && extraAttributeAllowed(element.localName.toLowerCase(), name, value)) {
+        element.setAttribute(name, value);
+      } else {
+        const warning = document.createElement('span');
+        warning.textContent = 'Ungültiger oder fehlender numerischer Wert im SVG-Reading';
+        warning.setAttribute('role', 'status');
+        container.append(warning);
+      }
+    }
+  }
+  for (const element of container.querySelectorAll('use[data-cms-svg-href]')) {
+    const svg = element.closest('svg');
+    const id = element.getAttribute('data-cms-svg-href').slice(1);
+    const target = svg && [...svg.querySelectorAll('[id]')].find(node => node.id === id);
+    if (target && target !== element && !target.contains(element) && target.localName.toLowerCase() !== 'use') {
+      element.setAttribute('href', `#${id}`);
+    } else {
+      const warning = document.createElement('span');
+      warning.textContent = 'Ungültiges oder fehlendes lokales SVG-Ziel';
+      warning.setAttribute('role', 'status');
+      container.append(warning);
     }
   }
   for (const element of container.querySelectorAll('*')) {
