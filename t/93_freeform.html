@@ -66,7 +66,8 @@
           ...widget,type:'text',markdown:widget.id,
         }))},
       ]};
-    const editing = {onEdit:() => {}, onChange:() => {}, onFreeformChange:() => {}};
+    let editedNavigation = false;
+    const editing = {onEdit:id => { if (id === '__nav') editedNavigation = true; }, onChange:() => {}, onFreeformChange:() => {}};
     if (new URLSearchParams(location.search).has('grid')) {
       root.classList.add('grid-stack');
       config.pages[0].widgets[0].grid.row = 3;
@@ -91,6 +92,8 @@
       const gridNav = root.querySelector('.cms-freeform-navigation').getBoundingClientRect();
       grid.destroy();
       const freeform = mountSchema5Widgets(GridStack, root, config, 'canvas', document.createElement('nav'), {}, new Map(), editing);
+      root.querySelector('.cms-freeform-navigation .cms-widget-config')?.click();
+      check(editedNavigation, 'navigation settings on non-start Freeform page');
       check(root.style.height === '', 'Grid height does not survive in Freeform');
       check(Math.abs(root.querySelector('.cms-freeform-canvas').getBoundingClientRect().top - canvasStart) < 2, 'canvas starts at top after Grid');
       check(root.querySelector('.cms-freeform-canvas .cms-freeform-navigation nav'), 'navigation is inside canvas');

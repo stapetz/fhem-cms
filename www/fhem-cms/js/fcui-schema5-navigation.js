@@ -108,6 +108,7 @@ export class Schema5NavigationPanel {
         width: item.width === undefined ? '' : String(item.width),
         height: item.height === undefined ? '' : String(item.height),
         show: item.hidden !== true,
+        kiosk: page.kiosk === true,
       };
     });
     this.#rowsBox = element('div');
@@ -146,7 +147,7 @@ export class Schema5NavigationPanel {
         this.#message(`Dateiname „${file}“ ist bereits vergeben.`, true);
         return;
       }
-      this.#rows.push({ page: { id: file, title, widgets: [] }, file, title, label: '', width: '', height: '', show: true });
+      this.#rows.push({ page: { id: file, title, widgets: [] }, file, title, label: '', width: '', height: '', show: true, kiosk: false });
       addTitle.value = '';
       addFile.value = '';
       this.#renderRows();
@@ -193,7 +194,7 @@ export class Schema5NavigationPanel {
   #values() {
     return JSON.stringify([this.#orientation.value, this.#sharedEnabled.checked,
       this.#shared.itemWidth.value, this.#shared.itemHeight.value,
-      this.#rows.map((row) => [row.file, row.title, row.label, row.width, row.height, row.show])]);
+      this.#rows.map((row) => [row.file, row.title, row.label, row.width, row.height, row.show, row.kiosk])]);
   }
 
   #moveRow(from, to) {
@@ -221,7 +222,9 @@ export class Schema5NavigationPanel {
     removeSpace.className = 'cms-navedit-removespace';
     const duplicateSpace = element('span');
     duplicateSpace.className = 'cms-navedit-duplicatespace';
-    head.append(removeSpace, duplicateSpace);
+    const kioskHead = element('span', 'Im Kioskmodus anzeigen');
+    kioskHead.className = 'cms-navedit-kiosk';
+    head.append(removeSpace, duplicateSpace, kioskHead);
     this.#rowsBox.append(head);
     this.#rows.forEach((row, index) => {
       const box = element('div');
@@ -292,6 +295,18 @@ export class Schema5NavigationPanel {
         this.#message(this.#values() !== this.#baseline ? 'Noch nicht gespeicherte Änderungen.' : '');
       });
       showLabel.append(show);
+      const kioskLabel = element('label');
+      kioskLabel.className = 'cms-navedit-kiosk';
+      const kiosk = element('input');
+      kiosk.type = 'checkbox';
+      kiosk.checked = row.kiosk;
+      kiosk.setAttribute('aria-label', `„${row.title || row.file}“ im Kioskmodus anzeigen`);
+      kiosk.title = 'Im Kioskmodus anzeigen';
+      kiosk.addEventListener('change', () => {
+        row.kiosk = kiosk.checked;
+        this.#message(this.#values() !== this.#baseline ? 'Noch nicht gespeicherte Änderungen.' : '');
+      });
+      kioskLabel.append(kiosk);
       const remove = element('button', '✕');
       remove.type = 'button';
       remove.className = 'cms-navedit-remove';
@@ -325,12 +340,12 @@ export class Schema5NavigationPanel {
         const widgetIds = new Set(this.#rows.flatMap((entry) => entry.page.widgets.map((widget) => widget.id)));
         for (const widget of page.widgets) widget.id = uniqueWidgetId(widget.id, widgetIds);
         this.#rows.splice(index + 1, 0, {
-          page, file, title, label: '', width: row.width, height: row.height, show: row.show,
+          page, file, title, label: '', width: row.width, height: row.height, show: row.show, kiosk: row.kiosk,
         });
         this.#renderRows();
         this.#message('Noch nicht gespeicherte Änderungen.');
       });
-      box.append(grip, ...fields, showLabel, remove, duplicate);
+      box.append(grip, ...fields, showLabel, remove, duplicate, kioskLabel);
       this.#rowsBox.append(box);
     });
   }
@@ -410,6 +425,8 @@ export class Schema5NavigationPanel {
       const page = byId.get(row.page.id) || structuredClone(row.page);
       page.id = row.file;
       page.title = row.title;
+      if (row.kiosk) page.kiosk = true;
+      else delete page.kiosk;
       return page;
     });
     syncSharedFreeformSize(config);

@@ -63,6 +63,9 @@ function validateLayout(config, includeNavigation = true) {
       throw new Error('Ungültige oder doppelte Seite');
     }
     pages.add(page.id);
+    if (Object.hasOwn(page, 'kiosk') && typeof page.kiosk !== 'boolean') {
+      throw new Error('Ungültiger Kioskmodus der Seite');
+    }
     if (page.layoutMode !== undefined && (Number(config.schemaVersion) !== 6
       || !['grid', 'freeform'].includes(page.layoutMode))) throw new Error('Ungültiger Seiten-Layoutmodus');
     const freeform = isFreeform(page);

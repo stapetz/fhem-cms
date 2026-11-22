@@ -101,6 +101,11 @@ export class Schema5View {
       const link = document.createElement('a');
       link.className = 'cms-nav-link';
       if (item.hidden === true) link.classList.add('cms-nav-hiddenpage');
+      if (editing && page.kiosk === true) {
+        link.classList.add('cms-nav-kioskpage');
+        link.title = 'Kioskseite: Live ohne Navigation';
+        link.setAttribute('aria-label', `${item.label || page.title} (Kioskseite)`);
+      }
       link.href = `#/${page.id}`;
       link.textContent = item.label || page.title;
       const width = config.navigation.itemWidth || item.width;
@@ -129,6 +134,8 @@ export class Schema5View {
     this.setStatus('Seite wird geladen …');
     try {
       const page = this.config.pages.find((entry) => entry.id === pageId);
+      if (!this.editing && page.kiosk === true) this.root.setAttribute('data-kiosk', '');
+      else this.root.removeAttribute('data-kiosk');
       const background = schema5PageBackground(this.config, pageId);
       const image = background
         ? `url("${new URL(background, this.browser.location.href).href}")` : 'none';
@@ -152,7 +159,7 @@ export class Schema5View {
           onDelete: typeof this.editing.onDelete === 'function'
             ? (id) => this.editing.onDelete(pageId, id) : undefined,
         });
-      this.stopNavigation = cmsPageCanvas(this.config) ? null : observeSchema5Navigation(navigation,
+      this.stopNavigation = cmsPageCanvas(this.config) || (!this.editing && page.kiosk === true) ? null : observeSchema5Navigation(navigation,
         () => Boolean(this.editing) || getComputedStyle(this.root).display !== 'flex');
       const view = this.view;
       this.live = new Schema5LivePage(this.client, page.widgets,
@@ -209,6 +216,7 @@ export class Schema5View {
     const shell = document.createElement('div'); shell.className = 'cms-shell';
     const workspace = document.createElement('div'); workspace.className = 'cms-schema5-workspace';
     const grid = document.createElement('div'); grid.className = 'grid-stack cms-schema5-grid';
+    if (!this.editing && page.kiosk === true) grid.setAttribute('data-kiosk', '');
     workspace.append(grid); shell.append(workspace); dialog.append(header, shell);
     dialog.addEventListener('click', event => {
       if (event.target !== dialog) return;
@@ -226,7 +234,8 @@ export class Schema5View {
       view = mountSchema5Widgets(this.GridStack, grid, this.config, pageId, navigation,
         { ...this.services, freeformBackground: background, openPageModal: (id, nextSize) => this.openModal(id, nextSize) },
         this.live.snapshots);
-      const stopNavigation = cmsPageCanvas(this.config) ? null : observeSchema5Navigation(navigation, () => getComputedStyle(grid).display !== 'flex');
+      const stopNavigation = cmsPageCanvas(this.config) || (!this.editing && page.kiosk === true) ? null
+        : observeSchema5Navigation(navigation, () => getComputedStyle(grid).display !== 'flex');
       this.modal = { dialog, view, stopNavigation, originalFocus };
       showCmsModal(dialog);
       close.focus();

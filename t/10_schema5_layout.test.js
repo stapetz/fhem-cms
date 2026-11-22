@@ -19,6 +19,23 @@ const source = () => ({
   ],
 });
 
+test('kiosk flag is an optional boolean in schemas 5 and 6', () => {
+  for (const version of [5, 6]) {
+    const config = source();
+    config.schemaVersion = version;
+    for (const value of [true, false]) {
+      config.pages[1].kiosk = value;
+      assert.doesNotThrow(() => schema5GridItems(config, 'b'));
+    }
+    for (const value of [null, 0, 1, 'true', {}, []]) {
+      config.pages[1].kiosk = value;
+      assert.throws(() => schema5GridItems(config, 'b'), /Kioskmodus/);
+    }
+    delete config.pages[1].kiosk;
+    assert.doesNotThrow(() => schema5GridItems(config, 'b'));
+  }
+});
+
 test('title alignment is optional, validated and preserved by frontend and Perl', () => {
   const script = 'use strict; use warnings; use JSON::PP (); require "./FHEM/01_FHEMCMS.pm";'
     + ' local $/; my $v=JSON::PP->new->decode(<STDIN>); my $e=FHEMCMS_ValidateConfig($v,5); print $e if defined $e;';

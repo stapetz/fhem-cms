@@ -74,6 +74,34 @@ export class Schema5PagePanel {
     this.#status.setAttribute('role', 'status');
 
     this.#form = element('form');
+    const urlLabel = element('label', 'Direkte Live-URL dieser Seite ');
+    const urlInput = element('input');
+    urlInput.type = 'text';
+    urlInput.readOnly = true;
+    const href = browser.location?.href;
+    if (href) {
+      const url = new URL(href);
+      url.searchParams.delete('mode');
+      url.searchParams.delete('cms-device');
+      url.hash = `/${page.id}`;
+      urlInput.value = url.href;
+    } else {
+      urlInput.value = 'Live-URL nicht verfügbar';
+    }
+    urlLabel.append(urlInput);
+    const copyUrl = element('button', 'Live-URL kopieren');
+    copyUrl.type = 'button';
+    copyUrl.addEventListener('click', async () => {
+      try {
+        if (!href || typeof browser.navigator?.clipboard?.writeText !== 'function') {
+          throw new Error('Zwischenablage nicht verfügbar');
+        }
+        await browser.navigator.clipboard.writeText(urlInput.value);
+        this.#message('Live-URL kopiert.');
+      } catch {
+        this.#message('Kopieren fehlgeschlagen. Bitte die Live-URL manuell kopieren.', true);
+      }
+    });
     if (freeformSupported) this.#addFreeformControls(page, measurements);
     const themeLabel = element('label', 'Darstellung ');
     this.#theme = element('select');
@@ -220,6 +248,7 @@ export class Schema5PagePanel {
       this.#backgroundLabel.textContent = 'Kein Bild ausgewählt';
       this.#updateSettingsPreview();
     });
+    this.#form.append(urlLabel, copyUrl);
     this.#form.addEventListener('submit', (event) => event.preventDefault());
 
     this.#save = element('button', 'Speichern');

@@ -335,3 +335,18 @@ Bei `>`, `<`, `>=`, `<=` wird zahlenmäßig verglichen, wenn beide Seiten Zahlen
 ## Fragen, Fehler und Ideen
 
 Fragen, Fehler und Ideen bitte als [GitHub-Issue](https://github.com/stapetz/fhem-cms/issues/new/choose) melden. Issues sind öffentlich sichtbar und können von Suchmaschinen gefunden werden; bitte keine Passwörter, Tokens oder Adressen posten.
+
+## Kioskseite und direkter Link
+
+Unter **Navigation bearbeiten** lässt sich für jede Seite **Im Kioskmodus
+anzeigen** aktivieren. Nach dem Speichern und Veröffentlichen erscheint diese
+Seite in der Live-Ansicht immer ohne Navigation; im Editor bleiben Navigation
+und Werkzeuge sichtbar, Kioskseiten sind dort mit ⛶ markiert. Die Option
+„Anzeigen“ steuert unabhängig davon, ob die Seite in der Navigation anderer
+Seiten erscheint.
+
+Die **Seiteneinstellungen** zeigen die direkte Live-URL der aktuellen Seite.
+Der Kopierknopf übernimmt sie in die Zwischenablage; falls das nicht möglich
+ist, kann sie aus dem Feld manuell kopiert werden. Die URL verwendet immer den
+veröffentlichten Stand; Entwurfsänderungen werden erst nach dem Veröffentlichen
+sichtbar. Kiosk ist eine Anzeigeoption, keine Zugriffssperre.

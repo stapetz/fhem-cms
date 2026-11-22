@@ -244,7 +244,7 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
     assert.ok(descendants(root).every((node) => node.type !== 'number'
       && !node.className?.includes('grid-stack') && node.textContent !== 'Position übernehmen'));
     const settings = root.children[3];
-    assert.equal(settings.children.length, 5, 'theme, frames, raster, title alignment and background');
+    assert.equal(settings.children.length, 7, 'appearance settings and direct live URL');
     assert.equal(settings.children[3].children[0].value, 'left');
     assert.deepEqual(settings.children[3].children[0].children.map((option) => option.value), ['left', 'center', 'right']);
     assert.equal(settings.children[0].children[0].value, 'dark');
@@ -293,6 +293,39 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
   } finally {
     globalThis.document = original;
   }
+});
+
+test('page settings expose the current live URL and report clipboard failures', async () => {
+  const original = globalThis.document;
+  globalThis.document = { createElement: (tag) => new Element(tag) };
+  try {
+    const f = fixture();
+    const state = await f.controller.reload();
+    const root = new Element('section');
+    let copied;
+    const browser = { confirm: () => true,
+      location: { href: 'https://example.test/fhem/cms/index.html?mode=edit&cms-device=tablet&x=1#/a' },
+      navigator: { clipboard: { writeText: async value => { copied = value; } } },
+    };
+    const panel = new Schema5PagePanel({ root, controller: f.controller, pageId: 'b',
+      token: state.token, browser, onClose: () => {} });
+    const form = root.children[3];
+    const url = form.children[5].children[0];
+    const copy = form.children[6];
+    assert.equal(url.value, 'https://example.test/fhem/cms/index.html?x=1#/b');
+    assert.equal(url.readOnly, true);
+    await copy.fire('click');
+    assert.equal(copied, url.value);
+    assert.match(root.children[2].textContent, /kopiert/);
+    browser.navigator.clipboard.writeText = async () => { throw new Error('denied'); };
+    await copy.fire('click');
+    assert.match(root.children[2].textContent, /Kopieren fehlgeschlagen.*manuell/);
+    assert.ok('data-error' in root.children[2].attributes);
+    browser.navigator.clipboard = undefined;
+    await copy.fire('click');
+    assert.match(root.children[2].textContent, /Kopieren fehlgeschlagen/);
+    panel.close();
+  } finally { globalThis.document = original; }
 });
 
 test('freeform presets resize only freeform pages proportionally from the open baseline', async () => {

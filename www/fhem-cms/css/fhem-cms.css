@@ -1170,7 +1170,14 @@ body:has(.cms-schema5-grid) {
   text-align: center;
 }
 
-.cms-navedit-row .cms-navedit-show input {
+.cms-navedit-row .cms-navedit-kiosk,
+.cms-navedit-head .cms-navedit-kiosk {
+  flex: 0 0 6rem;
+  text-align: center;
+}
+
+.cms-navedit-row .cms-navedit-show input,
+.cms-navedit-row .cms-navedit-kiosk input {
   width: 1.2rem;
   height: 1.2rem;
   accent-color: var(--cms-accent);
@@ -1180,6 +1187,16 @@ body:has(.cms-schema5-grid) {
 .cms-nav-link.cms-nav-hiddenpage {
   opacity: .5;
   border-style: dashed;
+}
+
+.cms-nav-link.cms-nav-kioskpage::after {
+  content: " ⛶";
+}
+
+[data-kiosk] .cms-responsive-navigation,
+[data-kiosk] .cms-freeform-navigation,
+[data-kiosk] .cms-freeform-compact-navigation {
+  display: none !important;
 }
 
 .cms-navedit-head .cms-navedit-gripspace,

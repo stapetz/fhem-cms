@@ -20,7 +20,7 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
         setProperty(name, value) { this[name] = value; },
         removeProperty(name) { delete this[name]; },
       };
-      this.classList = { toggle() {} };
+      this.classList = { toggle() {}, add: (...names) => { this.className += ` ${names.join(' ')}`; } };
     }
     append(child) { this.children.push(child); }
     replaceChildren(...children) { this.children = children; }
@@ -52,7 +52,7 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
         { id: 'first', title: 'Eins', widgets: [
           { id: 'a', type: 'fhem-value', device: 'Temp', grid: { col: 1, row: 2, w: 2, h: 1 } },
         ] },
-        { id: 'second', title: 'Andere', widgets: [
+        { id: 'second', title: 'Andere', kiosk: true, widgets: [
           { id: 'b', type: 'fhem-value', device: 'Other', grid: { col: 1, row: 2, w: 2, h: 1 } },
         ] },
       ],
@@ -102,6 +102,7 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
     assert.equal(firstNav.children[1].attributes['aria-current'], 'page');
     assert.equal(firstNav.children[2].textContent, 'Zwei');
     assert.equal(firstNav.children[2].style.width, 'min(calc(var(--cms-view-width) * 0.075), 100%)');
+    assert.equal('data-kiosk' in root.attributes, false);
     browser.location.hash = '#/second';
     listeners.get('hashchange')();
     assert.equal(requests[1].spec, 'Other,device=Other');
@@ -110,6 +111,10 @@ test('schema 5 view routes pages and cleans up old requests and subscriptions', 
     const secondComponent = root.children[1].children[0].children[0];
     const secondNav = root.children[0].children[0].children[0];
     assert.equal(secondNav.children[2].attributes['aria-current'], 'page');
+    assert.ok('data-kiosk' in root.attributes, 'live kiosk page has no navigation');
+    const editNav = view.navigation('second', config, true);
+    assert.match(editNav.children[2].className, /cms-nav-kioskpage/);
+    assert.match(editNav.children[2].attributes['aria-label'], /Kioskseite/);
     requests[1].resolve([{ name: 'Other', readings: { state: 'neu' } }]);
     await view.live.inFlight;
     assert.equal(secondComponent.data[0].readings.state, 'neu');
