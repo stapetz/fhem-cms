@@ -86,8 +86,10 @@ try {
   check(doc.title === 'Globale FHEM-CMS Administration' && $('h1').textContent === doc.title,
     'page heading and browser title use the global administration name');
   check([...doc.querySelectorAll('.cms-admin-toolbar .cms-menu summary')].map(node => node.textContent).join(',')
-    === 'Datei,Bearbeiten' && $('#configuration').querySelector('h2').textContent === 'CMS-Konfiguration',
+    === 'Datei,Bearbeiten,Konfiguration,Seiten,Darstellung' && $('#configuration').querySelector('h2').textContent === 'CMS-Konfiguration',
   'central admin has matching File/Edit menus and a separate configuration area');
+  check([...doc.querySelectorAll('.cms-editor-link')].every(link => link.hidden && !link.hasAttribute('href')),
+    'editor links are unavailable until a device is selected');
   check($('#configuration-device').disabled === false && $('#import-config').disabled
     && $('#export-config').disabled, 'configuration actions wait until a CMS is selected');
   const anchorClick = frame.contentWindow.HTMLAnchorElement.prototype.click;
@@ -176,6 +178,9 @@ try {
   await wait(() => !$('#import-config').disabled);
   check(loadedDevices.join() === 'Keep' && $('#configuration-name').textContent === 'Keep'
     && $('#configuration-schema').textContent === '5', 'selection loads the chosen versioned configuration');
+  check([...doc.querySelectorAll('.cms-editor-link')].every(link => !link.hidden
+    && link.getAttribute('href') === '/custom/fhem-cms/Keep/index.html?mode=edit'),
+  'configuration, pages and appearance links open the existing editor for the selected CMS');
   $('#export-config').click();
   check(exportedBlobs.length === 1 && anchorDownloads[0].name === 'Keep-config.json'
     && JSON.parse(await exportedBlobs[0].text()).pages[0].id === 'home',
@@ -201,6 +206,11 @@ try {
     'export prefers an existing draft over live configuration');
   const editMenu = $('#edit-menu');
   editMenu.open = true;
+  $('#confirmation').showModal();
+  const modalEscape = new frame.contentWindow.KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true});
+  $('#confirmation').dispatchEvent(modalEscape);
+  check(modalEscape.defaultPrevented && !$('#confirmation').open && editMenu.open && closeCalls === 0,
+    'Escape closes an active dialog without closing its underlying menu or window');
   doc.body.dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true}));
   check(!editMenu.open && closeCalls === 0, 'Escape closes an open menu before attempting to close the page');
   doc.body.dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true}));
