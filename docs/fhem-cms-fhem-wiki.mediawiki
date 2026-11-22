@@ -33,7 +33,9 @@
 
 '''fhem-cms''' ergänzt FHEM um eine frei gestaltbare Bedienoberfläche im Browser. Du kombinierst Gerätewerte, Bedienelemente, Texte, Bilder und Links auf eigenen Seiten. Das Layout erstellst du grafisch, ohne dafür eine komplette HTML-Oberfläche programmieren zu müssen.
 
-Dieser Artikel beschreibt den stabilen Funktionsstand '''1.12.0'''. Rasterseiten bleiben verfügbar; für pixelgenaues Freeform wird Schema 6 verwendet. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+Dieser Artikel beschreibt den stabilen Funktionsstand '''1.13.0'''. Rasterseiten bleiben verfügbar; für pixelgenaues Freeform wird Schema 6 verwendet. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+
+'''Neu in 1.13.0:''' Freies HTML unterstützt bis zu 50.000 Unicode-Zeichen, weitere passive SVG-/CSS-Funktionen und präzise Quelltextdiagnosen. Die zentrale Administration bietet JSON-Import/-Export je CMS; Kioskseiten haben eine kopierbare Live-URL. Standardwidgets sind besser lesbar, SolarFlow-Kreiswerte ausgewogener. CMS-Startseiten revalidieren ihren Browsercache. Die Bedienung ist in den jeweiligen Abschnitten dieses Artikels beschrieben.
 
 '''Neu in 1.12.0:''' Raster- und Freeform-Seiten übernehmen die Darstellungsgröße von der Startseite. Im mobilen Hochformat werden Widgets in Leserichtung angeordnet und das Hintergrundbild mittig ohne Wiederholung beschnitten. Im Querformat bleiben Navigationslinks sichtbar, sofern sie passen. Das Vorlagenmenü entfällt; Widgets lassen sich weiterhin kopieren.
 
@@ -44,7 +46,7 @@ Dieser Artikel beschreibt den stabilen Funktionsstand '''1.12.0'''. Rasterseiten
 '''Seit Version 1.10.0:''' Die zentrale Seite
 <code>/fhem/fhem-cms/admin.html</code> listet CMS-Devices und getrennt davon
 verwaiste CMS-Dateistrukturen. Erst nach <code>attr &lt;CMS&gt; adminMenu 1</code>
-fuehrt im Dateimenue des jeweiligen CMS
+fuehrt unter '''Bearbeiten''' im jeweiligen CMS
 '''Globale FHEM-CMS Administration''' dorthin. Checkbox-Auswahl und die
 Bestaetigung <code>DELETE</code> erlauben Purge mit anschliessendem Delete
 (nur bei erfolgreichem Purge) bzw. separat die Bereinigung verwaister Daten.
@@ -64,6 +66,26 @@ Menueeintrag; direkte Zugriffe unterliegen weiterhin den FHEMWEB-Rechten.
 Beim Menueaufruf uebernimmt die Administration das aktuelle Theme, das
 Seitenhintergrundbild und die Liquid-Glass-Werte des aufrufenden CMS.
 Direktaufrufe ohne Darstellungskontext bleiben im dunklen Standardtheme.
+
+'''Seit Version 1.13.0:''' Die obere Menüstruktur der Administration ist auf
+globale Aufgaben begrenzt: Bestand, Purgen/Löschen und JSON-Transfer.
+Es gibt keine globale CMS-Auswahl. Seiten-, Darstellungs- und
+Widgeteinstellungen bleiben in den Bearbeitungsmenüs des jeweiligen CMS.
+
+* '''JSON importieren …''' und '''JSON exportieren''' stehen direkt in der
+  Bestandszeile des betreffenden CMS-Devices, nicht bei verwaisten Verzeichnissen.
+* Unterstützt werden Schema 5 und 6. Exportiert wird ein vorhandener Entwurf,
+  andernfalls der Live-Stand. Medien sind nicht enthalten.
+* Der Import ersetzt nach Bestätigung ausschließlich den Entwurf, nicht den
+  Live-Stand. Erst '''Datei → Entwurf veröffentlichen''' macht ihn live.
+  Dateien über 1 MiB, ungültige Konfigurationen und Zustandskonflikte werden
+  mit einer Fehlermeldung abgewiesen.
+* Bei unklarer Speicherbestätigung zuerst den aktuellen Zustand über
+  JSON-Export prüfen, statt den Import blind zu wiederholen.
+* JSON-Import und -Export sind aus dem lokalen CMS-Dateimenü entfernt.
+* '''×''' oben rechts und '''Esc''' versuchen, die Administrationsseite zu
+  schließen. Offene Dialoge haben Vorrang. Blockiert der Browser
+  <code>window.close()</code>, erscheint ein Hinweis; den Tab dann selbst schließen.
 
 '''Seit Version 1.10.0:''' Magic verwendet das
 mitgelieferte Strandfoto als Hintergrund aller erzeugten Seiten, auch der
@@ -241,9 +263,11 @@ Ein CMS-Device hat '''einen gemeinsamen Entwurf''', nicht einen eigenen je Brows
 |-
 | Datei || Veröffentlichen, Verwerfen, Assetmanager, Sicherungen und Wiederherstellung.
 |-
-| Bearbeiten || Seiteneinstellungen, Widget hinzufügen, Widgets automatisch anordnen.
+| Bearbeiten || Seiteneinstellungen und globale FHEM-CMS Administration, wenn freigegeben.
 |-
-| Ansicht || Vorschau und Rasteranzeige.
+| Einfügen || Widget hinzufügen und Gerät hinzufügen.
+|-
+| Ansicht || Vorschau, Rasteranzeige und Widgets automatisch anordnen.
 |}
 
 Die Widgetwerkzeuge erscheinen auf Mausgeräten beim Überfahren oder Tastaturfokus; auf Touchgeräten ohne Hover bleiben sie sichtbar. Über den Stift öffnest du die Einstellungen, über den Seitenwechselknopf verschiebst du ein Widget auf eine andere Seite.
@@ -253,6 +277,7 @@ Die Widgetwerkzeuge erscheinen auf Mausgeräten beim Überfahren oder Tastaturfo
 == Seiten, Navigation und Layout ==
 
 Die Navigation ist ein gemeinsames Widget für alle Seiten des CMS-Devices. Öffne dessen Stiftsymbol, um Seiten zu erstellen, umzubenennen, umzusortieren oder in der Navigation auszublenden.
+Die Navigationseinstellungen sind auf allen Seiten erreichbar, nicht nur auf der Startseite.
 
 * Ausgeblendete Seiten bleiben über ihren Link erreichbar und sind nicht geschützt.
 * Zum Löschen einer Seite entfernst oder verschiebst du zunächst ihre Widgets und änderst referenzierende LinkWidget-Kacheln.
@@ -271,6 +296,26 @@ Widgettitel lassen sich global links, zentriert oder rechts ausrichten. Ob ein T
 '''Ansicht → Widgets automatisch anordnen''' rückt die Widgets der aktuellen Seite nach oben und links. Größen und Inhalte bleiben erhalten; die Änderung landet im Entwurf.
 
 '''Einfügen''' enthält Widget hinzufügen und Gerät hinzufügen. Vorhandene Widgets lassen sich direkt am Widget duplizieren. Die freigegebene globale FHEM-CMS Administration steht unter '''Bearbeiten'''. '''Ansicht → Raster anzeigen''' merkt die letzte Auswahl dauerhaft pro CMS im verwendeten Browser, auch für spätere Besuche; auf anderen Geräten gilt die dortige Auswahl.
+
+=== Kioskseiten und direkte Live-URL (seit 1.13.0) ===
+
+In '''Navigation bearbeiten''' kann jede Seite mit '''Im Kioskmodus anzeigen'''
+markiert werden. Die Einstellung wird zuerst im Entwurf gespeichert.
+Nach '''Datei → Entwurf veröffentlichen''' erscheint die markierte Seite live
+ohne CMS-Navigation, unabhängig davon, über welchen Link sie geöffnet wurde.
+Im Editor bleibt ihr Navigationspunkt sichtbar und farblich hervorgehoben.
+
+Zum Kopieren des Links die gewünschte Seite im Editor öffnen:
+
+# '''Bearbeiten → Seiteneinstellungen''' öffnen.
+# Unter '''Direkte Live-URL dieser Seite''' den Button '''Live-URL kopieren''' verwenden.
+# Die kopierte URL normal im Browser öffnen; sie enthält keinen Bearbeitungsmodus.
+
+Seiten werden über Hash-Routen wie <code>#/start</code> aufgerufen.
+Ein zusätzlicher <code>kiosk=1</code>-Parameter ist nicht nötig.
+Ist die Zwischenablage nicht verfügbar, erscheint eine Meldung; die angezeigte
+URL kann manuell kopiert werden. Kiosk schaltet den Browser nicht automatisch
+auf Vollbild und ist kein Zugriffsschutz.
 
 === Theme-Manager und Hintergrundbilder ===
 
@@ -435,7 +480,7 @@ Die [https://github.com/stapetz/fhem-cms/wiki/VolvoConnect-Widget bebilderte Git
 
 === Geräte und Befehle richtig zuordnen ===
 
-'''Diagramme ohne Logdaten (nur dev, noch nicht in 1.11.0):''' Werden für ein Device keine geloggten Readings gefunden, melden Konfigurationsdialog und Geräteauswahl '''Keine Daten zum Device vorhanden'''. Alte Readingauswahlen bleiben dabei nicht erhalten; ohne Logdaten wird kein Diagramm vorgeschlagen. Datenquellenfehler bleiben eigenständige Fehler. Ein leerer Zeitraum bei vorhandener Protokollierung wird separat als '''Keine Werte im gewählten Zeitraum''' angezeigt.
+'''Diagramme ohne Logdaten:''' Werden für ein Device keine geloggten Readings gefunden, melden Konfigurationsdialog und Geräteauswahl '''Keine Daten zum Device vorhanden'''. Alte Readingauswahlen bleiben dabei nicht erhalten; ohne Logdaten wird kein Diagramm vorgeschlagen. Datenquellenfehler bleiben eigenständige Fehler. Ein leerer Zeitraum bei vorhandener Protokollierung wird separat als '''Keine Werte im gewählten Zeitraum''' angezeigt.
 
 '''Devicewechsel in Tabellen (ab 1.11.0):''' Die Geräteauswahl lädt die Readings frisch aus FHEM und belegt das Reading neu vor, statt die vorherige manuelle Auswahl zu übernehmen. Dies gilt für das gemeinsame Device sowie einzelne Mehr-Device-Zeilen. Eigene Bezeichner bleiben erhalten; Abbrechen speichert nichts.
 
@@ -474,6 +519,13 @@ dargestellt; ein fehlgeschlagener ausgehender Anruf ist nicht zuverlässig als
 „besetzt“ unterscheidbar. Anrufdaten sind persönlich: Zugriff auf CMS und FHEMWEB
 entsprechend schützen.
 
+Seit 1.13.0 zeigt die native Anrufliste lokale Grafiksymbole für eingehende,
+ausgehende und verpasste Anrufe sowie größere responsive Texte.
+Die kompakte Spaltenüberschrift '''Art''' trägt die zugängliche Bezeichnung
+'''Status'''. Kleine Kacheln können weiterhin intern scrollen.
+Eigene Telefonlisten im freien HTML sind nicht dieses native Widget und
+werden durch dessen Gestaltung nicht verändert.
+
 === SolarFlow ===
 
 Die PV-Leistung ist Pflicht; andere Quellen sind optional. Du kannst Werte aus einem Device oder aus mehreren Devices zuordnen. Ohne Hausverbrauchsreading kann der Hausverbrauch berechnet werden.
@@ -486,6 +538,11 @@ Bei einem von Magic vorgeschlagenen SolaxModbus-Gerät ist die Berechnung zunäc
 * Fehlende Netz-/Batteriequellen blenden die betreffende Station aus.
 
 Prüfe die Richtung an einem bekannten Betriebszustand; Hersteller verwenden nicht immer dieselbe Vorzeichenkonvention.
+
+Seit 1.13.0 verwendet SolarFlow zurückhaltender gewichtete Kreiswerte und
+getrennte Einheiten. Die native Solar-/Energieübersicht erhält größere,
+responsive Bezeichnungen mit ausgewogener Wertehierarchie für Desktop,
+Tablet und Smartphone. Eigene Freehtml-Solarübersichten werden nicht umgestaltet.
 
 === LinkWidget ===
 
@@ -531,6 +588,11 @@ passende Code- und Konfigurationssicherungen gemeinsam wiederherstellen.
 
 Das Textwidget bietet einen WYSIWYG-Editor mit Textformatierung, Überschriften, Listen, Farben, Links, Bildern und Tabellen.
 
+Seit 1.13.0 erhält Standardtext eine größere responsive Grundschrift.
+Explizite Formatierungen bereits vorhandener Inhalte werden durch die
+CSS-Grundgröße nicht überschrieben; der bestehende Richtext-Import-/
+Speicherfilter bleibt unverändert.
+
 * Über '''Bild''' öffnest du den gemeinsamen Assetmanager.
 * Ein eingefügtes Bild kannst du anklicken, links/mittig/rechts ausrichten und proportional skalieren.
 * Über '''<nowiki>{{ }}</nowiki>''' fügst du einen Live-Platzhalter ein.
@@ -573,6 +635,28 @@ Die Sonderwerte <code>@alias</code>, <code>@name</code> und <code>@type</code> l
 
 === Freies HTML ===
 
+Seit 1.13.0 sind bis zu '''50.000 Unicode-Zeichen''' möglich, nicht 50.000
+Zeilen. Auch leere Inhalte lassen sich speichern, ohne die vorhandene
+Freeform-Geometrie zu verlieren.
+
+Bei Ablehnungen zeigt der Dialog '''Zeile und Spalte''' sowie einen begrenzten
+Codeausschnitt mit '''markierter Problemstelle''', nicht die gesamte lange Zeile.
+'''Zur Stelle im Code''' springt zur beanstandeten Stelle.
+'''Geladene Codeprüfung''' zeigt die tatsächlich geladene Browserversion;
+das FHEM-Internal <code>VERSION</code> allein belegt diesen Browserstand nicht.
+
+SVG unterstützt unter anderem Rechteckmaße, Gradienten, lokale
+<code>use</code>-, <code>clipPath</code>- und <code>mask</code>-Referenzen,
+<code>pattern</code> und passive <code>animate</code>-Elemente für Geometrie,
+Farbe und Opazität. Für Geometrieanimationen
+<code>attributeType="XML"</code> verwenden.
+Numerische Readings können geeignete SVG-Geometrie und CSS-Werte dynamisch
+belegen, auch mit numerischem <code>default(0)</code>.
+CSS unterstützt Bewegungspfade und <code>content</code> für Pseudoelemente;
+vollständige HTML-Blockkommentare innerhalb von CSS werden akzeptiert.
+Freie Skriptausführung ist damit nicht erlaubt.
+Die Standardwidget-Typografie verändert eigene Freehtml-Layouts nicht.
+
 Freies HTML unterstützt Platzhalter und alternativ Elemente mit <code>device</code>- und <code>reading</code>-Attributen:
 
 <pre>
@@ -587,7 +671,7 @@ Iframes haben keine Anbieter-/Hostliste: beliebige HTTP-/HTTPS-Ziele und relativ
 
 <code>data-value="{{Device:power|int}}"</code> und <code>data-state="{{Device:state}}"</code> setzen Livewerte als sicheren Attributtext für CSS-Selektoren; kein HTML. <code>data-cms-*</code> bleibt intern reserviert, außer <code>data-cms-class</code>. Sprungmarken <code>#id</code> und <code>:target</code> wirken widgetlokal, ohne den CMS-Seitenrouter zu verändern.
 
-Numerische Reading-Platzhalter sind in Inline-Styles möglich, etwa <code>style="width:{{MeinElch:state_batteryChargeLevel|int}}%;"</code>. Erlaubte Filter: <code>int</code>, <code>round(0)</code> bis <code>round(6)</code>. Kartenkoordinaten können als <code>marker={{MeinElch:location_latitude}}%2C{{MeinElch:location_longitude}}</code> im Querystring der Einbettungs-URL stehen. Zahlen und Koordinatengrenzen werden bei jeder Anzeige geprüft; ungültige Werte zeigen einen Hinweis statt CSS oder Kartenquelle zu setzen. Domain/Pfad bleiben fest. <code>scroll-behavior:smooth</code> ist erlaubt. Der <code>map</code>-Filter akzeptiert <code>on=An</code> und <code>on:An</code>.
+Numerische Reading-Platzhalter sind in Inline-Styles möglich, etwa <code>style="width:{{MeinElch:state_batteryChargeLevel|int}}%;"</code>. Erlaubte Filter: <code>int</code>, <code>round(0)</code> bis <code>round(6)</code> und numerisches <code>default(0)</code>. Kartenkoordinaten können als <code>marker={{MeinElch:location_latitude}}%2C{{MeinElch:location_longitude}}</code> im Querystring der Einbettungs-URL stehen. Zahlen und Koordinatengrenzen werden bei jeder Anzeige geprüft; ungültige Werte zeigen einen Hinweis statt CSS oder Kartenquelle zu setzen. Domain/Pfad bleiben fest. <code>scroll-behavior:smooth</code> ist erlaubt. Der <code>map</code>-Filter akzeptiert <code>on=An</code> und <code>on:An</code>.
 
 <pre><nowiki><img src="{{MeinElch:vehicle_images_exteriorImageUrl}}" alt="Fahrzeug" width="100%"></nowiki></pre>
 
@@ -727,6 +811,15 @@ shutdown restart
 </pre>
 
 Prüfe anschließend Updateprotokoll und Internal '''VERSION''' und lade den Browser vollständig neu.
+
+Seit 1.13.0 revalidieren generierte CMS-Startseiten ihren Browsercache,
+bevor Einstieg und transitive Module geladen werden. Bei geändertem Assetstand
+wird neu geladen; Seitenroute und Bearbeitungsmodus bleiben erhalten.
+Beim erstmaligen Wechsel von einer älteren Version den alten CMS-Tab
+schließen und über den FHEMWEB-Startlink neu öffnen: Ein bereits laufender
+alter Tab kennt die neue Ladeprüfung noch nicht.
+Im HTML-Dialog lässt sich unter '''Geladene Codeprüfung''' der Browserstand
+mit dem erwarteten Release vergleichen.
 
 Bei ausschließlich geänderten Frontenddateien genügt nach entsprechender Releaseanweisung:
 
