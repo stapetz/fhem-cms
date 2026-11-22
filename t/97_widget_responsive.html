@@ -47,6 +47,17 @@ try {
     check(face.top >= title.bottom && face.bottom <= date.top + 1, 'clock avoids title and date');
     clock.remove();
   }
+  const mobileClock = create({type:'fhem-clock', style:'analog', title:'Uhr', showDate:true});
+  mobileClock.style.cssText = 'width:280px;height:auto;--cms-widget-height:auto;--cms-widget-overflow:visible;--cms-widget-containment:inline-size;--cms-widget-clock-face-min:min(100cqi, 360px)';
+  await pause();
+  const mobileTile = mobileClock.shadowRoot.querySelector('.tile');
+  const mobileFace = mobileClock.shadowRoot.querySelector('[data-face]').getBoundingClientRect();
+  const mobileDate = mobileClock.shadowRoot.querySelector('[data-date]').getBoundingClientRect();
+  check(mobileFace.width >= 240 && Math.abs(mobileFace.width - mobileFace.height) <= 1,
+    'natural-height mobile clock fills the available width');
+  check(mobileFace.bottom <= mobileDate.top + 1 && mobileTile.scrollHeight <= mobileTile.clientHeight + 1,
+    'mobile clock and date remain visible in natural height');
+  mobileClock.remove();
   const calls = create({type:'fhem-calllist', columns:['state','party'], limit:3, title:'Anrufe'});
   calls.style.cssText = 'width:800px;height:400px';
   await pause();
@@ -61,7 +72,7 @@ try {
   const small = parseFloat(getComputedStyle(root.querySelector('table')).fontSize);
   measurements.push({ widget:'calllist', largeFont:large, smallFont:small });
   check(small >= 16 && small < large, `small text remains readable and scales: ${small}`);
-  check(parseFloat(getComputedStyle(root.querySelector('[data-title]')).fontSize) >= 19, 'title remains readable');
+  check(parseFloat(getComputedStyle(root.querySelector('[data-title]')).fontSize) >= 22.39, 'title remains readable');
   const html = create({type:'fhem-html', devices:[], html:'<p style="font-size:11px">Eigener Text</p>'});
   html.style.cssText = 'width:600px;height:300px';
   check(getComputedStyle(html.shadowRoot.querySelector('[data-content] p')).fontSize === '11px',

@@ -65,6 +65,12 @@ try {
     const tile = $('[data-tile]');
     check(tile.scrollHeight <= tile.clientHeight,
       `${limit} calls fit the initial grid height at 720px grid width: ${tile.scrollHeight}/${tile.clientHeight}`);
+    const dateCell = $('[data-rows] tr td:nth-child(3)');
+    const dateRange = document.createRange();
+    dateRange.setStart(dateCell.firstChild, 0);
+    dateRange.setEnd(dateCell.firstChild, 10);
+    check(dateRange.getClientRects().length === 1,
+      `${limit} calls: calendar date does not break inside the date`);
   }
   widget.style.width = '';
   widget.style.height = '';

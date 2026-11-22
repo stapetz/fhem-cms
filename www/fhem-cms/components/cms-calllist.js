@@ -128,6 +128,9 @@ class FHEMCMSCallList extends HTMLElement {
         .tile th, .tile td { padding: 6px 8px; border-bottom: 1px solid rgba(128,128,128,.1); }
         .tile th { color: inherit; font-weight: 700; }
         .tile th[data-column=state] { width:3.5em; }
+        .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=state] { width:17%; }
+        .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=timestamp] { width:36%; }
+        .tile table:has(th[data-column=state]):has(th[data-column=party]):has(th[data-column=timestamp]):has(th[data-column=duration]):not(:has(th:nth-child(5))) th[data-column=duration] { width:23%; }
         .tile .status svg { display:block; width:1.4em; height:1.4em; }
       </style>
       <article class="tile" data-tile>

@@ -290,6 +290,7 @@ body:has(.cms-schema5-grid) {
   --cms-widget-body-min-height: 0px;
   --cms-widget-main-height: clamp(48px, 30cqi, 160px);
   --cms-widget-main-basis: auto;
+  --cms-widget-clock-face-min: min(100cqi, 360px);
   --cms-widget-fit-width: 100%;
   --cms-widget-fit-white-space: normal;
   --cms-widget-flow-ratio: 400 / 375;
@@ -2331,6 +2332,7 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   --cms-widget-body-min-height: 0px;
   --cms-widget-main-height: clamp(48px, 30cqi, 160px);
   --cms-widget-main-basis: auto;
+  --cms-widget-clock-face-min: min(100cqi, 360px);
   --cms-widget-fit-width: 100%;
   --cms-widget-fit-white-space: normal;
   --cms-widget-flow-ratio: 400 / 375;
