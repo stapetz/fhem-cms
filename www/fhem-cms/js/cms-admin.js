@@ -1,8 +1,11 @@
-import { showCmsModal } from './modal-dialog.js?v=admin-20261122-2';
-import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261122-2';
-import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261122-2';
-import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261122-2';
-import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261122-2';
+import { showCmsModal } from './modal-dialog.js?v=admin-20261122-3';
+import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261122-3';
+import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261122-3';
+import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261122-3';
+import { Schema5PagePanel } from './fcui-schema5-page-panel.js?v=admin-20261122-3';
+import { Schema5NavigationPanel } from './fcui-schema5-navigation.js?v=admin-20261122-3';
+import { createSchema5WidgetServices } from './widget-services.js?v=admin-20261122-3';
+import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261122-3';
 
 const CONFIG_LIMIT = 1048576;
 
@@ -30,7 +33,7 @@ export async function createCmsConfigurationSession(device, base) {
   }
   const controller = new Schema5DraftController(createSchema5Transport(client));
   const state = await controller.reload();
-  return { controller, schemaVersion, state };
+  return { client, controller, schemaVersion, state };
 }
 
 export function requestAdminClose(browser, notify) {
@@ -93,11 +96,15 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
   const status = $('#status');
   const dialog = $('#confirmation');
   const importDialog = $('#import-confirmation');
+  const settingsDialog = $('#settings-dialog');
+  const editorDialog = $('#embedded-editor');
   const deviceSelect = $('#configuration-device');
+  const pageSelect = $('#configuration-page');
   const importInput = $('#config-file');
   let inventory;
   let busy = false;
   let configurationBusy = false;
+  let configurationInvalid = false;
   let configurationSession;
   let configurationGeneration = 0;
   let pendingImport;
@@ -109,29 +116,25 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
   };
   const choices = kind => [...root.querySelectorAll(`input[data-kind="${kind}"]:checked`)];
   const actions = () => {
-    $('#refresh').disabled = busy;
+    $('#refresh').disabled = busy || configurationBusy;
     for (const kind of ['device', 'orphan']) {
       const count = choices(kind).length;
-      $(`#delete-${kind}s`).disabled = busy || !count || count > 20;
+      $(`#delete-${kind}s`).disabled = busy || configurationBusy || !count || count > 20;
     }
-    for (const input of root.querySelectorAll('input[data-kind]')) input.disabled = busy || !!input.dataset.blocked;
+    for (const input of root.querySelectorAll('input[data-kind]')) {
+      input.disabled = busy || configurationBusy || !!input.dataset.blocked;
+    }
     deviceSelect.disabled = busy || configurationBusy || !inventory
       || !inventory.items.some(item => item.kind === 'device');
-    const configReady = !!configurationSession && !configurationBusy && !busy;
+    const configReady = !!configurationSession && !configurationInvalid && !configurationBusy && !busy;
     $('#refresh-config').disabled = !deviceSelect.value || configurationBusy || busy;
     $('#import-config').disabled = !configReady;
     $('#export-config').disabled = !configReady;
-    $('#configuration-status').setAttribute('aria-busy', String(configurationBusy));
-    const device = deviceSelect.value;
-    for (const link of root.querySelectorAll('.cms-editor-link')) {
-      link.hidden = !device || !inventory;
-      if (!link.hidden) {
-        link.href = `${client.base.pathname.replace(/\/$/, '')}/fhem-cms/${encodeURIComponent(device)}/index.html?mode=edit`;
-      } else {
-        link.removeAttribute('href');
-      }
+    pageSelect.disabled = !configReady;
+    for (const id of ['open-settings', 'open-page-settings', 'open-appearance', 'open-navigation', 'open-editor', 'open-pages-editor']) {
+      $(`#${id}`).disabled = !configReady;
     }
-    root.querySelectorAll('.cms-editor-hint').forEach(hint => { hint.hidden = !!device && !!inventory; });
+    $('#configuration-status').setAttribute('aria-busy', String(configurationBusy));
   };
   const message = (text, error = false) => {
     status.textContent = text;
@@ -148,10 +151,18 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
     const details = $('#configuration-details');
     if (!configurationSession) {
       details.hidden = true;
+      pageSelect.replaceChildren();
       return;
     }
     const { state, schemaVersion } = configurationSession;
     const config = state.draft || state.live;
+    const selectedPage = pageSelect.value;
+    pageSelect.replaceChildren(...config.pages.map(page => {
+      const option = element('option', page.title || page.id);
+      option.value = page.id;
+      return option;
+    }));
+    if (config.pages.some(page => page.id === selectedPage)) pageSelect.value = selectedPage;
     details.hidden = false;
     $('#configuration-name').textContent = deviceSelect.value;
     $('#configuration-schema').textContent = String(config.schemaVersion || schemaVersion);
@@ -240,6 +251,7 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
     const device = deviceSelect.value;
     const generation = ++configurationGeneration;
     configurationSession = null;
+    configurationInvalid = false;
     if (!device) {
       configurationBusy = false;
       renderConfiguration();
@@ -279,10 +291,12 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
       const state = await configurationSession.controller.reload();
       if (generation !== configurationGeneration) return;
       configurationSession.state = state;
+      configurationInvalid = false;
       renderConfiguration();
       configurationMessage(`Konfiguration für ${configurationSession.device} neu geladen.`);
     } catch (error) {
       if (generation === configurationGeneration) {
+        configurationInvalid = true;
         configurationMessage(`Neuladen fehlgeschlagen: ${error.message}`, true);
       }
     } finally {
@@ -321,6 +335,8 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
       renderConfiguration();
       configurationMessage(`JSON wurde als Entwurf für ${configurationSession.device} gespeichert. Die Live-Konfiguration blieb unverändert.`);
     } catch (error) {
+      try { configurationSession.controller.snapshot(); }
+      catch { configurationInvalid = true; }
       configurationMessage(`Import fehlgeschlagen: ${error.message}. Zustand neu laden und erneut prüfen.`, true);
     } finally {
       configurationBusy = false;
@@ -347,6 +363,78 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
       configurationMessage(`Export fehlgeschlagen: ${error.message}`, true);
     }
   };
+  const editorUrl = device => new URL(
+    `${client.base.pathname.replace(/\/$/, '')}/fhem-cms/${encodeURIComponent(device)}/index.html?mode=edit`,
+    client.base);
+  const openSettings = (navigation = false) => {
+    if (!configurationSession || configurationBusy || busy) return;
+    const session = configurationSession;
+    try {
+      const state = session.controller.snapshot();
+      const panelBrowser = {
+        location: {href: editorUrl(session.device).href},
+        navigator: browser.navigator,
+        confirm: browser.confirm.bind(browser),
+      };
+      const panel = $('#settings-panel');
+      panel.replaceChildren();
+      const onClose = ({requiresReload}) => {
+        settingsDialog.close();
+        configurationBusy = false;
+        if (requiresReload) {
+          configurationInvalid = true;
+          configurationMessage('Entwurf nicht bestätigt. Bitte Konfiguration neu laden.', true);
+        } else {
+          session.state = session.controller.snapshot();
+          renderConfiguration();
+          configurationMessage(`Konfiguration für ${session.device} aktualisiert.`);
+        }
+        actions();
+      };
+      settingsDialog.dataset.panel = navigation ? 'navigation' : 'page';
+      settingsDialog.setAttribute('aria-label', navigation ? 'Navigation bearbeiten' : 'Seiteneinstellungen');
+      if (navigation) {
+        new Schema5NavigationPanel({
+          root: panel, controller: session.controller, token: state.token, browser: panelBrowser, onClose,
+          fitNavigation: () => {
+            throw new Error('Die Änderung der Ausrichtung benötigt den eingebetteten CMS-Editor mit Navigationsvorschau.');
+          },
+        });
+      } else {
+        new Schema5PagePanel({
+          root: panel, controller: session.controller, pageId: pageSelect.value, token: state.token,
+          browser: panelBrowser, onClose,
+          services: session.client ? createSchema5WidgetServices(session.client) : {},
+          // Grid-to-freeform conversion needs measurements from the live editor canvas.
+          freeformSupported: false,
+        });
+      }
+      configurationBusy = true;
+      actions();
+      showCmsModal(settingsDialog);
+    } catch (error) {
+      configurationBusy = false;
+      actions();
+      configurationMessage(`Seiteneinstellungen konnten nicht geöffnet werden: ${error.message}`, true);
+    }
+  };
+  const closeEditor = () => {
+    if (!browser.confirm('Editor schließen? Nicht gespeicherte Änderungen in geöffneten Dialogen gehen verloren.')) return;
+    $('#editor-frame').removeAttribute('src');
+    editorDialog.close();
+    configurationBusy = false;
+    actions();
+    void refreshConfiguration();
+  };
+  const openEditor = () => {
+    if (!configurationSession || configurationBusy || busy) return;
+    configurationBusy = true;
+    actions();
+    const url = editorUrl(configurationSession.device);
+    url.hash = `/${encodeURIComponent(pageSelect.value)}`;
+    $('#editor-frame').src = url.href;
+    showCmsModal(editorDialog);
+  };
   $('#refresh').addEventListener('click', refresh);
   deviceSelect.addEventListener('change', () => {
     root.querySelectorAll('.cms-menu[open]').forEach(menu => { menu.open = false; });
@@ -360,6 +448,14 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
     if (file) void prepareImport(file);
   });
   $('#export-config').addEventListener('click', exportConfiguration);
+  for (const id of ['open-settings', 'open-page-settings', 'open-appearance']) {
+    $(`#${id}`).addEventListener('click', () => openSettings());
+  }
+  $('#open-navigation').addEventListener('click', () => openSettings(true));
+  for (const id of ['open-editor', 'open-pages-editor']) {
+    $(`#${id}`).addEventListener('click', openEditor);
+  }
+  $('#close-editor').addEventListener('click', closeEditor);
   importDialog.querySelector('form').addEventListener('submit', event => {
     if (event.submitter?.value !== 'import') return;
     event.preventDefault();
@@ -386,7 +482,16 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
     if (event.key !== 'Escape' || event.defaultPrevented) return;
     const activeDialog = event.target.closest?.('dialog[open]') || root.querySelector('dialog[open]');
     if (activeDialog) {
+      if (![settingsDialog, editorDialog, importDialog, dialog].includes(activeDialog)) return;
       event.preventDefault();
+      if (activeDialog === settingsDialog) {
+        settingsDialog.querySelector('.cms-panel-close')?.click();
+        return;
+      }
+      if (activeDialog === editorDialog) {
+        closeEditor();
+        return;
+      }
       if (activeDialog === importDialog) pendingImport = null;
       activeDialog.close('cancel');
       return;

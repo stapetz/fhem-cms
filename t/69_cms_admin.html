@@ -51,10 +51,12 @@ try {
     pages: [{id: 'home', title: 'Home', widgets: []}],
   };
   let configState = {live: config, draft: null, token: 'b'.repeat(64)};
+  let failSave = false;
   const controller = {
     snapshot: () => structuredClone(configState),
     reload: async () => structuredClone(configState),
     saveDraft: async (candidate, token) => {
+      if (failSave) throw new Error('Zustand ist veraltet');
       if (token !== configState.token) throw new Error('Zustand ist veraltet');
       configState = {...configState, draft: structuredClone(candidate), token: 'c'.repeat(64)};
       return structuredClone(configState);
@@ -70,6 +72,7 @@ try {
   const browser = {
     closed: false,
     close: () => { closeCalls++; },
+    confirm: () => true,
     setTimeout: frame.contentWindow.setTimeout.bind(frame.contentWindow),
     Blob: frame.contentWindow.Blob,
     URL: {
@@ -88,8 +91,8 @@ try {
   check([...doc.querySelectorAll('.cms-admin-toolbar .cms-menu summary')].map(node => node.textContent).join(',')
     === 'Datei,Bearbeiten,Konfiguration,Seiten,Darstellung' && $('#configuration').querySelector('h2').textContent === 'CMS-Konfiguration',
   'central admin has matching File/Edit menus and a separate configuration area');
-  check([...doc.querySelectorAll('.cms-editor-link')].every(link => link.hidden && !link.hasAttribute('href')),
-    'editor links are unavailable until a device is selected');
+  check($('#open-settings').disabled && $('#open-editor').disabled,
+    'settings and embedded editor are unavailable until a device is selected');
   check($('#configuration-device').disabled === false && $('#import-config').disabled
     && $('#export-config').disabled, 'configuration actions wait until a CMS is selected');
   const anchorClick = frame.contentWindow.HTMLAnchorElement.prototype.click;
@@ -178,9 +181,62 @@ try {
   await wait(() => !$('#import-config').disabled);
   check(loadedDevices.join() === 'Keep' && $('#configuration-name').textContent === 'Keep'
     && $('#configuration-schema').textContent === '5', 'selection loads the chosen versioned configuration');
-  check([...doc.querySelectorAll('.cms-editor-link')].every(link => !link.hidden
-    && link.getAttribute('href') === '/custom/fhem-cms/Keep/index.html?mode=edit'),
-  'configuration, pages and appearance links open the existing editor for the selected CMS');
+  check(!$('#open-settings').disabled && !$('#open-editor').disabled
+    && $('#configuration-page').value === 'home', 'selected CMS enables page settings and embedded editor');
+  $('#open-appearance').click();
+  check($('#settings-dialog').open && $('#settings-panel h2').textContent.includes('Home'),
+    'appearance opens the existing page panel inside administration');
+  const theme = [...$('#settings-panel').querySelectorAll('select')]
+    .find(select => [...select.options].some(option => option.value === 'light'));
+  theme.value = 'light';
+  theme.dispatchEvent(new Event('change'));
+  $('#settings-panel .cms-panel-close').click();
+  check(!$('#settings-dialog').open && configState.draft === null,
+    'cancel discards unsaved settings without creating a draft');
+  $('#open-page-settings').click();
+  const theme2 = [...$('#settings-panel').querySelectorAll('select')]
+    .find(select => [...select.options].some(option => option.value === 'light'));
+  theme2.value = 'light';
+  theme2.dispatchEvent(new Event('change'));
+  $('#settings-panel .cms-panel-save').click();
+  await wait(() => !$('#settings-dialog').open);
+  check(configState.draft.theme === 'light' && configState.live.theme === 'dark',
+    'page setting saves only to draft and leaves live unchanged');
+  failSave = true;
+  $('#open-settings').click();
+  $('#settings-panel .cms-panel-save').click();
+  await wait(() => $('#settings-panel [data-error]'));
+  check($('#settings-panel [data-error]').textContent.includes('veraltet')
+    && $('#settings-panel .cms-panel-save').disabled && configState.live.theme === 'dark',
+  'stale state remains an explicit error and blocks further writes');
+  $('#settings-panel .cms-panel-close').click();
+  check($('#configuration-status').textContent.includes('neu laden'), 'failed save requires an explicit reload');
+  failSave = false;
+  $('#refresh-config').click();
+  await wait(() => !$('#open-settings').disabled);
+  $('#open-navigation').click();
+  check($('#settings-dialog').open && $('#settings-panel h2').textContent === 'Navigation bearbeiten',
+    'navigation opens the existing panel inside administration');
+  const pageTitle = $('#settings-panel input[aria-label^="Seitentitel"]');
+  pageTitle.value = 'Geändert';
+  pageTitle.dispatchEvent(new Event('input'));
+  $('#settings-panel .cms-panel-save').click();
+  await wait(() => !$('#settings-dialog').open);
+  check(configState.draft.pages[0].title === 'Geändert' && configState.live.pages[0].title === 'Home',
+    'page title changes only the draft');
+  $('#open-navigation').click();
+  $('#settings-panel select').value = 'vertical';
+  $('#settings-panel .cms-panel-save').click();
+  check($('#settings-panel [data-error]')?.textContent.includes('eingebetteten CMS-Editor')
+    && configState.draft.navigation.orientation === 'horizontal',
+  'orientation changes require the editor measurements and never silently alter geometry');
+  $('#settings-panel .cms-panel-close').click();
+  $('#open-pages-editor').click();
+  check($('#embedded-editor').open
+    && $('#editor-frame').getAttribute('src').endsWith('/custom/fhem-cms/Keep/index.html?mode=edit#/home'),
+  'pages menu embeds selected CMS editor on the selected page');
+  $('#close-editor').click();
+  await wait(() => !$('#open-settings').disabled);
   $('#export-config').click();
   check(exportedBlobs.length === 1 && anchorDownloads[0].name === 'Keep-config.json'
     && JSON.parse(await exportedBlobs[0].text()).pages[0].id === 'home',
