@@ -99,8 +99,8 @@ class FHEMCMSSelect extends HTMLElement {
         ${widgetDesignCss}
         .tile .choices { border: 1px solid rgba(128,128,128,.18); border-radius: 14px;
           padding: 14px; background: rgba(128,128,128,.08); }
-        .tile .choices button, .tile .choices select { min-height: 48px; min-width: 48px; }
-        .tile .status { color: inherit; font-size: .86rem; }
+        .tile .choices button, .tile .choices select { min-height: 48px; min-width: 48px; font-size: clamp(1rem, 3cqw, 1.5rem); }
+        .tile .status { color: inherit; font-size: clamp(1rem, 3cqw, 1.5rem); }
         .tile[data-error] .status { color: var(--cms-danger, #ffb4a8); }
       </style>
       <article class="tile" data-tile>

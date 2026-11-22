@@ -220,20 +220,20 @@ class FHEMCMSThermostat extends HTMLElement {
           background-repeat: no-repeat; background-position: right 0.5em center; background-size: 0.65em;
           padding-right: 1.6em; }
         ${widgetDesignCss}
-        .tile .body { height: auto; min-height: var(--cms-widget-body-min-height, 100%); flex: 1; gap: 14px; font-size: 1rem; }
+        .tile .body { height: auto; min-height: var(--cms-widget-body-min-height, 100%); flex: 1; gap: 14px; font-size: clamp(1rem, 3cqw, 1.5rem); }
         .tile .boxes { margin: 0; padding: 0; gap: 14px;
           grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
           flex: none; align-content: start; }
         .tile .box { ${detailCardCss} gap: 8px; overflow: visible; }
-        .tile .label { font-size: .86rem; color: inherit; opacity: .72;
+        .tile .label { font-size: clamp(1rem, 3cqw, 1.5rem); color: inherit; opacity: .72;
           letter-spacing: normal; text-transform: none; white-space: normal; }
-        .tile .num { font-size: 2.7rem; font-weight: 800; white-space: normal; overflow-wrap: anywhere; }
+        .tile .num { font-size: clamp(2rem, 9cqw, 4rem); font-weight: 800; white-space: normal; overflow-wrap: anywhere; }
         .tile .ist .num { color: #3b82f6; }
         .tile .soll .num { color: #f59e0b; }
         .tile .unit { color: inherit; }
-        .tile .foot { padding: 0; margin: 0; flex-wrap: wrap; font-size: .86rem; }
+        .tile .foot { padding: 0; margin: 0; flex-wrap: wrap; font-size: clamp(1rem, 3cqw, 1.5rem); }
         .tile .foot select { min-height: 48px; min-width: 0; max-width: 100%; font: inherit; }
-        .tile .status { padding: 0; font-size: .86rem; }
+        .tile .status { padding: 0; font-size: clamp(1rem, 3cqw, 1.5rem); }
         .tile input[type="range"] { min-height: 48px; }
       </style>
       <article class="tile" data-tile>

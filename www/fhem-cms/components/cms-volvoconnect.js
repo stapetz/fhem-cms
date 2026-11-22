@@ -78,8 +78,10 @@ class FHEMCMSVolvoConnect extends HTMLElement {
         .identity { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; }
         .identity h4 { font-size:1.45rem; margin:0; }
         .identity small { opacity:.75; }
+        .tile .identity small { font-size:clamp(1rem,3cqi,1.5rem); }
         .badge { background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.35);
           border-radius:20px; padding:4px 12px; font-size:.8rem; }
+        .tile .badge { font-size:clamp(1rem,3cqi,1.5rem); }
         .badge[data-error] { border-color:var(--cms-danger,#ef4444); }
         .top { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));
           gap:16px; align-items:start; }

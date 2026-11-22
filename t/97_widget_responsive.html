@@ -1,0 +1,79 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Responsive widget content</title>
+<main id="mount"></main><pre id="result">RUNNING</pre>
+<script type="module">
+import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
+const output = document.querySelector('#result');
+const mount = document.querySelector('#mount');
+const snapshot = [{ name: 'Demo', readings: { state: 'on', '1-state': '=>', '1-name': 'Test',
+  '2-state': '<=', '2-name': 'Test', '3-state': '=> X', '3-name': 'Test' }, sets: 'on:noArg off:noArg' }];
+const snapshots = new Map([['Demo', snapshot]]);
+const services = { iconUrl: () => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"%3E%3Cpath d="M1 1h8v8H1z"/%3E%3C/svg%3E' };
+const pause = () => new Promise(resolve => setTimeout(resolve, 100));
+let checks = 0;
+const measurements = [];
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const create = config => {
+  const host = createWidgetElement({ id:'test', device:'Demo', reading:'state', ...config }, services, snapshots, true);
+  mount.append(host);
+  return host;
+};
+try {
+  for (const [width, height] of [[640,360], [120,100]]) {
+    const sw = create({type:'fhem-switch', on:'on', off:'off', showTitle:false, icon:'lamp'});
+    sw.style.cssText = `width:${width}px;height:${height}px`;
+    sw.getBoundingClientRect();
+    await pause();
+    const area = sw.shadowRoot.querySelector('.main').getBoundingClientRect();
+    const icon = sw.shadowRoot.querySelector('[data-icon]').getBoundingClientRect();
+    measurements.push({ widget:'switch', width, height, area:[area.width, area.height], icon:[icon.width, icon.height] });
+    check(Math.max(icon.width / area.width, icon.height / area.height) >= .9,
+      `switch icon must fill the limiting dimension: ${width}x${height} ${icon.width}x${icon.height}/${area.width}x${area.height} button=${JSON.stringify(sw.shadowRoot.querySelector('[data-toggle]').getBoundingClientRect())} font=${getComputedStyle(sw.shadowRoot.querySelector('.main')).fontSize} padding=${getComputedStyle(sw.shadowRoot.querySelector('[data-toggle]')).padding}`);
+    check(icon.width <= area.width + 1 && icon.height <= area.height + 1, `switch icon fits: ${icon.width}x${icon.height}/${area.width}x${area.height}`);
+    sw.remove();
+  }
+  for (const [width, height] of [[640,480], [180,150]]) {
+    const clock = create({type:'fhem-clock', style:'analog', title:'Uhr', showDate:true});
+    clock.style.cssText = `width:${width}px;height:${height}px`;
+    await pause();
+    const face = clock.shadowRoot.querySelector('[data-face]').getBoundingClientRect();
+    const area = clock.shadowRoot.querySelector('[data-face-area]').getBoundingClientRect();
+    const title = clock.shadowRoot.querySelector('[data-title]').getBoundingClientRect();
+    const date = clock.shadowRoot.querySelector('[data-date]').getBoundingClientRect();
+    measurements.push({ widget:'clock', width, height, area:[area.width, area.height], face:[face.width, face.height] });
+    check(Math.abs(face.width - Math.min(area.width, area.height)) <= 1, 'clock fills available face area');
+    check(Math.abs(face.width - face.height) <= 1, 'clock remains circular');
+    check(face.top >= title.bottom && face.bottom <= date.top + 1, 'clock avoids title and date');
+    clock.remove();
+  }
+  const calls = create({type:'fhem-calllist', columns:['state','party'], limit:3, title:'Anrufe'});
+  calls.style.cssText = 'width:800px;height:400px';
+  await pause();
+  const root = calls.shadowRoot;
+  const large = parseFloat(getComputedStyle(root.querySelector('table')).fontSize);
+  check(large >= 23, `large table text: ${large}`);
+  check([...root.querySelectorAll('td.status svg')].map(e => e.dataset.callIcon).join(',') === 'incoming,outgoing,missed-in',
+    'distinct local icons');
+  check(root.querySelectorAll('td.status')[2].getAttribute('aria-label') === 'Eingehend: verpasst', 'missed label');
+  calls.style.width = '200px';
+  await pause();
+  const small = parseFloat(getComputedStyle(root.querySelector('table')).fontSize);
+  measurements.push({ widget:'calllist', largeFont:large, smallFont:small });
+  check(small >= 16 && small < large, `small text remains readable and scales: ${small}`);
+  check(parseFloat(getComputedStyle(root.querySelector('[data-title]')).fontSize) >= 19, 'title remains readable');
+  const html = create({type:'fhem-html', devices:[], html:'<p style="font-size:11px">Eigener Text</p>'});
+  html.style.cssText = 'width:600px;height:300px';
+  check(getComputedStyle(html.shadowRoot.querySelector('[data-content] p')).fontSize === '11px',
+    'free HTML custom text size is preserved');
+  const rich = create({type:'text', html:'<h2>Eigener Text</h2>'});
+  rich.style.cssText = 'width:600px;height:300px';
+  check(parseFloat(getComputedStyle(rich.shadowRoot.querySelector('[data-body] h2')).fontSize) === 19.2,
+    'rich text heading size is preserved');
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({checks, measurements});
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || error.message;
+}
+</script>

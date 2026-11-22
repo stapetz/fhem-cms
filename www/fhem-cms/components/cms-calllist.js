@@ -20,18 +20,40 @@ function safeText(value) {
 
 function stateInfo(value) {
   const states = {
-    '=>': ['↘', 'Eingehend: angenommen'],
-    '<=': ['↗', 'Ausgehend: abgeschlossen'],
-    '=> X': ['✕', 'Eingehend: verpasst'],
-    '<= X': ['✕', 'Ausgehend: nicht zustande gekommen'],
-    '=> O_O': ['▣', 'Anrufbeantworter'],
-    '=> [=]': ['☎', 'Eingehend: verbunden'],
-    '<= [=]': ['☎', 'Ausgehend: verbunden'],
-    '=> ((o))': ['◌', 'Eingehend: klingelt'],
-    '<= ((o))': ['◌', 'Ausgehend: klingelt'],
+    '=>': ['incoming', 'Eingehend: angenommen'],
+    '<=': ['outgoing', 'Ausgehend: abgeschlossen'],
+    '=> X': ['missed-in', 'Eingehend: verpasst'],
+    '<= X': ['missed-out', 'Ausgehend: nicht zustande gekommen'],
+    '=> O_O': ['incoming', 'Anrufbeantworter'],
+    '=> [=]': ['incoming', 'Eingehend: verbunden'],
+    '<= [=]': ['outgoing', 'Ausgehend: verbunden'],
+    '=> ((o))': ['incoming', 'Eingehend: klingelt'],
+    '<= ((o))': ['outgoing', 'Ausgehend: klingelt'],
   };
   return Object.hasOwn(states, value) ? states[value]
     : ['?', value ? `Unbekannter Status: ${value}` : 'Status nicht verfügbar'];
+}
+
+function stateIcon(kind) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.dataset.callIcon = kind;
+  const path = document.createElementNS(svg.namespaceURI, 'path');
+  const outgoing = kind === 'outgoing' || kind === 'missed-out';
+  path.setAttribute('d', outgoing ? 'M4 20L20 4M12 4h8v8' : 'M20 4L4 20M4 12v8h8');
+  svg.append(path);
+  if (kind.startsWith('missed')) {
+    const cross = document.createElementNS(svg.namespaceURI, 'path');
+    cross.setAttribute('d', 'M15 15l6 6m0-6l-6 6');
+    svg.append(cross);
+  }
+  return svg;
 }
 
 function callRows(snapshot, device, limit) {
@@ -100,12 +122,13 @@ class FHEMCMSCallList extends HTMLElement {
         [data-message]:empty { display:none; }
         [hidden] { display:none !important; }
         ${widgetDesignCss}
-        .tile table { font-size: .875rem; table-layout: fixed; color: inherit;
+        .tile table { font-size: clamp(1rem, 3cqw, 1.5rem); table-layout: fixed; color: inherit;
           border: 1px solid rgba(128,128,128,.18); border-radius: 14px;
           background: rgba(128,128,128,.08); border-spacing: 0; border-collapse: separate; }
         .tile th, .tile td { padding: 6px 8px; border-bottom: 1px solid rgba(128,128,128,.1); }
         .tile th { color: inherit; font-weight: 700; }
-        .tile th[data-column=state] { width:3.5rem; }
+        .tile th[data-column=state] { width:3.5em; }
+        .tile .status svg { display:block; width:1.4em; height:1.4em; }
       </style>
       <article class="tile" data-tile>
         <button type="button" class="gear" data-open-config aria-label="Anrufliste konfigurieren">⚙</button>
@@ -275,7 +298,8 @@ class FHEMCMSCallList extends HTMLElement {
         if (column === 'state') {
           const [symbol, label] = stateInfo(row.state);
           td.className = 'status';
-          td.textContent = symbol;
+          if (symbol === '?') td.textContent = symbol;
+          else td.append(stateIcon(symbol));
           td.title = label;
           td.setAttribute('aria-label', label);
         } else if (column === 'party') {

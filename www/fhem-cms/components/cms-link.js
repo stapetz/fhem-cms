@@ -44,7 +44,7 @@ class FHEMCMSLink extends HTMLElement {
         header { flex:none; padding:0 0 8px; display:flex; align-items:center;
           gap:8px; border-bottom:1px solid rgba(128,128,128,.25); }
         header[hidden] { display:none; }
-        [data-title] { margin:0; width:100%; min-width:0; font-size:1.4rem; font-weight:700;
+        [data-title] { margin:0; width:100%; min-width:0; font-size:clamp(1.2rem,4cqw,2rem); font-weight:700;
           color:inherit; overflow-wrap:anywhere;
           text-align:var(--cms-widget-title-align,left); }
         .links { flex:1; min-height:0; display:grid; gap:8px; grid-template-columns:repeat(12,minmax(0,1fr)); }

@@ -132,18 +132,18 @@ try {
     if (width === 761) {
       check(cards.every(card => Math.abs(card.top - cards[0].top) < 1),
         'reference desktop width: all three yield cards in one row, not two plus one');
-      check(cards.every(card => card.height <= 210), 'yield cards retain compact original height');
+      check(cards.every(card => card.height <= 300), 'larger yield text retains compact aligned cards');
       const firstRows = [...host.shadowRoot.querySelectorAll('.yield .row:first-child')].map(e => e.getBoundingClientRect());
       check(firstRows.every(row => Math.abs(row.top - firstRows[0].top) < 1),
         'desktop yield rows align even when the heading total wraps');
-      check($('.flow').clientHeight <= 370 && $('.node').getBoundingClientRect().width <= 181,
-        'flow remains compact with room for labels and border-to-border connections');
+      check($('.flow').clientHeight <= 460 && $('.node').getBoundingClientRect().width <= 181,
+        'flow accommodates larger labels and border-to-border connections');
       const lower = ['bat', 'home', 'grid'].map(key => $(`.${key}`).getBoundingClientRect());
       check(lower.every(box => Math.abs(box.top - lower[0].top) < 1
         && Math.abs(box.bottom - lower[0].bottom) < 1), 'desktop station frames align across browsers');
       check($('progress').getBoundingClientRect().height <= 5,
         'native Safari progress appearance cannot inflate the battery station');
-      check($('.totals').clientHeight <= 90, 'summary stays in original compact strip');
+      check($('.totals').clientHeight <= 120, 'summary stays in a compact strip with larger labels');
       check($('[data-sections] h4').textContent.includes('(kWh)')
         && !$('.yield dd').textContent.includes('kWh') && $('.yield dd').textContent === '1.23',
       'units appear in card header, compact numeric precision matches original');

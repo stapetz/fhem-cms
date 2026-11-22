@@ -59,6 +59,7 @@ class FHEMCMSSwitch extends HTMLElement {
         ${fittedContentCss}
         .toggle { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 0.14em; padding: 0.15em; flex: none; border-radius: 0.3em;
           background: rgba(128,128,128,.08); border: 1px solid rgba(128,128,128,.18); position: relative; cursor: pointer; }
+        .toggle:has(.label[hidden]) { padding: 0; line-height: 1; }
         .toggle[data-unknown] { border-style: dashed; }
         .state-mark { display: inline-block; flex: none; text-align: center; font-size: 0.75em; font-weight: 700; line-height: 1; }
         .state-mark[hidden], .state[hidden] { display: none; }

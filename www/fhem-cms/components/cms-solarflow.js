@@ -162,7 +162,7 @@ class FHEMCMSSolarFlow extends HTMLElement {
           flex: 0 0 auto; min-width: 0; padding: 0 48px 8px 0;
           border-bottom: 1px solid rgba(128,128,128,.25); }
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 1.05rem; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        h3[data-title] { font-size: 1.4rem; font-weight: 700; color: inherit;
+        h3[data-title] { font-size: clamp(1.2rem, 4cqw, 2rem); font-weight: 700; color: inherit;
           white-space: normal; overflow-wrap: anywhere; }
         header[hidden] { display: none; }
         .flow-card { flex: 1 0 160px; min-height: 160px; min-width: 0; position: relative;
