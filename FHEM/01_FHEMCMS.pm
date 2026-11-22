@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.24.2-dev';
+our $FHEMCMS_VERSION = '1.24.3-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -471,7 +471,10 @@ sub FHEMCMS_Summary {
     my $basePath = $main::FW_ME || '/fhem';
     $basePath =~ s{/$}{};
     my $entry = $basePath . '/fhem-cms/' . $name . '/index.html';
-    return '<a href="' . $entry . '?mode=edit" target="_blank" rel="noopener">CMS starten</a> <a href="' . $entry . '" target="_blank" rel="noopener">Zeige Homepage</a>';
+    my ($assetToken) = FHEMCMS_AssetInfo(File::Spec->catdir($main::attr{global}{modpath}, 'www', 'fhem-cms'));
+    return '<a href="' . $entry . '?mode=edit&amp;cms-assets=' . $assetToken
+        . '" target="_blank" rel="noopener">CMS starten</a> <a href="' . $entry
+        . '?cms-assets=' . $assetToken . '" target="_blank" rel="noopener">Zeige Homepage</a>';
 }
 
 # Entfernt Datenordner und Startseite eines Devices. Symlinks und fremde Dateien werden nicht angetastet.
@@ -600,13 +603,34 @@ $marker
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="fhem-cms-device" content="$htmlName">
+  <meta name="fhem-cms-assets" content="$token">
+  <meta name="fhem-cms-version" content="$FHEMCMS_VERSION">
   <title>fhem-cms - $htmlName</title>
   <link rel="stylesheet" href="../css/fhem-cms.css?v=$token">
   <link rel="stylesheet" href="../css/fcui-gridstack.css?v=$token">
   <script type="importmap">
 $importMap
   </script>
-  <script type="module" src="../js/fhem-cms.js?v=$token"></script>
+  <script type="module">
+    try {
+      const response = await fetch(location.href, {cache: 'no-store', credentials: 'same-origin'});
+      if (!response.ok) throw new Error('Startseite: HTTP ' + response.status);
+      const fresh = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const current = fresh.querySelector('meta[name="fhem-cms-assets"]')?.content;
+      if (!/^[a-f0-9]{10}\$/.test(current || '')) throw new Error('Aktueller Frontend-Stand fehlt');
+      if (current !== '$token') {
+        const url = new URL(location.href);
+        url.searchParams.set('cms-assets', current);
+        location.replace(url.href);
+      } else {
+        await import('../js/fhem-cms.js?v=$token');
+      }
+    } catch (error) {
+      const status = document.querySelector('.cms-status');
+      status.setAttribute('data-error', '');
+      status.textContent = 'Frontend konnte nicht aktualisiert werden: ' + error.message;
+    }
+  </script>
 </head>
 <body>
   <main class="cms-shell">

@@ -31,6 +31,7 @@ test('device entry dispatches validated formats and displays format errors', asy
     clearTimeout() {},
   };
   globalThis.document = {
+    readyState: 'loading',
     addEventListener(name, callback) { if (name === 'DOMContentLoaded') onReady = callback; },
     querySelector(selector) {
       if (selector === '.cms-status') return card;
