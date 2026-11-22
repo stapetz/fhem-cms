@@ -39,10 +39,11 @@ class FHEMCMSClock extends HTMLElement {
         header { flex: none; display: flex; align-items: center; padding: 0 48px 8px 0;
           border-bottom: 1px solid rgba(128,128,128,.25); }
         header[hidden] { display: none; }
-        .content { display: grid; width: 100%; flex: 1 1 0; grid-template-rows: minmax(0, 1fr) auto;
+        .content { display: grid; width: 100%; flex: 1 1 auto;
+          grid-template-rows: minmax(var(--cms-widget-clock-face-min, 0px), 1fr) auto;
           justify-items: center; align-items: center; gap: 14px; min-width: 0; min-height: 0; }
         h3 { margin: 0; color: var(--cms-muted, #a5c9b2); font-size: 1.05rem; font-weight: 400; overflow-wrap: anywhere; }
-        h3[data-title] { font-size: clamp(1.2rem, 4cqw, 2rem); font-weight: 700; color: inherit; }
+        h3[data-title] { font-size: clamp(1.4rem, 4cqw, 2rem); font-weight: 700; color: inherit; }
         .time { font-size: max(12px, min(38cqh, 16cqw)); font-weight: 800;
           font-variant-numeric: tabular-nums; line-height: 1.1; }
         /* Ohne Datum/Wochentag füllt die Uhr das Widget aus. */

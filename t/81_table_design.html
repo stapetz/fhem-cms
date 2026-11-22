@@ -64,7 +64,7 @@ try {
       const tile = $('[data-tile]'), card = $('.table-card');
       const titleStyle = getComputedStyle($('[data-title]'));
       check(getComputedStyle(tile).fontFamily.startsWith('system-ui'), `${theme}/${width}: system font`);
-      check(parseFloat(titleStyle.fontSize) >= 19.2 && parseFloat(titleStyle.fontSize) <= 32 && titleStyle.fontWeight === '700',
+      check(parseFloat(titleStyle.fontSize) >= 22.39 && parseFloat(titleStyle.fontSize) <= 32 && titleStyle.fontWeight === '700',
         `${theme}/${width}: title is bold and responsive`);
       const rowSize = parseFloat(getComputedStyle($('table')).fontSize);
       check(rowSize >= 16 && rowSize <= 24 && (width < 900 || rowSize >= 23),

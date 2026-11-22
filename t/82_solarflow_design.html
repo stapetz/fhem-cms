@@ -60,7 +60,7 @@ try {
       const expectedSurface = getComputedStyle(surface).backgroundColor;
       surface.remove();
       check(getComputedStyle(tile).fontFamily.startsWith('system-ui'), `${theme}/${width}: system font`);
-      check(getComputedStyle($('[data-title]')).fontSize === '22.4px',
+      check(parseFloat(getComputedStyle($('[data-title]')).fontSize) >= 22.39,
         `${theme}/${width}: legible title, not container-shrunk`);
       check(getComputedStyle(tile).backgroundColor === expectedSurface, `${theme}/${width}: exact theme surface`);
       check(!$('.metrics') && !$('.metric'), `${theme}/${width}: diagram only, no duplicate value cards`);

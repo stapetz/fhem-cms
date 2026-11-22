@@ -362,7 +362,7 @@ class FHEMCMSWeather extends HTMLElement {
         header { min-height:2rem; display:flex; flex-wrap:wrap; align-items:center; gap:.45rem; padding-right:3rem; }
         header h3 { min-width:0; }
         h3 { margin:0; font-size:clamp(.95rem,5cqi,1.3rem); overflow-wrap:anywhere; }
-        .tile header h3 { font-size:clamp(1.2rem,4cqi,2rem); }
+        .tile header h3 { font-size:clamp(1.4rem,4cqi,2rem); }
         .updated { margin-left:auto; color:var(--cms-muted,#a5c9b2); font-size:.75rem; white-space:nowrap; }
         .badge { flex:none; border-radius:99px; padding:.15rem .45rem; font-size:.72rem; font-weight:700; color:#241500; }
         .badge.minor { background:#ffeb3b; } .badge.moderate { background:#ff9800; }

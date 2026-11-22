@@ -17,7 +17,7 @@ export const widgetDesignCss = `
   .tile header[hidden] { display: none; }
   :host([view-only]) .tile header:has(> [data-title][hidden]):not(:has(.controls, .badge:not([hidden]))) { display: none; }
   .tile header h3[data-title] {
-    margin: 0; min-width: 0; font: 700 clamp(1.2rem, 4cqw, 2rem)/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    margin: 0; min-width: 0; font: 700 clamp(1.4rem, 4cqw, 2rem)/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color: inherit; white-space: normal; overflow-wrap: anywhere;
     overflow: visible; text-overflow: clip; text-align: var(--cms-widget-title-align, left);
   }
