@@ -171,7 +171,7 @@ try {
   check(Boolean(choice), 'call list offered in real editor');
   choice.click();
   await pause();
-  const editorWidget = panel.querySelector('cms-calllist');
+  const editorWidget = panel.querySelector('.cms-widget-dialog-host cms-calllist');
   check(editorWidget?.shadowRoot.querySelector('[data-dialog]').open, 'editor opens real call list dialog');
   const editorForm = editorWidget.shadowRoot.querySelector('[data-form]');
   equal(editorForm.elements.limit.value, '5', 'new editor widget defaults to five calls');

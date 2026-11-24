@@ -9,6 +9,8 @@ import { isValidName } from './fhem-client.js';
 import { widgetIds } from './widget-ids.js';
 import { pinKeepsCard } from './pin-presentation.js';
 import { mountPinReadingOptions } from './pin-reading-options.js';
+import { createWidgetPreview } from './widget-preview.js';
+import { showCmsModal } from './modal-dialog.js';
 
 const WIDGET_TYPES = [
   ['thermostat', 'Thermostat', 't', 4, 2, { device: '', readings: { actual: '', target: '' } }],
@@ -141,7 +143,7 @@ export class Schema5WidgetPanel {
     if (this.#mode === 'edit') return;
     const query = this.#search.value.trim().toLowerCase();
     let matches = 0;
-    for (const [type, name] of WIDGET_TYPES) {
+    for (const [type, name] of [...WIDGET_TYPES].sort((a, b) => a[1].localeCompare(b[1], 'de'))) {
       if (this.#deviceFirst && !this.#suggestions.has(type)) continue;
       if (query && !name.toLowerCase().includes(query)) continue;
       matches += 1;
@@ -157,10 +159,45 @@ export class Schema5WidgetPanel {
           this.#status.textContent = `Widget kann nicht angelegt werden: ${error.message || String(error)}`;
         }
       });
-      this.#list.append(button);
+      const card = element('div');
+      card.className = 'cms-widget-choice-card';
+      const preview = element('button');
+      preview.type = 'button';
+      preview.className = 'cms-widget-preview-button';
+      preview.setAttribute('aria-label', `Vorschau für ${name} vergrößern`);
+      const stage = element('span');
+      stage.className = 'cms-widget-preview-stage';
+      stage.append(createWidgetPreview(type, name).element);
+      preview.append(stage);
+      preview.addEventListener('click', () => this.#showPreview(type, name));
+      card.append(button, preview);
+      this.#list.append(card);
     }
     if (!matches) this.#list.append(element('p', this.#deviceFirst && !this.#selectedDevice
       ? 'Bitte zuerst ein Gerät auswählen.' : 'Kein Widget-Typ gefunden.'));
+  }
+
+  #showPreview(type, name) {
+    if (this.#closed || this.#busy || this.#session) return;
+    const dialog = element('dialog');
+    dialog.className = 'cms-widget-preview-dialog';
+    dialog.setAttribute('aria-label', `Vorschau: ${name}`);
+    const title = element('h2', name);
+    const {element: widget, description} = createWidgetPreview(type, name);
+    const preview = element('div');
+    preview.className = 'cms-widget-preview-large';
+    const stage = element('div');
+    stage.className = 'cms-widget-preview-stage';
+    stage.append(widget);
+    preview.append(stage);
+    const close = element('button', 'Schließen');
+    close.type = 'button';
+    close.className = 'cms-button';
+    close.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => dialog.remove(), {once:true});
+    dialog.append(title, preview, element('p', description), close);
+    this.#root.append(dialog);
+    showCmsModal(dialog);
   }
 
   async #pickDevice() {

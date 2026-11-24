@@ -60,14 +60,14 @@ try {
   check(choices.some(button => button.textContent === 'Textbaustein')
     && choices.some(button => button.textContent === 'Freies HTML'), 'Text and HTML always available');
   choices.find(button => button.textContent === 'Wert-Anzeige').click();
-  await until(() => root.querySelector('cms-value')?.shadowRoot.querySelector('[data-dialog]').open);
-  const widget = root.querySelector('cms-value');
+  await until(() => root.querySelector('.cms-widget-dialog-host cms-value')?.shadowRoot.querySelector('[data-dialog]').open);
+  const widget = root.querySelector('.cms-widget-dialog-host cms-value');
   check(widget.shadowRoot.querySelector('[name="device"]').value === 'Thermometer', 'Standard value dialog has chosen device');
   check(widget.shadowRoot.querySelector('[name="reading"]').value === 'temperature', 'Standard value dialog has chosen reading');
   check(widget.shadowRoot.querySelector('[name="title"]').value === 'Kitchen', 'Standard dialog uses alias as editable title');
   check(saved === 0 && live.pages[0].widgets.length === 0, 'No draft is saved before standard dialog confirmation');
   widget.shadowRoot.querySelector('[data-cancel]').click();
-  await until(() => !root.querySelector('cms-value'));
+  await until(() => !root.querySelector('.cms-widget-dialog-host cms-value'));
   check(!closed, 'Cancel returns to matching suggestions without saving');
   root.querySelector('.cms-device-first-choice').click();
   await until(() => document.querySelector('.cms-dp-dialog [data-list] button'));
@@ -87,11 +87,11 @@ try {
   check(saved === 0, 'Picking, switching and cancelling devices never writes a draft');
   [...root.querySelectorAll('.cms-widget-choice')].find(button => button.textContent === 'Wert-Anzeige').click();
   await until(() => root.hasAttribute('data-widget-open'));
-  const form = root.querySelector('cms-value').shadowRoot.querySelector('[data-form]');
+  const form = root.querySelector('.cms-widget-dialog-host cms-value').shadowRoot.querySelector('[data-form]');
   form.elements.title.value = 'My own title';
   form.elements.title.dispatchEvent(new Event('input'));
   form.requestSubmit();
-  await until(() => saved === 1 && !root.querySelector('cms-value'));
+  await until(() => saved === 1 && !root.querySelector('.cms-widget-dialog-host cms-value'));
   check(savedWidget.title === 'My own title' && savedWidget.device === 'Thermometer'
     && savedWidget.reading === 'temperature', 'Manual overrides persist through the standard configuration dialog');
   check(saved === 1 && live.pages[0].widgets.length === 0, 'Exactly one draft write leaves live configuration untouched');
@@ -118,8 +118,8 @@ try {
     const choice = [...root.querySelectorAll('.cms-widget-choice')].find(button => button.textContent === label);
     check(Boolean(choice), `${label}: measuring plug offers a solar widget`);
     choice.click();
-    await until(() => root.querySelector(tag)?.shadowRoot.querySelector('[data-dialog]').open);
-    const solar = root.querySelector(tag);
+    await until(() => root.querySelector(`.cms-widget-dialog-host ${tag}`)?.shadowRoot.querySelector('[data-dialog]').open);
+    const solar = root.querySelector(`.cms-widget-dialog-host ${tag}`);
     await until(() => tag === 'cms-solarflow' || !solar.shadowRoot.querySelector('[data-save]').disabled);
     check(solar.config.readings.pv.device === 'ShellyBalcony' && solar.config.readings.pv.reading === 'apower',
       `${label}: chosen meter and power reading reach the actual standard dialog`);
@@ -127,7 +127,7 @@ try {
     check(!form.elements.deriveHome, `${label}: dialog cannot enable an invented house load`);
     const before = saved;
     form.requestSubmit();
-    await until(() => saved === before + 1 && !root.querySelector(tag));
+    await until(() => saved === before + 1 && !root.querySelector(`.cms-widget-dialog-host ${tag}`));
     check(savedWidget.readings.pv.reading === 'apower' && savedWidget.deriveHome === false,
       `${label}: confirmed sources persist through normal token-bound creation`);
     panel.close();
@@ -141,8 +141,8 @@ try {
   multiPicker.querySelector('[data-list] button').click();
   await until(() => !root.querySelector('.cms-device-first-choice').disabled);
   [...root.querySelectorAll('.cms-widget-choice')].find(button => button.textContent === 'SolarFlow').click();
-  await until(() => root.querySelector('cms-solarflow')?.shadowRoot.querySelector('[data-dialog]').open);
-  const multiSolar = root.querySelector('cms-solarflow');
+  await until(() => root.querySelector('.cms-widget-dialog-host cms-solarflow')?.shadowRoot.querySelector('[data-dialog]').open);
+  const multiSolar = root.querySelector('.cms-widget-dialog-host cms-solarflow');
   const multiForm = multiSolar.shadowRoot.querySelector('[data-form]');
   check(multiForm.elements['device-single'].value === 'MultiMeter'
     && multiForm.elements['reading-pv'].value === '', 'multiple power channels require an explicit PV-reading choice');
@@ -153,7 +153,7 @@ try {
     'ambiguous meter cannot be saved with an arbitrary reading');
   multiForm.elements['reading-pv'].value = 'power_1';
   multiForm.requestSubmit();
-  await until(() => saved === beforeMultiSave + 1 && !root.querySelector('cms-solarflow'));
+  await until(() => saved === beforeMultiSave + 1 && !root.querySelector('.cms-widget-dialog-host cms-solarflow'));
   check(savedWidget.device === 'MultiMeter' && savedWidget.readings.pv === 'power_1',
     'manual choice of a meter channel persists');
   panel.close();

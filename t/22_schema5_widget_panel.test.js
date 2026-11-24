@@ -139,8 +139,8 @@ test('widget panel binds real draft controller, cancellation, failures and lifec
         search.fire('input');
         const list = root.children[4];
         assert.equal(list.children.length, 1);
-        assert.equal(list.children[0].textContent, 'Freies HTML');
-        await list.children[0].fire('click');
+        assert.equal(list.children[0].children[0].textContent, 'Freies HTML');
+        await list.children[0].children[0].fire('click');
         await tick();
         const html = '<span device="Temp" reading="state">{{Temp:state|upper}}</span>';
         await widget.services.saveWidget({ ...widget.config, html, devices: ['Temp'], showTitle: false });
@@ -175,7 +175,7 @@ test('widget panel binds real draft controller, cancellation, failures and lifec
         linkSearch.value = 'linkwidget';
         linkSearch.fire('input');
         assert.equal(linkRoot.children[4].children.length, 1);
-        await linkRoot.children[4].children[0].fire('click');
+        await linkRoot.children[4].children[0].children[0].fire('click');
         await tick();
         assert.equal(widget.config.type, 'fhem-link');
         assert.equal(widget.config.links[0].page, 'one', 'new LinkWidget starts with a valid local page');
@@ -269,7 +269,7 @@ test('widget panel binds real draft controller, cancellation, failures and lifec
     search.value = 'Textbaustein';
     search.fire('input');
     const status = root.children[2];
-    await root.children[4].children[0].fire('click');
+    await root.children[4].children[0].children[0].fire('click');
     await tick();
     assert.equal(item.options.isNew, true);
     assert.deepEqual(item.config.grid, { col: 1, row: 4, w: 6, h: 2 });
@@ -280,7 +280,7 @@ test('widget panel binds real draft controller, cancellation, failures and lifec
     await tick();
     assert.equal(closed, undefined);
     assert.match(status.textContent, /abgebrochen/);
-    await root.children[4].children[0].fire('click');
+    await root.children[4].children[0].children[0].fire('click');
     await tick();
     await item.services.saveWidget({ ...item.config, html: 'Neuer Text' });
     await tick();
@@ -294,7 +294,8 @@ test('widget panel binds real draft controller, cancellation, failures and lifec
     root = new Element('section');
     new Schema5WidgetPanel({ root, controller, services: {}, pageId: 'one', token: controller.snapshot().token,
       createElement, onClose: () => {} });
-    const textButton = root.children[4].children.find((button) => button.textContent === 'Textbaustein');
+    const textButton = root.children[4].children.map((card) => card.children[0])
+      .find((button) => button.textContent === 'Textbaustein');
     await textButton.fire('click');
     await tick();
     assert.deepEqual(item.config.grid, { col: 1, row: 21, w: 24, h: 8 },
@@ -325,7 +326,7 @@ test('widget panel binds real draft controller, cancellation, failures and lifec
     const suspended = new Schema5WidgetPanel({ root: suspendedRoot, controller, services: {}, pageId: 'one',
       token: restored.token, createElement, onClose: () => { throw new Error('unexpected callback'); } });
     opening = {};
-    const promise = suspendedRoot.children[4].children[0].fire('click');
+    const promise = suspendedRoot.children[4].children[0].children[0].fire('click');
     suspended.suspend();
     opening.resolve();
     await promise;

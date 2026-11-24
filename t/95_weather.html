@@ -210,7 +210,7 @@ try {
     new Schema5WidgetPanel({ root, controller, services: fixtureServices, pageId: 'start',
       token: 'test', onClose: () => {} });
     [...root.querySelectorAll('.cms-widget-choice')].find(button => button.textContent.trim() === 'DWD-Wetter').click();
-    const item = root.querySelector('cms-weather');
+    const item = root.querySelector('.cms-widget-dialog-host cms-weather');
     const dialog = item?.shadowRoot.querySelector('[data-dialog]');
     check(dialog?.open, `Widget panel opens weather configuration (${freeform ? 'Freeform' : 'Grid'})`);
     dialog.querySelector('[name=dataSource][value=fhem_dwd]').click();

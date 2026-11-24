@@ -12,6 +12,19 @@ nicht ersetzen.
 
 ---
 
+### Widget-Auswahl und Vorschauen
+
+Jeder vorhandene und jeder kuenftige Widgettyp benoetigt in
+`js/widget-preview.js` eine eigene kurze Funktionsbeschreibung und eine
+demonstrationsfaehige Konfiguration mit Dummywerten. Die Widget-Auswahl
+sortiert nach deutschem Namen und zeigt neben dem Auswahlknopf eine Vorschau;
+ein eigener, beschrifteter Vorschauknopf oeffnet die groessere Vorschau mit
+Beschreibung. Es werden die echten Widgetkomponenten verwendet, aber keine
+realen Device-Daten, Netzwerkdienste oder schreibenden Aktionen. Vorschauen
+muessen inaktiv sein und beim Entfernen ihre Ressourcen freigeben. Neue
+Widgettypen sind zusammen mit ihren Vorschauen und Browserregressionen zu
+registrieren; eine fehlende Vorschau darf nicht stillschweigend ersetzt werden.
+
 ### Verbindliche Datumsdarstellung
 
 Alle bestehenden und neuen Widgets verwenden an der Praesentationsgrenze

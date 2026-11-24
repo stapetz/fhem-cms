@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-24",
+  "version": "1.31.0-dev",
+  "title": "Widget-Auswahl mit Vorschauen",
+  "changes": [
+    "Widgettypen erscheinen alphabetisch mit Vorschau und Beispieldaten; ein Klick auf die Vorschau zeigt eine groessere Ansicht und Beschreibung. Refs #258.",
+    "Vorschauen verwenden keine realen Geraetedaten oder schreibenden Aktionen. Safari- und Geraeteabnahme stehen aus."
+  ]
+}

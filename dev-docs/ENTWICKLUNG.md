@@ -100,6 +100,19 @@ Tab-Fokus und Escape. Dazu Lifecycle-/Entwurfstests
 `node --test t/11_schema5_widgets.test.js t/13_schema5_live.test.js t/19_schema5_editor.test.js t/93_freeform.test.js`,
 Perl-Syntax und Build-Check. Echte Safari-/Touch-Geräteabnahme steht aus.
 
+## Widget-Auswahl mit Vorschauen (dev, Refs #258)
+
+Die normale und geraetebasierte Widget-Auswahl sind alphabetisch sortiert.
+Neben dem Auswahlknopf oeffnet ein eigener Vorschauknopf ein Dialogfenster mit
+groesserer echter Komponente und Funktionsbeschreibung. Alle 18 Widgettypen
+verwenden isolierte Dummy-Daten und -Dienste, keine realen Devicezugriffe oder
+Schreibaktionen. Der [verbindliche Entwicklervertrag](./entwicklerdoku_und_styleguides.md#widget-auswahl-und-vorschauen)
+gilt auch fuer neue Typen. Browserregression:
+`node --test --test-name-pattern='widget selection sorts|Device-first flow|DWD weather renders|LinkWidget configures|call list displays' t/35_schema5_scaling.test.js`
+und `node --test t/22_schema5_widget_panel.test.js`. Fixture
+`t/114_widget_previews.html` prueft alle Typen, Suche, Detaildialoge, Dummy-Dienste,
+Beschriftungen und Zielgroessen auf Desktop und bei 390px Breite.
+
 ## Grundriss- und Pin-Modus (geplant, Refs #243)
 
 Der importierte Entwurf „Interaktiver Grundriss- & Pin-Modus für

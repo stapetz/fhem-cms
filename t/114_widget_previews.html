@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de" data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget-Auswahl mit Vorschauen</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<dialog id="panel" class="cms-editor-panel cms-editor-dialog"></dialog>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { Schema5WidgetPanel } from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
+import { WIDGET_PREVIEWS } from '../www/fhem-cms/js/widget-preview.js';
+const root = document.querySelector('#panel'), output = document.querySelector('#result');
+const errors = [];
+window.addEventListener('error', event => errors.push(event.message));
+window.addEventListener('unhandledrejection', event => errors.push(String(event.reason)));
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const settle = () => new Promise(resolve => setTimeout(resolve, 100));
+let checks = 0, writes = 0, calls = 0;
+const live = {schemaVersion:5,settings:{layoutMode:'grid',gridColumns:12},
+  navigation:{grid:{col:1,row:1,w:12,h:1}},pages:[{id:'start',title:'Start',widgets:[]}]};
+const controller = {snapshot:() => ({token:'test',live,draft:null}),
+  saveWidget:async () => {writes++; throw new Error('unexpected write');}};
+const services = {history:async () => {calls++; throw new Error('unexpected history');},
+  weather:async () => {calls++; throw new Error('unexpected weather');},
+  setCommand:async () => {calls++; throw new Error('unexpected command');}};
+let panel;
+try {
+  panel = new Schema5WidgetPanel({root,controller,services,pageId:'start',token:'test',onClose() {}});
+  root.showModal();
+  await settle();
+  const cards = [...root.querySelectorAll('.cms-widget-choice-card')];
+  const names = cards.map(card => card.querySelector('.cms-widget-choice').textContent);
+  check(cards.length === Object.keys(WIDGET_PREVIEWS).length && cards.length === 18,
+    'every offered type has a preview');
+  check(JSON.stringify(names) === JSON.stringify([...names].sort((a,b) => a.localeCompare(b,'de'))),
+    'widget names are sorted alphabetically');
+  for (const card of cards) {
+    const name = card.querySelector('.cms-widget-choice').textContent;
+    const button = card.querySelector('.cms-widget-preview-button');
+    const widget = button.querySelector('.cms-widget-preview-stage > *');
+    check(button.getAttribute('aria-label').includes(name), `${name}: preview button labelled`);
+    check(widget?.shadowRoot && widget.inert && widget.getAttribute('aria-hidden') === 'true',
+      `${name}: actual dummy widget is isolated and rendered`);
+    check(button.getBoundingClientRect().width >= 48 && button.getBoundingClientRect().height >= 48,
+      `${name}: preview target is usable`);
+    const frame = button.getBoundingClientRect(), contents = widget.getBoundingClientRect();
+    check(contents.left >= frame.left && contents.top >= frame.top
+      && contents.right <= frame.right + 1 && contents.bottom <= frame.bottom + 1,
+    `${name}: thumbnail fits the preview button`);
+    button.click();
+    const dialog = root.querySelector('.cms-widget-preview-dialog');
+    await settle();
+    check(dialog?.open && dialog.querySelector('h2').textContent === name, `${name}: detail modal opens`);
+    check(dialog.querySelector('p').textContent.length > 10, `${name}: detail has a description`);
+    check(dialog.querySelector('.cms-widget-preview-stage > *')?.shadowRoot,
+      `${name}: detail uses actual widget`);
+    check(dialog.getBoundingClientRect().right <= innerWidth + 1, `${name}: dialog fits viewport`);
+    dialog.querySelector('.cms-button').click();
+    await settle();
+    check(!root.querySelector('.cms-widget-preview-dialog'), `${name}: close removes preview`);
+  }
+  check(root.querySelector('cms-chart').shadowRoot.querySelector('polyline.line'),
+    'diagram thumbnail uses dummy history points');
+  check(root.querySelector('cms-solar-energy').shadowRoot.querySelector('[data-sections] .yield'),
+    'solar thumbnail contains dummy yield card');
+  check(calls === 0 && writes === 0, 'preview does not use real services or save a draft');
+  const search = root.querySelector('.cms-widget-search input');
+  search.value = 'Solar'; search.dispatchEvent(new Event('input'));
+  check([...root.querySelectorAll('.cms-widget-choice')].map(button => button.textContent).join('|')
+    === 'Solar und Energiefluss|SolarFlow', 'search filters the sorted list');
+  check(!errors.length, `no browser errors: ${errors.join('; ')}`);
+  panel.close();
+  root.close();
+  output.dataset.result = 'pass'; output.textContent = JSON.stringify({checks});
+} catch (error) {
+  output.dataset.result = 'fail'; output.textContent = `${error.stack}\n${errors.join('\n')}`;
+}
+</script>

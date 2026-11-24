@@ -256,6 +256,8 @@ for (const [name, fixtures] of [
       ['85_solar_energy.html?width=768&reduced=1', 100]]],
   ['Solar und Energiefluss fills large scaled shared-canvas tiles in live view and editor',
     [['113_solar_fill.html', 100]]],
+  ['widget selection sorts and previews every widget without live services',
+    [['114_widget_previews.html', 100], ['114_widget_previews.html?width=390', 100]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
       ['75_dialog_layout.html?width=852', 51]]],
@@ -953,6 +955,11 @@ for (const [name, fixtures] of [
               name: 'prefers-reduced-motion', value: fixture.includes('reduced=1') ? 'reduce' : 'no-preference',
             }] });
           }
+          : fixture.startsWith('114_widget_previews.html')
+          ? command => command('Emulation.setDeviceMetricsOverride', {
+            width:Number(new URLSearchParams(fixture.split('?')[1]).get('width') || 1440),
+            height:1000,deviceScaleFactor:1,mobile:false,
+          })
           : fixture.startsWith('95_weather.html')
           ? command => command('Emulation.setDeviceMetricsOverride', {
             width: Number(new URLSearchParams(fixture.split('?')[1]).get('width') || 1440),
