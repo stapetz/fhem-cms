@@ -415,6 +415,12 @@ gespeichert. Pfeile verschieben um einen Canvaspixel, Shift+Pfeile um zehn.
 Escape oder eine abgebrochene Touchgeste verwirft die laufende Bewegung.
 Neue Widgets starten in der Bildmitte. Normale Kachelgrößen bleiben erhalten;
 bei Rückkehr zur Kachelansicht werden Karten am Canvasrand eingepasst.
+Eine vollständige [Schritt-für-Schritt-Anleitung „Floorplan Küche“](FLOORPLAN.md)
+führt mit elf echten Screenshots von der neuen Navigationsseite über die
+Assetauswahl bis zu Temperatur-, Thermostat- und Schalter-Pins und zur
+Veröffentlichung. Der räumliche Überblick und die vollständige Bedienkarte
+hinter jedem Pin stehen dabei im Mittelpunkt.
+
 Pins verwenden das im Widget konfigurierte Icon. Ist keines ausgewählt,
 erscheint kein Ersatzzeichen wie `#` oder ein Dreistrich. Konfigurierte
 An-/Aus- und Status-Icons wechseln mit dem aktuellen Reading.
