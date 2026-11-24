@@ -2291,6 +2291,39 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   isolation: isolate;
 }
 .cms-freeform-mobile .cms-freeform-canvas { background-image: none; }
+.cms-freeform-pins:not(.cms-freeform-stack) { background-image: none; }
+.cms-freeform-pins:not(.cms-freeform-stack) .cms-freeform-canvas {
+  background-image: var(--cms-canvas-image, none);
+  background-size: var(--cms-pin-image-size, contain);
+  background-position: var(--cms-pin-image-position, center);
+}
+.cms-pin-image-status { color: var(--cms-muted); margin: .5rem; }
+.cms-freeform-widget.cms-freeform-pin {
+  width: max-content !important;
+  height: auto !important;
+  transform: translate(-50%, -50%) scale(calc(1 / var(--cms-freeform-scale)));
+  transform-origin: center;
+}
+.cms-freeform-widget.cms-freeform-pin > cms-pin-badge {
+  width: max-content;
+  height: auto;
+  container-type: normal;
+  overflow: visible;
+}
+.cms-pin-widget-popup {
+  width: min(94vw, 48rem);
+  max-height: 94dvh;
+  padding: 1rem;
+  overflow: auto;
+  color: var(--cms-text);
+  background: var(--cms-surface);
+  border: 1px solid var(--cms-border);
+  border-radius: 1rem;
+}
+.cms-pin-widget-popup::backdrop { background: var(--cms-backdrop); }
+.cms-pin-widget-popup .cms-button { min-width: 48px; min-height: 48px; }
+.cms-pin-widget-popup-content { height: min(65dvh, 42rem); margin-top: 1rem; }
+.cms-pin-widget-popup-content > * { display: block; width: 100%; height: 100%; }
 .cms-freeform-widget {
   position: absolute;
 }

@@ -114,6 +114,9 @@ export class Schema5WidgetSession {
       else candidate.grid = structuredClone(this.#widget.grid);
       if (this.#widget.hideOnMobile === undefined) delete candidate.hideOnMobile;
       else candidate.hideOnMobile = this.#widget.hideOnMobile;
+      if (candidate.forceCard === undefined && this.#widget.forceCard !== undefined) {
+        candidate.forceCard = this.#widget.forceCard;
+      }
     }
     return candidate;
   }

@@ -113,6 +113,9 @@ async function testServer() {
 }
 
 for (const [name, fixtures] of [
+  ['Pin badges preserve themes, physical targets, lazy widgets and portrait cards',
+    [['104_pin_badges.html', 400], ['104_pin_badges.html?input=1', 2],
+      ['104_pin_badges.html?preview=1&mode=preview', 2]]],
   ['widget editor actions retain usable targets across all types, themes and canvas scales',
     [['102_widget_editor_tools.html', 10000], ['102_widget_editor_tools.html?touch=1', 10000]]],
   ['standard widget typography grows in actual Grid and scaled Freeform without changing authored content',
@@ -212,9 +215,11 @@ for (const [name, fixtures] of [
   const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
     for (const [fixture, minimum] of fixtures) {
-      const interact = !['49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
+      const interactive = fixture === '104_pin_badges.html?input=1' || [
+        '49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
         '63_responsive_edges.html', '65_widget_dialogs.html', '88_volvoconnect.html',
-        '89_volvoconnect_order.html', '96_popup_scroll.html'].includes(fixture.split('?')[0]) ? undefined : async command => {
+        '89_volvoconnect_order.html', '96_popup_scroll.html'].includes(fixture.split('?')[0]);
+      const interact = !interactive ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
           assert.ok(!reply.exceptionDetails, JSON.stringify(reply));
@@ -228,6 +233,42 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
+        if (fixture === '104_pin_badges.html?input=1') {
+          const point = await evaluate('window.pinInput.point("w0")');
+          await command('Input.dispatchMouseEvent', {type:'mousePressed',...point,button:'left',clickCount:1});
+          await command('Input.dispatchMouseEvent', {type:'mouseReleased',...point,button:'left',clickCount:1});
+          assert.equal(await evaluate('Boolean(document.querySelector(".cms-pin-widget-popup[open] cms-value"))'), true,
+            'real mouse opens the normal widget');
+          const escape = async () => {
+            await command('Input.dispatchKeyEvent', {type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+            await command('Input.dispatchKeyEvent', {type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+            await pause(80);
+            assert.equal(await evaluate('document.querySelector(".cms-pin-widget-popup") === null'), true,
+              'native Escape closes and removes the popup');
+          };
+          await escape();
+          await command('Input.dispatchKeyEvent', {type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+          await command('Input.dispatchKeyEvent', {type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+          assert.equal(await evaluate(`document.activeElement?.localName === 'cms-pin-badge'
+            && document.activeElement.shadowRoot.activeElement?.matches(':focus-visible')`), true,
+          'actual Tab exposes visible pin focus');
+          await command('Input.dispatchKeyEvent', {type:'keyDown',key:'Enter',code:'Enter',text:'\r',windowsVirtualKeyCode:13});
+          await command('Input.dispatchKeyEvent', {type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+          assert.equal(await evaluate('document.querySelectorAll(".cms-pin-widget-popup[open]").length'), 1,
+            'keyboard activation opens exactly one popup');
+          await escape();
+          await command('Emulation.setTouchEmulationEnabled', {enabled:true});
+          const touch = await evaluate('window.pinInput.point("w0")');
+          await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...touch,id:1}]});
+          await command('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+          await pause(100);
+          assert.equal(await evaluate('document.querySelectorAll(".cms-pin-widget-popup[open]").length'), 1,
+            'real emulated touch opens exactly one popup');
+          await escape();
+          await command('Emulation.setTouchEmulationEnabled', {enabled:false});
+          await evaluate('window.pinInput.finish()');
+          return;
+        }
         if (fixture === '96_popup_scroll.html') {
           const position = name => evaluate(`window.popupScroll.position('${name}')`);
           const wheel = async (target, deltaY) => {
@@ -851,6 +892,12 @@ test('editor tools require activation and Freeform navigation supports real poin
       `http://127.0.0.1:${server.address().port}/t/41_editor_hover.html`, child, interact);
     assert.ok(result.checks >= 70);
     await browserResult(profile, `http://127.0.0.1:${server.address().port}/t/93_freeform.html?grid`, child, async command => {
+      const ready = await command('Runtime.evaluate', {expression:
+        `new Promise(resolve => { const timer = setInterval(() => {
+          if (document.querySelector('#result')?.textContent !== 'grid ready') return;
+          clearInterval(timer); resolve();
+        },25); })`, awaitPromise:true, timeout:30000});
+      assert.ok(!ready.exceptionDetails, JSON.stringify(ready));
       await command('Runtime.evaluate', {expression:
         `document.querySelector('.grid-stack-item:not(.cms-responsive-navigation) > .grid-stack-item-content').click()`});
       await command('Input.dispatchKeyEvent', {type:'keyDown', key:'Escape', code:'Escape', windowsVirtualKeyCode:27});

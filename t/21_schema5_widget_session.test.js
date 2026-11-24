@@ -81,13 +81,14 @@ test('freeform dialogs preserve placement for new and existing widgets without a
     const rect = { x: 40, y: 30, w: 240, h: 140, z: 2 };
     const grid = { col: 1, row: 2, w: 4, h: 3 };
     const widget = { id: 'h1', type: 'fhem-html', html: '', devices: [], rect,
-      hideOnMobile: true, ...(withGrid ? { grid } : {}) };
+      hideOnMobile: true, forceCard: true, ...(withGrid ? { grid } : {}) };
     const create = open(controller, 'one', state.token, widget, 'create');
     await create.services({}).saveWidget({ id: 'h1', type: 'fhem-html', html: '', devices: [],
       title: 'Titel', grid: { ...widget.grid } });
     let saved = controller.snapshot().draft.pages[0].widgets[0];
     assert.deepEqual(saved.rect, rect);
     assert.equal(saved.hideOnMobile, true);
+    assert.equal(saved.forceCard, true);
     assert.deepEqual(saved.grid, withGrid ? grid : undefined);
     assert.equal(saved.title, 'Titel');
 
@@ -97,6 +98,7 @@ test('freeform dialogs preserve placement for new and existing widgets without a
     saved = controller.snapshot().draft.pages[0].widgets[0];
     assert.deepEqual(saved.rect, rect);
     assert.equal(saved.hideOnMobile, true);
+    assert.equal(saved.forceCard, true, 'legacy widget dialogs preserve the page presentation override');
     assert.deepEqual(saved.grid, withGrid ? grid : undefined);
     assert.equal(saved.html, '<p>Text</p>');
     const backend = spawnSync('perl', ['-MJSON::PP', '-e', `

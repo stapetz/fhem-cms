@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pin badges, Freeform projection and lifecycle</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<style>body { margin: 0; padding: 0; } #root { margin: 0 auto; } iframe { border: 0; }</style>
+<main id="root"></main><pre id="result">RUNNING</pre>
+<script type="module">
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+import { PIN_TYPES, pinKeepsCard } from '../www/fhem-cms/js/pin-presentation.js';
+import { Schema5WidgetPanel } from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
+import { createPinWidgetPopup } from '../www/fhem-cms/js/pin-widget-popup.js';
+
+const root = document.querySelector('#root'), result = document.querySelector('#result');
+const params = new URLSearchParams(location.search);
+let checks = 0, view, writes = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const paint = () => new Promise(resolve => setTimeout(resolve, 70));
+const until = async (condition, label) => {
+  for (let n = 0; n < 100; n++) { if (condition()) return; await paint(); }
+  throw new Error(label);
+};
+const specs = [
+  {type:'thermostat',device:'Demo',readings:{actual:'temperature',target:'desiredTemperature'}},
+  {type:'fhem-value',device:'Demo',reading:'temperature',unit:'°C'},
+  {type:'fhem-switch',device:'Demo',reading:'state',on:'on',off:'off'},
+  {type:'fhem-button',device:'Demo',command:'on'},
+  {type:'fhem-clock',style:'digital',showSeconds:false,showDate:false,showWeekday:false},
+  {type:'fhem-icon',device:'Demo',reading:'state',states:[]},
+  {type:'fhem-table',rows:[{device:'Demo',reading:'power',label:'Leistung'}]},
+  {type:'fhem-solarflow',device:'Demo',readings:{}},
+  {type:'fhem-solar-energy',readings:{pv:{device:'Demo',reading:'power'}}},
+  {type:'fhem-volvoconnect',device:'Demo'},
+  {type:'fhem-chart',device:'Demo',reading:'temperature'},
+  {type:'fhem-calllist',device:'Demo',limit:5,columns:['state','party','timestamp','duration']},
+  {type:'weather',config:{dataSource:'fhem_dwd',device:'Demo'}},
+  {type:'fhem-slider',device:'Demo',command:'pct',reading:'pct'},
+  {type:'fhem-select',device:'Demo',command:'mode',reading:'mode',mode:'dropdown'},
+  {type:'fhem-html',devices:[],html:'<p>HTML</p>'},
+  {type:'text',html:'<p>Text</p>'},
+  {type:'fhem-link',links:[{id:'one',kind:'internal',page:'home',text:'Start',textPosition:'above',
+    showText:true,target:'self',grid:{col:1,row:1,w:6,h:3}}]},
+];
+const snapshot = temperature => new Map([['Demo', [{name:'Demo', readings:{
+  temperature, desiredTemperature:'22', state:'off', power:'100',
+}}]]]);
+const services = {
+  history: async () => ({points:[]}),
+  setCommand: () => { writes++; throw new Error('Pin presentation must not send commands'); },
+};
+const makeConfig = (widgets = specs) => ({
+  schemaVersion:6, theme:'dark',settings:{layoutMode:'grid',gridColumns:12},
+  navigation:{grid:{col:1,row:1,w:12,h:1}},
+  pages:[{id:'home',title:'Grundriss',layoutMode:'freeform',renderAsPins:true,
+    canvas:{width:1280,height:800,scaling:'width',mobileBehavior:'scale'},
+    widgets:widgets.map((widget,i) => ({...widget,id:`w${i}`,title:`Widget ${i}`,
+      rect:{x:(i%6)*210,y:80+Math.floor(i/6)*230,w:200,h:180}}))}],
+});
+const mount = (config, editing) => mountSchema5Widgets(null, root, config, 'home',
+  document.createElement('nav'), services, snapshot('21.5'), editing);
+try {
+  if (params.has('input')) {
+    root.style.width = '640px';
+    const config = makeConfig([specs[1], {...specs[16],forceCard:false}]);
+    view = mount(config);
+    window.pinInput = {
+      point: id => {
+        const button = root.querySelector(`[data-widget-id="${id}"] cms-pin-badge`).shadowRoot.querySelector('button');
+        const rect = button.getBoundingClientRect();
+        return {x:rect.x+rect.width/2,y:rect.y+rect.height/2};
+      },
+      finish() {
+        check(writes === 0, 'real pointer/touch/keyboard inspection sends no commands');
+        view.destroy();
+        check(!root.querySelector('dialog,cms-pin-badge'), 'interactive fixture cleanup');
+        result.dataset.result = 'pass';
+        result.textContent = JSON.stringify({checks});
+      },
+    };
+    result.dataset.ready = 'input';
+  } else if (params.has('preview')) {
+    root.style.width = '640px';
+    view = mount(makeConfig([specs[1]]));
+    root.querySelector('cms-pin-badge').shadowRoot.querySelector('button').click();
+    check(!root.querySelector('dialog'), 'preview pin activation does not open an interactive full widget');
+    check(writes === 0, 'preview sends no device command');
+    view.destroy();
+    result.dataset.result = 'pass';
+    result.textContent = JSON.stringify({checks});
+  } else if (params.has('portrait')) {
+    const config = makeConfig([specs[1], {...specs[16],forceCard:false}]);
+    root.style.width = '100%';
+    const bytes = JSON.stringify(config);
+    view = mount(config);
+    await until(() => root.querySelector('.cms-freeform-stack'), 'Pin pages always stack full cards in portrait');
+    check(!root.querySelector('cms-pin-badge'), 'portrait has no compact pins even with mobileBehavior=scale');
+    check(root.querySelector('cms-value') && root.querySelector('cms-text'), 'portrait mounts actual normal widgets');
+    view.update(snapshot('24.5'));
+    await paint();
+    check(root.querySelector('cms-value').shadowRoot.textContent.includes('24.5'), 'portrait cards receive live values');
+    window.addEventListener('resize', async () => {
+      if (innerWidth <= innerHeight) return;
+      try {
+        await until(() => root.querySelectorAll('cms-pin-badge').length === 2, 'landscape restores pins');
+        check(!root.querySelector('cms-value, cms-text'), 'landscape removes full cards, avoiding duplicate subscriptions');
+        check(JSON.stringify(config) === bytes, 'orientation never rewrites data');
+        result.dataset.result = 'pass';
+        result.textContent = JSON.stringify({checks});
+      } catch (error) { result.dataset.result = 'fail'; result.textContent = error.stack; }
+    }, {once:true});
+    result.dataset.ready = 'portrait';
+  } else {
+    const fixture = document.createElement('cms-pin-badge');
+    root.append(fixture);
+    for (const theme of ['dark','light','liquid-glass','oled-black','catppuccin-mocha']) {
+      document.documentElement.dataset.cmsTheme = theme;
+      for (const state of ['normal','active','alarm']) for (const count of [0,1,3]) {
+        const values = Array.from({length:count}, (_,i) => ({value:String(20+i),unit:'°C'}));
+        fixture.presentation = {label:'Heizung',icon:'♨',values,state};
+        const button = fixture.shadowRoot.querySelector('button');
+        const badge = fixture.shadowRoot.querySelector('.badge');
+        check(button.getBoundingClientRect().width >= 48 && button.getBoundingClientRect().height >= 48,
+          `${theme}/${state}/${count}: minimum hit target`);
+        check(badge.getBoundingClientRect().height === (count ? 32 : 36), 'circle/pill visual height');
+        check(count || badge.getBoundingClientRect().width === 36, 'circle is 36px wide');
+        check(fixture.shadowRoot.querySelectorAll('.separator').length === Math.max(0,count-1), 'multi-value separators');
+        const expected = getComputedStyle(document.documentElement).getPropertyValue(state === 'alarm' ? '--cms-danger'
+          : state === 'active' ? '--cms-accent' : '--cms-frame').trim();
+        const probe = document.createElement('span');
+        probe.style.color = expected; root.append(probe);
+        check(getComputedStyle(badge).borderTopColor === getComputedStyle(probe).color, 'state uses shared theme token');
+        probe.remove();
+        check(button.getAttribute('aria-label').includes('Heizung') &&
+          (state !== 'alarm' || button.getAttribute('aria-label').includes('Alarm')), 'accessible name includes state');
+      }
+    }
+    fixture.presentation = {label:'<img onerror=alert(1)>',icon:'<script>',state:'normal',
+      values:[{value:'<b>23</b>',unit:'<svg>'}]};
+    check(!fixture.shadowRoot.querySelector('img,script,svg,b'), 'foreign strings render as text only');
+    let invalid = false;
+    try { fixture.presentation = {label:'x',icon:'x',values:[{value:1}],state:'normal'}; } catch { invalid = true; }
+    check(invalid, 'invalid presentation is rejected');
+    fixture.remove();
+    check(Object.keys(PIN_TYPES).length === specs.length, 'all 18 real widget types covered explicitly');
+    for (const spec of specs) check(pinKeepsCard(spec) === ['fhem-clock','text','fhem-link'].includes(spec.type),
+      `${spec.type}: card default`);
+
+    for (const scale of [.25,.5,1,1.5]) {
+      const config = makeConfig();
+      const bytes = JSON.stringify(config);
+      root.style.width = `${1280*scale}px`;
+      view = mount(config);
+      await paint();
+      check(root.querySelectorAll('cms-pin-badge').length === 15, 'all eligible widgets use pins');
+      check(root.querySelector('cms-clock') && root.querySelector('cms-text') && root.querySelector('cms-link'),
+        'clock/text/navigation retain normal cards');
+      check(!root.querySelector('cms-thermostat,cms-value,cms-switch,cms-button,cms-chart,cms-weather,cms-volvoconnect'),
+        'full widgets for pins are not eagerly instantiated');
+      for (const pin of root.querySelectorAll('cms-pin-badge')) {
+        const box = pin.shadowRoot.querySelector('button').getBoundingClientRect();
+        const bounds = root.querySelector('.cms-freeform-canvas').getBoundingClientRect();
+        check(box.width >= 47.99 && box.height >= 47.99, `${scale}: scale-independent target`);
+        check(box.left >= bounds.left-.1 && box.right <= bounds.right+.1
+          && box.top >= bounds.top-.1 && box.bottom <= bounds.bottom+.1, `${scale}: target stays inside canvas`);
+      }
+      const pin = root.querySelector('[data-widget-id="w1"] cms-pin-badge');
+      pin.shadowRoot.querySelector('button').click();
+      await paint();
+      const dialog = root.querySelector('.cms-pin-widget-popup');
+      check(dialog?.open && dialog.querySelector('cms-value'), 'activation lazily opens the real normal widget');
+      view.update(snapshot('23.5'), '2026-11-24T10:00:00');
+      await paint();
+      check(dialog.querySelector('cms-value').shadowRoot.textContent.includes('23.5'), 'popup receives live values');
+      check(pin.hasAttribute('data-stale'), 'stale state reaches pins');
+      dialog.querySelector('button').click();
+      check(!root.querySelector('.cms-pin-widget-popup,cms-value'), 'closing removes popup and full widget');
+      pin.shadowRoot.querySelector('button').click();
+      pin.shadowRoot.querySelector('button').click();
+      await paint();
+      check(root.querySelectorAll('.cms-pin-widget-popup[open]').length === 1,
+        'late close events from a replaced dialog never close the new popup');
+      view.destroy();
+      check(!root.querySelector('dialog,cms-pin-badge'), 'page destruction cleans an open popup');
+      check(JSON.stringify(config) === bytes, 'mount/update/open/close never change persisted geometry');
+    }
+    for (const background of [
+      `media/${'a'.repeat(32)}.png`, 'missing-floorplan.png', undefined,
+    ]) {
+      const config = makeConfig([{...specs[1],rect:undefined}]);
+      config.pages[0].backgroundDim = .25;
+      root.style.width = '640px';
+      view = mountSchema5Widgets(null,root,config,'home',document.createElement('nav'),
+        {...services,freeformBackground:background},snapshot('21'),null);
+      await until(() => !root.querySelector('.cms-pin-image-status').textContent.includes('wird geladen')
+        || root.querySelector('.cms-pin-image-status').hidden, 'background resolves or visibly fails');
+      const status = root.querySelector('.cms-pin-image-status');
+      check(background?.startsWith('media/') ? status.hidden : !status.hidden, 'missing/broken image reports Canvas fallback');
+      if (status.hidden) {
+        const canvas = root.querySelector('.cms-freeform-canvas');
+        check(canvas.style.width === '1280px' && canvas.style.height === '800px', 'image never changes common canvas dimensions');
+        check(getComputedStyle(canvas).backgroundSize.split(', ').every(size => size === '800px 800px'),
+          `square image and dim layer are contained, never stretched: ${getComputedStyle(canvas).backgroundSize}`);
+      }
+      view.destroy();
+    }
+    const forced = makeConfig([{...specs[1],forceCard:true}, {...specs[16],forceCard:false}]);
+    view = mount(forced);
+    await paint();
+    check(root.querySelector('cms-value') && root.querySelector('[data-widget-id="w1"] cms-pin-badge'),
+      'explicit forceCard overrides defaults in both directions');
+    view.destroy();
+
+    for (const scale of [.25,.5,1,1.5]) for (const [x,y] of [[0,0],[1270,0],[0,790],[1270,790]]) {
+      const config = makeConfig([specs[1]]);
+      config.pages[0].widgets[0].rect = {x,y,w:10,h:10};
+      root.style.width = `${1280*scale}px`;
+      view = mount(config);
+      const pin = root.querySelector('cms-pin-badge');
+      pin.presentation = {label:'Sehr breiter Pin',icon:'≡',state:'active',
+        values:[{value:'1234567890123456789012345678901234567890',unit:'W'},
+          {value:'98.7',unit:'%'},{value:'24.5',unit:'°C'}]};
+      await paint();
+      const target = pin.shadowRoot.querySelector('button').getBoundingClientRect();
+      const bounds = root.querySelector('.cms-freeform-canvas').getBoundingClientRect();
+      check(target.left >= bounds.left-.1 && target.right <= bounds.right+.1
+        && target.top >= bounds.top-.1 && target.bottom <= bounds.bottom+.1,
+        `${scale}/${x}/${y}: wide multi-pill and complete target remain inside all Canvas edges`);
+      for (const divider of pin.shadowRoot.querySelectorAll('.separator')) {
+        const rect = divider.getBoundingClientRect();
+        check(Math.abs(rect.width - 1) < .1 && Math.abs(rect.height - 12) < .1
+          && getComputedStyle(divider).opacity === '0.25', 'separators retain physical size and contrast at every scale');
+      }
+      view.destroy();
+    }
+
+    const config = makeConfig([specs[16]]);
+    const panelRoot = document.createElement('section');
+    root.append(panelRoot);
+    let saved;
+    const controller = {
+      snapshot: () => ({live:config,draft:null,token:'test'}),
+      saveWidget: async (_page, widget) => { saved = widget; return {live:config}; },
+      previewWidget: async () => ({}), deleteWidget: async () => ({}),
+    };
+    const panel = new Schema5WidgetPanel({root:panelRoot,controller,services,pageId:'home',token:'test',
+      widgetId:'w0',onClose() {}});
+    await until(() => panelRoot.querySelector('cms-text')?.shadowRoot.querySelector('[data-force-card]'),
+      'central forceCard control is attached to the real widget dialog');
+    const text = panelRoot.querySelector('cms-text');
+    const control = text.shadowRoot.querySelector('[data-force-card]');
+    check(control.checked, 'text defaults to card in the real widget dialog');
+    control.checked = false;
+    text.shadowRoot.querySelector('[data-form]').requestSubmit();
+    await until(() => saved, 'forceCard choice reaches the existing draft save path');
+    check(saved.forceCard === false && saved.rect.w === 200, 'forceCard saves without changing normal card size');
+    panel.close();
+    panelRoot.remove();
+
+    const failing = createPinWidgetPopup(root, () => { throw new Error('Testfehler'); });
+    failing.open(config.pages[0].widgets[0]);
+    check(root.querySelector('[role="alert"]').textContent.includes('Testfehler'), 'lazy creation errors are visible');
+    failing.close();
+    check(!root.querySelector('dialog'), 'failed popup can be closed and fully removed');
+
+    const frame = document.createElement('iframe');
+    frame.style.width = '393px'; frame.style.height = '852px';
+    frame.src = `${location.pathname}?portrait=1`;
+    root.append(frame);
+    await until(() => frame.contentDocument?.querySelector('#result[data-ready="portrait"]'), 'portrait fixture ready');
+    frame.style.width = '852px'; frame.style.height = '393px';
+    await until(() => frame.contentDocument?.querySelector('#result[data-result]'), 'orientation regression ready');
+    const child = frame.contentDocument.querySelector('#result');
+    check(child.dataset.result === 'pass', child.textContent);
+    checks += JSON.parse(child.textContent).checks;
+    frame.remove();
+    check(writes === 0, 'pin rendering and activation never send direct device commands');
+    result.dataset.result = 'pass';
+    result.textContent = JSON.stringify({checks});
+  }
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = error.stack || String(error);
+} finally {
+  if (!params.has('portrait') && !params.has('input')) view?.destroy();
+}
+</script>

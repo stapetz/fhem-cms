@@ -1,8 +1,9 @@
 import { DEFAULT_CANVAS, fitFreeformRect, freeformReadingOrder } from './fcui-freeform-layout.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
-import { validatePinPage } from './pin-layout.js';
+import { pinImageFrame, pinPercentPoint, pinCanvasPoint, validatePinPage } from './pin-layout.js';
 
-export function mountFreeform(root, page, navigation, render, {background, editing, phone, tablet, navigationGrid, columns, grid} = {}) {
+export function mountFreeform(root, page, navigation, render, {background, editing, phone, tablet, navigationGrid, columns, grid,
+  renderPin, onPresentationChange} = {}) {
   validatePinPage(page, 6);
   const doc = root.ownerDocument;
   const browser = doc.defaultView;
@@ -15,8 +16,21 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   if (burger) navigation.setAttribute('data-adaptive', '');
   const canvas = box('cms-freeform-canvas');
   const settings = {...DEFAULT_CANVAS, ...page.canvas};
+  const pinPage = page.renderAsPins === true;
+  const pinMode = pinPage && !editing && typeof renderPin === 'function';
+  viewport.classList.toggle('cms-freeform-pins', pinPage);
+  let imageFrame = pinImageFrame(settings);
+  let imageLoader;
+  let disposed = false;
+  const imageWarning = doc.createElement('p');
+  if (pinPage) {
+    imageWarning.className = 'cms-pin-image-status';
+    imageWarning.setAttribute('role', 'status');
+    imageWarning.textContent = background ? 'Grundriss wird geladen …' : 'Kein Grundrissbild. Pin-Positionen beziehen sich auf den Canvas.';
+  }
   canvas.style.setProperty('--cms-freeform-snap', `${settings.snapGrid}px`);
   const wrappers = new Map();
+  const pinStates = new Map();
   const navBox = box('cms-freeform-navigation');
   let navigationRect = page.navigationRect ?? {x: 0, y: 0, w: settings.width, h: 48};
   if (navigationGrid && columns) {
@@ -41,18 +55,43 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   for (const widget of page.widgets) {
     const wrapper = box('cms-freeform-widget');
     wrapper.dataset.widgetId = widget.id;
-    wrapper.append(render(widget.id));
+    const pin = pinMode && renderPin(widget);
+    wrapper.append(render(widget.id, pin));
+    if (pinMode) {
+      pinStates.set(widget.id, pin);
+      wrapper.classList.toggle('cms-freeform-pin', pin);
+    }
     setFreeformBox(wrapper, widget.rect);
     wrappers.set(widget.id, wrapper);
     canvas.append(wrapper);
   }
   footprint.append(canvas);
-  viewport.append(compactNavigation, footprint);
+  viewport.append(...(pinPage ? [imageWarning] : []), compactNavigation, footprint);
   root.classList.add('cms-freeform-root');
   root.append(viewport);
   let stacked = null;
   let compact = false;
   let scale = 1;
+  function placePins() {
+    if (!pinMode) return;
+    const bounds = canvas.getBoundingClientRect();
+    for (const widget of page.widgets) {
+      if (!pinStates.get(widget.id)) continue;
+      const wrapper = wrappers.get(widget.id);
+      const point = pinCanvasPoint(pinPercentPoint({
+        x: widget.rect.x + widget.rect.w / 2, y: widget.rect.y + widget.rect.h / 2,
+      }, imageFrame), imageFrame);
+      wrapper.style.left = `${point.x}px`;
+      wrapper.style.top = `${point.y}px`;
+      const rect = wrapper.getBoundingClientRect();
+      const dx = rect.width > bounds.width ? bounds.left + bounds.width/2 - (rect.left + rect.width/2)
+        : Math.max(bounds.left - rect.left, Math.min(0, bounds.right - rect.right));
+      const dy = rect.height > bounds.height ? bounds.top + bounds.height/2 - (rect.top + rect.height/2)
+        : Math.max(bounds.top - rect.top, Math.min(0, bounds.bottom - rect.bottom));
+      wrapper.style.left = `${point.x + dx / scale}px`;
+      wrapper.style.top = `${point.y + dy / scale}px`;
+    }
+  }
   const landscape = browser.matchMedia('(orientation: landscape)');
   const touchTablet = browser.matchMedia('(pointer: coarse) and (min-width: 600px) and (min-height: 600px) and (max-width: 1400px)');
   function landscapeNavigationFits(byWidth) {
@@ -85,7 +124,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     viewport.classList.toggle('cms-freeform-landscape-full', Boolean(fullLandscape));
     const width = viewport.clientWidth;
     if (!width) return;
-    const stack = mobilePortrait && settings.mobileBehavior === 'stack';
+    const stack = mobilePortrait && (pinPage || settings.mobileBehavior === 'stack');
     const byWidth = width / settings.width;
     if (mobileLandscape) {
       canvas.style.width = `${settings.width}px`;
@@ -108,6 +147,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
       if (hadFocus) (compact ? burger : navigation.querySelector('.cms-nav-link'))?.focus({preventScroll:true});
     }
     if (stack !== stacked) {
+      onPresentationChange?.();
       stacked = stack;
       viewport.classList.toggle('cms-freeform-stack', stack);
       grid?.toggleAttribute('data-responsive', stack);
@@ -134,6 +174,22 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     canvas.style.width = stack ? '100%' : `${settings.width}px`;
     canvas.style.height = stack ? 'auto' : `${settings.height}px`;
     canvas.style.transform = stack ? '' : `scale(${scale})`;
+    if (pinMode) {
+      canvas.style.setProperty('--cms-pin-max-width', `${Math.max(48, settings.width * scale)}px`);
+      for (const widget of page.widgets) {
+        const pin = !stack && renderPin(widget);
+        const wrapper = wrappers.get(widget.id);
+        if (pinStates.get(widget.id) !== pin) {
+          const hadFocus = wrapper.contains(doc.activeElement);
+          pinStates.set(widget.id, pin);
+          wrapper.classList.toggle('cms-freeform-pin', pin);
+          if (!pin) setFreeformBox(wrapper, widget.rect);
+          wrapper.replaceChildren(render(widget.id, pin));
+          if (hadFocus) { wrapper.tabIndex = -1; wrapper.focus({preventScroll: true}); }
+        }
+      }
+      placePins();
+    }
     for (const wrapper of canvas.querySelectorAll('.cms-widget-selected')) {
       fitWidgetTools(wrapper, wrapper.closest('.cms-shared-grid-pane') ?? canvas);
     }
@@ -144,16 +200,37 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   });
   observer.observe(viewport);
   observer.observe(compactNavigation);
+  if (pinMode) for (const wrapper of wrappers.values()) observer.observe(wrapper);
   landscape.addEventListener('change', resize);
   touchTablet.addEventListener('change', resize);
   browser.addEventListener('resize', resize);
   const navChanges = new browser.MutationObserver(resize);
   navChanges.observe(navigation, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['hidden', 'aria-current']});
   doc.fonts?.addEventListener('loadingdone', resize);
+  if (pinPage && background) {
+    imageLoader = new browser.Image();
+    imageLoader.onload = () => {
+      if (disposed) return;
+      imageFrame = pinImageFrame(settings, {width: imageLoader.naturalWidth, height: imageLoader.naturalHeight});
+      imageWarning.hidden = true;
+      viewport.style.setProperty('--cms-pin-image-position', `${imageFrame.x}px ${imageFrame.y}px`);
+      viewport.style.setProperty('--cms-pin-image-size', `${imageFrame.w}px ${imageFrame.h}px`);
+      resize();
+    };
+    imageLoader.onerror = () => {
+      if (disposed) return;
+      imageWarning.hidden = false;
+      imageWarning.textContent = 'Grundrissbild konnte nicht geladen werden. Pin-Positionen beziehen sich auf den Canvas.';
+      resize();
+    };
+    imageLoader.src = new URL(background, browser.location.href).href;
+  }
   resize();
   return {
     canvas, wrappers, navBox, navigationRect, getScale: () => scale,
     destroy() {
+      disposed = true;
+      if (imageLoader) { imageLoader.onload = null; imageLoader.onerror = null; }
       observer.disconnect();
       navChanges.disconnect();
       doc.fonts?.removeEventListener('loadingdone', resize);

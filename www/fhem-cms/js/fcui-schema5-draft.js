@@ -341,6 +341,7 @@ export class Schema5DraftController {
       widget.grid = structuredClone(grid);
       delete widget.rect;
       delete widget.hideOnMobile;
+      delete widget.forceCard;
     }
     target.widgets.push(widget);
     return this.saveDraft(candidate, expectedToken);

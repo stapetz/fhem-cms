@@ -91,6 +91,10 @@ function validateLayout(config, includeNavigation = true) {
         throw new Error(`Ungültige oder doppelte Widget-ID auf Seite ${page.id}`);
       }
       ids.add(widget.id);
+      if (Object.hasOwn(widget, 'forceCard')
+        && (!freeform || typeof widget.forceCard !== 'boolean')) {
+        throw new Error('forceCard ist nur als Boolean auf Freeform-Seiten erlaubt');
+      }
       if (widget.type === 'fhem-link') validateLinkItems(widget.links, config.pages);
       if (freeform) {
         validateFreeformWidget(widget, page.canvas);
@@ -188,6 +192,7 @@ export function changePageLayout(config, pageId, mode, canvas, measurements) {
       delete page.navigationRect;
       delete page.renderAsPins;
       delete page.backgroundDim;
+      for (const widget of page.widgets) delete widget.forceCard;
     }
     syncSharedFreeformSize(config);
     validateLayout(config);

@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.25.0-dev';
+our $FHEMCMS_VERSION = '1.26.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1109,10 +1109,12 @@ sub FHEMCMS_ValidateConfig {
             my ($widget, $where, $required, $optional) = @_;
             return $exact->($widget, $where, $required, $optional) if (!$freeform);
             return $exact->($widget, $where, ['rect', grep { $_ ne 'grid' } @{$required}],
-                [@{$optional}, 'grid', 'hideOnMobile']);
+                [@{$optional}, 'grid', 'hideOnMobile', 'forceCard']);
         };
         for my $widget (@{$page->{widgets}}) {
             return 'Widget muss ein Objekt sein' if (ref($widget) ne 'HASH');
+            return 'Ungueltiger Wert fuer forceCard'
+                if (exists($widget->{forceCard}) && (!$freeform || !$isBool->($widget->{forceCard})));
             return 'Unbekannter Widget-Typ'
                 if (ref($widget->{type}) || !defined($widget->{type})
                     || ($widget->{type} ne 'fhem-value' && $widget->{type} ne 'thermostat'

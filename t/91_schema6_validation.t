@@ -44,6 +44,23 @@ for my $schema (5, 6) {
 is(FHEMCMS_ValidateConfig($config, 6), undef, 'mixed pages, allowed overlap and exact canvas-edge placement');
 is($json->encode($config), $bytes, 'validation does not rewrite defaults or remembered grid positions');
 for my $enabled (JSON::PP::true, JSON::PP::false) {
+    my $candidate = $json->decode($bytes);
+    $candidate->{pages}[1]{widgets}[0]{forceCard} = $enabled;
+    is(FHEMCMS_ValidateConfig($candidate, 6), undef, 'Freeform accepts real forceCard booleans');
+}
+for my $value (undef, 0, 1, 'true', [], {}) {
+    my $candidate = $json->decode($bytes);
+    $candidate->{pages}[1]{widgets}[0]{forceCard} = $value;
+    like(FHEMCMS_ValidateConfig($candidate, 6), qr/forceCard/, 'forceCard rejects non-boolean values');
+}
+for my $schema (5, 6) {
+    my $candidate = $json->decode($bytes);
+    pop(@{$candidate->{pages}});
+    $candidate->{schemaVersion} = $schema;
+    $candidate->{pages}[0]{widgets}[0]{forceCard} = JSON::PP::false;
+    like(FHEMCMS_ValidateConfig($candidate, $schema), qr/forceCard/, 'Grid rejects forceCard even when false');
+}
+for my $enabled (JSON::PP::true, JSON::PP::false) {
     for my $dim (0, 0.125, 0.5, 1e-7) {
         my $candidate = $json->decode($bytes);
         $candidate->{pages}[1]{renderAsPins} = $enabled;
