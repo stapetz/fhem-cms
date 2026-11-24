@@ -19,7 +19,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   const pinPage = page.renderAsPins === true;
   const pinMode = pinPage && !editing && typeof renderPin === 'function';
   viewport.classList.toggle('cms-freeform-pins', pinPage);
-  let imageFrame = pinImageFrame(settings);
+  let imageFrame = pinPage ? pinImageFrame(settings) : null;
   let imageLoader;
   let disposed = false;
   const imageWarning = doc.createElement('p');
