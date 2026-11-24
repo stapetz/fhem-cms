@@ -1,5 +1,40 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Pin-Tap/Hold und Popup-X (24.11.2026, dev, #248)
+
+Ab 1.28.0-dev: nur klassisches X oben rechts, mit gemeinsamem Seitenpopup-
+Stilvertrag, zugänglicher Beschriftung und 48px-Ziel. Schalter/Taster nutzen
+live Tap `<400 ms` für ihren konfigurierten Befehl und Hold `>=400 ms` für die
+normale Karte. Andere Pins und Tastatur/Screenreader öffnen die Karte direkt.
+Unbekannte/veraltete Zustände, Preview und Editor senden keine Pin-Befehle.
+
+Reproduzierbar:
+- `node --test t/107_pin_gestures.test.js`: exakte Grenzen
+  0/349/350/399/400/401/1000 ms, 0/6/6.001/7 px inklusive Loslassposition,
+  verzögerter Timer, Cancel/Captureverlust/Fokusverlust/Escape/Disconnect,
+  Mehrfingerabbruch, keine Doppelaktivierung, alle realen Registrytypen,
+  validierte konfigurierte Befehle und unveränderter FHEMWEB-Fehlerpfad.
+- `node --test --test-name-pattern='Pin interactions|Pin badges|Pin reading choices|CMS popups|page settings preview' t/35_schema5_scaling.test.js`:
+  Interaktionsfixture `t/108_pin_interactions.html` mit 34 Checks plus
+  Preview- und echten Eingabefällen. Der Läufer sendet reale CDP-Maus- und
+  Touch-Taps/Holds, Bewegung und Touchcancel, Tab/Enter/Escape.
+  Hold öffnet genau eine echte Karte, nie zusätzlich einen Befehl;
+  anschließendes Touch-Loslassen darf das Popup nicht schließen.
+  X-Position, Zielgröße, Label, Lazy-Lifecycle, aktuelle Schalterdaten,
+  fehlende/veraltete Werte, sichtbare Berechtigungsfehler,
+  Doppelsendeschutz und späte Fehler nach Seitenabbau sind abgedeckt.
+- Die bestehende Pin-/Reading-/Seitendialog- und Scrollregression bleibt aktiv.
+  Zusätzlich Lifecycle-/Cachetests, Perl-Syntax, Build und Release-JSON-Prüfung.
+
+Geräteabnahme: Live-Schalter kurz tippen und lange halten; dabei Bewegungen
+und Scrollen prüfen. Langes Halten darf nie zusätzlich schalten, kurzes
+Tippen bei bekanntem Zustand darf kein Popup öffnen. Taster entsprechend.
+Wert-Pin kurz tippen: normale Karte mit X oben rechts; X und Escape schließen.
+Ohne Pointer/mit Screenreader direkt öffnen und über normale Bedienelemente
+bedienen. Fehler und Offlinezustand sichtbar, Vorschau/Editor ohne Befehle.
+Echte Safari-/Touch-Geräteprüfung noch offen. Pin-Editor folgt in #249;
+kein `main`-Release.
+
 ## Pin-Readings und Garten-Wert (24.11.2026, dev, #247)
 
 Im freigegebenen Browser war das Garten-Reading in der normalen Karte vorhanden,

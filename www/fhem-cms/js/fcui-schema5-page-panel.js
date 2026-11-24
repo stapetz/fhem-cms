@@ -178,7 +178,7 @@ export class Schema5PagePanel {
       this.#renderAsPins.addEventListener('change', () => this.#updateSettingsPreview());
       pinLabel.append(this.#renderAsPins);
       pinOptions.append(pinLabel, element('p',
-        'Vorschau und Live zeigen kompakte Pins mit den im Widgetdialog ausgewählten Werten. Tippen öffnet die normale Karte. Im mobilen Hochformat werden vollständige Karten gestapelt. Der Editor arbeitet vorerst mit normalen Kacheln; direktes Schalten vom Pin folgt.'));
+        'Vorschau und Live zeigen kompakte Pins mit den im Widgetdialog ausgewählten Werten. Live: Schalter/Taster kurz tippen zum Schalten, ab 400 ms halten für die normale Karte. Andere Pins oder Tastaturaktivierung öffnen die Karte. Vorschau ohne Geräteaktionen. Im mobilen Hochformat werden vollständige Karten gestapelt. Der Editor arbeitet vorerst mit normalen Kacheln.'));
       this.#freeform.section.append(pinOptions);
       const dimLabel = element('label', 'Hintergrund-Abdunklung ');
       this.#backgroundDim = element('input');

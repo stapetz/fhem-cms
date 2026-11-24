@@ -128,8 +128,8 @@ Freeform kann den Wrapper ohne vorab erzeugte Vollwidgets darstellen.
 Aktivierung mit Maus, Touch oder Tastatur öffnet erst dann das reguläre Widget
 über die bestehende Factory und den gemeinsamen Modalpfad. Die geöffnete Karte
 erhält denselben aktuellen Snapshot-/Stale-Stand; Schließen, Orientierungswechsel
-und Seitenabbau entfernen sie vollständig. Noch kein direktes Schalten vom Pin:
-die 400ms-Interaktion folgt in #248. Vorschau aktiviert keine interaktive Karte.
+und Seitenabbau entfernen sie vollständig. Die direkte 400ms-Interaktion
+ist mit #248 angeschlossen (siehe unten). Vorschau aktiviert keine interaktive Karte.
 Der Editor verwendet bis #249 normale Karten samt unveränderter Werkzeuge;
 Vorschau und Live zeigen die kompakte Darstellung.
 
@@ -161,8 +161,8 @@ ohne eine Konfiguration zu schreiben. Abbrechen verwirft den Schalterzustand,
 Speichern erhält alle normalen Kachelrechtecke unverändert. Ohne Änderung
 bleibt das optionale Feld abwesend; ein explizites Ausschalten speichert `false`.
 Rasterseiten zeigen den Schalter nicht und erhalten keine Pin-Felder.
-Der Dialog benennt die vorläufige Kartenbearbeitung und ausstehende
-Direktschaltfunktion ausdrücklich.
+Der Dialog benennt die vorläufige Kartenbearbeitung, die Tap-/Hold-Bedienung
+und die gesperrten Geräteaktionen der Vorschau ausdrücklich.
 
 **Reading-Auswahl und Livewerte (Refs #247):** `pin-readings.js` normalisiert
 die tatsächlichen Datenmodelle, ohne ein universelles `readings`-Array
@@ -202,7 +202,39 @@ automatisch aufgebaute Volvo-Karten haben keine feste einzelne
 Live-Readingauswahl in diesem Vertrag und bleiben Typsymbole bzw. normale
 Karten nach `forceCard`. Ihre Inhalte sind weiter in der vollständigen Karte
 verfügbar; keine beliebigen internen oder historischen Werte zu Livewerten
-umdeuten. Direkte Tap-/Hold-Bedienung (#248) und Pin-Editor (#249) bleiben offen.
+umdeuten. Der Pin-Editor (#249) bleibt offen.
+
+**Tap/Hold und Popup (Refs #248):** `PIN_BEHAVIOR` in `pin-behavior.js`
+leitet die vollständige Registry aus den tatsächlichen `PIN_TYPES` ab:
+binärer Schalter `toggle`, Taster `trigger`, alle übrigen Typen `open`.
+Keine geratene Toggle-Funktion: Schalter senden nur den bereits konfigurierten
+On-/Off-Befehl, abgeleitet vom exakt bestätigten aktuellen Reading. Bei
+unbekanntem Zustand oder Stale wird nur die normale Karte geöffnet.
+Taster senden ihren konfigurierten Befehl. Device/Befehl werden validiert;
+gesendet wird ausschließlich über die vorhandenen `services.setCommand`
+und `FhemClient.setCommand`, einschließlich FHEMWEB-Rechten, CSRF und Fehlern.
+Während einer laufenden Anfrage keine zweite Pin-Sendung. Kein optimistischer
+Gerätezustand: erst echte Snapshotupdates ändern die Pin-Statusdarstellung.
+Fehler öffnen die normale Karte mit sichtbarer Fehlermeldung. Nach Abbau oder
+Darstellungswechsel dürfen verspätete Antworten kein Popup erneut öffnen.
+
+`bindPinGesture` aus `pin-gesture.js` bündelt Pointer Events und die einzige
+Zeitgrenze: Tap `<400 ms`, Hold `>=400 ms`, auch bei verzögertem Timer.
+Bewegung `>6` sichtbare CSS-Pixel (inklusive Loslassposition), `pointercancel`,
+Captureverlust, Fokusverlust, Escape und Disconnect brechen ab und räumen
+Timer/Capture auf. Nach Hold oder Abbruch wird kein kompatibler Klick
+zusätzlich ausgeführt. Scrollen bleibt möglich; kein pauschales `touch-action:
+none`. Native/assistive Klicks per Tastatur öffnen immer die normale Karte;
+ihre bestehenden Bedienelemente sind die zeitunabhängige Alternative zum Hold.
+Der Pin benennt diese Bedienung zugänglich. Editor/Vorschau senden keine
+Pin-Befehle und Vorschau öffnet weiterhin keine interaktive Karte.
+
+Der Popupkopf verwendet denselben Header-/48px-X-Stilvertrag wie Seitenpopups:
+nur „×“ oben rechts, `aria-label`/Tooltip „Popup schließen“, kein sichtbarer
+Schließen-Text. Escape bleibt erhalten. Hintergrundschließen erfordert,
+dass bereits das Drücken auf dem Dialoghintergrund begann. Ein auf dem Pin
+begonnener Touch-Hold darf beim Loslassen nicht das neue Popup schließen.
+Diese reale Touch-Ereignisfolge ist als Browserregression enthalten.
 
 - **Umfang:** Kein neuer Floorplan-Seitentyp. Freeform-Seiten erhalten optional
   `renderAsPins` (Boolean, Standard `false`) und `backgroundDim` (`0` bis `0.5`,

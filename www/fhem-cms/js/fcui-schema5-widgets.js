@@ -6,6 +6,7 @@ import { mountFreeformEditor } from './fcui-freeform-edit.js';
 import '../components/cms-pin-badge.js';
 import { pinKeepsCard, pinPresentation } from './pin-presentation.js';
 import { createPinWidgetPopup } from './pin-widget-popup.js';
+import { PIN_BEHAVIOR, pinCommand } from './pin-behavior.js';
 
 export function mountSchema5Widgets(GridStack, root, config, pageId, navigation, services, snapshots, editing) {
   if (!navigation || !services || typeof services !== 'object' || !(snapshots instanceof Map)) {
@@ -54,8 +55,36 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     const element = pin ? root.ownerDocument.createElement('cms-pin-badge') : createCard(id);
     if (pin) {
       element.presentation = pinPresentation(widget, Boolean(currentStale), currentSnapshots);
+      element.directAction = !preview && !editing && PIN_BEHAVIOR[widget.type] !== 'open';
       element.addEventListener('pin-open', () => {
         if (!preview && !editing && !root.inert) popup.open(widget);
+      });
+      element.addEventListener('pin-action', async () => {
+        if (preview || editing || root.inert || !element.isConnected || element.busy) return;
+        if (currentStale) {
+          popup.open(widget);
+          return;
+        }
+        element.busy = true;
+        element.setAttribute('aria-busy', 'true');
+        element.feedback = 'Befehl wird gesendet';
+        try {
+          const action = pinCommand(widget, currentSnapshots);
+          if (!action) {
+            popup.open(widget);
+            return;
+          }
+          await services.setCommand(action.device, action.command);
+          if (element.isConnected) element.feedback = 'Befehl gesendet';
+        } catch (error) {
+          if (element.isConnected && !destroyed) {
+            element.feedback = 'Schalten fehlgeschlagen';
+            popup.showError(widget, error);
+          }
+        } finally {
+          element.busy = false;
+          element.removeAttribute('aria-busy');
+        }
       });
     }
     elements.set(id, element);

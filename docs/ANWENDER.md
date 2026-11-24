@@ -400,11 +400,18 @@ Schieberegler, Select, Tabelle sowie beide Solar-/Energie-Widgets bereit.
 Ohne feste Live-Readingquellen (etwa freies HTML, Diagramm, Wetter,
 Anrufliste und automatisch aufgebaute Volvo-Karten) bleibt das Typsymbol;
 deren vollständige Inhalte stehen in der normalen Karte.
-Tippen oder Tastaturaktivierung
-öffnet die normale Widgetkarte mit aktuellen Daten; **Schließen** oder
-Escape entfernt sie wieder. Noch kein direktes Schalten vom Pin:
-Geräte bedienen Sie in der geöffneten normalen Karte. Direkte Tap-/Hold-Bedienung
-folgt in einer weiteren Ausbaustufe.
+In der Liveansicht schalten **Schalter und Taster** bei kurzem Tippen unter
+400 ms mit ihrem konfigurierten Befehl. **Halten ab 400 ms** öffnet stattdessen
+die normale Widgetkarte; anschließendes Loslassen schaltet nicht zusätzlich.
+Eine Bewegung über 6 sichtbare Pixel bricht die Geste ab. Bei unbekanntem
+Schalterzustand oder veralteten Daten öffnet sich die Karte, ohne einen
+Schaltbefehl zu raten. Laufende Sendevorgänge sperren weitere Pin-Befehle;
+Fehler werden sichtbar im Popup gemeldet.
+Alle anderen Pins öffnen ihre normale Karte beim Tippen. Mit Tastatur oder
+Screenreader öffnet die Aktivierung grundsätzlich die normale Karte, in der
+die gewohnten Bedienelemente ohne zeitkritisches Halten verfügbar sind.
+Das klassische **X oben rechts** oder Escape schließt das Popup und entfernt
+die Karte. Die Vorschau und der Editor senden keine Pin-Gerätebefehle.
 Uhr, Text und LinkWidget bleiben standardmäßig normale Karten. Im jeweiligen
 Widgetdialog können Sie mit **Nicht als Pin darstellen (normale Kachel behalten)**
 die Darstellung auf Pin-Seiten ändern.

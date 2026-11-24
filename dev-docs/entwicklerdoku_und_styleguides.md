@@ -169,8 +169,17 @@ die Geräte-Vorschau zeigt Livewerte. Null bleibt sichtbar; fehlende Werte
 „–“ ohne Einheit, veraltete Daten gestrichelt markieren.
 Ohne feste Livequellen nur das Typsymbol, keine historischen oder automatisch
 gewählten internen Readings als aktuelle Messwerte ausgeben.
-Aktivierung öffnet zunächst nur die echte normale Karte; keine direkte
-Schaltgeste vor #248. Der Editor bleibt bis #249 in der regulären Kartenansicht.
+Binäre Schalter/Taster senden live bei Pointer-Tap `<400 ms` ihren konfigurierten
+Befehl; Hold `>=400 ms` öffnet nur die echte normale Karte (#248). Bewegung
+`>6` sichtbare Pixel bricht ab. Keine geratenen Befehle bei unbekanntem oder
+veraltetem Zustand. Andere Pins sowie Tastatur-/Screenreaderaktivierung
+öffnen die normale Karte direkt; damit bleibt die Bedienung zeitunabhängig
+zugänglich. Vorschau/Editor senden keine Pin-Befehle.
+Popupkopf: klassisches „×“ oben rechts statt Schließen-Text, gemeinsam mit
+dem Seitenpopup gestylt, mindestens 48×48px, zugänglich beschriftet und
+per Escape schließbar. Nach Hold keinen nachlaufenden Klick ausführen oder
+das neue Popup beim Loslassen sofort wieder schließen.
+Der Editor bleibt bis #249 in der regulären Kartenansicht.
 `forceCard` wird im gemeinsamen Widgetdialog angeboten, nicht in 18 separaten
 Formularvarianten. Ohne Opt-in keine Änderung normaler Freeform-Seiten.
 Randentscheidung: Pin bis zum Bildrand, normale Karte bei Bedarf ins Canvas
