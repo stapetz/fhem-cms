@@ -49,13 +49,16 @@ try {
           const flow = shadow.querySelector('.flow');
           const totals = shadow.querySelector('.totals');
           const label = `${editing ? 'editor' : 'live'} scale=${scale} sections=${count}`;
-          const tileBox = tile.getBoundingClientRect(), totalsBox = totals.getBoundingClientRect();
           check(Math.abs(parseFloat(getComputedStyle(host).getPropertyValue('--cms-freeform-scale')) - scale) < .02,
             `${label}: actual shared canvas scale`);
-          check(tile.scrollHeight <= tile.clientHeight + 1 && tile.scrollWidth <= tile.clientWidth + 1,
-            `${label}: large tile has no internal overflow ${tile.scrollHeight}/${tile.clientHeight}`);
+          check(tile.scrollWidth <= tile.clientWidth + 1, `${label}: no horizontal overflow`);
+          if (count < 8) check(tile.scrollHeight <= tile.clientHeight + 1,
+            `${label}: large tile has no vertical overflow ${tile.scrollHeight}/${tile.clientHeight}`);
+          tile.scrollTop = tile.scrollHeight;
+          const tileBox = tile.getBoundingClientRect(), totalsBox = totals.getBoundingClientRect();
           check(tileBox.bottom - totalsBox.bottom <= 18 * scale + 1 && totalsBox.bottom <= tileBox.bottom + 1,
-            `${label}: totals reach tile bottom`);
+            `${label}: totals reach tile bottom or are reachable by scrolling`);
+          tile.scrollTop = 0;
           check(flow.getBoundingClientRect().height > 170, `${label}: flow uses extra height`);
           const stations = [...shadow.querySelectorAll('.node:not([hidden])')];
           for (const station of stations) {

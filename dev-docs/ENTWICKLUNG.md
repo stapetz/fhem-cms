@@ -1135,7 +1135,9 @@ Livewerte werden nicht geaendert. Browserregression:
 `node --test --test-name-pattern='Solar und Energiefluss|phone landscape shared grid|standard widget typography|All mobile widget types' t/35_schema5_scaling.test.js`.
 Fixture `t/113_solar_fill.html` prueft Editor und Live auf gemeinsamem Canvas
 bei Skalierung 0.375/0.5, 0/1/3/8 Ertragskarten, fehlenden Summen, Leitungen,
-kurzen Kacheln und Groessenaenderungen; `t/85_solar_energy.html` prueft auch Phone und Tablet.
+kurzen Kacheln und Groessenaenderungen. Bei vielen Karten und grossen
+Schriftmassen bleibt die Kachel vertikal scrollbar; alle Summen sind erreichbar.
+`t/85_solar_energy.html` prueft auch Phone und Tablet.
 Safari-/iPhone-Abnahme bleibt erforderlich.
 
 ## Zentrale CMS-Verwaltung (dev, 1.10.0-dev, Refs #177)
