@@ -1,4 +1,5 @@
 import { validateLinkItems } from './link-widget.js';
+import { validatePinPage } from './pin-layout.js';
 import { freeformStartRect, isFreeform, resizeFreeformPage, syncSharedFreeformSize, validateFreeformCanvas, validateFreeformWidget } from './fcui-freeform-layout.js';
 
 const NAVIGATION = '__nav';
@@ -63,6 +64,7 @@ function validateLayout(config, includeNavigation = true) {
       throw new Error('Ungültige oder doppelte Seite');
     }
     pages.add(page.id);
+    validatePinPage(page, config.schemaVersion);
     if (Object.hasOwn(page, 'kiosk') && typeof page.kiosk !== 'boolean') {
       throw new Error('Ungültiger Kioskmodus der Seite');
     }
@@ -184,6 +186,8 @@ export function changePageLayout(config, pageId, mode, canvas, measurements) {
       delete page.layoutMode;
       delete page.canvas;
       delete page.navigationRect;
+      delete page.renderAsPins;
+      delete page.backgroundDim;
     }
     syncSharedFreeformSize(config);
     validateLayout(config);

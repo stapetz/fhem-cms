@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-24",
+  "version": "1.25.0-dev",
+  "title": "Grundlagen fuer Grundriss-Pins und Hintergrund-Abdunklung",
+  "changes": [
+    "Freeform-Seiten: Hintergrund in den Seiteneinstellungen um 0 bis 50 Prozent abdunkeln, mit Entwurf und echter Vorschau. Refs #245.",
+    "Optionale Schema-6-Seitenfelder in Browser und Perl streng validiert; gemeinsame Berechnung unverzerrter Bildflaechen und prozentualer Pin-Mittelpunkte vorbereitet.",
+    "Erstes Grundlageninkrement des Pin-Epics #243; Pin-Badges, Reading-Auswahl, Popup-Bedienung und Pin-Editor noch nicht verfuegbar. Kein wirkungsloser Pin-Schalter."
+  ]
+}

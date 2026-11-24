@@ -355,6 +355,12 @@ geändert, liefert die neue erste Seite das gemeinsame Bild. Hat sie keines,
 erscheint auf allen Seiten der Theme-Hintergrund. Die Einstellungen werden als Entwurf gespeichert und
 erst beim Veröffentlichen auf der Homepage sichtbar. Verwendete Hintergrundbilder
 sind im Assetmanager gegen Löschen geschützt.
+Auf **Freeform-Seiten** lässt sich das wirksame Bild mit
+**Hintergrund-Abdunklung** um 0–50 % abdunkeln. Der Regler wirkt nur auf
+das Bild, nicht auf Widgets oder Navigation, und gilt individuell pro Seite,
+auch wenn das Bild von der Startseite geerbt wird. Ohne Bild hat er keinen
+sichtbaren Effekt. Die Vorschau folgt unmittelbar; erst **Speichern**
+übernimmt die Änderung in den Entwurf, **Abbrechen** verwirft sie.
 Bei Liquid Glass gelten die Regler **Liquid-Effekt** (Unschärfe und Glanz) und **Transparenz**
 für alle Seiten. Die Seitenvorschau im Dialog aktualisiert sich beim Verschieben
 und verwendet das wirksame Seitenbild. Erst

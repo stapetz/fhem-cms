@@ -1,7 +1,9 @@
 import { DEFAULT_CANVAS, fitFreeformRect, freeformReadingOrder } from './fcui-freeform-layout.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
+import { validatePinPage } from './pin-layout.js';
 
 export function mountFreeform(root, page, navigation, render, {background, editing, phone, tablet, navigationGrid, columns, grid} = {}) {
+  validatePinPage(page, 6);
   const doc = root.ownerDocument;
   const browser = doc.defaultView;
   const box = className => Object.assign(doc.createElement('div'), {className});
@@ -30,7 +32,12 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     pane.append(grid);
     canvas.prepend(pane);
   }
-  if (background) viewport.style.setProperty('--cms-canvas-image', `url("${new URL(background, browser.location.href).href}")`);
+  if (background) {
+    const image = `url("${new URL(background, browser.location.href).href}")`;
+    const dim = page.backgroundDim ?? 0;
+    const shade = dim ? `linear-gradient(rgb(0 0 0 / ${dim}), rgb(0 0 0 / ${dim})), ` : '';
+    viewport.style.setProperty('--cms-canvas-image', `${shade}${image}`);
+  }
   for (const widget of page.widgets) {
     const wrapper = box('cms-freeform-widget');
     wrapper.dataset.widgetId = widget.id;
