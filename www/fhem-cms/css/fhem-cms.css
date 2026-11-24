@@ -2360,6 +2360,36 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   max-width: calc(100% - 2 * (var(--cms-freeform-handle-size) + 2px));
 }
 .cms-freeform-canvas .cms-widget-drag { cursor: grab; touch-action: none; }
+.cms-freeform-pin > .cms-widget-drag {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 48px;
+  min-height: 48px;
+  pointer-events: auto;
+  border-radius: 999px;
+}
+.cms-freeform-canvas > .cms-freeform-pin > .cms-widget-tools {
+  --cms-freeform-scale: 1;
+  top: auto;
+  bottom: calc(100% + 6px);
+  right: 0;
+  max-width: min(320px, calc(100vw - 16px));
+}
+.cms-freeform-pin.cms-pin-dragging > .cms-widget-tools { visibility: hidden; }
+.cms-pin-position {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 8;
+  padding: .2rem .4rem;
+  border-radius: .25rem;
+  color: var(--cms-text);
+  background: var(--cms-surface-raised);
+  font: 14px/1.4 system-ui, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
 .cms-grid-guides .cms-freeform-canvas::before {
   content: '';
   position: absolute;

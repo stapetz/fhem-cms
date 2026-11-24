@@ -272,6 +272,15 @@ Widgettitel lassen sich global links, zentriert oder rechts ausrichten. Ob ein T
 
 '''Einfügen''' enthält Widget hinzufügen und Gerät hinzufügen. Vorhandene Widgets lassen sich direkt am Widget duplizieren. Die freigegebene globale FHEM-CMS Administration steht unter '''Bearbeiten'''. '''Ansicht → Raster anzeigen''' merkt die letzte Auswahl dauerhaft pro CMS im verwendeten Browser, auch für spätere Besuche; auf anderen Geräten gilt die dortige Auswahl.
 
+=== Pin-Editor (neu auf dev, noch nicht freigegeben) ===
+
+Auf Freeform-Seiten mit '''Widgets als Pins darstellen''' zeigt auch der Editor
+kompakte Pins. Anklicken blendet die gemeinsamen Werkzeuge ein; Ziehen
+positioniert bildbezogen in Prozent mit zwei Nachkommastellen. Pfeile bewegen
+um einen Canvaspixel, Shift+Pfeile um zehn; Escape verwirft die laufende Geste.
+Neue Pins starten in der Mitte. Normale Kartenmasse bleiben erhalten.
+Das neutrale '''#''' bei Wertanzeigen ist ein Typsymbol, kein Menue.
+
 === Theme-Manager und Hintergrundbilder ===
 
 Unter '''Bearbeiten → Seiteneinstellungen''' stehen '''Forest Green''', '''Hell''',

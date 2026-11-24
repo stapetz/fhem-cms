@@ -2,7 +2,7 @@ import { pinReadingRaw, pinReadingValues } from './pin-readings.js';
 
 export const PIN_TYPES = Object.freeze({
   thermostat: {icon: '♨'},
-  'fhem-value': {icon: '≡'},
+  'fhem-value': {icon: '#'},
   'fhem-switch': {icon: '⏻'},
   'fhem-button': {icon: '●'},
   'fhem-clock': {icon: '◷', forceCard: true},

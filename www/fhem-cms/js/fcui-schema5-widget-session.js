@@ -111,6 +111,7 @@ export class Schema5WidgetSession {
     const candidate = structuredClone(widget);
     if (this.#widget.rect) {
       candidate.rect = structuredClone(this.#widget.rect);
+      if (this.#widget.position !== undefined) candidate.position = structuredClone(this.#widget.position);
       if (this.#widget.grid === undefined) delete candidate.grid;
       else candidate.grid = structuredClone(this.#widget.grid);
       if (this.#widget.hideOnMobile === undefined) delete candidate.hideOnMobile;

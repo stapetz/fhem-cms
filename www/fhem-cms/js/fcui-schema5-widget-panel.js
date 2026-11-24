@@ -1,6 +1,7 @@
 import { Schema5WidgetSession } from './fcui-schema5-widget-session.js';
 import { schema5GridItems } from './fcui-schema5-layout.js';
 import { freeformStartRect, isFreeform } from './fcui-freeform-layout.js';
+import { centerNewPin } from './pin-layout.js';
 import { createWidgetElement } from './widget-factory.js';
 import { openDevicePicker } from './device-picker.js';
 import { deviceWidgetSuggestions } from './device-widget-suggestions.js';
@@ -240,6 +241,9 @@ export class Schema5WidgetPanel {
       grid: { col: 1, row: 1, w: 4, h: 3 } }];
     if (isFreeform(page)) {
       widget.rect = freeformStartRect({}, page.widgets.length, page.canvas, Number(config.settings.gridColumns));
+      if (page.renderAsPins === true) {
+        centerNewPin(widget, page.canvas);
+      }
       delete widget.grid;
     }
     const candidate = structuredClone(config);

@@ -351,8 +351,8 @@ export class Schema5Editor {
         showGrid: () => this.#showGrid,
         selectedWidget: this.#freeformSelection?.pageId === (this.#browser.location.hash.slice(2) || config.pages[0].id)
           ? this.#freeformSelection.id : undefined,
-        onFreeformChange: (pageId, id, rect, hide) => {
-          this.#layoutSavePromise = this.#saveFreeform(pageId, id, rect, hide);
+        onFreeformChange: (pageId, id, rect, hide, position) => {
+          this.#layoutSavePromise = this.#saveFreeform(pageId, id, rect, hide, position);
           return this.#layoutSavePromise;
         },
         onChange: (pageId, items) => {
@@ -474,7 +474,7 @@ export class Schema5Editor {
     }
   }
 
-  async #saveFreeform(pageId, id, rect, hide) {
+  async #saveFreeform(pageId, id, rect, hide, position) {
     if (!this.#active || this.#suspended || !this.#view || this.#layoutSaving) return;
     this.#layoutSaving = true;
     const generation = ++this.#generation;
@@ -491,6 +491,8 @@ export class Schema5Editor {
       } else {
         const widget = page.widgets.find(entry => entry.id === id);
         widget.rect = rect;
+        if (position !== undefined) widget.position = position;
+        else delete widget.position;
         if (hide !== undefined) widget.hideOnMobile = hide;
       }
       this.#freeformSelection = {pageId, id};

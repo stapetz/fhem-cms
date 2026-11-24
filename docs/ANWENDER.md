@@ -408,9 +408,14 @@ Uhr, Text und LinkWidget bleiben standardmäßig normale Karten. Im jeweiligen
 Widgetdialog können Sie mit **Nicht als Pin darstellen (normale Kachel behalten)**
 die Darstellung auf Pin-Seiten ändern.
 Im mobilen Hochformat erscheinen stets normale Karten untereinander.
-Der Editor verwendet vorerst ebenfalls die normalen Kacheln zum Bearbeiten
-und Positionieren; normale Kachelgrößen und gespeicherte Positionen bleiben
-beim Einschalten der Pins erhalten.
+**Neu auf dev:** Auch der Editor zeigt kompakte Pins. Anklicken wählt aus und
+blendet die Werkzeuge darüber ein; Ziehen verschiebt direkt auf dem Grundriss.
+X/Y werden in Prozent des Bildes angezeigt und mit zwei Nachkommastellen
+gespeichert. Pfeile verschieben um einen Canvaspixel, Shift+Pfeile um zehn.
+Escape oder eine abgebrochene Touchgeste verwirft die laufende Bewegung.
+Neue Widgets starten in der Bildmitte. Normale Kachelgrößen bleiben erhalten;
+bei Rückkehr zur Kachelansicht werden Karten am Canvasrand eingepasst.
+Das `#` auf Wert-Pins ist nur das Typsymbol der Wertanzeige, kein Menü.
 
 Die zusätzliche Smartphone-Quervorschau zeigt die aktuelle Seite und das wirksame
 Seitenbild. Änderungen an Darstellung, Hintergrund, Rahmen, Titelausrichtung und
