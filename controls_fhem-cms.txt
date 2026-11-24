@@ -1,4 +1,4 @@
-UPD 2026-11-25_00:27:53 199692 FHEM/01_FHEMCMS.pm
+UPD 2026-11-25_00:47:14 199692 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-20_06:26:48 29073 FHEM/lib/FHEMCMS/Weather.pm
@@ -8,7 +8,7 @@ UPD 2026-11-20_06:54:39 18385 www/fhem-cms/components/cms-button.js
 UPD 2026-11-22_12:10:28 19180 www/fhem-cms/components/cms-calllist.js
 UPD 2026-11-22_11:11:58 23040 www/fhem-cms/components/cms-chart.js
 UPD 2026-11-22_11:11:58 15539 www/fhem-cms/components/cms-clock.js
-UPD 2026-11-25_00:27:53 41165 www/fhem-cms/components/cms-graph.js
+UPD 2026-11-25_00:47:14 43335 www/fhem-cms/components/cms-graph.js
 UPD 2026-11-22_11:00:00 22868 www/fhem-cms/components/cms-html.js
 UPD 2026-11-20_06:54:39 18737 www/fhem-cms/components/cms-icon.js
 UPD 2026-11-24_23:04:31 29177 www/fhem-cms/components/cms-link.js
@@ -78,7 +78,7 @@ UPD 2026-11-22_11:00:00 81446 www/fhem-cms/js/fhem-cms.js
 UPD 2026-11-22_10:25:12 10205 www/fhem-cms/js/freehtml-css.js
 UPD 2026-11-22_10:40:34 18238 www/fhem-cms/js/freehtml-diagnostics.js
 UPD 2026-11-22_10:40:34 26626 www/fhem-cms/js/freehtml.js
-UPD 2026-11-25_00:27:53 46 www/fhem-cms/js/frontend-version.js
+UPD 2026-11-25_00:47:14 46 www/fhem-cms/js/frontend-version.js
 UPD 2026-11-24_23:04:31 2191 www/fhem-cms/js/graph-data.js
 UPD 2026-11-13_15:48:11 930 www/fhem-cms/js/grid-preference.js
 UPD 2026-11-24_11:00:18 5062 www/fhem-cms/js/icon-picker.js
