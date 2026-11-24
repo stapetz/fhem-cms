@@ -8,6 +8,7 @@ import { diagnoseFreeHtml } from '../www/fhem-cms/js/freehtml-diagnostics.js';
 import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
 import { Schema5WidgetSession } from '../www/fhem-cms/js/fcui-schema5-widget-session.js';
+import { FRONTEND_VERSION } from '../www/fhem-cms/js/frontend-version.js';
 const output = document.querySelector('#result');
 let checks = 0;
 const check = (value, message) => { if (!value) throw new Error(message); checks++; };
@@ -413,7 +414,7 @@ try {
   diagnosticWidget.services = { saveWidget: async () => {} };
   document.body.append(diagnosticWidget);
   diagnosticWidget.openConfig();
-  check(diagnosticWidget.shadowRoot.querySelector('[data-frontend-version]').textContent.includes('1.13.0'),
+  check(diagnosticWidget.shadowRoot.querySelector('[data-frontend-version]').textContent.includes(FRONTEND_VERSION),
     'HTML dialog reports the loaded code-checking component version');
   const editor = diagnosticWidget.shadowRoot.querySelector('[name="html"]');
   const diagnosticPanel = diagnosticWidget.shadowRoot.querySelector('[data-diagnostic]');

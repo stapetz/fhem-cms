@@ -202,9 +202,11 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       const size = wrapper.querySelector('.cms-widget-dimensions');
       if (size) size.hidden = true;
     });
-    grid?.on('dragstop resizestop', (_event, wrapper) => {
-      fitWidgetTools(wrapper, gridRoot.closest('.cms-shared-grid-pane') ?? gridRoot);
-      if (!destroyed) editing.onChange(grid.save(false));
+    grid?.on('dragstop resizestop', () => {
+      if (destroyed) return;
+      const selected = gridRoot.querySelector('.cms-widget-selected');
+      if (selected) fitWidgetTools(selected, gridRoot.closest('.cms-shared-grid-pane') ?? gridRoot);
+      editing.onChange(grid.save(false));
     });
   }
   const stopEditor = frame && editing?.onFreeformChange
