@@ -880,6 +880,7 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     push(@lines, POSIX::strftime('%Y-%m-%d_%H:%M:%S', localtime($now)) . ' Temp humidity: 55');
     push(@lines, POSIX::strftime('%Y-%m-%d_%H:%M:%S', localtime($now)) . ' Other temperature: 99');
     push(@lines, POSIX::strftime('%Y-%m-%d_%H:%M:%S', localtime($now)) . ' Temp state: on');
+    push(@lines, POSIX::strftime('%Y-%m-%d_%H:%M:%S', localtime($now - 9 * 86400)) . ' Temp old: 4');
     write_file($logFile, join("\n", @lines) . "\n");
     $main::defs{HistLog} = {NAME => 'HistLog', TYPE => 'FileLog', REGEXP => 'Temp:.*', logfile => $logFile};
     %main::FHEMCMS_HISTORY_CACHE = ();
@@ -901,7 +902,13 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
     my $readings = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Temp'));
     is($readings->{source}, 'filelog', 'logreadings falls back to the FileLog');
-    is_deeply($readings->{readings}, ['humidity', 'state', 'temperature'], 'logreadings lists the readings logged for the device');
+    is_deeply($readings->{readings}, ['humidity', 'old', 'state', 'temperature'],
+        'logreadings includes readings older than seven days');
+    {
+        local $main::FHEMCMS_HISTORY_MAX_LINES = 3;
+        my $partial = JSON::PP::decode_json(FHEMCMS_LogReadingsData($name, 'Temp', 'filelog'));
+        ok($partial->{truncated}, 'limited FileLog reading discovery reports incomplete results');
+    }
 
     my $fileHistoryPending = JSON::PP::decode_json(
         FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'raw'));
@@ -930,6 +937,41 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     is($min, 20, 'bucket minimum is kept');
     is($max, 29, 'bucket maximum is kept');
     is_deeply($bucketed->{summary}, $history->{summary}, 'summary is independent of bucket sizes');
+    my $customRange = ($now - 3600) . '_' . $now;
+    %main::FHEMCMS_HISTORY_CACHE = ();
+    FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', $customRange, '1w', 'filelog');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[-1]{arg}));
+    my $custom = JSON::PP::decode_json(
+        FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', $customRange, '1w', 'filelog'));
+    is($custom->{from}, $now - 3600, 'custom history retains its exact start');
+    is($custom->{to}, $now, 'custom history retains its exact end');
+    is($custom->{step}, 10080, 'custom history supports calendar weeks');
+    my $dec31 = Time::Local::timelocal(0, 0, 12, 31, 11, 2023);
+    my $jan1 = Time::Local::timelocal(0, 0, 12, 1, 0, 2024);
+    isnt(FHEMCMS_HistoryBucket($dec31, '1w', 10080), FHEMCMS_HistoryBucket($jan1, '1w', 10080),
+        'calendar weeks start on Monday at year boundaries');
+    isnt(FHEMCMS_HistoryBucket($dec31, '1mo', 43200), FHEMCMS_HistoryBucket($jan1, '1mo', 43200),
+        'calendar months respect year boundaries');
+    isnt(FHEMCMS_HistoryBucket($dec31, '1y', 525600), FHEMCMS_HistoryBucket($jan1, '1y', 525600),
+        'calendar years respect year boundaries');
+    {
+        no warnings 'redefine';
+        local *main::FHEMCMS_HistoryRows = sub { return ([[$dec31, 2], [$jan1, 4]], 0, undef); };
+        for my $granularity ('1w', '1mo', '1y') {
+            my ($encoded, $error) = FHEMCMS_HistoryData($name, 'filelog', $main::defs{HistLog},
+                'Temp', 'temperature', ($dec31 - 1) . '_' . ($jan1 + 1), $granularity);
+            is($error, undef, "$granularity history aggregation succeeds");
+            is_deeply([map { $_->[1] } @{JSON::PP::decode_json($encoded)->{points}}], [2, 4],
+                "$granularity history keeps distinct calendar buckets");
+        }
+    }
+    like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '1_400000000', 'auto'),
+        qr/Zeitraum/, 'custom history rejects an excessive span');
+    my $tenStart = Time::Local::timegm(0, 0, 0, 1, 0, 2020);
+    my $tenEnd = Time::Local::timegm(0, 0, 0, 1, 0, 2030);
+    ok(scalar(FHEMCMS_HistoryBounds("${tenStart}_${tenEnd}", $now)), 'ten calendar years are accepted');
+    ok(!scalar(FHEMCMS_HistoryBounds($tenStart . '_' . ($tenEnd + 7200), $now)),
+        'more than ten years plus DST tolerance is rejected');
     {
         local $main::FHEMCMS_HISTORY_MAX_ROWS = 3;
         my ($limited, $limitedError) = FHEMCMS_HistoryData($name, 'filelog', $main::defs{HistLog},
@@ -954,6 +996,12 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
             {tstamp => 'broken', value => '1'});
     };
     $main::defs{HistDb} = {NAME => 'HistDb', TYPE => 'DbLog'};
+    {
+        no warnings 'redefine';
+        local *main::DbLog_Get = sub { die 'database unavailable'; };
+        like(FHEMCMS_LogReadingsData($name, 'Unknown', 'auto'), qr/DbLog-Abfrage fehlgeschlagen/,
+            'DbLog failure is not hidden by an empty FileLog fallback');
+    }
     %main::FHEMCMS_HISTORY_CACHE = ();
     %main::FHEMCMS_HISTORY_JOBS = ();
     @historyJobs = ();

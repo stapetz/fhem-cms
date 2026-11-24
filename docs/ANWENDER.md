@@ -273,11 +273,9 @@ erst das Veröffentlichen aktiviert sie live. Bestehende Seiten behalten ohne
 ### Graph: mehrere historische Datenreihen
 
 Unter **Einfügen → Widget hinzufügen → Graph** können bis zu 20 Device- und
-Reading-Kombinationen ausgewählt werden. Geräte mit erkannten Datenlogs stehen
-in der Geräteauswahl zuerst; die Logprüfung läuft beim Öffnen im Hintergrund.
-Bei FileLog berücksichtigt die automatische Reading-Erkennung nur die letzten
-sieben Tage. Ein älteres Reading kann im Feld **Reading manuell** angegeben
-werden; diese Eingabe hat Vorrang vor der Auswahlliste.
+Reading-Kombinationen ausgewählt werden. Die Logprüfung startet erst nach
+der Geräteauswahl. Bei FileLog werden bis zu zehn Jahre durchsucht; wird das
+Zeilenlimit erreicht, meldet der Dialog eine möglicherweise unvollständige Liste.
 Je Reihe sind Quelle (automatisch, DbLog oder FileLog), Legendentext und Farbe
 wählbar. Automatisch bevorzugt DbLog und verwendet bei fehlenden Werten ein
 passendes FileLog, sofern keine andere CMS-Quellenpräferenz gesetzt ist.
@@ -292,6 +290,13 @@ echte Verlaufsdaten, ohne einen Entwurf zu speichern. Klick auf einen
 Legendeneintrag blendet die Reihe ein oder aus. Zeitraum und Granularität sind
 im Dialog wählbar; live kann der Zeitraum gewechselt werden. Bei fehlenden
 Daten oder nicht verfügbarer Quelle erscheint eine Meldung.
+Neben festen Zeiträumen kann ein eigener Zeitraum von bis zu zehn Jahren
+gewählt oder durch Ziehen im Diagramm markiert werden. Auch die Auflösung und
+das Raster lassen sich in der Ansicht ändern. Wochen, Monate und Jahre werden
+als Kalenderzeiträume ausgewertet. Für jede Reihe sind Achsseite, Linientyp,
+Linienstärke und eine Flächenfüllung konfigurierbar; die Y-Achsen links und
+rechts besitzen getrennte automatische Wertebereiche. Beim Bewegen der Maus
+zeigt das Diagramm die jeweils nächstgelegenen Messwerte und Zeitpunkte.
 
 ### Gerät zuerst hinzufügen (ab 1.11.0)
 

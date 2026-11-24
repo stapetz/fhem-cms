@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.33.0-dev';
+our $FHEMCMS_VERSION = '1.34.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -133,7 +133,7 @@ sub FHEMCMS_Get {
     }
 
     if ($cmd eq 'history') {
-        return 'history erwartet <device> <reading> [24h|7d|30d|365d] [auto|raw|15m|1h|1d] [auto|dblog|filelog]'
+        return 'history erwartet <device> <reading> [Zeitraum] [auto|raw|15m|1h|1d|1w|1mo|1y] [auto|dblog|filelog]'
             if (@args < 2 || @args > 5);
         return FHEMCMS_History($name, @args);
     }
@@ -1178,7 +1178,7 @@ sub FHEMCMS_ValidateConfig {
                     ['title', 'showTitle', 'unit', 'range', 'granularity', 'source']);
             } elsif ($widget->{type} eq 'fhem-graph') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'series', 'chartType', 'aggregation', 'range', 'granularity', 'grid'],
-                    ['title', 'showTitle']);
+                    ['title', 'showTitle', 'axisLabelX', 'axisLabelLeft', 'axisLabelRight', 'showGrid']);
             } elsif ($widget->{type} eq 'fhem-calllist') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
@@ -1287,16 +1287,26 @@ sub FHEMCMS_ValidateConfig {
                             || $widget->{icon} !~ $FHEMCMS_ICON_NAME));
             } elsif ($widget->{type} eq 'fhem-graph') {
                 for my $option (['chartType', qr/\A(?:line|stack|pie)\z/],
-                    ['aggregation', qr/\A(?:last|average)\z/], ['range', qr/\A(?:24h|7d|30d|365d)\z/],
-                    ['granularity', qr/\A(?:auto|raw|15m|1h|1d)\z/]) {
+                    ['aggregation', qr/\A(?:last|average)\z/],
+                    ['granularity', qr/\A(?:auto|raw|15m|1h|1d|1w|1mo|1y)\z/]) {
                     my ($field, $pattern) = @{$option};
                     return "Ungueltiger Wert fuer $field"
                         if (!defined($widget->{$field}) || ref($widget->{$field}) || $widget->{$field} !~ $pattern);
                 }
+                return 'Ungueltiger Wert fuer range'
+                    if (!scalar(FHEMCMS_HistoryBounds($widget->{range}, time())));
+                for my $field ('axisLabelX', 'axisLabelLeft', 'axisLabelRight') {
+                    return "Ungueltiger Wert fuer $field"
+                        if (exists($widget->{$field}) && (!defined($widget->{$field}) || ref($widget->{$field})
+                            || length($widget->{$field}) > 64 || $widget->{$field} =~ /[\x00-\x1f\x7f]/));
+                }
+                return 'Ungueltiger Wert fuer showGrid'
+                    if (exists($widget->{showGrid}) && !$isBool->($widget->{showGrid}));
                 return 'Ungueltige Graph-Datenreihen'
                     if (ref($widget->{series}) ne 'ARRAY' || @{$widget->{series}} < 1 || @{$widget->{series}} > 20);
                 for my $series (@{$widget->{series}}) {
-                    $err = $exact->($series, 'Graph-Datenreihe', ['device', 'reading', 'source', 'label', 'color'], []);
+                    $err = $exact->($series, 'Graph-Datenreihe', ['device', 'reading', 'source', 'label', 'color'],
+                        ['axis', 'lineStyle', 'lineWidth', 'fill']);
                     return $err if ($err);
                     return 'Ungueltiges Graph-Device oder Reading'
                         if (!$isName->($series->{device}) || !$isName->($series->{reading}));
@@ -1307,6 +1317,16 @@ sub FHEMCMS_ValidateConfig {
                             || $series->{label} =~ /[\x00-\x1f\x7f]/);
                     return 'Ungueltige Graph-Farbe'
                         if (!defined($series->{color}) || ref($series->{color}) || $series->{color} !~ /\A#[0-9a-fA-F]{6}\z/);
+                    return 'Ungueltige Graph-Achse'
+                        if (exists($series->{axis}) && (!defined($series->{axis}) || ref($series->{axis})
+                            || $series->{axis} !~ /\A(?:left|right)\z/));
+                    return 'Ungueltiger Linientyp'
+                        if (exists($series->{lineStyle}) && (!defined($series->{lineStyle}) || ref($series->{lineStyle})
+                            || $series->{lineStyle} !~ /\A(?:solid|dashed|dotted|points)\z/));
+                    return 'Ungueltige Linienstaerke'
+                        if (exists($series->{lineWidth}) && !$isInt->($series->{lineWidth}, 1, 10));
+                    return 'Ungueltige Linienfuellung'
+                        if (exists($series->{fill}) && !$isBool->($series->{fill}));
                 }
             } elsif ($widget->{type} eq 'fhem-chart') {
                 for my $field ('device', 'reading') {
@@ -2181,8 +2201,35 @@ our $FHEMCMS_HISTORY_MAX_POINTS = 400;
 our $FHEMCMS_HISTORY_MAX_LINES = 2000000;
 our $FHEMCMS_HISTORY_MAX_ROWS = 500000;
 my %FHEMCMS_HISTORY_HOURS = ('24h' => 24, '7d' => 168, '30d' => 720, '365d' => 8760);
-my %FHEMCMS_HISTORY_STEPS = (auto => 0, raw => 0, '15m' => 15, '1h' => 60, '1d' => 1440);
-my @FHEMCMS_HISTORY_NICE_STEPS = (1, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440);
+my %FHEMCMS_HISTORY_STEPS = (auto => 0, raw => 0, '15m' => 15, '1h' => 60, '1d' => 1440,
+    '1w' => 10080, '1mo' => 43200, '1y' => 525600);
+my @FHEMCMS_HISTORY_NICE_STEPS = (1, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 10080, 43200, 525600);
+
+sub FHEMCMS_HistoryBounds {
+    my ($range, $now) = @_;
+    return () if (!defined($range) || ref($range));
+    if (exists($FHEMCMS_HISTORY_HOURS{$range})) {
+        return ($now - $FHEMCMS_HISTORY_HOURS{$range} * 3600, $now);
+    }
+    return () if ($range !~ /\A(\d{1,10})_(\d{1,10})\z/);
+    my ($from, $to) = ($1 + 0, $2 + 0);
+    return () if ($to <= $from || $to > 4102444800);
+    my ($second, $minute, $hour, $day, $month, $year) = gmtime($from);
+    $year += 1910;
+    $day = 28 if ($month == 1 && $day == 29
+        && ($year % 4 != 0 || ($year % 100 == 0 && $year % 400 != 0)));
+    my $limit = Time::Local::timegm($second, $minute, $hour, $day, $month, $year);
+    return () if ($to > $limit + 3600);
+    return ($from, $to);
+}
+
+sub FHEMCMS_HistoryBucket {
+    my ($timestamp, $granularity, $step) = @_;
+    return strftime('%G-%V', localtime($timestamp)) if ($granularity eq '1w');
+    return strftime('%Y-%m', localtime($timestamp)) if ($granularity eq '1mo');
+    return strftime('%Y', localtime($timestamp)) if ($granularity eq '1y');
+    return int($timestamp / ($step * 60));
+}
 
 sub FHEMCMS_LogDevices {
     my ($cmsName, $type, $attribute) = @_;
@@ -2211,17 +2258,19 @@ sub FHEMCMS_FileLogFiles {
         my $file = $fileLog->{logfile};
         $file =~ s/%L/$logdir/g;
         $file = strftime($file, localtime($day));
-        $files{$file} = 1 if (-f $file && -r $file);
+        $files{$file} = $day if (-f $file && -r $file);
     }
-    return sort keys %files;
+    return sort { $files{$a} <=> $files{$b} || $a cmp $b } keys %files;
 }
 
 # Liest passende FileLog-Zeilen; $onLine erhaelt (epoch, reading, value).
 sub FHEMCMS_ScanFileLog {
-    my ($fileLog, $device, $from, $to, $onLine) = @_;
+    my ($fileLog, $device, $from, $to, $onLine, $newestFirst) = @_;
     my $lines = 0;
     my $truncated = 0;
-    FILE: for my $file (FHEMCMS_FileLogFiles($fileLog, $from, $to)) {
+    my @files = FHEMCMS_FileLogFiles($fileLog, $from, $to);
+    @files = reverse(@files) if ($newestFirst);
+    FILE: for my $file (@files) {
         open(my $fh, '<', $file) or next;
         while (my $line = <$fh>) {
             if (++$lines > $FHEMCMS_HISTORY_MAX_LINES) {
@@ -2330,17 +2379,22 @@ sub FHEMCMS_LogReadingsData {
         return 'DbLog ist nicht verfuegbar';
     }
 
-    my (%seen, $any);
+    my (%seen, $any, $truncated);
     my $now = time();
     for my $fileLog ($mode ne 'dblog' ? FHEMCMS_LogDevices($cmsName, 'FileLog', 'fileLog') : ()) {
         $any = 1;
-        FHEMCMS_ScanFileLog($fileLog, $device, $now - 7 * 86400, $now, sub { $seen{$_[1]} = 1; });
+        my $limited = FHEMCMS_ScanFileLog($fileLog, $device, $now - 3653 * 86400, $now,
+            sub { $seen{$_[1]} = 1 if (length($_[1]) <= 128); }, 1);
+        $truncated ||= $limited;
     }
     return $json->encode({source => 'dblog', readings => []})
         if (!$any && $dbError && $dbError eq 'DbLog enthaelt keine Readings fuer dieses Device');
     return $dbError if (!$any && defined($dbError));
     return 'Kein DbLog- oder FileLog-Device gefunden' if (!$any);
-    return $json->encode({source => 'filelog', readings => [sort keys %seen]});
+    return $dbError if (!keys(%seen) && defined($dbError)
+        && $dbError ne 'DbLog enthaelt keine Readings fuer dieses Device');
+    return $json->encode({source => 'filelog', readings => [sort keys %seen],
+        truncated => ($truncated ? JSON::PP::true : JSON::PP::false)});
 }
 
 sub FHEMCMS_HistoryRows {
@@ -2381,9 +2435,9 @@ sub FHEMCMS_HistoryRows {
 
 sub FHEMCMS_HistoryData {
     my ($cmsName, $kind, $logHash, $device, $reading, $range, $granularity) = @_;
-    my $to = time();
-    my $hours = $FHEMCMS_HISTORY_HOURS{$range};
-    my $from = $to - $hours * 3600;
+    my ($from, $to) = FHEMCMS_HistoryBounds($range, time());
+    return (undef, 'Ungueltiger Zeitraum') if (!defined($from));
+    my $hours = ($to - $from) / 3600;
     my ($rows, $truncated, $error) = FHEMCMS_HistoryRows($cmsName, $kind, $logHash, $device, $reading, $from, $to);
     return (undef, $error) if ($error);
 
@@ -2401,7 +2455,8 @@ sub FHEMCMS_HistoryData {
     }
     my $step = $FHEMCMS_HISTORY_STEPS{$granularity};
     $step = 0 if ($granularity eq 'raw' && @rows <= $FHEMCMS_HISTORY_MAX_POINTS);
-    $step = $minStep if ($granularity eq 'auto' || ($step > 0 && $step < $minStep)
+    $step = $minStep if ($granularity eq 'auto' || ($step > 0 && $step < $minStep
+        && $granularity !~ /\A(?:1w|1mo|1y)\z/)
         || ($granularity eq 'raw' && @rows > $FHEMCMS_HISTORY_MAX_POINTS));
 
     my @points;
@@ -2411,7 +2466,7 @@ sub FHEMCMS_HistoryData {
         my %buckets;
         my @order;
         for my $row (@rows) {
-            my $id = int($row->[0] / ($step * 60));
+            my $id = FHEMCMS_HistoryBucket($row->[0], $granularity, $step);
             my $bucket = $buckets{$id};
             if (!$bucket) {
                 $bucket = $buckets{$id} = {count => 0, time => 0, sum => 0, min => $row->[1], max => $row->[1]};
@@ -2521,7 +2576,7 @@ sub FHEMCMS_HistoryWorker {
         return '' if (!FHEMCMS_ValidName($request->{logdevice})
             || ($request->{kind} // '') !~ /\A(?:dblog|filelog)\z/
             || !defined($request->{reading}) || $request->{reading} !~ /\A[A-Za-z0-9_.-]{1,128}\z/
-            || !exists($FHEMCMS_HISTORY_HOURS{$request->{range} // ''})
+            || !scalar(FHEMCMS_HistoryBounds($request->{range}, time()))
             || !exists($FHEMCMS_HISTORY_STEPS{$request->{granularity} // ''})
             || ($request->{source} // '') !~ /\A(?:auto|dblog|filelog)\z/
             || ($request->{mode} // '') !~ /\A(?:auto|dblog|filelog)\z/
@@ -2605,7 +2660,7 @@ sub FHEMCMS_History {
     $range //= '24h';
     $granularity //= 'auto';
     $source //= 'auto';
-    return 'Ungueltiger Zeitraum' if (!exists($FHEMCMS_HISTORY_HOURS{$range}));
+    return 'Ungueltiger Zeitraum' if (!scalar(FHEMCMS_HistoryBounds($range, time())));
     return 'Ungueltige Granularitaet' if (!exists($FHEMCMS_HISTORY_STEPS{$granularity}));
     return 'Ungueltige Quelle' if ($source !~ /\A(?:auto|dblog|filelog)\z/);
 

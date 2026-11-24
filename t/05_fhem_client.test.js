@@ -116,6 +116,28 @@ test('history waits for asynchronous DbLog results and surfaces worker errors', 
   await assert.rejects(client.history('Temp', 'temperature'), /DbLog-Abfrage fehlgeschlagen/);
 });
 
+test('history accepts bounded custom ranges and calendar granularities', async () => {
+  const commands = [];
+  globalThis.fetch = async (url, options) => {
+    if (!options.method) return new Response('', { headers: { 'X-FHEM-csrfToken': 'token' } });
+    commands.push(options.body.get('cmd'));
+    return new Response(JSON.stringify({source:'filelog', points:[]}));
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  for (const granularity of ['1w', '1mo', '1y']) {
+    await client.history('Temp', 'temperature', '1700000000_1700100000', granularity, 'filelog');
+  }
+  assert.equal(commands.length, 3);
+  assert.match(commands[1], /1700000000_1700100000 1mo filelog$/);
+  await assert.rejects(client.history('Temp', 'temperature', '1_400000000', 'auto'), /Ungültige Verlaufsabfrage/);
+  await assert.rejects(client.history('Temp', 'temperature', '20_10', 'auto'), /Ungültige Verlaufsabfrage/);
+  const start = Date.UTC(2020, 0, 1) / 1000;
+  const end = Date.UTC(2030, 0, 1) / 1000;
+  await client.history('Temp', 'temperature', `${start}_${end}`, '1y');
+  await assert.rejects(client.history('Temp', 'temperature', `${start}_${end + 7200}`, 'auto'), /Ungültige Verlaufsabfrage/);
+  assert.equal(commands.length, 4, 'invalid ranges never reach FHEM');
+});
+
 test('log reading discovery polls asynchronous results and validates source responses', async () => {
   const client = new FhemClient('cms', 'https://fhem.example/fhem/');
   const commands = [];

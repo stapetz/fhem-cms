@@ -141,12 +141,16 @@ werden getrennt gestapelt.
 `fhem-graph` ist ein eigener Typ und laesst bestehende `fhem-chart`-Widgets
 unveraendert. Der Dialog verwaltet bis zu 20 Reihen mit eigener Logquelle,
 Legende und Farbe, zeigt echte Daten im Liniendiagramm, Stapel oder Torte
-und speichert ausschliesslich einen Entwurf. Die Geraeteauswahl prueft
-Logs begrenzt parallel und meldet fehlende Daten bzw. Fehler getrennt.
-Logreadings findet FileLog-Readings anhand der letzten sieben Tage; eine
-fehlende Erkennung beweist daher nicht, dass aeltere Logdaten fehlen.
-Fuer aeltere Readings bietet der Graphdialog eine validierte manuelle Eingabe,
-die die ausgewaehlte Reading-Liste ueberschreibt.
+und speichert ausschliesslich einen Entwurf. Die Geraeteauswahl fuehrt keine
+Logpruefungen durch; nach der Auswahl werden Readings und Fehler angezeigt.
+Logreadings durchsucht nach Auswahl bis zu zehn Jahre FileLog-Daten, neuere
+Dateien zuerst. Ein erreichtes Zeilenlimit wird explizit als moeglicherweise
+unvollstaendige Reading-Liste angezeigt.
+Graphen unterstuetzen frei waehlbare Zeitbereiche bis zehn Jahre,
+Kalenderwochen/-monate/-jahre, unabhaengige automatische Y-Achsen,
+Linienstile, -staerken und Fuellungen, Tooltip, Bereichsauswahl und ein
+in der Ansicht umschaltbares Raster. Das Backend validiert freie Zeitbereiche
+und berechnet Kalender-Buckets in der lokalen Zeitzone des FHEM-Servers.
 Regressionen: `prove t/01_fhemcms.t t/91_schema6_validation.t t/92_schema6_persistence.t`,
 `node --test t/115_graph_data.test.js` sowie der Browserfall
 `graph supports multiple log series` in `t/35_schema5_scaling.test.js`.

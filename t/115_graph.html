@@ -18,7 +18,7 @@ const until = async (condition, message) => {
   throw new Error(message);
 };
 try {
-  let writes = 0, saved;
+  let writes = 0, saved, readingCalls = 0;
   const calls = [];
   const graph = document.createElement('cms-graph');
   graph.style.cssText = 'width:min(600px,95vw);height:400px';
@@ -28,9 +28,11 @@ try {
       const base = device === 'Solar1' ? 2 : 3;
       return {points:[[1000,base],[2000,base+1]],summary:{last:base+1,average:base+.5},truncated:false};
     },
-    logReadings: async device => ({source:device === 'Solar1' ? 'dblog' : 'filelog',
-      readings:device === 'Empty' ? [] : ['power']}),
-    listAllDevices: async () => [{name:'Empty',type:'Dummy'}, {name:'Solar2',type:'Dummy'}, {name:'Solar1',type:'Dummy'}],
+    logReadings: async device => {
+      readingCalls++;
+      return {source:device === 'Solar1' ? 'dblog' : 'filelog', readings:device === 'Empty' ? [] : ['power']};
+    },
+    listAllDevices: async () => [{name:'Empty',type:'Dummy'}, {name:'Solar2',alias:'Garten',type:'Dummy'}, {name:'Solar1',type:'Dummy'}],
     saveWidget: async value => { writes++; saved = value; },
     deleteWidget: async () => { throw new Error('unexpected delete'); },
   };
@@ -42,6 +44,10 @@ try {
   document.body.append(graph);
   const root = graph.shadowRoot;
   await until(() => root.querySelectorAll('[data-svg] polyline').length === 2, 'two live lines not drawn');
+  const initialPlot = root.querySelector('[data-svg]');
+  const initialViewBox = initialPlot.viewBox.baseVal;
+  check(Math.abs(initialViewBox.width / initialViewBox.height - initialPlot.clientWidth / initialPlot.clientHeight) < .02,
+    'plot viewBox matches the available widget aspect ratio');
   check(calls.some(call => call.source === 'dblog') && calls.some(call => call.source === 'filelog'),
     'each series uses its selected log source');
   const liveLegend = root.querySelectorAll('[data-legend] button');
@@ -53,49 +59,100 @@ try {
   check(root.querySelectorAll('[data-svg] polyline').length === 2, 'legend restores a line');
   await graph.openConfig();
   const form = root.querySelector('form');
+  check(root.querySelector('[data-aggregation]').hidden, 'pie aggregation hidden for line charts');
   check(root.querySelector('dialog').getBoundingClientRect().right <= innerWidth + 1,
     'configuration dialog fits the viewport');
+  const fields = root.querySelector('.row');
+  check(Math.abs(fields.querySelector('[data-label]').getBoundingClientRect().height
+    - fields.querySelector('[data-reading]').getBoundingClientRect().height) < 1,
+    'row text and select controls have equal heights');
   await until(() => root.querySelectorAll('[data-preview] polyline').length === 2, 'line preview missing');
   check(writes === 0, 'preview does not save');
   form.elements.chartType.value = 'stack';
   form.elements.chartType.dispatchEvent(new Event('change', {bubbles:true}));
+  check(root.querySelector('[data-aggregation]').hidden, 'pie aggregation hidden for stacks');
   await until(() => root.querySelectorAll('[data-preview] polygon').length === 2, 'stack preview missing');
   root.querySelector('[data-preview-legend] button').click();
   check(root.querySelectorAll('[data-preview] polygon').length === 1, 'preview legend hides a stack');
   form.elements.chartType.value = 'pie';
   form.elements.aggregation.value = 'average';
   form.elements.chartType.dispatchEvent(new Event('change', {bubbles:true}));
+  check(!root.querySelector('[data-aggregation]').hidden, 'pie aggregation shown for pie charts');
   await until(() => root.querySelectorAll('[data-preview] path').length === 2, 'pie preview missing');
   check(root.querySelector('[data-preview] title').textContent.includes('2.5'),
     'pie uses raw average instead of the last value');
   check(writes === 0, 'changing chart type never saves');
   root.querySelector('[data-add]').click();
   check(root.querySelectorAll('.row').length === 3, 'a new row can be added');
+  const beforePicker = readingCalls;
   root.querySelectorAll('[data-pick]')[2].click();
   await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 3
     && document.querySelector('.cms-dp-dialog [data-info]').textContent === '3 Devices', 'device discovery did not complete');
   const devices = [...document.querySelectorAll('.cms-dp-dialog [role=option]')];
-  check(devices[0].textContent.startsWith('Solar1') && devices[2].textContent.includes('Keine Datenlogs'),
-    'logged devices precede devices without logs');
+  check(readingCalls === beforePicker && devices.every(device => !device.textContent.includes('Datenlogs')),
+    'listing devices performs no log discovery and displays no log status');
   devices[1].click();
   await until(() => root.querySelectorAll('[data-reading]')[2].options.length === 2, 'selected device readings not loaded');
   check(root.querySelectorAll('[data-device]')[2].value === 'Solar2', 'device picker sets the chosen row');
-  const manual = root.querySelectorAll('[data-manual-reading]')[2];
-  manual.value = 'olderReading';
-  check(graph.collect().series[2].reading === 'olderReading', 'manual reading overrides discovery for older logs');
-  manual.value = 'invalid reading';
-  let invalid = false;
-  try { graph.collect(); } catch { invalid = true; }
-  check(invalid, 'manual readings are validated before use');
+  check(root.querySelectorAll('[data-label]')[2].value === 'Garten', 'legend defaults to the device alias');
+  check(!root.querySelector('[data-manual-reading]'), 'manual reading field is absent');
+  check(root.querySelectorAll('[data-remove]')[2].querySelector('svg')
+    && root.querySelectorAll('[data-remove]')[2].getAttribute('aria-label'), 'row removal uses an accessible X icon');
   root.querySelectorAll('[data-remove]')[2].click();
   check(root.querySelectorAll('.row').length === 2, 'row removal preserves other sources');
+  form.elements.range.value = 'custom';
+  form.elements.from.value = '2025-01-01T10:00';
+  form.elements.to.value = '2025-02-01T10:00';
+  form.elements.granularity.value = '1mo';
+  form.elements.axisLabelX.value = 'Zeit';
+  form.elements.axisLabelLeft.value = 'Watt';
+  form.elements.axisLabelRight.value = 'Grad';
+  form.elements.showGrid.checked = false;
+  root.querySelectorAll('[data-axis]')[1].value = 'right';
+  root.querySelectorAll('[data-line-style]')[1].value = 'dashed';
+  root.querySelectorAll('[data-line-width]')[1].value = '7';
+  root.querySelectorAll('[data-fill]')[1].checked = true;
   form.dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
   await until(() => writes === 1, 'graph was not saved');
   check(saved.chartType === 'pie' && saved.aggregation === 'average' && saved.series.length === 2,
     'save preserves selected type, aggregate and series');
   check(saved.series[0].source === 'dblog' && saved.series[1].source === 'filelog',
     'save preserves manually selected sources');
+  check(/^\d+_\d+$/.test(saved.range) && saved.granularity === '1mo' && saved.axisLabelRight === 'Grad'
+    && saved.showGrid === false && saved.series[1].axis === 'right' && saved.series[1].lineStyle === 'dashed'
+    && saved.series[1].lineWidth === 7 && saved.series[1].fill === true, 'save preserves custom time and graph styling');
   check(JSON.stringify(saved.grid) === JSON.stringify(graph.config.grid), 'save preserves geometry');
+  check(saved.series[0].lineWidth === 4 && saved.series[0].axis === 'left',
+    'new rows default to four-pixel lines on the left axis');
+  const decorated = {...graph.config, showGrid:false, axisLabelLeft:'Leistung', axisLabelRight:'Temperatur', axisLabelX:'Zeit',
+    series:[{...graph.config.series[0], axis:'left', lineStyle:'dashed', lineWidth:4, fill:true},
+      {...graph.config.series[1], axis:'right', lineStyle:'points', lineWidth:3}]};
+  const decoratedData = [
+    {points:[[1000,1],[2000,2]]}, {points:[[1000,100],[2000,200]]},
+  ];
+  graph.draw(decorated, decoratedData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+  const plot = root.querySelector('[data-svg]');
+  check(plot.querySelector('polyline').getAttribute('stroke-dasharray') === '8 5'
+    && plot.querySelector('polyline').getAttribute('stroke-width') === '4'
+    && plot.querySelector('polygon'), 'filled dashed lines and configured width are drawn');
+  check(plot.textContent.includes('Temperatur') && plot.textContent.includes('Leistung')
+    && plot.textContent.includes('Zeit') && plot.textContent.includes('200'), 'both axes have independent ranges and labels');
+  check(!plot.querySelector('line[opacity="0.2"]'), 'grid can be hidden');
+  const box = plot.getBoundingClientRect();
+  plot.onpointermove({clientX:box.left + box.width / 2});
+  check(!root.querySelector('[data-tooltip]').hidden && root.querySelector('[data-tooltip]').textContent.includes('Dach')
+    && root.querySelector('[data-tooltip]').textContent.includes('Garten'), 'hover shows values for both series');
+  const oldCapture = plot.setPointerCapture;
+  plot.setPointerCapture = () => {};
+  plot.onpointerdown({button:0, pointerId:1, clientX:box.left + box.width * .35});
+  plot.onpointermove({clientX:box.left + box.width * .7});
+  plot.onpointerup({clientX:box.left + box.width * .7});
+  plot.setPointerCapture = oldCapture;
+  await until(() => calls.some(call => /^\d+_\d+$/.test(call.range)), 'drag selection did not load a custom range');
+  check(root.querySelector('[data-range]').value === 'custom', 'drag selection switches live range to custom');
+  root.querySelector('[data-granularity]').value = '1mo';
+  root.querySelector('[data-granularity]').dispatchEvent(new Event('change'));
+  await until(() => calls.some(call => call.granularity === '1mo'), 'live granularity change not loaded');
   const manySeries = Array.from({length:20}, (_, index) => ({
     ...graph.config.series[0], device:`Solar${index}`,
   }));
@@ -107,6 +164,29 @@ try {
   check(root.querySelectorAll('[data-svg] polygon').length === 20,
     'maximum stack size with distinct timestamps renders without argument overflow');
   graph.remove();
+  const racing = document.createElement('cms-graph');
+  let releaseFirst, releaseSecond;
+  racing.services = {logReadings: device => new Promise(resolve => {
+    if (device === 'First') releaseFirst = resolve; else releaseSecond = resolve;
+  })};
+  racing.config = {id:'race',type:'fhem-graph',series:[]};
+  document.body.append(racing);
+  racing.openConfig();
+  const raceRow = racing.shadowRoot.querySelector('.row');
+  raceRow.querySelector('[data-device]').value = 'First';
+  const firstLoad = racing.loadReadings(raceRow);
+  check(raceRow.querySelector('[data-reading]').disabled, 'reading select is disabled while discovery is pending');
+  raceRow.querySelector('[data-device]').value = 'Second';
+  const secondLoad = racing.loadReadings(raceRow);
+  releaseSecond({source:'dblog',readings:['newer']});
+  await secondLoad;
+  releaseFirst({source:'dblog',readings:['stale']});
+  await firstLoad;
+  check(!raceRow.querySelector('[data-reading]').disabled
+    && raceRow.querySelector('[data-reading]').options[1].value === 'newer',
+    'late responses cannot replace readings for the latest device');
+  racing.closeConfig();
+  racing.remove();
   let release, requests = 0;
   const pending = new Promise(resolve => { release = resolve; });
   const detached = document.createElement('cms-graph');
@@ -143,7 +223,8 @@ try {
   graphInPanel.shadowRoot.querySelector('[data-pick]').click();
   await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 3
     && document.querySelector('.cms-dp-dialog [data-info]').textContent === '3 Devices', 'panel device picker unavailable');
-  document.querySelector('.cms-dp-dialog [role=option]').click();
+  [...document.querySelectorAll('.cms-dp-dialog [role=option]')]
+    .find(option => option.textContent.startsWith('Solar1')).click();
   const row = graphInPanel.shadowRoot.querySelector('.row');
   await until(() => !row.hasAttribute('data-loading') && row.querySelector('[data-reading]').options.length === 2,
     'panel readings not loaded');

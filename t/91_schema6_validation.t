@@ -39,6 +39,18 @@ for my $schema (5, 6) {
         ],
     };
     is(FHEMCMS_ValidateConfig($graph, $schema), undef, "schema $schema accepts graph with multiple devices");
+    my $advanced = $json->decode($json->encode($graph));
+    my $advancedWidget = $advanced->{pages}[0]{widgets}[0];
+    @{$advancedWidget}{qw(range granularity axisLabelX axisLabelLeft axisLabelRight showGrid)} =
+        ('1700000000_1700100000', '1mo', 'Zeit', 'Watt', 'Grad', JSON::PP::false);
+    @{$advancedWidget->{series}[0]}{qw(axis lineStyle lineWidth fill)} =
+        ('right', 'dashed', 4, JSON::PP::true);
+    is(FHEMCMS_ValidateConfig($advanced, $schema), undef, 'custom range and graph styles accepted');
+    for my $field (['axis', 'middle'], ['lineStyle', 'zigzag'], ['lineWidth', 11], ['fill', 1]) {
+        my $bad = $json->decode($json->encode($advanced));
+        $bad->{pages}[0]{widgets}[0]{series}[0]{$field->[0]} = $field->[1];
+        like(FHEMCMS_ValidateConfig($bad, $schema), qr/Ungueltig/, "invalid graph style $field->[0] rejected");
+    }
     for my $field (
         ['chartType', 'unknown'], ['aggregation', 'sum'], ['range', '1y'], ['granularity', '2h'],
     ) {

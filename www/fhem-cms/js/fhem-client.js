@@ -8,6 +8,18 @@ export function isValidName(value) {
   return typeof value === 'string' && NAME_PATTERN.test(value) && value !== '.' && value !== '..';
 }
 
+export function customHistoryRange(value) {
+  if (typeof value !== 'string') return null;
+  const match = /^(\d{1,10})_(\d{1,10})$/.exec(value);
+  if (!match) return null;
+  const from = Number(match[1]), to = Number(match[2]);
+  const limit = new Date(from * 1000);
+  const month = limit.getUTCMonth();
+  limit.setUTCFullYear(limit.getUTCFullYear() + 10);
+  if (limit.getUTCMonth() !== month) limit.setUTCDate(0);
+  return to > from && to <= 4102444800 && to * 1000 <= limit.getTime() + 3600000 ? [from, to] : null;
+}
+
 function toBase64(text) {
   const bytes = new TextEncoder().encode(text);
   let binary = '';
@@ -430,13 +442,15 @@ export class FhemClient {
     }
     return {
       source: result.source,
-      readings: result.readings.filter(isValidName)
+      readings: result.readings.filter(isValidName),
+      ...(result.truncated === true ? {truncated:true} : {})
     };
   }
 
   async history(device, reading, range = '24h', granularity = 'auto', source = 'auto') {
-    if (!isValidName(device) || !isValidName(reading) || !/^(?:24h|7d|30d|365d)$/.test(range)
-      || !/^(?:auto|raw|15m|1h|1d)$/.test(granularity) || !/^(?:auto|dblog|filelog)$/.test(source)) {
+    const validRange = /^(?:24h|7d|30d|365d)$/.test(range) || customHistoryRange(range);
+    if (!isValidName(device) || !isValidName(reading) || !validRange
+      || !/^(?:auto|raw|15m|1h|1d|1w|1mo|1y)$/.test(granularity) || !/^(?:auto|dblog|filelog)$/.test(source)) {
       throw new Error('Ungültige Verlaufsabfrage');
     }
     const command = `get ${this.cmsDevice} history ${device} ${reading} ${range} ${granularity} ${source}`;
