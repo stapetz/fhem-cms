@@ -21,6 +21,13 @@ Anleitung
 - Freigegebener Umfang: Epic #243 und Issues #244 bis #253. Keine pauschale
   Uebernahme des dev-Branches.
 
+2026-11-24 - 1.30.4-dev: Smartphone-Raster im Querformat
+- Rasterseiten mit gemeinsamem Canvas brechen im Smartphone-Querformat in
+  inhaltshohe Kacheln um; Vorschau und Telefon verwenden die gleiche kompakte
+  Navigation. Refs #254.
+- Gespeicherte Rasterpositionen, Freeform-Seiten und groessere Tabletansichten
+  bleiben unveraendert. Die iPhone-Abnahme steht aus.
+
 2026-11-24 - 1.30.3-dev: Konfigurierte Widget-Icons auf Pins
 - Pins verwenden konfigurierte Widget-Icons als Theme-Maske statt pauschaler
   Typsymbole. Ohne Icon entfallen Ersatzzeichen und Iconabstand. Refs #252.

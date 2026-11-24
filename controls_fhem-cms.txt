@@ -1,4 +1,4 @@
-UPD 2026-11-24_11:29:38 192223 FHEM/01_FHEMCMS.pm
+UPD 2026-11-24_20:36:50 192223 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-20_06:26:48 29073 FHEM/lib/FHEMCMS/Weather.pm
@@ -47,7 +47,7 @@ UPD 2026-11-14_16:12:23 4924 www/fhem-cms/js/device-widget-suggestions.js
 UPD 2026-11-24_10:15:19 1995 www/fhem-cms/js/dialog-groups.js
 UPD 2026-11-24_11:00:18 13574 www/fhem-cms/js/fcui-freeform-edit.js
 UPD 2026-11-20_04:40:33 6282 www/fhem-cms/js/fcui-freeform-layout.js
-UPD 2026-11-24_10:58:14 14099 www/fhem-cms/js/fcui-freeform-view.js
+UPD 2026-11-24_20:36:50 14463 www/fhem-cms/js/fcui-freeform-view.js
 UPD 2026-11-13_17:56:27 150460 www/fhem-cms/js/fcui-map-runtime.js
 UPD 2026-11-08_15:33:41 3422 www/fhem-cms/js/fcui-migration-controller.js
 UPD 2026-11-20_06:13:07 27650 www/fhem-cms/js/fcui-migration-preview.js
