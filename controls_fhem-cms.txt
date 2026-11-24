@@ -69,7 +69,7 @@ UPD 2026-11-20_00:44:21 1845 www/fhem-cms/js/fcui-schema5-transport.js
 UPD 2026-11-22_09:07:55 13119 www/fhem-cms/js/fcui-schema5-view.js
 UPD 2026-11-20_05:01:57 16141 www/fhem-cms/js/fcui-schema5-widget-panel.js
 UPD 2026-11-21_12:53:56 5549 www/fhem-cms/js/fcui-schema5-widget-session.js
-UPD 2026-11-24_08:36:44 12876 www/fhem-cms/js/fcui-schema5-widgets.js
+UPD 2026-11-24_08:49:12 12960 www/fhem-cms/js/fcui-schema5-widgets.js
 UPD 2026-11-20_06:13:07 27191 www/fhem-cms/js/fhem-client.js
 UPD 2026-11-22_11:00:00 81446 www/fhem-cms/js/fhem-cms.js
 UPD 2026-11-22_10:25:12 10205 www/fhem-cms/js/freehtml-css.js
