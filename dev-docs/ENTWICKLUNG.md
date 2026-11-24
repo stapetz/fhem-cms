@@ -151,6 +151,8 @@ Kalenderwochen/-monate/-jahre, unabhaengige automatische Y-Achsen,
 Linienstile, -staerken und Fuellungen, Tooltip, Bereichsauswahl und ein
 in der Ansicht umschaltbares Raster. Das Backend validiert freie Zeitbereiche
 und berechnet Kalender-Buckets in der lokalen Zeitzone des FHEM-Servers.
+Das optionale Reihenformat `round(0)` bis `round(6)` oder `int` betrifft
+nur die Anzeige von Messwerten, nicht die Berechnung oder Skalierung.
 Regressionen: `prove t/01_fhemcms.t t/91_schema6_validation.t t/92_schema6_persistence.t`,
 `node --test t/115_graph_data.test.js` sowie der Browserfall
 `graph supports multiple log series` in `t/35_schema5_scaling.test.js`.

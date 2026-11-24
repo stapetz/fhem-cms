@@ -1,10 +1,11 @@
 {
   "date": "2026-11-24",
-  "version": "1.34.0-dev",
+  "version": "1.34.1-dev",
   "title": "Graph mit mehreren Datenreihen",
   "changes": [
     "Neues Graph-Widget mit mehreren DbLog-/FileLog-Reihen, Linien, Stapeln und Tortendiagramm sowie Konfigurationsvorschau. Refs #259.",
     "Frei waehlbarer Zeitraum, Kalenderaufloesungen, zwei Y-Achsen, Liniengestaltung, Raster, Mauswerte und Bereichsauswahl.",
+    "Graphdialog uebersichtlicher angeordnet; Anzeigeformat fuer einzelne Datenreihen konfigurierbar.",
     "Echte Logquellen und Safari-Geraeteabnahme stehen aus."
   ]
 }

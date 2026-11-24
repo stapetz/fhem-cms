@@ -44,6 +44,8 @@ try {
   document.body.append(graph);
   const root = graph.shadowRoot;
   await until(() => root.querySelectorAll('[data-svg] polyline').length === 2, 'two live lines not drawn');
+  check(root.querySelector('[data-title]').hidden && !root.querySelector('[data-title]').textContent,
+    'missing title stays empty');
   const initialPlot = root.querySelector('[data-svg]');
   const initialViewBox = initialPlot.viewBox.baseVal;
   check(Math.abs(initialViewBox.width / initialViewBox.height - initialPlot.clientWidth / initialPlot.clientHeight) < .02,
@@ -66,6 +68,24 @@ try {
   check(Math.abs(fields.querySelector('[data-label]').getBoundingClientRect().height
     - fields.querySelector('[data-reading]').getBoundingClientRect().height) < 1,
     'row text and select controls have equal heights');
+  const controls = [...fields.querySelectorAll('input:not([type=checkbox]),select')];
+  check(controls.every(control => Math.abs(control.getBoundingClientRect().height - 40) < 1),
+    'all row inputs and selects are 40px high');
+  const axisLeft = form.elements.axisLabelLeft.getBoundingClientRect();
+  const axisRight = form.elements.axisLabelRight.getBoundingClientRect();
+  check(axisLeft.top !== axisRight.top || axisRight.left - axisLeft.right >= 11,
+    'left and right axis labels have adequate spacing');
+  const deviceBox = fields.querySelector('[data-device]').getBoundingClientRect();
+  const statusBox = fields.querySelector('[data-row-status]').getBoundingClientRect();
+  check(statusBox.top >= deviceBox.bottom && Math.abs(statusBox.left - deviceBox.left) < 1,
+    'log status is directly below the device');
+  const card = fields.getBoundingClientRect(), remove = fields.querySelector('[data-remove]').getBoundingClientRect();
+  check(remove.top >= card.top && remove.top - card.top < 10 && card.right - remove.right < 10,
+    'remove button is in the top-right corner');
+  const lineControls = fields.querySelector('.line-controls');
+  check([...lineControls.querySelectorAll('input')].map(input => input.dataset.lineWidth !== undefined ? 'width'
+    : input.dataset.color !== undefined ? 'color' : 'fill').join(',') === 'width,color,fill',
+    'line width, color and fill are ordered together');
   await until(() => root.querySelectorAll('[data-preview] polyline').length === 2, 'line preview missing');
   check(writes === 0, 'preview does not save');
   form.elements.chartType.value = 'stack';
@@ -76,11 +96,17 @@ try {
   check(root.querySelectorAll('[data-preview] polygon').length === 1, 'preview legend hides a stack');
   form.elements.chartType.value = 'pie';
   form.elements.aggregation.value = 'average';
+  root.querySelector('[data-format]').value = 'round(2)';
   form.elements.chartType.dispatchEvent(new Event('change', {bubbles:true}));
   check(!root.querySelector('[data-aggregation]').hidden, 'pie aggregation shown for pie charts');
   await until(() => root.querySelectorAll('[data-preview] path').length === 2, 'pie preview missing');
-  check(root.querySelector('[data-preview] title').textContent.includes('2.5'),
-    'pie uses raw average instead of the last value');
+  check(root.querySelector('[data-preview] title').textContent.includes('2.50'),
+    'pie displays the formatted raw average instead of the last value');
+  root.querySelector('[data-format]').value = 'round(7)';
+  let badFormat = false;
+  try { graph.collect(); } catch { badFormat = true; }
+  check(badFormat, 'invalid formatting commands are rejected');
+  root.querySelector('[data-format]').value = 'int';
   check(writes === 0, 'changing chart type never saves');
   root.querySelector('[data-add]').click();
   check(root.querySelectorAll('.row').length === 3, 'a new row can be added');
@@ -112,6 +138,7 @@ try {
   root.querySelectorAll('[data-line-style]')[1].value = 'dashed';
   root.querySelectorAll('[data-line-width]')[1].value = '7';
   root.querySelectorAll('[data-fill]')[1].checked = true;
+  root.querySelectorAll('[data-format]')[1].value = 'round(2)';
   form.dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
   await until(() => writes === 1, 'graph was not saved');
   check(saved.chartType === 'pie' && saved.aggregation === 'average' && saved.series.length === 2,
@@ -120,16 +147,20 @@ try {
     'save preserves manually selected sources');
   check(/^\d+_\d+$/.test(saved.range) && saved.granularity === '1mo' && saved.axisLabelRight === 'Grad'
     && saved.showGrid === false && saved.series[1].axis === 'right' && saved.series[1].lineStyle === 'dashed'
-    && saved.series[1].lineWidth === 7 && saved.series[1].fill === true, 'save preserves custom time and graph styling');
+    && saved.series[1].lineWidth === 7 && saved.series[1].fill === true && saved.series[1].format === 'round(2)',
+    'save preserves custom time, formatting and graph styling');
   check(JSON.stringify(saved.grid) === JSON.stringify(graph.config.grid), 'save preserves geometry');
   check(saved.series[0].lineWidth === 4 && saved.series[0].axis === 'left',
     'new rows default to four-pixel lines on the left axis');
+  check(saved.series[0].format === 'int', 'integer format is saved with its data series');
   const decorated = {...graph.config, showGrid:false, axisLabelLeft:'Leistung', axisLabelRight:'Temperatur', axisLabelX:'Zeit',
     series:[{...graph.config.series[0], axis:'left', lineStyle:'dashed', lineWidth:4, fill:true},
-      {...graph.config.series[1], axis:'right', lineStyle:'points', lineWidth:3}]};
+      {...graph.config.series[1], axis:'right', lineStyle:'points', lineWidth:3, format:'round(2)'}]};
   const decoratedData = [
-    {points:[[1000,1],[2000,2]]}, {points:[[1000,100],[2000,200]]},
+    {points:[[1000,-1.7],[2000,2]]}, {points:[[1000,100],[2000,200]]},
   ];
+  decorated.series[0].format = 'int';
+  const rawData = JSON.stringify(decoratedData);
   graph.draw(decorated, decoratedData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
   const plot = root.querySelector('[data-svg]');
   check(plot.querySelector('polyline').getAttribute('stroke-dasharray') === '8 5'
@@ -140,8 +171,11 @@ try {
   check(!plot.querySelector('line[opacity="0.2"]'), 'grid can be hidden');
   const box = plot.getBoundingClientRect();
   plot.onpointermove({clientX:box.left + box.width / 2});
-  check(!root.querySelector('[data-tooltip]').hidden && root.querySelector('[data-tooltip]').textContent.includes('Dach')
-    && root.querySelector('[data-tooltip]').textContent.includes('Garten'), 'hover shows values for both series');
+  check(!root.querySelector('[data-tooltip]').hidden && root.querySelector('[data-tooltip]').textContent.includes('Dach: -1')
+    && root.querySelector('[data-tooltip]').textContent.includes('Garten: 100.00'), 'hover shows formatted values for both series');
+  check(JSON.stringify(decoratedData) === rawData, 'display formatting does not modify the source values');
+  check(parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) > 16,
+    'tooltip uses a larger font');
   const oldCapture = plot.setPointerCapture;
   plot.setPointerCapture = () => {};
   plot.onpointerdown({button:0, pointerId:1, clientX:box.left + box.width * .35});

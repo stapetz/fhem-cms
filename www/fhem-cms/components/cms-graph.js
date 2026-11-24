@@ -51,6 +51,12 @@ function label(series) {
   return series.label || `${series.device}: ${series.reading}`;
 }
 
+function formatValue(value, format) {
+  if (format === 'int') return String(Math.trunc(value));
+  const match = /^round\(([0-6])\)$/.exec(format || '');
+  return match ? value.toFixed(Number(match[1])) : String(value);
+}
+
 function validate(config) {
   if (!Array.isArray(config.series) || config.series.length < 1 || config.series.length > 20) {
     throw new Error('Bitte eine bis 20 Datenreihen auswählen.');
@@ -68,6 +74,8 @@ function validate(config) {
       || !['left','right'].includes(row.axis || 'left')
       || !Object.hasOwn(LINE_STYLES, row.lineStyle || 'solid')
       || !Number.isInteger(row.lineWidth ?? 4) || (row.lineWidth ?? 4) < 1 || (row.lineWidth ?? 4) > 10
+      || (row.format !== undefined && (typeof row.format !== 'string'
+        || !/^(?:|int|round\([0-6]\))$/.test(row.format)))
       || (row.fill !== undefined && typeof row.fill !== 'boolean')) throw new Error('Ungültige Datenreihe');
   }
 }
@@ -146,10 +154,11 @@ class FHEMCMSGraph extends HTMLElement {
         .legend button { display:flex; align-items:center; gap:.35rem; min-height:36px; border:0; background:transparent; }
         .legend button[aria-pressed="false"] { opacity:.5; text-decoration:line-through; }
         .swatch { width:2rem; height:.4rem; border-radius:1rem; flex:none; }
-        .graph-tooltip { position:absolute; z-index:2; pointer-events:none; padding:.5rem; border:1px solid var(--cms-border);
-          border-radius:.5rem; background:var(--cms-surface); color:var(--cms-text); font-size:.85rem; white-space:nowrap; }
-        .graph-tooltip div { display:flex; align-items:center; gap:.4rem; }
-        .graph-tooltip i { width:.7rem; height:.7rem; border-radius:.2rem; flex:none; }
+        .graph-tooltip { position:absolute; z-index:2; pointer-events:none; padding:.8rem 1rem; border:1px solid var(--cms-border);
+          border-radius:.6rem; background:var(--cms-surface); color:var(--cms-text); font-size:1.1rem;
+          max-width:100%; overflow-wrap:anywhere; }
+        .graph-tooltip div { display:flex; align-items:center; gap:.55rem; }
+        .graph-tooltip i { width:.9rem; height:.9rem; border-radius:.2rem; flex:none; }
         .status { margin:0; color:var(--cms-muted); }
         .status[data-error] { color:var(--cms-danger); }
         dialog { width:min(94vw,48rem); max-height:94vh; overflow:auto; padding:1rem; color:var(--cms-text);
@@ -157,17 +166,20 @@ class FHEMCMSGraph extends HTMLElement {
         dialog::backdrop { background:var(--cms-backdrop); }
         form { display:grid; gap:.7rem; }
         label { display:grid; gap:.2rem; }
-        .settings { display:grid; grid-template-columns:repeat(auto-fit,minmax(10rem,1fr)); gap:.5rem; }
+        .settings { display:grid; grid-template-columns:repeat(auto-fit,minmax(10rem,1fr)); gap:.75rem; }
+        form label { min-width:0; }
+        form input:not([type=checkbox]), form select { width:100%; min-width:0; height:40px; }
+        form input[type=checkbox] { width:24px; height:24px; justify-self:start; }
         .row { display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr)); gap:.5rem;
-          align-items:end; padding:.7rem; border:1px solid var(--cms-border); border-radius:.5rem; }
-        .row input,.row select,.row [data-pick] { min-width:0; width:100%; height:48px; }
+          position:relative; align-items:start; padding:.7rem 3.8rem .7rem .7rem; border:1px solid var(--cms-border); border-radius:.5rem; }
+        .row [data-pick] { min-width:0; width:100%; height:44px; margin-top:calc(1em + .2rem); }
         .row input[type=color] { padding:.2rem; }
-        .row input[type=checkbox] { width:24px; height:24px; justify-self:start; }
         .row input[type=color]::-webkit-color-swatch-wrapper { padding:0; }
         .row input[type=color]::-webkit-color-swatch { border:0; border-radius:.3rem; }
-        .row [data-remove] { width:48px; height:48px; padding:0; display:grid; place-items:center; }
+        .row [data-remove] { position:absolute; right:.35rem; top:.35rem; width:48px; height:48px; padding:0; display:grid; place-items:center; }
         .row [data-remove] svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
-        .row [data-row-status] { grid-column:1 / -1; }
+        .row [data-row-status] { margin-top:.3rem; overflow-wrap:anywhere; }
+        .row .line-controls { grid-column:1 / -1; display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr)); gap:.5rem; }
         .actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.5rem; }
         .preview { height:16rem; flex:none; }
         [hidden] { display:none !important; }
@@ -246,7 +258,8 @@ class FHEMCMSGraph extends HTMLElement {
     this.granularity = config.granularity || 'auto';
     this.showGrid = config.showGrid !== false;
     const title = this.shadowRoot.querySelector('[data-title]');
-    title.textContent = config.showTitle === false ? '' : config.title || 'Graph';
+    title.textContent = config.showTitle === false ? '' : config.title || '';
+    title.hidden = !title.textContent;
     const bounds = customRange(this.range);
     this.shadowRoot.querySelector('[data-range]').replaceChildren(...options(RANGES, bounds ? 'custom' : this.range));
     this.shadowRoot.querySelector('[data-granularity]').replaceChildren(...options(GRANULARITIES, this.granularity));
@@ -368,7 +381,7 @@ class FHEMCMSGraph extends HTMLElement {
           const x2 = width/2 + radius * Math.cos(next), y2 = 110 + radius * Math.sin(next);
           shape = svg('path', {d:`M ${width/2} 110 L ${x1} ${y1} A ${radius} ${radius} 0 ${next-angle > Math.PI ? 1 : 0} 1 ${x2} ${y2} Z`, fill:item.row.color});
         }
-        shape.append(svg('title', {}, `${label(item.row)}: ${value}`));
+        shape.append(svg('title', {}, `${label(item.row)}: ${formatValue(value, item.row.format)}`));
         target.append(shape);
         angle = next;
       });
@@ -456,7 +469,7 @@ class FHEMCMSGraph extends HTMLElement {
           ...(style === 'dashed' ? {'stroke-dasharray':'8 5'} : style === 'dotted' ? {'stroke-dasharray':'2 4'} : {})}));
         for (const point of row) {
           const circle = svg('circle', {cx:x(point[0]), cy:valueY(point[1]), r:style === 'points' ? 3 : 1, fill:item.row.color});
-          circle.append(svg('title', {}, `${label(item.row)}: ${point[1]} · ${new Date(point[0]*1000).toLocaleString('de-DE')}`));
+          circle.append(svg('title', {}, `${label(item.row)}: ${formatValue(point[1], item.row.format)} · ${new Date(point[0]*1000).toLocaleString('de-DE')}`));
           target.append(circle);
         }
       }
@@ -492,7 +505,7 @@ class FHEMCMSGraph extends HTMLElement {
         const nearest = row.reduce((best, point) => Math.abs(point[0] - timestamp(px)) < Math.abs(best[0] - timestamp(px)) ? point : best);
         const entry = document.createElement('div'), swatch = document.createElement('i');
         swatch.style.backgroundColor = item.row.color;
-        entry.append(swatch, document.createTextNode(`${label(item.row)}: ${nearest[1]} · ${new Date(nearest[0] * 1000).toLocaleString('de-DE')}`));
+        entry.append(swatch, document.createTextNode(`${label(item.row)}: ${formatValue(nearest[1], item.row.format)} · ${new Date(nearest[0] * 1000).toLocaleString('de-DE')}`));
         tooltip.append(entry);
       });
       tooltip.hidden = false;
@@ -560,21 +573,25 @@ class FHEMCMSGraph extends HTMLElement {
     }
     const row = document.createElement('div');
     row.className = 'row';
-    row.innerHTML = `<label>Device<input data-device readonly placeholder="Device auswählen"></label>
+    row.innerHTML = `<div><label>Device<input data-device readonly placeholder="Device auswählen"></label>
+      <p class="status" data-row-status role="status"></p></div>
       <button type="button" data-pick>Device auswählen …</button>
       <label>Reading<select data-reading><option value="">Reading wählen …</option></select></label>
       <label>Quelle<select data-source></select></label>
       <label>Legende<input data-label maxlength="64"></label>
-      <label>Farbe<input data-color type="color"></label>
       <label>Y-Achse<select data-axis></select></label>
       <label>Linientyp<select data-line-style></select></label>
-      <label>Linienstärke<input data-line-width type="number" min="1" max="10" step="1"></label>
-      <label>Fläche füllen<input data-fill type="checkbox"></label>
-      <button type="button" data-remove aria-label="Datenreihe entfernen" title="Datenreihe entfernen">${closeButtonSvg}</button>
-      <p class="status" data-row-status role="status"></p>`;
+      <label>Format<input data-format maxlength="8" placeholder="z. B. round(2)"></label>
+      <div class="line-controls">
+        <label>Linienstärke<input data-line-width type="number" min="1" max="10" step="1"></label>
+        <label>Farbe<input data-color type="color"></label>
+        <label>Fläche füllen<input data-fill type="checkbox"></label>
+      </div>
+      <button type="button" data-remove aria-label="Datenreihe entfernen" title="Datenreihe entfernen">${closeButtonSvg}</button>`;
     const $ = selector => row.querySelector(selector);
     $('[data-device]').value = series.device || '';
     $('[data-label]').value = series.label || '';
+    $('[data-format]').value = series.format || '';
     $('[data-color]').value = series.color || COLORS[container.children.length % COLORS.length];
     $('[data-axis]').replaceChildren(...options({left:'Links',right:'Rechts'}, series.axis || 'left'));
     $('[data-line-style]').replaceChildren(...options(LINE_STYLES, series.lineStyle || 'solid'));
@@ -648,6 +665,7 @@ class FHEMCMSGraph extends HTMLElement {
       color:row.querySelector('[data-color]').value,
       axis:row.querySelector('[data-axis]').value, lineStyle:row.querySelector('[data-line-style]').value,
       lineWidth:Number(row.querySelector('[data-line-width]').value), fill:row.querySelector('[data-fill]').checked,
+      format:row.querySelector('[data-format]').value.trim(),
     }));
     const config = {...this.widgetConfig, title:form.elements.title.value.trim(), series,
       chartType:form.elements.chartType.value, aggregation:form.elements.aggregation.value,

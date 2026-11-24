@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.34.0-dev';
+our $FHEMCMS_VERSION = '1.34.1-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1306,7 +1306,7 @@ sub FHEMCMS_ValidateConfig {
                     if (ref($widget->{series}) ne 'ARRAY' || @{$widget->{series}} < 1 || @{$widget->{series}} > 20);
                 for my $series (@{$widget->{series}}) {
                     $err = $exact->($series, 'Graph-Datenreihe', ['device', 'reading', 'source', 'label', 'color'],
-                        ['axis', 'lineStyle', 'lineWidth', 'fill']);
+                        ['axis', 'lineStyle', 'lineWidth', 'fill', 'format']);
                     return $err if ($err);
                     return 'Ungueltiges Graph-Device oder Reading'
                         if (!$isName->($series->{device}) || !$isName->($series->{reading}));
@@ -1327,6 +1327,9 @@ sub FHEMCMS_ValidateConfig {
                         if (exists($series->{lineWidth}) && !$isInt->($series->{lineWidth}, 1, 10));
                     return 'Ungueltige Linienfuellung'
                         if (exists($series->{fill}) && !$isBool->($series->{fill}));
+                    return 'Ungueltiges Graph-Format'
+                        if (exists($series->{format}) && (!defined($series->{format}) || ref($series->{format})
+                            || $series->{format} !~ /\A(?:|int|round\([0-6]\))\z/));
                 }
             } elsif ($widget->{type} eq 'fhem-chart') {
                 for my $field ('device', 'reading') {

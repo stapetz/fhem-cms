@@ -39,7 +39,7 @@ $draft5->{pages}[0]{widgets} = [{
     chartType => 'pie', aggregation => 'average', range => '1700000000_1700100000', granularity => '1mo',
     axisLabelX => 'Zeit', axisLabelLeft => 'Watt', axisLabelRight => 'Grad', showGrid => JSON::PP::false,
     series => [{device => 'Solar1', reading => 'power', source => 'auto', label => 'Dach', color => '#123abc',
-        axis => 'right', lineStyle => 'dashed', lineWidth => 4, fill => JSON::PP::true}],
+        axis => 'right', lineStyle => 'dashed', lineWidth => 4, fill => JSON::PP::true, format => 'round(2)'}],
 }];
 $draft5->{settings}{pageCanvas} = {width => 200, height => 200};
 $draft5->{settings}{pageNavigationRect} = {x => 10, y => 10, w => 180, h => 40};

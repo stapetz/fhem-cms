@@ -43,10 +43,11 @@ for my $schema (5, 6) {
     my $advancedWidget = $advanced->{pages}[0]{widgets}[0];
     @{$advancedWidget}{qw(range granularity axisLabelX axisLabelLeft axisLabelRight showGrid)} =
         ('1700000000_1700100000', '1mo', 'Zeit', 'Watt', 'Grad', JSON::PP::false);
-    @{$advancedWidget->{series}[0]}{qw(axis lineStyle lineWidth fill)} =
-        ('right', 'dashed', 4, JSON::PP::true);
+    @{$advancedWidget->{series}[0]}{qw(axis lineStyle lineWidth fill format)} =
+        ('right', 'dashed', 4, JSON::PP::true, 'round(2)');
     is(FHEMCMS_ValidateConfig($advanced, $schema), undef, 'custom range and graph styles accepted');
-    for my $field (['axis', 'middle'], ['lineStyle', 'zigzag'], ['lineWidth', 11], ['fill', 1]) {
+    for my $field (['axis', 'middle'], ['lineStyle', 'zigzag'], ['lineWidth', 11], ['fill', 1],
+        ['format', 'round(7)'], ['format', 'round(2);system'], ['format', undef]) {
         my $bad = $json->decode($json->encode($advanced));
         $bad->{pages}[0]{widgets}[0]{series}[0]{$field->[0]} = $field->[1];
         like(FHEMCMS_ValidateConfig($bad, $schema), qr/Ungueltig/, "invalid graph style $field->[0] rejected");
