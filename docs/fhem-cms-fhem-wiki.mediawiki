@@ -336,6 +336,150 @@ Ersatzzeichen wie '''#''' oder Dreistrich. Konfigurierte Zustandsicons folgen
 dem aktuellen Reading. Einheiten wie '''°C''' werden im Wert-Widget eingetragen,
 nicht aus dem Readingnamen geraten.
 
+=== Praxis: Floorplan Küche Schritt für Schritt ===
+
+Ein Floorplan stellt nicht nur Werte dar, sondern zeigt ihren '''räumlichen
+Zusammenhang''': Temperatur im zugehörigen Raum, Heizung an der Wand und
+Schalter an der Leuchte. Die kompakten Pins lassen den Plan sichtbar; hinter
+jedem Pin bleibt das vollständige normale Widget erhalten. Das vermeidet
+getrennte Detailseiten und doppelte Gerätekonfiguration nur für die Bedienung.
+
+Die ausführliche [https://github.com/stapetz/fhem-cms/wiki/Floorplan-Kueche
+GitHub-Wiki-Anleitung mit elf echten Screenshots] zeigt den vollständigen
+Aufbau. Die Aufnahmen vom 24.11.2026 verwenden einen freigegebenen Grundriss
+und echte FHEM-Geräte; Messwerte ändern sich laufend. Die Seite wurde neu
+angelegt, nicht nur aus einer Vorlage kopiert. Beispielnamen durch eigene
+Geräte und tatsächlich vorhandene Readings ersetzen.
+
+==== 1. Neue Navigationsseite anlegen ====
+
+# Das CMS im Bearbeitungsmodus öffnen und die Navigation auswählen.
+# Über den Stift '''Navigation einstellen''' den Dialog '''Navigation bearbeiten''' öffnen.
+# Bei '''Seitentitel''' <code>Floorplan Küche</code> und bei '''Dateiname (optional)''' <code>floorplan_kueche</code> eintragen.
+# '''Neue Seite erstellen''' wählen, anschließend '''Speichern'''.
+# Den neuen Navigationspunkt öffnen. Die vorhandenen Seiten bleiben erhalten.
+
+==== 2. Freie Seite mit Pins einstellen ====
+
+# '''Bearbeiten → Seiteneinstellungen „Floorplan Küche“''' öffnen.
+# Unter '''Seitenlayout → Modus''' '''Frei (Pixelgenau)''' wählen.
+# '''Widgets als Pins darstellen''' einschalten.
+# Die gemeinsame Seitengröße und Rastergröße unverändert lassen. Das Beispiel erbt 2560 × 1440 Pixel von der Startseite; das Bild muss nicht diese Abmessungen haben.
+# Das gewünschte Theme beibehalten, im Beispiel '''Liquid Glass'''.
+
+==== 3. Eigenen Grundriss aus dem Assetmanager auswählen ====
+
+# '''Hintergrundvererbung von der Startseite überschreiben''' aktivieren. So darf diese Seite einen Grundriss verwenden, während normale Seiten weiter das gemeinsame Startseitenbild nutzen.
+# '''Hintergrundbild auswählen''' öffnen.
+# Im Assetmanager '''Stammordner → Floorplans''' öffnen. Der Ordner heißt im Beispiel tatsächlich „Floorplans“.
+# Das vorhandene Bild <code>floorplan_eg.png</code> auswählen. Das Original hat hier 1646 × 1252 Pixel.
+# Mit '''Auswählen''' bestätigen und den angezeigten Bildpfad kontrollieren.
+# Bei Bedarf '''Hintergrund-Abdunklung''' anpassen, im Beispiel auf '''12 %''', und '''Speichern'''.
+
+Das Bild wird proportional eingepasst. Freie Ränder sind möglich; die
+Pinpositionen beziehen sich auf die tatsächliche Bildfläche, nicht auf diese
+Ränder. Die Abdunklung verbessert den Kontrast und verändert nicht die Datei.
+Ein vorhandenes Bild nur auswählen; nicht unnötig neu hochladen oder bearbeiten.
+Assetdateiänderungen gelten unabhängig vom Seitenentwurf sofort.
+
+==== 4. Temperatur-Pin anlegen ====
+
+# '''Einfügen → Widget hinzufügen → Wert-Anzeige''' öffnen.
+# Titel <code>Küche</code> vergeben und das Temperaturgerät auswählen. Im Beispiel heißt es technisch <code>tmp_Kuehlschrank_Keller</code> und hat den Alias „Küche“.
+# Reading <code>temperature</code> wählen und '''Auf Pin anzeigen''' aktiviert lassen.
+# Unter '''Darstellung → Einheit''' ausdrücklich <code>°C</code> eintragen.
+# Optional das konfigurierte Icon <code>temp_temperature</code> auswählen.
+# '''Nicht als Pin darstellen''' ausgeschaltet lassen und '''Speichern'''.
+
+Ergebnis: aktuelle Temperatur mit Einheit auf einer kompakten Pille.
+Der Readingname allein legt keine Einheit fest. Ohne Icon gibt es kein
+Ersatzzeichen wie eine Raute oder einen Dreistrich.
+
+==== 5. Thermostat mit Ist- und Solltemperatur hinzufügen ====
+
+# '''Einfügen → Widget hinzufügen → Thermostat''' öffnen, Titel <code>Thermostat</code> vergeben und das passende Gerät wählen, im Beispiel <code>th_kueche_Clima</code>.
+# Isttemperatur <code>measured-temp</code> und Solltemperatur <code>desired-temp</code> zuordnen.
+# Bei '''beiden''' Temperaturfeldern '''Auf Pin anzeigen''' einschalten.
+# Optional <code>ValvePosition</code> und <code>controlMode</code> für die vollständige Karte zuordnen, deren Pin-Anzeige aber ausgeschaltet lassen.
+# Als Pin speichern. Ist- und Solltemperatur erscheinen nebeneinander, durch einen feinen Strich getrennt.
+
+So bleiben die wichtigsten Temperaturen unmittelbar am Raum sichtbar,
+während Ventilstellung und Bedienung erst bei Bedarf die Detailkarte belegen.
+Die kleine Pin-Vorschau im Konfigurationsdialog zeigt ausdrücklich
+'''Readingnamen, keine Livewerte'''; die eigentliche Seite zeigt die Werte.
+
+==== 6. Schalter mit Zustand hinzufügen ====
+
+# '''Einfügen → Widget hinzufügen → Schalter''' wählen.
+# Das Schaltergerät auswählen, im Beispiel <code>sw_wiese_Sw_02</code>.
+# Zustandsreading <code>state</code>, An-Befehl <code>on</code> und Aus-Befehl <code>off</code> zuordnen. Nur zum eigenen Gerät passende angebotene Befehle verwenden.
+# '''Auf Pin anzeigen''' beim Zustand einschalten und als Pin speichern.
+
+Das Konfigurieren schaltet das Gerät nicht. Die Beispielposition ist eine
+Demonstration und kein Nachweis des tatsächlichen Einbauorts des Geräts.
+Ohne Readinganzeige und ohne Icon bleibt nur ein Kreis ohne Ersatzzeichen;
+für eine verständliche Oberfläche einen sinnvollen Wert oder ein Icon wählen.
+
+==== 7. Pins räumlich platzieren ====
+
+Neue Pins beginnen in der Bildmitte bei 50/50 und können zunächst
+übereinanderliegen. Nacheinander auswählen und per Maus oder Touch an ihren
+Bildpunkt ziehen. Die X/Y-Anzeige zeigt bildbezogene Prozentwerte mit zwei
+Nachkommastellen. Bei Tastaturfokus auf der Verschiebefläche bewegen Pfeile um
+einen Canvaspixel, Shift+Pfeile um zehn; Escape verwirft die laufende Geste.
+
+Im Beispiel liegen Temperatur bei X 13,50 % / Y 23,75 %, Thermostat bei
+X 36,47 % / Y 22,26 % und Schalter bei X 36,00 % / Y 43,00 %. Das sind nur
+Orientierungswerte für diesen Plan. Eigene Geräte am wirklichen Raum oder
+Einbauort platzieren. Die großen Bearbeitungswerkzeuge erscheinen nach Auswahl
+außerhalb des Pins und verdecken den Messwert nicht.
+
+'''Stärke:''' Ändert sich die Bildschirmgröße, bleiben die Pins am zugeordneten
+Bildpunkt statt an absoluten Bildschirmpixeln. Ein anders zugeschnittenes oder
+inhaltlich verändertes Ersatzbild muss trotzdem neu geprüft werden.
+
+==== 8. Vorschau, Veröffentlichung und Livebedienung ====
+
+# In der Geräte-Vorschau Anordnung, Lesbarkeit und Einheiten prüfen. Editor und Vorschau senden keine Pin-Schaltbefehle.
+# Auch andere Änderungen im aktuellen CMS-Entwurf prüfen.
+# '''Datei → Entwurf veröffentlichen''' wählen und bestätigen. Veröffentlicht wird der '''gesamte aktuelle Entwurf''', nicht nur diese Seite; der bisherige Live-Stand wird gesichert.
+# Die direkte Live-URL aus den Seiteneinstellungen in einem separaten Fenster ohne <code>mode=edit</code> öffnen. Im Beispiel endet sie auf <code>index.html#/floorplan_kueche</code>.
+# Nach erneutem Laden Navigation und die drei Pins kontrollieren.
+
+{| class="wikitable"
+! Liveaktion !! Ergebnis
+|-
+| Temperatur- oder Thermostat-Pin antippen || Normales vollständiges Widget im Popup öffnen.
+|-
+| Schalter/Taster kürzer als 400 ms tippen || Tatsächlichen konfigurierten Gerätebefehl senden.
+|-
+| Schalter/Taster mindestens 400 ms halten || Vollständige Karte öffnen, ohne zusätzlichen Pin-Schaltbefehl.
+|-
+| Tastatur-/Screenreaderaktivierung || Normale Karte ohne zeitkritische Geste öffnen.
+|-
+| X oben rechts oder Escape || Popup schließen.
+|}
+
+Bei unbekanntem Schalterzustand oder veralteten Daten wird kein Befehl
+geraten. Fehlende Werte erscheinen als „–“ ohne Einheit; Null bleibt
+sichtbar. Veraltete Werte werden gekennzeichnet und Sendefehler sichtbar
+gemeldet. Die normalen Gerätebedienelemente im '''Live-Popup''' sind wirksam.
+
+==== Stärken und bewusste Grenzen ====
+
+* '''Raumbezug statt langer Gerätelisten:''' Messwerte und Zustände werden auf dem Grundriss unmittelbar zugeordnet.
+* '''Übersicht plus Tiefe:''' kompakte Livewerte auf dem Plan, vollständige Karte bei Bedarf.
+* '''Mehrere Werte pro Pin:''' etwa Ist-/Solltemperatur, ohne zwei große Kacheln zu benötigen.
+* '''Bildbezogene Position und große Treffflächen:''' Pins bleiben am Bildpunkt; mindestens 48 × 48 CSS-Pixel Bedienfläche auch bei verkleinertem Canvas.
+* '''Flexibel pro Seite:''' normaler gemeinsamer Hintergrund auf Standardseiten, eigener Grundriss als Ausnahme; einzelne Widgets dürfen normale Karten bleiben.
+* '''Mobil sinnvoll:''' Im mobilen Hochformat werden vollständige Karten untereinander statt winziger zusammengedrängter Pins gezeigt.
+* '''Vorhandene Widgets weiterverwenden:''' kein zweiter Gerätesatz, keine eigene HTML-/JavaScript-Programmierung für dieses Beispiel.
+* Keine automatische Raumerkennung, kein neuer Zugriffsschutz und keine beliebig geratenen Einheiten oder internen Messwerte.
+* Bei „Zustand ist veraltet“ neu laden, aktuellen Stand prüfen und den Schritt erneut ausführen, statt konkurrierende Änderungen zu überschreiben.
+
+Screenshots und vollständige Erklärung:
+[https://github.com/stapetz/fhem-cms/wiki/Floorplan-Kueche Floorplan Küche – bebilderte Schritt-für-Schritt-Anleitung].
+
 === Theme-Manager und Hintergrundbilder ===
 
 Unter '''Bearbeiten → Seiteneinstellungen''' stehen '''Forest Green''', '''Hell''',
