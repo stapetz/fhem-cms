@@ -106,6 +106,47 @@ Standard. Datenvertrag und Migration stehen in der
   Widget-Breite anpassen; bestehende Shadow-DOM- und Theme-Verträge wahren.
   Die Vorschau zeigt keine Griffe, Hilfslinien oder aktiven Editor-Gesten.
 
+### Grundriss- und Pin-Modus (geplant, Refs #243)
+
+Die vollständige Vorlage steht im [Epic #243](https://github.com/stapetz/fhem-cms/issues/243);
+Datenmodell, offene Vertragsfragen und Story-Abhängigkeiten im
+[Entwicklungsvertrag](./ENTWICKLUNG.md#grundriss--und-pin-modus-geplant-refs-243).
+Noch nicht implementiert; keine Änderung normaler Freeform-Seiten ohne Opt-in.
+
+- Zentraler `cms-pin-badge` mit Shadow DOM oder klar abgegrenzten
+  `.cms-pin__*`-Klassen, keine separat nachgebauten Full-Size-Widgets.
+  Prozentualer Mittelpunkt, `translate(-50%, -50%)`; Positionen bleiben beim
+  Wechsel zwischen Pin und normaler Kachel erhalten.
+- **Kreis:** Ohne ausgewählte Werte `36×36px`, rund, nur Status-Icon.
+  **Pille:** Ein Wert, `32px` Höhe, Icon + Wert + Einheit.
+  **Multi-Pille:** Ab zwei Werten, gleiche Höhe, Trenner zwischen Werten.
+  Pillenradius `999px`, Padding `0 10px 0 8px`, Abstand `6px`, kein Zeilenumbruch.
+  Kreis ohne Padding. Schrift ruhig mit `font-variant-numeric: tabular-nums`;
+  zusätzlich prüfen, dass wechselnde Werte die Position nicht zittern lassen.
+- Trenner `1px × 12px`, `currentColor` mit Deckkraft `.25`. Basisfläche,
+  Rahmen, Schatten, Blur und Text erben ausschließlich reale gemeinsame
+  Theme-Tokens (`--cms-*` bzw. bestehende Widget-Aliase). Keine eigenen
+  Farb-Fallbacks aus den Beispielcodes übernehmen. Dark, Light, Liquid Glass
+  und künftige Themes müssen ohne Pin-Sonderfarben funktionieren.
+- Aktive Zustände: semantische Akzentfarbe an Rahmen/Icon und dezenter Glow.
+  Warn-/Alarmzustände: vorhandene semantische Gefahrenfarbe, optional langsamer
+  Puls (`2.4s`). `prefers-reduced-motion` respektieren; Zustand zusätzlich
+  zugänglich benennen und nicht ausschließlich durch Farbe vermitteln.
+- Optisch kleine Pins behalten **mindestens 48×48 sichtbare CSS-Pixel**
+  Interaktionsfläche, auch bei Canvas-Verkleinerung. Unsichtbare Erweiterung
+  darf keine Nachbarpins verdecken; echte Hit-Tests und Randfälle prüfen.
+  Die strengere bestehende 48px-Regel ersetzt die 44px-Vorlage.
+- Breite Multi-Pillen und Toolbar an allen Bild-/Viewport-Rändern vollständig
+  erreichbar halten. Die Musterattribute `data-clamp-x="left|right"` bei
+  `<4%`/`>96%` allein reichen nicht; tatsächliche Breite und Skalierung messen.
+- Hintergrund-Abdunklung als nicht interaktiver Layer über dem proportional
+  eingepassten Seitenbild und unter sämtlichen Pins/Kacheln, Deckkraft `0–.5`.
+  `pointer-events: none`; bestehende Guides/Editor-Overlays nicht überschreiben.
+- Im Editor erscheint die schwebende Toolbar über dem ausgewählten Pin,
+  nicht auf ihm. Klick/Tap und Tastatur müssen ohne Hover funktionieren.
+  Aktionen gemäß dem gemeinsamen Widget-Werkzeugvertrag, keine geschrumpften
+  „Mini“-Knöpfe. Auch `forceCard`-Kacheln bleiben regulär bearbeitbar.
+
 ## 1. Technologische Kern-Architektur
 
 Das Framework trennt die Steuerungs- und Kommunikationsebene (TypeScript/ES6) strikt von der Darstellungsebene (Web Components via Lit).

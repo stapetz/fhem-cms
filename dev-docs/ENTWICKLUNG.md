@@ -56,6 +56,76 @@ Seiteneinstellungen zuerst im Entwurf gespeichert.
 Navigationseinstellungen sind auf jeder CMS-Seite erreichbar;
 gemeinsame Canvas-Einstellungen bleiben der Startseite zugeordnet.
 
+## Grundriss- und Pin-Modus (geplant, Refs #243)
+
+Der importierte Entwurf „Interaktiver Grundriss- & Pin-Modus für
+Freeform-Seiten“ ist vollständig im [Epic #243](https://github.com/stapetz/fhem-cms/issues/243)
+erhalten. Die fünf verknüpften Stories stehen im Kanban zunächst auf Backlog:
+[Seitenoption/Bildbezug #245](https://github.com/stapetz/fhem-cms/issues/245),
+[Pin-Wrapper #246](https://github.com/stapetz/fhem-cms/issues/246),
+[Reading-Auswahl #247](https://github.com/stapetz/fhem-cms/issues/247),
+[Interaktion/Popup #248](https://github.com/stapetz/fhem-cms/issues/248) und
+[Editor #249](https://github.com/stapetz/fhem-cms/issues/249).
+Dies ist ein Zielbild, keine bereits implementierte Funktion.
+
+- **Umfang:** Kein neuer Floorplan-Seitentyp. Freeform-Seiten erhalten optional
+  `renderAsPins` (Boolean, Standard `false`) und `backgroundDim` (`0` bis `0.5`,
+  Regler 0–50 %). Ein zentraler `cms-pin-badge` stellt bestehende Widgets kompakt
+  dar; das reguläre Widget wird erst beim Öffnen im vorhandenen Popup erzeugt.
+  Keine doppelte Fachlogik und keine neue Laufzeitabhängigkeit.
+- **Positionen:** Bildbezogene Mittelpunkte `centerX`/`centerY` in Prozent,
+  auf zwei Nachkommastellen gerundet und auf `[0,100]` begrenzt. Umschalten
+  zwischen Kachel und Pin erhält Mittelpunkt und reguläre Kachelgröße.
+  Bildbezugsfläche proportional aus natürlichen Bildmaßen, zentriert und
+  unverzerrt (`contain`); dieselbe Verankerung auf Desktop, Tablet und Phone.
+- **Werte und Ausnahmen:** Optionales boolesches `showOnPin` pro Reading/Value;
+  dessen Checkbox „Auf Pin anzeigen“ erscheint nur auf Pin-Seiten. Bei neuen
+  Thermostaten Isttemperatur an, Solltemperatur aus; bei Wert/Klima erstes
+  Reading an, weitere aus; bei Schalter/Taster/Status-Symbol alle aus.
+  Null/ein/mehrere ausgewählte Werte ergeben Kreis/Pille/Multi-Pille.
+  `forceCard` behält eine normale Kachel; Uhr, Navigation und Text haben dies
+  standardmäßig aktiv. „Nicht als Pin darstellen (normale Kachel behalten)“
+  steht im jeweiligen Konfigurationsdialog.
+- **Interaktion:** Zentrale `PIN_BEHAVIOR`-Registry. Binäre Schalter/Taster
+  schalten bei kurzem Tippen `<350 ms` über ihren vorhandenen konfigurierten
+  Befehl; ab `400 ms` öffnet das reguläre Widget. Komplexe Widgets und Sensoren
+  öffnen es schon beim Tippen. Einheitliche Pointer Events; Bewegung `>6 px`
+  bricht Long-Press ab. Nach ausgelöstem Hold niemals zusätzlich schalten.
+  `pointercancel`, Captureverlust, Seitenwechsel und Disconnect räumen Timer
+  auf. Tastatur-/Screenreader-Alternative anbieten. Editor und Vorschau senden
+  keine Gerätebefehle; Berechtigungen, CSRF, Bestätigungen und Fehlerpfade
+  bleiben erhalten. Popup-Schließen trennt Widget, Live-Abos, Timer und Karten.
+- **Editor:** Neue Pins in Seitenmitte oder explizit per Klick platzieren.
+  Live-Drag ohne Browser-Ghost, Tooltip `X: 42.5% | Y: 61.0%`; Drag-Deltas
+  berücksichtigen Canvas-Skalierung und Bildbezug. Auswahl zeigt eine Toolbar
+  oberhalb des Pins, ohne ihn zu verdecken: Bearbeiten, Seite wechseln,
+  Löschen. Klick/Tap und Tastatur sind Pflicht, Hover höchstens ergänzend.
+  Escape und Abbruch verwerfen die laufende Geste; bestehende Entwurfs-,
+  Undo- und Publish-Pfade verwenden.
+
+**Vor Implementierung verbindlich klären:** Der Anhang nimmt Schema 5,
+`backgroundImage`, ein einheitliches `readings`-Array und beispielhafte
+Theme-/Widgetnamen an. Im Bestand verwendet Freeform Schema 6, `background`
+mit Asset-Auflösung, `rect` und unterschiedliche Readingmodelle. Den
+Koordinaten-/Speichervertrag zwischen Prozent-Mittelpunkten, Pixelrechtecken,
+Bildfläche und gemeinsamem Canvas einschließlich fehlender Bilder zuerst
+festlegen; keine parallelen widersprüchlichen Positionen speichern und keine
+stille Migration beim Laden. Alle neuen Felder optional und server-/clientseitig
+typ- und grenzgeprüft, einschließlich Entwurf, Publish, Import/Export, Backup
+und bestehender Blueprints. Die Registry muss tatsächliche Typen einschließlich
+Select, Link, Anrufliste, Solar/Energie, Volvo und Wetter abdecken.
+Das Verhalten zwischen `350` und `399 ms` ist im Entwurf offen und vor Umsetzung
+zu entscheiden. CSS-Beispiele sind Muster, keine Freigabe harter Farben.
+Die bestehende Mindestzielgröße von **48×48 sichtbaren CSS-Pixeln** hat Vorrang
+vor den 44px des Anhangs.
+
+Reihenfolge: #245 legt den Daten-/Bildvertrag fest; #246 und #247 werden
+aufeinander abgestimmt; darauf folgen #248 und #249. Abnahme umfasst alle
+Widgettypen, Themes, Skalierungen, Bildränder, Zustände, Maus/Touch/Tastatur,
+Liveupdates und Popup-Lifecycle sowie unveränderte Schema-5-Rasterdaten.
+Chromium-Mocks ersetzen keine Safari-/WebKit- oder echte Touch-Geräteprüfung.
+Gestaltungsdetails stehen im [Pin-Stylevertrag](./entwicklerdoku_und_styleguides.md#grundriss--und-pin-modus-geplant-refs-243).
+
 ## Freeform-Seiten (Schema 6, geplant)
 
 Freies HTML erlaubt `animate` fuer passive SVG-Geometrie-, Farb- und
