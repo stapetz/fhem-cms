@@ -4,7 +4,7 @@ export function navigationDom(element) {
     disconnect() {}
   }
   element.ownerDocument = Object.assign(new EventTarget(), {
-    defaultView: { ResizeObserver: Observer, MutationObserver: Observer },
+    defaultView: Object.assign(new EventTarget(), { ResizeObserver: Observer, MutationObserver: Observer }),
   });
   element.clientWidth = 0;
   element.querySelectorAll = (selector) => {

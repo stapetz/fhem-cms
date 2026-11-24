@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-24",
+  "version": "1.24.5-dev",
+  "title": "Widget-Bearbeitungsknoepfe gut bedienbar",
+  "changes": [
+    "Gemeinsame Widgetaktionen mindestens 48 x 48 sichtbare CSS-Pixel, auch auf skalierten Raster- und Freeform-Seiten. Refs #244.",
+    "Lesbare Symbole, Zeilenumbruch statt Schrumpfen und unveraenderte Einblendung nach Widgetauswahl.",
+    "Nur dev; echte Touch- und Safari-Geraeteabnahme ausstehend."
+  ]
+}

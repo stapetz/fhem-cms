@@ -106,6 +106,33 @@ Standard. Datenvertrag und Migration stehen in der
   Widget-Breite anpassen; bestehende Shadow-DOM- und Theme-Verträge wahren.
   Die Vorschau zeigt keine Griffe, Hilfslinien oder aktiven Editor-Gesten.
 
+### Widget-Bearbeitungsknöpfe (verbindlich, Refs #244)
+
+Alle bestehenden und künftigen Widgettypen verwenden die gemeinsame
+`.cms-widget-tools`-Leiste für Einstellen, Duplizieren, Seitenwechsel, Löschen
+und Freeform-Geometrie. Erst die Auswahl per Klick/Tap oder Tastatur blendet
+die Aktionen ein; Hover allein genügt nicht. Erneute Auswahl bzw. Escape
+blendet sie wieder aus. Live-Ansicht und Vorschau zeigen keine Editor-Aktionen.
+
+- Jeder Knopf ist mindestens **48×48 sichtbare CSS-Pixel** groß, mit mindestens
+  20px sichtbarer Symbolschrift. Keine 24px-Miniaturknöpfe und keine Skalierung
+  der Werkzeugleiste auf die kleinen Inhaltsmaße des Widgets.
+- Der gemeinsame CSS-Vertrag kompensiert `--cms-freeform-scale` für
+  Knopfmaße, Symbolschrift, Abstände und Radius; dies gilt auch für Raster
+  innerhalb eines skalierten gemeinsamen Canvas. Größere Basisschrift darf
+  Ziele vergrößern, nie verkleinern.
+- Schmale Widgets umbrechen die Aktionen in weitere Zeilen, statt die Ziele
+  zu schrumpfen. Werkzeugleiste außerhalb des Inhalts-Clippings halten,
+  ausgewähltes Widget vor benachbarten Widgets anzeigen und Abstand zu
+  Größenanfassern erhalten. Bei flachen Widgets darf die Leiste ober-/unterhalb
+  stehen; `fitWidgetTools` hält sie innerhalb des Canvas bzw. Rasterbereichs
+  und passt sie bei Auswahl, Gesten und Ansichtsgrößenänderungen neu ein.
+  Sehr hohe Leisten bleiben scrollbar. Kleine Widget-Geometrie nicht
+  automatisch ändern.
+- Theme-Tokens für Fläche, Text, Rahmen und Feedback, sprechende
+  `aria-label`/Tooltips, sichtbarer Tastaturfokus und unmittelbares Press-Feedback.
+  Neue Widgets dürfen keine eigenen kleineren Editorleisten einführen.
+
 ### Grundriss- und Pin-Modus (geplant, Refs #243)
 
 Die vollständige Vorlage steht im [Epic #243](https://github.com/stapetz/fhem-cms/issues/243);

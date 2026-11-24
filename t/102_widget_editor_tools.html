@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget editor targets in Grid and scaled Freeform</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<style>
+  .grid-stack-animate,.grid-stack-item { transition: none !important; }
+  #root { margin: 0 auto; }
+</style>
+<main id="root"></main><pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+
+const root = document.querySelector('#root'), output = document.querySelector('#result');
+const specs = [
+  {type:'fhem-table',rows:[{device:'Demo',reading:'power',label:'Leistung'}]},
+  {type:'fhem-calllist',device:'Demo',limit:5,columns:['state','party','timestamp','duration']},
+  {type:'fhem-clock',style:'analog'},
+  {type:'thermostat',device:'Demo',readings:{actual:'temperature',target:'desiredTemperature'}},
+  {type:'fhem-slider',device:'Demo',command:'pct',reading:'pct'},
+  {type:'fhem-select',device:'Demo',command:'mode',reading:'mode',mode:'dropdown'},
+  {type:'fhem-chart',device:'Demo',reading:'temperature'},
+  {type:'fhem-link',links:[{id:'one',kind:'internal',page:'home',text:'Start',textPosition:'above',
+    showText:true,target:'self',grid:{col:1,row:1,w:6,h:3}}]},
+  {type:'fhem-solar-energy',readings:{pv:{device:'Demo',reading:'power'}}},
+  {type:'fhem-solarflow',device:'Demo',readings:{}},
+  {type:'fhem-volvoconnect',device:'Demo'},
+  {type:'weather',config:{dataSource:'fhem_dwd',device:'Demo'}},
+  {type:'fhem-value',device:'Demo',reading:'temperature'},
+  {type:'fhem-switch',device:'Demo',reading:'state',on:'on',off:'off'},
+  {type:'fhem-button',device:'Demo',command:'on'},
+  {type:'fhem-icon',device:'Demo',reading:'state',states:[{value:'on',icon:'test'}]},
+  {type:'fhem-html',devices:[],html:'<p>HTML</p>'},
+  {type:'text',html:'<p>Text</p>'},
+];
+let view, checks = 0, calls = [];
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const paint = () => new Promise(resolve => setTimeout(resolve,150));
+const editing = {
+  onEdit:id => calls.push(['edit',id]), onDuplicate:id => calls.push(['duplicate',id]),
+  onMove:id => calls.push(['move',id]), onDelete:id => calls.push(['delete',id]),
+  onChange:() => { throw new Error('Selection must not change grid positions'); },
+  onFreeformChange:() => { throw new Error('Selection must not change Freeform geometry'); },
+};
+try {
+  for (const [layout, scale, width] of [
+    ['grid',1,400], ['grid',1,180],
+    ['shared-grid',.5,400], ['shared-grid',1.5,200],
+    ['freeform',.25,400], ['freeform',.5,200], ['freeform',1,400], ['freeform',1.5,200],
+    ['freeform',.5,40],
+  ]) {
+    const pixel = layout === 'freeform', framed = layout !== 'grid';
+    const canvas = {width:1000,height:7680,scaling:'width'};
+    const config = {
+      schemaVersion:framed ? 6 : 5,
+      settings:{layoutMode:'grid',gridColumns:12,
+        ...(framed ? {pageCanvas:canvas,pageNavigationRect:{x:0,y:0,w:1000,h:48}} : {})},
+      navigation:{grid:{col:1,row:1,w:12,h:1}},
+      pages:[{id:'home',title:'Start',...(pixel ? {layoutMode:'freeform',canvas} : {}),
+        widgets:specs.map((spec,i) => ({...spec,id:`w${i}`,
+          grid:{col:1,row:2+i*4,w:12,h:4},
+          ...(pixel ? {rect:{x:width===40 ? 960 : 0,y:width===40 && i===17 ? 7670 : 100+i*400,
+            w:width,h:width===40 ? 10 : 300}} : {})}))}],
+    };
+    const original = JSON.stringify(config);
+    root.className = 'cms-schema5-grid grid-stack';
+    root.style.width = `${framed ? 1000*scale : width}px`;
+    view = mountSchema5Widgets(GridStack,root,config,'home',document.createElement('nav'),{
+      history:async () => ({points:[]}),
+      setCommand:() => { throw new Error('Editor must never send device commands'); },
+    },new Map(),editing);
+    await paint();
+    const wrappers = [...root.querySelectorAll(pixel ? '.cms-freeform-widget' : '.grid-stack-item')]
+      .filter(node => node.querySelector('.cms-widget-tools') && !node.classList.contains('cms-responsive-navigation'));
+    check(wrappers.length === specs.length, `${layout}: all widget types mounted`);
+    for (const theme of ['light','dark','liquid-glass']) {
+      document.documentElement.dataset.cmsTheme = theme;
+      for (const [index, wrapper] of wrappers.entries()) {
+        const label = `${layout}/${scale}/${width}/${theme}/${specs[index].type}`;
+        const tools = wrapper.querySelector('.cms-widget-tools');
+        check(getComputedStyle(tools).visibility === 'hidden', `${label}: hidden before selection`);
+        const before = [wrapper.offsetLeft,wrapper.offsetTop,wrapper.offsetWidth,wrapper.offsetHeight].join();
+        wrapper.querySelector('.cms-widget-drag').click();
+        check(getComputedStyle(tools).visibility === 'visible', `${label}: selected tools visible`);
+        const buttons = [...tools.querySelectorAll('button')];
+        check(buttons.length === (pixel ? 5 : 4), `${label}: complete actions`);
+        for (const button of buttons) {
+          const box = button.getBoundingClientRect();
+          check(box.width >= 47.99 && box.height >= 47.99, `${label}: target ${box.width}x${box.height}`);
+          check(parseFloat(getComputedStyle(button).fontSize)*scale >= 19.99, `${label}: readable symbol`);
+          check(Boolean(button.getAttribute('aria-label') && button.title), `${label}: name and tooltip`);
+          button.scrollIntoView({block:'center',inline:'nearest'});
+          const visible = button.getBoundingClientRect();
+          const bounds = (root.querySelector('.cms-freeform-footprint') ?? root).getBoundingClientRect();
+          check(visible.left >= bounds.left-.1 && visible.right <= bounds.right+.1,
+            `${label}: target inside horizontal canvas bounds`);
+          check(visible.top >= bounds.top-.1 && visible.bottom <= bounds.bottom+.1,
+            `${label}: target inside vertical canvas bounds`);
+          const hit = document.elementFromPoint(visible.x+visible.width/2,visible.y+visible.height/2);
+          check(button === hit || button.contains(hit),
+            `${label}: action is not covered (${button.className}, hit ${hit?.outerHTML}, box ${JSON.stringify(visible)})`);
+        }
+        const positions = buttons.map(button => button.getBoundingClientRect());
+        for (let i=1;i<positions.length;i++) {
+          const a=positions[i-1], b=positions[i];
+          check(b.top >= a.bottom+3 || b.left >= a.right+3, `${label}: separated targets`);
+        }
+        if (layout === 'grid' && width <= 200 || pixel && width*scale <= 200) {
+          check(positions.at(-1).top > positions[0].top, `${label}: narrow toolbar wraps`);
+        }
+        calls = [];
+        for (const button of buttons.filter(button => !button.classList.contains('cms-widget-geometry'))) button.click();
+        check(calls.map(call => call[0]).join() === 'edit,duplicate,move,delete', `${label}: actions routed`);
+        check(calls.every(call => call[1] === `w${index}`), `${label}: correct widget`);
+        const configButton = tools.querySelector('button');
+        configButton.focus({preventScroll:true});
+        check(document.activeElement === configButton, `${label}: keyboard focus`);
+        if (index===0 && theme==='light') {
+          const previous = root.style.width;
+          root.style.width = `${parseFloat(previous)*.8}px`;
+          window.dispatchEvent(new Event('resize'));
+          await paint();
+          check(configButton.getBoundingClientRect().width >= 47.99, `${label}: resized target remains usable`);
+          configButton.scrollIntoView({block:'center',inline:'nearest'});
+          const box = configButton.getBoundingClientRect();
+          check(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2) === configButton,
+            `${label}: selected toolbar remains reachable after viewport resize`);
+          root.style.width = previous;
+          window.dispatchEvent(new Event('resize'));
+          await paint();
+        }
+        wrapper.querySelector('.cms-widget-drag').click();
+        check(getComputedStyle(tools).visibility === 'hidden', `${label}: second selection hides tools`);
+        check([wrapper.offsetLeft,wrapper.offsetTop,wrapper.offsetWidth,wrapper.offsetHeight].join() === before,
+          `${label}: geometry unchanged`);
+      }
+    }
+    check(JSON.stringify(config) === original, `${layout}: source data unchanged`);
+    view.destroy(); view = null;
+  }
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({checks});
+} catch (error) {
+  view?.destroy();
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>

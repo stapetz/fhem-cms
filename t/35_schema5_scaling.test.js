@@ -113,6 +113,8 @@ async function testServer() {
 }
 
 for (const [name, fixtures] of [
+  ['widget editor actions retain usable targets across all types, themes and canvas scales',
+    [['102_widget_editor_tools.html', 10000], ['102_widget_editor_tools.html?touch=1', 10000]]],
   ['standard widget typography grows in actual Grid and scaled Freeform without changing authored content',
     [['99_widget_typography.html?width=1440', 1000],
       ['99_widget_typography.html?mode=preview&cms-device=tablet&width=768', 1000],
@@ -673,7 +675,14 @@ for (const [name, fixtures] of [
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture.startsWith('89_volvoconnect_order.html')
+        fixture === '102_widget_editor_tools.html?touch=1'
+          ? async command => {
+            await command('Emulation.setDeviceMetricsOverride', {
+              width:820, height:1180, deviceScaleFactor:1, mobile:true,
+            });
+            await command('Emulation.setTouchEmulationEnabled', {enabled:true});
+          }
+          : fixture.startsWith('89_volvoconnect_order.html')
           ? async command => {
             const touch = fixture.includes('touch=1');
             await command('Emulation.setDeviceMetricsOverride', {
@@ -784,7 +793,7 @@ test('editor tools require activation and Freeform navigation supports real poin
         await evaluate(`document.dispatchEvent(new CustomEvent('regression-check', {detail:${JSON.stringify({ phase, index })}}))`);
         const error = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
-        assert.equal(error, null, error);
+        assert.equal(error, null, `${phase}/${index}: ${error}`);
       };
       await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
       await pause(50);
@@ -800,8 +809,11 @@ test('editor tools require activation and Freeform navigation supports real poin
         await command('Input.dispatchMouseEvent', {type:'mousePressed', ...point, button:'left', clickCount:1});
         await command('Input.dispatchMouseEvent', {type:'mouseReleased', ...point, button:'left', clickCount:1});
         await check('selected', index);
-        await command('Input.dispatchMouseEvent', {type:'mousePressed', ...point, button:'left', clickCount:1});
-        await command('Input.dispatchMouseEvent', {type:'mouseReleased', ...point, button:'left', clickCount:1});
+        // Larger action targets may cover the original centre; deselect on unobscured content.
+        const content = await evaluate(`(() => { const r = document.querySelector('#hover-item-${index}').getBoundingClientRect();
+          return {x:r.x + 25, y:r.y + r.height / 2}; })()`);
+        await command('Input.dispatchMouseEvent', {type:'mousePressed', ...content, button:'left', clickCount:1});
+        await command('Input.dispatchMouseEvent', {type:'mouseReleased', ...content, button:'left', clickCount:1});
         await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
         await pause(50);
         await check('leave');
@@ -811,12 +823,29 @@ test('editor tools require activation and Freeform navigation supports real poin
         await command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
         await command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
         await check('focus', index);
+        await command('Input.dispatchKeyEvent', {type:'keyDown', key:'Enter', code:'Enter', text:'\r', windowsVirtualKeyCode:13});
+        await command('Input.dispatchKeyEvent', {type:'keyUp', key:'Enter', code:'Enter', windowsVirtualKeyCode:13});
+        await check('selected', index);
+        await command('Input.dispatchKeyEvent', {type:'keyDown', key:'Tab', code:'Tab', windowsVirtualKeyCode:9});
+        await command('Input.dispatchKeyEvent', {type:'keyUp', key:'Tab', code:'Tab', windowsVirtualKeyCode:9});
+        assert.equal(await evaluate(`document.activeElement.matches('#hover-item-${index} .cms-widget-config')
+          && getComputedStyle(document.activeElement).outlineStyle !== 'none'`), true, 'Tab reaches the visible action focus');
+        await command('Input.dispatchKeyEvent', {type:'keyDown', key:'Escape', code:'Escape', windowsVirtualKeyCode:27});
+        await check('leave');
         await evaluate(`document.querySelector('#outside').focus()`);
         await check('leave');
       }
       await command('Emulation.setTouchEmulationEnabled', { enabled: true });
       await pause(50);
       await check('touch');
+      const touchPoint = await evaluate(`(() => {const r=document.querySelector('#hover-item-1').getBoundingClientRect();
+        return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+      await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[touchPoint]});
+      await command('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+      await pause(50);
+      await check('selected', 1);
+      await command('Input.dispatchKeyEvent', {type:'keyDown', key:'Escape', code:'Escape', windowsVirtualKeyCode:27});
+      await check('leave');
       await command('Emulation.setTouchEmulationEnabled', { enabled: false });
       await check('finish');
     };

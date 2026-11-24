@@ -1,7 +1,7 @@
 import { createSchema5Grid, schema5GridItems } from './fcui-schema5-layout.js';
 import { createWidgetElement, dataFor, isLiveWidget } from './widget-factory.js';
 import { cmsPageCanvas, cmsPageNavigationRect, isFreeform, resizeFreeformPage } from './fcui-freeform-layout.js';
-import { mountFreeform } from './fcui-freeform-view.js';
+import { fitWidgetTools, mountFreeform } from './fcui-freeform-view.js';
 import { mountFreeformEditor } from './fcui-freeform-edit.js';
 
 export function mountSchema5Widgets(GridStack, root, config, pageId, navigation, services, snapshots, editing) {
@@ -94,11 +94,16 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
         && wrapper.contains(root.ownerDocument.activeElement)) root.ownerDocument.activeElement.blur();
       wrapper.classList.toggle('cms-widget-selected', wrapper === selected);
     }
+    if (selected) fitWidgetTools(selected, gridRoot.closest('.cms-shared-grid-pane') ?? gridRoot);
   };
   const gridKeys = new AbortController();
   if (grid && editing) root.ownerDocument.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !event.defaultPrevented && !root.inert
       && !event.target.closest?.('dialog, .cms-menu-items, :popover-open')) selectGridWidget(null);
+  }, {signal: gridKeys.signal});
+  if (grid && editing && !frame) root.ownerDocument.defaultView.addEventListener('resize', () => {
+    const selected = gridRoot.querySelector('.cms-widget-selected');
+    if (selected) fitWidgetTools(selected, gridRoot);
   }, {signal: gridKeys.signal});
   if (editing) {
     if (grid) gridRoot.classList.toggle('cms-grid-editable', true);
@@ -187,6 +192,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     }
     grid?.setStatic(false);
     grid?.on('resizestart resize', (_event, wrapper) => {
+      fitWidgetTools(wrapper, gridRoot.closest('.cms-shared-grid-pane') ?? gridRoot);
       const size = wrapper.querySelector('.cms-widget-dimensions');
       if (!size) return;
       size.hidden = false;
@@ -196,7 +202,8 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       const size = wrapper.querySelector('.cms-widget-dimensions');
       if (size) size.hidden = true;
     });
-    grid?.on('dragstop resizestop', () => {
+    grid?.on('dragstop resizestop', (_event, wrapper) => {
+      fitWidgetTools(wrapper, gridRoot.closest('.cms-shared-grid-pane') ?? gridRoot);
       if (!destroyed) editing.onChange(grid.save(false));
     });
   }

@@ -1,5 +1,29 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Widget-Bearbeitungsknöpfe (24.11.2026, dev, #244)
+
+Alle 18 Widgettypen teilen mindestens 48×48 sichtbare CSS-Pixel große
+Editor-Aktionen mit lesbaren Symbolen. Die auswahlbasierte Einblendung bleibt;
+kleine Widgets erhalten umgebrochene, innerhalb der Layoutgrenzen erreichbare
+Leisten statt verkleinerter Ziele. Die dauerhafte Vorgabe steht im Styleguide.
+
+Lokal erfolgreich:
+- Browserläufer `node --test --test-name-pattern='widget editor actions|editor tools require activation' t/35_schema5_scaling.test.js`:
+  je 19152 Assertions der neuen Fixture in Desktop-Chromium und
+  Tablet-Touch-Emulation; alle Typen, drei Themes, Grid/Freeform/gemeinsamer
+  Canvas, Maßstäbe 0.25 bis 1.5, winzige Randwidgets und Größenwechsel.
+  Zusätzlich reale Pointer-/Touch-Ereignisse, Tastaturauswahl, Tab-Fokus,
+  Escape und vorhandene Drag-/Resize-Regression.
+- Elf Tests mit `node --test t/11_schema5_widgets.test.js t/13_schema5_live.test.js t/19_schema5_editor.test.js t/93_freeform.test.js`:
+  Lifecycle, unveränderte Live-Daten, Entwurfstransaktionen und Freeform-Gesten.
+- `perl -c FHEM/01_FHEMCMS.pm`, `npm run build:check` und
+  `python3 -m unittest discover -s t -p 'test_generate_changed.py'`.
+
+Offen: Abnahme in FHEM sowie echte Tablet-/Phone- und Safari-Bedienung.
+Touch-Emulation ist kein Ersatz für diese Geräteprüfung. Kein `main`-Release.
+Das separat erfasste Pin-Epic #243 und seine fünf Stories bleiben Planung
+im Backlog; diese Änderung implementiert keinen Pin-Modus.
+
 ## Freigegebener Release 1.8.0 (#136, #137, #139)
 
 Am 11.11.2026 bestätigte der Entwickler die Geräteabnahme und gab den

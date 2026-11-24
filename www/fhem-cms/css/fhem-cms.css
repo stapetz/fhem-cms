@@ -520,27 +520,41 @@ body:has(.cms-schema5-grid) {
 }
 
 .cms-widget-tools {
+  --cms-widget-tool-size: calc(max(48px, 3rem) / var(--cms-freeform-scale, 1));
+  --cms-widget-tool-gap: calc(.35rem / var(--cms-freeform-scale, 1));
   position: absolute;
   z-index: 5;
   top: calc(var(--gs-item-margin-top, 0px) + 0.4rem);
   right: calc(var(--gs-item-margin-right, 0px) + 0.4rem);
+  width: max-content;
+  box-sizing: border-box;
+  min-width: calc(var(--cms-widget-tool-size) + 8px / var(--cms-freeform-scale, 1));
+  max-width: calc(100% - var(--gs-item-margin-left, 0px) - var(--gs-item-margin-right, 0px) - .8rem);
   display: flex;
-  gap: .25rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--cms-widget-tool-gap);
+  padding: calc(4px / var(--cms-freeform-scale, 1));
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .cms-widget-tools button {
-  width: 1.5rem;
-  height: 1.5rem;
+  box-sizing: border-box;
+  flex: 0 0 var(--cms-widget-tool-size);
+  width: var(--cms-widget-tool-size);
+  height: var(--cms-widget-tool-size);
+  min-width: var(--cms-widget-tool-size);
+  min-height: var(--cms-widget-tool-size);
   padding: 0;
-  border: 1px solid var(--cms-border);
-  border-radius: .45rem;
+  border: calc(1px / var(--cms-freeform-scale, 1)) solid var(--cms-border);
+  border-radius: calc(.6rem / var(--cms-freeform-scale, 1));
   color: var(--cms-muted-strong);
   background: var(--cms-surface-raised);
   font: inherit;
-  font-size: .85rem;
+  font-size: calc(max(20px, 1.35rem) / var(--cms-freeform-scale, 1));
   line-height: 1;
   cursor: pointer;
-  opacity: .85;
 }
 
 .cms-widget-tools button:hover {
@@ -556,8 +570,18 @@ body:has(.cms-schema5-grid) {
 }
 
 .cms-grid-editable .cms-widget-tools {
-  /* 7px Griffabstand + 18px Griffbreite + 4px freie Trefferzone, auch bei flachen Widgets. */
+  top: 29px;
   right: calc(var(--cms-view-gap) + 29px);
+  max-width: calc(100% - var(--cms-view-gap) - 58px);
+}
+
+.cms-grid-editable > .grid-stack-item.cms-widget-selected {
+  z-index: 10001;
+}
+
+.cms-widget-tools button:active:not(:disabled) {
+  background: var(--cms-surface-hover);
+  box-shadow: inset 0 0 0 calc(2px / var(--cms-freeform-scale, 1)) var(--cms-accent);
 }
 
 .cms-grid-editable > .grid-stack-item::after {
@@ -1044,6 +1068,11 @@ body:has(.cms-schema5-grid) {
 .cms-widget-tools button:focus-visible {
   outline: 2px solid var(--cms-accent);
   outline-offset: 2px;
+}
+
+.cms-widget-tools button:focus-visible {
+  outline-width: calc(2px / var(--cms-freeform-scale, 1));
+  outline-offset: calc(2px / var(--cms-freeform-scale, 1));
 }
 
 .cms-editor-panel fieldset {
@@ -2294,9 +2323,9 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   }
 }
 .cms-freeform-canvas > :is(.cms-freeform-widget, .cms-freeform-navigation) > .cms-widget-tools {
-  z-index: 2;
   top: calc(var(--cms-freeform-handle-size) + 2px);
   right: calc(var(--cms-freeform-handle-size) + 2px);
+  max-width: calc(100% - 2 * (var(--cms-freeform-handle-size) + 2px));
 }
 .cms-freeform-canvas .cms-widget-drag { cursor: grab; touch-action: none; }
 .cms-grid-guides .cms-freeform-canvas::before {

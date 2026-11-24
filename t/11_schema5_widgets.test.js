@@ -20,8 +20,10 @@ test('schema 5 widget adapter preserves bindings and cleans up the grid', async 
     removeAttribute(name) { delete this.attributes[name]; }
     addEventListener(name, listener) { this.listeners[name] = listener; }
   }
-  globalThis.window = { location: { href: 'https://example.test/' } };
-  globalThis.document = Object.assign(new EventTarget(), { createElement: (tag) => new Element(tag) });
+  globalThis.window = Object.assign(new EventTarget(), { location: { href: 'https://example.test/' } });
+  globalThis.document = Object.assign(new EventTarget(), {
+    defaultView: globalThis.window, createElement: (tag) => new Element(tag),
+  });
   globalThis.HTMLElement = class {};
   const registry = new Map();
   globalThis.customElements = {

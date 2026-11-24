@@ -127,6 +127,9 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     canvas.style.width = stack ? '100%' : `${settings.width}px`;
     canvas.style.height = stack ? 'auto' : `${settings.height}px`;
     canvas.style.transform = stack ? '' : `scale(${scale})`;
+    for (const wrapper of canvas.querySelectorAll('.cms-widget-selected')) {
+      fitWidgetTools(wrapper, wrapper.closest('.cms-shared-grid-pane') ?? canvas);
+    }
   }
   let frame = null;
   const observer = new browser.ResizeObserver(() => {
@@ -158,4 +161,26 @@ export function mountFreeform(root, page, navigation, render, {background, editi
 
 export function setFreeformBox(node, {x, y, w, h, z = 1}) {
   Object.assign(node.style, {left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px`, zIndex: z});
+}
+
+export function fitWidgetTools(wrapper, container) {
+  const tools = wrapper.querySelector('.cms-widget-tools');
+  if (!tools) return;
+  const browser = wrapper.ownerDocument.defaultView;
+  const style = browser.getComputedStyle(wrapper);
+  const scale = Number.parseFloat(style.getPropertyValue('--cms-freeform-scale')) || 1;
+  const bounds = container.getBoundingClientRect();
+  tools.style.translate = 'none';
+  tools.style.maxHeight = `${Math.max(48, Math.min(bounds.height, browser.innerHeight - 16)) / scale}px`;
+  const rect = tools.getBoundingClientRect();
+  const x = Math.max(bounds.left, Math.min(rect.left, bounds.right - rect.width));
+  let y = Math.max(bounds.top, Math.min(rect.top, bounds.bottom - rect.height));
+  const widget = wrapper.getBoundingClientRect();
+  const clearance = (Number.parseFloat(style.getPropertyValue('--cms-freeform-handle-target')) || 18) + 4;
+  // Tall, wrapped tools must not cross the widget's resize handles.
+  if (rect.height > widget.height - 2 * clearance) {
+    if (widget.top - clearance - rect.height >= bounds.top) y = widget.top - clearance - rect.height;
+    else if (widget.bottom + clearance + rect.height <= bounds.bottom) y = widget.bottom + clearance;
+  }
+  tools.style.translate = `${(x - rect.left) / scale}px ${(y - rect.top) / scale}px`;
 }

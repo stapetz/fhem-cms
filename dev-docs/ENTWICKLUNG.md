@@ -56,6 +56,33 @@ Seiteneinstellungen zuerst im Entwurf gespeichert.
 Navigationseinstellungen sind auf jeder CMS-Seite erreichbar;
 gemeinsame Canvas-Einstellungen bleiben der Startseite zugeordnet.
 
+## Bedienbare Widget-Werkzeuge (Refs #244)
+
+Alle Widgettypen teilen `.cms-widget-tools` in Raster und Freeform:
+Einstellen, Duplizieren, Seitenwechsel, Löschen und Freeform-Geometrie haben
+mindestens 48×48 sichtbare CSS-Pixel und mindestens 20px Symbolschrift.
+Die Größen kompensieren den wirksamen Canvas-Maßstab, auch im Raster auf
+gemeinsamem Canvas. Bei Platzmangel umbrechen die Aktionen statt zu schrumpfen.
+Die Auswahl bleibt der Auslöser; Hover zeigt keine Werkzeuge. Live/Vorschau
+bleiben ohne Editorleisten. Widget-Geometrie, Drag-/Resize- und Speicherpfade
+werden dadurch nicht verändert.
+Die [verbindliche Gestaltungsregel](./entwicklerdoku_und_styleguides.md#widget-bearbeitungsknöpfe-verbindlich-refs-244)
+gilt ebenso für künftige Widgets. Gemeinsame Styles statt Sonderlösungen pflegen.
+`fitWidgetTools` berücksichtigt Canvas-/Rastergrenzen, setzt hohe umgebrochene
+Leisten bei Bedarf ober-/unterhalb des Widgets und erhält die Erreichbarkeit
+beim Skalieren, Verschieben und Vergrößern. Die Werkzeugleiste liegt vor
+der Verschiebefläche, ohne die Größenanfasser zu verdecken.
+
+Lokale Regression: `node --test --test-name-pattern='widget editor actions|editor tools require activation' t/35_schema5_scaling.test.js`
+prüft alle 18 Widgettypen in drei Themes, Raster, gemeinsamem Raster-Canvas und
+Freeform, Skalierungen `0.25/0.5/1/1.5`, schmale/10px-flache Randwidgets und
+Größenwechsel. Fixture `t/102_widget_editor_tools.html` erreicht je 19152
+Assertions in Desktop-Chromium und Tablet-Touch-Emulation. Die bestehende
+Editorregression ergänzt echte Pointer-/Touch-Ereignisse und Tastaturauswahl,
+Tab-Fokus und Escape. Dazu Lifecycle-/Entwurfstests
+`node --test t/11_schema5_widgets.test.js t/13_schema5_live.test.js t/19_schema5_editor.test.js t/93_freeform.test.js`,
+Perl-Syntax und Build-Check. Echte Safari-/Touch-Geräteabnahme steht aus.
+
 ## Grundriss- und Pin-Modus (geplant, Refs #243)
 
 Der importierte Entwurf „Interaktiver Grundriss- & Pin-Modus für
