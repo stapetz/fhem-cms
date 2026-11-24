@@ -69,7 +69,9 @@ Live, Editor, Seitenpopup und Pin-Bildfläche verwenden denselben Resolver
 `schema5PageBackground`. Entwurf, Publish und Backups erhalten den Boolean.
 Regression: `node --test t/18_schema5_page_panel.test.js t/54_liquid_glass.test.js`,
 `prove t/92_schema6_persistence.t` und der Browserfall „page settings preview“
-in `t/35_schema5_scaling.test.js`.
+in `t/35_schema5_scaling.test.js`. Die Theme-/Bildregression „themes use and
+restore page backgrounds“ prüft zusätzlich Umbruch und Bildbeschreibungszeile
+im eigenen Aktionscontainer einer Nicht-Startseite.
 
 ## Bedienbare Widget-Werkzeuge (Refs #244)
 

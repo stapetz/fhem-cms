@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-24",
+  "version": "1.30.2-dev",
+  "title": "Hintergrundausnahmen, Pin-Editor und einheitliches Schliessen-X",
+  "changes": [
+    "Einzelne Seiten duerfen das gemeinsame Startseitenbild durch ein eigenes Bild oder bewusst kein Bild ersetzen. Refs #251.",
+    "Die individuellen Bildaktionen behalten Umbruch, Abstaende und eine eigene Bildbeschreibungszeile im Seitendialog.",
+    "Enthaelt den kompakten Pin-Editor mit bildbezogenem Drag, Tastaturbedienung und 48px-Werkzeugen sowie das gemeinsame SVG-X fuer Dialoge und Widgets.",
+    "Wert-Pins verwenden ein neutrales # statt eines menueaehnlichen Typsymbols."
+  ]
+}

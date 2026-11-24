@@ -164,6 +164,7 @@ export class Schema5PagePanel {
       this.#backgroundControls.append(sharedLabel);
     }
     const individualBackground = element('div');
+    individualBackground.className = 'cms-page-background-local';
     if (pageId !== config.pages[0].id) {
       individualBackground.append(choose, remove, headingBackground);
       const overrideLabel = element('label', 'Hintergrundvererbung von der Startseite überschreiben ');
