@@ -509,7 +509,7 @@ class FHEMCMSLink extends HTMLElement {
     const names = { thermostat: 'Thermostat', 'fhem-value': 'Wert-Anzeige', 'fhem-switch': 'Schalter',
       'fhem-button': 'Taster', 'fhem-html': 'Freies HTML', 'fhem-clock': 'Uhr / Datum',
       'fhem-icon': 'Status-Symbol', 'fhem-table': 'Tabelle', 'fhem-slider': 'Schieberegler',
-      'fhem-chart': 'Diagramm', 'fhem-calllist': 'Anrufliste', 'fhem-solarflow': 'SolarFlow',
+      'fhem-chart': 'Diagramm', 'fhem-graph': 'Graph', 'fhem-calllist': 'Anrufliste', 'fhem-solarflow': 'SolarFlow',
       'fhem-volvoconnect': 'VolvoConnect',
       text: 'Textbaustein', 'fhem-link': 'LinkWidget', navigation: 'Navigation' };
     const label = entry => entry.title || `${names[entry.type] || 'Widget'} (${entry.id})`;

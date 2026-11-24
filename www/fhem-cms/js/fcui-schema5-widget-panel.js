@@ -24,6 +24,7 @@ const WIDGET_TYPES = [
   ['fhem-slider', 'Schieberegler', 'l', 4, 6, { device: '', command: '', reading: '' }],
   ['fhem-select', 'Wert auswählen', 'q', 4, 4, { device: '', command: '', reading: '', mode: 'dropdown' }],
   ['fhem-chart', 'Diagramm', 'g', 6, 10, { device: '', reading: '' }],
+  ['fhem-graph', 'Graph', 'graph', 6, 10, {series: [], chartType:'line', aggregation:'last', range:'24h', granularity:'auto'}],
   ['fhem-calllist', 'Anrufliste', 'a', 6, 6, { device: '', limit: 5, columns: ['state', 'party', 'timestamp', 'duration'] }],
   ['fhem-solarflow', 'SolarFlow', 'f', 5, 14, { readings: {} }],
   ['fhem-solar-energy', 'Solar und Energiefluss', 'e', 12, 12, { readings: {}, sections: [] }],

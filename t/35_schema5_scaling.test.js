@@ -258,6 +258,8 @@ for (const [name, fixtures] of [
     [['113_solar_fill.html', 100]]],
   ['widget selection sorts and previews every widget without live services',
     [['114_widget_previews.html', 100], ['114_widget_previews.html?width=390', 100]]],
+  ['graph supports multiple log series and previews every chart type',
+    [['115_graph.html', 10], ['115_graph.html?width=390', 10]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
       ['75_dialog_layout.html?width=852', 51]]],

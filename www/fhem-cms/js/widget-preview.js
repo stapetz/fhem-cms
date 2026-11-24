@@ -30,6 +30,10 @@ export const WIDGET_PREVIEWS = {
     {device:'Vorschau',command:'mode',reading:'mode',mode:'dropdown'}],
   'fhem-chart': ['Zeigt den zeitlichen Verlauf eines Readings.',
     {device:'Vorschau',reading:'temperature',unit:'°C'}],
+  'fhem-graph': ['Vergleicht mehrere historische Datenreihen als Linien, Stapel oder Tortendiagramm.',
+    {chartType:'line',aggregation:'last',range:'24h',granularity:'auto',
+      series:[{device:'Vorschau',reading:'temperature',label:'Temperatur',source:'auto',color:'#3b82f6'},
+        {device:'Vorschau',reading:'humidity',label:'Luftfeuchte',source:'auto',color:'#f59e0b'}]}],
   'fhem-calllist': ['Zeigt Anrufe mit Status, Kontakt, Zeit und Dauer.',
     {device:'Vorschau',limit:5,columns:['state','party','timestamp','duration']}],
   'fhem-solarflow': ['Zeigt den aktuellen Energiefluss zwischen Solaranlage, Haus, Netz und Speicher.',
@@ -62,7 +66,10 @@ const now = Math.floor(Date.now() / 1000);
 const services = {
   pages:[{id:'start',title:'Start'}],
   iconUrl:() => icon,
-  history:async () => ({points:[[now-7200,19],[now-5400,19.5],[now-3600,20.8],[now-1800,20.2],[now,21.5]]}),
+  history:async (device, reading) => ({points: reading === 'humidity'
+    ? [[now-7200,35],[now-5400,40],[now-3600,38],[now-1800,43],[now,48]]
+    : [[now-7200,19],[now-5400,19.5],[now-3600,20.8],[now-1800,20.2],[now,21.5]],
+    summary: reading === 'humidity' ? {last:48,average:40.8} : {last:21.5,average:20.2}}),
   weather:async () => ({source:'fhem_dwd',stationName:'Beispiel',updatedAt:new Date().toISOString(),
     current:{timestamp:new Date().toISOString(),temp:21,humidity:48,windSpeed:12,condition:'cloudy',icon:'cloudy'},
     alerts:[],hourly:[],daily:[{date:new Date().toISOString(),tempMin:14,tempMax:22,precipitationSum:1,

@@ -27,6 +27,38 @@ my $config = {
 };
 my $bytes = $json->encode($config);
 for my $schema (5, 6) {
+    my $graph = $json->decode($bytes);
+    pop(@{$graph->{pages}});
+    $graph->{schemaVersion} = $schema;
+    $graph->{pages}[0]{widgets}[0] = {
+        id => 'graph', type => 'fhem-graph', grid => $grid,
+        chartType => 'stack', aggregation => 'average', range => '24h', granularity => 'auto',
+        series => [
+            {device => 'Solar1', reading => 'power', source => 'auto', label => 'Dach', color => '#123abc'},
+            {device => 'Solar2', reading => 'power', source => 'filelog', label => '', color => '#ef9900'},
+        ],
+    };
+    is(FHEMCMS_ValidateConfig($graph, $schema), undef, "schema $schema accepts graph with multiple devices");
+    for my $field (
+        ['chartType', 'unknown'], ['aggregation', 'sum'], ['range', '1y'], ['granularity', '2h'],
+    ) {
+        my $bad = $json->decode($json->encode($graph));
+        $bad->{pages}[0]{widgets}[0]{$field->[0]} = $field->[1];
+        like(FHEMCMS_ValidateConfig($bad, $schema), qr/Ungueltiger/, "invalid graph $field->[0] rejected");
+    }
+    for my $field (['device', 'bad device'], ['reading', '../bad'], ['source', 'sql'],
+        ['color', 'red'], ['label', "bad\nlabel"]) {
+        my $bad = $json->decode($json->encode($graph));
+        $bad->{pages}[0]{widgets}[0]{series}[0]{$field->[0]} = $field->[1];
+        like(FHEMCMS_ValidateConfig($bad, $schema), qr/Ungueltig/, "invalid series $field->[0] rejected");
+    }
+    my $bad = $json->decode($json->encode($graph));
+    $bad->{pages}[0]{widgets}[0]{series} = [];
+    like(FHEMCMS_ValidateConfig($bad, $schema), qr/Datenreihen/, 'empty graph series rejected');
+    $bad->{pages}[0]{widgets}[0]{series} = [($graph->{pages}[0]{widgets}[0]{series}[0]) x 21];
+    like(FHEMCMS_ValidateConfig($bad, $schema), qr/Datenreihen/, 'graph series count limited');
+}
+for my $schema (5, 6) {
     my $kiosk = $json->decode($bytes);
     if ($schema == 5) {
         pop(@{$kiosk->{pages}});

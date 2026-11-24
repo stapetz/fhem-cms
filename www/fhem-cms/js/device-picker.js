@@ -22,7 +22,7 @@ const STYLE = `
   .cms-dp-dialog .actions { display: flex; justify-content: flex-end; }
 `;
 
-export function openDevicePicker({ services, title = 'Device auswählen', accept = () => true, signal }) {
+export function openDevicePicker({ services, title = 'Device auswählen', accept = () => true, signal, classify }) {
   if (signal?.aborted) return Promise.resolve(null);
   return new Promise((resolve) => {
     const dialog = document.createElement('dialog');
@@ -41,6 +41,8 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
     const $ = (selector) => dialog.querySelector(selector);
     let devices = [];
     let done = false;
+    const classifications = new Map();
+    let remaining = 0;
 
     const finish = (value) => {
       if (done) {
@@ -63,14 +65,26 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
         const haystack = [device.name, device.alias, device.type, device.room, device.parent].join(' ').toLowerCase();
         return accept(device) && terms.every((term) => haystack.includes(term));
       });
+      if (classify) matches.sort((a, b) => {
+        const rank = device => {
+          const item = classifications.get(device.name);
+          return item?.logged ? 0 : item ? 2 : 1;
+        };
+        return rank(a) - rank(b) || a.name.localeCompare(b.name, 'de');
+      });
       const shown = matches.slice(0, MAX_ROWS);
       $('[data-list]').replaceChildren(...shown.map((device) => {
         const row = document.createElement('button');
         row.type = 'button';
         row.setAttribute('role', 'option');
         const alias = device.alias && device.alias !== device.name ? ` (${device.alias})` : '';
-        row.textContent = `${device.name}${alias} · ${device.type || '?'}`;
-        row.title = row.textContent;
+        const classification = classifications.get(device.name);
+        const suffix = classify ? !classification ? ' (Datenlogs werden geprüft)'
+          : classification.error ? ' (Logprüfung fehlgeschlagen)'
+            : classification.logged ? ' (Datenlogs vorhanden)' : ' (Keine Datenlogs erkannt; FileLog: letzte 7 Tage)' : '';
+        row.textContent = `${device.name}${alias} · ${device.type || '?'}${suffix}`;
+        if (classification?.error) row.title = classification.error;
+        else row.title = row.textContent;
         row.addEventListener('click', () => finish(device));
         return row;
       }));
@@ -78,7 +92,7 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
         ? 'Keine passenden Devices gefunden'
         : matches.length > shown.length
           ? `${shown.length} von ${matches.length} Treffern, Suche weiter einschränken`
-          : `${matches.length} Devices`;
+          : `${matches.length} Devices${remaining ? ` · ${remaining} Logprüfungen ausstehend` : ''}`;
     };
 
     $('[data-search]').addEventListener('input', render);
@@ -99,6 +113,28 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
     services.listAllDevices().then((list) => {
       if (done) return;
       devices = list;
+      if (classify) {
+        const candidates = devices.filter(accept);
+        remaining = candidates.length;
+        let next = 0;
+        const worker = async () => {
+          while (!done && next < candidates.length) {
+            const device = candidates[next++];
+            try {
+              const logged = await classify(device);
+              if (!done) classifications.set(device.name, {logged: Boolean(logged)});
+            } catch (error) {
+              if (!done) classifications.set(device.name, {error: error.message || String(error)});
+            }
+            if (!done) {
+              remaining--;
+              render();
+            }
+          }
+        };
+        void worker();
+        void worker();
+      }
       render();
     }, (error) => {
       if (done) return;

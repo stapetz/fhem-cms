@@ -912,6 +912,8 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     is($history->{source}, 'filelog', 'history reads the FileLog');
     is(scalar(@{$history->{points}}), 10, 'history returns only the matching numeric rows');
     is($history->{points}[0][1] + 0, 20, 'history keeps the values in time order');
+    is($history->{summary}{last}, 29, 'summary uses the last raw value');
+    is($history->{summary}{average}, 24.5, 'summary uses the average of all raw values');
 
     %main::FHEMCMS_HISTORY_CACHE = ();
     my $bucketedPending = JSON::PP::decode_json(
@@ -927,6 +929,14 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     }
     is($min, 20, 'bucket minimum is kept');
     is($max, 29, 'bucket maximum is kept');
+    is_deeply($bucketed->{summary}, $history->{summary}, 'summary is independent of bucket sizes');
+    {
+        local $main::FHEMCMS_HISTORY_MAX_ROWS = 3;
+        my ($limited, $limitedError) = FHEMCMS_HistoryData($name, 'filelog', $main::defs{HistLog},
+            'Temp', 'temperature', '24h', 'raw');
+        is($limitedError, undef, 'limited FileLog read succeeds');
+        ok(JSON::PP::decode_json($limited)->{truncated}, 'FileLog row limit is explicitly reported');
+    }
 
     like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'bad device', 'temperature'), qr/Ungueltiges Device/, 'history validates the device');
     like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '10y'), qr/Zeitraum/, 'history validates the range');
@@ -939,6 +949,7 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
         my ($dbHash, $dbName, $in, $out, @rest) = @_;
         return '{"data":[]}' if ($out eq 'webchart' && $rest[2] eq 'Temp');
         return '{"data":[{"READING":"power"},{"READING":"bad name"}]}' if ($out eq 'webchart');
+        return () if ($out eq 'array' && ($rest[-1] // '') eq 'Temp:temperature');
         return ({tstamp => POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime(time() - 60)), value => '12.5 W'},
             {tstamp => 'broken', value => '1'});
     };
@@ -953,6 +964,37 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     is($fallbackReadings->{source}, 'filelog', 'logreadings falls back to FileLog when DbLog has no data');
     ok((grep { $_ eq 'temperature' } @{$fallbackReadings->{readings}}),
         'FileLog fallback preserves its logged readings');
+
+    %main::FHEMCMS_HISTORY_CACHE = ();
+    %main::FHEMCMS_HISTORY_JOBS = ();
+    @historyJobs = ();
+    FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'auto', 'auto');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
+    my $fallbackHistory = JSON::PP::decode_json(
+        FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'auto', 'auto'));
+    is($fallbackHistory->{source}, 'filelog', 'automatic history falls back when DbLog has no data');
+    is($fallbackHistory->{summary}{last}, 29, 'fallback returns the real latest FileLog value');
+    %main::FHEMCMS_HISTORY_CACHE = ();
+    %main::FHEMCMS_HISTORY_JOBS = ();
+    @historyJobs = ();
+    FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'auto', 'dblog');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
+    my $explicitDb = JSON::PP::decode_json(
+        FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'auto', 'dblog'));
+    is($explicitDb->{source}, 'dblog', 'explicit DbLog selection never falls back');
+    is($explicitDb->{summary}, undef, 'empty history has no summary');
+    {
+        local $main::attr{$name}{historySource} = 'dblog';
+        %main::FHEMCMS_HISTORY_JOBS = ();
+        @historyJobs = ();
+        FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'auto', 'auto');
+        is(scalar(@historyJobs), 1, 'changed source preference does not reuse an automatic fallback cache');
+        FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
+        my $preferred = JSON::PP::decode_json(
+            FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'auto', 'auto'));
+        is($preferred->{source}, 'dblog', 'explicit CMS DbLog preference prevents automatic fallback');
+    }
+    is(FHEMCMS_ReadingNumber('1e999'), undef, 'non-finite history values are rejected');
 
     %main::FHEMCMS_HISTORY_CACHE = ();
     %main::FHEMCMS_HISTORY_JOBS = ();

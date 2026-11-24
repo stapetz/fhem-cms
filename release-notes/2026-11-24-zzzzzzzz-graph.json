@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-24",
+  "version": "1.33.0-dev",
+  "title": "Graph mit mehreren Datenreihen",
+  "changes": [
+    "Neues Graph-Widget mit mehreren DbLog-/FileLog-Reihen, Linien, Stapeln und Tortendiagramm sowie Konfigurationsvorschau. Refs #259.",
+    "Echte Logquellen und Safari-Geraeteabnahme stehen aus."
+  ]
+}

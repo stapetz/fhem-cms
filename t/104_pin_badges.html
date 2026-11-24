@@ -41,6 +41,8 @@ const specs = [
   {type:'text',html:'<p>Text</p>'},
   {type:'fhem-link',links:[{id:'one',kind:'internal',page:'home',text:'Start',textPosition:'above',
     showText:true,target:'self',grid:{col:1,row:1,w:6,h:3}}]},
+  {type:'fhem-graph',chartType:'line',aggregation:'last',range:'24h',granularity:'auto',
+    series:[{device:'Demo',reading:'power',source:'auto',label:'Leistung',color:'#123abc'}]},
 ];
 const snapshot = temperature => new Map([['Demo', [{name:'Demo', readings:{
   temperature, desiredTemperature:'22', state:'off', power:'100',
@@ -56,7 +58,7 @@ const makeConfig = (widgets = specs) => ({
   pages:[{id:'home',title:'Grundriss',layoutMode:'freeform',renderAsPins:true,
     canvas:{width:1280,height:800,scaling:'width',mobileBehavior:'scale'},
     widgets:widgets.map((widget,i) => ({...widget,id:`w${i}`,title:`Widget ${i}`,
-      rect:{x:(i%6)*210,y:80+Math.floor(i/6)*230,w:200,h:180}}))}],
+      rect:{x:(i%6)*210,y:Math.min(620,80+Math.floor(i/6)*230),w:200,h:180}}))}],
 });
 const mount = (config, editing) => mountSchema5Widgets(null, root, config, 'home',
   document.createElement('nav'), services, snapshot('21.5'), editing);
@@ -167,8 +169,8 @@ try {
       check(rejected,'foreign or injectable icon URLs are rejected');
     }
     fixture.remove();
-    check(Object.keys(PIN_TYPES).length === specs.length, 'all 18 real widget types covered explicitly');
-    for (const spec of specs) check(pinKeepsCard(spec) === ['fhem-clock','text','fhem-link'].includes(spec.type),
+    check(Object.keys(PIN_TYPES).length === specs.length, 'all real widget types covered explicitly');
+    for (const spec of specs) check(pinKeepsCard(spec) === ['fhem-clock','text','fhem-link','fhem-graph'].includes(spec.type),
       `${spec.type}: card default`);
 
     for (const scale of [.25,.5,1,1.5]) {
@@ -178,8 +180,8 @@ try {
       view = mount(config);
       await paint();
       check(root.querySelectorAll('cms-pin-badge').length === 15, 'all eligible widgets use pins');
-      check(root.querySelector('cms-clock') && root.querySelector('cms-text') && root.querySelector('cms-link'),
-        'clock/text/navigation retain normal cards');
+      check(root.querySelector('cms-clock') && root.querySelector('cms-text') && root.querySelector('cms-link')
+        && root.querySelector('cms-graph'), 'clock/text/navigation/graph retain normal cards');
       check(!root.querySelector('cms-thermostat,cms-value,cms-switch,cms-button,cms-chart,cms-weather,cms-volvoconnect'),
         'full widgets for pins are not eagerly instantiated');
       for (const pin of root.querySelectorAll('cms-pin-badge')) {

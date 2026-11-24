@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.32.0-dev';
+our $FHEMCMS_VERSION = '1.33.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1147,7 +1147,7 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'
                         && !($fcui && ($widget->{type} eq 'fhem-link' || $widget->{type} eq 'fhem-calllist'
                             || $widget->{type} eq 'fhem-solar-energy' || $widget->{type} eq 'fhem-volvoconnect'
-                            || $widget->{type} eq 'weather'))));
+                            || $widget->{type} eq 'weather' || $widget->{type} eq 'fhem-graph'))));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -1176,6 +1176,9 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'fhem-chart') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'grid'],
                     ['title', 'showTitle', 'unit', 'range', 'granularity', 'source']);
+            } elsif ($widget->{type} eq 'fhem-graph') {
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'series', 'chartType', 'aggregation', 'range', 'granularity', 'grid'],
+                    ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-calllist') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
@@ -1238,6 +1241,7 @@ sub FHEMCMS_ValidateConfig {
                 my $weatherError = FHEMCMS_ValidateWeather($widget->{config}, $exact);
                 return $weatherError if (defined($weatherError));
             } elsif ($widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-solar-energy'
+                && $widget->{type} ne 'fhem-graph'
                 && !($widget->{type} eq 'fhem-solarflow' && !exists($widget->{device}))) {
                 return 'Ungueltiger Wert fuer device' if (!$isName->($widget->{device}));
             }
@@ -1281,6 +1285,29 @@ sub FHEMCMS_ValidateConfig {
                     if (exists($widget->{icon})
                         && (ref($widget->{icon}) || !defined($widget->{icon})
                             || $widget->{icon} !~ $FHEMCMS_ICON_NAME));
+            } elsif ($widget->{type} eq 'fhem-graph') {
+                for my $option (['chartType', qr/\A(?:line|stack|pie)\z/],
+                    ['aggregation', qr/\A(?:last|average)\z/], ['range', qr/\A(?:24h|7d|30d|365d)\z/],
+                    ['granularity', qr/\A(?:auto|raw|15m|1h|1d)\z/]) {
+                    my ($field, $pattern) = @{$option};
+                    return "Ungueltiger Wert fuer $field"
+                        if (!defined($widget->{$field}) || ref($widget->{$field}) || $widget->{$field} !~ $pattern);
+                }
+                return 'Ungueltige Graph-Datenreihen'
+                    if (ref($widget->{series}) ne 'ARRAY' || @{$widget->{series}} < 1 || @{$widget->{series}} > 20);
+                for my $series (@{$widget->{series}}) {
+                    $err = $exact->($series, 'Graph-Datenreihe', ['device', 'reading', 'source', 'label', 'color'], []);
+                    return $err if ($err);
+                    return 'Ungueltiges Graph-Device oder Reading'
+                        if (!$isName->($series->{device}) || !$isName->($series->{reading}));
+                    return 'Ungueltige Graph-Quelle'
+                        if (!defined($series->{source}) || ref($series->{source}) || $series->{source} !~ /\A(?:auto|dblog|filelog)\z/);
+                    return 'Ungueltige Graph-Beschriftung'
+                        if (!defined($series->{label}) || ref($series->{label}) || length($series->{label}) > 64
+                            || $series->{label} =~ /[\x00-\x1f\x7f]/);
+                    return 'Ungueltige Graph-Farbe'
+                        if (!defined($series->{color}) || ref($series->{color}) || $series->{color} !~ /\A#[0-9a-fA-F]{6}\z/);
+                }
             } elsif ($widget->{type} eq 'fhem-chart') {
                 for my $field ('device', 'reading') {
                     return "Ungueltiger Wert fuer $field" if (!$isName->($widget->{$field}));
@@ -2225,7 +2252,8 @@ sub FHEMCMS_DbLogCall {
 sub FHEMCMS_ReadingNumber {
     my ($value) = @_;
     return undef if (!defined($value) || $value !~ /\A\s*([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)/);
-    return $1 + 0;
+    my $number = $1 + 0;
+    return POSIX::isfinite($number) ? $number : undef;
 }
 
 # Liefert die Quelle fuer ein Device/Reading: ('dblog', $hash), ('filelog', $hash) oder (undef, Fehlertext).
@@ -2319,11 +2347,18 @@ sub FHEMCMS_HistoryRows {
     my ($cmsName, $kind, $logHash, $device, $reading, $from, $to) = @_;
     my (@rows, $truncated);
     if ($kind eq 'filelog') {
+        my $rowLimitReached = 0;
         $truncated = FHEMCMS_ScanFileLog($logHash, $device, $from, $to, sub {
             return if ($_[1] ne $reading);
             my $number = FHEMCMS_ReadingNumber($_[2]);
-            push(@rows, [$_[0], $number]) if (defined($number) && @rows < $FHEMCMS_HISTORY_MAX_ROWS);
+            return if (!defined($number));
+            if (@rows >= $FHEMCMS_HISTORY_MAX_ROWS) {
+                $rowLimitReached = 1;
+                return;
+            }
+            push(@rows, [$_[0], $number]);
         });
+        $truncated ||= $rowLimitReached;
         return (\@rows, $truncated, undef);
     }
     my ($result, $error) = FHEMCMS_DbLogCall($logHash, 'array',
@@ -2353,6 +2388,12 @@ sub FHEMCMS_HistoryData {
     return (undef, $error) if ($error);
 
     my @rows = sort { $a->[0] <=> $b->[0] } @{$rows};
+    my $summary;
+    if (@rows) {
+        my $average = 0;
+        $average += $_->[1] / @rows for (@rows);
+        $summary = {last => $rows[-1][1], average => $average};
+    }
     my $minStep = 1;
     for my $candidate (@FHEMCMS_HISTORY_NICE_STEPS) {
         $minStep = $candidate;
@@ -2394,6 +2435,7 @@ sub FHEMCMS_HistoryData {
     return (JSON::PP->new->utf8->canonical->encode({
         source => $kind, from => $from, to => $to, step => $step, rows => scalar(@rows),
         truncated => ($truncated ? JSON::PP::true : JSON::PP::false), points => \@points,
+        summary => $summary,
     }), undef);
 }
 
@@ -2482,6 +2524,7 @@ sub FHEMCMS_HistoryWorker {
             || !exists($FHEMCMS_HISTORY_HOURS{$request->{range} // ''})
             || !exists($FHEMCMS_HISTORY_STEPS{$request->{granularity} // ''})
             || ($request->{source} // '') !~ /\A(?:auto|dblog|filelog)\z/
+            || ($request->{mode} // '') !~ /\A(?:auto|dblog|filelog)\z/
             || ($request->{source} ne 'auto' && $request->{source} ne $request->{kind}));
         my $logHash = $main::defs{$request->{logdevice}};
         my $expectedType = $request->{kind} eq 'dblog' ? 'DbLog' : 'FileLog';
@@ -2491,6 +2534,18 @@ sub FHEMCMS_HistoryWorker {
             my $ok = eval {
                 ($json, $error) = FHEMCMS_HistoryData($request->{cmsName}, $request->{kind}, $logHash,
                     $request->{device}, $request->{reading}, $request->{range}, $request->{granularity});
+                if (!defined($error) && $request->{source} eq 'auto'
+                    && $request->{kind} eq 'dblog' && $request->{mode} eq 'auto') {
+                    my $data = JSON::PP->new->utf8->decode($json);
+                    if (!$data->{truncated} && !$data->{rows}) {
+                        for my $fileLog (FHEMCMS_LogDevices($request->{cmsName}, 'FileLog', 'fileLog')) {
+                            next if (!FHEMCMS_FileLogMatches($fileLog, $request->{device}, $request->{reading}));
+                            ($json, $error) = FHEMCMS_HistoryData($request->{cmsName}, 'filelog', $fileLog,
+                                $request->{device}, $request->{reading}, $request->{range}, $request->{granularity});
+                            last;
+                        }
+                    }
+                }
                 1;
             };
             $error = 'Verlaufsabfrage fehlgeschlagen' if (!$ok);
@@ -2556,12 +2611,14 @@ sub FHEMCMS_History {
 
     my ($kind, $logHash) = FHEMCMS_HistorySource($cmsName, $source, $device, $reading);
     return $logHash if (!$kind);
+    my $mode = $source eq 'auto' ? ($main::attr{$cmsName}{historySource} // 'auto') : $source;
+    $mode = 'auto' if ($mode !~ /\A(?:auto|dblog|filelog)\z/);
     my $key = join("\0", $cmsName, $device, $reading, $range, $granularity, $source,
-        $kind, $logHash->{NAME} // '');
+        $mode, $kind, $logHash->{NAME} // '');
     return FHEMCMS_QueueHistoryJob($key, {
         operation => 'history', cmsName => $cmsName, kind => $kind, logdevice => $logHash->{NAME},
         device => $device, reading => $reading, range => $range, granularity => $granularity,
-        source => $source,
+        source => $source, mode => $mode,
     });
 }
 

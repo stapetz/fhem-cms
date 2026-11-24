@@ -270,6 +270,29 @@ erst das Veröffentlichen aktiviert sie live. Bestehende Seiten behalten ohne
   **Vorschau** blendet das Raster immer aus; beim Zurückkehren zur Bearbeitung
   gilt wieder die gespeicherte Rasteranzeige.
 
+### Graph: mehrere historische Datenreihen
+
+Unter **Einfügen → Widget hinzufügen → Graph** können bis zu 20 Device- und
+Reading-Kombinationen ausgewählt werden. Geräte mit erkannten Datenlogs stehen
+in der Geräteauswahl zuerst; die Logprüfung läuft beim Öffnen im Hintergrund.
+Bei FileLog berücksichtigt die automatische Reading-Erkennung nur die letzten
+sieben Tage. Ein älteres Reading kann im Feld **Reading manuell** angegeben
+werden; diese Eingabe hat Vorrang vor der Auswahlliste.
+Je Reihe sind Quelle (automatisch, DbLog oder FileLog), Legendentext und Farbe
+wählbar. Automatisch bevorzugt DbLog und verwendet bei fehlenden Werten ein
+passendes FileLog, sofern keine andere CMS-Quellenpräferenz gesetzt ist.
+
+Zur Auswahl stehen Linien, gestapelte Flächen und eine Torte. Gestapelte Reihen
+führen den letzten Messwert bis zur nächsten Messung fort; vor dem ersten Wert
+bleibt die Reihe leer. Für die Torte wählen Sie den letzten Rohwert oder den
+Durchschnitt aller gelesenen Rohwerte im Zeitraum. Negative Werte und gekürzte
+Daten werden bei der Torte mit einer Fehlermeldung abgewiesen.
+Die Vorschau im Konfigurationsdialog zeigt den gewählten Typ und verwendet
+echte Verlaufsdaten, ohne einen Entwurf zu speichern. Klick auf einen
+Legendeneintrag blendet die Reihe ein oder aus. Zeitraum und Granularität sind
+im Dialog wählbar; live kann der Zeitraum gewechselt werden. Bei fehlenden
+Daten oder nicht verfügbarer Quelle erscheint eine Meldung.
+
 ### Gerät zuerst hinzufügen (ab 1.11.0)
 
 **Einfügen → Gerät hinzufügen** öffnet die gemeinsame Gerätesuche nach Name,

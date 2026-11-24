@@ -34,6 +34,11 @@ $draft5->{pages}[0]{title} = 'Grid draft';
 $draft5->{pages}[0]{kiosk} = JSON::PP::true;
 $draft5->{pages}[0]{overrideBackground} = JSON::PP::false;
 $draft5->{navigation}{style} = 'cards';
+$draft5->{pages}[0]{widgets} = [{
+    id => 'graph', type => 'fhem-graph', grid => {col => 1, row => 2, w => 12, h => 8},
+    chartType => 'pie', aggregation => 'average', range => '7d', granularity => 'auto',
+    series => [{device => 'Solar1', reading => 'power', source => 'auto', label => 'Dach', color => '#123abc'}],
+}];
 $draft5->{settings}{pageCanvas} = {width => 200, height => 200};
 $draft5->{settings}{pageNavigationRect} = {x => 10, y => 10, w => 180, h => 40};
 is(FHEMCMS_WriteVersion5Draft($dataDir, $draft5, $initial->{token}, 1), undef, 'grid-only save stays schema 5');
@@ -41,6 +46,8 @@ my ($gridState) = FHEMCMS_ReadVersion5State($dataDir);
 is($gridState->{draft}{pages}[0]{kiosk}, JSON::PP::true, 'kiosk flag survives schema 5 draft round trip');
 is($gridState->{draft}{pages}[0]{overrideBackground}, JSON::PP::false, 'false background exception survives schema 5 draft round trip');
 is($gridState->{draft}{navigation}{style}, 'cards', 'navigation style survives schema 5 draft round trip');
+is_deeply($gridState->{draft}{pages}[0]{widgets}[0], $draft5->{pages}[0]{widgets}[0],
+    'graph configuration survives the real schema 5 draft round trip');
 ok(!exists($gridState->{live}{navigation}{style}), 'draft navigation style leaves legacy live configuration unchanged');
 ok(!exists($gridState->{live}{pages}[0]{kiosk}), 'draft kiosk flag does not change live configuration');
 is_deeply($gridState->{draft}{settings}, $draft5->{settings}, 'common frame persists in a grid-only draft');

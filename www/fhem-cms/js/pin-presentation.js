@@ -13,6 +13,7 @@ export const PIN_TYPES = Object.freeze({
   'fhem-solar-energy': {},
   'fhem-volvoconnect': {},
   'fhem-chart': {},
+  'fhem-graph': {forceCard: true},
   'fhem-calllist': {},
   weather: {},
   'fhem-slider': {},

@@ -127,6 +127,31 @@ Regression: `node --test t/18_schema5_page_panel.test.js t/10_schema5_layout.tes
 Browserfall „page settings preview“ in `t/35_schema5_scaling.test.js`.
 Abnahme auf echten Safari-Geraeten steht aus.
 
+## Graph-Widget (dev, Refs #259)
+
+Die History-Antwort enthaelt `summary.last` und `summary.average` aus den
+gelesenen Rohwerten, unabhaengig von der Granularitaet; ohne Werte ist
+`summary` null. Bei gekuerzten Daten beziehen sich diese Angaben nur auf
+die gelesenen Werte. Die Graph-Tortenauswertung verweigert solche Daten
+und negative Werte. Automatische Quellenwahl faellt bei leerem DbLog-Verlauf
+auf ein passendes FileLog zurueck; eine explizite Quellenwahl bleibt erhalten.
+`graph-data.js` haelt fuer Stapel den letzten Wert bis zur naechsten Messung;
+vor der ersten Messung bleibt die Reihe leer. Negative und positive Werte
+werden getrennt gestapelt.
+`fhem-graph` ist ein eigener Typ und laesst bestehende `fhem-chart`-Widgets
+unveraendert. Der Dialog verwaltet bis zu 20 Reihen mit eigener Logquelle,
+Legende und Farbe, zeigt echte Daten im Liniendiagramm, Stapel oder Torte
+und speichert ausschliesslich einen Entwurf. Die Geraeteauswahl prueft
+Logs begrenzt parallel und meldet fehlende Daten bzw. Fehler getrennt.
+Logreadings findet FileLog-Readings anhand der letzten sieben Tage; eine
+fehlende Erkennung beweist daher nicht, dass aeltere Logdaten fehlen.
+Fuer aeltere Readings bietet der Graphdialog eine validierte manuelle Eingabe,
+die die ausgewaehlte Reading-Liste ueberschreibt.
+Regressionen: `prove t/01_fhemcms.t t/91_schema6_validation.t t/92_schema6_persistence.t`,
+`node --test t/115_graph_data.test.js` sowie der Browserfall
+`graph supports multiple log series` in `t/35_schema5_scaling.test.js`.
+Abnahme mit echten DbLog-/FileLog-Quellen und Safari steht aus.
+
 ## Schalter und Pin-Darstellung (dev, Refs #261)
 
 Der Schalterdialog bietet eine Icon-Auswahl; vorhandene getrennte Icons bleiben

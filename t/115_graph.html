@@ -1,0 +1,163 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graph regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-graph.js';
+import { Schema5WidgetPanel } from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+const result = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const until = async (condition, message) => {
+  for (let i = 0; i < 150; i++) {
+    if (condition()) return;
+    await new Promise(resolve => setTimeout(resolve, 30));
+  }
+  throw new Error(message);
+};
+try {
+  let writes = 0, saved;
+  const calls = [];
+  const graph = document.createElement('cms-graph');
+  graph.style.cssText = 'width:min(600px,95vw);height:400px';
+  graph.services = {
+    history: async (device, reading, range, granularity, source) => {
+      calls.push({device,reading,range,granularity,source});
+      const base = device === 'Solar1' ? 2 : 3;
+      return {points:[[1000,base],[2000,base+1]],summary:{last:base+1,average:base+.5},truncated:false};
+    },
+    logReadings: async device => ({source:device === 'Solar1' ? 'dblog' : 'filelog',
+      readings:device === 'Empty' ? [] : ['power']}),
+    listAllDevices: async () => [{name:'Empty',type:'Dummy'}, {name:'Solar2',type:'Dummy'}, {name:'Solar1',type:'Dummy'}],
+    saveWidget: async value => { writes++; saved = value; },
+    deleteWidget: async () => { throw new Error('unexpected delete'); },
+  };
+  graph.config = {id:'graph1',type:'fhem-graph',grid:{col:1,row:2,w:6,h:10},
+    chartType:'line',aggregation:'last',range:'24h',granularity:'auto',series:[
+      {device:'Solar1',reading:'power',source:'dblog',label:'Dach',color:'#123abc'},
+      {device:'Solar2',reading:'power',source:'filelog',label:'Garten',color:'#ef9900'},
+    ]};
+  document.body.append(graph);
+  const root = graph.shadowRoot;
+  await until(() => root.querySelectorAll('[data-svg] polyline').length === 2, 'two live lines not drawn');
+  check(calls.some(call => call.source === 'dblog') && calls.some(call => call.source === 'filelog'),
+    'each series uses its selected log source');
+  const liveLegend = root.querySelectorAll('[data-legend] button');
+  liveLegend[0].click();
+  check(root.querySelectorAll('[data-svg] polyline').length === 1
+    && root.querySelector('[data-legend] button').getAttribute('aria-pressed') === 'false',
+    'legend hides and marks a line');
+  root.querySelector('[data-legend] button').click();
+  check(root.querySelectorAll('[data-svg] polyline').length === 2, 'legend restores a line');
+  await graph.openConfig();
+  const form = root.querySelector('form');
+  check(root.querySelector('dialog').getBoundingClientRect().right <= innerWidth + 1,
+    'configuration dialog fits the viewport');
+  await until(() => root.querySelectorAll('[data-preview] polyline').length === 2, 'line preview missing');
+  check(writes === 0, 'preview does not save');
+  form.elements.chartType.value = 'stack';
+  form.elements.chartType.dispatchEvent(new Event('change', {bubbles:true}));
+  await until(() => root.querySelectorAll('[data-preview] polygon').length === 2, 'stack preview missing');
+  root.querySelector('[data-preview-legend] button').click();
+  check(root.querySelectorAll('[data-preview] polygon').length === 1, 'preview legend hides a stack');
+  form.elements.chartType.value = 'pie';
+  form.elements.aggregation.value = 'average';
+  form.elements.chartType.dispatchEvent(new Event('change', {bubbles:true}));
+  await until(() => root.querySelectorAll('[data-preview] path').length === 2, 'pie preview missing');
+  check(root.querySelector('[data-preview] title').textContent.includes('2.5'),
+    'pie uses raw average instead of the last value');
+  check(writes === 0, 'changing chart type never saves');
+  root.querySelector('[data-add]').click();
+  check(root.querySelectorAll('.row').length === 3, 'a new row can be added');
+  root.querySelectorAll('[data-pick]')[2].click();
+  await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 3
+    && document.querySelector('.cms-dp-dialog [data-info]').textContent === '3 Devices', 'device discovery did not complete');
+  const devices = [...document.querySelectorAll('.cms-dp-dialog [role=option]')];
+  check(devices[0].textContent.startsWith('Solar1') && devices[2].textContent.includes('Keine Datenlogs'),
+    'logged devices precede devices without logs');
+  devices[1].click();
+  await until(() => root.querySelectorAll('[data-reading]')[2].options.length === 2, 'selected device readings not loaded');
+  check(root.querySelectorAll('[data-device]')[2].value === 'Solar2', 'device picker sets the chosen row');
+  const manual = root.querySelectorAll('[data-manual-reading]')[2];
+  manual.value = 'olderReading';
+  check(graph.collect().series[2].reading === 'olderReading', 'manual reading overrides discovery for older logs');
+  manual.value = 'invalid reading';
+  let invalid = false;
+  try { graph.collect(); } catch { invalid = true; }
+  check(invalid, 'manual readings are validated before use');
+  root.querySelectorAll('[data-remove]')[2].click();
+  check(root.querySelectorAll('.row').length === 2, 'row removal preserves other sources');
+  form.dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
+  await until(() => writes === 1, 'graph was not saved');
+  check(saved.chartType === 'pie' && saved.aggregation === 'average' && saved.series.length === 2,
+    'save preserves selected type, aggregate and series');
+  check(saved.series[0].source === 'dblog' && saved.series[1].source === 'filelog',
+    'save preserves manually selected sources');
+  check(JSON.stringify(saved.grid) === JSON.stringify(graph.config.grid), 'save preserves geometry');
+  const manySeries = Array.from({length:20}, (_, index) => ({
+    ...graph.config.series[0], device:`Solar${index}`,
+  }));
+  const manyData = manySeries.map((_, index) => ({
+    points:Array.from({length:400}, (_, point) => [1000 + point * 20 + index, point + 1]),
+  }));
+  graph.draw({...graph.config, chartType:'stack', series:manySeries}, manyData,
+    '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+  check(root.querySelectorAll('[data-svg] polygon').length === 20,
+    'maximum stack size with distinct timestamps renders without argument overflow');
+  graph.remove();
+  let release, requests = 0;
+  const pending = new Promise(resolve => { release = resolve; });
+  const detached = document.createElement('cms-graph');
+  detached.services = {history: async () => { requests++; return pending; }};
+  detached.config = structuredClone(graph.config);
+  detached.config.series.push({...detached.config.series[0], device:'Solar3'});
+  document.body.append(detached);
+  await until(() => requests === 2, 'bounded parallel history requests did not start');
+  detached.remove();
+  release({points:[[1000,1]],summary:{last:1,average:1}});
+  await new Promise(resolve => setTimeout(resolve, 30));
+  check(requests === 2, 'removing the graph stops further history requests');
+  const live = {schemaVersion:5,settings:{layoutMode:'grid',gridColumns:12},
+    navigation:{orientation:'horizontal',grid:{col:1,row:1,w:12,h:1}},
+    pages:[{id:'start',title:'Start',widgets:[]}]};
+  let state = {live,draft:null,token:'a'.repeat(64)};
+  const controller = new Schema5DraftController({
+    read:async () => structuredClone(state),
+    save:async (draft, token) => {
+      if (token !== state.token) throw new Error('stale token');
+      state = {live,draft:structuredClone(draft),token:'b'.repeat(64)};
+    },
+    publish:async () => {}, discard:async () => {},
+  });
+  await controller.reload();
+  const panelRoot = document.createElement('dialog');
+  document.body.append(panelRoot);
+  const panel = new Schema5WidgetPanel({root:panelRoot,controller,services:graph.services,
+    pageId:'start',token:state.token,onClose() {}});
+  panelRoot.showModal();
+  [...panelRoot.querySelectorAll('.cms-widget-choice')].find(button => button.textContent === 'Graph').click();
+  const graphInPanel = panelRoot.querySelector('.cms-widget-dialog-host cms-graph');
+  check(graphInPanel?.shadowRoot.querySelector('[data-dialog]').open, 'real widget panel opens the new graph dialog');
+  graphInPanel.shadowRoot.querySelector('[data-pick]').click();
+  await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 3
+    && document.querySelector('.cms-dp-dialog [data-info]').textContent === '3 Devices', 'panel device picker unavailable');
+  document.querySelector('.cms-dp-dialog [role=option]').click();
+  const row = graphInPanel.shadowRoot.querySelector('.row');
+  await until(() => !row.hasAttribute('data-loading') && row.querySelector('[data-reading]').options.length === 2,
+    'panel readings not loaded');
+  row.querySelector('[data-reading]').value = 'power';
+  row.querySelector('[data-reading]').dispatchEvent(new Event('change', {bubbles:true}));
+  graphInPanel.shadowRoot.querySelector('form').dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
+  await until(() => state.draft?.pages[0].widgets.length === 1, 'real panel did not save graph draft');
+  check(state.draft.pages[0].widgets[0].type === 'fhem-graph'
+    && state.draft.pages[0].widgets[0].series[0].device === 'Solar1', 'panel creates graph with chosen series');
+  check(live.pages[0].widgets.length === 0, 'panel never mutates live configuration');
+  panel.close();
+  panelRoot.remove();
+  result.dataset.result = 'pass'; result.textContent = JSON.stringify({checks});
+} catch (error) {
+  result.dataset.result = 'fail'; result.textContent = error.stack;
+}
+</script>
