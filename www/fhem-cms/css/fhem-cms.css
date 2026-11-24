@@ -907,7 +907,8 @@ body:has(.cms-schema5-grid) {
   padding-right: 1.6em;
 }
 
-.cms-page-background-controls {
+.cms-page-background-controls,
+.cms-page-background-local:not([hidden]) {
   display: flex;
   flex: 1 1 100%;
   flex-wrap: wrap;
@@ -917,6 +918,8 @@ body:has(.cms-schema5-grid) {
 }
 
 .cms-page-background-controls > p,
+.cms-page-background-local > p,
+.cms-page-background-controls > .cms-page-background-local,
 .cms-page-background-controls > .cms-liquid-controls {
   flex: 1 1 100%;
 }

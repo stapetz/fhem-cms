@@ -146,7 +146,7 @@ try {
   roomDialog.showModal();
   const roomControls = roomDialog.querySelector('.cms-page-background-controls');
   const roomDescription = roomControls.querySelector('.cms-page-background-description');
-  const roomButtons = [...roomControls.querySelectorAll(':scope > button')];
+  const roomButtons = [...roomDescription.parentElement.querySelectorAll(':scope > button')];
   check(roomButtons.length === 2 && roomDescription.previousElementSibling === roomButtons[1]
     && roomDescription.getBoundingClientRect().top >= Math.max(...roomButtons.map(button => button.getBoundingClientRect().bottom)),
   'background description follows both actions on a non-start page');
