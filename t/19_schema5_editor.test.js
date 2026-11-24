@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import { navigationDom } from './helpers/navigation-dom.js';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
@@ -81,6 +80,20 @@ function toolbarControls(toolbar) {
     ? /^Seiteneinstellungen „.+“$/.test(node.textContent)
     : label ? node.textContent === label : node.className === 'cms-editor-mode'));
 }
+
+function findDescendant(root, predicate) {
+  const nodes = [root, ...root.children.flatMap(function descendants(node) {
+    return [node, ...node.children.flatMap(descendants)];
+  })];
+  const result = nodes.find(predicate);
+  assert.ok(result, 'expected panel control exists');
+  return result;
+}
+
+const panelButton = (panel, className) => findDescendant(panel,
+  node => node.tag === 'button' && node.className?.split(' ').includes(className));
+const appearanceField = (panel, label) => findDescendant(panel,
+  node => node.tag === 'label' && node.textContent === label).children[0];
 
 test('editor connects view and grid draft, and suspends in-flight writes on pagehide', async () => {
   const previous = {
@@ -310,8 +323,8 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const panel = content.children[0];
     assert.equal(panel.children[0].textContent, edit.textContent);
     assert.equal(panel.children.length, 5, 'settings contain no separate widget grid or position form');
-    panel.children[3].children[0].children[0].value = 'light';
-    await panel.children[4].children[1].fire('click');
+    appearanceField(panel, 'Darstellung ').value = 'light';
+    await panelButton(panel, 'cms-panel-save').fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(mode.textContent, 'Entwurf');
     assert.equal(edit.disabled, false);
@@ -347,7 +360,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
 
     edit.fire('click');
     const anotherPanel = content.children[0];
-    await anotherPanel.children[4].children[1].fire('click');
+    await panelButton(anotherPanel, 'cms-panel-save').fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     await publish.fire('click');
     assert.equal(publishCalls, 2);
@@ -358,11 +371,11 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     edit.fire('click');
     fail = true;
     const failedPanel = content.children[0];
-    await failedPanel.children[4].children[1].fire('click');
+    await panelButton(failedPanel, 'cms-panel-save').fire('click');
     assert.match(failedPanel.children[2].textContent, /Antwort verloren/);
     assert.equal(edit.disabled, true);
     fail = false;
-    failedPanel.children[4].children[0].fire('click');
+    panelButton(failedPanel, 'cms-panel-close').fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(mode.textContent, 'Live');
     assert.equal(edit.disabled, false);
@@ -410,7 +423,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     const pendingPanel = content.children[0];
     const pendingGrid = grids.at(-1);
     blocked = true;
-    const saving = pendingPanel.children[4].children[1].fire('click');
+    const saving = panelButton(pendingPanel, 'cms-panel-save').fire('click');
     browser.dispatch('pagehide');
     assert.equal(pendingPanel.hidden, true);
     assert.equal(content.children.length, 0);
@@ -462,7 +475,8 @@ test('editor lifecycle and auto-arrangement use real isolated Perl draft transac
     window: globalThis.window, document: globalThis.document,
     HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
   };
-  const dir = await mkdtemp(join(tmpdir(), 'cms-v5-editor-'));
+  const dir = join(process.cwd(), 't', `.cms-v5-editor-${process.pid}`);
+  await mkdir(dir);
   globalThis.window = {
     location: { href: 'https://example.test/' },
     addEventListener() {},
@@ -571,8 +585,8 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     await arrange.fire('click');
     assert.equal(controller.snapshot().token, persistedToken, 'already arranged does not rewrite the draft');
     edit.fire('click');
-    content.children[0].children[3].children[1].children[0].checked = false;
-    await content.children[0].children[4].children[1].fire('click');
+    appearanceField(content.children[0], 'Rahmen anzeigen ').checked = false;
+    await panelButton(content.children[0], 'cms-panel-save').fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(mode.textContent, 'Entwurf');
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
@@ -598,7 +612,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     assert.equal(await readFile(join(dir, backup), 'utf8'), original);
     assert.equal(mode.textContent, 'Live');
     edit.fire('click');
-    await content.children[0].children[4].children[1].fire('click');
+    await panelButton(content.children[0], 'cms-panel-save').fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     const navWrapper2 = content.children[0].children[0];
     navWrapper2.children.find(child => child.className === 'cms-widget-tools').children[0].fire('click');
@@ -613,10 +627,9 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     assert.equal(mode.textContent, 'Entwurf');
     edit.fire('click');
     const pagePanel = content.children[0];
-    const appearanceForm = pagePanel.children[3];
-    appearanceForm.children[0].children[0].value = 'light';
-    appearanceForm.children[1].children[0].checked = false;
-    await pagePanel.children[4].children[1].fire('click');
+    appearanceField(pagePanel, 'Darstellung ').value = 'light';
+    appearanceField(pagePanel, 'Rahmen anzeigen ').checked = false;
+    await panelButton(pagePanel, 'cms-panel-save').fire('click');
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(document.documentElement.getAttribute('data-cms-theme'), 'light');
     assert.equal(document.documentElement.getAttribute('data-cms-frames'), 'off');

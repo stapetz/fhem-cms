@@ -53,7 +53,9 @@ const assertX = () => {
   const dialog = root.querySelector('.cms-pin-widget-popup');
   check(dialog?.open, 'popup is open');
   const x = dialog.querySelector(':scope > header button');
-  check(x.textContent === '×' && x.getAttribute('aria-label') === 'Popup schließen', 'only X, with accessible label');
+  check(x.querySelector('svg path')?.getAttribute('d') === 'M6 6l12 12M18 6L6 18'
+    && x.getAttribute('aria-label') === 'Popup schließen' && x.title === 'Popup schließen',
+  'shared SVG X with accessible label and title');
   const r = x.getBoundingClientRect(), h = dialog.querySelector('header').getBoundingClientRect();
   check(r.width >= 48 && r.height >= 48 && Math.abs(r.right-h.right) < 1, 'X is 48px at upper right');
   check(dialog.querySelector('cms-switch,cms-button,cms-value'), 'real widget is mounted');

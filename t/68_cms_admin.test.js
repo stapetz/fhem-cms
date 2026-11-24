@@ -16,7 +16,7 @@ test('admin entry points and directly imported helpers have matching cache versi
     assert.ok(html.includes(`${asset}?v=${version}`), asset);
   }
   const imports = [...script.matchAll(/from '\.\/([^']+)'/g)];
-  assert.equal(imports.length, 5);
+  assert.equal(imports.length, 6);
   for (const [, path] of imports) assert.ok(path.endsWith(`?v=${version}`), path);
 });
 

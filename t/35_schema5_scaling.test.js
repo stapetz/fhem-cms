@@ -113,6 +113,8 @@ async function testServer() {
 }
 
 for (const [name, fixtures] of [
+  ['shared close buttons preserve nested dialog behavior and themes',
+    [['111_close_buttons.html', 90]]],
   ['Pin interactions use safe tap and hold commands, keyboard access and popup X',
     [['108_pin_interactions.html', 20], ['108_pin_interactions.html?mode=preview', 5],
       ['108_pin_interactions.html?input=1', 2]]],
@@ -840,7 +842,9 @@ for (const [name, fixtures] of [
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture === '102_widget_editor_tools.html?touch=1'
+        fixture === '111_close_buttons.html'
+          ? command => command('Emulation.setFocusEmulationEnabled', { enabled: true })
+          : fixture === '102_widget_editor_tools.html?touch=1'
           ? async command => {
             await command('Emulation.setDeviceMetricsOverride', {
               width:820, height:1180, deviceScaleFactor:1, mobile:true,

@@ -2183,6 +2183,10 @@ html:not(.cms-view) .cms-status[data-error]::before {
   backdrop-filter: blur(2px);
 }
 
+.cms-device-close { position: absolute; top: .75rem; right: .75rem; z-index: 1; }
+.cms-freeform-properties > .cms-freeform-properties-close { position: absolute; top: .75rem; right: .75rem; }
+.cms-freeform-properties:has(> .cms-freeform-properties-close) { padding-top: 68px; }
+
 .cms-device-stage {
   display: flex;
   flex: 1;

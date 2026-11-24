@@ -39,6 +39,13 @@ try {
   check(root.querySelectorAll('cms-pin-badge').length === 1 && !root.querySelector('cms-value'),
     'editor uses a lazy compact Pin, not a hidden full widget');
   check(root.querySelector('cms-text'), 'forceCard retains the normal editable card');
+  root.querySelector('[data-widget-id="card"] .cms-widget-geometry').click();
+  const properties=root.querySelector('.cms-freeform-properties');
+  const close=properties.querySelector('.cms-close-button');
+  check(properties.matches(':popover-open') && close.querySelector('svg path')?.getAttribute('d')==='M6 6l12 12M18 6L6 18',
+    'non-native Freeform properties use the same SVG-X as native dialogs');
+  close.click();
+  check(!properties.matches(':popover-open') && writes.length===0,'properties X cancels without saving geometry');
   check(wrapper().querySelector('cms-pin-badge').shadowRoot.querySelector('.icon').textContent === '#',
     'value symbol cannot be mistaken for a hamburger menu');
   check(getComputedStyle(drag()).pointerEvents === 'auto' && drag().getBoundingClientRect().width >= 48,

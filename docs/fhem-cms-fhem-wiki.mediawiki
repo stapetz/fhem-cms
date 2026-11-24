@@ -272,6 +272,13 @@ Widgettitel lassen sich global links, zentriert oder rechts ausrichten. Ob ein T
 
 '''Einfügen''' enthält Widget hinzufügen und Gerät hinzufügen. Vorhandene Widgets lassen sich direkt am Widget duplizieren. Die freigegebene globale FHEM-CMS Administration steht unter '''Bearbeiten'''. '''Ansicht → Raster anzeigen''' merkt die letzte Auswahl dauerhaft pro CMS im verwendeten Browser, auch für spätere Besuche; auf anderen Geräten gilt die dortige Auswahl.
 
+=== Einheitliches Schliessen-X (neu auf dev, noch nicht freigegeben) ===
+
+CMS-Dialoge und Widget-Popups verwenden dasselbe klassische X oben rechts
+mit 48-Pixel-Bedienflaeche, auch Medienauswahl, Vorschau, Administration und
+Freeform-Positionseinstellungen. Das X nutzt die bestehenden Abbruchpruefungen;
+es speichert nichts automatisch und umgeht keine Rueckfrage bei Aenderungen.
+
 === Pin-Editor (neu auf dev, noch nicht freigegeben) ===
 
 Auf Freeform-Seiten mit '''Widgets als Pins darstellen''' zeigt auch der Editor

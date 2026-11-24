@@ -1,4 +1,5 @@
 import { showCmsModal } from './modal-dialog.js';
+import { styleCloseButton } from './close-button.js';
 
 export function createPinWidgetPopup(root, createWidget) {
   const doc = root.ownerDocument;
@@ -21,9 +22,7 @@ export function createPinWidgetPopup(root, createWidget) {
       dialog.setAttribute('aria-label', heading.textContent);
       const dismiss = doc.createElement('button');
       dismiss.type = 'button';
-      dismiss.textContent = '×';
-      dismiss.setAttribute('aria-label', 'Popup schließen');
-      dismiss.title = 'Popup schließen';
+      styleCloseButton(dismiss, 'Popup schließen');
       dismiss.addEventListener('click', close);
       header.append(heading, dismiss);
       dialog.append(header);

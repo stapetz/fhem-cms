@@ -1,4 +1,5 @@
 import { showCmsModal } from './modal-dialog.js';
+import { styleCloseButton } from './close-button.js';
 import { schema5GridItems } from './fcui-schema5-layout.js';
 import { Schema5LivePage } from './fcui-schema5-live.js';
 import { mountSchema5Widgets } from './fcui-schema5-widgets.js';
@@ -209,8 +210,7 @@ export class Schema5View {
     const title = document.createElement('h2');
     title.id = 'cms-modal-title'; title.textContent = page.title;
     const close = document.createElement('button');
-    close.type = 'button'; close.textContent = '×';
-    close.setAttribute('aria-label', 'Popup schließen');
+    close.type = 'button'; styleCloseButton(close, 'Popup schließen');
     close.addEventListener('click', () => dialog.close());
     header.append(title, close);
     const shell = document.createElement('div'); shell.className = 'cms-shell';
