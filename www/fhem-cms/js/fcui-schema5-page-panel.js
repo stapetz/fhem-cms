@@ -36,6 +36,7 @@ export class Schema5PagePanel {
   #background;
   #backgroundLabel;
   #sharedBackground;
+  #overrideBackground;
   #backgroundControls;
   #intensity;
   #transparency;
@@ -153,7 +154,7 @@ export class Schema5PagePanel {
     remove.type = 'button';
     remove.className = 'cms-button';
     const inheritsBackground = pageId !== config.pages[0].id && config.settings.sharedBackground === true;
-    if (!inheritsBackground) this.#backgroundControls.append(choose);
+    if (pageId === config.pages[0].id) this.#backgroundControls.append(choose);
     if (pageId === config.pages[0].id) {
       const sharedLabel = element('label', 'Bild auf allen Seiten verwenden ');
       this.#sharedBackground = element('input');
@@ -162,11 +163,35 @@ export class Schema5PagePanel {
       sharedLabel.append(this.#sharedBackground);
       this.#backgroundControls.append(sharedLabel);
     }
-    if (!inheritsBackground) this.#backgroundControls.append(remove, headingBackground);
+    const individualBackground = element('div');
+    if (pageId !== config.pages[0].id) {
+      individualBackground.append(choose, remove, headingBackground);
+      const overrideLabel = element('label', 'Hintergrundvererbung von der Startseite überschreiben ');
+      this.#overrideBackground = element('input');
+      this.#overrideBackground.type = 'checkbox';
+      this.#overrideBackground.setAttribute('data-override-background', '');
+      this.#overrideBackground.checked = page.overrideBackground === true;
+      overrideLabel.append(this.#overrideBackground);
+      this.#backgroundControls.append(overrideLabel);
+      const inheritanceHint = element('p');
+      const updateInheritance = () => {
+        individualBackground.hidden = inheritsBackground && !this.#overrideBackground.checked;
+        inheritanceHint.textContent = individualBackground.hidden
+          ? 'Bild wird von der Startseite geerbt. Zum Verwenden eines eigenen Bildes oder keines Bildes die Vererbung überschreiben.'
+          : 'Eigenes Seitenbild verwenden oder das Bild entfernen. Andere Seiten bleiben unverändert.';
+      };
+      this.#overrideBackground.addEventListener('change', () => {
+        updateInheritance();
+        this.#updateSettingsPreview();
+        if (!individualBackground.hidden) void this.#updateBackgroundLabel(services);
+      });
+      this.#backgroundControls.append(inheritanceHint);
+      updateInheritance();
+    }
+    if (pageId === config.pages[0].id) this.#backgroundControls.append(remove, headingBackground);
+    else this.#backgroundControls.append(individualBackground);
     if (this.#sharedBackground) {
       this.#backgroundControls.append(element('p', 'Ist die Checkbox deaktiviert, kann das Hintergrundbild auf jeder Seite einzeln über die Seiteneinstellungen gewählt werden. Eigene Bilder anderer Seiten bleiben erhalten.'));
-    } else if (inheritsBackground) {
-      this.#backgroundControls.append(element('p', 'Bild wird von der Startseite geerbt.'));
     }
     if (freeformSupported) {
       const pinOptions = element('div');
@@ -314,7 +339,7 @@ export class Schema5PagePanel {
       this.close();
       this.#onClose(outcome);
     });
-    if (this.#background && !inheritsBackground) void this.#updateBackgroundLabel(services);
+    if (this.#background && (!inheritsBackground || this.#overrideBackground?.checked)) void this.#updateBackgroundLabel(services);
   }
 
   async #updateBackgroundLabel(services) {
@@ -353,7 +378,7 @@ export class Schema5PagePanel {
     return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value,
       this.#titleAlign.value, this.#background, this.#sharedBackground?.checked ?? null,
       this.#intensity.value, this.#transparency.value, this.#freeform?.values(), this.#backgroundDim?.value,
-      this.#renderAsPins?.checked]);
+      this.#renderAsPins?.checked, this.#overrideBackground?.checked ?? null]);
   }
 
   #addFreeformControls(page, measurements) {
@@ -459,8 +484,7 @@ export class Schema5PagePanel {
       update();
     });
     if (!inherited) button('Größe aus Hintergrundbild übernehmen', () => {
-      const background = page !== start && this.#config.settings.sharedBackground === true
-        ? start.background : this.#background;
+      const background = schema5PageBackground(this.#candidate(), page.id);
       if (!background) { this.#message('Kein Hintergrundbild ausgewählt.', true); return; }
       const image = new this.#browser.Image();
       image.onload = () => {
@@ -515,7 +539,7 @@ export class Schema5PagePanel {
     }
     const candidate = resizeSchema5Grid(this.#config, Number(this.#columns.value));
     const [originalTheme, originalFrames, , originalTitleAlign, originalBackground, originalShared,
-      originalIntensity, originalTransparency, originalLayout, originalDim, originalPins] = JSON.parse(this.#settingsBaseline);
+      originalIntensity, originalTransparency, originalLayout, originalDim, originalPins, originalOverride] = JSON.parse(this.#settingsBaseline);
     for (const value of [this.#intensity.value, this.#transparency.value]) {
       if (!/^(?:100|[1-9]?\d)$/.test(value)) throw new Error('Ungültiger Liquid-Glass-Wert');
     }
@@ -529,6 +553,9 @@ export class Schema5PagePanel {
     }
     if (this.#sharedBackground && this.#sharedBackground.checked !== originalShared) {
       candidate.settings.sharedBackground = this.#sharedBackground.checked;
+    }
+    if (this.#overrideBackground && this.#overrideBackground.checked !== originalOverride) {
+      candidate.pages.find((entry) => entry.id === this.#pageId).overrideBackground = this.#overrideBackground.checked;
     }
     if (this.#intensity.value !== originalIntensity) candidate.settings.liquidIntensity = Number(this.#intensity.value);
     if (this.#transparency.value !== originalTransparency) candidate.settings.liquidTransparency = Number(this.#transparency.value);

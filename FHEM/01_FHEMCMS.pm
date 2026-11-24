@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.28.0-dev';
+our $FHEMCMS_VERSION = '1.29.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1056,10 +1056,12 @@ sub FHEMCMS_ValidateConfig {
 
     my %pageIds;
     for my $page (@{$config->{pages}}) {
-        my @pageFields = $fcui ? ('background', 'kiosk') : ();
+        my @pageFields = $fcui ? ('background', 'kiosk', 'overrideBackground') : ();
         push(@pageFields, 'layoutMode', 'canvas', 'navigationRect', 'renderAsPins', 'backgroundDim') if ($targetSchema == 6);
         $err = $exact->($page, 'Seite', ['id', 'title', 'widgets'], \@pageFields);
         return $err if ($err);
+        return 'Ungueltige Hintergrundvererbung'
+            if (exists($page->{overrideBackground}) && !$isBool->($page->{overrideBackground}));
         return 'Ungueltiger Kioskmodus der Seite'
             if (exists($page->{kiosk}) && !$isBool->($page->{kiosk}));
         return 'Ungueltiger Layoutmodus der Seite'

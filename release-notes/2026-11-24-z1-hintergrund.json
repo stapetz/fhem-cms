@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-24",
+  "version": "1.29.0-dev",
+  "title": "Individuelle Ausnahme vom gemeinsamen Seitenhintergrund",
+  "changes": [
+    "Einzelne Seiten koennen die Hintergrundvererbung der Startseite explizit ueberschreiben: eigenes Bild oder bewusst kein Bild. Refs #251.",
+    "Eigene Bilder bleiben beim Wiederherstellen der Vererbung erhalten. Live, Editor, Popup und echte Vorschau verwenden dieselbe Bildauswahl.",
+    "Bestehende Seiten bleiben unveraendert; der optionale Boolean bleibt in Entwurf, Publish und Backups erhalten."
+  ]
+}

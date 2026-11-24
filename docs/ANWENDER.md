@@ -355,6 +355,11 @@ geändert, liefert die neue erste Seite das gemeinsame Bild. Hat sie keines,
 erscheint auf allen Seiten der Theme-Hintergrund. Die Einstellungen werden als Entwurf gespeichert und
 erst beim Veröffentlichen auf der Homepage sichtbar. Verwendete Hintergrundbilder
 sind im Assetmanager gegen Löschen geschützt.
+**Neu auf dev:** Auf einzelnen Nicht-Startseiten erlaubt
+**Hintergrundvererbung von der Startseite überschreiben** ein eigenes Bild
+oder bewusst keinen Bildhintergrund. Beispielsweise kann ein Grundriss das
+gemeinsame Standardbild ersetzen. Ausschalten der Ausnahme stellt die Vererbung
+wieder her; das eigene Bild bleibt gespeichert.
 Auf **Freeform-Seiten** lässt sich das wirksame Bild mit
 **Hintergrund-Abdunklung** um 0–50 % abdunkeln. Der Regler wirkt nur auf
 das Bild, nicht auf Widgets oder Navigation, und gilt individuell pro Seite,

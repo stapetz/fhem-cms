@@ -32,11 +32,13 @@ my $json = JSON::PP->new->canonical;
 my $draft5 = $json->decode($json->encode($initial->{live}));
 $draft5->{pages}[0]{title} = 'Grid draft';
 $draft5->{pages}[0]{kiosk} = JSON::PP::true;
+$draft5->{pages}[0]{overrideBackground} = JSON::PP::false;
 $draft5->{settings}{pageCanvas} = {width => 200, height => 200};
 $draft5->{settings}{pageNavigationRect} = {x => 10, y => 10, w => 180, h => 40};
 is(FHEMCMS_WriteVersion5Draft($dataDir, $draft5, $initial->{token}, 1), undef, 'grid-only save stays schema 5');
 my ($gridState) = FHEMCMS_ReadVersion5State($dataDir);
 is($gridState->{draft}{pages}[0]{kiosk}, JSON::PP::true, 'kiosk flag survives schema 5 draft round trip');
+is($gridState->{draft}{pages}[0]{overrideBackground}, JSON::PP::false, 'false background exception survives schema 5 draft round trip');
 ok(!exists($gridState->{live}{pages}[0]{kiosk}), 'draft kiosk flag does not change live configuration');
 is_deeply($gridState->{draft}{settings}, $draft5->{settings}, 'common frame persists in a grid-only draft');
 my $livePath = File::Spec->catfile($dataDir, 'config.json');
@@ -52,6 +54,7 @@ $next->{pages}[0]{background} = "media/$mediaName";
 $next->{pages}[0]{canvas} = {width => 200, height => 200};
 $next->{pages}[0]{renderAsPins} = JSON::PP::true;
 $next->{pages}[0]{backgroundDim} = 0.25;
+$next->{pages}[0]{overrideBackground} = JSON::PP::true;
 $next->{pages}[0]{widgets} = [{
     id => 'pin', type => 'text', markdown => 'Pin card', forceCard => JSON::PP::false,
     rect => {x => 20, y => 60, w => 100, h => 100},
@@ -62,6 +65,12 @@ $next->{pages}[0]{widgets} = [{
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $initial->{token}, 1), qr/veraltet/, 'stale upgrade refused');
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $gridState->{token}), qr/schemaVersion/, 'old writer cannot introduce schema 6');
 my $bad = $json->decode($json->encode($next));
+for my $invalid (undef, 0, 1, 'true', [], {}) {
+    $bad->{pages}[0]{overrideBackground} = $invalid;
+    like(FHEMCMS_WriteVersion5Draft($dataDir, $bad, $gridState->{token}, 1), qr/Hintergrundvererbung/,
+        'non-Boolean background exception refused before persistence');
+}
+$bad = $json->decode($json->encode($next));
 $bad->{pages}[0]{canvas}{width} = 199;
 like(FHEMCMS_WriteVersion5Draft($dataDir, $bad, $gridState->{token}, 1), qr/canvas\.width/, 'invalid pixels prevent saving');
 rename($mediaDir, "$mediaDir.saved") or die $!;

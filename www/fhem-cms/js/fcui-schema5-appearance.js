@@ -16,7 +16,11 @@ export function setLiquidAppearance(element, settings = {}) {
 export function schema5PageBackground(config, pageId) {
   const page = config.pages.find((entry) => entry.id === pageId);
   if (!page) throw new Error('Unbekannte Seite');
-  const background = config.settings?.sharedBackground === true ? config.pages[0].background : page.background;
+  if (Object.hasOwn(page, 'overrideBackground') && typeof page.overrideBackground !== 'boolean') {
+    throw new Error('Ungültige Hintergrundvererbung');
+  }
+  const background = config.settings?.sharedBackground === true && page.overrideBackground !== true
+    ? config.pages[0].background : page.background;
   if (background !== undefined && (typeof background !== 'string' || !ASSET_IMAGE.test(background))) {
     throw new Error('Ungültiges Hintergrundbild');
   }

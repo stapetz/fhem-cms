@@ -65,6 +65,9 @@ function validateLayout(config, includeNavigation = true) {
       throw new Error('Ungültige oder doppelte Seite');
     }
     pages.add(page.id);
+    if (Object.hasOwn(page, 'overrideBackground') && typeof page.overrideBackground !== 'boolean') {
+      throw new Error('Ungültige Hintergrundvererbung');
+    }
     validatePinPage(page, config.schemaVersion);
     if (Object.hasOwn(page, 'kiosk') && typeof page.kiosk !== 'boolean') {
       throw new Error('Ungültiger Kioskmodus der Seite');
