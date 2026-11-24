@@ -43,6 +43,21 @@ for my $schema (5, 6) {
 }
 is(FHEMCMS_ValidateConfig($config, 6), undef, 'mixed pages, allowed overlap and exact canvas-edge placement');
 is($json->encode($config), $bytes, 'validation does not rewrite defaults or remembered grid positions');
+for my $schema (5, 6) {
+    my $candidate = $json->decode($bytes);
+    pop(@{$candidate->{pages}});
+    $candidate->{schemaVersion} = $schema;
+    for my $style (qw(classic tabs underline cards)) {
+        $candidate->{navigation}{style} = $style;
+        my $before = $json->encode($candidate);
+        is(FHEMCMS_ValidateConfig($candidate, $schema), undef, "schema $schema accepts $style navigation");
+        is($json->encode($candidate), $before, 'navigation style is preserved during validation');
+    }
+    for my $invalid (undef, '', 'other', 'tabs ', [], {}, JSON::PP::true) {
+        $candidate->{navigation}{style} = $invalid;
+        like(FHEMCMS_ValidateConfig($candidate, $schema), qr/Navigationsstil/, "schema $schema rejects invalid navigation style");
+    }
+}
 for my $enabled (JSON::PP::true, JSON::PP::false) {
     my $candidate = $json->decode($bytes);
     $candidate->{pages}[1]{widgets}[0]{forceCard} = $enabled;

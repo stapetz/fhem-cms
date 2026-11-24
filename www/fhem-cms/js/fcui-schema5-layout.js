@@ -2,6 +2,7 @@ import { validateLinkItems } from './link-widget.js';
 import { validatePinPage, validatePinPosition } from './pin-layout.js';
 import { validatePinReadings } from './pin-readings.js';
 import { freeformStartRect, isFreeform, resizeFreeformPage, syncSharedFreeformSize, validateFreeformCanvas, validateFreeformWidget } from './fcui-freeform-layout.js';
+import { navigationStyle } from './fcui-schema5-appearance.js';
 
 const NAVIGATION = '__nav';
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -42,6 +43,7 @@ function validateLayout(config, includeNavigation = true) {
     throw new Error('Gültiges Schema 5 mit 12, 24, 48, 96 oder 192 Rasterspalten erwartet');
   }
   const columns = Number(config.settings.gridColumns);
+  navigationStyle(config.navigation);
   if (config.settings.titleAlign !== undefined && !['left', 'center', 'right'].includes(config.settings.titleAlign)) {
     throw new Error('Ungültige Titelausrichtung');
   }

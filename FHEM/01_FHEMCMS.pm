@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.31.1-dev';
+our $FHEMCMS_VERSION = '1.32.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1013,11 +1013,15 @@ sub FHEMCMS_ValidateConfig {
         if (exists($config->{theme}) && (ref($config->{theme}) || !defined($config->{theme})
             || $config->{theme} !~ ($fcui ? qr/\A(?:dark|light|liquid-glass|oled-black|catppuccin-mocha)\z/ : qr/\A(?:dark|light)\z/)));
     if (exists($config->{navigation})) {
-        $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid'], ['items', 'itemWidth', 'itemHeight']);
+        $err = $exact->($config->{navigation}, 'navigation', ['orientation', 'grid'], ['items', 'itemWidth', 'itemHeight', 'style']);
         return $err if ($err);
         return 'Ungueltige Ausrichtung der Navigation'
             if (ref($config->{navigation}{orientation}) || !defined($config->{navigation}{orientation})
                 || $config->{navigation}{orientation} !~ /\A(?:horizontal|vertical)\z/);
+        return 'Ungueltiger Navigationsstil'
+            if (exists($config->{navigation}{style}) && (!$fcui || ref($config->{navigation}{style})
+                || !defined($config->{navigation}{style})
+                || $config->{navigation}{style} !~ /\A(?:classic|tabs|underline|cards)\z/));
         return 'Ungueltige gemeinsame Breite'
             if (exists($config->{navigation}{itemWidth}) && !$isInt->($config->{navigation}{itemWidth}, 40, 600));
         return 'Ungueltige gemeinsame Hoehe'

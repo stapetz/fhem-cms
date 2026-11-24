@@ -1,6 +1,6 @@
 import { deviceSize, previewDeviceType } from './device-preview.js';
 import { schema5GridItems } from './fcui-schema5-layout.js';
-import { schema5PageBackground, setLiquidAppearance } from './fcui-schema5-appearance.js';
+import { navigationStyle, schema5PageBackground, setLiquidAppearance } from './fcui-schema5-appearance.js';
 
 const READY = 'fhem-cms-settings-preview-ready';
 const UPDATE = 'fhem-cms-settings-preview-update';
@@ -145,6 +145,9 @@ export function listenForSettingsPreview({ view, browser = window }) {
         } else {
           view.config = config;
           if (config.settings.pageCanvas || page?.layoutMode === 'freeform') root.style.setProperty('--cms-page-image', 'none');
+        }
+        for (const nav of view.root.querySelectorAll('.cms-nav')) {
+          nav.setAttribute('data-nav-style', navigationStyle(config.navigation));
         }
         if (!pending && !closed) browser.parent.postMessage({ type: UPDATED }, origin);
       }

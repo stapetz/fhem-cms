@@ -4,7 +4,7 @@ import { schema5GridItems } from './fcui-schema5-layout.js';
 import { Schema5LivePage } from './fcui-schema5-live.js';
 import { mountSchema5Widgets } from './fcui-schema5-widgets.js';
 import { observeSchema5Navigation } from './fcui-schema5-navigation-fit.js';
-import { schema5PageBackground, setLiquidAppearance } from './fcui-schema5-appearance.js';
+import { navigationStyle, schema5PageBackground, setLiquidAppearance } from './fcui-schema5-appearance.js';
 import { cmsPageCanvas } from './fcui-freeform-layout.js';
 
 export class Schema5View {
@@ -82,6 +82,7 @@ export class Schema5View {
   navigation(pageId, config = this.config, editing = this.editing) {
     const nav = document.createElement('nav');
     nav.className = 'cms-nav';
+    nav.setAttribute('data-nav-style', navigationStyle(config.navigation));
     nav.classList.toggle('is-vertical', config.navigation.orientation === 'vertical');
     nav.setAttribute('aria-label', 'Seiten');
     const burger = document.createElement('button');

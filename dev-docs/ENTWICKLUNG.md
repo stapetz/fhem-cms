@@ -113,6 +113,20 @@ und `node --test t/22_schema5_widget_panel.test.js`. Fixture
 `t/114_widget_previews.html` prueft alle Typen, Suche, Detaildialoge, Dummy-Dienste,
 Beschriftungen und Zielgroessen auf Desktop und bei 390px Breite.
 
+## Navigationsstile (dev, Refs #260)
+
+Schema 5/6 erlaubt optional `navigation.style` mit `classic`, `tabs`,
+`underline` oder `cards`. Fehlt das Feld, bleibt die bisherige Darstellung
+unveraendert; Validierung und Laden schreiben keinen Standardwert. Der Stil
+gilt fuer alle Seiten und wird im Seitendialog mit sofortiger Vorschau
+ausgewaehlt und als Entwurf gespeichert. Ansicht, Editor, Seitenpopup und
+mobile Navigation verwenden denselben Renderer. Die bestehenden Ausrichtungs-,
+Geometrie-, Burger- und Kioskregeln bleiben erhalten.
+Regression: `node --test t/18_schema5_page_panel.test.js t/10_schema5_layout.test.js t/23_schema5_navigation.test.js`,
+`prove t/91_schema6_validation.t t/92_schema6_persistence.t` und der
+Browserfall „page settings preview“ in `t/35_schema5_scaling.test.js`.
+Abnahme auf echten Safari-Geraeten steht aus.
+
 ## Schalter und Pin-Darstellung (dev, Refs #261)
 
 Der Schalterdialog bietet eine Icon-Auswahl; vorhandene getrennte Icons bleiben

@@ -120,6 +120,25 @@ if (child) {
     widget.remove();
     check([...theme.options].find(option => option.value === 'dark').textContent === 'Forest Green',
       'existing dark value has new label');
+    const navigationStyle = dialog.querySelector('[data-navigation-style]');
+    check([...navigationStyle.options].map(option => option.value).join(',') === 'classic,tabs,underline,cards',
+      'the existing navigation and three additional styles are selectable');
+    const navigation = () => frameDocument().querySelector('.cms-nav');
+    const linkStyle = () => frame.contentWindow.getComputedStyle(navigation().querySelector('.cms-nav-link'));
+    for (const palette of ['dark', 'light', 'liquid-glass', 'oled-black', 'catppuccin-mocha']) {
+      theme.value = palette;
+      theme.dispatchEvent(new Event('change'));
+      await until(() => frameDocument().documentElement.dataset.cmsTheme === palette, `${palette} did not update`);
+      const appearances = new Set();
+      for (const style of ['classic', 'tabs', 'underline', 'cards']) {
+        navigationStyle.value = style;
+        navigationStyle.dispatchEvent(new Event('change'));
+        await until(() => navigation()?.dataset.navStyle === style, `${style} navigation did not update in preview`);
+        appearances.add(`${linkStyle().borderRadius}|${linkStyle().backgroundColor}|${linkStyle().borderColor}`);
+      }
+      check(appearances.size === 4, `${palette}: each navigation style has a visibly different appearance`);
+    }
+    check(writes === 0 && JSON.stringify(config) === original, 'navigation preview never saves or changes live configuration');
     theme.value = 'liquid-glass';
     theme.dispatchEvent(new Event('change'));
     await until(() => frameDocument().documentElement.dataset.cmsTheme === 'liquid-glass', 'theme did not update');
@@ -175,7 +194,9 @@ if (child) {
       'choosing another background updates the actual page preview');
     const mode = dialog.querySelector('.cms-freeform-mode select');
     mode.value = 'freeform';
-    mode.dispatchEvent(new Event('change'));
+    mode.dispatchEvent(new Event('change', {bubbles: true}));
+    await until(() => frameDocument().querySelector('.cms-freeform-canvas')
+      && navigation()?.dataset.navStyle === 'cards', 'navigation style is retained when switching to Freeform');
     check(!dialog.querySelector('.cms-freeform-preset'), 'non-Start layout mode has no size preset');
     const dim = dialog.querySelector('[data-background-dim]');
     check(!dim.parentElement.hidden && dim.min === '0' && dim.max === '50',
@@ -236,6 +257,9 @@ if (child) {
     dialog.showModal();
     const startFrame = dialog.querySelector('.cms-settings-preview iframe');
     const preset = dialog.querySelector('.cms-freeform-preset select');
+    const startNavigationStyle = dialog.querySelector('[data-navigation-style]');
+    startNavigationStyle.value = 'underline';
+    startNavigationStyle.dispatchEvent(new Event('change'));
     for (const [id, width, height, type] of [
       ['ipad-air', 820, 1180, 'tablet'], ['iphone-15', 393, 852, 'mobile'], ['desktop-1280', 1280, 720, 'desktop'],
     ]) {
@@ -243,8 +267,11 @@ if (child) {
       preset.dispatchEvent(new Event('change'));
       await until(() => startFrame.contentDocument?.querySelector('.cms-freeform-canvas .cms-shared-canvas-grid')
         && startFrame.contentWindow.innerWidth === width && startFrame.contentWindow.innerHeight === height
-        && new URL(startFrame.contentWindow.location.href).searchParams.get('cms-device') === type,
+        && new URL(startFrame.contentWindow.location.href).searchParams.get('cms-device') === type
+        && startFrame.contentDocument.querySelector('.cms-nav')?.dataset.navStyle === 'underline',
       `${id}: settings preview does not use the selected viewport`);
+      check(startFrame.contentDocument.querySelector('.cms-nav-link[aria-current="page"]'),
+        `${id}: current page remains marked in the navigation`);
     }
     check(JSON.stringify(config) === original && writes === 0, 'preview never mutates or saves the original');
     dialog.querySelector('.cms-panel-close').click();

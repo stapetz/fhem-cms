@@ -69,6 +69,50 @@ function fixture() {
   };
 }
 
+test('navigation style previews globally, cancels and persists only on change', async () => {
+  const original = globalThis.document;
+  globalThis.document = {createElement: tag => new Element(tag)};
+  const all = node => [node, ...node.children.flatMap(all)];
+  try {
+    const f = fixture();
+    const before = JSON.stringify(f.live);
+    await f.controller.reload();
+    let preview;
+    let confirmations = 0;
+    const root = new Element('section');
+    const open = pageId => new Schema5PagePanel({root, controller: f.controller, pageId,
+      token: f.controller.snapshot().token, browser: {confirm: () => { confirmations++; return true; }},
+      onClose: () => {}, services: {createSettingsPreview: () => ({
+        element: new Element('section'), update: config => {preview = config;}, close() {},
+      })}});
+    const style = () => all(root).find(node => Object.hasOwn(node.attributes, 'data-navigation-style'));
+    const button = name => all(root).find(node => node.className?.split(' ').includes(name));
+    open('b');
+    assert.equal(style().value, 'classic');
+    await button('cms-panel-save').fire('click');
+    assert.equal(Object.hasOwn(f.controller.snapshot().draft.navigation, 'style'), false,
+      'unchanged legacy configuration never acquires a style field');
+    open('b');
+    style().value = 'tabs';
+    style().fire('change');
+    assert.equal(preview.navigation.style, 'tabs');
+    assert.equal(JSON.stringify(f.live), before);
+    button('cms-panel-close').fire('click');
+    assert.equal(confirmations, 1, 'style change is treated as unsaved');
+    assert.equal(Object.hasOwn(f.controller.snapshot().draft.navigation, 'style'), false);
+    open('b');
+    style().value = 'cards';
+    style().fire('change');
+    await button('cms-panel-save').fire('click');
+    assert.equal(f.controller.snapshot().draft.navigation.style, 'cards');
+    assert.equal(JSON.stringify(f.live), before, 'live remains unchanged');
+    await f.controller.reload();
+    const panel = open('a');
+    assert.equal(style().value, 'cards', 'the same global style is available from the other page after reload');
+    panel.close();
+  } finally { globalThis.document = original; }
+});
+
 test('Freeform background dimming previews per page, cancels and saves only into the draft', async () => {
   const original = globalThis.document;
   globalThis.document = {createElement: tag => new Element(tag)};
@@ -171,7 +215,7 @@ test('background label follows the asset catalog and reports missing entries or 
       token: f.controller.snapshot().token, services, browser: { confirm: () => true }, onClose: () => {} });
     const settle = () => new Promise(resolve => setImmediate(resolve));
     let panel = open();
-    let background = root.children[3].children[4];
+    let background = root.children[3].children[5];
     await settle();
     assert.equal(background.children[3].children[0].textContent, 'Stammordner / Haus / Zimmer / Wand.png');
     catalog.folders[1].name = 'Büro';
@@ -181,7 +225,7 @@ test('background label follows the asset catalog and reports missing entries or 
     catalog.assets[0].folder = 'root';
     panel.close();
     panel = open();
-    background = root.children[3].children[4];
+    background = root.children[3].children[5];
     await settle();
     assert.equal(background.children[3].children[0].textContent, 'Stammordner / Umbenannt.png');
     selected = { href: second, name: 'veralteter Name' };
@@ -215,7 +259,7 @@ test('late catalog responses cannot overwrite a removed background', async () =>
     new Schema5PagePanel({ root, controller: f.controller, pageId: 'a', token: f.controller.snapshot().token,
       services: { assetAction: () => new Promise(done => { resolve = done; }) },
       browser: { confirm: () => true }, onClose: () => {} });
-    const background = root.children[3].children[4];
+    const background = root.children[3].children[5];
     background.children[2].fire('click');
     resolve({ invalid: true });
     await new Promise(done => setImmediate(done));
@@ -239,7 +283,7 @@ test('new themes are selectable and saved without modifying widget layout', asyn
       assert.ok(theme.children.some(option => option.value === value));
       theme.value = value;
       theme.fire('change');
-      assert.equal(root.children[3].children[4].children[5].hidden, true);
+      assert.equal(root.children[3].children[5].children[5].hidden, true);
       await root.children[4].children[1].fire('click');
       assert.equal(f.controller.snapshot().draft.theme, value);
       assert.deepEqual(f.controller.snapshot().draft.pages, f.live.pages);
@@ -272,15 +316,15 @@ test('settings preview receives isolated candidates and closes without saving on
     assert.equal(theme.children[0].value, 'dark');
     theme.value = 'liquid-glass';
     theme.fire('change');
-    form.children[1].children[0].checked = false;
-    form.children[1].children[0].fire('change');
-    form.children[3].children[0].value = 'right';
-    form.children[3].children[0].fire('change');
-    const controls = form.children[4].children[5];
+    form.children[2].children[0].checked = false;
+    form.children[2].children[0].fire('change');
+    form.children[4].children[0].value = 'right';
+    form.children[4].children[0].fire('change');
+    const controls = form.children[5].children[5];
     controls.children[1].children[0].value = '65';
     controls.children[1].children[0].fire('input');
-    form.children[2].children[0].value = '24';
-    form.children[2].children[0].fire('change');
+    form.children[3].children[0].value = '24';
+    form.children[3].children[0].fire('change');
     const candidate = preview.updates.at(-1);
     assert.equal(candidate.theme, 'liquid-glass');
     assert.equal(candidate.settings.showFrames, false);
@@ -318,15 +362,15 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
     assert.ok(descendants(root).every((node) => node.type !== 'number'
       && !node.className?.includes('grid-stack') && node.textContent !== 'Position übernehmen'));
     const settings = root.children[3];
-    assert.equal(settings.children.length, 7, 'appearance settings and direct live URL');
-    assert.equal(settings.children[3].children[0].value, 'left');
-    assert.deepEqual(settings.children[3].children[0].children.map((option) => option.value), ['left', 'center', 'right']);
+    assert.equal(settings.children.length, 8, 'appearance settings and direct live URL');
+    assert.equal(settings.children[4].children[0].value, 'left');
+    assert.deepEqual(settings.children[4].children[0].children.map((option) => option.value), ['left', 'center', 'right']);
     assert.equal(settings.children[0].children[0].value, 'dark');
-    assert.notEqual(settings.children[4].hidden, true, 'background settings are available in dark theme');
-    assert.equal(settings.children[4].children[5].hidden, true, 'liquid controls are hidden for dark theme');
-    assert.equal(settings.children[1].children[0].checked, true);
-    assert.deepEqual(settings.children[2].children[0].children.map((option) => option.value), ['12', '24', '48', '96', '192']);
-    assert.notEqual(settings.children[2].children[0].disabled, true);
+    assert.notEqual(settings.children[5].hidden, true, 'background settings are available in dark theme');
+    assert.equal(settings.children[5].children[5].hidden, true, 'liquid controls are hidden for dark theme');
+    assert.equal(settings.children[2].children[0].checked, true);
+    assert.deepEqual(settings.children[3].children[0].children.map((option) => option.value), ['12', '24', '48', '96', '192']);
+    assert.notEqual(settings.children[3].children[0].disabled, true);
     const footer = root.children[4];
     const [cancel, save] = footer.children;
     assert.equal(save.textContent, 'Speichern');
@@ -343,8 +387,8 @@ test('page panel only exposes look and feel, protects cancel and preserves widge
 
     const next = open();
     root.children[3].children[0].children[0].value = 'light';
-    root.children[3].children[1].children[0].checked = false;
-    root.children[3].children[3].children[0].value = 'center';
+    root.children[3].children[2].children[0].checked = false;
+    root.children[3].children[4].children[0].value = 'center';
     const gate = f.delay();
     const saving = root.children[4].children[1].fire('click');
     assert.equal(root.children[4].children[0].disabled, true);
@@ -384,8 +428,8 @@ test('page settings expose the current live URL and report clipboard failures', 
     const panel = new Schema5PagePanel({ root, controller: f.controller, pageId: 'b',
       token: state.token, browser, onClose: () => {} });
     const form = root.children[3];
-    const url = form.children[5].children[0];
-    const copy = form.children[6];
+    const url = form.children[6].children[0];
+    const copy = form.children[7];
     assert.equal(url.value, 'https://example.test/fhem/cms/index.html?x=1#/b');
     assert.equal(url.readOnly, true);
     await copy.fire('click');
@@ -563,7 +607,7 @@ test('liquid glass uses a reversible start-page background without changing indi
     const settings = root.children[3];
     settings.children[0].children[0].value = 'liquid-glass';
     settings.children[0].children[0].fire('change');
-    const background = settings.children[4];
+    const background = settings.children[5];
     assert.notEqual(background.hidden, true);
     assert.equal(background.children[5].hidden, false, 'liquid controls appear for liquid glass');
     assert.equal(background.children[3].textContent, 'Hintergrundbild für aktuelle Seite „A“: ');
@@ -576,7 +620,7 @@ test('liquid glass uses a reversible start-page background without changing indi
     assert.equal(f.controller.snapshot().draft.pages[0].background, first);
     assert.equal(f.controller.snapshot().draft.settings.sharedBackground, true);
     open('b');
-    const inherited = root.children[3].children[4];
+    const inherited = root.children[3].children[5];
     assert.match(inherited.children[1].textContent, /Bild wird von der Startseite geerbt/);
     assert.equal(inherited.children[2].hidden, true);
     assert.ok(inherited.children.every(node => node.tag !== 'button'));
@@ -598,7 +642,7 @@ test('liquid glass uses a reversible start-page background without changing indi
     root.children[4].children[0].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[1].background, second, 'cancel preserves the original local image');
     open('b');
-    const exception = root.children[3].children[4].children[0].children[0];
+    const exception = root.children[3].children[5].children[0].children[0];
     exception.checked = true;
     exception.fire('change');
     await root.children[4].children[1].fire('click');
@@ -606,7 +650,7 @@ test('liquid glass uses a reversible start-page background without changing indi
     assert.equal(f.controller.snapshot().draft.pages[1].overrideBackground, true);
 
     open('a');
-    root.children[3].children[4].children[1].children[0].checked = false;
+    root.children[3].children[5].children[1].children[0].checked = false;
     await root.children[4].children[1].fire('click');
     const result = f.controller.snapshot().draft;
     assert.equal(result.settings.sharedBackground, false);
@@ -635,7 +679,7 @@ test('background selection and shared setting work in light and dark themes', as
       const form = root.children[3];
       form.children[0].children[0].value = theme;
       form.children[0].children[0].fire('change');
-      const background = form.children[4];
+      const background = form.children[5];
       assert.notEqual(background.hidden, true);
       assert.equal(background.children[5].hidden, true);
       await background.children[0].fire('click');
@@ -664,12 +708,12 @@ test('background picker reports errors, tolerates cancellation and removes an im
       services: { pickAsset: () => pick() }, browser: { confirm: () => true }, onClose: () => {},
     });
     open();
-    let background = root.children[3].children[4];
+    let background = root.children[3].children[5];
     await background.children[0].fire('click');
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.pages[0].background, first);
     open();
-    background = root.children[3].children[4];
+    background = root.children[3].children[5];
     pick = async () => null;
     await background.children[0].fire('click');
     assert.match(background.children[3].children[0].textContent, /Bildname nicht verfügbar: Assetkatalog nicht verfügbar/);
@@ -700,7 +744,7 @@ test('liquid sliders preview immediately, cancel safely and save global settings
       browser: { confirm: () => confirmed }, onClose: () => {},
     });
     open('a');
-    const controls = root.children[3].children[4].children[5];
+    const controls = root.children[3].children[5].children[5];
     const intensity = controls.children[0].children[0];
     const transparency = controls.children[1].children[0];
     assert.equal(controls.children.length, 2, 'only the two sliders remain');
@@ -720,14 +764,14 @@ test('liquid sliders preview immediately, cancel safely and save global settings
     root.children[4].children[0].fire('click');
     assert.equal(f.controller.snapshot().draft, null);
     open('b');
-    const otherControls = root.children[3].children[4].children[3];
+    const otherControls = root.children[3].children[5].children[3];
     otherControls.children[0].children[0].value = '0';
     otherControls.children[1].children[0].value = '100';
     await root.children[4].children[1].fire('click');
     assert.equal(f.controller.snapshot().draft.settings.liquidIntensity, 0);
     assert.equal(f.controller.snapshot().draft.settings.liquidTransparency, 100);
     open('a');
-    const savedControls = root.children[3].children[4].children[5];
+    const savedControls = root.children[3].children[5].children[5];
     assert.equal(savedControls.children[0].children[0].value, '0');
     assert.equal(savedControls.children[1].children[0].value, '100');
     savedControls.children[0].children[0].value = '101';
@@ -752,7 +796,7 @@ test('raster selector validates all pages, cancels without writes and scales onl
       browser: { confirm: () => true }, onClose: () => { closed += 1; },
     });
     open();
-    const columns = root.children[3].children[2].children[0];
+    const columns = root.children[3].children[3].children[0];
     columns.value = '24';
     columns.fire('change');
     assert.equal(columns.value, '24');
@@ -762,7 +806,7 @@ test('raster selector validates all pages, cancels without writes and scales onl
     assert.equal(closed, 1);
     assert.equal(f.writes, 0, 'cancel leaves both live and draft unchanged');
     open();
-    const nextColumns = root.children[3].children[2].children[0];
+    const nextColumns = root.children[3].children[3].children[0];
     for (const count of [48, 96, 192]) {
       nextColumns.value = String(count);
       nextColumns.fire('change');
@@ -826,7 +870,7 @@ test('settings reject invalid choices and excessive raster height before writing
     const panel = new Schema5PagePanel({ root, controller: f.controller, pageId: 'a', token: state.token,
       browser: { confirm: () => true }, onClose() {} });
     const settings = root.children[3];
-    const columns = settings.children[2].children[0];
+    const columns = settings.children[3].children[0];
     columns.value = '192';
     columns.fire('change');
     assert.equal(columns.value, '12');
@@ -865,7 +909,7 @@ test('temporary raster selections do not accumulate rounding or alter an existin
     const root = new Element('section');
     new Schema5PagePanel({ root, controller: f.controller, pageId: 'a', token: current.token,
       browser: { confirm: () => true }, onClose() {} });
-    const columns = root.children[3].children[2].children[0];
+    const columns = root.children[3].children[3].children[0];
     for (const count of [12, 24, 96, 192, 48]) {
       columns.value = String(count);
       columns.fire('change');
@@ -960,21 +1004,27 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     new Schema5PagePanel({ root, controller, pageId: 'a', token: state.token,
       services: { pickAsset: async () => ({ href: background, name: 'Beispiel' }) },
       browser: { confirm: () => true }, onClose: (outcome) => { closed = outcome; } });
-    root.children[3].children[1].children[0].checked = false;
-    const align = root.children[3].children[3].children[0];
+    root.children[3].children[2].children[0].checked = false;
+    const align = root.children[3].children[4].children[0];
     align.value = 'justify';
     await root.children[4].children[1].fire('click');
     assert.match(root.children[2].textContent, /Ungültige Titelausrichtung/);
     assert.equal(controller.snapshot().draft, null);
     align.value = 'right';
+    const navigationStyle = root.children[3].children[1].children[0];
+    navigationStyle.value = 'invalid';
+    await root.children[4].children[1].fire('click');
+    assert.match(root.children[2].textContent, /Ungültiger Navigationsstil/);
+    assert.equal(controller.snapshot().draft, null);
+    navigationStyle.value = 'tabs';
     const theme = root.children[3].children[0].children[0];
     theme.value = 'liquid-glass';
     theme.fire('change');
-    await root.children[3].children[4].children[0].fire('click');
-    root.children[3].children[4].children[1].children[0].checked = true;
-    root.children[3].children[4].children[5].children[0].children[0].value = '80';
-    root.children[3].children[4].children[5].children[1].children[0].value = '35';
-    const columns = root.children[3].children[2].children[0];
+    await root.children[3].children[5].children[0].fire('click');
+    root.children[3].children[5].children[1].children[0].checked = true;
+    root.children[3].children[5].children[5].children[0].children[0].value = '80';
+    root.children[3].children[5].children[5].children[1].children[0].value = '35';
+    const columns = root.children[3].children[3].children[0];
     columns.value = '192';
     columns.fire('change');
     await root.children[4].children[1].fire('click');
@@ -987,12 +1037,14 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     assert.equal(draft.settings.gridColumns, 192);
     assert.equal(draft.settings.titleAlign, 'right');
     assert.equal(draft.theme, 'liquid-glass');
+    assert.equal(draft.navigation.style, 'tabs');
     assert.equal(draft.pages[0].background, background);
     assert.equal(draft.settings.sharedBackground, true);
     assert.equal(draft.settings.liquidIntensity, 80);
     assert.equal(draft.settings.liquidTransparency, 35);
     assert.equal(await readFile(join(dir, 'config.json'), 'utf8'), original);
     assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).pages[0].widgets[0].grid.row, 17);
+    assert.equal(JSON.parse(await readFile(join(dir, 'draft.json'), 'utf8')).navigation.style, 'tabs');
   } finally {
     globalThis.document = originalDocument;
     await rm(dir, { recursive: true });

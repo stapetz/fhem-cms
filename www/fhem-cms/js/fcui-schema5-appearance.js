@@ -1,6 +1,15 @@
 import { ASSET_IMAGE } from './asset-contract.js';
 
 export const LIQUID_DEFAULTS = { liquidIntensity: 47, liquidTransparency: 12 };
+export const NAVIGATION_STYLES = [
+  ['classic', 'Klassisch'], ['tabs', 'Register'], ['underline', 'Unterstrichen'], ['cards', 'Kacheln'],
+];
+
+export function navigationStyle(navigation) {
+  const style = navigation?.style === undefined ? 'classic' : navigation.style;
+  if (!NAVIGATION_STYLES.some(([value]) => value === style)) throw new Error('Ungültiger Navigationsstil');
+  return style;
+}
 
 export function setLiquidAppearance(element, settings = {}) {
   const intensity = settings.liquidIntensity === undefined ? LIQUID_DEFAULTS.liquidIntensity : settings.liquidIntensity;

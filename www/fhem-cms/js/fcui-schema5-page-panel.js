@@ -1,7 +1,7 @@
 import { resizeSchema5Grid, schema5GridItems, SCHEMA5_GRID_COLUMNS } from './fcui-schema5-layout.js';
 import { changePageLayout } from './fcui-schema5-layout.js';
 import { DEFAULT_CANVAS, applyCmsPageCanvas, cmsPageCanvas, isFreeform, validateFreeformCanvas } from './fcui-freeform-layout.js';
-import { schema5PageBackground } from './fcui-schema5-appearance.js';
+import { NAVIGATION_STYLES, navigationStyle, schema5PageBackground } from './fcui-schema5-appearance.js';
 import { ASSET_IMAGE, assetPathText, validateAssetState } from './asset-contract.js';
 import { LIQUID_DEFAULTS } from './fcui-schema5-appearance.js';
 import { FREEFORM_DEVICE_GROUPS, deviceSize } from './device-preview.js';
@@ -21,6 +21,7 @@ export class Schema5PagePanel {
   #columns;
   #status;
   #theme;
+  #navigationStyle;
   #frames;
   #titleAlign;
   #form;
@@ -116,6 +117,16 @@ export class Schema5PagePanel {
     }
     this.#theme.value = config.theme || 'dark';
     themeLabel.append(this.#theme);
+    const navigationStyleLabel = element('label', 'Navigationsstil (für alle Seiten) ');
+    this.#navigationStyle = element('select');
+    this.#navigationStyle.setAttribute('data-navigation-style', '');
+    for (const [value, title] of NAVIGATION_STYLES) {
+      const option = element('option', title);
+      option.value = value;
+      this.#navigationStyle.append(option);
+    }
+    this.#navigationStyle.value = navigationStyle(config.navigation);
+    navigationStyleLabel.append(this.#navigationStyle);
     const framesLabel = element('label', 'Rahmen anzeigen ');
     this.#frames = element('input');
     this.#frames.type = 'checkbox';
@@ -140,7 +151,7 @@ export class Schema5PagePanel {
     }
     this.#titleAlign.value = config.settings.titleAlign || 'left';
     titleLabel.append(this.#titleAlign);
-    this.#form.append(themeLabel, framesLabel, layoutLabel, titleLabel);
+    this.#form.append(themeLabel, navigationStyleLabel, framesLabel, layoutLabel, titleLabel);
     this.#backgroundControls = element('div');
     this.#backgroundControls.className = 'cms-page-background-controls';
     const headingBackground = element('p', `Hintergrundbild für aktuelle Seite „${page.title}“: `);
@@ -270,6 +281,7 @@ export class Schema5PagePanel {
       this.#updateSettingsPreview();
     });
     this.#frames.addEventListener('change', () => this.#updateSettingsPreview());
+    this.#navigationStyle.addEventListener('change', () => this.#updateSettingsPreview());
     this.#titleAlign.addEventListener('change', () => this.#updateSettingsPreview());
     choose.addEventListener('click', async () => {
       if (this.#busy || this.#closed || this.#requiresReload) return;
@@ -379,7 +391,7 @@ export class Schema5PagePanel {
     return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value,
       this.#titleAlign.value, this.#background, this.#sharedBackground?.checked ?? null,
       this.#intensity.value, this.#transparency.value, this.#freeform?.values(), this.#backgroundDim?.value,
-      this.#renderAsPins?.checked, this.#overrideBackground?.checked ?? null]);
+      this.#renderAsPins?.checked, this.#overrideBackground?.checked ?? null, this.#navigationStyle.value]);
   }
 
   #addFreeformControls(page, measurements) {
@@ -540,11 +552,14 @@ export class Schema5PagePanel {
     }
     const candidate = resizeSchema5Grid(this.#config, Number(this.#columns.value));
     const [originalTheme, originalFrames, , originalTitleAlign, originalBackground, originalShared,
-      originalIntensity, originalTransparency, originalLayout, originalDim, originalPins, originalOverride] = JSON.parse(this.#settingsBaseline);
+      originalIntensity, originalTransparency, originalLayout, originalDim, originalPins, originalOverride,
+      originalNavigationStyle] = JSON.parse(this.#settingsBaseline);
     for (const value of [this.#intensity.value, this.#transparency.value]) {
       if (!/^(?:100|[1-9]?\d)$/.test(value)) throw new Error('Ungültiger Liquid-Glass-Wert');
     }
     if (this.#theme.value !== originalTheme) candidate.theme = this.#theme.value;
+    navigationStyle({style:this.#navigationStyle.value});
+    if (this.#navigationStyle.value !== originalNavigationStyle) candidate.navigation.style = this.#navigationStyle.value;
     if (this.#frames.checked !== originalFrames) candidate.settings.showFrames = this.#frames.checked;
     if (this.#titleAlign.value !== originalTitleAlign) candidate.settings.titleAlign = this.#titleAlign.value;
     if (this.#background !== originalBackground) {

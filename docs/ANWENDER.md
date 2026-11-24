@@ -235,7 +235,7 @@ Nach dem Einrichten werden die Widgets automatisch angeordnet; ausgelassene
 Geräte lassen sich später im Editor hinzufügen.
 
 - **Datei:** Entwurf veröffentlichen/verwerfen sowie Sicherungen und Wiederherstellung.
-- **Bearbeiten:** Seiteneinstellungen (Theme, Widget-Rahmen, Titelausrichtung und Rastergröße)
+- **Bearbeiten:** Seiteneinstellungen (Theme, Navigationsstil, Widget-Rahmen, Titelausrichtung und Rastergröße)
   sowie die globale FHEM-CMS Administration, wenn freigegeben.
 - **Einfügen:** Widget hinzufügen (mit Suche) oder Gerät hinzufügen. Vorhandene Widgets lassen sich direkt am Widget duplizieren.
 
@@ -259,6 +259,11 @@ Die Größe und Skalierung für alle Raster- und Freeform-Seiten stellst du unte
 **Seiteneinstellungen** auf der Startseite ein. Auch die Position und Größe
 der Navigation bearbeitest du dort direkt an der Navigation. Andere Seiten
 übernehmen diese Einstellungen; ihr Widget-Layout bleibt Raster oder Freeform.
+Unter **Seiteneinstellungen → Navigationsstil** stehen Klassisch, Register,
+Unterstrichen und Kacheln zur Auswahl. Die Auswahl gilt für alle Seiten und
+ist sofort in der Vorschau sichtbar. **Speichern** übernimmt sie in den Entwurf;
+erst das Veröffentlichen aktiviert sie live. Bestehende Seiten behalten ohne
+Änderung den klassischen Stil.
 - **Ansicht:** Vorschau, Raster anzeigen und Widgets automatisch anordnen.
   Die Rasteranzeige wird dauerhaft pro CMS in diesem Browser gespeichert,
   unabhängig vom Entwurf. Auf anderen Browsern oder Geräten gilt deren eigene Wahl.
