@@ -34,12 +34,22 @@ export function mountPinReadingOptions(dialog, widget, services = {}) {
     form.insertBefore(preview, form.querySelector('.actions'));
   }
   const sync = () => {
+    const iconOnly = widget.type === 'fhem-switch'
+      && dialog.querySelector('[name="showLabel"]')?.value !== 'true';
     for (const {control, key, selected = false} of readingControls(dialog, widget.type)) {
-      if (!control || choices.has(control)) continue;
+      if (!control) continue;
+      if (choices.has(control)) {
+        const checkbox = choices.get(control);
+        checkbox.disabled = iconOnly;
+        checkbox.title = iconOnly ? 'Nur bei „Symbol + Beschriftung“ sichtbar' : '';
+        continue;
+      }
       const label = dialog.ownerDocument.createElement('label');
       label.className = 'cms-pin-reading-choice';
       const checkbox = dialog.ownerDocument.createElement('input');
       checkbox.type = 'checkbox';
+      checkbox.disabled = iconOnly;
+      checkbox.title = iconOnly ? 'Nur bei „Symbol + Beschriftung“ sichtbar' : '';
       checkbox.checked = (!initialized ? widget.showOnPin?.[key] : undefined) ?? selected;
       checkbox.dataset.showOnPin = key;
       label.append(checkbox, ' Auf Pin anzeigen');
@@ -51,7 +61,7 @@ export function mountPinReadingOptions(dialog, widget, services = {}) {
     }
     badge.presentation = {...pinPresentation({...widget, showOnPin: {}}, false, new Map(), services),
       values: readingControls(dialog, widget.type).flatMap(({control}) =>
-        control?.value && choices.get(control)?.checked ? [{value: control.value, unit: ''}] : [])};
+        !iconOnly && control?.value && choices.get(control)?.checked ? [{value: control.value, unit: ''}] : [])};
   };
   sync();
   initialized = true;

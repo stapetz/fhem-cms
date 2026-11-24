@@ -106,6 +106,7 @@ function pinReadingValue(widget, field, snapshots) {
 
 export function pinReadingValues(widget, snapshots) {
   validatePinReadings(widget);
+  if (widget.type === 'fhem-switch' && widget.showLabel !== true) return [];
   return pinReadingFields(widget)
     .filter(field => widget.showOnPin?.[field.key] ?? field.selected ?? false)
     .map(field => pinReadingValue(widget, field, snapshots));

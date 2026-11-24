@@ -9,6 +9,9 @@
 <script type="module">
 import { createWidgetElement } from '../www/fhem-cms/js/widget-factory.js';
 import { defaultActionIcon } from '../www/fhem-cms/js/action-presentation.js';
+import { switchIconPair } from '../www/fhem-cms/components/cms-switch.js';
+import { pinPresentation } from '../www/fhem-cms/js/pin-presentation.js';
+import '../www/fhem-cms/components/cms-pin-badge.js';
 
 const output = document.querySelector('#result');
 const fixture = document.querySelector('#fixture');
@@ -26,6 +29,35 @@ const services = {
   setCommand: async (...args) => { commands.push(args); },
 };
 try {
+  for (const [chosen, icons, expected] of [
+    ['lamp_on.svg', ['lamp_on.svg','lamp_off.svg'], {on:'lamp_on.svg',off:'lamp_off.svg'}],
+    ['lamp-off', ['lamp-on','lamp-off'], {on:'lamp-on',off:'lamp-off'}],
+    ['lamp', ['lamp','lamp_on','lamp_off'], {on:'lamp_on',off:'lamp_off'}],
+    ['lamp', ['lamp','lamp_on','lamp_off','lamp-on','lamp-off'], {on:'lamp',off:''}],
+    ['lamp', ['lamp'], {on:'lamp',off:''}],
+  ]) {
+    check(JSON.stringify(switchIconPair(chosen, icons)) === JSON.stringify(expected),
+      `${chosen}: select only an existing, unambiguous counterpart`);
+  }
+  const pin = {type:'fhem-switch',id:'pin',device:'Lamp',reading:'state',on:'on',off:'off',
+    icon:'lamp',showLabel:false,showOnPin:{reading:true}};
+  const pinServices = {iconUrl:name => `/fhem/icons/${name}`};
+  check(pinPresentation(pin, false, snapshots('on'), pinServices).switchColor === 'on'
+    && pinPresentation(pin, false, snapshots('off'), pinServices).switchColor === 'off',
+  'pin single icon projects the correct state colours');
+  check(pinPresentation(pin, false, snapshots('on'), pinServices).values.length === 0,
+    'icon-only pin suppresses even a previously selected state');
+  check(pinPresentation({...pin,showLabel:true}, false, snapshots('on'), pinServices).values.length === 1,
+    'pin state choice returns when symbol and label are selected');
+  const badge = document.createElement('cms-pin-badge');
+  fixture.append(badge);
+  for (const [state, color] of [['on','rgb(255, 177, 59)'],['off','rgb(128, 128, 128)']]) {
+    badge.presentation = pinPresentation(pin, false, snapshots(state), pinServices);
+    check(getComputedStyle(badge.shadowRoot.querySelector('.icon')).color === color,
+      `pin single icon renders ${state} colour`);
+    check(badge.shadowRoot.querySelectorAll('.value').length === 0, `pin ${state} renders no state text`);
+  }
+  badge.remove();
   for (const type of ['fhem-button', 'fhem-switch']) {
     const config = { type, id: 'test', title: 'Licht', label: 'Umschalten', device: 'Lamp',
       command: 'toggle', reading: 'state', on: 'on', off: 'off', grid: { col: 1, row: 2, w: 3, h: 2 } };
@@ -41,6 +73,8 @@ try {
     check(control.getAttribute('aria-label').includes('Umschalten'), 'Icon-only control has an accessible name');
     check(!$('[data-header]').hidden, 'Title remains independent from action caption');
     if (type === 'fhem-switch') {
+      check($('[data-state]').hidden && $('[data-state-mark]').hidden,
+        'icon-only switch hides visible state text and marker');
       const off = icon.style.getPropertyValue('--icon-url');
       host.data = snapshots('on').get('Lamp');
       check(control.getAttribute('aria-checked') === 'true', 'Known on state remains accessible');
@@ -91,9 +125,31 @@ try {
       host.data = snapshots('on').get('Lamp');
       host.data = snapshots('off').get('Lamp');
       check(icon.style.getPropertyValue('--icon-url').includes(defaultActionIcon('press')), 'Off inherits custom on icon');
+      check(getComputedStyle(icon).backgroundColor === 'rgb(128, 128, 128)', 'single off icon is grey');
+      host.data = snapshots('on').get('Lamp');
+      check(getComputedStyle(icon).backgroundColor === 'rgb(255, 177, 59)', 'single on icon is light orange');
+      host.data = snapshots('off').get('Lamp');
       host.config = { ...saved, iconOff: 'off.svg' };
       check(icon.style.getPropertyValue('--icon-url').includes(defaultActionIcon('off')), 'Own off icon overrides inheritance');
+      check(!control.hasAttribute('data-shared-icon'), 'existing distinct icon pair is preserved');
       host.config = saved;
+      await host.openConfig();
+      host.services = {...services,listIcons:async () => ['lamp_on.svg','lamp_off.svg','custom.svg']};
+      const pairedSelection = host.chooseIcon('on');
+      await settle();
+      document.querySelector('.cms-ip-dialog [title="lamp_off.svg"]').click();
+      await pairedSelection;
+      check(host.collectWidget().icon === 'lamp_on.svg' && host.collectWidget().iconOff === 'lamp_off.svg',
+        'single gallery selection saves the matching on/off pair');
+      check(!$('[data-icon-choose="off"]'), 'only one gallery selector is offered');
+      const singleSelection = host.chooseIcon('on');
+      await settle();
+      document.querySelector('.cms-ip-dialog [title="custom.svg"]').click();
+      await singleSelection;
+      check(host.collectWidget().icon === 'custom.svg' && !('iconOff' in host.collectWidget()),
+        'an unpaired choice replaces the old pair with one shared icon');
+      $('[data-cancel]').click();
+      host.services = services;
     }
     await host.openConfig();
     const clearing = host.chooseIcon(...(type === 'fhem-switch' ? ['on'] : []));

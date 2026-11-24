@@ -113,6 +113,22 @@ und `node --test t/22_schema5_widget_panel.test.js`. Fixture
 `t/114_widget_previews.html` prueft alle Typen, Suche, Detaildialoge, Dummy-Dienste,
 Beschriftungen und Zielgroessen auf Desktop und bei 390px Breite.
 
+## Schalter und Pin-Darstellung (dev, Refs #261)
+
+Der Schalterdialog bietet eine Icon-Auswahl; vorhandene getrennte Icons bleiben
+beim Oeffnen und unveraenderten Speichern erhalten. Bei einer neuen Auswahl
+werden vorhandene eindeutige `*_on`/`*_off`- oder `*-on`/`*-off`-Paare
+automatisch verwendet. Ohne eindeutiges Paar gilt das gewaehlte Icon fuer
+beide Zustaende: An hellorange, Aus grau, in Kachel und Pin. Die Anzeige
+„Nur Symbol“ blendet den State auch im Pin aus; explizite Pin-Reading-Auswahlen
+bleiben gespeichert und werden bei „Symbol + Beschriftung“ wieder wirksam.
+Die Checkbox fuer die normale Kachel ist in allen Widgetdialogen vertikal mit
+ihrem Text ausgerichtet. Browserregression:
+`node --test --test-name-pattern='widget titles inherit|Pin reading choices|Pin badges preserve' t/35_schema5_scaling.test.js`;
+`t/39_action_presentation.html` prueft Gallery-Paare, Farben und Pin-Projektion,
+`t/106_pin_readings.html` die verborgene und wiederhergestellte Pin-Auswahl.
+Safari- und Geraeteabnahme stehen aus.
+
 ## Grundriss- und Pin-Modus (geplant, Refs #243)
 
 Der importierte Entwurf „Interaktiver Grundriss- & Pin-Modus für

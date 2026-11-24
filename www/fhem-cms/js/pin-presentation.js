@@ -41,6 +41,8 @@ export function pinPresentation(widget, stale = false, snapshots = new Map(), se
     label: widget.title || widget.config?.customTitle || widget.device || widget.id,
     icon: '', iconUrl, values: pinReadingValues(widget, snapshots),
     state: widget.type === 'fhem-switch' && raw === widget.on ? 'active' : 'normal',
+    ...(widget.type === 'fhem-switch' && widget.icon && (!widget.iconOff || widget.iconOff === widget.icon)
+      && (raw === widget.on || raw === widget.off) ? {switchColor: raw === widget.on ? 'on' : 'off'} : {}),
     stale,
   };
 }

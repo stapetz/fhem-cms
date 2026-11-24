@@ -26,7 +26,7 @@ const services = {listAllDevices: async () => [demo], listDevices: async () => [
 const specs = [
   {type: 'fhem-value', device: 'Demo', reading: 'temperature', unit: '°C'},
   {type: 'thermostat', device: 'Demo', readings: {actual: 'temperature', target: 'desiredTemperature'}},
-  {type: 'fhem-switch', device: 'Demo', reading: 'state', on: 'on', off: 'off'},
+  {type: 'fhem-switch', device: 'Demo', reading: 'state', on: 'on', off: 'off', showLabel: true},
   {type: 'fhem-icon', device: 'Demo', reading: 'state', states: [{value: 'on', icon: 'general_an', color: '#ffffff'}]},
   {type: 'fhem-slider', device: 'Demo', reading: 'pct', command: 'pct'},
   {type: 'fhem-select', device: 'Demo', reading: 'mode', command: 'mode', mode: 'dropdown'},
@@ -99,6 +99,30 @@ try {
     await until(() => saved, `${spec.type}: save succeeds: ${dialog.querySelector('[data-error],[data-dialog-error]')?.textContent}`);
     check(writes === 1 && saved.rect.w === 300 && saved.rect.x === 100, `${spec.type}: existing save path preserves rect`);
     check(pinReadingValues(saved, snapshots).length === configured.length, `${spec.type}: every selected value survives save`);
+    panel.close();
+  }
+  {
+    const {dialog} = await open({...specs[2], showLabel:false, showOnPin:{reading:true}});
+    const checkbox = dialog.querySelector('[data-show-on-pin]');
+    const preview = dialog.querySelector('cms-pin-badge');
+    const forceCard = dialog.querySelector('[data-force-card]');
+    const checkboxBox = forceCard.getBoundingClientRect();
+    const labelBox = forceCard.parentElement.getBoundingClientRect();
+    check(Math.abs((checkboxBox.top + checkboxBox.bottom) - (labelBox.top + labelBox.bottom)) <= 2,
+      'force-card checkbox is vertically aligned with its label');
+    check(checkbox.checked && checkbox.disabled && preview.shadowRoot.querySelectorAll('.value').length === 0,
+      'icon-only switch hides an explicitly selected pin reading without deleting it');
+    const presentation = dialog.querySelector('[name="showLabel"]');
+    presentation.value = 'true';
+    presentation.dispatchEvent(new Event('change', {bubbles:true}));
+    check(!checkbox.disabled && preview.shadowRoot.querySelectorAll('.value').length === 1,
+      'enabling the label restores the dormant pin reading');
+    presentation.value = 'false';
+    presentation.dispatchEvent(new Event('change', {bubbles:true}));
+    dialog.querySelector('button[type="submit"]').click();
+    await until(() => saved, 'icon-only switch saves');
+    check(saved.showOnPin.reading === true && pinReadingValues(saved, snapshots).length === 0,
+      'icon-only save preserves the dormant choice but displays no state');
     panel.close();
   }
   const {dialog} = await open(specs[0]);

@@ -369,6 +369,13 @@ export class Schema5WidgetPanel {
         forceCard.type = 'checkbox';
         forceCard.checked = pinKeepsCard(widget);
         forceCard.setAttribute('data-force-card', '');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '.5rem';
+        forceCard.style.width = '1.2rem';
+        forceCard.style.height = '1.2rem';
+        forceCard.style.flex = 'none';
+        forceCard.style.margin = '0';
         label.append(forceCard);
         const form = dialog.querySelector('form');
         form.insertBefore(label, form.querySelector('.actions'));

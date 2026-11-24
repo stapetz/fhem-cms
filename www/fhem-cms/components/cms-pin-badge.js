@@ -38,6 +38,8 @@ class CmsPinBadge extends HTMLElement {
         .separator { flex: 0 0 1px; height: 12px; background: currentColor; opacity: .25; }
         :host([data-state="active"]) .badge { border-color: var(--cms-accent); }
         :host([data-state="active"]) .icon { color: var(--cms-accent); }
+        :host([data-switch-color="on"]) .icon { color: #ffb13b; }
+        :host([data-switch-color="off"]) .icon { color: #808080; }
         :host([data-state="alarm"]) .badge { border-color: var(--cms-danger); }
         :host([data-state="alarm"]) .icon { color: var(--cms-danger); }
         :host([data-stale]) .badge { border-style: dashed; }
@@ -91,10 +93,13 @@ class CmsPinBadge extends HTMLElement {
         || (value.iconUrl && !/^\/(?:[A-Za-z0-9_%.-]+\/)*icons\/[A-Za-z0-9_%./-]+$/.test(value.iconUrl))))
       || !Array.isArray(value.values) || value.values.some(item => !item
         || typeof item.value !== 'string' || typeof item.unit !== 'string')
-      || !['normal', 'active', 'alarm'].includes(value.state)) {
+      || !['normal', 'active', 'alarm'].includes(value.state)
+      || (value.switchColor !== undefined && !['on', 'off'].includes(value.switchColor))) {
       throw new Error('Ungültige Pin-Darstellung');
     }
     this.dataset.state = value.state;
+    if (value.switchColor) this.dataset.switchColor = value.switchColor;
+    else delete this.dataset.switchColor;
     this.toggleAttribute('data-stale', value.stale === true);
     this.#icon.textContent = value.icon;
     this.#icon.hidden = !value.icon && !value.iconUrl;

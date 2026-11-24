@@ -16,6 +16,27 @@ export const switchCommands = (sets) => String(sets || '').split(/\s+/).filter(B
   .filter(([name, argument]) => NAME_PATTERN.test(name) && (argument === undefined || argument === 'noArg'))
   .map(([name]) => name);
 
+export function switchIconPair(name, icons) {
+  const available = new Set(icons);
+  const match = /^(.*?)([_-])(on|off)(\.[A-Za-z0-9]+)?$/i.exec(name);
+  if (match) {
+    const [, base, separator, , extension = ''] = match;
+    const on = `${base}${separator}on${extension}`;
+    const off = `${base}${separator}off${extension}`;
+    if (available.has(on) && available.has(off)) return {on, off};
+  } else {
+    const extension = /(\.[A-Za-z0-9]+)$/.exec(name)?.[1] || '';
+    const base = extension ? name.slice(0, -extension.length) : name;
+    const pairs = [];
+    for (const separator of ['_', '-']) {
+      const on = `${base}${separator}on${extension}`, off = `${base}${separator}off${extension}`;
+      if (available.has(on) && available.has(off)) pairs.push({on, off});
+    }
+    if (pairs.length === 1) return pairs[0];
+  }
+  return {on:name, off:''};
+}
+
 class FHEMCMSSwitch extends HTMLElement {
   constructor() {
     super();
@@ -70,6 +91,8 @@ class FHEMCMSSwitch extends HTMLElement {
         .toggle:disabled { cursor: default; }
         .glyph { display: inline-block; flex: none; width: 1.1em; height: 1.1em; background-color: var(--cms-icon-color);
           -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
+        .toggle[data-shared-icon][aria-checked="true"] .glyph { background-color: #ffb13b; }
+        .toggle[data-shared-icon][aria-checked="false"] .glyph { background-color: #808080; }
         .glyph[hidden] { display: none; }
         .msg { position: absolute; left: 0; right: 0; bottom: 0.3em; margin: 0; text-align: center; color: var(--cms-danger, #ffb4a8);
           font-size: max(5px, min(9cqh, 3.5cqw)); }
@@ -139,7 +162,7 @@ class FHEMCMSSwitch extends HTMLElement {
               <label>Beschriftung (leer = An/Aus/Zustand unbekannt)<input name="label" maxlength="32" autocomplete="off"></label>
               ${actionPresentationFields}
               <div>
-                <span class="hint">Icon bei „An“ (leer = Standardsymbol)</span>
+                <span class="hint">Icon auswählen (ein passendes An-/Aus-Paar wird automatisch erkannt)</span>
                 <div class="icon-row">
                   <span class="glyph" data-icon-preview="on" aria-hidden="true" hidden></span>
                   <span data-icon-name="on">kein Icon</span>
@@ -147,11 +170,10 @@ class FHEMCMSSwitch extends HTMLElement {
                 </div>
               </div>
               <div>
-                <span class="hint">Icon bei „Aus“ (leer = eigenes An-Icon oder Standardsymbol)</span>
+                <span class="hint">Automatisches Icon bei „Aus“</span>
                 <div class="icon-row">
                   <span class="glyph" data-icon-preview="off" aria-hidden="true" hidden></span>
                   <span data-icon-name="off">kein Icon</span>
-                  <button type="button" data-icon-choose="off">Icon wählen …</button>
                 </div>
               </div>
             </div>
@@ -282,6 +304,8 @@ class FHEMCMSSwitch extends HTMLElement {
     this.shadowRoot.querySelector('[data-title]').textContent = title;
     this.shadowRoot.querySelector('[data-header]').hidden = !titleShown;
     const name = state === 'off' && this.widgetConfig.iconOff ? this.widgetConfig.iconOff : this.widgetConfig.icon;
+    toggle.toggleAttribute('data-shared-icon', Boolean(this.widgetConfig.icon
+      && (!this.widgetConfig.iconOff || this.widgetConfig.iconOff === this.widgetConfig.icon)));
     const url = actionIconUrl(name, state || 'unknown', this.services);
     const icon = this.shadowRoot.querySelector('[data-icon]');
     icon.hidden = !url;
@@ -432,7 +456,8 @@ class FHEMCMSSwitch extends HTMLElement {
     const url = actionIconUrl(name || (which === 'off' ? this.iconOn : ''), which, this.services);
     preview.hidden = !url;
     this.setIconSrc(preview, url);
-    this.shadowRoot.querySelector(`[data-icon-name="${which}"]`).textContent = name || 'Standardsymbol / Vererbung';
+    this.shadowRoot.querySelector(`[data-icon-name="${which}"]`).textContent = name
+      || (which === 'off' && this.iconOn ? 'Wie An (Zustandsfarbe)' : 'Standardsymbol');
     if (which === 'on') this.setIcon('off', this.iconOff);
   }
 
@@ -440,7 +465,20 @@ class FHEMCMSSwitch extends HTMLElement {
     const name = await openIconPicker({ services: this.services, title: which === 'on' ? 'Icon bei „An“' : 'Icon bei „Aus“',
       clearLabel: 'Standardsymbol / Vererbung' });
     if (name !== null) {
-      this.setIcon(which, name);
+      if (!name) {
+        this.setIcon('on', '');
+        this.setIcon('off', '');
+        return;
+      }
+      try {
+        const icons = await this.services.listIcons();
+        const pair = switchIconPair(name, icons);
+        this.setIcon('on', pair.on);
+        this.setIcon('off', pair.off);
+        this.setDialogError('');
+      } catch (error) {
+        this.setDialogError(`Icon-Paar konnte nicht ermittelt werden: ${error.message || String(error)}`);
+      }
     }
   }
 
