@@ -1,5 +1,19 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Kompakter Pin-Editor (24.11.2026, dev, #249)
+
+`node --test t/109_pin_editor.test.js t/103_pin_layout.test.js` und
+`prove t/92_schema6_persistence.t`: strikte optionale Prozentposition,
+Altbestand ohne Migration, Kartenmasse, Rasterwechsel, echter Publish/Backup.
+`node --test --test-name-pattern='Pin editor supports' t/35_schema5_scaling.test.js`:
+67 Browserchecks mit drei Themes, drei Canvasbreiten, echter contain-Bildfläche, 48px-Werkzeugen,
+forceCard-Mischung, vier Rändern, echtem Maus-/Touch-Drag, Escape/Touchcancel,
+Tastaturalternative und keinem Gerätebefehl. Ergänzend bestehende Pin-,
+Reading-, Freeform-, Lifecycle- und Cachetests. Geräteabnahme in Safari und
+auf echtem Touchgerät offen: Auswahl, Verschieben am Bildrand, Seitenwechsel,
+Widgetdialog/Speichern, Entwurf verwerfen/veröffentlichen und Orientierung.
+Kein main-Release.
+
 ## Pin-Tap/Hold und Popup-X (24.11.2026, dev, #248)
 
 Ab 1.28.0-dev: nur klassisches X oben rechts, mit gemeinsamem Seitenpopup-

@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-24",
+  "version": "1.30.0-dev",
+  "title": "Kompakter Pin-Editor auf dem Grundriss",
+  "changes": [
+    "Pins auch im Editor direkt auswaehlen und per Maus oder Touch verschieben; schwebende 48px-Werkzeuge bleiben am Rand erreichbar. Refs #249.",
+    "Bildbezogene Prozentpositionen mit zwei Nachkommastellen, Live-Tooltip, Pfeiltasten und sicherem Gestenabbruch; neue Pins starten in der Mitte.",
+    "Normale Karten und Navigation bleiben gemeinsam editierbar. Entwurf, Publish, Backups und bestehende Kartenmasse bleiben erhalten.",
+    "Wertanzeigen verwenden ein neutrales # als Typsymbol statt des menueaehnlichen Dreistrichzeichens."
+  ]
+}

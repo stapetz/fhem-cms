@@ -153,6 +153,7 @@ for (const [name, fixtures] of [
   ['modal page preserves the main page and closes by keyboard and backdrop', [['62_page_modal.html', 35]]],
   ['themes use and restore page backgrounds', [['55_liquid_glass.html', 63]]],
   ['page settings preview shows the real phone page without saving', [['57_settings_preview.html', 25]]],
+  ['Pin editor supports physical tools, mouse, touch and keyboard without device commands', [['110_pin_editor.html', 65]]],
   ['page and widget duplication preserve drafts and live configuration',
     [['59_page_duplicate.html', 21]]],
   ['Widget-Vorlagen speichern, Device-Referenzen ersetzen und als Entwurf einfügen',
@@ -222,7 +223,7 @@ for (const [name, fixtures] of [
   const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
     for (const [fixture, minimum] of fixtures) {
-      const interactive = fixture === '104_pin_badges.html?input=1' || fixture === '108_pin_interactions.html?input=1' || [
+      const interactive = fixture === '110_pin_editor.html' || fixture === '104_pin_badges.html?input=1' || fixture === '108_pin_interactions.html?input=1' || [
         '49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
         '63_responsive_edges.html', '65_widget_dialogs.html', '88_volvoconnect.html',
         '89_volvoconnect_order.html', '96_popup_scroll.html'].includes(fixture.split('?')[0]);
@@ -240,6 +241,60 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
+        if (fixture === '110_pin_editor.html') {
+          const point = () => evaluate('window.pinEditorTest.point()');
+          const writes = () => evaluate('window.pinEditorTest.writes()');
+          const key = async (key, code, windowsVirtualKeyCode) => {
+            await command('Input.dispatchKeyEvent', {type:'keyDown',key,code,windowsVirtualKeyCode});
+            await command('Input.dispatchKeyEvent', {type:'keyUp',key,code,windowsVirtualKeyCode});
+          };
+          let start = await point();
+          await command('Input.dispatchMouseEvent',{type:'mousePressed',...start,button:'left',clickCount:1});
+          await command('Input.dispatchMouseEvent',{type:'mouseReleased',...start,button:'left',clickCount:1});
+          assert.equal(await evaluate('window.pinEditorTest.selected()'),true,'first mouse tap selects the Pin');
+          start = await point();
+          await command('Input.dispatchMouseEvent',{type:'mousePressed',...start,button:'left',clickCount:1});
+          await command('Input.dispatchMouseEvent',{type:'mouseMoved',x:start.x+64,y:start.y+40,button:'left',buttons:1});
+          assert.match(await evaluate('window.pinEditorTest.tooltip()'),/X: 60\.00% \| Y: 60\.00%/);
+          await command('Input.dispatchMouseEvent',{type:'mouseReleased',x:start.x+64,y:start.y+40,button:'left',clickCount:1});
+          assert.deepEqual((await writes()).at(-1).position,{centerX:60,centerY:60},'scaled drag persists image percentages');
+          await evaluate('window.pinEditorTest.reset()');
+          start = await point();
+          await command('Input.dispatchMouseEvent',{type:'mousePressed',...start,button:'left',clickCount:1});
+          await command('Input.dispatchMouseEvent',{type:'mouseMoved',x:start.x+60,y:start.y,button:'left',buttons:1});
+          await key('Escape','Escape',27);
+          await command('Input.dispatchMouseEvent',{type:'mouseReleased',x:start.x+60,y:start.y,button:'left',clickCount:1});
+          assert.equal((await writes()).length,0,'Escape cancels without saving');
+          await evaluate('window.pinEditorTest.reset(); window.pinEditorTest.focus()');
+          await key('ArrowRight','ArrowRight',39);
+          assert.deepEqual((await writes()).at(-1).position,{centerX:50.08,centerY:50},'keyboard moves one Canvas pixel');
+          await evaluate('window.pinEditorTest.reset()');
+          await command('Emulation.setTouchEmulationEnabled',{enabled:true});
+          start = await point();
+          await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...start,id:1}]});
+          await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:start.x+32,y:start.y+20,id:1}]});
+          await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+          assert.deepEqual((await writes()).at(-1).position,{centerX:55,centerY:55},'real touch drag persists once');
+          await evaluate('window.pinEditorTest.reset()');
+          start = await point();
+          await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...start,id:1}]});
+          await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:start.x+32,y:start.y,id:1}]});
+          await command('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+          assert.equal((await writes()).length,0,'touch cancellation never saves');
+          await command('Emulation.setTouchEmulationEnabled',{enabled:false});
+          await evaluate('window.pinEditorTest.image()');
+          start = await point();
+          await command('Input.dispatchMouseEvent',{type:'mousePressed',...start,button:'left',clickCount:1});
+          await command('Input.dispatchMouseEvent',{type:'mouseMoved',x:start.x+40,y:start.y,button:'left',buttons:1});
+          await command('Input.dispatchMouseEvent',{type:'mouseReleased',x:start.x+40,y:start.y,button:'left',clickCount:1});
+          assert.deepEqual((await writes()).at(-1).position,{centerX:10,centerY:50},
+            'scaled dragging uses the actual contained image, not its Canvas margins');
+          for (const [x,y] of [[0,0],[100,0],[0,100],[100,100]]) {
+            await evaluate(`window.pinEditorTest.edge(${x},${y})`);
+          }
+          await evaluate('window.pinEditorTest.finish()');
+          return;
+        }
         if (fixture === '108_pin_interactions.html?input=1') {
           const point = () => evaluate('window.pinGestures.point("switch")');
           const writes = () => evaluate('window.pinGestures.writes()');

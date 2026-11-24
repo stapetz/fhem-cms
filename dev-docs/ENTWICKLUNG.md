@@ -145,8 +145,8 @@ Aktivierung mit Maus, Touch oder Tastatur öffnet erst dann das reguläre Widget
 erhält denselben aktuellen Snapshot-/Stale-Stand; Schließen, Orientierungswechsel
 und Seitenabbau entfernen sie vollständig. Die direkte 400ms-Interaktion
 ist mit #248 angeschlossen (siehe unten). Vorschau aktiviert keine interaktive Karte.
-Der Editor verwendet bis #249 normale Karten samt unveränderter Werkzeuge;
-Vorschau und Live zeigen die kompakte Darstellung.
+Seit #249 zeigt auch der Editor kompakte Pins mit den gemeinsamen Werkzeugen;
+Vorschau und Live zeigen dieselbe kompakte Darstellung.
 
 `forceCard` ist ein optionaler echter Boolean ausschließlich auf Freeform-
 Widgets. Ohne Feld bleiben Uhr, Text und LinkWidget (Navigation) normale Karten;
@@ -164,7 +164,7 @@ für die Darstellung berechnet, niemals beim Laden zurückgeschrieben.
 Bestätigte Randregel: Pins dürfen bis an den Bildrand, normale Karten dürfen
 beim Rückwechsel zur Einhaltung der Canvasgrenzen eingepasst werden. Dies
 ersetzt am Rand die ursprüngliche Forderung nach identischen Mittelpunkten.
-Eigenständige Pin-Drag-/Speicherkoordinaten folgen erst mit #249.
+Seit #249 können explizite Prozentpositionen gespeichert werden (siehe unten).
 Im mobilen Hochformat werden stets vollständige Karten gestapelt, auch wenn
 die normale Freeform-Einstellung „Layout behalten“ lautet. Orientierungswechsel
 ersetzen die Darstellung, statt beide Widgetinstanzen parallel zu halten.
@@ -217,7 +217,29 @@ automatisch aufgebaute Volvo-Karten haben keine feste einzelne
 Live-Readingauswahl in diesem Vertrag und bleiben Typsymbole bzw. normale
 Karten nach `forceCard`. Ihre Inhalte sind weiter in der vollständigen Karte
 verfügbar; keine beliebigen internen oder historischen Werte zu Livewerten
-umdeuten. Der Pin-Editor (#249) bleibt offen.
+umdeuten.
+
+**Pin-Editor (Refs #249):** `position: {centerX, centerY}` ist eine optionale,
+streng validierte Freeform-Widgetposition mit JSON-Zahlen von 0 bis 100 und
+höchstens zwei Nachkommastellen. Ohne Position bleibt der bisherige
+`rect`-Mittelpunkt maßgeblich; Laden migriert nichts. Nach dem Verschieben
+bleibt die bildbezogene Prozentposition maßgeblich für Pins. Die normale
+Kartengröße bleibt im `rect` erhalten, ihr Mittelpunkt wird beim Speichern
+passend versetzt und bei Bedarf in den Canvas eingepasst. Neue Widgets auf
+Pin-Seiten starten bei 50/50, Duplikate leicht versetzt. Beim Wechsel ins Raster
+wird die Pinposition entfernt. Widgetdialoge erhalten vorhandene Positionen.
+`pin-editor.js` ergänzt ausschließlich Pins; der vorhandene Freeform-Editor
+bleibt für Navigation und `forceCard`-Karten zuständig. Anklicken/Tastatur wählt
+aus, gemeinsame 48px-Werkzeuge schweben außerhalb des Pins und bleiben am
+sichtbaren Canvasrand erreichbar. Pointer-Drag zeigt X/Y mit zwei Dezimalstellen,
+verrechnet den Canvasmaßstab und begrenzt auf die tatsächliche `contain`-Bildfläche.
+Pfeile bewegen um 1, Shift+Pfeile um 10 Canvaspixel. Escape, Pointercancel,
+Captureverlust und Fokusverlust verwerfen eine laufende Geste ohne Schreiben.
+Speichern verwendet den vorhandenen tokengebundenen Entwurfspfad; keine
+Live-Gerätebefehle und keine Konfigurationsmutation bei Auswahl/Rendern.
+Wertanzeigen verwenden `#` als neutrales Typsymbol statt des menüähnlichen `≡`.
+Regressionen: `t/109_pin_editor.test.js`, `t/110_pin_editor.html` im vorhandenen
+Chrome-Läufer sowie `t/92_schema6_persistence.t`.
 
 **Tap/Hold und Popup (Refs #248):** `PIN_BEHAVIOR` in `pin-behavior.js`
 leitet die vollständige Registry aus den tatsächlichen `PIN_TYPES` ab:

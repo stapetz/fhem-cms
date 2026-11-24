@@ -1,4 +1,10 @@
-import { validateFreeformCanvas } from './fcui-freeform-layout.js';
+import { fitFreeformRect, validateFreeformCanvas } from './fcui-freeform-layout.js';
+
+export function centerNewPin(widget, canvas) {
+  widget.position = {centerX: 50, centerY: 50};
+  widget.rect = fitFreeformRect({...widget.rect, x: (canvas.width - widget.rect.w) / 2,
+    y: (canvas.height - widget.rect.h) / 2}, canvas);
+}
 
 export function validatePinPage(page, schemaVersion) {
   for (const key of ['renderAsPins', 'backgroundDim']) {
@@ -11,6 +17,16 @@ export function validatePinPage(page, schemaVersion) {
       : typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > .5) {
       throw new Error(`Ungültiger Wert für ${key}`);
     }
+  }
+}
+
+export function validatePinPosition(position) {
+  if (!position || typeof position !== 'object' || Array.isArray(position)
+    || Object.keys(position).sort().join(',') !== 'centerX,centerY'
+    || !['centerX', 'centerY'].every(key => typeof position[key] === 'number'
+      && Number.isFinite(position[key]) && position[key] >= 0 && position[key] <= 100
+      && Math.abs(position[key] * 100 - Math.round(position[key] * 100)) < 1e-8)) {
+    throw new Error('Ungültige prozentuale Pin-Position');
   }
 }
 
@@ -47,10 +63,7 @@ export function pinPercentPoint(point, frame) {
 
 export function pinCanvasPoint(position, frame) {
   validateFrame(frame);
-  if (!position || !['centerX', 'centerY'].every(key => typeof position[key] === 'number'
-    && Number.isFinite(position[key]) && position[key] >= 0 && position[key] <= 100)) {
-    throw new Error('Ungültige prozentuale Pin-Position');
-  }
+  validatePinPosition(position);
   return {
     x: frame.x + position.centerX / 100 * frame.w,
     y: frame.y + position.centerY / 100 * frame.h,

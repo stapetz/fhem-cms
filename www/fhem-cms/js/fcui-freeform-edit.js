@@ -68,8 +68,9 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     return node;
   };
   const nav = {id: '__nav', rect: view.navigationRect};
-  const entries = new Map([['__nav', view.navBox], ...view.wrappers]);
-  const widgets = editNavigation ? [nav, ...page.widgets] : page.widgets;
+  const cards = page.widgets.filter(widget => !view.isPin(widget.id));
+  const entries = new Map([['__nav', view.navBox], ...[...view.wrappers].filter(([id]) => !view.isPin(id))]);
+  const widgets = editNavigation ? [nav, ...cards] : cards;
   const size = doc.createElement('span');
   size.className = 'cms-widget-dimensions';
   if (editNavigation && !view.navBox.querySelector('.cms-widget-config')) {
@@ -157,6 +158,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
       if (wrapper.contains(doc.activeElement) || overlay.contains(doc.activeElement)) doc.activeElement.blur();
       wrapper.classList.remove('cms-widget-selected');
     }
+    view.canvas.addEventListener('cms-pin-select', () => select(), options);
     controls.remove();
     selected = widgets.find(widget => widget.id === id);
     overlay.replaceChildren();

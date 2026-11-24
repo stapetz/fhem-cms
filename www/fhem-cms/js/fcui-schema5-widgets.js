@@ -7,6 +7,7 @@ import '../components/cms-pin-badge.js';
 import { pinKeepsCard, pinPresentation } from './pin-presentation.js';
 import { createPinWidgetPopup } from './pin-widget-popup.js';
 import { PIN_BEHAVIOR, pinCommand } from './pin-behavior.js';
+import { mountPinEditor } from './pin-editor.js';
 
 export function mountSchema5Widgets(GridStack, root, config, pageId, navigation, services, snapshots, editing) {
   if (!navigation || !services || typeof services !== 'object' || !(snapshots instanceof Map)) {
@@ -54,6 +55,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     const widget = widgets.get(id);
     const element = pin ? root.ownerDocument.createElement('cms-pin-badge') : createCard(id);
     if (pin) {
+      if (editing) element.inert = true;
       element.presentation = pinPresentation(widget, Boolean(currentStale), currentSnapshots);
       element.directAction = !preview && !editing && PIN_BEHAVIOR[widget.type] !== 'open';
       element.addEventListener('pin-open', () => {
@@ -261,6 +263,8 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   }
   const stopEditor = frame && editing?.onFreeformChange
     ? mountFreeformEditor(root, framePage, frame, editing, navigation, true) : null;
+  const stopPinEditor = freeform && editing?.onFreeformChange
+    ? mountPinEditor(root, page, freeform, editing) : null;
   return {
     measureGrid() {
       if (!grid || !editing) return undefined;
@@ -311,6 +315,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       grid?.destroy(false);
       if (grid) root.style.removeProperty?.('height');
       stopEditor?.();
+      stopPinEditor?.();
       frame?.destroy();
       if (!editing) {
         root.removeAttribute('data-responsive');

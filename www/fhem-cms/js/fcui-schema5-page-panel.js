@@ -203,7 +203,7 @@ export class Schema5PagePanel {
       this.#renderAsPins.addEventListener('change', () => this.#updateSettingsPreview());
       pinLabel.append(this.#renderAsPins);
       pinOptions.append(pinLabel, element('p',
-        'Vorschau und Live zeigen kompakte Pins mit den im Widgetdialog ausgewählten Werten. Live: Schalter/Taster kurz tippen zum Schalten, ab 400 ms halten für die normale Karte. Andere Pins oder Tastaturaktivierung öffnen die Karte. Vorschau ohne Geräteaktionen. Im mobilen Hochformat werden vollständige Karten gestapelt. Der Editor arbeitet vorerst mit normalen Kacheln.'));
+        'Kompakte Pins mit ausgewählten Livewerten auch im Editor: anklicken zum Auswählen, ziehen zum Positionieren. Live: Schalter/Taster kurz tippen zum Schalten, ab 400 ms halten für die normale Karte. Andere Pins oder Tastaturaktivierung öffnen die Karte. Vorschau ohne Geräteaktionen. Im mobilen Hochformat werden vollständige Karten gestapelt.'));
       this.#freeform.section.append(pinOptions);
       const dimLabel = element('label', 'Hintergrund-Abdunklung ');
       this.#backgroundDim = element('input');

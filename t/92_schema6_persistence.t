@@ -61,6 +61,7 @@ $next->{pages}[0]{widgets} = [{
 }, {
     id => 'temperature', type => 'fhem-value', device => 'Demo', reading => 'temperature',
     showOnPin => {reading => JSON::PP::false}, rect => {x => 120, y => 60, w => 80, h => 100},
+    position => {centerX => 0, centerY => 100},
 }];
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $initial->{token}, 1), qr/veraltet/, 'stale upgrade refused');
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $gridState->{token}), qr/schemaVersion/, 'old writer cannot introduce schema 6');
@@ -69,6 +70,14 @@ for my $invalid (undef, 0, 1, 'true', [], {}) {
     $bad->{pages}[0]{overrideBackground} = $invalid;
     like(FHEMCMS_WriteVersion5Draft($dataDir, $bad, $gridState->{token}, 1), qr/Hintergrundvererbung/,
         'non-Boolean background exception refused before persistence');
+}
+$bad = $json->decode($json->encode($next));
+for my $invalid (undef, [], {}, {centerX => '50', centerY => 50}, {centerX => -1, centerY => 50},
+    {centerX => 101, centerY => 50}, {centerX => 42.123, centerY => 50},
+    {centerX => 50, centerY => JSON::PP::true}, {centerX => 50, centerY => 50, extra => 1}) {
+    $bad->{pages}[0]{widgets}[1]{position} = $invalid;
+    like(FHEMCMS_WriteVersion5Draft($dataDir, $bad, $gridState->{token}, 1), qr/Pin-Position/,
+        'invalid Pin percentages refused before persistence');
 }
 $bad = $json->decode($json->encode($next));
 $bad->{pages}[0]{canvas}{width} = 199;

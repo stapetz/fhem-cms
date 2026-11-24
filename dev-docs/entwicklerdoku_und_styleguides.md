@@ -179,7 +179,12 @@ Popupkopf: klassisches „×“ oben rechts statt Schließen-Text, gemeinsam mit
 dem Seitenpopup gestylt, mindestens 48×48px, zugänglich beschriftet und
 per Escape schließbar. Nach Hold keinen nachlaufenden Klick ausführen oder
 das neue Popup beim Loslassen sofort wieder schließen.
-Der Editor bleibt bis #249 in der regulären Kartenansicht.
+Der Editor zeigt seit #249 dieselben kompakten Pins. Auswahl per Klick/Tap
+oder Tastatur blendet die gemeinsamen 48px-Werkzeuge außerhalb des Pins ein;
+kein Werkzeug darf den Pin verdecken oder am sichtbaren Canvasrand verloren
+gehen. Direktes Pointer-Drag ohne Browser-Ghost, X/Y-Prozenttooltip mit zwei
+Nachkommastellen; Pfeile/Shift+Pfeile sind die pixelgenaue Alternative.
+Wertanzeigen nutzen das neutrale `#`, kein menüähnliches Dreistrichsymbol.
 `forceCard` wird im gemeinsamen Widgetdialog angeboten, nicht in 18 separaten
 Formularvarianten. Ohne Opt-in keine Änderung normaler Freeform-Seiten.
 Randentscheidung: Pin bis zum Bildrand, normale Karte bei Bedarf ins Canvas

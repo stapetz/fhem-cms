@@ -1,5 +1,5 @@
 import { validateLinkItems } from './link-widget.js';
-import { validatePinPage } from './pin-layout.js';
+import { validatePinPage, validatePinPosition } from './pin-layout.js';
 import { validatePinReadings } from './pin-readings.js';
 import { freeformStartRect, isFreeform, resizeFreeformPage, syncSharedFreeformSize, validateFreeformCanvas, validateFreeformWidget } from './fcui-freeform-layout.js';
 
@@ -95,6 +95,10 @@ function validateLayout(config, includeNavigation = true) {
         throw new Error(`Ungültige oder doppelte Widget-ID auf Seite ${page.id}`);
       }
       ids.add(widget.id);
+      if (Object.hasOwn(widget, 'position')) {
+        if (!freeform) throw new Error('Pin-Positionen sind nur auf Freeform-Seiten erlaubt');
+        validatePinPosition(widget.position);
+      }
       validatePinReadings(widget);
       if (Object.hasOwn(widget, 'forceCard')
         && (!freeform || typeof widget.forceCard !== 'boolean')) {
@@ -186,6 +190,7 @@ export function changePageLayout(config, pageId, mode, canvas, measurements) {
         else pending.push(widget);
         delete widget.rect;
         delete widget.hideOnMobile;
+        delete widget.position;
       }
       for (const widget of pending) {
         const { w, h } = widget.grid || { w: Math.max(1, columns / 3), h: 3 };

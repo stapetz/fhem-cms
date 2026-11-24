@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.29.0-dev';
+our $FHEMCMS_VERSION = '1.30.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1112,10 +1112,24 @@ sub FHEMCMS_ValidateConfig {
             $optional = [@{$optional}, 'showOnPin'] if ($fcui);
             return $exact->($widget, $where, $required, $optional) if (!$freeform);
             return $exact->($widget, $where, ['rect', grep { $_ ne 'grid' } @{$required}],
-                [@{$optional}, 'grid', 'hideOnMobile', 'forceCard']);
+                [@{$optional}, 'grid', 'hideOnMobile', 'forceCard', 'position']);
         };
         for my $widget (@{$page->{widgets}}) {
             return 'Widget muss ein Objekt sein' if (ref($widget) ne 'HASH');
+            if (exists($widget->{position})) {
+                return 'Pin-Positionen sind nur auf Freeform-Seiten erlaubt' if (!$freeform);
+                my $position = $widget->{position};
+                $err = $exact->($position, 'Pin-Position', ['centerX', 'centerY'], []);
+                return $err if ($err);
+                for my $axis ('centerX', 'centerY') {
+                    my $value = $position->{$axis};
+                    return 'Ungueltige prozentuale Pin-Position'
+                        if (!defined($value) || ref($value)
+                            || $scalarJson->encode($value) !~ /\A(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\z/
+                            || $value < 0 || $value > 100
+                            || abs($value * 100 - int($value * 100 + 0.5)) > 0.00000001);
+                }
+            }
             return 'Ungueltiger Wert fuer forceCard'
                 if (exists($widget->{forceCard}) && (!$freeform || !$isBool->($widget->{forceCard})));
             return 'Unbekannter Widget-Typ'

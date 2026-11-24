@@ -17,7 +17,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   const canvas = box('cms-freeform-canvas');
   const settings = {...DEFAULT_CANVAS, ...page.canvas};
   const pinPage = page.renderAsPins === true;
-  const pinMode = pinPage && !editing && typeof renderPin === 'function';
+  const pinMode = pinPage && typeof renderPin === 'function';
   viewport.classList.toggle('cms-freeform-pins', pinPage);
   let imageFrame = pinPage ? pinImageFrame(settings) : null;
   let imageLoader;
@@ -72,24 +72,29 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   let stacked = null;
   let compact = false;
   let scale = 1;
+  const pinPosition = widget => widget.position ?? pinPercentPoint({
+    x: widget.rect.x + widget.rect.w / 2, y: widget.rect.y + widget.rect.h / 2,
+  }, imageFrame);
+  function placePin(widget, position = pinPosition(widget)) {
+    const bounds = canvas.getBoundingClientRect();
+    const wrapper = wrappers.get(widget.id);
+    const point = pinCanvasPoint(position, imageFrame);
+    wrapper.style.left = `${point.x}px`;
+    wrapper.style.top = `${point.y}px`;
+    const rect = wrapper.getBoundingClientRect();
+    const dx = rect.width > bounds.width ? bounds.left + bounds.width/2 - (rect.left + rect.width/2)
+      : Math.max(bounds.left - rect.left, Math.min(0, bounds.right - rect.right));
+    const dy = rect.height > bounds.height ? bounds.top + bounds.height/2 - (rect.top + rect.height/2)
+      : Math.max(bounds.top - rect.top, Math.min(0, bounds.bottom - rect.bottom));
+    wrapper.style.left = `${point.x + dx / scale}px`;
+    wrapper.style.top = `${point.y + dy / scale}px`;
+    if (editing && wrapper.classList.contains('cms-widget-selected')) fitWidgetTools(wrapper, canvas);
+  }
   function placePins() {
     if (!pinMode) return;
-    const bounds = canvas.getBoundingClientRect();
     for (const widget of page.widgets) {
       if (!pinStates.get(widget.id)) continue;
-      const wrapper = wrappers.get(widget.id);
-      const point = pinCanvasPoint(pinPercentPoint({
-        x: widget.rect.x + widget.rect.w / 2, y: widget.rect.y + widget.rect.h / 2,
-      }, imageFrame), imageFrame);
-      wrapper.style.left = `${point.x}px`;
-      wrapper.style.top = `${point.y}px`;
-      const rect = wrapper.getBoundingClientRect();
-      const dx = rect.width > bounds.width ? bounds.left + bounds.width/2 - (rect.left + rect.width/2)
-        : Math.max(bounds.left - rect.left, Math.min(0, bounds.right - rect.right));
-      const dy = rect.height > bounds.height ? bounds.top + bounds.height/2 - (rect.top + rect.height/2)
-        : Math.max(bounds.top - rect.top, Math.min(0, bounds.bottom - rect.bottom));
-      wrapper.style.left = `${point.x + dx / scale}px`;
-      wrapper.style.top = `${point.y + dy / scale}px`;
+      placePin(widget);
     }
   }
   const landscape = browser.matchMedia('(orientation: landscape)');
@@ -228,6 +233,8 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   resize();
   return {
     canvas, wrappers, navBox, navigationRect, getScale: () => scale,
+    isPin: id => pinStates.get(id) === true,
+    getPinFrame: () => ({...imageFrame}), pinPosition, placePin,
     destroy() {
       disposed = true;
       if (imageLoader) { imageLoader.onload = null; imageLoader.onerror = null; }
@@ -252,8 +259,14 @@ export function fitWidgetTools(wrapper, container) {
   if (!tools) return;
   const browser = wrapper.ownerDocument.defaultView;
   const style = browser.getComputedStyle(wrapper);
-  const scale = Number.parseFloat(style.getPropertyValue('--cms-freeform-scale')) || 1;
-  const bounds = container.getBoundingClientRect();
+  const pin = wrapper.classList.contains('cms-freeform-pin');
+  const scale = pin ? 1 : Number.parseFloat(style.getPropertyValue('--cms-freeform-scale')) || 1;
+  const box = container.getBoundingClientRect();
+  const bounds = pin ? {
+    left: Math.max(0, box.left), top: Math.max(0, box.top),
+    right: Math.min(browser.innerWidth, box.right), bottom: Math.min(browser.innerHeight, box.bottom),
+    height: Math.min(browser.innerHeight, box.bottom) - Math.max(0, box.top),
+  } : box;
   tools.style.translate = 'none';
   tools.style.maxHeight = `${Math.max(48, Math.min(bounds.height, browser.innerHeight - 16)) / scale}px`;
   const rect = tools.getBoundingClientRect();

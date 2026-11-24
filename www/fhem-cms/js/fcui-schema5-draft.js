@@ -2,6 +2,7 @@ import { applySchema5GridItems, reflowSchema5Widget, schema5GridItems } from './
 import { fitLinkWidget } from './link-widget.js';
 import { normalizeWidgetIds, uniqueWidgetId, widgetIds } from './widget-ids.js';
 import { fitFreeformRect, freeformStartRect, isFreeform, syncSharedFreeformSize } from './fcui-freeform-layout.js';
+import { centerNewPin } from './pin-layout.js';
 
 export class WidgetLayoutError extends Error {}
 
@@ -165,6 +166,10 @@ export class Schema5DraftController {
       copy.rect = action === 'update' ? original.rect : copy.rect
         ?? freeformStartRect(copy, page.widgets.length, page.canvas, Number(candidate.settings.gridColumns));
       if (action === 'update' && original.hideOnMobile !== undefined) copy.hideOnMobile = original.hideOnMobile;
+      if (action === 'update' && original.position !== undefined) copy.position = structuredClone(original.position);
+      if (action === 'create' && page.renderAsPins === true && copy.position === undefined) {
+        centerNewPin(copy, page.canvas);
+      }
     }
     if (widget.type === 'fhem-link' && !isFreeform(page)) {
       try {
@@ -252,6 +257,10 @@ export class Schema5DraftController {
     }
     if (isFreeform(page)) {
       if (copy.rect) copy.rect = fitFreeformRect({...copy.rect, x: copy.rect.x + 15, y: copy.rect.y + 15}, page.canvas);
+      if (copy.position) copy.position = {
+        centerX: Math.min(100, Math.round((copy.position.centerX + 2) * 100) / 100),
+        centerY: Math.min(100, Math.round((copy.position.centerY + 2) * 100) / 100),
+      };
       delete copy.grid;
     } else {
       copy.grid = freeGridPosition(copy, [candidate.navigation.grid, ...page.widgets.map((entry) => entry.grid)], columns);
@@ -342,6 +351,7 @@ export class Schema5DraftController {
       delete widget.rect;
       delete widget.hideOnMobile;
       delete widget.forceCard;
+      delete widget.position;
     }
     target.widgets.push(widget);
     return this.saveDraft(candidate, expectedToken);
