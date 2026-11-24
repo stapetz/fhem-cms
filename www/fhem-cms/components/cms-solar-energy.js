@@ -107,7 +107,6 @@ class FHEMCMSSolarEnergy extends HTMLElement {
           align-content: start;
           margin: 0 0 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,.2);
           overflow-wrap: anywhere; }
-        .yield h4 small { font-size: .8em; opacity: .7; white-space: nowrap; }
         .yield dl { margin: 0; display: grid; gap: 1px; align-content: space-evenly; }
         .yield .row { display: flex; justify-content: space-between; gap: 8px; font-size: 1em;
           border-bottom: 1px solid rgba(128,128,128,.1); padding: 0; overflow-wrap: anywhere; }
@@ -122,9 +121,9 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .total strong { display: block; font-size: 1.25em; margin-top: 2px; color: #f59e0b; }
         .total:last-child { border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.12); }
         @container (min-width: 601px) {
-          .sections { grid-auto-rows: max(70px, 2.4em) minmax(128px, 1fr); }
+          .sections { grid-auto-rows: minmax(max(70px, 2.4em), max-content) minmax(128px, 1fr); }
           .yield { min-height: 0; }
-          .yield h4 { min-height: 0; margin-bottom: 0; padding-bottom: 0; line-height: 1.1; overflow: auto; }
+          .yield h4 { margin-bottom: 0; padding-bottom: 0; line-height: 1.1; }
           .yield dl { min-height: 0; overflow: auto; }
           .total { padding-block: 2px; line-height: 1.1; }
         }
@@ -308,13 +307,13 @@ class FHEMCMSSolarEnergy extends HTMLElement {
       const emoji = { dach: '🏠', garage: '🚗', gartenhaus: '🏡' }[section.label.toLocaleLowerCase('de-DE')];
       const heading = node('h4');
       heading.append(node('span', `${emoji ? `${emoji} ` : ''}${section.label} (${energyUnit})`));
-      if (section.readings.total) heading.append(node('small', `∑ ${energy(section.readings.total, 0)}`));
       card.append(heading);
       const list = node('dl');
-      for (const [key, label] of solarYieldFields.slice(1)) {
+      for (const [key, label] of [...solarYieldFields.slice(1), solarYieldFields[0]]) {
         if (!section.readings[key]) continue;
         const row = node('div', undefined, 'row');
-        row.append(node('dt', label), node('dd', energy(section.readings[key], key === 'year' ? 0 : ['hour', 'day'].includes(key) ? 2 : 1)));
+        row.append(node('dt', key === 'total' ? 'Gesamt' : label),
+          node('dd', energy(section.readings[key], ['year', 'total'].includes(key) ? 0 : ['hour', 'day'].includes(key) ? 2 : 1)));
         list.append(row);
       }
       card.append(list);

@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-24",
+  "version": "1.30.6-dev",
+  "title": "Solarkarten: Gesamtertrag als Zeile",
+  "changes": [
+    "Der Gesamtertrag steht als letzte Zeile jeder Solarkarte statt im Titel; mehrzeilige Ueberschriften behalten ihre natuerliche Hoehe. Refs #257.",
+    "Safari- und Geraeteabnahme stehen aus."
+  ]
+}

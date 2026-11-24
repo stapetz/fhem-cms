@@ -1140,6 +1140,13 @@ Schriftmassen bleibt die Kachel vertikal scrollbar; alle Summen sind erreichbar.
 `t/85_solar_energy.html` prueft auch Phone und Tablet.
 Safari-/iPhone-Abnahme bleibt erforderlich.
 
+Geraetenachbesserung (Refs #257): Der Gesamtertrag jeder Ertragskarte steht
+als letzte Zeile nach Jahr, statt im Titel, mit weiterhin null Nachkommastellen.
+Mehrzeilige Kartenueberschriften duerfen ihre natuerliche Hoehe einnehmen.
+Browserregression: `t/85_solar_energy.html` und `t/113_solar_fill.html` pruefen
+Reihenfolge, grosse Zahlen, Ueberschriften und Scroll-Erreichbarkeit; die
+Abnahme mit Safari auf iPhone und iPad bleibt erforderlich.
+
 ## Zentrale CMS-Verwaltung (dev, 1.10.0-dev, Refs #177)
 
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.

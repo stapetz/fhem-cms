@@ -138,7 +138,10 @@ try {
       const totalsBounds = $('.totals').getBoundingClientRect();
       check(tileBounds.bottom - totalsBounds.bottom <= 18, 'totals reach the bottom of the large tile');
       for (const list of host.shadowRoot.querySelectorAll('.yield dl')) {
-        check(list.children.length === 5, 'all desktop yield rows remain available');
+        check(list.children.length === 6, 'all desktop yield rows remain available');
+        check(list.lastElementChild.querySelector('dt').textContent === 'Gesamt'
+          && list.lastElementChild.querySelector('dd').textContent === '12457',
+        'total is the last yield row and retains its whole-number precision');
         list.scrollTop = list.scrollHeight;
         const last = list.lastElementChild.getBoundingClientRect(), bounds = list.getBoundingClientRect();
         check(last.bottom <= bounds.bottom + 1 && last.top >= bounds.top,

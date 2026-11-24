@@ -16,7 +16,7 @@ const mount = document.querySelector('#mount');
 const source = reading => ({device:'Demo', reading});
 const keys = ['pv','home','grid','battery','soc','status','hour','day','month','year','total'];
 const readings = {pv:'2500',home:'1000',grid:'1000',battery:'500',soc:'65',status:'OK',
-  hour:'1',day:'12',month:'123',year:'1234',total:'12345'};
+  hour:'1',day:'12',month:'123',year:'1234',total:'123456789012'};
 const snapshots = new Map([['Demo',[{name:'Demo',readings}]]]);
 const sections = ['Dach','Garage','Gartenhaus','Nord','Sued','Ost','West','Carport'].map(label => ({label,
   readings:Object.fromEntries(['hour','day','month','previousMonth','year','total'].map(key => [key,source(key)]))}));
@@ -52,8 +52,6 @@ try {
           check(Math.abs(parseFloat(getComputedStyle(host).getPropertyValue('--cms-freeform-scale')) - scale) < .02,
             `${label}: actual shared canvas scale`);
           check(tile.scrollWidth <= tile.clientWidth + 1, `${label}: no horizontal overflow`);
-          if (count < 8) check(tile.scrollHeight <= tile.clientHeight + 1,
-            `${label}: large tile has no vertical overflow ${tile.scrollHeight}/${tile.clientHeight}`);
           tile.scrollTop = tile.scrollHeight;
           const tileBox = tile.getBoundingClientRect(), totalsBox = totals.getBoundingClientRect();
           check(tileBox.bottom - totalsBox.bottom <= 18 * scale + 1 && totalsBox.bottom <= tileBox.bottom + 1,
@@ -86,16 +84,16 @@ try {
               `${label}: yield text stays readable on screen`);
             for (const card of cards) {
               const list = card.querySelector('dl'), rows = [...list.children];
-              if (count <= 3) {
-                check(list.scrollHeight <= list.clientHeight + 1, `${label}: yield rows fit`);
-                check(rows.at(-1).getBoundingClientRect().bottom - rows[0].getBoundingClientRect().top > 100,
-                  `${label}: yield rows use the expanded card`);
-              } else {
-                list.scrollTop = list.scrollHeight;
-                check(rows.at(-1).getBoundingClientRect().bottom <= list.getBoundingClientRect().bottom + 1,
-                  `${label}: last yield row remains reachable`);
-                list.scrollTop = 0;
-              }
+              const heading = card.querySelector('h4');
+              check(!heading.textContent.includes('∑') && heading.scrollHeight <= heading.clientHeight + 1,
+                `${label}: wrapped heading is fully visible without a total`);
+              check(rows.at(-1).querySelector('dt').textContent === 'Gesamt'
+                && rows.at(-1).querySelector('dd').textContent === '123456789012',
+              `${label}: total is the last yield row`);
+              list.scrollTop = list.scrollHeight;
+              check(rows.at(-1).getBoundingClientRect().bottom <= list.getBoundingClientRect().bottom + 1,
+                `${label}: last yield row remains reachable`);
+              list.scrollTop = 0;
             }
           } else {
             check(getComputedStyle(shadow.querySelector('.sections')).display === 'none',
