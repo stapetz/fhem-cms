@@ -1,5 +1,5 @@
 import { fitFreeformRect, validateFreeformWidget } from './fcui-freeform-layout.js';
-import { setFreeformBox } from './fcui-freeform-view.js';
+import { fitWidgetTools, setFreeformBox } from './fcui-freeform-view.js';
 import { containPopupScroll } from './modal-dialog.js';
 
 export function freeformGesture(rect, direction, dx, dy, canvas, widgets, noSnap) {
@@ -62,6 +62,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     node.type = 'button';
     node.textContent = text;
     node.setAttribute('aria-label', label);
+    node.title = label;
     node.addEventListener('click', action, options);
     parent.append(node);
     return node;
@@ -136,6 +137,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     overlay.querySelectorAll('.cms-freeform-guide').forEach(node => node.remove());
     if (!selected || !rect) return;
     setFreeformBox(entries.get(selected.id), selected === nav ? {...rect, z: 10000} : rect);
+    fitWidgetTools(entries.get(selected.id), view.canvas);
     setFreeformBox(handles, {...rect, z: 1});
     if (active && active.direction !== 'move') {
       handles.append(size);
