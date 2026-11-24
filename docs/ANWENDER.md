@@ -355,7 +355,7 @@ geändert, liefert die neue erste Seite das gemeinsame Bild. Hat sie keines,
 erscheint auf allen Seiten der Theme-Hintergrund. Die Einstellungen werden als Entwurf gespeichert und
 erst beim Veröffentlichen auf der Homepage sichtbar. Verwendete Hintergrundbilder
 sind im Assetmanager gegen Löschen geschützt.
-**Neu auf dev:** Auf einzelnen Nicht-Startseiten erlaubt
+**Seit 1.14.0:** Auf einzelnen Nicht-Startseiten erlaubt
 **Hintergrundvererbung von der Startseite überschreiben** ein eigenes Bild
 oder bewusst keinen Bildhintergrund. Beispielsweise kann ein Grundriss das
 gemeinsame Standardbild ersetzen. Ausschalten der Ausnahme stellt die Vererbung
@@ -408,7 +408,7 @@ Uhr, Text und LinkWidget bleiben standardmäßig normale Karten. Im jeweiligen
 Widgetdialog können Sie mit **Nicht als Pin darstellen (normale Kachel behalten)**
 die Darstellung auf Pin-Seiten ändern.
 Im mobilen Hochformat erscheinen stets normale Karten untereinander.
-**Neu auf dev:** Auch der Editor zeigt kompakte Pins. Anklicken wählt aus und
+**Seit 1.14.0:** Auch der Editor zeigt kompakte Pins. Anklicken wählt aus und
 blendet die Werkzeuge darüber ein; Ziehen verschiebt direkt auf dem Grundriss.
 X/Y werden in Prozent des Bildes angezeigt und mit zwei Nachkommastellen
 gespeichert. Pfeile verschieben um einen Canvaspixel, Shift+Pfeile um zehn.
