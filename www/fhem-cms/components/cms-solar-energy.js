@@ -64,10 +64,12 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         .badge { padding: 3px 10px; border-radius: 20px; font-size: .9em; font-weight: 600;
           color: #10b981; background: rgba(16,185,129,.16); border: 1px solid rgba(16,185,129,.35); }
         .flow { ${detailCardCss} display: grid; grid-template-columns: repeat(3,minmax(0,1fr));
-          grid-template-rows: auto 40px auto auto auto; position: relative; flex: none;
+          grid-template-rows: auto minmax(40px, 1fr) auto auto auto; position: relative; flex: 2 0 auto;
           align-items: center; justify-items: center; padding: 10px 10px 22px; column-gap: 8px;
           font-size: max(1rem, .84em, min(8cqi, calc(1rem / var(--cms-freeform-scale, 1)))); line-height: 1.2; }
-        .node { min-width: 0; width: 100%; max-width: 180px; padding: 10px 4px; border: 1.5px solid var(--station-color);
+        .node { min-width: 0; width: 100%;
+          max-width: max(180px, min(25cqi, calc(180px / var(--cms-freeform-scale, 1))));
+          padding: 10px 4px; border: 1.5px solid var(--station-color);
           border-radius: 12px; text-align: center; position: relative; z-index: 1;
           background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
         .pv { grid-column: 2; grid-row: 1; --station-color: #f59e0b; }
@@ -96,7 +98,9 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         progress::-webkit-progress-bar { background: rgba(128,128,128,.22); border-radius: 3px; }
         progress::-webkit-progress-value { background: #10b981; border-radius: 3px; }
         progress::-moz-progress-bar { background: #10b981; border-radius: 3px; }
-        .sections { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,200px),1fr)); gap: 12px; }
+        .sections { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,200px),1fr)); gap: 12px;
+          flex: 1 0 auto; font-size: max(1em, min(4.5cqi, calc(1rem / var(--cms-freeform-scale, 1)))); }
+        .sections:empty { display: none; }
         .yield { ${detailCardCss} min-width: 0; border-radius: 12px; padding: 12px;
           display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0; }
         .yield h4 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0;
@@ -104,7 +108,7 @@ class FHEMCMSSolarEnergy extends HTMLElement {
           margin: 0 0 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(128,128,128,.2);
           overflow-wrap: anywhere; }
         .yield h4 small { font-size: .8em; opacity: .7; white-space: nowrap; }
-        .yield dl { margin: 0; display: grid; gap: 1px; align-content: start; }
+        .yield dl { margin: 0; display: grid; gap: 1px; align-content: space-evenly; }
         .yield .row { display: flex; justify-content: space-between; gap: 8px; font-size: 1em;
           border-bottom: 1px solid rgba(128,128,128,.1); padding: 0; overflow-wrap: anywhere; }
         .yield .row:last-child { border: 0; }
@@ -112,21 +116,20 @@ class FHEMCMSSolarEnergy extends HTMLElement {
         dd { margin: 0; font-weight: 700; text-align: right; }
         .totals { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,140px),1fr)); gap: 10px;
           padding: 10px; border-radius: 12px; border: 1px solid rgba(245,158,11,.3); background: rgba(245,158,11,.1); text-align: center;
-          font-size: max(1rem, .75em); }
+          font-size: max(1rem, .75em, min(4.5cqi, calc(1rem / var(--cms-freeform-scale, 1)))); }
         .total { padding: 8px 4px; border-radius: 8px; background: rgba(128,128,128,.08); overflow-wrap: anywhere; }
         .total span { display: block; opacity: .8; font-size: .9em; text-transform: uppercase; }
         .total strong { display: block; font-size: 1.25em; margin-top: 2px; color: #f59e0b; }
         .total:last-child { border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.12); }
         @container (min-width: 601px) {
-          /* Shared subgrid tracks retain the 210px card, including the 12px gap. */
-          .sections { grid-auto-rows: minmax(0, 70px) minmax(0, 128px); }
+          .sections { grid-auto-rows: max(70px, 2.4em) minmax(128px, 1fr); }
           .yield { min-height: 0; }
           .yield h4 { min-height: 0; margin-bottom: 0; padding-bottom: 0; line-height: 1.1; overflow: auto; }
           .yield dl { min-height: 0; overflow: auto; }
           .total { padding-block: 2px; line-height: 1.1; }
         }
         @container (max-width: 600px) {
-          .flow { padding: 12px 4px 28px; grid-template-rows: auto 60px auto auto auto; }
+          .flow { padding: 12px 4px 28px; grid-template-rows: auto minmax(60px, 1fr) auto auto auto; }
           .node { padding: 8px 3px; }
           .pv { width: min(180px, 250%); }
           .node strong { font-size: 1.25em; }

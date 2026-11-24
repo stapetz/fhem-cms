@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="de" data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar widget fills large shared canvases</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<style>body{margin:0}.grid-stack-item{transition:none!important}#result{white-space:pre-wrap}</style>
+<main id="mount" class="cms-shell"></main><pre id="result">RUNNING</pre>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+
+const output = document.querySelector('#result');
+const mount = document.querySelector('#mount');
+const source = reading => ({device:'Demo', reading});
+const keys = ['pv','home','grid','battery','soc','status','hour','day','month','year','total'];
+const readings = {pv:'2500',home:'1000',grid:'1000',battery:'500',soc:'65',status:'OK',
+  hour:'1',day:'12',month:'123',year:'1234',total:'12345'};
+const snapshots = new Map([['Demo',[{name:'Demo',readings}]]]);
+const sections = ['Dach','Garage','Gartenhaus','Nord','Sued','Ost','West','Carport'].map(label => ({label,
+  readings:Object.fromEntries(['hour','day','month','previousMonth','year','total'].map(key => [key,source(key)]))}));
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const settle = () => new Promise(resolve => setTimeout(resolve, 300));
+try {
+  for (const editing of [false,true]) {
+    for (const scale of [.375,.5]) {
+      for (const count of [0,1,3,8]) {
+        const root = document.createElement('div');
+        root.className = 'cms-schema5-grid';
+        root.style.width = `${2560 * scale}px`;
+        mount.append(root);
+        const widget = {id:'solar',type:'fhem-solar-energy',title:'Solar',
+          readings:Object.fromEntries(keys.map(key => [key,source(key)])),
+          sections:sections.slice(0,count),grid:{col:1,row:5,w:95,h:46}};
+        const config = {schemaVersion:6,settings:{layoutMode:'grid',gridColumns:96,
+          pageCanvas:{width:2560,height:1440,scaling:'width',snapGrid:5,mobileBehavior:'stack'},
+          pageNavigationRect:{x:0,y:0,w:2560,h:107}},
+        navigation:{grid:{col:1,row:1,w:95,h:4}},pages:[{id:'home',widgets:[widget]}]};
+        const original = JSON.stringify(config);
+        const editor = editing ? {onChange:() => {},onEdit:() => {}} : undefined;
+        const view = mountSchema5Widgets(GridStack,root,config,'home',document.createElement('nav'),{},snapshots,editor);
+        try {
+          await settle();
+          const host = root.querySelector('cms-solar-energy');
+          const shadow = host.shadowRoot;
+          const tile = shadow.querySelector('.tile');
+          const flow = shadow.querySelector('.flow');
+          const totals = shadow.querySelector('.totals');
+          const label = `${editing ? 'editor' : 'live'} scale=${scale} sections=${count}`;
+          const tileBox = tile.getBoundingClientRect(), totalsBox = totals.getBoundingClientRect();
+          check(Math.abs(parseFloat(getComputedStyle(host).getPropertyValue('--cms-freeform-scale')) - scale) < .02,
+            `${label}: actual shared canvas scale`);
+          check(tile.scrollHeight <= tile.clientHeight + 1 && tile.scrollWidth <= tile.clientWidth + 1,
+            `${label}: large tile has no internal overflow ${tile.scrollHeight}/${tile.clientHeight}`);
+          check(tileBox.bottom - totalsBox.bottom <= 18 * scale + 1 && totalsBox.bottom <= tileBox.bottom + 1,
+            `${label}: totals reach tile bottom`);
+          check(flow.getBoundingClientRect().height > 170, `${label}: flow uses extra height`);
+          const stations = [...shadow.querySelectorAll('.node:not([hidden])')];
+          for (const station of stations) {
+            for (const text of station.querySelectorAll('.label,strong,small')) {
+              check(text.scrollWidth <= text.clientWidth + 1 && text.scrollHeight <= text.clientHeight + 1,
+                `${label}: station text is not clipped`);
+            }
+          }
+          for (const group of shadow.querySelectorAll('[data-edge]')) {
+            if (getComputedStyle(group).display === 'none') continue;
+            const path = group.querySelector('.wire'), matrix = path.getScreenCTM();
+            const length = path.getTotalLength(), countPoints = Math.ceil(length / 3) + 1;
+            const points = Array.from({length:countPoints}, (_, index) =>
+              path.getPointAtLength(index * length / (countPoints - 1)).matrixTransform(matrix));
+            check(length > 0 && points.every(point => stations.every(station => {
+              const box = station.getBoundingClientRect();
+              return point.x <= box.left || point.x >= box.right || point.y <= box.top || point.y >= box.bottom;
+            })), `${label}: resized wire stays outside stations`);
+          }
+          if (count) {
+            const cards = [...shadow.querySelectorAll('.yield')];
+            check(cards.length === count && cards.every(card => card.getBoundingClientRect().height > (count > 3 ? 70 : 120)),
+              `${label}: yield cards grow`);
+            check(parseFloat(getComputedStyle(cards[0]).fontSize) * scale >= 15.9,
+              `${label}: yield text stays readable on screen`);
+            for (const card of cards) {
+              const list = card.querySelector('dl'), rows = [...list.children];
+              if (count <= 3) {
+                check(list.scrollHeight <= list.clientHeight + 1, `${label}: yield rows fit`);
+                check(rows.at(-1).getBoundingClientRect().bottom - rows[0].getBoundingClientRect().top > 100,
+                  `${label}: yield rows use the expanded card`);
+              } else {
+                list.scrollTop = list.scrollHeight;
+                check(rows.at(-1).getBoundingClientRect().bottom <= list.getBoundingClientRect().bottom + 1,
+                  `${label}: last yield row remains reachable`);
+                list.scrollTop = 0;
+              }
+            }
+          } else {
+            check(getComputedStyle(shadow.querySelector('.sections')).display === 'none',
+              `${label}: no empty yield area`);
+          }
+          check(parseFloat(getComputedStyle(totals).fontSize) * scale >= 15.9,
+            `${label}: totals stay readable on screen`);
+          check(JSON.stringify(config) === original, `${label}: geometry is not changed`);
+          if (editing && scale === .5 && count === 3) {
+            host.config = {...widget,readings:Object.fromEntries(keys.slice(0,6).map(key => [key,source(key)]))};
+            view.update(snapshots, null);
+            await settle();
+            check(totals.hidden, `${label}: absent totals do not reserve height`);
+            check(Math.abs(tile.getBoundingClientRect().bottom
+              - shadow.querySelector('.sections').getBoundingClientRect().bottom) <= 10,
+              `${label}: cards reach the bottom without totals`);
+            host.config = widget;
+            view.update(snapshots, null);
+            await settle();
+            const grid = root.querySelector('.cms-shared-canvas-grid');
+            const item = grid.querySelector('.grid-stack-item[gs-id="solar"]');
+            grid.gridstack.update(item, {h:8});
+            await settle();
+            check(tile.scrollHeight > tile.clientHeight, `${label}: short tile retains vertical scrolling`);
+            tile.scrollTop = tile.scrollHeight;
+            check(totals.getBoundingClientRect().bottom <= tile.getBoundingClientRect().bottom + 1,
+              `${label}: totals remain reachable in short tile`);
+            grid.gridstack.update(item, {h:46});
+            tile.scrollTop = 0;
+            await settle();
+            check(tile.scrollHeight <= tile.clientHeight + 1, `${label}: resized large tile fits again`);
+            check(Math.abs(tile.getBoundingClientRect().bottom - totals.getBoundingClientRect().bottom) <= 10,
+              `${label}: resized contents reach the bottom again`);
+          }
+        } finally { view.destroy(); root.remove(); }
+      }
+    }
+  }
+  output.dataset.result = 'pass'; output.textContent = JSON.stringify({checks});
+} catch (error) {
+  output.dataset.result = 'fail'; output.textContent = error.stack;
+}
+</script>

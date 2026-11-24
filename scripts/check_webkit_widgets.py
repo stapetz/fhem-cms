@@ -25,6 +25,7 @@ CASES = [
     ("85_solar_energy.html", 1400, 1000, False),
     ("85_solar_energy.html?width=390", 390, 844, True),
     ("85_solar_energy.html?width=768&reduced=1", 768, 1024, True),
+    ("113_solar_fill.html", 1400, 1000, False),
     ("86_mobile_widgets.html?mode=preview&cms-device=mobile&width=393", 393, 852, False),
     ("86_mobile_widgets.html?mode=preview&cms-device=mobile&width=834", 834, 1194, False),
     ("86_mobile_widgets.html?mode=preview&cms-device=mobile&width=852&landscape=1", 852, 393, False),

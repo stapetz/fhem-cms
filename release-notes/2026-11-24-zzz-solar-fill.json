@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-24",
+  "version": "1.30.5-dev",
+  "title": "Grosse Solarkacheln ausfuellen",
+  "changes": [
+    "Solar und Energiefluss verteilt die Inhalte in grossen Kacheln flexibel bis zum unteren Rand und verbessert die Lesbarkeit auf skaliertem Canvas. Refs #257.",
+    "Kleine Kacheln bleiben scrollbar und mobile Stapelkacheln wachsen mit ihrem Inhalt. Safari- und Geraeteabnahme stehen aus."
+  ]
+}

@@ -133,27 +133,29 @@ try {
     if (width === 761) {
       check(cards.every(card => Math.abs(card.top - cards[0].top) < 1),
         'reference desktop width: all three yield cards in one row, not two plus one');
-      check(cards.every(card => card.height <= 210), `yield cards retain compact original height: ${cards.map(card => card.height)}; tile ${$('.tile').clientWidth}`);
+      check(cards.every(card => card.height > 210), `yield cards grow into available height: ${cards.map(card => card.height)}`);
+      const tileBounds = $('.tile').getBoundingClientRect();
+      const totalsBounds = $('.totals').getBoundingClientRect();
+      check(tileBounds.bottom - totalsBounds.bottom <= 18, 'totals reach the bottom of the large tile');
       for (const list of host.shadowRoot.querySelectorAll('.yield dl')) {
-        check(list.children.length === 5 && list.scrollHeight > list.clientHeight,
-          'larger desktop yield rows remain complete in their bounded scroll area');
+        check(list.children.length === 5, 'all desktop yield rows remain available');
         list.scrollTop = list.scrollHeight;
         const last = list.lastElementChild.getBoundingClientRect(), bounds = list.getBoundingClientRect();
         check(last.bottom <= bounds.bottom + 1 && last.top >= bounds.top,
-          'last yield row is reachable without enlarging the compact card');
+          'last yield row is reachable in the resized card');
         list.scrollTop = 0;
       }
       const firstRows = [...host.shadowRoot.querySelectorAll('.yield .row:first-child')].map(e => e.getBoundingClientRect());
       check(firstRows.every(row => Math.abs(row.top - firstRows[0].top) < 1),
         'desktop yield rows align even when the heading total wraps');
-      check($('.flow').clientHeight <= 370 && $('.node').getBoundingClientRect().width <= 181,
-        `flow remains compact with room for labels and border-to-border connections: ${$('.flow').clientHeight}`);
+      check($('.flow').clientHeight >= 300 && $('.node').getBoundingClientRect().width <= 181,
+        `flow grows with room for labels and border-to-border connections: ${$('.flow').clientHeight}`);
       for (const family of ['Arial, sans-serif', 'Georgia, serif', 'monospace']) {
         $('.flow').style.fontFamily = family;
         await pause(120);
         const flow = $('.flow');
         flowFontHeights[family] = flow.clientHeight;
-        check(flow.clientHeight <= 370, `${family}: flow remains at most 370px: ${flow.clientHeight}`);
+        check(flow.clientHeight >= 300, `${family}: flow retains its usable height: ${flow.clientHeight}`);
         checkFlowGeometry(host, family);
         for (const key of ['pv', 'bat', 'home', 'grid']) {
           const station = $(`[data-station="${key}"]`).getBoundingClientRect();

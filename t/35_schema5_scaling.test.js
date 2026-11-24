@@ -254,6 +254,8 @@ for (const [name, fixtures] of [
   ['Solar und Energiefluss configures cross-device sources and preserves responsive live data',
     [['85_solar_energy.html', 100], ['85_solar_energy.html?width=390', 100],
       ['85_solar_energy.html?width=768&reduced=1', 100]]],
+  ['Solar und Energiefluss fills large scaled shared-canvas tiles in live view and editor',
+    [['113_solar_fill.html', 100]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
       ['75_dialog_layout.html?width=852', 51]]],

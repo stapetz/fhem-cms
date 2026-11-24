@@ -1125,6 +1125,19 @@ Pruefung: `t/85_solar_energy.t`, `t/85_solar_energy.test.js` und Browserfixture
 `t/85_solar_energy.html` (Desktop/Phone/Tablet, reduzierte Bewegung, alle Themes,
 Dialogroundtrip, mehrere Devices, fehlende Werte und Liveupdates).
 
+Nachbesserung fuer grosse Kacheln (dev, Refs #257): Energiefluss und vorhandene
+Ertragskarten teilen sich freie Hoehe; die Ertragszeilen verteilen sich in den
+Karten, Summen liegen nahe am Kachelende. Bei Canvas-Verkleinerung vergroessern
+sich Ertrags- und Summenschrift sowie Stationsrahmen innerhalb ihrer verfuegbaren
+Breite. Nicht konfigurierte Karten reservieren keinen Platz; kleine Kacheln
+bleiben scrollbar, mobile Stapelkacheln inhaltshoch. Gespeicherte Geometrie und
+Livewerte werden nicht geaendert. Browserregression:
+`node --test --test-name-pattern='Solar und Energiefluss|phone landscape shared grid|standard widget typography|All mobile widget types' t/35_schema5_scaling.test.js`.
+Fixture `t/113_solar_fill.html` prueft Editor und Live auf gemeinsamem Canvas
+bei Skalierung 0.375/0.5, 0/1/3/8 Ertragskarten, fehlenden Summen, Leitungen,
+kurzen Kacheln und Groessenaenderungen; `t/85_solar_energy.html` prueft auch Phone und Tablet.
+Safari-/iPhone-Abnahme bleibt erforderlich.
+
 ## Zentrale CMS-Verwaltung (dev, 1.10.0-dev, Refs #177)
 
 `www/fhem-cms/admin.html` ist eine gemeinsame, deviceunabhaengige Seite.
