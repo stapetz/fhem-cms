@@ -451,6 +451,12 @@ zwischen Hoch- und Querformat. Die Vorschau zeigt den responsiven Entwurf,
 ohne die gespeicherten Desktoppositionen zu verändern; zum Positionieren und
 Skalieren der Widgets zurück in den Editor wechseln.
 
+**Entwicklungsstand (Refs #254):** Rasterseiten mit gemeinsamem Canvas zeigen
+auf Smartphones im kurzen Querformat die Kacheln in einem umgebrochenen,
+inhaltshohen Raster und die Navigation als Burger-Menü. Die Geräte-Vorschau
+verwendet dieselbe Darstellung; die gespeicherte Anordnung bleibt erhalten.
+Die Prüfung auf dem echten iPhone steht noch aus.
+
 Unter **Ansicht → Widgets automatisch anordnen** rücken die Widgets der
 aktuellen Seite kompakt nach oben und links. Ihre bisherige Reihenfolge
 (zeilenweise von links nach rechts, dann von oben nach unten) bleibt erhalten.

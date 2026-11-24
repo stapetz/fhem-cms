@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-24",
+  "version": "1.30.4-dev",
+  "title": "Smartphone-Raster im Querformat",
+  "changes": [
+    "Rasterseiten mit gemeinsamem Canvas brechen im Smartphone-Querformat in inhaltshohe Kacheln um; Vorschau und Telefon verwenden die gleiche kompakte Navigation. Refs #254.",
+    "Gespeicherte Rasterpositionen, Freeform-Seiten und groessere Tabletansichten bleiben unveraendert. Die iPhone-Abnahme steht aus."
+  ]
+}

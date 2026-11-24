@@ -386,6 +386,19 @@ zurückgibt. `t/21_schema5_widget_session.test.js` und `t/78_freehtml.html`
 prüfen Anlegen und Bearbeiten; die HTML-Policy-Fixture prüft SVG-Rechteckmaße
 in Browser und Perl einschließlich ungültiger Werte.
 
+Smartphone-Rasterquerformat (dev, Refs #254): Rasterseiten mit gemeinsamem
+Canvas wechseln auf Phones bei kurzer Queransicht in denselben unskalierten,
+inhaltshohen Rasterfluss wie die mobile Vorschau. Die Navigation erscheint
+dabei als unskaliertes Burger-Menue. Die Regel betrifft Smartphone-Vorschau
+und grobe Zeiger bei hoechstens 1100x500 CSS-Pixeln, nicht Freeform-Seiten,
+Editor oder groessere Tabletansichten. Gespeicherte Positionen bleiben erhalten.
+`node --test --test-name-pattern='phone landscape shared grid' t/35_schema5_scaling.test.js`
+prueft den echten Rasterrenderer mit Solarkacheln bei wiederholter Rotation,
+Touch und Vorschau sowie die Rueckkehr zum Tablet-/Desktopcanvas. Erwartet:
+keine Ueberlappung, kein interner Kachelueberlauf und unveraenderte Daten.
+Die echte Safari-/iPhone-Abnahme steht aus. Die separate Safari-Fehlermeldung
+nach Rotation (Refs #255) ist damit nicht als behoben nachgewiesen.
+
 Abnahmenachtrag (Refs #216): Die Seitennavigation gehört im Freeform-Modus
 zum Canvas. Im mobilen Hochformat erscheint das unskalierte Burger-Menü.
 Im Querformat bleiben die Links im Canvas, sofern sie ohne Umbruch passen

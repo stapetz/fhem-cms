@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de" data-cms-theme="liquid-glass">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<main class="cms-shell"><div id="root" class="cms-schema5-grid"></div></main>
+<output id="result">pending</output>
+<script type="module">
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+
+const source = reading => ({device:'Demo', reading});
+const energy = (id, col, row, w, h, sections = []) => ({
+  id, type:'fhem-solar-energy', title:id,
+  readings:Object.fromEntries(['pv', 'home', 'grid', 'battery', 'soc', 'status', 'hour'].map(key => [key, source(key)])),
+  sections, grid:{col, row, w, h},
+});
+const config = {
+  schemaVersion:6,
+  settings:{layoutMode:'grid', gridColumns:96,
+    pageCanvas:{width:2560, height:1440, scaling:'width', snapGrid:5, mobileBehavior:'stack'},
+    pageNavigationRect:{x:0, y:0, w:2560, h:107}},
+  navigation:{grid:{col:1, row:1, w:95, h:4}},
+  pages:[{id:'home', widgets:[
+    energy('Solar', 1, 5, 43, 46, ['Dach', 'Garage', 'Gartenhaus'].map(label => ({
+      label, readings:Object.fromEntries(['hour','day','month','year','total'].map(key => [key, source(key)])),
+    }))),
+    energy('Solax', 44, 5, 25, 24),
+    {id:'Flow', type:'fhem-solarflow', device:'Demo', readings:{pv:'pv', home:'home'},
+      grid:{col:69, row:5, w:26, h:23}},
+    energy('Garage', 44, 29, 25, 24),
+    energy('Garten', 69, 29, 26, 24),
+  ]}],
+};
+const original = JSON.stringify(config);
+const nav = Object.assign(document.createElement('nav'), {className:'cms-nav'});
+nav.append(Object.assign(document.createElement('button'), {className:'cms-nav-burger', textContent:'☰'}));
+for (const label of ['Start', 'Thermometer', 'Schalter', 'Auto', 'Solaranlage', 'FullSolar2', 'Floorplan Küche']) {
+  nav.append(Object.assign(document.createElement('a'), {className:'cms-nav-link', textContent:label, href:'#'}));
+}
+const readings = {pv:'0', home:'822', grid:'-822', battery:'0', soc:'14', status:'OK',
+  hour:'0', day:'3', month:'95', year:'4108', total:'39810'};
+const root = document.querySelector('#root');
+const view = mountSchema5Widgets(GridStack, root, config, 'home', nav, {},
+  new Map([['Demo', [{name:'Demo', readings}]]]));
+const check = (condition, message) => { if (!condition) throw new Error(message); };
+window.checkPhoneLayout = () => {
+  const viewport = root.querySelector('.cms-freeform-viewport');
+  const grid = root.querySelector('.cms-shared-canvas-grid');
+  check(viewport.classList.contains('cms-freeform-stack'), 'phone uses intrinsic-height flow');
+  check(grid.hasAttribute('data-responsive') && grid.hasAttribute('data-mobile-layout'), 'grid uses mobile layout');
+  check(nav.hasAttribute('data-compact') && nav.closest('.cms-freeform-compact-navigation'), 'usable compact navigation');
+  check(document.documentElement.scrollWidth <= innerWidth + 1, 'no horizontal page overflow');
+  const items = [...grid.querySelectorAll(':scope > .grid-stack-item:not(.cms-responsive-navigation)')];
+  for (const [index, item] of items.entries()) {
+    const r = item.getBoundingClientRect();
+    check(r.width > 0 && r.height > 0, `widget ${index} has dimensions`);
+    const tile = item.querySelector('cms-solar-energy, cms-solarflow').shadowRoot.querySelector('.tile');
+    const t = tile.getBoundingClientRect();
+    check(t.bottom <= r.bottom + 1 && t.right <= r.right + 1, `widget ${index} fits its frame`);
+    check(tile.scrollHeight <= tile.clientHeight + 1, `widget ${index} has no internal vertical overflow`);
+    for (const other of items.slice(index + 1)) {
+      const b = other.getBoundingClientRect();
+      check(r.right <= b.left + 1 || b.right <= r.left + 1 || r.bottom <= b.top + 1 || b.bottom <= r.top + 1,
+        `widgets ${index} and ${other.getAttribute('gs-id')} do not overlap`);
+    }
+  }
+  check(JSON.stringify(config) === original, 'rendering does not modify configuration');
+  return {count:items.length, compact:nav.hasAttribute('data-compact')};
+};
+window.addEventListener('pagehide', () => view.destroy(), {once:true});
+document.querySelector('#result').textContent = 'ready';
+</script>

@@ -19,6 +19,67 @@ for (const path of candidates) {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 
+test('phone landscape shared grid reflows consistently in preview and touch view', {
+  skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
+  timeout: 90000,
+}, async () => {
+  const server = await testServer();
+  const profile = await mkdtemp(join(root, 't/.cms-phone-'));
+  const child = spawn(chrome, ['--headless=new', '--no-first-run', '--no-default-browser-check',
+    '--disable-background-networking', '--remote-debugging-address=127.0.0.1',
+    '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank']);
+  child.stdout.resume();
+  child.stderr.resume();
+  const closed = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+  const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
+  try {
+    for (const preview of [true, false]) {
+      const url = `http://127.0.0.1:${server.address().port}/t/112_phone_landscape.html`
+        + (preview ? '?mode=preview&cms-device=mobile' : '');
+      const beforeNavigate = async command => {
+        await command('Emulation.setTouchEmulationEnabled', {enabled: !preview});
+        await command('Emulation.setDeviceMetricsOverride', {
+          width:852, height:393, deviceScaleFactor:1, mobile:false,
+        });
+      };
+      await browserResult(profile, url, child, async command => {
+        const evaluate = async expression => {
+          const response = await command('Runtime.evaluate', {expression, awaitPromise:true, returnByValue:true});
+          assert.ok(!response.exceptionDetails, JSON.stringify(response.exceptionDetails));
+          return response.result.value;
+        };
+        await evaluate(`new Promise(resolve => {
+          const timer = setInterval(() => {
+            if (document.querySelector('#result').textContent !== 'ready') return;
+            clearInterval(timer); resolve();
+          }, 25);
+        })`);
+        for (const [width, height] of [[852,393], [393,852], [852,393], [393,852], [852,393]]) {
+          await command('Emulation.setDeviceMetricsOverride', {width, height, deviceScaleFactor:1, mobile:false});
+          await pause(250);
+          assert.deepEqual(await evaluate('window.checkPhoneLayout()'), {count:5, compact:true},
+            `${preview ? 'preview' : 'touch'} ${width}x${height}`);
+        }
+        if (!preview) {
+          for (const [width, height] of [[1194,834], [1440,1000]]) {
+            await command('Emulation.setDeviceMetricsOverride', {width, height, deviceScaleFactor:1, mobile:false});
+            await pause(250);
+            assert.equal(await evaluate(`!document.querySelector('.cms-freeform-viewport')
+              .classList.contains('cms-freeform-stack')`), true, `${width}x${height} keeps the canvas`);
+          }
+        }
+        await evaluate(`Object.assign(document.querySelector('#result'), {textContent:'{"checks":5}'}).dataset.result='pass'`);
+      }, beforeNavigate);
+    }
+  } finally {
+    clearTimeout(timeout);
+    child.kill('SIGTERM');
+    await closed;
+    await new Promise(resolve => server.close(resolve));
+    await rm(profile, {recursive:true, force:true});
+  }
+});
+
 async function browserResult(profile, url, child, interact, beforeNavigate) {
   let port;
   for (let attempt = 0; attempt < 600; attempt++) {

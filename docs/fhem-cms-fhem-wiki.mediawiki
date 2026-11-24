@@ -523,6 +523,8 @@ lesbare Inhalte bleiben erhalten. Zoom und Resize schreiben keine Layoutdaten.
 
 Bis einschließlich '''600 Pixel Inhaltsbreite''' ordnen Homepage und Vorschau die Widgets in Leserichtung mit Zeilenumbruch an. Der Editor bleibt zum präzisen Positionieren beim exakten Raster. Das Drehen des Geräts verändert keine gespeicherten Rasterpositionen.
 
+'''Entwicklungsstand (stapetz/fhem-cms#254):''' Rasterseiten mit gemeinsamem Canvas verwenden auf Smartphones im kurzen Querformat einen unskalierten, inhaltshohen Rasterfluss und ein Burger-Menü; die Geräte-Vorschau zeigt dieselbe Darstellung. Die Prüfung auf dem echten iPhone steht noch aus.
+
 Im schmalen Smartphone-Hochformat nutzen Widgets die gesamte verfügbare Breite; im kurzen Querformat erhalten sie mindestens 40 Prozent.
 
 '''Seit Version 1.9.0 (stapetz/fhem-cms#141):''' Homepage und Vorschau

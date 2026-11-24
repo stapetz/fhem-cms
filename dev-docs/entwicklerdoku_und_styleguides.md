@@ -78,6 +78,11 @@ Standard. Datenvertrag und Migration stehen in der
   gibt es kein automatisches Anordnen. Der mobile Freeform-Stapel zeigt das
   Seitenhintergrundbild und liest vertikal überlappende Zeilen von links nach
   rechts.
+- Ausnahme für Rasterseiten mit gemeinsamem Canvas (dev, Refs #254): Auf
+  Smartphones im kurzen Querformat verwenden Ansicht und Geräte-Vorschau
+  statt des skalierten Canvas den unskalierten Rasterfluss mit inhaltshohen
+  Widgets und Burger-Menü. Die gespeicherten Rasterpositionen bleiben erhalten;
+  Freeform, Editor und größere Tabletansichten bleiben unverändert.
 - Die Geräteauswahl steht über Breite und Höhe. Die Einstellungs-Vorschau
   verwendet die CSS-Pixelgröße und Geräteklasse der gewählten Vorgabe.
 - Freeform: Pixelgeometrie am Widget in Position, Größe und Ebene gliedern.

@@ -99,6 +99,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   }
   const landscape = browser.matchMedia('(orientation: landscape)');
   const touchTablet = browser.matchMedia('(pointer: coarse) and (min-width: 600px) and (min-height: 600px) and (max-width: 1400px)');
+  const touchPhoneLandscape = browser.matchMedia('(pointer: coarse) and (max-width: 1100px) and (max-height: 500px)');
   function landscapeNavigationFits(byWidth) {
     const probe = compact ? navigation.cloneNode(true) : navigation;
     if (compact) {
@@ -129,16 +130,17 @@ export function mountFreeform(root, page, navigation, render, {background, editi
     viewport.classList.toggle('cms-freeform-landscape-full', Boolean(fullLandscape));
     const width = viewport.clientWidth;
     if (!width) return;
-    const stack = mobilePortrait && (pinPage || settings.mobileBehavior === 'stack');
+    const stack = (mobilePortrait && (pinPage || settings.mobileBehavior === 'stack'))
+      || (Boolean(grid) && mobileLandscape && (phone || (!tablet && touchPhoneLandscape.matches)));
     const byWidth = width / settings.width;
-    if (mobileLandscape) {
+    if (mobileLandscape && !stack) {
       canvas.style.width = `${settings.width}px`;
       canvas.style.transform = `scale(${byWidth})`;
       canvas.style.setProperty('--cms-view-width', `${settings.width}px`);
       canvas.style.setProperty('--cms-landscape-nav-target', `${24 / byWidth}px`);
       viewport.classList.remove('cms-freeform-stack');
     }
-    const showBurger = Boolean(burger) && (mobilePortrait || (mobileLandscape && !landscapeNavigationFits(byWidth)));
+    const showBurger = Boolean(burger) && (mobilePortrait || (mobileLandscape && (stack || !landscapeNavigationFits(byWidth))));
     if (showBurger !== compact) {
       const hadFocus = navigation.contains(doc.activeElement);
       compact = showBurger;
@@ -208,6 +210,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
   if (pinMode) for (const wrapper of wrappers.values()) observer.observe(wrapper);
   landscape.addEventListener('change', resize);
   touchTablet.addEventListener('change', resize);
+  touchPhoneLandscape.addEventListener('change', resize);
   browser.addEventListener('resize', resize);
   const navChanges = new browser.MutationObserver(resize);
   navChanges.observe(navigation, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['hidden', 'aria-current']});
@@ -243,6 +246,7 @@ export function mountFreeform(root, page, navigation, render, {background, editi
       doc.fonts?.removeEventListener('loadingdone', resize);
       landscape.removeEventListener('change', resize);
       touchTablet.removeEventListener('change', resize);
+      touchPhoneLandscape.removeEventListener('change', resize);
       browser.removeEventListener('resize', resize);
       if (frame !== null) browser.cancelAnimationFrame(frame);
       root.classList.remove('cms-freeform-root');
