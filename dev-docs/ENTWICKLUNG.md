@@ -56,6 +56,21 @@ Seiteneinstellungen zuerst im Entwurf gespeichert.
 Navigationseinstellungen sind auf jeder CMS-Seite erreichbar;
 gemeinsame Canvas-Einstellungen bleiben der Startseite zugeordnet.
 
+## Hintergrund-Ausnahmen pro Seite (dev, Refs #251)
+
+`page.overrideBackground` ist in Schema 5/6 ein optionaler echter Boolean.
+Bei `true` verwendet die Seite ihr eigenes `background`, auch wenn
+`settings.sharedBackground` aktiv ist. Ohne eigenes Bild bleibt der Hintergrund
+bewusst leer. Abwesend/`false` erbt unverändert das Bild der aktuellen Startseite.
+Eigene Bilder und Ausnahmen bleiben beim Abschalten der globalen Vererbung
+erhalten; Laden fügt keine Felder hinzu. Der Seitendialog bietet die Ausnahme
+auf jeder Nicht-Startseite an und aktualisiert seine echte Vorschau sofort.
+Live, Editor, Seitenpopup und Pin-Bildfläche verwenden denselben Resolver
+`schema5PageBackground`. Entwurf, Publish und Backups erhalten den Boolean.
+Regression: `node --test t/18_schema5_page_panel.test.js t/54_liquid_glass.test.js`,
+`prove t/92_schema6_persistence.t` und der Browserfall „page settings preview“
+in `t/35_schema5_scaling.test.js`.
+
 ## Bedienbare Widget-Werkzeuge (Refs #244)
 
 Alle Widgettypen teilen `.cms-widget-tools` in Raster und Freeform:

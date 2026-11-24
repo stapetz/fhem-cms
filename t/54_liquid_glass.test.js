@@ -28,6 +28,21 @@ test('liquid glass resolves local and shared backgrounds without modifying pages
   assert.equal(schema5PageBackground(config, 'other'), second);
   config.settings.sharedBackground = true;
   assert.equal(schema5PageBackground(config, 'other'), first);
+  const original = JSON.stringify(config);
+  assert.equal(schema5PageBackground(config, 'other'), first);
+  assert.equal(JSON.stringify(config), original, 'loading old pages adds no inheritance flag');
+  config.pages[1].overrideBackground = true;
+  assert.equal(schema5PageBackground(config, 'other'), second, 'explicit exception uses the local image');
+  delete config.pages[1].background;
+  assert.equal(schema5PageBackground(config, 'other'), '', 'an exception may deliberately have no image');
+  config.pages[1].background = second;
+  config.pages[1].overrideBackground = false;
+  assert.equal(schema5PageBackground(config, 'other'), first, 'false restores inheritance without deleting the local image');
+  for (const invalid of [null, 1, 'true', [], {}]) {
+    config.pages[1].overrideBackground = invalid;
+    assert.throws(() => schema5PageBackground(config, 'other'), /Hintergrundvererbung/);
+  }
+  delete config.pages[1].overrideBackground;
   config.pages.reverse();
   assert.equal(schema5PageBackground(config, 'start'), second, 'the current first page supplies the shared image');
   delete config.pages[0].background;

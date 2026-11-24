@@ -10,6 +10,7 @@
 <script type="module">
 import { Schema5PagePanel } from '../www/fhem-cms/js/fcui-schema5-page-panel.js';
 import { Schema5SettingsPreview } from '../www/fhem-cms/js/fcui-schema5-settings-preview.js';
+import { schema5PageBackground } from '../www/fhem-cms/js/fcui-schema5-appearance.js';
 import '../www/fhem-cms/components/cms-button.js';
 
 const first = `media/${'a'.repeat(32)}.png`;
@@ -262,15 +263,35 @@ if (child) {
     let saved;
     new Schema5PagePanel({ root: dialog, pageId: 'room', token: 'test', freeformSupported: true,
       controller: {snapshot: () => ({live: shared, token: 'test'}), saveDraft: async candidate => { saved = candidate; }},
+      services: {createSettingsPreview: ({pageId}) => new Schema5SettingsPreview({browser: window, pageId})},
       onClose: () => {} });
     dialog.showModal();
+    const inheritedFrame = dialog.querySelector('.cms-settings-preview iframe');
+    const effectivePreviewImage = () => {
+      const canvas = inheritedFrame.contentDocument?.querySelector('.cms-freeform-canvas');
+      return canvas ? [canvas, canvas.closest('.cms-freeform-viewport')].map(node =>
+        inheritedFrame.contentWindow.getComputedStyle(node).backgroundImage).join(' ') : '';
+    };
+    await until(() => effectivePreviewImage().includes(first), 'inherited real preview must show the Start image');
     const options = dialog.querySelector('.cms-freeform-options');
     check(options.textContent.includes('Seite erbt Größeneinstellungen von der Startseite (820 × 1180 px).')
       && !options.querySelector('.cms-freeform-preset, .cms-freeform-dimension') && !options.hidden,
     'inherited dimensions replace the local size controls');
     const background = dialog.querySelector('.cms-page-background-controls');
-    check(background.textContent.includes('Bild wird von der Startseite geerbt.') && !background.querySelector('button'),
-      'inherited background replaces local image controls');
+    const exception = background.querySelector('[data-override-background]');
+    const individual = [...background.children].find(node => node.querySelector('button'));
+    check(background.textContent.includes('Bild wird von der Startseite geerbt.') && individual.hidden,
+      'inherited background hides local image controls until explicitly overridden');
+    exception.checked = true;
+    exception.dispatchEvent(new Event('change'));
+    check(!individual.hidden, 'background exception exposes individual image controls');
+    await until(() => effectivePreviewImage().includes(second), 'exception must replace the real preview image');
+    exception.checked = false;
+    exception.dispatchEvent(new Event('change'));
+    await until(() => effectivePreviewImage().includes(first), 'restoring inheritance must update the real preview');
+    exception.checked = true;
+    exception.dispatchEvent(new Event('change'));
+    await until(() => effectivePreviewImage().includes(second), 'restoring the exception must keep the stored image');
     check(!options.querySelector('select'), 'all canvas settings are controlled by Start');
     const inheritedDim = background.querySelector('[data-background-dim]');
     check(!inheritedDim.parentElement.hidden, 'inherited background retains per-page dimming');
@@ -283,6 +304,8 @@ if (child) {
     'saving subordinate settings preserves inherited dimensions and the stored local image');
     check(saved.pages[1].backgroundDim === .25 && !Object.hasOwn(saved.pages[0], 'backgroundDim'),
       'dimming is saved per page even when the image is shared');
+    check(saved.pages[1].overrideBackground === true && schema5PageBackground(saved, 'room') === second,
+      'background exception persists without changing the shared setting');
     result.dataset.result = 'pass';
     result.textContent = JSON.stringify({ checks });
   } catch (error) {

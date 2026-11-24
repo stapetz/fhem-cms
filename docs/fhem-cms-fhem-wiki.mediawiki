@@ -331,6 +331,11 @@ gilt dann gemeinsam; individuelle Bilder der anderen Seiten bleiben gespeichert.
 Nach dem Ausschalten werden diese wieder verwendet. Hat die erste Seite kein
 Bild, erscheint der jeweilige Theme-Hintergrund. Verwendete Bilder sind im
 Assetmanager gegen Löschen geschützt.
+'''Neu auf dev (noch nicht freigegeben):''' Mit
+'''Hintergrundvererbung von der Startseite überschreiben''' kann eine einzelne
+Nicht-Startseite ein eigenes Bild oder bewusst kein Bild verwenden, während
+die übrigen Seiten weiter das Startseitenbild erben. Ausschalten der Ausnahme
+stellt die Vererbung wieder her und erhält das eigene Bild.
 
 Für '''Liquid Glass''' regeln '''Liquid-Effekt''' und '''Transparenz''' die
 Darstellung auf allen Seiten. Die Smartphone-Vorschau zeigt Änderungen an der
