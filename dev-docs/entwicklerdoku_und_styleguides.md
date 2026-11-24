@@ -138,13 +138,14 @@ blendet sie wieder aus. Live-Ansicht und Vorschau zeigen keine Editor-Aktionen.
 Die vollständige Vorlage steht im [Epic #243](https://github.com/stapetz/fhem-cms/issues/243);
 Datenmodell, offene Vertragsfragen und Story-Abhängigkeiten im
 [Entwicklungsvertrag](./ENTWICKLUNG.md#grundriss--und-pin-modus-geplant-refs-243).
-Die Pin-Darstellung ist noch nicht implementiert. Die Hintergrund-Abdunklung
-ist als erstes Grundlageninkrement im Freeform-Seitendialog verfügbar:
+Die erste Pin-Darstellung ist auf Freeform-Seiten optional verfügbar.
+Die Hintergrund-Abdunklung steht im Freeform-Seitendialog bereit:
 0–50 %, unmittelbar in der echten Vorschau, individuell auch bei geerbtem
 Bild. Ein CSS-Hintergrundverlauf liegt vor dem Bild und hinter sämtlichen
 Inhalten, ohne Guides, Pointer-Ziele oder Widget-Deckkraft zu verändern.
 Ohne Bild keine abgedunkelte Ersatzfläche. Normale Freeform-Seiten behalten
-ihre bisherige Bildskalierung; der Pin-Schalter folgt mit dem Wrapper.
+ihre bisherige Bildskalierung; nur das ausdrückliche Aktivieren von
+„Widgets als Pins darstellen“ verwendet den Pin-Bildvertrag.
 
 Für den Pin-Modus verbindlich bestätigt: `contain` innerhalb des vorhandenen
 Canvas, kein automatisches Umstellen gemeinsamer Abmessungen; fehlendes/defektes

@@ -96,11 +96,16 @@ test('Freeform background dimming previews per page, cancels and saves only into
     });
     let panel = open('a');
     let dim = all(root).find(node => Object.hasOwn(node.attributes, 'data-background-dim'));
+    let pins = all(root).find(node => Object.hasOwn(node.attributes, 'data-render-as-pins'));
+    assert.equal(pins.checked, false);
     assert.equal(dim.value, '0');
     assert.equal(all(root).find(node => node.children.includes(dim)).hidden, false);
     dim.value = '25';
     dim.fire('input');
+    pins.checked = true;
+    pins.fire('change');
     assert.equal(preview.pages[0].backgroundDim, .25);
+    assert.equal(preview.pages[0].renderAsPins, true);
     assert.equal(Object.hasOwn(preview.pages[1], 'backgroundDim'), false);
     assert.equal(f.writes, 0);
     assert.equal(JSON.stringify(f.controller.snapshot().live), bytes);
@@ -108,11 +113,18 @@ test('Freeform background dimming previews per page, cancels and saves only into
     assert.equal(f.controller.snapshot().draft, null);
     panel = open('a');
     dim = all(root).find(node => Object.hasOwn(node.attributes, 'data-background-dim'));
+    pins = all(root).find(node => Object.hasOwn(node.attributes, 'data-render-as-pins'));
+    assert.equal(pins.checked, false, 'cancel leaves Pin opt-in unchanged');
     assert.equal(dim.value, '0', 'cancel does not retain the unsaved value');
     dim.value = '50';
     dim.fire('input');
+    pins.checked = true;
+    pins.fire('change');
     await all(root).find(node => node.className?.split(' ').includes('cms-panel-save')).fire('click');
     assert.equal(f.controller.snapshot().draft.pages[0].backgroundDim, .5);
+    assert.equal(f.controller.snapshot().draft.pages[0].renderAsPins, true);
+    assert.deepEqual(f.controller.snapshot().draft.pages[0].widgets, f.live.pages[0].widgets,
+      'opting into Pins never changes normal widget geometry');
     assert.equal(JSON.stringify(f.controller.snapshot().live), bytes);
     panel = open('a');
     dim = all(root).find(node => Object.hasOwn(node.attributes, 'data-background-dim'));
@@ -123,6 +135,7 @@ test('Freeform background dimming previews per page, cancels and saves only into
     assert.equal(all(root).find(node => node.children.includes(dim)).hidden, true);
     await all(root).find(node => node.className?.split(' ').includes('cms-panel-save')).fire('click');
     assert.equal(Object.hasOwn(f.controller.snapshot().draft.pages[0], 'backgroundDim'), false);
+    assert.equal(Object.hasOwn(f.controller.snapshot().draft.pages[0], 'renderAsPins'), false);
     panel = open('b');
     dim = all(root).find(node => Object.hasOwn(node.attributes, 'data-background-dim'));
     assert.equal(all(root).find(node => node.children.includes(dim)).hidden, true, 'Grid hides Freeform dimming');

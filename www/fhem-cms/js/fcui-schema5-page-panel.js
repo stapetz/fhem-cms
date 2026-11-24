@@ -42,6 +42,7 @@ export class Schema5PagePanel {
   #backgroundLabelRevision = 0;
   #preview;
   #backgroundDim;
+  #renderAsPins;
 
   #freeform;
 
@@ -117,6 +118,7 @@ export class Schema5PagePanel {
     const framesLabel = element('label', 'Rahmen anzeigen ');
     this.#frames = element('input');
     this.#frames.type = 'checkbox';
+    this.#frames.setAttribute('data-show-frames', '');
     this.#frames.checked = config.settings.showFrames !== false;
     framesLabel.append(this.#frames);
     const layoutLabel = element('label', 'Rastergröße ');
@@ -167,6 +169,17 @@ export class Schema5PagePanel {
       this.#backgroundControls.append(element('p', 'Bild wird von der Startseite geerbt.'));
     }
     if (freeformSupported) {
+      const pinOptions = element('div');
+      const pinLabel = element('label', 'Widgets als Pins darstellen ');
+      this.#renderAsPins = element('input');
+      this.#renderAsPins.type = 'checkbox';
+      this.#renderAsPins.checked = page.renderAsPins === true;
+      this.#renderAsPins.setAttribute('data-render-as-pins', '');
+      this.#renderAsPins.addEventListener('change', () => this.#updateSettingsPreview());
+      pinLabel.append(this.#renderAsPins);
+      pinOptions.append(pinLabel, element('p',
+        'Vorschau und Live zeigen kompakte Pins; Tippen öffnet die normale Karte. Im mobilen Hochformat werden vollständige Karten gestapelt. Der Editor arbeitet vorerst mit normalen Kacheln; Reading-Auswahl und direktes Schalten vom Pin folgen.'));
+      this.#freeform.section.append(pinOptions);
       const dimLabel = element('label', 'Hintergrund-Abdunklung ');
       this.#backgroundDim = element('input');
       Object.assign(this.#backgroundDim, {
@@ -176,6 +189,7 @@ export class Schema5PagePanel {
       const dimValue = element('output');
       const updateDim = () => {
         dimLabel.hidden = this.#freeform.mode.value !== 'freeform';
+        pinOptions.hidden = this.#freeform.mode.value !== 'freeform';
         dimValue.textContent = `${this.#backgroundDim.value} %`;
       };
       this.#backgroundDim.addEventListener('input', () => {
@@ -338,7 +352,8 @@ export class Schema5PagePanel {
   #settings() {
     return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value,
       this.#titleAlign.value, this.#background, this.#sharedBackground?.checked ?? null,
-      this.#intensity.value, this.#transparency.value, this.#freeform?.values(), this.#backgroundDim?.value]);
+      this.#intensity.value, this.#transparency.value, this.#freeform?.values(), this.#backgroundDim?.value,
+      this.#renderAsPins?.checked]);
   }
 
   #addFreeformControls(page, measurements) {
@@ -464,7 +479,7 @@ export class Schema5PagePanel {
     section.addEventListener('change', update);
     this.#form.append(section);
     this.#freeform = {
-      mode, measurements, preset,
+      mode, measurements, preset, section,
       values: () => [mode.value, width.value, height.value, scaling.value, snap.value, mobile.value],
     };
   }
@@ -500,7 +515,7 @@ export class Schema5PagePanel {
     }
     const candidate = resizeSchema5Grid(this.#config, Number(this.#columns.value));
     const [originalTheme, originalFrames, , originalTitleAlign, originalBackground, originalShared,
-      originalIntensity, originalTransparency, originalLayout, originalDim] = JSON.parse(this.#settingsBaseline);
+      originalIntensity, originalTransparency, originalLayout, originalDim, originalPins] = JSON.parse(this.#settingsBaseline);
     for (const value of [this.#intensity.value, this.#transparency.value]) {
       if (!/^(?:100|[1-9]?\d)$/.test(value)) throw new Error('Ungültiger Liquid-Glass-Wert');
     }
@@ -535,6 +550,9 @@ export class Schema5PagePanel {
           throw new Error('Ungültige Hintergrund-Abdunklung');
         }
         candidate.pages.find(page => page.id === this.#pageId).backgroundDim = Number(this.#backgroundDim.value) / 100;
+      }
+      if (mode === 'freeform' && this.#renderAsPins.checked !== originalPins) {
+        candidate.pages.find(page => page.id === this.#pageId).renderAsPins = this.#renderAsPins.checked;
       }
     }
     return candidate;

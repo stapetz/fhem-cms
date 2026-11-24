@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-24",
+  "version": "1.26.0-dev",
+  "title": "Pin-Modus im Freeform-Seitendialog aktivieren",
+  "changes": [
+    "Widgets als Pins darstellen ist jetzt als optionale Freeform-Seiteneinstellung mit echter Vorschau, Abbrechen und Entwurfsspeicherung verfuegbar. Refs #245.",
+    "Uhr, Text und LinkWidget bleiben standardmaessig normale Karten; auf Pin-Seiten laesst sich dies pro Widget umstellen.",
+    "Tippen oeffnet zunaechst die regulaere Karte; Reading-Auswahl, direktes Schalten vom Pin und kompakter Pin-Editor folgen. Im mobilen Hochformat werden normale Karten gestapelt."
+  ]
+}

@@ -1,5 +1,24 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Pin-Seitenschalter (24.11.2026, dev, #245)
+
+Nach der Wrapper-Anbindung ist der Schalter „Widgets als Pins darstellen“
+unter Seitenlayout bedienbar, ausschließlich für Freeform. Die vorhandenen
+Seitendialogtests prüfen Vorschau, Abbrechen, Entwurfsspeicherung,
+unveränderte normale Kachelgeometrie und das Entfernen beim Rasterwechsel.
+Die echte iframe-Vorschau prüft Opt-in/Opt-out, `contain`, fehlendes/geladenes
+Bild, Text-als-Karte-Standard und keine Schreibaktionen.
+
+Geräteprüfung: Freeform-Seitendialog öffnen, Pin-Schalter aktivieren und
+Vorschau prüfen. Abbrechen darf nichts speichern; nach Speichern zunächst
+nur im Entwurf. Nach eigenem Veröffentlichen Pin antippen: normale Karte
+öffnet, Escape/Schließen entfernt sie. Werte/Bedienung in der normalen Karte
+prüfen. Typausnahmen im Widgetdialog ändern. Mobil hochkant normale Karten,
+quer wieder Pins. Ohne Grundriss sichtbarer Canvas-Hinweis.
+Der Dialog weist auf ausstehende Reading-Auswahl, direktes Schalten und
+vorläufig normale Karten im Editor hin. Diese Folgefunktionen gehören
+zu #247–#249 und sind nicht Teil der Seitenoption-Abnahme.
+
 ## Pin-Wrapper und Freeform-Anbindung (24.11.2026, dev, #246)
 
 Prüfumfang: zentraler Badge, 48px-Hitflächen, fünf Themes, normale/aktive/

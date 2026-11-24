@@ -104,15 +104,14 @@ ist bereits die Abdunklung mit unmittelbarer echter Vorschau bedienbar,
 auch bei geerbtem Bild individuell pro Seite. Sie legt einen passiven
 CSS-Hintergrundverlauf vor das Bild, nicht über die Widgets; ohne Bild
 wird keine dunkle Ersatzfläche erzeugt. Normale Seiten behalten ihre bisherige
-Bildskalierung. Der Pin-Schalter wird erst mit dem funktionierenden Wrapper
-angeboten; ein gespeichertes `renderAsPins` allein stellt noch keine Pins dar.
-Die Story bleibt bis zu ihren vollständigen Kriterien in Arbeit.
+Bildskalierung. Mit dem unten beschriebenen Wrapper ist inzwischen auch
+der Pin-Schalter im Seitendialog verfügbar.
 
 `pin-layout.js` bündelt die strikte Seitenvalidierung, die zentrierte
 `contain`-Bildfläche und Projektionen zwischen Canvaspunkt und bildbezogenen
 Prozentwerten. Nur explizit fehlende Bildmaße verwenden die Canvasfläche;
 fehlerhafte Maße werden nicht still ersetzt. Diese Geometrie ist vorbereitet,
-noch nicht an die Bildlade-/Pin-Darstellung angeschlossen. Der vorhandene
+im ersten Inkrement noch nicht an die Bildlade-/Pin-Darstellung angeschlossen. Der vorhandene
 `rect` bleibt in diesem Inkrement alleinige gespeicherte Widgetposition,
 es werden keine zweiten Koordinaten oder automatischen Migrationen erzeugt.
 
@@ -154,6 +153,16 @@ Eigenständige Pin-Drag-/Speicherkoordinaten folgen erst mit #249.
 Im mobilen Hochformat werden stets vollständige Karten gestapelt, auch wenn
 die normale Freeform-Einstellung „Layout behalten“ lautet. Orientierungswechsel
 ersetzen die Darstellung, statt beide Widgetinstanzen parallel zu halten.
+
+**Seitendialog-Opt-in (Refs #245):** „Widgets als Pins darstellen“ wird nur im
+Freeform-Modus angeboten und speichert über den vorhandenen Entwurfspfad.
+Die echte Seitendialogvorschau aktualisiert Bildbezug und Darstellung sofort,
+ohne eine Konfiguration zu schreiben. Abbrechen verwirft den Schalterzustand,
+Speichern erhält alle normalen Kachelrechtecke unverändert. Ohne Änderung
+bleibt das optionale Feld abwesend; ein explizites Ausschalten speichert `false`.
+Rasterseiten zeigen den Schalter nicht und erhalten keine Pin-Felder.
+Der Dialog benennt die vorläufige Kartenbearbeitung und ausstehenden
+Reading-/Direktschaltfunktionen ausdrücklich.
 
 - **Umfang:** Kein neuer Floorplan-Seitentyp. Freeform-Seiten erhalten optional
   `renderAsPins` (Boolean, Standard `false`) und `backgroundDim` (`0` bis `0.5`,
