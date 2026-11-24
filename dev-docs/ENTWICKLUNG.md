@@ -138,7 +138,7 @@ Werten; neutrale, aktive, Alarm- und Stale-Zustände über gemeinsame Theme-Toke
 Werte und Zustände werden als typisiertes Präsentationsobjekt übergeben, niemals
 als HTML. `pin-presentation.js` erfasst alle 18 tatsächlichen Widgettypen.
 Die Readingprojektion aus Geräten ist mit #247 angeschlossen (siehe unten).
-Typen ohne feste Live-Readingquellen bleiben Typsymbole. Keine vermeintlich
+Typen ohne feste Live-Readingquellen bleiben Pins ohne Werte. Keine vermeintlich
 aktuellen Ersatzwerte oder geratenen Gerätezustände anzeigen.
 
 Freeform kann den Wrapper ohne vorab erzeugte Vollwidgets darstellen.
@@ -216,7 +216,7 @@ Keine Einheit aus Readingnamen ableiten. Schalter nutzen nur ihren exakt
 konfigurierten bestätigten On-Wert als aktiven Zustand; keine geratenen Alarme.
 Freies HTML/Text, Uhr/Link, historische Diagramme, Wetter, Anruflisten und
 automatisch aufgebaute Volvo-Karten haben keine feste einzelne
-Live-Readingauswahl in diesem Vertrag und bleiben Typsymbole bzw. normale
+Live-Readingauswahl in diesem Vertrag und bleiben Pins ohne Werte bzw. normale
 Karten nach `forceCard`. Ihre Inhalte sind weiter in der vollständigen Karte
 verfügbar; keine beliebigen internen oder historischen Werte zu Livewerten
 umdeuten.
@@ -239,7 +239,13 @@ Pfeile bewegen um 1, Shift+Pfeile um 10 Canvaspixel. Escape, Pointercancel,
 Captureverlust und Fokusverlust verwerfen eine laufende Geste ohne Schreiben.
 Speichern verwendet den vorhandenen tokengebundenen Entwurfspfad; keine
 Live-Gerätebefehle und keine Konfigurationsmutation bei Auswahl/Rendern.
-Wertanzeigen verwenden `#` als neutrales Typsymbol statt des menüähnlichen `≡`.
+Seit #252 verwenden alle Pins ausschließlich konfigurierte Widget-Icons über
+den validierten `services.iconUrl`-Pfad als einfarbige Theme-Maske. Ohne Icon
+kein Ersatzzeichen (`#`, Dreistrich oder Typsymbol) und kein leerer Iconabstand.
+Konfigurierte An-/Aus-Icons und Status-Zuordnungen folgen dem aktuellen Reading.
+Live, Editor und gemeinsame Dialogvorschau verwenden denselben Präsentationspfad.
+Einheiten bleiben explizite Widgetkonfiguration; `temperature` allein erzeugt
+kein `°C`. Laden/Rendern migriert weder Icons noch Einheiten.
 Regressionen: `t/109_pin_editor.test.js`, `t/110_pin_editor.html` im vorhandenen
 Chrome-Läufer sowie `t/92_schema6_persistence.t`.
 

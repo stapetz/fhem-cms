@@ -14,6 +14,32 @@ const value = {id: 'value', type: 'fhem-value', device: 'Demo', reading: 'temper
 const thermostat = {id: 'heat', type: 'thermostat', device: 'Demo',
   readings: {actual: 'temperature', target: 'target', valve: 'valve'}};
 
+test('Pins use only configured icons and explicit units, including live icon mappings', () => {
+  const services = {iconUrl: name => `/fhem/icons/${name}`};
+  for (const type of Object.keys(PIN_TYPES)) {
+    const widget = {...value,type};
+    const before = JSON.stringify(widget);
+    const presentation = pinPresentation(widget,false,snapshots(),services);
+    assert.equal(presentation.icon,'',`${type}: no arbitrary type symbol`);
+    assert.equal(presentation.iconUrl,'');
+    assert.equal(JSON.stringify(widget),before,'presentation adds no config defaults');
+  }
+  const configured = {...value,icon:'temp_temperature',unit:'°C'};
+  assert.equal(pinPresentation(configured,false,snapshots(),services).iconUrl,'/fhem/icons/temp_temperature');
+  assert.deepEqual(pinPresentation(configured,false,snapshots(),services).values,[{value:'-0.5',unit:'°C'}]);
+  assert.deepEqual(pinPresentation(value,false,snapshots(),services).values,[{value:'-0.5',unit:''}],
+    'a temperature Reading name alone never invents Celsius');
+  const toggle = {...value,type:'fhem-switch',reading:'state',on:'on',off:'off',icon:'general_an',iconOff:'general_aus'};
+  assert.equal(pinPresentation(toggle,false,snapshots(),services).iconUrl,'/fhem/icons/general_an');
+  assert.equal(pinPresentation(toggle,false,snapshots({state:'off'}),services).iconUrl,'/fhem/icons/general_aus');
+  const mapped = {...value,type:'fhem-icon',reading:'state',states:[{value:'on',icon:'general_an'}]};
+  assert.equal(pinPresentation(mapped,false,snapshots(),services).iconUrl,'/fhem/icons/general_an');
+  assert.equal(pinPresentation(mapped,false,snapshots({state:'other'}),services).iconUrl,'');
+  for (const icon of ['../secret','x");url(https://evil.test)','https://evil.test/icon',7,null]) {
+    assert.throws(() => pinPresentation({...value,icon},false,snapshots(),services),/Pin-Icon/);
+  }
+});
+
 test('Pin defaults show existing value/actual readings without mutating configuration', () => {
   for (const [widget, expected] of [[value, [{value: '-0.5', unit: ''}]],
     [{...value, unit: '°C'}, [{value: '-0.5', unit: '°C'}]],

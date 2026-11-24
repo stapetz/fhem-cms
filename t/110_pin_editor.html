@@ -46,8 +46,8 @@ try {
     'non-native Freeform properties use the same SVG-X as native dialogs');
   close.click();
   check(!properties.matches(':popover-open') && writes.length===0,'properties X cancels without saving geometry');
-  check(wrapper().querySelector('cms-pin-badge').shadowRoot.querySelector('.icon').textContent === '#',
-    'value symbol cannot be mistaken for a hamburger menu');
+  check(wrapper().querySelector('cms-pin-badge').shadowRoot.querySelector('.icon').hidden,
+    'value without a configured icon has no arbitrary replacement symbol');
   check(getComputedStyle(drag()).pointerEvents === 'auto' && drag().getBoundingClientRect().width >= 48,
     'Pin can be selected and dragged directly with a physical 48px target');
   for (const theme of ['dark','light','liquid-glass']) {

@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-24",
+  "version": "1.30.3-dev",
+  "title": "Konfigurierte Widget-Icons auf Pins",
+  "changes": [
+    "Pins verwenden konfigurierte Widget-Icons als Theme-Maske statt pauschaler Typsymbole. Ohne Icon entfallen Ersatzzeichen und Iconabstand. Refs #252.",
+    "Konfigurierte An-/Aus-Icons und Status-Zuordnungen folgen dem aktuellen Reading; Editor und Dialogvorschau nutzen denselben Pin-Vertrag.",
+    "Einheiten bleiben explizite Widgetkonfiguration. Aus Readingnamen werden weder Celsius noch andere Einheiten geraten."
+  ]
+}

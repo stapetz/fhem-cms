@@ -1,5 +1,17 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Konfigurierte Pin-Icons (24.11.2026, dev, #252)
+
+`node --test t/105_pin_readings.test.js`: alle 18 Typen ohne pauschale
+Ersatzsymbole, validierte konfigurierte Icons, An-/Aus- und Status-Zuordnungen,
+explizites °C und absichtlich fehlende Einheit ohne Konfigurationsmutation.
+`node --test --test-name-pattern='Pin badges|Pin reading|Pin editor|Pin interactions' t/35_schema5_scaling.test.js`:
+564 Badge-Checks plus Eingabe/Vorschau, 110 Reading-Dialogchecks,
+69 Editorchecks und bestehende Tap/Hold-/Popupfälle erfolgreich.
+Die Masken-/Kein-Icon-Regressionsfälle prüfen drei Themes, ausgeblendete
+Iconfläche ohne Leerabstand und Ablehnung fremder/injizierter Icon-URLs.
+Echte Safari-/Touch-Geräteabnahme steht aus.
+
 ## Einheitliches Schließen-X (24.11.2026, dev, #250)
 
 `node --test --test-name-pattern='shared close buttons|Pin editor supports|Pin interactions' t/35_schema5_scaling.test.js`:

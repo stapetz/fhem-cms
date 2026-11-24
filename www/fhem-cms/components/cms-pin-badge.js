@@ -30,6 +30,9 @@ class CmsPinBadge extends HTMLElement {
         .circle { justify-content: center; height: 36px; width: 36px; padding: 0; }
         .icon { display: flex; align-items: center; justify-content: center; flex: 0 0 20px;
           width: 20px; height: 20px; font-size: 20px; line-height: 1; }
+        .icon[hidden] { display: none; }
+        .icon.glyph { background-color: currentColor;
+          -webkit-mask: var(--icon-url) center / contain no-repeat; mask: var(--icon-url) center / contain no-repeat; }
         .values { display: flex; align-items: center; gap: 6px; overflow: hidden; min-width: 0; }
         .value { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         .separator { flex: 0 0 1px; height: 12px; background: currentColor; opacity: .25; }
@@ -83,7 +86,9 @@ class CmsPinBadge extends HTMLElement {
 
   set presentation(value) {
     if (!value || typeof value.label !== 'string' || !value.label.trim()
-      || typeof value.icon !== 'string' || !value.icon.trim()
+      || typeof value.icon !== 'string'
+      || (value.iconUrl !== undefined && (typeof value.iconUrl !== 'string'
+        || (value.iconUrl && !/^\/(?:[A-Za-z0-9_%.-]+\/)*icons\/[A-Za-z0-9_%./-]+$/.test(value.iconUrl))))
       || !Array.isArray(value.values) || value.values.some(item => !item
         || typeof item.value !== 'string' || typeof item.unit !== 'string')
       || !['normal', 'active', 'alarm'].includes(value.state)) {
@@ -92,6 +97,10 @@ class CmsPinBadge extends HTMLElement {
     this.dataset.state = value.state;
     this.toggleAttribute('data-stale', value.stale === true);
     this.#icon.textContent = value.icon;
+    this.#icon.hidden = !value.icon && !value.iconUrl;
+    this.#icon.classList.toggle('glyph', Boolean(value.iconUrl));
+    if (value.iconUrl) this.#icon.style.setProperty('--icon-url', `url("${value.iconUrl}")`);
+    else this.#icon.style.removeProperty('--icon-url');
     this.#badge.classList.toggle('circle', value.values.length === 0);
     this.#values.replaceChildren();
     const values = value.values.map(item => `${item.value}${item.unit ? ` ${item.unit}` : ''}`);

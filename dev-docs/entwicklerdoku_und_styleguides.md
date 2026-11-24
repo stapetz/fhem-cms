@@ -167,7 +167,7 @@ ergänzt die vorhandenen Formulare, auch bei dynamischen Tabellen-/Solarzeilen.
 Ihre unmittelbare Vorschau bezeichnet Readingnamen ausdrücklich als solche;
 die Geräte-Vorschau zeigt Livewerte. Null bleibt sichtbar; fehlende Werte
 „–“ ohne Einheit, veraltete Daten gestrichelt markieren.
-Ohne feste Livequellen nur das Typsymbol, keine historischen oder automatisch
+Ohne feste Livequellen nur den Pin ohne Werte, keine historischen oder automatisch
 gewählten internen Readings als aktuelle Messwerte ausgeben.
 Binäre Schalter/Taster senden live bei Pointer-Tap `<400 ms` ihren konfigurierten
 Befehl; Hold `>=400 ms` öffnet nur die echte normale Karte (#248). Bewegung
@@ -184,7 +184,12 @@ oder Tastatur blendet die gemeinsamen 48px-Werkzeuge außerhalb des Pins ein;
 kein Werkzeug darf den Pin verdecken oder am sichtbaren Canvasrand verloren
 gehen. Direktes Pointer-Drag ohne Browser-Ghost, X/Y-Prozenttooltip mit zwei
 Nachkommastellen; Pfeile/Shift+Pfeile sind die pixelgenaue Alternative.
-Wertanzeigen nutzen das neutrale `#`, kein menüähnliches Dreistrichsymbol.
+Verbindlich seit #252: Pins verwenden das konfigurierte Widget-Icon als
+Theme-Maske über den bestehenden validierten FHEMWEB-Iconpfad. Ohne Icon kein
+Ersatzzeichen und kein freigehaltener Iconabstand. Keine pauschalen Typsymbole,
+Rauten oder Dreistriche. Konfigurierte Zustandsicons folgen dem Reading.
+Diese Regel gilt für Live, Editor und die gemeinsame Pin-Dialogvorschau.
+Einheiten kommen aus der Widgetkonfiguration, nicht aus geratenen Readingnamen.
 `forceCard` wird im gemeinsamen Widgetdialog angeboten, nicht in 18 separaten
 Formularvarianten. Ohne Opt-in keine Änderung normaler Freeform-Seiten.
 Randentscheidung: Pin bis zum Bildrand, normale Karte bei Bedarf ins Canvas
