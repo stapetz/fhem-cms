@@ -1,4 +1,4 @@
-UPD 2026-11-22_11:58:36 189009 FHEM/01_FHEMCMS.pm
+UPD 2026-11-24_08:36:44 189009 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-20_06:26:48 29073 FHEM/lib/FHEMCMS/Weather.pm
@@ -25,7 +25,7 @@ UPD 2026-11-22_11:11:58 63173 www/fhem-cms/components/cms-weather.js
 UPD 2026-11-22_09:58:52 3044 www/fhem-cms/css/cms-admin.css
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
 UPD 2026-11-13_17:56:27 15580 www/fhem-cms/css/fcui-map.css
-UPD 2026-11-22_09:29:20 57675 www/fhem-cms/css/fhem-cms.css
+UPD 2026-11-24_08:36:44 58982 www/fhem-cms/css/fhem-cms.css
 UPD 2026-11-10_07:50:19 26290 www/fhem-cms/examples/fcui-check.html
 UPD 2026-11-08_21:07:16 4844 www/fhem-cms/examples/migration-preview.html
 UPD 2026-11-13_09:56:15 353874 www/fhem-cms/images/sunnybeach.jpg
@@ -43,9 +43,9 @@ UPD 2026-11-20_02:47:40 7671 www/fhem-cms/js/device-preview.js
 UPD 2026-11-13_07:06:17 2398 www/fhem-cms/js/device-suggestions.js
 UPD 2026-11-14_16:12:23 4924 www/fhem-cms/js/device-widget-suggestions.js
 UPD 2026-11-14_18:16:49 1731 www/fhem-cms/js/dialog-groups.js
-UPD 2026-11-20_07:11:05 12977 www/fhem-cms/js/fcui-freeform-edit.js
+UPD 2026-11-24_08:36:44 13076 www/fhem-cms/js/fcui-freeform-edit.js
 UPD 2026-11-20_04:40:33 6282 www/fhem-cms/js/fcui-freeform-layout.js
-UPD 2026-11-20_04:59:18 7964 www/fhem-cms/js/fcui-freeform-view.js
+UPD 2026-11-24_08:36:44 9435 www/fhem-cms/js/fcui-freeform-view.js
 UPD 2026-11-13_17:56:27 150460 www/fhem-cms/js/fcui-map-runtime.js
 UPD 2026-11-08_15:33:41 3422 www/fhem-cms/js/fcui-migration-controller.js
 UPD 2026-11-20_06:13:07 27650 www/fhem-cms/js/fcui-migration-preview.js
@@ -69,7 +69,7 @@ UPD 2026-11-20_00:44:21 1845 www/fhem-cms/js/fcui-schema5-transport.js
 UPD 2026-11-22_09:07:55 13119 www/fhem-cms/js/fcui-schema5-view.js
 UPD 2026-11-20_05:01:57 16141 www/fhem-cms/js/fcui-schema5-widget-panel.js
 UPD 2026-11-21_12:53:56 5549 www/fhem-cms/js/fcui-schema5-widget-session.js
-UPD 2026-11-22_09:07:55 12319 www/fhem-cms/js/fcui-schema5-widgets.js
+UPD 2026-11-24_08:36:44 12876 www/fhem-cms/js/fcui-schema5-widgets.js
 UPD 2026-11-20_06:13:07 27191 www/fhem-cms/js/fhem-client.js
 UPD 2026-11-22_11:00:00 81446 www/fhem-cms/js/fhem-cms.js
 UPD 2026-11-22_10:25:12 10205 www/fhem-cms/js/freehtml-css.js
