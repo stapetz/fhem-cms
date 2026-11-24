@@ -1,5 +1,33 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Pin-Grundlagen: erstes Inkrement (24.11.2026, dev, #245)
+
+Umgesetzt: streng optionale Freeform-Seitenfelder in Schema 6, gemeinsame
+Bild-/Prozentprojektionen und nutzbare Hintergrund-Abdunklung mit echter
+Seitendialogvorschau. Noch kein Pin-Modus: Wrapper, Bildladehinweise,
+Pin-Schalter, Reading-Auswahl, Popup-Gesten und Pin-Editor bleiben offen.
+#245 und Epic #243 bleiben in Arbeit.
+
+Lokale Prüfung:
+- `perl -c FHEM/01_FHEMCMS.pm` und
+  `prove t/91_schema6_validation.t t/92_schema6_persistence.t`: 123 Assertions,
+  echte JSON-Typen und Grenzen, alte Rasterdaten, Entwurf/Publish/Backup-Restore.
+- `node --test t/103_pin_layout.test.js t/18_schema5_page_panel.test.js t/93_freeform.test.js t/11_schema5_widgets.test.js t/13_schema5_live.test.js t/19_schema5_editor.test.js t/21_schema5_widget_session.test.js t/101_frontend_cache.test.js`:
+  45 Tests einschließlich Bildrändern/Contain/Projektionen, Abbrechen/Speichern,
+  Seitenisolation, Lifecycle, Transaktionen und aktuellem Importgraph.
+- `node --test --test-name-pattern='editor tools require activation|page settings preview shows' t/35_schema5_scaling.test.js`:
+  echte Chromium-iframe-Vorschau, 0/25/50-%-Abdunklung, unveränderte
+  Widget-Deckkraft und geerbte Bilder; bestehende Pointer-/Touch-/Tastaturgesten.
+- `npm run build:check` und
+  `python3 -m unittest discover -s t -p 'test_generate_changed.py'`.
+
+Geräteprüfung: Freeform-Seite mit Bild öffnen, Regler verschieben, Vorschau
+prüfen; Abbrechen darf nichts speichern, Speichern zunächst nur den Entwurf.
+Nach eigenem Veröffentlichen in FHEM bleibt nur das Bild abgedunkelt.
+Andere Seiten behalten ihren Wert, auch bei gemeinsamem Bild. Ohne Bild
+keine dunkle Ersatzfläche; beim Wechsel ins Raster kein Abdunklungsregler.
+FHEM-/Safari-/echte Touch-Abnahme steht aus. Kein `main`-Release.
+
 ## Widget-Bearbeitungsknöpfe (24.11.2026, dev, #244)
 
 Alle 18 Widgettypen teilen mindestens 48×48 sichtbare CSS-Pixel große

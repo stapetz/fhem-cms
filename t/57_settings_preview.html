@@ -174,6 +174,36 @@ if (child) {
     mode.value = 'freeform';
     mode.dispatchEvent(new Event('change'));
     check(!dialog.querySelector('.cms-freeform-preset'), 'non-Start layout mode has no size preset');
+    const dim = dialog.querySelector('[data-background-dim]');
+    check(!dim.parentElement.hidden && dim.min === '0' && dim.max === '50',
+      'background dimming is available only in Freeform and constrained to 0-50 percent');
+    for (const percent of [25, 50, 0]) {
+      dim.value = String(percent);
+      dim.dispatchEvent(new Event('input'));
+      await until(() => {
+        const canvas = frameDocument().querySelector('.cms-freeform-canvas');
+        if (!canvas) return false;
+        const image = frame.contentWindow.getComputedStyle(canvas).backgroundImage;
+        return image.includes(first) && (percent
+          ? image.includes(`rgba(0, 0, 0, ${percent/100})`) : !image.includes('linear-gradient'));
+      }, `background dimming ${percent}% did not reach the actual preview`);
+      const widget = frameDocument().querySelector('cms-text');
+      check(frame.contentWindow.getComputedStyle(widget).opacity === '1',
+        'dimming never changes foreground widget opacity');
+      check(widget.shadowRoot.textContent.includes('Aktuelle Seite'), 'foreground content stays intact');
+    }
+    dim.value = '50';
+    dim.dispatchEvent(new Event('input'));
+    remove.click();
+    await until(() => {
+      const canvas = frameDocument().querySelector('.cms-freeform-canvas');
+      return canvas && frame.contentWindow.getComputedStyle(canvas).backgroundImage === 'none';
+    }, 'dimming without an image must not create a dark replacement layer');
+    check(frameDocument().querySelector('cms-text').shadowRoot.textContent.includes('Aktuelle Seite'),
+      'removing the image preserves foreground content');
+    mode.value = 'grid';
+    mode.dispatchEvent(new Event('change'));
+    check(dim.parentElement.hidden, 'return to Grid hides Freeform-only background dimming');
     dialog.querySelector('.cms-panel-close').click();
     new Schema5PagePanel({ root: dialog, controller, pageId: 'start', token: 'test', freeformSupported: true,
       browser: { ...window, confirm: () => true },
@@ -217,11 +247,17 @@ if (child) {
     check(background.textContent.includes('Bild wird von der Startseite geerbt.') && !background.querySelector('button'),
       'inherited background replaces local image controls');
     check(!options.querySelector('select'), 'all canvas settings are controlled by Start');
+    const inheritedDim = background.querySelector('[data-background-dim]');
+    check(!inheritedDim.parentElement.hidden, 'inherited background retains per-page dimming');
+    inheritedDim.value = '25';
+    inheritedDim.dispatchEvent(new Event('input'));
     [...dialog.querySelectorAll('button')].find(button => button.textContent === 'Speichern').click();
     await until(() => saved, 'inherited page settings did not save');
     check(saved.pages[1].canvas.width === 820 && saved.pages[1].canvas.height === 1180
       && saved.pages[1].background === second,
     'saving subordinate settings preserves inherited dimensions and the stored local image');
+    check(saved.pages[1].backgroundDim === .25 && !Object.hasOwn(saved.pages[0], 'backgroundDim'),
+      'dimming is saved per page even when the image is shared');
     result.dataset.result = 'pass';
     result.textContent = JSON.stringify({ checks });
   } catch (error) {

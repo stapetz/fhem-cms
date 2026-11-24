@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.24.5-dev';
+our $FHEMCMS_VERSION = '1.25.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1057,7 +1057,7 @@ sub FHEMCMS_ValidateConfig {
     my %pageIds;
     for my $page (@{$config->{pages}}) {
         my @pageFields = $fcui ? ('background', 'kiosk') : ();
-        push(@pageFields, 'layoutMode', 'canvas', 'navigationRect') if ($targetSchema == 6);
+        push(@pageFields, 'layoutMode', 'canvas', 'navigationRect', 'renderAsPins', 'backgroundDim') if ($targetSchema == 6);
         $err = $exact->($page, 'Seite', ['id', 'title', 'widgets'], \@pageFields);
         return $err if ($err);
         return 'Ungueltiger Kioskmodus der Seite'
@@ -1066,6 +1066,19 @@ sub FHEMCMS_ValidateConfig {
             if (exists($page->{layoutMode}) && (!defined($page->{layoutMode}) || ref($page->{layoutMode})
                 || $page->{layoutMode} !~ /\A(?:grid|freeform)\z/));
         my $freeform = ($page->{layoutMode} // 'grid') eq 'freeform';
+        for my $field ('renderAsPins', 'backgroundDim') {
+            return "$field ist nur auf Freeform-Seiten erlaubt"
+                if (!$freeform && exists($page->{$field}));
+        }
+        return 'Ungueltiger Wert fuer renderAsPins'
+            if (exists($page->{renderAsPins}) && !$isBool->($page->{renderAsPins}));
+        if (exists($page->{backgroundDim})) {
+            my $dim = $page->{backgroundDim};
+            return 'Ungueltiger Wert fuer backgroundDim'
+                if (!defined($dim) || ref($dim)
+                    || $scalarJson->encode($dim) !~ /\A(?:0(?:\.[0-9]+)?|[1-9][0-9]*(?:\.[0-9]+)?)(?:[eE][+-]?[0-9]+)?\z/
+                    || $dim < 0 || $dim > 0.5);
+        }
         my $canvas = $page->{canvas};
         if ($freeform) {
             $err = $validateCanvas->($canvas);

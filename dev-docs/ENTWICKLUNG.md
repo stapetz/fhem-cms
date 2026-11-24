@@ -87,13 +87,34 @@ Perl-Syntax und Build-Check. Echte Safari-/Touch-Geräteabnahme steht aus.
 
 Der importierte Entwurf „Interaktiver Grundriss- & Pin-Modus für
 Freeform-Seiten“ ist vollständig im [Epic #243](https://github.com/stapetz/fhem-cms/issues/243)
-erhalten. Die fünf verknüpften Stories stehen im Kanban zunächst auf Backlog:
+erhalten. Epic und erste Story sind in Arbeit; die weiteren Stories folgen:
 [Seitenoption/Bildbezug #245](https://github.com/stapetz/fhem-cms/issues/245),
 [Pin-Wrapper #246](https://github.com/stapetz/fhem-cms/issues/246),
 [Reading-Auswahl #247](https://github.com/stapetz/fhem-cms/issues/247),
 [Interaktion/Popup #248](https://github.com/stapetz/fhem-cms/issues/248) und
 [Editor #249](https://github.com/stapetz/fhem-cms/issues/249).
-Dies ist ein Zielbild, keine bereits implementierte Funktion.
+Dies ist weiterhin das Zielbild des Epics, noch kein fertiger Pin-Modus.
+
+**Erstes Grundlageninkrement (Refs #245):** Schema 6 akzeptiert die optionalen
+Seitenfelder `renderAsPins` (echter Boolean) und `backgroundDim` (JSON-Zahl
+`0..0.5`) ausschließlich auf Freeform-Seiten. Abwesende Felder werden beim
+Lesen nicht ergänzt; der Wechsel zurück ins Raster entfernt beide. Entwurf,
+Publish und Backups erhalten gesetzte Werte unverändert. Im Seitendialog
+ist bereits die Abdunklung mit unmittelbarer echter Vorschau bedienbar,
+auch bei geerbtem Bild individuell pro Seite. Sie legt einen passiven
+CSS-Hintergrundverlauf vor das Bild, nicht über die Widgets; ohne Bild
+wird keine dunkle Ersatzfläche erzeugt. Normale Seiten behalten ihre bisherige
+Bildskalierung. Der Pin-Schalter wird erst mit dem funktionierenden Wrapper
+angeboten; ein gespeichertes `renderAsPins` allein stellt noch keine Pins dar.
+Die Story bleibt bis zu ihren vollständigen Kriterien in Arbeit.
+
+`pin-layout.js` bündelt die strikte Seitenvalidierung, die zentrierte
+`contain`-Bildfläche und Projektionen zwischen Canvaspunkt und bildbezogenen
+Prozentwerten. Nur explizit fehlende Bildmaße verwenden die Canvasfläche;
+fehlerhafte Maße werden nicht still ersetzt. Diese Geometrie ist vorbereitet,
+noch nicht an die Bildlade-/Pin-Darstellung angeschlossen. Der vorhandene
+`rect` bleibt in diesem Inkrement alleinige gespeicherte Widgetposition,
+es werden keine zweiten Koordinaten oder automatischen Migrationen erzeugt.
 
 - **Umfang:** Kein neuer Floorplan-Seitentyp. Freeform-Seiten erhalten optional
   `renderAsPins` (Boolean, Standard `false`) und `backgroundDim` (`0` bis `0.5`,
@@ -114,7 +135,7 @@ Dies ist ein Zielbild, keine bereits implementierte Funktion.
   standardmäßig aktiv. „Nicht als Pin darstellen (normale Kachel behalten)“
   steht im jeweiligen Konfigurationsdialog.
 - **Interaktion:** Zentrale `PIN_BEHAVIOR`-Registry. Binäre Schalter/Taster
-  schalten bei kurzem Tippen `<350 ms` über ihren vorhandenen konfigurierten
+  schalten bei kurzem Tippen `<400 ms` über ihren vorhandenen konfigurierten
   Befehl; ab `400 ms` öffnet das reguläre Widget. Komplexe Widgets und Sensoren
   öffnen es schon beim Tippen. Einheitliche Pointer Events; Bewegung `>6 px`
   bricht Long-Press ab. Nach ausgelöstem Hold niemals zusätzlich schalten.
@@ -130,7 +151,15 @@ Dies ist ein Zielbild, keine bereits implementierte Funktion.
   Escape und Abbruch verwerfen die laufende Geste; bestehende Entwurfs-,
   Undo- und Publish-Pfade verwenden.
 
-**Vor Implementierung verbindlich klären:** Der Anhang nimmt Schema 5,
+**Bestätigte Darstellungsentscheidungen:** Im Pin-Modus wird das Bild proportional
+im vorhandenen gemeinsamen Canvas eingepasst, ohne dessen Größe automatisch
+zu ändern. Freie Ränder gehören nicht zu den Bildkoordinaten. Ein fehlendes
+oder defektes Bild verwendet den Canvasbezug mit sichtbarem Hinweis. Im mobilen
+Hochformat werden normale vollständige Widgetkarten als Liste dargestellt,
+nicht die Grundriss-Pins. Die einzige Zeitgrenze ist 400 ms: darunter Tap,
+ab dann Hold; Bewegung über 6px bricht ab.
+
+**Bei der weiteren Implementierung beachten:** Der Anhang nimmt Schema 5,
 `backgroundImage`, ein einheitliches `readings`-Array und beispielhafte
 Theme-/Widgetnamen an. Im Bestand verwendet Freeform Schema 6, `background`
 mit Asset-Auflösung, `rect` und unterschiedliche Readingmodelle. Den
@@ -141,8 +170,8 @@ stille Migration beim Laden. Alle neuen Felder optional und server-/clientseitig
 typ- und grenzgeprüft, einschließlich Entwurf, Publish, Import/Export, Backup
 und bestehender Blueprints. Die Registry muss tatsächliche Typen einschließlich
 Select, Link, Anrufliste, Solar/Energie, Volvo und Wetter abdecken.
-Das Verhalten zwischen `350` und `399 ms` ist im Entwurf offen und vor Umsetzung
-zu entscheiden. CSS-Beispiele sind Muster, keine Freigabe harter Farben.
+Die Zeitlücke des ursprünglichen Entwurfs ist durch die bestätigte
+400ms-Grenze geschlossen. CSS-Beispiele sind Muster, keine Freigabe harter Farben.
 Die bestehende Mindestzielgröße von **48×48 sichtbaren CSS-Pixeln** hat Vorrang
 vor den 44px des Anhangs.
 

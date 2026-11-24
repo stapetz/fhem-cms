@@ -41,6 +41,7 @@ export class Schema5PagePanel {
   #transparency;
   #backgroundLabelRevision = 0;
   #preview;
+  #backgroundDim;
 
   #freeform;
 
@@ -164,6 +165,27 @@ export class Schema5PagePanel {
       this.#backgroundControls.append(element('p', 'Ist die Checkbox deaktiviert, kann das Hintergrundbild auf jeder Seite einzeln über die Seiteneinstellungen gewählt werden. Eigene Bilder anderer Seiten bleiben erhalten.'));
     } else if (inheritsBackground) {
       this.#backgroundControls.append(element('p', 'Bild wird von der Startseite geerbt.'));
+    }
+    if (freeformSupported) {
+      const dimLabel = element('label', 'Hintergrund-Abdunklung ');
+      this.#backgroundDim = element('input');
+      Object.assign(this.#backgroundDim, {
+        type: 'range', min: '0', max: '50', step: '1', value: String((page.backgroundDim ?? 0) * 100),
+      });
+      this.#backgroundDim.setAttribute('data-background-dim', '');
+      const dimValue = element('output');
+      const updateDim = () => {
+        dimLabel.hidden = this.#freeform.mode.value !== 'freeform';
+        dimValue.textContent = `${this.#backgroundDim.value} %`;
+      };
+      this.#backgroundDim.addEventListener('input', () => {
+        updateDim();
+        this.#updateSettingsPreview();
+      });
+      this.#freeform.mode.addEventListener('change', updateDim);
+      dimLabel.append(this.#backgroundDim, dimValue);
+      this.#backgroundControls.append(dimLabel);
+      updateDim();
     }
     const controls = element('div');
     controls.className = 'cms-liquid-controls';
@@ -316,7 +338,7 @@ export class Schema5PagePanel {
   #settings() {
     return JSON.stringify([this.#theme.value, this.#frames.checked, this.#columns.value,
       this.#titleAlign.value, this.#background, this.#sharedBackground?.checked ?? null,
-      this.#intensity.value, this.#transparency.value, this.#freeform?.values()]);
+      this.#intensity.value, this.#transparency.value, this.#freeform?.values(), this.#backgroundDim?.value]);
   }
 
   #addFreeformControls(page, measurements) {
@@ -478,7 +500,7 @@ export class Schema5PagePanel {
     }
     const candidate = resizeSchema5Grid(this.#config, Number(this.#columns.value));
     const [originalTheme, originalFrames, , originalTitleAlign, originalBackground, originalShared,
-      originalIntensity, originalTransparency, originalLayout] = JSON.parse(this.#settingsBaseline);
+      originalIntensity, originalTransparency, originalLayout, originalDim] = JSON.parse(this.#settingsBaseline);
     for (const value of [this.#intensity.value, this.#transparency.value]) {
       if (!/^(?:100|[1-9]?\d)$/.test(value)) throw new Error('Ungültiger Liquid-Glass-Wert');
     }
@@ -508,6 +530,12 @@ export class Schema5PagePanel {
       }
       changePageLayout(candidate, this.#pageId, mode, cmsPageCanvas(candidate) ?? canvas,
         this.#freeform.measurements?.boxes);
+      if (mode === 'freeform' && this.#backgroundDim.value !== originalDim) {
+        if (!/^(?:[0-4]?\d|50)$/.test(this.#backgroundDim.value)) {
+          throw new Error('Ungültige Hintergrund-Abdunklung');
+        }
+        candidate.pages.find(page => page.id === this.#pageId).backgroundDim = Number(this.#backgroundDim.value) / 100;
+      }
     }
     return candidate;
   }

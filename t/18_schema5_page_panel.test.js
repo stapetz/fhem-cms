@@ -69,6 +69,67 @@ function fixture() {
   };
 }
 
+test('Freeform background dimming previews per page, cancels and saves only into the draft', async () => {
+  const original = globalThis.document;
+  globalThis.document = {createElement: tag => new Element(tag)};
+  const all = node => [node, ...node.children.flatMap(all)];
+  try {
+    const f = fixture();
+    f.live.schemaVersion = 6;
+    Object.assign(f.live.pages[0], {
+      layoutMode: 'freeform', canvas: {width: 1280, height: 800},
+      background: `media/${'a'.repeat(32)}.png`,
+    });
+    for (const [i, widget] of f.live.pages[0].widgets.entries()) {
+      widget.rect = {x: 100 + i*400, y: 100, w: 300, h: 200};
+    }
+    const bytes = JSON.stringify(f.live);
+    await f.controller.reload();
+    let preview;
+    const root = new Element('section');
+    const open = pageId => new Schema5PagePanel({root, controller: f.controller, pageId,
+      token: f.controller.snapshot().token, freeformSupported: true,
+      browser: {confirm: () => true}, onClose: () => {},
+      services: {createSettingsPreview: () => ({
+        element: new Element('section'), update: config => {preview = config;}, close() {},
+      })},
+    });
+    let panel = open('a');
+    let dim = all(root).find(node => Object.hasOwn(node.attributes, 'data-background-dim'));
+    assert.equal(dim.value, '0');
+    assert.equal(all(root).find(node => node.children.includes(dim)).hidden, false);
+    dim.value = '25';
+    dim.fire('input');
+    assert.equal(preview.pages[0].backgroundDim, .25);
+    assert.equal(Object.hasOwn(preview.pages[1], 'backgroundDim'), false);
+    assert.equal(f.writes, 0);
+    assert.equal(JSON.stringify(f.controller.snapshot().live), bytes);
+    all(root).find(node => node.className?.split(' ').includes('cms-panel-close')).fire('click');
+    assert.equal(f.controller.snapshot().draft, null);
+    panel = open('a');
+    dim = all(root).find(node => Object.hasOwn(node.attributes, 'data-background-dim'));
+    assert.equal(dim.value, '0', 'cancel does not retain the unsaved value');
+    dim.value = '50';
+    dim.fire('input');
+    await all(root).find(node => node.className?.split(' ').includes('cms-panel-save')).fire('click');
+    assert.equal(f.controller.snapshot().draft.pages[0].backgroundDim, .5);
+    assert.equal(JSON.stringify(f.controller.snapshot().live), bytes);
+    panel = open('a');
+    dim = all(root).find(node => Object.hasOwn(node.attributes, 'data-background-dim'));
+    assert.equal(dim.value, '50', 'draft value is reloaded');
+    const mode = all(root).find(node => node.className === 'cms-freeform-mode').children[0];
+    mode.value = 'grid';
+    mode.fire('change');
+    assert.equal(all(root).find(node => node.children.includes(dim)).hidden, true);
+    await all(root).find(node => node.className?.split(' ').includes('cms-panel-save')).fire('click');
+    assert.equal(Object.hasOwn(f.controller.snapshot().draft.pages[0], 'backgroundDim'), false);
+    panel = open('b');
+    dim = all(root).find(node => Object.hasOwn(node.attributes, 'data-background-dim'));
+    assert.equal(all(root).find(node => node.children.includes(dim)).hidden, true, 'Grid hides Freeform dimming');
+    panel.close();
+  } finally { globalThis.document = original; }
+});
+
 test('background label follows the asset catalog and reports missing entries or errors', async () => {
   const original = globalThis.document;
   globalThis.document = { createElement: (tag) => new Element(tag) };
