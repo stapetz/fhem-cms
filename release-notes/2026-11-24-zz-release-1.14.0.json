@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-24",
+  "version": "1.14.0",
+  "title": "Interaktiver Floorplan mit Live-Pins und bebilderter Anleitung",
+  "changes": [
+    "S245 - Pin 1: Freeform-Seitenoption, Bildbezug und Hintergrund-Abdunklung",
+    "S246 - Pin 2: Zentraler themefaehiger Pin-Wrapper mit Kreis, Pille und Multi-Pille",
+    "S247 - Pin 3: Reading-Auswahl Auf Pin anzeigen und Smart Defaults",
+    "S248 - Pin 4: Direkt-Schalten, Long-Press und regulaeres Widget-Popup",
+    "S249 - Pin 5: Pin-Platzierung, Live-Drag und bedienbare Editor-Toolbar",
+    "Bildbezogene Prozentpositionen erhalten die Raumzuordnung beim Skalieren. Einzelne Widgets koennen normale Karten bleiben; im mobilen Hochformat erscheinen vollstaendige Karten.",
+    "Schalter/Taster: unter 400 ms tippen schaltet, ab 400 ms halten oeffnet die Karte. Tastatur oeffnet die Karte; Editor und Vorschau senden keine Pin-Geraetebefehle.",
+    "Grosse Widget-Werkzeuge nach Auswahl (#244), einheitliches Schliessen-X (#250), individuelle Hintergrundausnahmen (#251) und konfigurierte Pin-Icons ohne Ersatzsymbole (#252).",
+    "Ausfuehrliche Schrittanleitung Floorplan Kueche mit elf echten Screenshots fuer GitHub-Wiki und FHEM-Wiki (#253).",
+    "Freigegebener Umfang: Epic #243 und Issues #244 bis #253. Keine pauschale Uebernahme des dev-Branches."
+  ]
+}

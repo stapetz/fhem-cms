@@ -2,7 +2,25 @@
 
 Frontend zur Erstellung grafischer Oberflächen für FHEM, einschließlich freier Seiten und Inhalte wie in einem klassischen Content-Management-System.
 
-**Aktuelle stabile Version: 1.13.0**
+**Aktuelle stabile Version: 1.14.0**
+
+## Neu in 1.14.0
+
+- **Interaktiver Floorplan:** Grundriss als Seitenbild, kompakte Pins mit
+  ausgewählten Livewerten und vollständige normale Widgetkarten bei Bedarf.
+- Bildbezogene Prozentpositionen, Direktplatzierung mit Maus/Touch und
+  Tastatur-Feinjustierung; große Bedienflächen auch auf skalierten Seiten.
+- Schalter/Taster live kurz tippen zum Schalten oder mindestens 400 ms halten
+  für die Detailkarte; Editor und Vorschau senden keine Pin-Gerätebefehle.
+- Eigenes Hintergrundbild pro Seite trotz globaler Startseitenvererbung,
+  individuelle Abdunklung und optionale normale Karten auf Pin-Seiten.
+- Einheitliche Schließen-X in Dialogen und Widgets sowie große,
+  erst nach Auswahl eingeblendete Widget-Werkzeuge.
+- [Ausführliche Anleitung „Floorplan Küche“ mit elf echten Screenshots](docs/FLOORPLAN.md)
+  sowie die [GitHub-Wiki-Fassung](https://github.com/stapetz/fhem-cms/wiki/Floorplan-Kueche).
+
+Releaseumfang: #243–253, einschließlich der fünf Pin-Stories und ihrer
+abgenommenen Folgekorrekturen. Andere Entwicklungsänderungen sind nicht enthalten.
 
 ## Neu in 1.13.0
 

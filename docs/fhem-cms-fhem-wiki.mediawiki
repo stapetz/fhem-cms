@@ -11,7 +11,7 @@
 | Inoffizielles Modul; Installation aus externer Updatequelle.
 |- style="background-color:#FFFFFF"
 | Aktuelle stabile Version
-| [https://github.com/stapetz/fhem-cms/releases/tag/v1.13.0 1.13.0]
+| [https://github.com/stapetz/fhem-cms/releases/tag/v1.14.0 1.14.0]
 |- style="background-color:#EFEFFF"
 ! colspan="2" | Details
 |- style="background-color:#FFFFFF"
@@ -33,7 +33,9 @@
 
 '''fhem-cms''' ergänzt FHEM um eine frei gestaltbare Bedienoberfläche im Browser. Du kombinierst Gerätewerte, Bedienelemente, Texte, Bilder und Links auf eigenen Seiten. Das Layout erstellst du grafisch, ohne dafür eine komplette HTML-Oberfläche programmieren zu müssen.
 
-Dieser Artikel beschreibt den stabilen Funktionsstand '''1.13.0'''. Rasterseiten bleiben verfügbar; für pixelgenaues Freeform wird Schema 6 verwendet. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+Dieser Artikel beschreibt den stabilen Funktionsstand '''1.14.0'''. Rasterseiten bleiben verfügbar; für pixelgenaues Freeform wird Schema 6 verwendet. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
+
+'''Neu in 1.14.0:''' Interaktiver Floorplan mit kompakten Livewert-Pins, bildbezogener Platzierung und vollständigen Widgetkarten im Popup. Schalter und Taster lassen sich kurz antippen oder für die Detailkarte halten. Einzelne Seiten dürfen das gemeinsame Hintergrundbild überschreiben; Dialoge haben ein einheitliches Schließen-X und Widgets große Bearbeitungswerkzeuge. Die [https://github.com/stapetz/fhem-cms/wiki/Floorplan-Kueche Schritt-für-Schritt-Anleitung Floorplan Küche] zeigt den Aufbau mit elf echten Screenshots.
 
 '''Neu in 1.13.0:''' Freies HTML unterstützt bis zu 50.000 Unicode-Zeichen, weitere passive SVG-/CSS-Funktionen und präzise Quelltextdiagnosen. Die zentrale Administration bietet JSON-Import/-Export je CMS; Kioskseiten haben eine kopierbare Live-URL. Standardwidgets sind besser lesbar, SolarFlow-Kreiswerte ausgewogener. CMS-Startseiten revalidieren ihren Browsercache. Die Bedienung ist in den jeweiligen Abschnitten dieses Artikels beschrieben.
 
@@ -317,14 +319,14 @@ Ist die Zwischenablage nicht verfügbar, erscheint eine Meldung; die angezeigte
 URL kann manuell kopiert werden. Kiosk schaltet den Browser nicht automatisch
 auf Vollbild und ist kein Zugriffsschutz.
 
-=== Einheitliches Schliessen-X (neu auf dev, noch nicht freigegeben) ===
+=== Einheitliches Schliessen-X (seit 1.14.0) ===
 
 CMS-Dialoge und Widget-Popups verwenden dasselbe klassische X oben rechts
 mit 48-Pixel-Bedienflaeche, auch Medienauswahl, Vorschau, Administration und
 Freeform-Positionseinstellungen. Das X nutzt die bestehenden Abbruchpruefungen;
 es speichert nichts automatisch und umgeht keine Rueckfrage bei Aenderungen.
 
-=== Pin-Editor (neu auf dev, noch nicht freigegeben) ===
+=== Pin-Editor (seit 1.14.0) ===
 
 Auf Freeform-Seiten mit '''Widgets als Pins darstellen''' zeigt auch der Editor
 kompakte Pins. Anklicken blendet die gemeinsamen Werkzeuge ein; Ziehen
@@ -494,7 +496,7 @@ gilt dann gemeinsam; individuelle Bilder der anderen Seiten bleiben gespeichert.
 Nach dem Ausschalten werden diese wieder verwendet. Hat die erste Seite kein
 Bild, erscheint der jeweilige Theme-Hintergrund. Verwendete Bilder sind im
 Assetmanager gegen Löschen geschützt.
-'''Neu auf dev (noch nicht freigegeben):''' Mit
+'''Seit 1.14.0:''' Mit
 '''Hintergrundvererbung von der Startseite überschreiben''' kann eine einzelne
 Nicht-Startseite ein eigenes Bild oder bewusst kein Bild verwenden, während
 die übrigen Seiten weiter das Startseitenbild erben. Ausschalten der Ausnahme
