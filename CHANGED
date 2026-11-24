@@ -6,6 +6,28 @@
   nach Widgetauswahl.
 - Nur dev; echte Touch- und Safari-Geraeteabnahme ausstehend.
 
+2026-11-24 - 1.26.0-dev: Pin-Modus im Freeform-Seitendialog aktivieren
+- Widgets als Pins darstellen ist jetzt als optionale
+  Freeform-Seiteneinstellung mit echter Vorschau, Abbrechen und
+  Entwurfsspeicherung verfuegbar. Refs #245.
+- Uhr, Text und LinkWidget bleiben standardmaessig normale Karten; auf
+  Pin-Seiten laesst sich dies pro Widget umstellen.
+- Tippen oeffnet zunaechst die regulaere Karte; Reading-Auswahl, direktes
+  Schalten vom Pin und kompakter Pin-Editor folgen. Im mobilen Hochformat
+  werden normale Karten gestapelt.
+
+2026-11-24 - 1.26.0-dev: Zentraler Grundriss-Pin-Wrapper
+- Gemeinsamer themefaehiger Badge fuer alle 18 Widgettypen mit 48px-Zielen und
+  Rand-Clamping unabhaengig vom Canvas-Massstab. Refs #246.
+- Pins oeffnen ihre regulaere Widgetkarte erst bei Aktivierung; Liveupdates und
+  Aufraeumen beim Schliessen bleiben erhalten. Im mobilen Hochformat normale
+  Karten statt Pins.
+- Normale Karten je Widget ueber forceCard; Uhr, Text und LinkWidget bleiben
+  standardmaessig Karten. Bildbezug nutzt contain mit sichtbarem Hinweis bei
+  fehlendem oder defektem Bild.
+- Reading-Auswahl, direkte Tap/Hold-Schaltsteuerung und Pin-Drag folgen in
+  eigenen Stories. Der Editor arbeitet vorerst mit normalen Kacheln.
+
 2026-11-24 - 1.25.0-dev: Grundlagen fuer Grundriss-Pins und
 Hintergrund-Abdunklung
 - Freeform-Seiten: Hintergrund in den Seiteneinstellungen um 0 bis 50 Prozent
