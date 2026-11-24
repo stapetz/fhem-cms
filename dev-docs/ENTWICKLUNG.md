@@ -116,6 +116,45 @@ noch nicht an die Bildlade-/Pin-Darstellung angeschlossen. Der vorhandene
 `rect` bleibt in diesem Inkrement alleinige gespeicherte Widgetposition,
 es werden keine zweiten Koordinaten oder automatischen Migrationen erzeugt.
 
+**Pin-Wrapper (Refs #246):** `cms-pin-badge` stellt den gemeinsamen visuellen
+Vertrag dar: Kreis ohne Werte, Pille mit einem Wert, Multi-Pille mit mehreren
+Werten; neutrale, aktive, Alarm- und Stale-Zustände über gemeinsame Theme-Tokens.
+Werte und Zustände werden als typisiertes Präsentationsobjekt übergeben, niemals
+als HTML. `pin-presentation.js` erfasst alle 18 tatsächlichen Widgettypen.
+Die Reading-/Statusprojektion aus Geräten folgt in #247; bis dahin zeigen
+Produktions-Pins ein neutrales Typsymbol ohne Readingwerte. Keine vermeintlich
+aktuellen Ersatzwerte oder geratene Gerätezustände anzeigen.
+
+Freeform kann den Wrapper ohne vorab erzeugte Vollwidgets darstellen.
+Aktivierung mit Maus, Touch oder Tastatur öffnet erst dann das reguläre Widget
+über die bestehende Factory und den gemeinsamen Modalpfad. Die geöffnete Karte
+erhält denselben aktuellen Snapshot-/Stale-Stand; Schließen, Orientierungswechsel
+und Seitenabbau entfernen sie vollständig. Noch kein direktes Schalten vom Pin:
+die 400ms-Interaktion folgt in #248. Vorschau aktiviert keine interaktive Karte.
+Der Editor verwendet bis #249 normale Karten samt unveränderter Werkzeuge;
+Vorschau und Live zeigen die kompakte Darstellung.
+
+`forceCard` ist ein optionaler echter Boolean ausschließlich auf Freeform-
+Widgets. Ohne Feld bleiben Uhr, Text und LinkWidget (Navigation) normale Karten;
+explizites `false` erlaubt auch dort einen Pin. Der gemeinsame Widgetdialog
+bietet auf Pin-Seiten die Ausnahme für alle Typen. Die Sitzung erhält das Feld
+auch dann, wenn ein älterer typspezifischer Dialog es nicht zurückliefert.
+Beim Wechsel oder Verschieben ins Raster wird es entfernt; vorhandene Raster-
+Vorlagen erhalten keine neuen Felder.
+
+Die Bildladeanbindung ermittelt natürliche Maße und verwendet die vorbereitete
+`contain`-Fläche, ohne den gemeinsamen Canvas zu verändern. Fehlende/defekte
+Bilder melden sichtbar den Canvasbezug. Die gespeicherten `rect`-Mittelpunkte
+bleiben zunächst autoritativ; Bild-Prozentwerte und Rand-Clamping werden nur
+für die Darstellung berechnet, niemals beim Laden zurückgeschrieben.
+Bestätigte Randregel: Pins dürfen bis an den Bildrand, normale Karten dürfen
+beim Rückwechsel zur Einhaltung der Canvasgrenzen eingepasst werden. Dies
+ersetzt am Rand die ursprüngliche Forderung nach identischen Mittelpunkten.
+Eigenständige Pin-Drag-/Speicherkoordinaten folgen erst mit #249.
+Im mobilen Hochformat werden stets vollständige Karten gestapelt, auch wenn
+die normale Freeform-Einstellung „Layout behalten“ lautet. Orientierungswechsel
+ersetzen die Darstellung, statt beide Widgetinstanzen parallel zu halten.
+
 - **Umfang:** Kein neuer Floorplan-Seitentyp. Freeform-Seiten erhalten optional
   `renderAsPins` (Boolean, Standard `false`) und `backgroundDim` (`0` bis `0.5`,
   Regler 0–50 %). Ein zentraler `cms-pin-badge` stellt bestehende Widgets kompakt
@@ -123,7 +162,8 @@ es werden keine zweiten Koordinaten oder automatischen Migrationen erzeugt.
   Keine doppelte Fachlogik und keine neue Laufzeitabhängigkeit.
 - **Positionen:** Bildbezogene Mittelpunkte `centerX`/`centerY` in Prozent,
   auf zwei Nachkommastellen gerundet und auf `[0,100]` begrenzt. Umschalten
-  zwischen Kachel und Pin erhält Mittelpunkt und reguläre Kachelgröße.
+  zwischen Kachel und Pin erhält im Bildinneren Mittelpunkt und reguläre
+  Kachelgröße; am Rand dürfen normale Karten ins Canvas eingepasst werden.
   Bildbezugsfläche proportional aus natürlichen Bildmaßen, zentriert und
   unverzerrt (`contain`); dieselbe Verankerung auf Desktop, Tablet und Phone.
 - **Werte und Ausnahmen:** Optionales boolesches `showOnPin` pro Reading/Value;

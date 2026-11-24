@@ -1,5 +1,37 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Pin-Wrapper und Freeform-Anbindung (24.11.2026, dev, #246)
+
+Prüfumfang: zentraler Badge, 48px-Hitflächen, fünf Themes, normale/aktive/
+Alarm-/Stale-Darstellung, geometrisches Clamping, `forceCard` sowie Lazy-Popup
+mit der echten Widget-Factory. Im mobilen Hochformat normale Karten, im
+Querformat wieder Pins, keine parallelen Vollwidgets. Bild proportional im
+Canvas, fehlende/defekte Bilder mit sichtbarem Canvas-Hinweis.
+
+`node --test --test-concurrency=1 --test-name-pattern='Pin badges preserve|page settings preview shows|widget editor actions|editor tools require activation' t/35_schema5_scaling.test.js`
+prüft die neue Fixture `t/104_pin_badges.html`: mindestens 512 Browserchecks plus
+separate Preview-/Eingabefälle; der Läufer ergänzt echte Maus-, emulierte
+Touch- und Tastaturaktivierung (Tab/Fokus, Enter, Escape, kein Doppelpopup).
+Abgedeckt sind alle 18 Typen, Maßstäbe 0.25/0.5/1/1.5, breite Multi-Pillen an
+allen vier Canvasrändern, unveränderte gespeicherte Daten, Liveupdates in der
+geöffneten Karte, sichtbare Fehler und vollständiges Aufräumen. Der echte
+Textdialog speichert `forceCard` über den bestehenden Sitzungspfad.
+Die bestehende Widget-Werkzeugregression und Seitendialogvorschau bleiben Teil
+der Prüfung. Die Grid-Interaktion wartet auf das Fixture-Signal `grid ready`,
+bevor sie Ergebnisse setzt; sonst kann die asynchrone Initialisierung diese
+überschreiben.
+
+Zusätzlich: Schema-6-/Persistenztests (133 Perl-Assertions), 27 gezielte
+Node-Tests für Lifecycle/Session/Freeform/Cache/Validierung, Perl-Syntax,
+Build-Check und Release-JSON-Prüfung.
+
+Bewusst separat: Auswahl/Projektion echter Readingwerte und Statuszuordnung
+(#247), direktes Schalten samt 400ms-Hold (#248), kompakter Pin-Editor
+einschließlich Prozent-Drag (#249). Produktions-Pins zeigen zunächst neutrale
+Typsymbole und öffnen auf Aktivierung immer die normale Karte. Editor:
+vorerst normale Karten. FHEM-/Safari-/echte Touch-Abnahme noch offen;
+kein `main`-Release.
+
 ## Pin-Grundlagen: erstes Inkrement (24.11.2026, dev, #245)
 
 Umgesetzt: streng optionale Freeform-Seitenfelder in Schema 6, gemeinsame

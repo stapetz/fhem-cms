@@ -45,6 +45,7 @@ test('optional Pin page fields are strict, Freeform-only and never migrated on r
 test('returning to Grid clears optional page fields without leaking to other pages', () => {
   const state = config();
   Object.assign(state.pages[0], {renderAsPins: true, backgroundDim: .25});
+  state.pages[0].widgets[0].forceCard = false;
   const other = structuredClone(state.pages[0]);
   other.id = 'other';
   other.widgets[0].id = 'two';
@@ -53,7 +54,30 @@ test('returning to Grid clears optional page fields without leaking to other pag
   changePageLayout(state, 'home', 'grid');
   assert.equal(Object.hasOwn(state.pages[0], 'renderAsPins'), false);
   assert.equal(Object.hasOwn(state.pages[0], 'backgroundDim'), false);
+  assert.equal(Object.hasOwn(state.pages[0].widgets[0], 'forceCard'), false);
   assert.equal(JSON.stringify(state.pages[1]), bytes);
+});
+
+test('forceCard accepts only real Freeform booleans and leaves old data alone', () => {
+  for (const value of [true, false]) {
+    const state = config();
+    state.pages[0].widgets[0].forceCard = value;
+    const bytes = JSON.stringify(state);
+    schema5GridItems(state, 'home');
+    assert.equal(JSON.stringify(state), bytes);
+  }
+  for (const value of [undefined, null, 0, 1, 'true', [], {}]) {
+    const state = config();
+    state.pages[0].widgets[0].forceCard = value;
+    assert.throws(() => schema5GridItems(state, 'home'), /forceCard/);
+  }
+  for (const schema of [5, 6]) {
+    const state = config();
+    changePageLayout(state, 'home', 'grid');
+    state.schemaVersion = schema;
+    state.pages[0].widgets[0].forceCard = false;
+    assert.throws(() => schema5GridItems(state, 'home'), /forceCard/);
+  }
 });
 
 test('image frames use centred contain, never stretch, with explicit no-image Canvas fallback', () => {

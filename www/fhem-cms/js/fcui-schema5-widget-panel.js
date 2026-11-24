@@ -6,6 +6,7 @@ import { openDevicePicker } from './device-picker.js';
 import { deviceWidgetSuggestions } from './device-widget-suggestions.js';
 import { isValidName } from './fhem-client.js';
 import { widgetIds } from './widget-ids.js';
+import { pinKeepsCard } from './pin-presentation.js';
 
 const WIDGET_TYPES = [
   ['thermostat', 'Thermostat', 't', 4, 2, { device: '', readings: { actual: '', target: '' } }],
@@ -263,8 +264,13 @@ export class Schema5WidgetPanel {
       const rejectCommand = async () => { throw new Error('Geräteaktionen sind im Widgetdialog gesperrt'); };
       const services = session.services({ ...this.#services, setCommand: rejectCommand, setTarget: rejectCommand });
       services.pages = (this.#state.draft || this.#state.live).pages.map(({ id, title }) => ({ id, title }));
+      let forceCard;
       const invoke = (name) => async (...args) => {
         if (this.#closed || this.#busy) throw new Error('Widget-Bearbeitung ist nicht mehr aktiv');
+        if (forceCard && ['previewWidget', 'saveWidget'].includes(name)
+          && (forceCard.checked !== pinKeepsCard(widget) || Object.hasOwn(widget, 'forceCard'))) {
+          args[0] = {...args[0], forceCard: forceCard.checked};
+        }
         this.#busy = true;
         const dialog = item.shadowRoot.querySelector('[data-dialog]');
         const form = dialog?.querySelector('form');
@@ -308,6 +314,17 @@ export class Schema5WidgetPanel {
         return;
       }
       if (!dialog.open) throw new Error('Widgetdialog wurde nicht geöffnet');
+      const page = (this.#state.draft || this.#state.live).pages.find(entry => entry.id === this.#page);
+      if (page.renderAsPins === true) {
+        const label = element('label', 'Nicht als Pin darstellen (normale Kachel behalten) ');
+        forceCard = element('input');
+        forceCard.type = 'checkbox';
+        forceCard.checked = pinKeepsCard(widget);
+        forceCard.setAttribute('data-force-card', '');
+        label.append(forceCard);
+        const form = dialog.querySelector('form');
+        form.insertBefore(label, form.querySelector('.actions'));
+      }
       this.#root.setAttribute('data-widget-open', '');
       this.#status.textContent = '';
     } catch (error) {

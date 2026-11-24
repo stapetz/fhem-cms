@@ -3,6 +3,9 @@ import { createWidgetElement, dataFor, isLiveWidget } from './widget-factory.js'
 import { cmsPageCanvas, cmsPageNavigationRect, isFreeform, resizeFreeformPage } from './fcui-freeform-layout.js';
 import { fitWidgetTools, mountFreeform } from './fcui-freeform-view.js';
 import { mountFreeformEditor } from './fcui-freeform-edit.js';
+import '../components/cms-pin-badge.js';
+import { pinKeepsCard, pinPresentation } from './pin-presentation.js';
+import { createPinWidgetPopup } from './pin-widget-popup.js';
 
 export function mountSchema5Widgets(GridStack, root, config, pageId, navigation, services, snapshots, editing) {
   if (!navigation || !services || typeof services !== 'object' || !(snapshots instanceof Map)) {
@@ -23,7 +26,9 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   }
   const widgets = new Map(page.widgets.map((widget) => [widget.id, widget]));
   const elements = new Map();
-  const createWidget = id => {
+  let currentSnapshots = snapshots;
+  let currentStale = null;
+  const createCard = id => {
     const widget = widgets.get(id);
     const widgetServices = widget.type === 'fhem-link' ? { ...services,
       pages: config.pages.map(({ id, title }) => ({ id, title })) } : services;
@@ -31,17 +36,31 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       GridStack,
       cardGrid: () => ({columns:Number(config.settings.gridColumns),
         rowHeight:root.getBoundingClientRect().width / Number(config.settings.gridColumns)})} : widgetServices;
-    const element = createWidgetElement(widget, vehicleServices, snapshots, true);
+    const element = createWidgetElement(widget, vehicleServices, currentSnapshots, true);
+    if (isLiveWidget(widget)) element.stale = currentStale;
     if (widget.type === 'fhem-volvoconnect' && editing) {
       element.services = { ...vehicleServices, editing:true,
         showGrid:editing.showGrid,
         ...(typeof editing.onPopupSettings === 'function'
           ? {savePopupSettings: settings => editing.onPopupSettings(id, settings)} : {}) };
     }
+    return element;
+  };
+  const popup = createPinWidgetPopup(root, createCard);
+  const params = new URLSearchParams(root.ownerDocument?.defaultView?.location?.search ?? globalThis.window?.location?.search);
+  const preview = params.get('mode') === 'preview' || params.get('cms-page-settings-preview') === '1';
+  const createWidget = (id, pin = false) => {
+    const widget = widgets.get(id);
+    const element = pin ? root.ownerDocument.createElement('cms-pin-badge') : createCard(id);
+    if (pin) {
+      element.presentation = pinPresentation(widget, Boolean(currentStale));
+      element.addEventListener('pin-open', () => {
+        if (!preview && !editing && !root.inert) popup.open(widget);
+      });
+    }
     elements.set(id, element);
     return element;
   };
-  const params = new URLSearchParams(root.ownerDocument?.defaultView?.location?.search ?? globalThis.window?.location?.search);
   const previewDevice = params.get('mode') === 'preview' && params.get('cms-device');
   const mobilePreview = previewDevice === 'mobile' || previewDevice === 'tablet';
   const gridRoot = !pixel && commonCanvas ? root.ownerDocument.createElement('div') : root;
@@ -55,6 +74,8 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     phone: previewDevice === 'mobile', tablet: previewDevice === 'tablet',
     navigationGrid: config.navigation.grid, columns: Number(config.settings.gridColumns),
     grid: pixel ? undefined : gridRoot,
+    renderPin: pixel && page.renderAsPins === true ? widget => !pinKeepsCard(widget) : undefined,
+    onPresentationChange: () => popup.close(),
   }) : null;
   const freeform = pixel ? frame : null;
   const viewConfig = editing || pixel ? config : {
@@ -237,16 +258,26 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     update(nextSnapshots, staleSince = null) {
       if (destroyed) throw new Error('Raster wurde bereits entfernt');
       if (!(nextSnapshots instanceof Map)) throw new Error('Snapshot-Map erforderlich');
+      currentSnapshots = nextSnapshots;
+      currentStale = staleSince;
+      const updateElement = (id, element) => {
+        const widget = widgets.get(id);
+        if (element.localName === 'cms-pin-badge') {
+          element.presentation = pinPresentation(widget, Boolean(staleSince));
+        } else if (isLiveWidget(widget)) {
+          element.data = dataFor(widget, nextSnapshots);
+          element.stale = staleSince;
+        }
+      };
       for (const [id, widget] of widgets) {
-        if (!isLiveWidget(widget)) continue;
-        const element = elements.get(id);
-        element.data = dataFor(widget, nextSnapshots);
-        element.stale = staleSince;
+        updateElement(id, elements.get(id));
       }
+      popup.update(updateElement);
     },
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      popup.close();
       gridKeys.abort();
       grid?.destroy(false);
       if (grid) root.style.removeProperty?.('height');

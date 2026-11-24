@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-24",
+  "version": "1.26.0-dev",
+  "title": "Zentraler Grundriss-Pin-Wrapper",
+  "changes": [
+    "Gemeinsamer themefaehiger Badge fuer alle 18 Widgettypen mit 48px-Zielen und Rand-Clamping unabhaengig vom Canvas-Massstab. Refs #246.",
+    "Pins oeffnen ihre regulaere Widgetkarte erst bei Aktivierung; Liveupdates und Aufraeumen beim Schliessen bleiben erhalten. Im mobilen Hochformat normale Karten statt Pins.",
+    "Normale Karten je Widget ueber forceCard; Uhr, Text und LinkWidget bleiben standardmaessig Karten. Bildbezug nutzt contain mit sichtbarem Hinweis bei fehlendem oder defektem Bild.",
+    "Reading-Auswahl, direkte Tap/Hold-Schaltsteuerung und Pin-Drag folgen in eigenen Stories. Der Editor arbeitet vorerst mit normalen Kacheln."
+  ]
+}

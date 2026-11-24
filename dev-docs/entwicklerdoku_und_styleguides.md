@@ -152,6 +152,18 @@ Bild mit Canvasbezug und sichtbarem Hinweis. Im mobilen Hochformat normale
 vollständige Widgetkarten als Liste. Tap `<400 ms`, Hold `>=400 ms`,
 Bewegung `>6 px` bricht ab.
 
+Der zentrale Wrapper `cms-pin-badge` und die Freeform-Anbindung sind vorhanden
+(Refs #246). Seine Präsentationsschnittstelle erwartet `label`, `icon`,
+`values: [{value, unit}]`, `state: normal|active|alarm` und optional `stale`.
+Fremde Texte ausschließlich als Text rendern. Die Readingprojektion folgt
+separat; bis dahin neutrale Typsymbole, keine erfundenen Mess-/Statuswerte.
+Aktivierung öffnet zunächst nur die echte normale Karte; keine direkte
+Schaltgeste vor #248. Der Editor bleibt bis #249 in der regulären Kartenansicht.
+`forceCard` wird im gemeinsamen Widgetdialog angeboten, nicht in 18 separaten
+Formularvarianten. Ohne Opt-in keine Änderung normaler Freeform-Seiten.
+Randentscheidung: Pin bis zum Bildrand, normale Karte bei Bedarf ins Canvas
+einpassen; kein Zwang, Pinpositionen auf zulässige Kachelmittelpunkte zu begrenzen.
+
 - Zentraler `cms-pin-badge` mit Shadow DOM oder klar abgegrenzten
   `.cms-pin__*`-Klassen, keine separat nachgebauten Full-Size-Widgets.
   Prozentualer Mittelpunkt, `translate(-50%, -50%)`; Positionen bleiben beim
