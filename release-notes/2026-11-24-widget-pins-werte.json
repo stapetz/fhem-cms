@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-24",
+  "version": "1.27.0-dev",
+  "title": "Livewerte auf Grundriss-Pins anzeigen",
+  "changes": [
+    "Wert-Anzeigen wie Garten zeigen ihr bestehendes Reading automatisch auf dem Pin; Thermostate standardmaessig die Isttemperatur.",
+    "Auf Pin anzeigen neben den festen Readingquellen fuer Wert, Thermostat, Schalter, Status-Symbol, Slider, Select, Tabelle und Solar-/Energie-Widgets.",
+    "Kreis, Pille und Multi-Pille folgen der Auswahl; Einheiten, Liveupdates, fehlende Werte und Stale-Markierung werden beruecksichtigt. Refs #247.",
+    "Konfigurationen werden beim Laden nicht migriert; gespeicherte Auswahl bleibt auch auf normalen Seiten und in Vorlagen erhalten.",
+    "Direkte Tap-/Hold-Bedienung und kompakter Pin-Editor bleiben die naechsten Ausbaustufen."
+  ]
+}

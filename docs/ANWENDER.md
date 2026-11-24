@@ -373,11 +373,25 @@ erst das Veröffentlichen aktiviert sie live. Das Grundrissbild wird dabei
 proportional in die vorhandene Seitenfläche eingepasst. Fehlende oder
 defekte Bilder werden sichtbar gemeldet; dann dient die Seitenfläche als Bezug.
 
-Die erste Ausbaustufe zeigt neutrale Typsymbole. Tippen oder Tastaturaktivierung
+Wert-Anzeigen zeigen ihr vorhandenes Reading automatisch auf dem Pin,
+Thermostate die Isttemperatur. Im Widgetdialog auf einer Pin-Seite wählen Sie
+neben den festen Readingquellen mit **Auf Pin anzeigen**, welche Werte sichtbar
+sind. Kein ausgewählter Wert ergibt einen Kreis, einer eine Pille, mehrere
+eine Multi-Pille. Die kleine Dialogvorschau zeigt sofort die Form mit den
+Readingnamen; die Geräte-Vorschau zeigt die tatsächlichen Werte.
+Werte und Einheiten werden live aktualisiert; fehlende Werte erscheinen als
+„–“, veraltete Daten mit gestricheltem Rahmen. Eine Einheit wird nicht aus dem
+Readingnamen geraten: Für „Garten“ bei Bedarf im Wert-Widget **°C** eintragen.
+Die Auswahl steht für Wert-Anzeige, Thermostat, Schalter, Status-Symbol,
+Schieberegler, Select, Tabelle sowie beide Solar-/Energie-Widgets bereit.
+Ohne feste Live-Readingquellen (etwa freies HTML, Diagramm, Wetter,
+Anrufliste und automatisch aufgebaute Volvo-Karten) bleibt das Typsymbol;
+deren vollständige Inhalte stehen in der normalen Karte.
+Tippen oder Tastaturaktivierung
 öffnet die normale Widgetkarte mit aktuellen Daten; **Schließen** oder
 Escape entfernt sie wieder. Noch kein direktes Schalten vom Pin:
-Geräte bedienen Sie in der geöffneten normalen Karte. Reading-Auswahl und
-direkte Tap-/Hold-Bedienung folgen in weiteren Ausbaustufen.
+Geräte bedienen Sie in der geöffneten normalen Karte. Direkte Tap-/Hold-Bedienung
+folgt in einer weiteren Ausbaustufe.
 Uhr, Text und LinkWidget bleiben standardmäßig normale Karten. Im jeweiligen
 Widgetdialog können Sie mit **Nicht als Pin darstellen (normale Kachel behalten)**
 die Darstellung auf Pin-Seiten ändern.

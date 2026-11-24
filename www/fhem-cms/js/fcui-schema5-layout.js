@@ -1,5 +1,6 @@
 import { validateLinkItems } from './link-widget.js';
 import { validatePinPage } from './pin-layout.js';
+import { validatePinReadings } from './pin-readings.js';
 import { freeformStartRect, isFreeform, resizeFreeformPage, syncSharedFreeformSize, validateFreeformCanvas, validateFreeformWidget } from './fcui-freeform-layout.js';
 
 const NAVIGATION = '__nav';
@@ -91,6 +92,7 @@ function validateLayout(config, includeNavigation = true) {
         throw new Error(`Ungültige oder doppelte Widget-ID auf Seite ${page.id}`);
       }
       ids.add(widget.id);
+      validatePinReadings(widget);
       if (Object.hasOwn(widget, 'forceCard')
         && (!freeform || typeof widget.forceCard !== 'boolean')) {
         throw new Error('forceCard ist nur als Boolean auf Freeform-Seiten erlaubt');

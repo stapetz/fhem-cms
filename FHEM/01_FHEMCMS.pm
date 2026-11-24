@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.26.1-dev';
+our $FHEMCMS_VERSION = '1.27.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1107,6 +1107,7 @@ sub FHEMCMS_ValidateConfig {
         my @targetGrids = $fcui ? ($config->{navigation}{grid}) : ();
         my $widgetExact = sub {
             my ($widget, $where, $required, $optional) = @_;
+            $optional = [@{$optional}, 'showOnPin'] if ($fcui);
             return $exact->($widget, $where, $required, $optional) if (!$freeform);
             return $exact->($widget, $where, ['rect', grep { $_ ne 'grid' } @{$required}],
                 [@{$optional}, 'grid', 'hideOnMobile', 'forceCard']);
@@ -1548,6 +1549,27 @@ sub FHEMCMS_ValidateConfig {
                     return "Ungueltiger Wert fuer readings.$field"
                         if (!$isName->($widget->{readings}{$field}));
                 }
+            }
+
+            if (exists($widget->{showOnPin})) {
+                my $choices = $widget->{showOnPin};
+                return 'Ungueltiger Wert fuer showOnPin' if (ref($choices) ne 'HASH');
+                my %keys;
+                my $type = $widget->{type};
+                if ($type =~ /\A(?:fhem-value|fhem-switch|fhem-icon|fhem-slider|fhem-select)\z/) {
+                    $keys{reading} = 1;
+                } elsif ($type eq 'fhem-table') {
+                    $keys{"rows.$_"} = 1 for (0 .. $#{$widget->{rows}});
+                } elsif ($type eq 'thermostat' || $type eq 'fhem-solarflow' || $type eq 'fhem-solar-energy') {
+                    $keys{"readings.$_"} = 1 for (keys %{$widget->{readings}});
+                    if ($type eq 'fhem-solar-energy') {
+                        for my $index (0 .. $#{$widget->{sections}}) {
+                            $keys{"sections.$index.$_"} = 1 for (keys %{$widget->{sections}[$index]{readings}});
+                        }
+                    }
+                }
+                return 'showOnPin muss konfigurierte Werte auf echte Booleans abbilden'
+                    if (grep { !$keys{$_} || !$isBool->($choices->{$_}) } keys %{$choices});
             }
 
             if ($freeform) {

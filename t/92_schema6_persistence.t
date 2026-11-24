@@ -55,6 +55,9 @@ $next->{pages}[0]{backgroundDim} = 0.25;
 $next->{pages}[0]{widgets} = [{
     id => 'pin', type => 'text', markdown => 'Pin card', forceCard => JSON::PP::false,
     rect => {x => 20, y => 60, w => 100, h => 100},
+}, {
+    id => 'temperature', type => 'fhem-value', device => 'Demo', reading => 'temperature',
+    showOnPin => {reading => JSON::PP::false}, rect => {x => 120, y => 60, w => 80, h => 100},
 }];
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $initial->{token}, 1), qr/veraltet/, 'stale upgrade refused');
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $gridState->{token}), qr/schemaVersion/, 'old writer cannot introduce schema 6');

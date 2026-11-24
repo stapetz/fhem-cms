@@ -35,6 +35,17 @@ export const titleVisibilityStyles = `
     flex: 0 0 auto;
     margin: 0;
   }
+  [data-dialog] .cms-pin-reading-choice {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 48px;
+    grid-column: 1 / -1;
+  }
+  [data-dialog] .cms-pin-reading-choice > input[type="checkbox"] {
+    width: 1.2rem;
+    flex: 0 0 auto;
+  }
 `;
 
 export const dialogGroupStyles = `

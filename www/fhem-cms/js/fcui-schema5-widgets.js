@@ -53,7 +53,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     const widget = widgets.get(id);
     const element = pin ? root.ownerDocument.createElement('cms-pin-badge') : createCard(id);
     if (pin) {
-      element.presentation = pinPresentation(widget, Boolean(currentStale));
+      element.presentation = pinPresentation(widget, Boolean(currentStale), currentSnapshots);
       element.addEventListener('pin-open', () => {
         if (!preview && !editing && !root.inert) popup.open(widget);
       });
@@ -263,7 +263,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       const updateElement = (id, element) => {
         const widget = widgets.get(id);
         if (element.localName === 'cms-pin-badge') {
-          element.presentation = pinPresentation(widget, Boolean(staleSince));
+          element.presentation = pinPresentation(widget, Boolean(staleSince), nextSnapshots);
         } else if (isLiveWidget(widget)) {
           element.data = dataFor(widget, nextSnapshots);
           element.stale = staleSince;
