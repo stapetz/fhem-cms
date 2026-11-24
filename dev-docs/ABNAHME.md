@@ -44,6 +44,12 @@ Zusätzlich: Schema-6-/Persistenztests (133 Perl-Assertions), 27 gezielte
 Node-Tests für Lifecycle/Session/Freeform/Cache/Validierung, Perl-Syntax,
 Build-Check und Release-JSON-Prüfung.
 
+Die vollständige CI deckte eine zu breite Anwendung der Pin-Bildprüfung
+auf normale Freeform-Ansätze auf. Korrektur: Bildflächenberechnung erst
+bei `renderAsPins === true`. Die bestehenden Browsergruppen
+`standard widget typography grows` und `widget titles inherit alignment`
+sowie die Pin-Gruppe wurden danach erfolgreich erneut ausgeführt.
+
 Bewusst separat: Auswahl/Projektion echter Readingwerte und Statuszuordnung
 (#247), direktes Schalten samt 400ms-Hold (#248), kompakter Pin-Editor
 einschließlich Prozent-Drag (#249). Produktions-Pins zeigen zunächst neutrale

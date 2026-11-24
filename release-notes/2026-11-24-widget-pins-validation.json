@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-24",
+  "version": "1.26.1-dev",
+  "title": "Widget-Pins aktivieren und normale Freeform-Seiten erhalten",
+  "changes": [
+    "Pin-Modus ueber Freeform-Seiteneinstellungen aktivierbar, mit kompakten Symbolen, lazy normaler Widgetkarte und normalen Karten im mobilen Hochformat.",
+    "Zusaetzliche Bildflaechenpruefung auf Pin-Seiten begrenzt; bestehende normale Freeform- und Widget-Skalierungsansaetze bleiben unveraendert. Refs #246.",
+    "Reading-Auswahl, direktes Tap/Hold-Schalten und kompakter Pin-Editor bleiben weitere Ausbaustufen."
+  ]
+}
