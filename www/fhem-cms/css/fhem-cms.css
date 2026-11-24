@@ -274,11 +274,11 @@ body:has(.cms-schema5-grid) {
 .cms-page-modal[data-size="sm"] { width: min(96vw, 480px); }
 .cms-page-modal[data-size="lg"] { width: min(96vw, 960px); }
 .cms-page-modal::backdrop { background: rgb(0 0 0 / .6); }
-.cms-page-modal > header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.cms-page-modal > header h2 { margin: 0 0 .5rem; }
-.cms-page-modal > header button { min-width: 48px; min-height: 48px; font: inherit; font-size: 1.5rem;
+.cms-page-modal > header, .cms-pin-widget-popup > header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.cms-page-modal > header h2, .cms-pin-widget-popup > header h2 { margin: 0 0 .5rem; min-width: 0; overflow-wrap: anywhere; }
+.cms-page-modal > header button, .cms-pin-widget-popup > header button { min-width: 48px; min-height: 48px; flex: none; font: inherit; font-size: 1.5rem;
   color: inherit; background: transparent; border: 1px solid var(--cms-border, #43564a); border-radius: .4rem; cursor: pointer; }
-.cms-page-modal > header button:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); }
+.cms-page-modal > header button:focus-visible, .cms-pin-widget-popup > header button:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); }
 .cms-schema5-grid > .grid-stack-item > .grid-stack-item-content {
   inset: 0 var(--cms-view-gap) var(--cms-view-gap) 0 !important;
 }
@@ -2321,7 +2321,6 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   border-radius: 1rem;
 }
 .cms-pin-widget-popup::backdrop { background: var(--cms-backdrop); }
-.cms-pin-widget-popup .cms-button { min-width: 48px; min-height: 48px; }
 .cms-pin-widget-popup-content { height: min(65dvh, 42rem); margin-top: 1rem; }
 .cms-pin-widget-popup-content > * { display: block; width: 100%; height: 100%; }
 .cms-freeform-widget {

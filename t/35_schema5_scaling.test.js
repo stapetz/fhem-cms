@@ -113,6 +113,9 @@ async function testServer() {
 }
 
 for (const [name, fixtures] of [
+  ['Pin interactions use safe tap and hold commands, keyboard access and popup X',
+    [['108_pin_interactions.html', 20], ['108_pin_interactions.html?mode=preview', 5],
+      ['108_pin_interactions.html?input=1', 2]]],
   ['Pin reading choices preserve real widget dialogs, live values and cancel semantics',
     [['106_pin_readings.html', 80]]],
   ['Pin badges preserve themes, physical targets, lazy widgets and portrait cards',
@@ -217,7 +220,7 @@ for (const [name, fixtures] of [
   const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
   try {
     for (const [fixture, minimum] of fixtures) {
-      const interactive = fixture === '104_pin_badges.html?input=1' || [
+      const interactive = fixture === '104_pin_badges.html?input=1' || fixture === '108_pin_interactions.html?input=1' || [
         '49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
         '63_responsive_edges.html', '65_widget_dialogs.html', '88_volvoconnect.html',
         '89_volvoconnect_order.html', '96_popup_scroll.html'].includes(fixture.split('?')[0]);
@@ -235,6 +238,72 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
+        if (fixture === '108_pin_interactions.html?input=1') {
+          const point = () => evaluate('window.pinGestures.point("switch")');
+          const writes = () => evaluate('window.pinGestures.writes()');
+          const popup = () => evaluate('window.pinGestures.popup()');
+          const mouse = async (duration, move = 0) => {
+            const start = await point();
+            await command('Input.dispatchMouseEvent', {type: 'mousePressed', ...start, button: 'left', clickCount: 1});
+            if (move) await command('Input.dispatchMouseEvent',
+              {type: 'mouseMoved', x: start.x + move, y: start.y, button: 'left', buttons: 1});
+            await pause(duration);
+            await command('Input.dispatchMouseEvent',
+              {type: 'mouseReleased', x: start.x + move, y: start.y, button: 'left', clickCount: 1});
+            await pause(80);
+          };
+          await mouse(50);
+          assert.equal(await writes(), 1, 'real short mouse tap sends once');
+          assert.equal(await popup(), false);
+          await evaluate('window.pinGestures.reset()');
+          await mouse(450);
+          assert.equal(await writes(), 0, 'real hold never sends a command');
+          assert.equal(await popup(), true, 'mouse hold opens full card');
+          await evaluate('window.pinGestures.assertX(); window.pinGestures.close()');
+          await mouse(450, 8);
+          assert.equal(await writes(), 0);
+          assert.equal(await popup(), false, 'movement cancels tap and hold');
+          await command('Emulation.setTouchEmulationEnabled', {enabled: true});
+          let start = await point();
+          await command('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{...start, id: 1}]});
+          await command('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+          await pause(80);
+          assert.equal(await writes(), 1, 'real touch tap sends once');
+          await evaluate('window.pinGestures.reset()');
+          start = await point();
+          await command('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{...start, id: 1}]});
+          await pause(450);
+          await command('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+          await pause(80);
+          assert.equal(await writes(), 0, 'touch hold does not leak a click');
+          assert.equal(await popup(), true, `touch hold opens full card: ${JSON.stringify(await evaluate('window.pinGestures.events()'))}`);
+          await evaluate('window.pinGestures.close()');
+          start = await point();
+          await command('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{...start, id: 1}]});
+          await command('Input.dispatchTouchEvent', {type: 'touchCancel', touchPoints: []});
+          await pause(450);
+          assert.equal(await writes(), 0, 'touch cancellation never sends');
+          assert.equal(await popup(), false, 'touch cancellation removes hold timer');
+          await command('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{...start, id: 1}]});
+          await command('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x:start.x+10,y:start.y,id:1}]});
+          await pause(450);
+          await command('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+          assert.equal(await writes(), 0, 'touch movement never sends');
+          assert.equal(await popup(), false, 'touch movement cancels hold');
+          await command('Emulation.setTouchEmulationEnabled', {enabled: false});
+          await command('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9});
+          await command('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9});
+          await command('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Enter', code: 'Enter', text: '\r', windowsVirtualKeyCode: 13});
+          await command('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13});
+          assert.equal(await writes(), 0, 'keyboard opens full card without sending');
+          assert.equal(await popup(), true);
+          await command('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27});
+          await command('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27});
+          await pause(80);
+          assert.equal(await popup(), false, 'native Escape cleans popup');
+          await evaluate('window.pinGestures.finish()');
+          return;
+        }
         if (fixture === '104_pin_badges.html?input=1') {
           const point = await evaluate('window.pinInput.point("w0")');
           await command('Input.dispatchMouseEvent', {type:'mousePressed',...point,button:'left',clickCount:1});

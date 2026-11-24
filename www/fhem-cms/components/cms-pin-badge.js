@@ -1,8 +1,13 @@
+import { bindPinGesture } from '../js/pin-gesture.js';
+
 class CmsPinBadge extends HTMLElement {
   #button;
   #badge;
   #icon;
   #values;
+  #stopGesture;
+  #directAction = false;
+  #label = '';
 
   constructor() {
     super();
@@ -13,7 +18,8 @@ class CmsPinBadge extends HTMLElement {
         * { box-sizing: border-box; }
         button { display: flex; align-items: center; justify-content: center; min-width: 48px; min-height: 48px;
           max-width: inherit; width: 100%; padding: 0; border: 0; background: transparent;
-          color: var(--cms-text); font: inherit; cursor: pointer; border-radius: 999px; }
+          color: var(--cms-text); font: inherit; cursor: pointer; border-radius: 999px;
+          touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
         button:focus-visible { outline: 2px solid var(--cms-accent); outline-offset: -2px; }
         button:active .badge { background: var(--cms-surface-active); }
         .badge { display: flex; align-items: center; gap: 6px; height: 32px; min-width: 32px;
@@ -32,17 +38,47 @@ class CmsPinBadge extends HTMLElement {
         :host([data-state="alarm"]) .badge { border-color: var(--cms-danger); }
         :host([data-state="alarm"]) .icon { color: var(--cms-danger); }
         :host([data-stale]) .badge { border-style: dashed; }
+        [role="status"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
       </style>
       <button type="button" aria-haspopup="dialog">
         <span class="badge circle"><span class="icon" aria-hidden="true"></span>
           <span class="values" aria-hidden="true"></span></span>
-      </button>`;
+      </button><span role="status" aria-live="polite"></span>`;
     this.#button = shadow.querySelector('button');
     this.#badge = shadow.querySelector('.badge');
     this.#icon = shadow.querySelector('.icon');
     this.#values = shadow.querySelector('.values');
-    this.#button.addEventListener('click', () =>
-      this.dispatchEvent(new CustomEvent('pin-open', {bubbles: true, composed: true})));
+  }
+
+  connectedCallback() {
+    this.#stopGesture?.();
+    this.#stopGesture = bindPinGesture(this.#button, {
+      tap: () => this.dispatchEvent(new CustomEvent('pin-action', {bubbles: true, composed: true})),
+      open: () => this.dispatchEvent(new CustomEvent('pin-open', {bubbles: true, composed: true})),
+      direct: () => this.#directAction,
+      enabled: () => this.isConnected && !this.busy,
+    });
+  }
+
+  disconnectedCallback() {
+    this.#stopGesture?.();
+    this.#stopGesture = null;
+  }
+
+  set directAction(value) {
+    this.#directAction = value === true;
+    this.#updateLabel();
+  }
+
+  set feedback(message) {
+    this.shadowRoot.querySelector('[role="status"]').textContent = message;
+  }
+
+  #updateLabel() {
+    const hint = this.#directAction
+      ? 'Tippen: schalten; Gedrückthalten oder Tastatur: Widget öffnen' : 'Widget öffnen';
+    this.#button.setAttribute('aria-label', `${this.#label}: ${hint}`);
+    this.#button.title = `${this.#label}: ${hint}`;
   }
 
   set presentation(value) {
@@ -72,8 +108,8 @@ class CmsPinBadge extends HTMLElement {
     }
     const status = {normal: '', active: 'aktiv', alarm: 'Alarm'}[value.state];
     const label = [value.label, ...values, status, value.stale ? 'Daten veraltet' : ''].filter(Boolean).join(', ');
-    this.#button.setAttribute('aria-label', `${label}: Widget öffnen`);
-    this.#button.title = `${label}: Widget öffnen`;
+    this.#label = label;
+    this.#updateLabel();
   }
 }
 

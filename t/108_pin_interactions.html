@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pin interaction and popup X regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<main id="root" style="width: 1000px"></main><pre id="result">RUNNING</pre>
+<script type="module">
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+
+const root = document.querySelector('#root'), result = document.querySelector('#result');
+const params = new URLSearchParams(location.search);
+let checks = 0, view, writes = [], failure = false, pending = false, finishCommand;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const paint = () => new Promise(resolve => setTimeout(resolve, 30));
+const snapshots = state => new Map([['Demo', [{name: 'Demo', readings: {state, temperature: '21'}}]]]);
+const config = {
+  schemaVersion: 6, settings: {layoutMode: 'grid', gridColumns: 12},
+  navigation: {grid: {col: 1, row: 1, w: 12, h: 1}},
+  pages: [{id: 'home', title: 'Pins', layoutMode: 'freeform', renderAsPins: true,
+    canvas: {width: 1280, height: 800, scaling: 'width', mobileBehavior: 'scale'},
+    widgets: [
+      {id: 'switch', type: 'fhem-switch', title: 'Licht', device: 'Demo', reading: 'state', on: 'on', off: 'off'},
+      {id: 'button', type: 'fhem-button', title: 'Taster', device: 'Demo', command: 'press'},
+      {id: 'value', type: 'fhem-value', title: 'Garten', device: 'Demo', reading: 'temperature'},
+    ].map((widget, index) => ({...widget, rect: {x: 150 + index * 350, y: 200, w: 200, h: 180}}))}],
+};
+const services = {setCommand: async (device, command) => {
+  writes.push({device, command});
+  if (pending) await new Promise(resolve => {finishCommand = resolve;});
+  if (failure) throw new Error('Nicht berechtigt');
+}};
+const mount = () => {
+  view = mountSchema5Widgets(null, root, config, 'home', document.createElement('nav'), services, snapshots('off'));
+};
+const badge = id => root.querySelector(`[data-widget-id="${id}"] cms-pin-badge`);
+const button = id => badge(id).shadowRoot.querySelector('button');
+const point = id => {const r = button(id).getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2};};
+const send = (id, type, fields = {}) => button(id).dispatchEvent(new PointerEvent(type, {
+  bubbles: true, isPrimary: true, pointerId: 1, pointerType: 'mouse', button: 0, clientX: 200, clientY: 200, ...fields,
+}));
+const tap = async id => {
+  const target = button(id);
+  const capture = target.setPointerCapture;
+  target.setPointerCapture = () => {};
+  send(id, 'pointerdown'); send(id, 'pointerup');
+  target.dispatchEvent(new MouseEvent('click', {bubbles: true, detail: 1}));
+  target.setPointerCapture = capture;
+  await paint();
+};
+const close = () => root.querySelector('.cms-pin-widget-popup > header button')?.click();
+const assertX = () => {
+  const dialog = root.querySelector('.cms-pin-widget-popup');
+  check(dialog?.open, 'popup is open');
+  const x = dialog.querySelector(':scope > header button');
+  check(x.textContent === '×' && x.getAttribute('aria-label') === 'Popup schließen', 'only X, with accessible label');
+  const r = x.getBoundingClientRect(), h = dialog.querySelector('header').getBoundingClientRect();
+  check(r.width >= 48 && r.height >= 48 && Math.abs(r.right-h.right) < 1, 'X is 48px at upper right');
+  check(dialog.querySelector('cms-switch,cms-button,cms-value'), 'real widget is mounted');
+};
+try {
+  mount();
+  if (params.has('input')) {
+    const events = [];
+    for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'lostpointercapture', 'click', 'contextmenu', 'blur']) {
+      root.addEventListener(type, event => events.push({
+        type, target: event.composedPath()[0].localName, time: performance.now(), detail: event.detail,
+      }), true);
+    }
+    window.pinGestures = {
+      events: () => events,
+      point, close, assertX, writes: () => writes.length,
+      popup: () => Boolean(root.querySelector('.cms-pin-widget-popup[open]')),
+      reset: () => {writes = []; close(); view.update(snapshots('off'));},
+      finish() {
+        check(writes.length === 0, 'last input sequence does not send an unexpected action');
+        view.destroy();
+        check(!root.querySelector('dialog,cms-pin-badge'), 'input cleanup');
+        result.dataset.result = 'pass'; result.textContent = JSON.stringify({checks});
+      },
+    };
+    result.dataset.ready = 'input';
+  } else {
+    const blocked = params.get('mode') === 'preview';
+    await tap('switch');
+    check(writes.length === (blocked ? 0 : 1), 'short switch tap sends exactly one configured action only live');
+    check(!root.querySelector('dialog'), 'short tap has no popup');
+    if (!blocked) check(writes[0].device === 'Demo' && writes[0].command === 'on', 'off state sends configured on');
+    view.update(snapshots('on'));
+    await tap('switch');
+    if (!blocked) check(writes.at(-1).command === 'off', 'fresh state sends configured off');
+    const before = writes.length;
+    view.update(snapshots('unknown'));
+    await tap('switch');
+    check(writes.length === before, 'unknown state never sends a guessed command');
+    if (!blocked) {assertX(); close();}
+    view.update(snapshots('off'), '2026-11-24T10:00:00');
+    await tap('switch'); await tap('button');
+    check(writes.length === before, 'stale switch and trigger do not send commands');
+    if (!blocked) {assertX(); close();}
+    view.update(snapshots('off'));
+    if (!blocked) {
+      pending = true;
+      await tap('button');
+      check(badge('button').busy && badge('button').getAttribute('aria-busy') === 'true',
+        'pending trigger visibly exposes busy state to assistive technology');
+      await tap('button');
+      check(writes.length === before+1, 'pending trigger blocks duplicate commands');
+      finishCommand();
+      await paint();
+      check(!badge('button').busy, 'confirmed response releases command lock');
+      pending = false;
+      failure = true;
+      await tap('button');
+      check(root.querySelector('[role="alert"]').textContent.includes('Nicht berechtigt'), 'permission error is visible');
+      assertX(); close();
+      failure = false;
+      button('switch').click();
+      check(writes.length === before+2, 'keyboard/assistive activation opens without command');
+      assertX(); close();
+      await tap('value');
+      assertX(); close();
+      check(!root.querySelector('cms-switch,cms-button,cms-value'), 'closing removes lazy widget');
+      pending = true;
+      await tap('button');
+      view.destroy();
+      failure = true;
+      finishCommand();
+      await paint();
+      check(!root.querySelector('dialog'), 'late command failure after page teardown cannot reopen a popup');
+      failure = false;
+      pending = false;
+      mount();
+    }
+    const last = writes.length;
+    const target = button('button');
+    target.setPointerCapture = () => {};
+    send('button', 'pointerdown');
+    view.destroy();
+    await new Promise(resolve => setTimeout(resolve, 450));
+    check(writes.length === last && !root.querySelector('dialog'), 'destroy cancels pending hold');
+    result.dataset.result = 'pass'; result.textContent = JSON.stringify({checks});
+  }
+} catch (error) {
+  result.dataset.result = 'fail'; result.textContent = error.stack || String(error);
+} finally {
+  if (!params.has('input')) view?.destroy();
+}
+</script>

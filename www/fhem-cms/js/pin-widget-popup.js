@@ -15,17 +15,26 @@ export function createPinWidgetPopup(root, createWidget) {
       close();
       const dialog = doc.createElement('dialog');
       dialog.className = 'cms-pin-widget-popup';
+      const header = doc.createElement('header');
       const heading = doc.createElement('h2');
       heading.textContent = widget.title || widget.config?.customTitle || widget.device || widget.id;
       dialog.setAttribute('aria-label', heading.textContent);
       const dismiss = doc.createElement('button');
       dismiss.type = 'button';
-      dismiss.className = 'cms-button';
-      dismiss.textContent = 'Schließen';
+      dismiss.textContent = '×';
+      dismiss.setAttribute('aria-label', 'Popup schließen');
+      dismiss.title = 'Popup schließen';
       dismiss.addEventListener('click', close);
-      dialog.append(heading, dismiss);
+      header.append(heading, dismiss);
+      dialog.append(header);
       dialog.addEventListener('close', () => { if (current?.dialog === dialog) close(); });
-      dialog.addEventListener('click', event => { if (event.target === dialog) close(); });
+      let backdropPress = false;
+      dialog.addEventListener('pointerdown', event => { backdropPress = event.target === dialog; });
+      dialog.addEventListener('pointercancel', () => { backdropPress = false; });
+      dialog.addEventListener('click', event => {
+        if (event.target === dialog && backdropPress) close();
+        backdropPress = false;
+      });
       root.append(dialog);
       current = {dialog, id: widget.id, element: null};
       try {
@@ -45,6 +54,13 @@ export function createPinWidgetPopup(root, createWidget) {
     },
     update(updateWidget) {
       if (current?.element) updateWidget(current.id, current.element);
+    },
+    showError(widget, error) {
+      this.open(widget);
+      const message = doc.createElement('p');
+      message.setAttribute('role', 'alert');
+      message.textContent = `Schalten fehlgeschlagen: ${error.message || String(error)}`;
+      current.dialog.append(message);
     },
     close,
   };
