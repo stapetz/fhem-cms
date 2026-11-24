@@ -20,7 +20,7 @@ function readingControls(dialog, type) {
   return [];
 }
 
-export function mountPinReadingOptions(dialog, widget) {
+export function mountPinReadingOptions(dialog, widget, services = {}) {
   const choices = new WeakMap();
   let initialized = false;
   const preview = dialog.ownerDocument.createElement('fieldset');
@@ -49,7 +49,7 @@ export function mountPinReadingOptions(dialog, widget) {
       (name || control).after(label);
       choices.set(control, checkbox);
     }
-    badge.presentation = {...pinPresentation({...widget, showOnPin: {}}),
+    badge.presentation = {...pinPresentation({...widget, showOnPin: {}}, false, new Map(), services),
       values: readingControls(dialog, widget.type).flatMap(({control}) =>
         control?.value && choices.get(control)?.checked ? [{value: control.value, unit: ''}] : [])};
   };

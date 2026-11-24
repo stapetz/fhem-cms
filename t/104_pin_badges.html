@@ -23,7 +23,7 @@ const until = async (condition, label) => {
 };
 const specs = [
   {type:'thermostat',device:'Demo',readings:{actual:'temperature',target:'desiredTemperature'}},
-  {type:'fhem-value',device:'Demo',reading:'temperature',unit:'°C'},
+  {type:'fhem-value',device:'Demo',reading:'temperature',unit:'°C',icon:'temp_temperature'},
   {type:'fhem-switch',device:'Demo',reading:'state',on:'on',off:'off'},
   {type:'fhem-button',device:'Demo',command:'on'},
   {type:'fhem-clock',style:'digital',showSeconds:false,showDate:false,showWeekday:false},
@@ -46,6 +46,7 @@ const snapshot = temperature => new Map([['Demo', [{name:'Demo', readings:{
   temperature, desiredTemperature:'22', state:'off', power:'100',
 }}]]]);
 const services = {
+  iconUrl: name => `/fhem/icons/${name}`,
   history: async () => ({points:[]}),
   setCommand: () => { writes++; throw new Error('Pin presentation must not send commands'); },
 };
@@ -141,6 +142,30 @@ try {
     let invalid = false;
     try { fixture.presentation = {label:'x',icon:'x',values:[{value:1}],state:'normal'}; } catch { invalid = true; }
     check(invalid, 'invalid presentation is rejected');
+    const loadedIcon = new Image();
+    loadedIcon.src='/fhem/icons/temp_temperature';
+    await loadedIcon.decode();
+    check(loadedIcon.naturalWidth>0,'configured SVG icon loads successfully, not a missing-image mask');
+    for (const theme of ['dark','light','liquid-glass']) {
+      document.documentElement.dataset.cmsTheme=theme;
+      fixture.presentation={label:'Temperatur',icon:'',iconUrl:'/fhem/icons/temp_temperature',state:'normal',
+        values:[{value:'18',unit:'°C'}]};
+      const icon=fixture.shadowRoot.querySelector('.icon');
+      check(!icon.hidden && icon.classList.contains('glyph') && icon.textContent==='',
+        'configured icon uses an SVG mask instead of a text placeholder');
+      check(getComputedStyle(icon).maskImage.includes('/fhem/icons/temp_temperature'),
+        'configured FHEMWEB icon path reaches the mask');
+      check(icon.getBoundingClientRect().width===20 && icon.getBoundingClientRect().height===20
+        && getComputedStyle(icon).backgroundColor!=='rgba(0, 0, 0, 0)','theme mask has visible dimensions and color');
+      check(fixture.shadowRoot.querySelector('.values').textContent==='18 °C','explicit Celsius remains visible');
+      fixture.presentation={label:'Temperatur',icon:'',state:'normal',values:[{value:'18',unit:'°C'}]};
+      check(icon.hidden && !icon.style.getPropertyValue('--icon-url'),'removing icon leaves no gap or stale mask');
+    }
+    for (const iconUrl of ['https://evil.test/icon.svg','//evil.test/icons/x','javascript:alert(1)','/fhem/icons/x");color:red']) {
+      let rejected=false;
+      try {fixture.presentation={label:'x',icon:'',iconUrl,state:'normal',values:[]};} catch {rejected=true;}
+      check(rejected,'foreign or injectable icon URLs are rejected');
+    }
     fixture.remove();
     check(Object.keys(PIN_TYPES).length === specs.length, 'all 18 real widget types covered explicitly');
     for (const spec of specs) check(pinKeepsCard(spec) === ['fhem-clock','text','fhem-link'].includes(spec.type),
@@ -168,6 +193,10 @@ try {
       check(pin.shadowRoot.querySelector('.values').textContent.includes('21.5'),
         'existing value widget shows its current reading on the pin without migration');
       check(!pin.shadowRoot.querySelector('.circle'), 'default value pin is a pill');
+      check(pin.shadowRoot.querySelector('.icon').style.getPropertyValue('--icon-url').includes('/fhem/icons/temp_temperature'),
+        'runtime mounting wires configured icon services at every canvas scale');
+      check(root.querySelector('[data-widget-id="w0"] cms-pin-badge').shadowRoot.querySelector('.icon').hidden,
+        'runtime without an icon does not synthesize a type symbol');
       pin.shadowRoot.querySelector('button').click();
       await paint();
       const dialog = root.querySelector('.cms-pin-widget-popup');

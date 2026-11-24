@@ -88,6 +88,11 @@ async function browserResult(profile, url, child, interact, beforeNavigate) {
 
 async function testServer() {
   const server = createServer(async (request, response) => {
+    if (new URL(request.url, 'http://localhost').pathname === '/fhem/icons/temp_temperature') {
+      response.setHeader('Content-Type', 'image/svg+xml');
+      response.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M8 2h4v11a4 4 0 1 1-4 0z"/></svg>');
+      return;
+    }
     if ([`/t/media/${'a'.repeat(32)}.png`, `/t/media/${'b'.repeat(32)}.png`]
       .includes(new URL(request.url, 'http://localhost').pathname)) {
       response.setHeader('Content-Type', 'image/png');

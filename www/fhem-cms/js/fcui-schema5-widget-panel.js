@@ -323,7 +323,7 @@ export class Schema5WidgetPanel {
       if (!dialog.open) throw new Error('Widgetdialog wurde nicht geöffnet');
       const page = (this.#state.draft || this.#state.live).pages.find(entry => entry.id === this.#page);
       if (page.renderAsPins === true) {
-        pinReadings = mountPinReadingOptions(dialog, widget);
+        pinReadings = mountPinReadingOptions(dialog, widget, services);
         const label = element('label', 'Nicht als Pin darstellen (normale Kachel behalten) ');
         forceCard = element('input');
         forceCard.type = 'checkbox';

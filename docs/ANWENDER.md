@@ -390,7 +390,7 @@ Readingnamen geraten: Für „Garten“ bei Bedarf im Wert-Widget **°C** eintra
 Die Auswahl steht für Wert-Anzeige, Thermostat, Schalter, Status-Symbol,
 Schieberegler, Select, Tabelle sowie beide Solar-/Energie-Widgets bereit.
 Ohne feste Live-Readingquellen (etwa freies HTML, Diagramm, Wetter,
-Anrufliste und automatisch aufgebaute Volvo-Karten) bleibt das Typsymbol;
+Anrufliste und automatisch aufgebaute Volvo-Karten) bleibt der Pin ohne Werte;
 deren vollständige Inhalte stehen in der normalen Karte.
 In der Liveansicht schalten **Schalter und Taster** bei kurzem Tippen unter
 400 ms mit ihrem konfigurierten Befehl. **Halten ab 400 ms** öffnet stattdessen
@@ -415,7 +415,11 @@ gespeichert. Pfeile verschieben um einen Canvaspixel, Shift+Pfeile um zehn.
 Escape oder eine abgebrochene Touchgeste verwirft die laufende Bewegung.
 Neue Widgets starten in der Bildmitte. Normale Kachelgrößen bleiben erhalten;
 bei Rückkehr zur Kachelansicht werden Karten am Canvasrand eingepasst.
-Das `#` auf Wert-Pins ist nur das Typsymbol der Wertanzeige, kein Menü.
+Pins verwenden das im Widget konfigurierte Icon. Ist keines ausgewählt,
+erscheint kein Ersatzzeichen wie `#` oder ein Dreistrich. Konfigurierte
+An-/Aus- und Status-Icons wechseln mit dem aktuellen Reading.
+Für Temperaturwerte muss die gewünschte Einheit (z. B. **°C**) im
+Wert-Widget eingetragen sein; ein Readingname legt keine Einheit fest.
 
 Die zusätzliche Smartphone-Quervorschau zeigt die aktuelle Seite und das wirksame
 Seitenbild. Änderungen an Darstellung, Hintergrund, Rahmen, Titelausrichtung und

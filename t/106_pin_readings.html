@@ -22,7 +22,7 @@ const demo = {name: 'Demo', alias: 'Demo', type: 'MAX', readings: {
 }, sets: 'on off pct:slider,0,1,100 mode:auto,manual desiredTemperature:slider,5,0.5,30'};
 const snapshots = new Map([['Demo', [demo]]]);
 const services = {listAllDevices: async () => [demo], listDevices: async () => [demo],
-  iconUrl: () => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E'};
+  iconUrl: name => `/fhem/icons/${name}`};
 const specs = [
   {type: 'fhem-value', device: 'Demo', reading: 'temperature', unit: '°C'},
   {type: 'thermostat', device: 'Demo', readings: {actual: 'temperature', target: 'desiredTemperature'}},
@@ -57,6 +57,14 @@ async function open(spec, enabled = true) {
   return {item, dialog: item.shadowRoot.querySelector('[data-dialog]')};
 }
 try {
+  {
+    const {dialog} = await open({...specs[0],icon:'temp_temperature'});
+    const badge=dialog.querySelector('cms-pin-badge');
+    check(badge.shadowRoot.querySelector('.icon').style.getPropertyValue('--icon-url').includes('/fhem/icons/temp_temperature'),
+      'widget dialog preview uses the configured Widget icon, not a type symbol');
+    dialog.querySelector('[data-cancel]').click();
+    await paint();
+  }
   for (const spec of specs) {
     const {item, dialog} = await open(spec);
     const before = JSON.stringify(config);

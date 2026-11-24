@@ -286,7 +286,10 @@ kompakte Pins. Anklicken blendet die gemeinsamen Werkzeuge ein; Ziehen
 positioniert bildbezogen in Prozent mit zwei Nachkommastellen. Pfeile bewegen
 um einen Canvaspixel, Shift+Pfeile um zehn; Escape verwirft die laufende Geste.
 Neue Pins starten in der Mitte. Normale Kartenmasse bleiben erhalten.
-Das neutrale '''#''' bei Wertanzeigen ist ein Typsymbol, kein Menue.
+Pins verwenden das konfigurierte Widget-Icon; ohne Icon erscheint kein
+Ersatzzeichen wie '''#''' oder Dreistrich. Konfigurierte Zustandsicons folgen
+dem aktuellen Reading. Einheiten wie '''°C''' werden im Wert-Widget eingetragen,
+nicht aus dem Readingnamen geraten.
 
 === Theme-Manager und Hintergrundbilder ===
 
