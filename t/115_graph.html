@@ -75,6 +75,17 @@ try {
   const axisRight = form.elements.axisLabelRight.getBoundingClientRect();
   check(axisLeft.top !== axisRight.top || axisRight.left - axisLeft.right >= 11,
     'left and right axis labels have adequate spacing');
+  check([...root.querySelector('.axis-settings').querySelectorAll('input')].map(input => input.name).join(',')
+    === 'axisLabelX,axisLabelLeft,axisLabelRight', 'axis labels start with X and then both Y axes');
+  const granularityBox = form.elements.granularity.closest('label').getBoundingClientRect();
+  const gridBox = form.elements.showGrid.closest('label').getBoundingClientRect();
+  check(Math.abs(granularityBox.top - gridBox.top) < 1 && gridBox.left >= granularityBox.right,
+    'grid checkbox is beside granularity');
+  const formatControl = fields.querySelector('[data-format]');
+  check(formatControl.tagName === 'SELECT' && formatControl.options.length === 9
+    && [...formatControl.options].map(option => option.value).join(',')
+      === ',int,round(0),round(1),round(2),round(3),round(4),round(5),round(6)',
+    'format selector offers every supported format');
   const deviceBox = fields.querySelector('[data-device]').getBoundingClientRect();
   const statusBox = fields.querySelector('[data-row-status]').getBoundingClientRect();
   check(statusBox.top >= deviceBox.bottom && Math.abs(statusBox.left - deviceBox.left) < 1,
@@ -100,8 +111,16 @@ try {
   form.elements.chartType.dispatchEvent(new Event('change', {bubbles:true}));
   check(!root.querySelector('[data-aggregation]').hidden, 'pie aggregation shown for pie charts');
   await until(() => root.querySelectorAll('[data-preview] path').length === 2, 'pie preview missing');
-  check(root.querySelector('[data-preview] title').textContent.includes('2.50'),
-    'pie displays the formatted raw average instead of the last value');
+  const pieShape = root.querySelector('[data-preview] path');
+  const pieBox = root.querySelector('[data-preview]').getBoundingClientRect();
+  pieShape.onpointermove({clientX:pieBox.left + pieBox.width / 2});
+  check(!root.querySelector('[data-preview-tooltip]').hidden
+    && root.querySelector('[data-preview-tooltip]').textContent.includes('2.50')
+    && pieShape.getAttribute('aria-label').includes('2.50') && !pieShape.querySelector('title'),
+    'pie hover displays the formatted raw average without a native tooltip');
+  pieShape.onpointerleave();
+  check(root.querySelector('[data-preview-tooltip]').hidden, 'pie tooltip hides after pointer leaves');
+  root.querySelector('[data-format]').append(new Option('invalid', 'round(7)'));
   root.querySelector('[data-format]').value = 'round(7)';
   let badFormat = false;
   try { graph.collect(); } catch { badFormat = true; }
@@ -168,6 +187,11 @@ try {
     && plot.querySelector('polygon'), 'filled dashed lines and configured width are drawn');
   check(plot.textContent.includes('Temperatur') && plot.textContent.includes('Leistung')
     && plot.textContent.includes('Zeit') && plot.textContent.includes('200'), 'both axes have independent ranges and labels');
+  const tickTexts = axis => [...plot.querySelectorAll(`[data-axis-tick="${axis}"]`)].map(node => node.textContent);
+  check(tickTexts('left')[0] === '-1' && tickTexts('right')[0] === '100.00'
+    && tickTexts('right')[4] === '200.00', 'each axis uses its first visible series format');
+  check(!plot.querySelector('circle title') && plot.querySelector('circle[aria-label]'),
+    'line points do not cause a second native browser tooltip');
   check(!plot.querySelector('line[opacity="0.2"]'), 'grid can be hidden');
   const box = plot.getBoundingClientRect();
   plot.onpointermove({clientX:box.left + box.width / 2});
@@ -176,6 +200,40 @@ try {
   check(JSON.stringify(decoratedData) === rawData, 'display formatting does not modify the source values');
   check(parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) > 16,
     'tooltip uses a larger font');
+  graph.style.setProperty('--cms-freeform-scale', '.5');
+  graph.style.transformOrigin = 'top left';
+  graph.style.transform = 'scale(.5)';
+  const scaledBox = plot.getBoundingClientRect();
+  plot.onpointermove({clientX:scaledBox.left + scaledBox.width * .75});
+  const tooltip = root.querySelector('[data-tooltip]');
+  check(parseFloat(getComputedStyle(tooltip).fontSize) * .5 >= 17.5,
+    'live tooltip stays readable under canvas scaling');
+  check(tooltip.textContent.includes('Dach: 2') && tooltip.textContent.includes('Garten: 200.00'),
+    'scaled pointer maps to the correct values');
+  check(parseFloat(tooltip.style.left) <= plot.clientWidth - tooltip.offsetWidth + 1,
+    'scaled tooltip remains within the plot');
+  check(parseFloat(getComputedStyle(root.querySelector('[data-preview-tooltip]')).fontSize) < 20,
+    'canvas scaling does not enlarge the modal preview tooltip');
+  graph.style.removeProperty('--cms-freeform-scale');
+  graph.style.transform = '';
+  graph.draw({...decorated, series:[decorated.series[0], {...decorated.series[1], axis:'left'}]},
+    decoratedData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set([0]));
+  check(tickTexts('left')[0] === '100.00', 'hiding the first series selects the next visible axis format');
+  const precise = {...decorated, series:decorated.series.map(row => ({...row, format:'round(6)'}))};
+  graph.draw(precise, decoratedData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+  check([...plot.querySelectorAll('[data-axis-tick]')].every(node => {
+    const textBox = node.getBBox();
+    return textBox.x >= -0.5 && textBox.x + textBox.width <= plot.viewBox.baseVal.width + 0.5;
+  }), 'six-decimal axis labels fit within the plot');
+  graph.draw({...decorated, chartType:'pie'}, [
+    {points:[[1000,1.5]], summary:{last:1.5,average:1.5}},
+    {points:[[1000,2.5]], summary:{last:2.5,average:2.5}},
+  ], '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+  const livePie = plot.querySelector('path');
+  livePie.onpointermove({clientX:plot.getBoundingClientRect().left + 20});
+  check(!tooltip.hidden && tooltip.textContent.includes('Dach: 1'),
+    'live pie uses the formatted custom tooltip');
+  graph.draw(decorated, decoratedData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
   const oldCapture = plot.setPointerCapture;
   plot.setPointerCapture = () => {};
   plot.onpointerdown({button:0, pointerId:1, clientX:box.left + box.width * .35});

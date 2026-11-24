@@ -13,6 +13,9 @@ const GRANULARITIES = { auto: 'Automatisch', raw: 'Rohdaten', '15m': '15 Minuten
 const TYPES = { line: 'Linien', stack: 'Gestapelt', pie: 'Torte' };
 const SOURCES = { auto: 'Automatisch', dblog: 'DbLog', filelog: 'FileLog' };
 const LINE_STYLES = {solid:'Durchgezogen', dashed:'Gestrichelt', dotted:'Gepunktet', points:'Nur Punkte'};
+const FORMATS = {'':'Unverändert', int:'Ganzzahl (abschneiden)',
+  ...Object.fromEntries(Array.from({length:7}, (_, digits) =>
+    [`round(${digits})`, `Runden: ${digits} Nachkommastellen`]))};
 
 function dateInput(timestamp) {
   const date = new Date(timestamp * 1000);
@@ -159,6 +162,9 @@ class FHEMCMSGraph extends HTMLElement {
           max-width:100%; overflow-wrap:anywhere; }
         .graph-tooltip div { display:flex; align-items:center; gap:.55rem; }
         .graph-tooltip i { width:.9rem; height:.9rem; border-radius:.2rem; flex:none; }
+        [data-tooltip] { font-size:max(1.1rem, calc(1.1rem / var(--cms-freeform-scale, 1)));
+          padding:max(.8rem, calc(.8rem / var(--cms-freeform-scale, 1)))
+            max(1rem, calc(1rem / var(--cms-freeform-scale, 1))); }
         .status { margin:0; color:var(--cms-muted); }
         .status[data-error] { color:var(--cms-danger); }
         dialog { width:min(94vw,48rem); max-height:94vh; overflow:auto; padding:1rem; color:var(--cms-text);
@@ -166,7 +172,13 @@ class FHEMCMSGraph extends HTMLElement {
         dialog::backdrop { background:var(--cms-backdrop); }
         form { display:grid; gap:.7rem; }
         label { display:grid; gap:.2rem; }
-        .settings { display:grid; grid-template-columns:repeat(auto-fit,minmax(10rem,1fr)); gap:.75rem; }
+        .settings { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; }
+        .granularity-grid { grid-column:span 2; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+        .axis-settings { grid-template-columns:repeat(3,minmax(0,1fr)); }
+        @media (max-width:600px) {
+          .settings { grid-template-columns:repeat(2,minmax(0,1fr)); }
+          .axis-settings { grid-template-columns:1fr; }
+        }
         form label { min-width:0; }
         form input:not([type=checkbox]), form select { width:100%; min-width:0; height:40px; }
         form input[type=checkbox] { width:24px; height:24px; justify-self:start; }
@@ -199,15 +211,19 @@ class FHEMCMSGraph extends HTMLElement {
         <label>Titel<input name="title" maxlength="64"></label>
         <div class="settings">
           <label>Diagrammtyp<select name="chartType"></select></label>
-          <label data-aggregation>Tortenwerte<select name="aggregation"></select></label>
           <label>Zeitraum<select name="range"></select></label>
-          <label>Granularität<select name="granularity"></select></label>
+          <div class="granularity-grid">
+            <label>Granularität<select name="granularity"></select></label>
+            <label>Raster anzeigen<input type="checkbox" name="showGrid"></label>
+          </div>
+          <label data-aggregation>Tortenwerte<select name="aggregation"></select></label>
           <label data-config-from hidden>Von<input type="datetime-local" step="1" name="from"></label>
           <label data-config-to hidden>Bis<input type="datetime-local" step="1" name="to"></label>
+        </div>
+        <div class="settings axis-settings">
           <label>X-Achse<input name="axisLabelX" maxlength="64"></label>
           <label>Y-Achse links<input name="axisLabelLeft" maxlength="64"></label>
           <label>Y-Achse rechts<input name="axisLabelRight" maxlength="64"></label>
-          <label>Raster anzeigen<input type="checkbox" name="showGrid"></label>
         </div>
         <section data-rows></section>
         <button type="button" data-add>Datenreihe hinzufügen</button>
@@ -335,7 +351,15 @@ class FHEMCMSGraph extends HTMLElement {
     target.setAttribute('viewBox', `0 0 ${width} 220`);
     target.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     target.onpointermove = target.onpointerleave = target.onpointerdown = target.onpointerup = target.onpointercancel = null;
-    target.parentElement.querySelector('.graph-tooltip').hidden = true;
+    const tooltip = target.parentElement.querySelector('.graph-tooltip');
+    tooltip.hidden = true;
+    const positionTooltip = event => {
+      tooltip.hidden = false;
+      const box = target.getBoundingClientRect();
+      const localX = (event.clientX - box.left) * target.clientWidth / box.width;
+      tooltip.style.left = `${Math.max(0, Math.min(target.clientWidth - tooltip.offsetWidth, localX + 12))}px`;
+      tooltip.style.top = '8px';
+    };
     target.replaceChildren();
     legend.replaceChildren();
     config.series.forEach((row, index) => {
@@ -381,7 +405,13 @@ class FHEMCMSGraph extends HTMLElement {
           const x2 = width/2 + radius * Math.cos(next), y2 = 110 + radius * Math.sin(next);
           shape = svg('path', {d:`M ${width/2} 110 L ${x1} ${y1} A ${radius} ${radius} 0 ${next-angle > Math.PI ? 1 : 0} 1 ${x2} ${y2} Z`, fill:item.row.color});
         }
-        shape.append(svg('title', {}, `${label(item.row)}: ${formatValue(value, item.row.format)}`));
+        const description = `${label(item.row)}: ${formatValue(value, item.row.format)}`;
+        shape.setAttribute('aria-label', description);
+        shape.onpointermove = event => {
+          tooltip.textContent = description;
+          positionTooltip(event);
+        };
+        shape.onpointerleave = () => { tooltip.hidden = true; };
         target.append(shape);
         angle = next;
       });
@@ -416,18 +446,35 @@ class FHEMCMSGraph extends HTMLElement {
       if (axis.low === axis.high) { axis.low -= 1; axis.high += 1; }
       if (!Number.isFinite(axis.high - axis.low)) throw new Error('Wertebereich ist zu groß');
     }
-    const left = 44, right = width - (limits.right.low === Infinity ? 4 : 44);
+    const axisFormats = Object.fromEntries(['left','right'].map(axis =>
+      [axis, visible.find(item => (item.row.axis || 'left') === axis)?.row.format || '']));
+    const ticks = {left:[], right:[]};
+    for (const axis of ['left','right']) {
+      if (limits[axis].low === Infinity) continue;
+      for (let i = 0; i <= 4; i++) {
+        const v = limits[axis].low + (limits[axis].high - limits[axis].low) * i / 4;
+        const text = svg('text', {y:193 - 175 * i / 4, 'text-anchor':axis === 'left' ? 'end' : 'start',
+          'data-axis-tick':axis}, axisFormats[axis] ? formatValue(v, axisFormats[axis]) : Number(v.toPrecision(4)));
+        target.append(text);
+        ticks[axis].push(text);
+      }
+    }
+    const tickWidth = axis => Math.max(0, ...ticks[axis].map(text => text.getComputedTextLength()));
+    const leftMargin = Math.max(44, tickWidth('left') + 8);
+    const rightMargin = ticks.right.length ? Math.max(44, tickWidth('right') + 8) : 4;
+    const marginScale = Math.min(1, (width - 20) / (leftMargin + rightMargin));
+    const left = leftMargin * marginScale, right = width - rightMargin * marginScale;
+    for (const axis of ['left','right']) {
+      for (const text of ticks[axis]) {
+        text.setAttribute('x', axis === 'left' ? left-4 : right+4);
+        if (marginScale < 1) text.style.fontSize = `${10 * marginScale}px`;
+      }
+    }
     const x = t => left + (t - from) / (to - from) * (right - left);
     const y = (v, axis = 'left') => 190 - (v - limits[axis].low) / (limits[axis].high - limits[axis].low) * 175;
     for (let i = 0; i <= 4; i++) {
       const position = 190 - 175 * i / 4;
       if (config.showGrid !== false) target.append(svg('line', {x1:left, x2:right, y1:position, y2:position, stroke:'currentColor', opacity:.2}));
-      for (const axis of ['left','right']) {
-        if (limits[axis].low === Infinity) continue;
-        const v = limits[axis].low + (limits[axis].high - limits[axis].low) * i / 4;
-        target.append(svg('text', {x:axis === 'left' ? left-4 : right+4, y:position+3,
-          'text-anchor':axis === 'left' ? 'end' : 'start'}, Number(v.toPrecision(4))));
-      }
     }
     if (config.showGrid !== false) {
       for (let i = 0; i <= 4; i++) {
@@ -468,13 +515,12 @@ class FHEMCMSGraph extends HTMLElement {
           fill:'none', stroke:item.row.color, 'stroke-width':item.row.lineWidth ?? 4, 'vector-effect':'non-scaling-stroke',
           ...(style === 'dashed' ? {'stroke-dasharray':'8 5'} : style === 'dotted' ? {'stroke-dasharray':'2 4'} : {})}));
         for (const point of row) {
-          const circle = svg('circle', {cx:x(point[0]), cy:valueY(point[1]), r:style === 'points' ? 3 : 1, fill:item.row.color});
-          circle.append(svg('title', {}, `${label(item.row)}: ${formatValue(point[1], item.row.format)} · ${new Date(point[0]*1000).toLocaleString('de-DE')}`));
+          const circle = svg('circle', {cx:x(point[0]), cy:valueY(point[1]), r:style === 'points' ? 3 : 1, fill:item.row.color,
+            'aria-label':`${label(item.row)}: ${formatValue(point[1], item.row.format)} · ${new Date(point[0]*1000).toLocaleString('de-DE')}`});
           target.append(circle);
         }
       }
     });
-    const tooltip = target.parentElement.querySelector('.graph-tooltip');
     const crosshair = svg('line', {y1:15, y2:190, stroke:'currentColor', 'stroke-dasharray':'3 3', hidden:''});
     const selection = svg('rect', {y:15, height:175, fill:'currentColor', opacity:.15, hidden:''});
     target.append(crosshair, selection);
@@ -508,9 +554,7 @@ class FHEMCMSGraph extends HTMLElement {
         entry.append(swatch, document.createTextNode(`${label(item.row)}: ${formatValue(nearest[1], item.row.format)} · ${new Date(nearest[0] * 1000).toLocaleString('de-DE')}`));
         tooltip.append(entry);
       });
-      tooltip.hidden = false;
-      tooltip.style.left = `${Math.max(0, Math.min(target.clientWidth - tooltip.offsetWidth, event.clientX - target.getBoundingClientRect().left + 12))}px`;
-      tooltip.style.top = '8px';
+      positionTooltip(event);
     };
     target.onpointerleave = () => { if (dragStart === null) { crosshair.setAttribute('hidden', ''); tooltip.hidden = true; } };
     target.onpointerdown = selector === '[data-svg]' ? event => {
@@ -581,7 +625,7 @@ class FHEMCMSGraph extends HTMLElement {
       <label>Legende<input data-label maxlength="64"></label>
       <label>Y-Achse<select data-axis></select></label>
       <label>Linientyp<select data-line-style></select></label>
-      <label>Format<input data-format maxlength="8" placeholder="z. B. round(2)"></label>
+      <label>Format<select data-format></select></label>
       <div class="line-controls">
         <label>Linienstärke<input data-line-width type="number" min="1" max="10" step="1"></label>
         <label>Farbe<input data-color type="color"></label>
@@ -591,7 +635,7 @@ class FHEMCMSGraph extends HTMLElement {
     const $ = selector => row.querySelector(selector);
     $('[data-device]').value = series.device || '';
     $('[data-label]').value = series.label || '';
-    $('[data-format]').value = series.format || '';
+    $('[data-format]').replaceChildren(...options(FORMATS, series.format || ''));
     $('[data-color]').value = series.color || COLORS[container.children.length % COLORS.length];
     $('[data-axis]').replaceChildren(...options({left:'Links',right:'Rechts'}, series.axis || 'left'));
     $('[data-line-style]').replaceChildren(...options(LINE_STYLES, series.lineStyle || 'solid'));

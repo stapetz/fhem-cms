@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-25",
+  "version": "1.34.2-dev",
+  "title": "Graph-Anzeige und Formatauswahl",
+  "changes": [
+    "Graphdialog: Formate auswaehlbar, Raster neben Granularitaet und Achsenbeschriftungen zusammengefasst. Refs #259.",
+    "Y-Achsen nutzen das Format der ersten sichtbaren Datenreihe; Live-Mauswerte bleiben bei Canvas-Skalierung lesbar."
+  ]
+}

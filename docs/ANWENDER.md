@@ -297,10 +297,12 @@ als Kalenderzeiträume ausgewertet. Für jede Reihe sind Achsseite, Linientyp,
 Linienstärke und eine Flächenfüllung konfigurierbar; die Y-Achsen links und
 rechts besitzen getrennte automatische Wertebereiche. Beim Bewegen der Maus
 zeigt das Diagramm die jeweils nächstgelegenen Messwerte und Zeitpunkte.
-Pro Datenreihe kann das optionale Feld **Format** die angezeigten Werte
-formatieren: `round(0)` bis `round(6)` rundet auf die angegebene Zahl
-Nachkommastellen; `int` schneidet Nachkommastellen ab. Ein leeres Feld
-zeigt den Wert unverändert. Berechnungen und Kurven bleiben unverändert.
+Pro Datenreihe ist unter **Format** die Anzeige wählbar: Runden auf null bis
+sechs Nachkommastellen (`round(0)` bis `round(6)`), Abschneiden (`int`) oder
+unverändert. Jede Y-Achse verwendet das Format ihrer ersten sichtbaren
+Datenreihe; beim Ausblenden wechselt es gegebenenfalls. Ohne Format bleibt
+die automatische Achsenbeschriftung erhalten. Berechnungen und Kurven bleiben
+unverändert.
 
 ### Gerät zuerst hinzufügen (ab 1.11.0)
 
