@@ -113,6 +113,8 @@ async function testServer() {
 }
 
 for (const [name, fixtures] of [
+  ['Pin reading choices preserve real widget dialogs, live values and cancel semantics',
+    [['106_pin_readings.html', 80]]],
   ['Pin badges preserve themes, physical targets, lazy widgets and portrait cards',
     [['104_pin_badges.html', 400], ['104_pin_badges.html?input=1', 2],
       ['104_pin_badges.html?preview=1&mode=preview', 2]]],

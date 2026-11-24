@@ -120,9 +120,9 @@ Vertrag dar: Kreis ohne Werte, Pille mit einem Wert, Multi-Pille mit mehreren
 Werten; neutrale, aktive, Alarm- und Stale-Zustände über gemeinsame Theme-Tokens.
 Werte und Zustände werden als typisiertes Präsentationsobjekt übergeben, niemals
 als HTML. `pin-presentation.js` erfasst alle 18 tatsächlichen Widgettypen.
-Die Reading-/Statusprojektion aus Geräten folgt in #247; bis dahin zeigen
-Produktions-Pins ein neutrales Typsymbol ohne Readingwerte. Keine vermeintlich
-aktuellen Ersatzwerte oder geratene Gerätezustände anzeigen.
+Die Readingprojektion aus Geräten ist mit #247 angeschlossen (siehe unten).
+Typen ohne feste Live-Readingquellen bleiben Typsymbole. Keine vermeintlich
+aktuellen Ersatzwerte oder geratenen Gerätezustände anzeigen.
 
 Freeform kann den Wrapper ohne vorab erzeugte Vollwidgets darstellen.
 Aktivierung mit Maus, Touch oder Tastatur öffnet erst dann das reguläre Widget
@@ -161,8 +161,48 @@ ohne eine Konfiguration zu schreiben. Abbrechen verwirft den Schalterzustand,
 Speichern erhält alle normalen Kachelrechtecke unverändert. Ohne Änderung
 bleibt das optionale Feld abwesend; ein explizites Ausschalten speichert `false`.
 Rasterseiten zeigen den Schalter nicht und erhalten keine Pin-Felder.
-Der Dialog benennt die vorläufige Kartenbearbeitung und ausstehenden
-Reading-/Direktschaltfunktionen ausdrücklich.
+Der Dialog benennt die vorläufige Kartenbearbeitung und ausstehende
+Direktschaltfunktion ausdrücklich.
+
+**Reading-Auswahl und Livewerte (Refs #247):** `pin-readings.js` normalisiert
+die tatsächlichen Datenmodelle, ohne ein universelles `readings`-Array
+anzunehmen. Unterstützt sind Wert, Thermostat, Schalter, Status-Symbol,
+Slider, Select, Tabelle, SolarFlow (altes gemeinsames Device und einzelne
+Quellen) sowie Solar/Energie einschließlich Ertragskarten.
+Das optionale Widgetobjekt `showOnPin` ordnet jedem konfigurierten Wert
+einen echten Boolean zu: `reading` beim Einzelwert,
+`readings.actual`/`readings.target` usw. bei benannten Quellen,
+`rows.0` usw. bei Tabellen und `sections.0.day` usw. bei Ertragskarten.
+Diese stabile Normalisierung erhält vorhandene String-/Quellenmodelle;
+keine Änderung ihrer Typen und keine Lade-Migration. JS und Perl erlauben
+ausschließlich vorhandene Quellen und echte Booleans. Das Feld ist auch
+in Schema 5 gültig, damit Seitenwechsel ins Raster und Blueprints die
+inaktive Auswahl erhalten; Schema 4 erhält keine neuen Felder.
+
+Ohne explizite Auswahl zeigen Wert-Anzeigen ihr Reading, Thermostate
+die Isttemperatur; übrige Quellen bleiben aus. Dies gilt ebenso für
+unveränderten Bestand, ohne ihn beim Laden zurückzuschreiben. Die gemeinsame
+Dialoganbindung `pin-reading-options.js` ergänzt auf Pin-Seiten die Checkbox
+neben jeder festen Readingquelle und eine sofortige Formvorschau mit
+Readingnamen, ausdrücklich ohne vorgetäuschte Livewerte. Die Geräte-Vorschau
+verwendet aktuelle Snapshots. Dynamisch hinzugefügte/entfernte Tabellenzeilen
+und Solar-Ertragskarten behalten ihre Auswahl am jeweiligen Control.
+Speichern/Preview nutzen die vorhandene Sitzung; Abbrechen schreibt nichts.
+Ohne Pin-Modus fehlen die Controls, gespeicherte Auswahl bleibt erhalten.
+
+Die zentrale Projektion aktualisiert Inline-Pins und geöffnete echte Karten
+aus derselben Snapshot-Map; keine unsichtbaren Vollwidgets, zusätzlichen
+Abonnements oder Netzwerkabrufe. Datumsformat, benannte Einheiten, numerische
+Thermostat-/Slider- und Solarformate folgen der normalen Karte. Fehlende Werte
+werden als „–“ ohne Einheit gezeigt, Null bleibt sichtbar, Stale ist markiert.
+Keine Einheit aus Readingnamen ableiten. Schalter nutzen nur ihren exakt
+konfigurierten bestätigten On-Wert als aktiven Zustand; keine geratenen Alarme.
+Freies HTML/Text, Uhr/Link, historische Diagramme, Wetter, Anruflisten und
+automatisch aufgebaute Volvo-Karten haben keine feste einzelne
+Live-Readingauswahl in diesem Vertrag und bleiben Typsymbole bzw. normale
+Karten nach `forceCard`. Ihre Inhalte sind weiter in der vollständigen Karte
+verfügbar; keine beliebigen internen oder historischen Werte zu Livewerten
+umdeuten. Direkte Tap-/Hold-Bedienung (#248) und Pin-Editor (#249) bleiben offen.
 
 - **Umfang:** Kein neuer Floorplan-Seitentyp. Freeform-Seiten erhalten optional
   `renderAsPins` (Boolean, Standard `false`) und `backgroundDim` (`0` bis `0.5`,

@@ -1,4 +1,5 @@
 import { WidgetLayoutError } from './fcui-schema5-draft.js';
+import { preservePinReadings } from './pin-readings.js';
 
 function sameGrid(left, right) {
   const keys = ['col', 'row', 'w', 'h'];
@@ -118,7 +119,7 @@ export class Schema5WidgetSession {
         candidate.forceCard = this.#widget.forceCard;
       }
     }
-    return candidate;
+    return preservePinReadings(candidate, this.#widget);
   }
 
   #preview(widget) {

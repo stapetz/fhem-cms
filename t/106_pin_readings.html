@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pin reading choices in real widget dialogs</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<main id="root"></main><pre id="result">RUNNING</pre>
+<script type="module">
+import { Schema5WidgetPanel } from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
+import { pinReadingValues } from '../www/fhem-cms/js/pin-readings.js';
+
+const root = document.querySelector('#root'), result = document.querySelector('#result');
+let checks = 0, panel;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const paint = () => new Promise(resolve => setTimeout(resolve, 50));
+const until = async (condition, message) => {
+  for (let i = 0; i < 100; i++) { if (condition()) return; await paint(); }
+  throw new Error(message);
+};
+const demo = {name: 'Demo', alias: 'Demo', type: 'MAX', readings: {
+  temperature: '-0.5', desiredTemperature: '22', humidity: '55', power: '123', state: 'on', pct: '50', mode: 'auto',
+}, sets: 'on off pct:slider,0,1,100 mode:auto,manual desiredTemperature:slider,5,0.5,30'};
+const snapshots = new Map([['Demo', [demo]]]);
+const services = {listAllDevices: async () => [demo], listDevices: async () => [demo],
+  iconUrl: () => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E'};
+const specs = [
+  {type: 'fhem-value', device: 'Demo', reading: 'temperature', unit: '°C'},
+  {type: 'thermostat', device: 'Demo', readings: {actual: 'temperature', target: 'desiredTemperature'}},
+  {type: 'fhem-switch', device: 'Demo', reading: 'state', on: 'on', off: 'off'},
+  {type: 'fhem-icon', device: 'Demo', reading: 'state', states: [{value: 'on', icon: 'general_an', color: '#ffffff'}]},
+  {type: 'fhem-slider', device: 'Demo', reading: 'pct', command: 'pct'},
+  {type: 'fhem-select', device: 'Demo', reading: 'mode', command: 'mode', mode: 'dropdown'},
+  {type: 'fhem-table', rows: [{device: 'Demo', reading: 'temperature', unit: '°C'},
+    {device: 'Demo', reading: 'humidity', unit: '%'}]},
+  {type: 'fhem-solarflow', device: 'Demo', readings: {pv: 'power', soc: 'humidity'}},
+  {type: 'fhem-solar-energy', readings: {pv: {device: 'Demo', reading: 'power'}},
+    sections: [{label: 'Dach', readings: {day: {device: 'Demo', reading: 'power'}}}]},
+];
+let saved, writes, previews, config;
+async function open(spec, enabled = true) {
+  saved = null; writes = 0; previews = 0;
+  config = {schemaVersion: 6, settings: {layoutMode: 'grid', gridColumns: 12},
+    navigation: {grid: {col: 1, row: 1, w: 12, h: 1}},
+    pages: [{id: 'home', title: 'Start', layoutMode: 'freeform', renderAsPins: enabled,
+      canvas: {width: 1280, height: 800}, widgets: [
+        {...structuredClone(spec), id: 'widget', title: 'Test', rect: {x: 100, y: 100, w: 300, h: 200}},
+      ]}]};
+  const controller = {
+    snapshot: () => ({live: config, draft: null, token: 'test'}),
+    saveWidget: async (_page, widget) => { saved = widget; writes++; return {live: config}; },
+    previewWidget: async () => { previews++; return config; }, deleteWidget: async () => ({}),
+  };
+  panel = new Schema5WidgetPanel({root, controller, services, pageId: 'home', token: 'test',
+    widgetId: 'widget', onClose() {}});
+  await until(() => root.hasAttribute('data-widget-open'), `dialog ready: ${spec.type}: ${root.textContent}`);
+  const item = root.querySelector('.cms-widget-dialog-host').firstElementChild;
+  return {item, dialog: item.shadowRoot.querySelector('[data-dialog]')};
+}
+try {
+  for (const spec of specs) {
+    const {item, dialog} = await open(spec);
+    const before = JSON.stringify(config);
+    const inputs = [...dialog.querySelectorAll('[data-show-on-pin]')];
+    check(inputs.length > 0, `${spec.type}: checkbox adjacent to configured reading controls`);
+    check(inputs.every(input => input.closest('label').textContent.includes('Auf Pin anzeigen')),
+      `${spec.type}: shared label`);
+    check(inputs.every(input => input.closest('label').getBoundingClientRect().height >= 48),
+      `${spec.type}: usable option target`);
+    check(dialog.querySelector('cms-pin-badge'), `${spec.type}: immediate shape preview`);
+    const defaults = inputs.filter(input => input.checked);
+    check(defaults.length === (['fhem-value', 'thermostat'].includes(spec.type) ? 1 : 0),
+      `${spec.type}: smart defaults`);
+    for (const input of inputs) {
+      input.checked = false;
+      input.dispatchEvent(new Event('change', {bubbles: true}));
+    }
+    check(dialog.querySelector('cms-pin-badge').shadowRoot.querySelector('.circle'), `${spec.type}: zero values becomes circle`);
+    const configured = inputs.filter(input => {
+      const previous = input.closest('label').previousElementSibling;
+      return (previous?.matches('select') ? previous : previous?.querySelector('select'))?.value;
+    });
+    for (const input of configured) {
+      input.checked = true;
+      input.dispatchEvent(new Event('change', {bubbles: true}));
+    }
+    const badge = dialog.querySelector('cms-pin-badge');
+    check(!badge.shadowRoot.querySelector('.circle'), `${spec.type}: selected reading becomes pill`);
+    check(badge.shadowRoot.querySelectorAll('.value').length === configured.length, `${spec.type}: preview reflects selected count`);
+    check(writes === 0 && previews === 0 && JSON.stringify(config) === before, `${spec.type}: selection does not write or mutate draft/live`);
+    dialog.querySelector('button[type="submit"]').click();
+    await until(() => saved, `${spec.type}: save succeeds: ${dialog.querySelector('[data-error],[data-dialog-error]')?.textContent}`);
+    check(writes === 1 && saved.rect.w === 300 && saved.rect.x === 100, `${spec.type}: existing save path preserves rect`);
+    check(pinReadingValues(saved, snapshots).length === configured.length, `${spec.type}: every selected value survives save`);
+    panel.close();
+  }
+  const {dialog} = await open(specs[0]);
+  const checkbox = dialog.querySelector('[data-show-on-pin]');
+  checkbox.checked = false;
+  checkbox.dispatchEvent(new Event('change', {bubbles: true}));
+  dialog.close();
+  await paint();
+  check(writes === 0 && !Object.hasOwn(config.pages[0].widgets[0], 'showOnPin'), 'cancel never persists choice');
+  panel.close();
+  const normal = await open(specs[0], false);
+  check(!normal.dialog.querySelector('[data-show-on-pin],cms-pin-badge'), 'non-Pin dialog has no reading choices or Pin preview');
+  normal.dialog.querySelector('[data-save]').click();
+  await until(() => saved, 'normal save completes');
+  check(!Object.hasOwn(saved, 'showOnPin'), 'normal dialog does not migrate absent fields');
+  panel.close();
+  const preserved = await open({...specs[0], showOnPin: {reading: false}}, false);
+  preserved.dialog.querySelector('button[type="submit"]').click();
+  await until(() => saved, 'dormant choice saves outside Pin mode');
+  check(saved.showOnPin.reading === false, 'normal card dialog preserves dormant explicit false');
+  panel.close();
+
+  const table = await open({...specs[6], showOnPin: {'rows.0': true, 'rows.1': false}});
+  const rows = table.dialog.querySelector('[data-config-rows]');
+  check(rows.firstElementChild.querySelector('[data-show-on-pin]').checked, 'table restores saved true');
+  check(!rows.lastElementChild.querySelector('[data-show-on-pin]').checked, 'table restores saved false');
+  [...rows.firstElementChild.querySelectorAll('button')].find(button => button.textContent === 'Entfernen').click();
+  await paint();
+  check(!rows.firstElementChild.querySelector('[data-show-on-pin]').checked, 'removing a row keeps remaining choice on its source');
+  table.dialog.querySelector('[data-add]').click();
+  await until(() => rows.children.length === 2 && rows.lastElementChild.querySelector('[data-show-on-pin]'),
+    'new row receives choice');
+  const added = rows.lastElementChild;
+  added.querySelector('select').value = 'temperature';
+  check(!added.querySelector('[data-show-on-pin]').checked, 'added row does not inherit removed source choice');
+  added.querySelector('[data-show-on-pin]').checked = true;
+  added.querySelector('[data-show-on-pin]').dispatchEvent(new Event('change', {bubbles: true}));
+  table.dialog.querySelector('button[type="submit"]').click();
+  await until(() => saved, 'dynamic table saves');
+  check(saved.showOnPin['rows.0'] === false && saved.showOnPin['rows.1'] === true,
+    'dynamic rows save choices at their current indexes');
+  check(pinReadingValues(saved, snapshots).length === 1, 'dynamic table projects only the selected source');
+  panel.close();
+  result.dataset.result = 'pass';
+  result.textContent = JSON.stringify({checks});
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = error.stack || String(error);
+} finally {
+  panel?.close();
+}
+</script>

@@ -165,6 +165,9 @@ try {
           && box.top >= bounds.top-.1 && box.bottom <= bounds.bottom+.1, `${scale}: target stays inside canvas`);
       }
       const pin = root.querySelector('[data-widget-id="w1"] cms-pin-badge');
+      check(pin.shadowRoot.querySelector('.values').textContent.includes('21.5'),
+        'existing value widget shows its current reading on the pin without migration');
+      check(!pin.shadowRoot.querySelector('.circle'), 'default value pin is a pill');
       pin.shadowRoot.querySelector('button').click();
       await paint();
       const dialog = root.querySelector('.cms-pin-widget-popup');
@@ -173,6 +176,10 @@ try {
       await paint();
       check(dialog.querySelector('cms-value').shadowRoot.textContent.includes('23.5'), 'popup receives live values');
       check(pin.hasAttribute('data-stale'), 'stale state reaches pins');
+      check(pin.shadowRoot.querySelector('.values').textContent.includes('23.5'), 'pin receives live values with popup open');
+      view.update(snapshot('0'));
+      check(pin.shadowRoot.querySelector('.values').textContent.includes('0'), 'zero is a visible value');
+      check(!pin.hasAttribute('data-stale'), 'fresh update clears stale on pin');
       dialog.querySelector('button').click();
       check(!root.querySelector('.cms-pin-widget-popup,cms-value'), 'closing removes popup and full widget');
       pin.shadowRoot.querySelector('button').click();

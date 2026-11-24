@@ -156,8 +156,19 @@ Bewegung `>6 px` bricht ab.
 Der zentrale Wrapper `cms-pin-badge` und die Freeform-Anbindung sind vorhanden
 (Refs #246). Seine Präsentationsschnittstelle erwartet `label`, `icon`,
 `values: [{value, unit}]`, `state: normal|active|alarm` und optional `stale`.
-Fremde Texte ausschließlich als Text rendern. Die Readingprojektion folgt
-separat; bis dahin neutrale Typsymbole, keine erfundenen Mess-/Statuswerte.
+Fremde Texte ausschließlich als Text rendern. Die Readingprojektion (#247)
+verwendet ausschließlich konfigurierte feste Livequellen und aktuelle
+Snapshots über `pin-readings.js`; keine erfundenen Mess-/Statuswerte.
+Wert und Thermostat-Istwert erscheinen standardmäßig, andere Quellen erst
+nach Auswahl. Die gemeinsame Checkbox „Auf Pin anzeigen“ steht unmittelbar
+an der Readingquelle, mindestens 48px hoch und zugänglich beschriftet.
+Keine typspezifischen separaten Pin-Dialoge: `pin-reading-options.js`
+ergänzt die vorhandenen Formulare, auch bei dynamischen Tabellen-/Solarzeilen.
+Ihre unmittelbare Vorschau bezeichnet Readingnamen ausdrücklich als solche;
+die Geräte-Vorschau zeigt Livewerte. Null bleibt sichtbar; fehlende Werte
+„–“ ohne Einheit, veraltete Daten gestrichelt markieren.
+Ohne feste Livequellen nur das Typsymbol, keine historischen oder automatisch
+gewählten internen Readings als aktuelle Messwerte ausgeben.
 Aktivierung öffnet zunächst nur die echte normale Karte; keine direkte
 Schaltgeste vor #248. Der Editor bleibt bis #249 in der regulären Kartenansicht.
 `forceCard` wird im gemeinsamen Widgetdialog angeboten, nicht in 18 separaten

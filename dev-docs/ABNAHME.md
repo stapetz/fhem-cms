@@ -1,5 +1,43 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Pin-Readings und Garten-Wert (24.11.2026, dev, #247)
+
+Im freigegebenen Browser war das Garten-Reading in der normalen Karte vorhanden,
+der bisherige Pin enthielt jedoch noch keine Readingprojektion. Ab 1.27.0-dev
+zeigen bestehende Wert-Widgets ihr Reading automatisch; Thermostate ihren
+Istwert, ohne Konfigurationen beim Laden zu verändern. Andere feste Quellen
+werden mit „Auf Pin anzeigen“ ausgewählt. Einheiten werden nicht geraten.
+
+Prüfumfang:
+- `node --test --test-name-pattern='Pin reading choices|Pin badges|page settings preview' t/35_schema5_scaling.test.js`:
+  109 Checks der neun echten Widgetdialoge, 536 Badge-/Integrationschecks plus
+  Maus-/Touch-/Tastatur- und Previewfälle, 51 echte Seitendialogvorschauchecks.
+  Defaults, Kreis/Pille/Multi-Pille, zugängliche 48px-Optionslabels,
+  Speichern/Abbrechen, inaktive Auswahl außerhalb des Pin-Modus und
+  Hinzufügen/Entfernen von Tabellenzeilen sind enthalten.
+- `node --test t/105_pin_readings.test.js t/103_pin_layout.test.js t/11_schema5_widgets.test.js t/13_schema5_live.test.js t/18_schema5_page_panel.test.js t/21_schema5_widget_session.test.js t/93_freeform.test.js`:
+  echte JS-/Perl-Typprüfung und Blueprint-Validierung, Snapshot-Gruppen/Kanäle,
+  Null, fehlende Werte, Datumsformat, Einheiten, hostile Text, beide SolarFlow-
+  Verträge, Solar-Ertragskarten, Select-Labels und Sliderformat.
+- `perl -c FHEM/01_FHEMCMS.pm`, `prove t/91_schema6_validation.t t/92_schema6_persistence.t`,
+  `npm run build:check`, Release-JSON-Generatorprüfung.
+  Die echte Persistenzprüfung enthält explizites `showOnPin.reading: false`
+  in Entwurf, Publish und Backup.
+
+Geräteabnahme nach Update: Geräte-Vorschau im Querformat öffnen; Garten muss
+seinen aktuellen Temperaturwert ohne erneutes Speichern anzeigen. Für °C bei
+Bedarf die Einheit am Wert-Widget konfigurieren. Im Widgetdialog Auswahl
+ausschalten und abbrechen: keine gespeicherte Änderung. Ausschalten und
+speichern: Entwurf zeigt Kreis; Einschalten zeigt Pille. Thermostat:
+Ist-/Sollwert gemeinsam auswählen und Multi-Pille prüfen. Live-Reading ändern
+und Stale/Reconnect prüfen. Hochkant und Editor bleiben normale Karten.
+Keine Gerätebefehle durch Pin-Auswahl oder Vorschau.
+
+Typen ohne feste Livequelle (u.a. historisches Diagramm, Wetter-API, automatische
+Volvo-/Anruflisteninhalte und freies HTML) bleiben ohne willkürliche Projektion.
+400ms-Tap/Hold und kompakter Pin-Editor folgen in #248/#249.
+FHEM-/Safari-/echte Touch-Abnahme noch offen; kein `main`-Release.
+
 ## Pin-Seitenschalter (24.11.2026, dev, #245)
 
 Nach der Wrapper-Anbindung ist der Schalter „Widgets als Pins darstellen“

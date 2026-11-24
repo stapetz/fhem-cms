@@ -7,6 +7,7 @@ import { deviceWidgetSuggestions } from './device-widget-suggestions.js';
 import { isValidName } from './fhem-client.js';
 import { widgetIds } from './widget-ids.js';
 import { pinKeepsCard } from './pin-presentation.js';
+import { mountPinReadingOptions } from './pin-reading-options.js';
 
 const WIDGET_TYPES = [
   ['thermostat', 'Thermostat', 't', 4, 2, { device: '', readings: { actual: '', target: '' } }],
@@ -265,8 +266,10 @@ export class Schema5WidgetPanel {
       const services = session.services({ ...this.#services, setCommand: rejectCommand, setTarget: rejectCommand });
       services.pages = (this.#state.draft || this.#state.live).pages.map(({ id, title }) => ({ id, title }));
       let forceCard;
+      let pinReadings;
       const invoke = (name) => async (...args) => {
         if (this.#closed || this.#busy) throw new Error('Widget-Bearbeitung ist nicht mehr aktiv');
+        if (pinReadings && ['previewWidget', 'saveWidget'].includes(name)) args[0] = pinReadings.apply(args[0]);
         if (forceCard && ['previewWidget', 'saveWidget'].includes(name)
           && (forceCard.checked !== pinKeepsCard(widget) || Object.hasOwn(widget, 'forceCard'))) {
           args[0] = {...args[0], forceCard: forceCard.checked};
@@ -304,7 +307,10 @@ export class Schema5WidgetPanel {
       dialog.addEventListener('close', () => {
         if (!this.#busy) session.close();
       });
-      session.completion.then((outcome) => this.#finish(session, outcome));
+      session.completion.then((outcome) => {
+        pinReadings?.destroy();
+        this.#finish(session, outcome);
+      });
       const opening = item.openConfig({ isNew: action === 'create' });
       const opened = dialog.open;
       await opening;
@@ -316,6 +322,7 @@ export class Schema5WidgetPanel {
       if (!dialog.open) throw new Error('Widgetdialog wurde nicht geöffnet');
       const page = (this.#state.draft || this.#state.live).pages.find(entry => entry.id === this.#page);
       if (page.renderAsPins === true) {
+        pinReadings = mountPinReadingOptions(dialog, widget);
         const label = element('label', 'Nicht als Pin darstellen (normale Kachel behalten) ');
         forceCard = element('input');
         forceCard.type = 'checkbox';
