@@ -1,6 +1,7 @@
 import { fitFreeformRect, validateFreeformWidget } from './fcui-freeform-layout.js';
 import { fitWidgetTools, setFreeformBox } from './fcui-freeform-view.js';
 import { containPopupScroll } from './modal-dialog.js';
+import { installCloseStyles, styleCloseButton } from './close-button.js';
 
 export function freeformGesture(rect, direction, dx, dy, canvas, widgets, noSnap) {
   const result = {...rect};
@@ -119,6 +120,10 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     if (controls.matches(':popover-open')) controls.hidePopover();
     if (restoreFocus) entries.get(selected?.id)?.querySelector('.cms-widget-geometry')?.focus({preventScroll: true});
   };
+  installCloseStyles(controls);
+  const close = styleCloseButton(button(controls, '', 'Positionseinstellungen schließen', () => closeProperties(true)),
+    'Positionseinstellungen schließen');
+  close.classList.add('cms-freeform-properties-close');
   button(actions, 'Abbrechen', 'Abbrechen', () => closeProperties(true));
   const save = (rect, hide = selected.hideOnMobile) => {
     try {

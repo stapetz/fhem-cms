@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de" data-cms-theme="dark">
+<meta charset="utf-8">
+<title>Gemeinsames Schließen-X</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<pre id="result">RUNNING</pre>
+<cms-weather id="weather"></cms-weather>
+<script type="module">
+import { showCmsModal } from '../www/fhem-cms/js/modal-dialog.js';
+import { openDevicePicker } from '../www/fhem-cms/js/device-picker.js';
+import { DevicePreview } from '../www/fhem-cms/js/device-preview.js';
+import { installCloseStyles, styleCloseButton } from '../www/fhem-cms/js/close-button.js';
+import '../www/fhem-cms/components/cms-weather.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { checks++; if (!condition) throw new Error(message); };
+const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
+try {
+  const outer = document.createElement('dialog');
+  const panel = document.createElement('dialog');
+  panel.className = 'cms-editor-panel';
+  document.body.append(panel);
+  showCmsModal(panel);
+  check(panel.children.length === 0, 'editor panel root remains empty for its constructor');
+  panel.append(document.createElement('h2'));
+  await Promise.resolve();
+  check(Boolean(panel.querySelector('.cms-close-button')), 'editor panel gets X after construction');
+  panel.close();
+  panel.remove();
+  outer.innerHTML = '<h2>Editor</h2><button class="cancel">Abbrechen</button>';
+  document.body.append(outer);
+  let cancelCount = 0;
+  outer.addEventListener('cancel', event => { event.preventDefault(); cancelCount++; });
+  showCmsModal(outer);
+  let button = outer.querySelector('.cms-close-button');
+  button.click();
+  check(outer.open && cancelCount === 1, 'dirty protection remains in control');
+  const picker = openDevicePicker({ services: { listAllDevices: async () => [] } });
+  await frame();
+  const inner = document.querySelector('.cms-dp-dialog');
+  check(inner?.open, 'nested picker opens');
+  inner.querySelector('.cms-close-button').click();
+  check(await picker === null && outer.open, 'X closes only picker and returns cancellation');
+
+  const weather = document.querySelector('#weather');
+  const widgetDialog = weather.shadowRoot.querySelector('[data-modal]');
+  showCmsModal(widgetDialog);
+  const widgetClose = widgetDialog.querySelector('[data-modal-close]');
+  check(widgetDialog.querySelectorAll('.cms-close-button').length === 1, 'existing widget X reused');
+
+  installCloseStyles(document.head);
+  const adminClose = styleCloseButton(document.createElement('button'), 'Fenster schließen');
+  document.body.append(adminClose);
+  const preview = new DevicePreview({ getUrl: () => `${location.origin}/`, beforeOpen: async () => {} });
+  await preview.select('iphone-se');
+  const previewClose = document.querySelector('.cms-device-close');
+  check(Boolean(previewClose), 'non-native preview has close X');
+  for (const theme of ['dark', 'light', 'liquid-glass', 'oled-black', 'catppuccin-mocha']) {
+    document.documentElement.dataset.cmsTheme = theme;
+    await frame();
+    const buttons = [button, widgetClose, adminClose, previewClose];
+    const properties = buttons.map(item => {
+      const style = getComputedStyle(item);
+      const box = item.getBoundingClientRect();
+      return [box.width, box.height, style.color, style.backgroundColor, style.borderColor, style.borderRadius];
+    });
+    for (const [index, item] of buttons.entries()) {
+      check(properties[index][0] === 48 && properties[index][1] === 48, `${theme}: 48px button`);
+      check(item.getAttribute('aria-label') && item.title, `${theme}: accessible label and title`);
+      check(item.querySelector('svg path')?.getAttribute('d') === 'M6 6l12 12M18 6L6 18', `${theme}: shared SVG`);
+      check(JSON.stringify(properties[index].slice(2)) === JSON.stringify(properties[0].slice(2)), `${theme}: identical styling`);
+    }
+    widgetClose.blur();
+    widgetClose.focus({ focusVisible: true });
+    check(getComputedStyle(widgetClose).outlineStyle !== 'none',
+      `${theme}: visible focus; focused=${widgetClose.matches(':focus')}, css=${widgetDialog.querySelector('style[data-cms-close-style]')?.textContent.length}`);
+  }
+  widgetClose.click();
+  check(!widgetDialog.open && outer.open, 'widget close handler and outer dialog preserved');
+  previewClose.click();
+  check(!preview.overlay && !preview.deviceId, 'preview X resets selection');
+  preview.destroy();
+  outer.replaceChildren(Object.assign(document.createElement('h2'), { textContent: 'Neu gerendert' }));
+  await Promise.resolve();
+  button = outer.querySelector('.cms-close-button');
+  check(Boolean(button), 'X survives panel rerender');
+  button.click();
+  check(outer.open && cancelCount === 2, 'rerendered X still honors cancel');
+  outer.close();
+  output.dataset.result = 'pass';
+  output.textContent = JSON.stringify({ checks });
+} catch (error) {
+  output.dataset.result = 'fail';
+  output.textContent = error.stack || String(error);
+}
+</script>

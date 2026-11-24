@@ -1,3 +1,5 @@
+import { installCloseButton } from './close-button.js';
+
 const guarded = new WeakSet();
 
 function canScroll(event, popup, delta, axis) {
@@ -41,6 +43,7 @@ export function containPopupScroll(popup) {
 }
 
 export function showCmsModal(dialog) {
+  installCloseButton(dialog);
   // The dialog is the last scroll container, including when its content fits.
   dialog.style.overscrollBehavior = 'contain';
   containPopupScroll(dialog);

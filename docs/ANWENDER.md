@@ -1126,6 +1126,14 @@ Das CMS speichert keine Zugangsdaten und erlaubt keine fremden Origins (kein COR
 
 ## Bedienung
 
+### Dialoge schließen
+
+Das X oben rechts schließt Dialoge, Widgetkarten und Vorschauen. Bei
+verschachtelten Dialogen wird nur der vorderste geschlossen. Vorhandene
+Rückfragen zu ungespeicherten Änderungen bleiben bestehen; das X veröffentlicht
+und verwirft keinen Entwurf automatisch. „Abbrechen“ und „Speichern“ behalten
+ihre bisherige Bedeutung.
+
 Die folgenden Beschreibungen betreffen vor allem das bisherige 48-Spalten-Format.
 Im 12-Spalten-Format stehen im Bearbeitungsmodus separate Schaltflächen für Raster,
 Seiten, Widgets, Navigation und Darstellung zur Verfügung. Änderungen werden als

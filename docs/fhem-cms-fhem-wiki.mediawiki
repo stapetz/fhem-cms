@@ -317,6 +317,13 @@ Ist die Zwischenablage nicht verfügbar, erscheint eine Meldung; die angezeigte
 URL kann manuell kopiert werden. Kiosk schaltet den Browser nicht automatisch
 auf Vollbild und ist kein Zugriffsschutz.
 
+=== Einheitliches Schliessen-X (neu auf dev, noch nicht freigegeben) ===
+
+CMS-Dialoge und Widget-Popups verwenden dasselbe klassische X oben rechts
+mit 48-Pixel-Bedienflaeche, auch Medienauswahl, Vorschau, Administration und
+Freeform-Positionseinstellungen. Das X nutzt die bestehenden Abbruchpruefungen;
+es speichert nichts automatisch und umgeht keine Rueckfrage bei Aenderungen.
+
 === Pin-Editor (neu auf dev, noch nicht freigegeben) ===
 
 Auf Freeform-Seiten mit '''Widgets als Pins darstellen''' zeigt auch der Editor

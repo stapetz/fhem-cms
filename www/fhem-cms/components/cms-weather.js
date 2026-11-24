@@ -1,4 +1,5 @@
 import { showCmsModal } from '../js/modal-dialog.js';
+import { closeButtonSvg } from '../js/close-button.js';
 import { isValidName } from '../js/fhem-client.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { createWidgetIconButton, widgetIconButtonCss, widgetTypographyCss } from '../js/widget-design.js';
@@ -479,7 +480,7 @@ class FHEMCMSWeather extends HTMLElement {
       </article>
       <dialog data-modal aria-labelledby="weather-modal-title">
         <div class="modal-head"><h2 id="weather-modal-title" data-modal-title>Wetterdetails</h2>
-          <button type="button" class="modal-close" data-modal-close aria-label="Details schließen" autofocus>×</button></div>
+          <button type="button" class="modal-close cms-close-button" data-modal-close aria-label="Details schließen" title="Details schließen" autofocus>${closeButtonSvg}</button></div>
         <div data-modal-content tabindex="0" role="region" aria-label="Wetterdetails und Vorhersagen"></div>
       </dialog>
       <dialog data-dialog aria-labelledby="weather-editor-title">

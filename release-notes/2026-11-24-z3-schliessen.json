@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-24",
+  "version": "1.30.1-dev",
+  "title": "Einheitliches Schliessen-X in Dialogen und Widgets",
+  "changes": [
+    "Gemeinsames klassisches SVG-X mit identischer 48px-Flaeche, Rahmen-, Farb- und Fokusgestaltung in allen Dialogen und Widgets. Refs #250.",
+    "Gilt auch fuer Medien-/Deviceauswahl, Vorschau, Admin, Karten, Pin-Popups, Wetter und Volvo sowie die Freeform-Positionseinstellungen.",
+    "Schliessen verwendet weiterhin die bestehenden Abbruch-, Dirty- und Busy-Pruefungen; Speichern und Verwerfen bleiben unveraendert."
+  ]
+}

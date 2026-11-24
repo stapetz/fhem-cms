@@ -87,7 +87,7 @@ export function openIconPicker({ services, title = 'Icon wählen', clearLabel = 
         finish(null);
       }
     });
-    dialog.addEventListener('cancel', (event) => event.preventDefault());
+    dialog.addEventListener('cancel', (event) => { event.preventDefault(); finish(null); });
     document.body.append(dialog);
     showCmsModal(dialog);
     $('[data-filter]').focus();

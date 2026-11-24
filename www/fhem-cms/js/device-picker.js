@@ -91,7 +91,7 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
         finish(null);
       }
     });
-    dialog.addEventListener('cancel', (event) => event.preventDefault());
+    dialog.addEventListener('cancel', (event) => { event.preventDefault(); finish(null); });
     document.body.append(dialog);
     showCmsModal(dialog);
     $('[data-search]').focus();

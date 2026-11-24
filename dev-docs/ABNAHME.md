@@ -1,5 +1,17 @@
 # MVP-Abnahmeprotokoll (S10)
 
+## Einheitliches Schließen-X (24.11.2026, dev, #250)
+
+`node --test --test-name-pattern='shared close buttons|Pin editor supports|Pin interactions' t/35_schema5_scaling.test.js`:
+96 Checks für denselben SVG-/48px-Vertrag in Themes, Dialogen, verschachtelten
+Pickern und Widgets; Pin-Popup 34 Checks plus echte Maus-/Touch-/Holdfälle.
+Die Pin-Editorfixture ergänzt die nichtnative Freeform-Positionseinstellung:
+dasselbe X, Schließen ohne Geometriespeicherung (nun insgesamt 69 Checks).
+`node --test t/19_schema5_editor.test.js t/68_cms_admin.test.js`:
+bestehende Panel-/Adminpfade unverändert. Escape, Dirty- und Busy-Schutz
+bleiben in den bestehenden Schließpfaden; X speichert nie automatisch.
+Echte Safari-/Touch-Geräteabnahme steht aus.
+
 ## Kompakter Pin-Editor (24.11.2026, dev, #249)
 
 `node --test t/109_pin_editor.test.js t/103_pin_layout.test.js` und

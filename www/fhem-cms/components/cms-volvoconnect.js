@@ -1,4 +1,5 @@
 import { showCmsModal } from '../js/modal-dialog.js';
+import { closeButtonSvg } from '../js/close-button.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { widgetDesignCss, detailCardCss, widgetIconButtonCss, createWidgetIconButton } from '../js/widget-design.js';
@@ -233,7 +234,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       <dialog data-details aria-labelledby="volvo-detail-title">
         <div class="detail-header"><h3 id="volvo-detail-title" data-detail-title></h3>
           <button type="button" data-arrange hidden>Anordnung bearbeiten</button>
-          <button type="button" data-close-details aria-label="Fahrzeugdetails schließen" autofocus>✕</button>
+          <button type="button" class="cms-close-button" data-close-details aria-label="Fahrzeugdetails schließen" title="Fahrzeugdetails schließen" autofocus>${closeButtonSvg}</button>
           <div data-arrange-bar hidden><p>Am Griff verschieben, an der Ecke Größe ändern. Mobil einspaltig; Größen gelten für größere Displays. Übernehmen speichert den Entwurf.</p>
             <button type="button" data-auto-arrange>Automatisch anordnen</button>
             <button type="button" data-reset-arrange>Standardreihenfolge</button>
@@ -244,7 +245,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       </dialog>
       <dialog data-actions-dialog aria-labelledby="volvo-actions-title">
         <div class="detail-header"><h3 id="volvo-actions-title" data-actions-title></h3>
-          <button type="button" data-close-actions aria-label="Fahrzeugaktionen schließen" autofocus>✕</button></div>
+          <button type="button" class="cms-close-button" data-close-actions aria-label="Fahrzeugaktionen schließen" title="Fahrzeugaktionen schließen" autofocus>${closeButtonSvg}</button></div>
         <div data-actions-content></div><p data-action-message role="status"></p>
       </dialog>
       <dialog data-dialog aria-label="VolvoConnect konfigurieren">
@@ -267,7 +268,7 @@ class FHEMCMSVolvoConnect extends HTMLElement {
       </dialog>
       <dialog data-module-help aria-labelledby="volvo-module-help-title">
         <div class="detail-header"><h3 id="volvo-module-help-title">VolvoConnect-Modul für FHEM</h3>
-          <button type="button" data-close-module-help aria-label="Modulhilfe schließen" autofocus>✕</button></div>
+          <button type="button" class="cms-close-button" data-close-module-help aria-label="Modulhilfe schließen" title="Modulhilfe schließen" autofocus>${closeButtonSvg}</button></div>
         <div class="module-help-body">
           <p>VolvoConnect ist ein Community-Modul für FHEM, kein Produkt von Volvo Cars.
             Es verbindet ein FHEM-Device mit den offiziellen Volvo Cars APIs und liest je nach

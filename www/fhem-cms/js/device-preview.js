@@ -1,3 +1,5 @@
+import { installCloseStyles, styleCloseButton } from './close-button.js';
+
 // Geräte-Vorschau für den Bearbeitungsmodus: zeigt den Entwurf in einem Rahmen mit der Bildschirmgröße
 // (CSS-Pixel) des gewählten Geräts. Die Seite läuft in einem iframe und reagiert so wie auf dem echten Gerät.
 
@@ -163,6 +165,11 @@ export class DevicePreview {
       this.overlay.className = 'cms-device-overlay';
       this.overlay.setAttribute('role', 'dialog');
       this.overlay.setAttribute('aria-label', 'Geräte-Vorschau');
+      installCloseStyles(document.head);
+      const dismiss = styleCloseButton(document.createElement('button'), 'Vorschau schließen');
+      dismiss.type = 'button';
+      dismiss.className += ' cms-device-close';
+      dismiss.addEventListener('click', () => this.select(''));
       this.stage = document.createElement('div');
       this.stage.className = 'cms-device-stage';
       this.frame = document.createElement('div');
@@ -179,7 +186,7 @@ export class DevicePreview {
       this.stage.append(this.frame);
       this.label = document.createElement('p');
       this.label.className = 'cms-device-label';
-      this.overlay.append(this.stage, this.label);
+      this.overlay.append(this.stage, this.label, dismiss);
       document.body.append(this.overlay);
       window.addEventListener('resize', this.onResize);
       document.addEventListener('keydown', this.onKey);

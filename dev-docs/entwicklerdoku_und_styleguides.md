@@ -1118,3 +1118,16 @@ mit Rohwert und ohne Statusfarbe.
   insbesondere Asset-Uploads und -Löschungen, kennzeichnen ihre Wirkung vor der
   Aktion eindeutig. Einstellungen zu Formatierung oder Darstellung zeigen,
   soweit verfügbar, eine nachvollziehbare Vorschau des Ergebnisses.
+
+### Einheitliches Schließen-X
+
+Schließen-Flächen in Dialogen, Popups und sonstigen überlagerten Ansichten
+verwenden den gemeinsamen Vertrag aus `js/close-button.js`: klassisches SVG-X,
+48 × 48 CSS-Pixel, Theme-Farben, sichtbarer Fokus sowie passendes `aria-label`
+und `title`. Das X steht oben rechts. Native Dialoge erhalten es über
+`showCmsModal`; vorhandene Schließen-Buttons können mit `styleCloseButton`
+gestaltet werden. In Shadow DOM muss `closeButtonCss` im jeweiligen Baum
+verfügbar sein; für globale Flächen stellt `installCloseStyles` die Styles bereit.
+Das X nutzt den vorhandenen Cancel-/Schließenpfad einschließlich Dirty- und
+Busy-Schutz, niemals einen direkten Discard. Verschachtelte Dialoge schließen
+nur die oberste Ebene. Browserregression: `node --test --test-name-pattern='shared close buttons' t/35_schema5_scaling.test.js`.

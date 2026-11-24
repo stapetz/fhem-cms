@@ -1,4 +1,5 @@
 import { showCmsModal } from './modal-dialog.js?v=admin-20261122-4';
+import { installCloseStyles, styleCloseButton } from './close-button.js?v=admin-20261122-4';
 import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261122-4';
 import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261122-4';
 import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261122-4';
@@ -268,6 +269,8 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
     cancelImport();
   });
   const closeWindow = () => requestAdminClose(browser, text => message(text, true));
+  installCloseStyles(root.ownerDocument.head);
+  styleCloseButton($('#close-window'), 'Fenster schließen');
   $('#close-window').addEventListener('click', closeWindow);
   root.addEventListener('keydown', event => {
     if (event.key !== 'Escape' || event.defaultPrevented) return;
