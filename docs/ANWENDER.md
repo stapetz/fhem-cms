@@ -366,6 +366,26 @@ für alle Seiten. Die Seitenvorschau im Dialog aktualisiert sich beim Verschiebe
 und verwendet das wirksame Seitenbild. Erst
 **Speichern** übernimmt die Werte in den Entwurf; **Abbrechen** verwirft sie.
 Hohe Transparenz kann die Lesbarkeit je nach Hintergrundbild verringern.
+Auf Freeform-Seiten steht unter **Seitenlayout** zusätzlich
+**Widgets als Pins darstellen** zur Verfügung. Die Vorschau zeigt die
+kompakte Darstellung sofort; **Speichern** übernimmt sie in den Entwurf,
+erst das Veröffentlichen aktiviert sie live. Das Grundrissbild wird dabei
+proportional in die vorhandene Seitenfläche eingepasst. Fehlende oder
+defekte Bilder werden sichtbar gemeldet; dann dient die Seitenfläche als Bezug.
+
+Die erste Ausbaustufe zeigt neutrale Typsymbole. Tippen oder Tastaturaktivierung
+öffnet die normale Widgetkarte mit aktuellen Daten; **Schließen** oder
+Escape entfernt sie wieder. Noch kein direktes Schalten vom Pin:
+Geräte bedienen Sie in der geöffneten normalen Karte. Reading-Auswahl und
+direkte Tap-/Hold-Bedienung folgen in weiteren Ausbaustufen.
+Uhr, Text und LinkWidget bleiben standardmäßig normale Karten. Im jeweiligen
+Widgetdialog können Sie mit **Nicht als Pin darstellen (normale Kachel behalten)**
+die Darstellung auf Pin-Seiten ändern.
+Im mobilen Hochformat erscheinen stets normale Karten untereinander.
+Der Editor verwendet vorerst ebenfalls die normalen Kacheln zum Bearbeiten
+und Positionieren; normale Kachelgrößen und gespeicherte Positionen bleiben
+beim Einschalten der Pins erhalten.
+
 Die zusätzliche Smartphone-Quervorschau zeigt die aktuelle Seite und das wirksame
 Seitenbild. Änderungen an Darstellung, Hintergrund, Rahmen, Titelausrichtung und
 Raster erscheinen dort unmittelbar, ohne sie zu speichern. Ist kein Seitenbild

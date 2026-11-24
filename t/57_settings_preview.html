@@ -22,6 +22,8 @@ const config = {
     { id: 'room', title: 'Küche', background: second, widgets: [
       { id: 'text', type: 'text', title: 'Küche', html: '<p>Aktuelle Seite</p>',
         grid: { col: 1, row: 2, w: 6, h: 3 } },
+      { id: 'value', type: 'fhem-value', device: 'Demo', reading: 'temperature',
+        grid: { col: 7, row: 2, w: 6, h: 3 } },
     ] },
   ],
 };
@@ -156,7 +158,7 @@ if (child) {
     titleAlign.dispatchEvent(new Event('change'));
     await until(() => frameDocument().querySelector('.cms-schema5-grid').style.getPropertyValue('--cms-widget-title-align') === 'right',
       'title alignment did not update');
-    const frames = form.querySelector('input[type="checkbox"]');
+    const frames = form.querySelector('[data-show-frames]');
     frames.checked = false;
     frames.dispatchEvent(new Event('change'));
     await until(() => frameDocument().documentElement.dataset.cmsFrames === 'off', 'frames did not update');
@@ -201,9 +203,30 @@ if (child) {
     }, 'dimming without an image must not create a dark replacement layer');
     check(frameDocument().querySelector('cms-text').shadowRoot.textContent.includes('Aktuelle Seite'),
       'removing the image preserves foreground content');
+    const pins = dialog.querySelector('[data-render-as-pins]');
+    check(!pins.checked && !pins.parentElement.parentElement.hidden, 'Pin opt-in defaults off on Freeform');
+    pins.checked = true;
+    pins.dispatchEvent(new Event('change'));
+    await until(() => frameDocument().querySelector('.cms-freeform-pins cms-pin-badge'),
+      'Pin opt-in does not reach the actual page preview');
+    check(!frameDocument().querySelector('.cms-pin-image-status').hidden, 'Pin preview reports missing image fallback');
+    check(frameDocument().querySelector('cms-text'), 'text remains a normal card by default');
+    check(!frameDocument().querySelector('cms-value'), 'real preview replaces eligible full widget with a lazy Pin');
+    choose.click();
+    await until(() => frameDocument().querySelector('.cms-pin-image-status')?.hidden,
+      'loaded image did not clear the fallback warning in Pin preview');
+    check(frame.contentWindow.getComputedStyle(frameDocument().querySelector('.cms-freeform-canvas'))
+      .backgroundSize.split(', ').every(size => /^\d+px \d+px$/.test(size)),
+    'Pin preview uses the measured contained image area');
+    pins.checked = false;
+    pins.dispatchEvent(new Event('change'));
+    await until(() => !frameDocument().querySelector('.cms-freeform-pins'),
+      'disabling Pins restores the normal Freeform page');
+    check(writes === 0 && JSON.stringify(config) === original, 'Pin preview changes never save or mutate configuration');
     mode.value = 'grid';
     mode.dispatchEvent(new Event('change'));
     check(dim.parentElement.hidden, 'return to Grid hides Freeform-only background dimming');
+    check(pins.parentElement.parentElement.hidden, 'Grid never exposes the Pin switch');
     dialog.querySelector('.cms-panel-close').click();
     new Schema5PagePanel({ root: dialog, controller, pageId: 'start', token: 'test', freeformSupported: true,
       browser: { ...window, confirm: () => true },
@@ -233,7 +256,9 @@ if (child) {
       page.layoutMode = 'freeform';
       page.canvas = {width: 820, height: 1180};
     }
-    shared.pages[1].widgets[0].rect = {x: 0, y: 80, w: 400, h: 220};
+    for (const [index, widget] of shared.pages[1].widgets.entries()) {
+      widget.rect = {x: index*410, y: 80, w: 400, h: 220};
+    }
     let saved;
     new Schema5PagePanel({ root: dialog, pageId: 'room', token: 'test', freeformSupported: true,
       controller: {snapshot: () => ({live: shared, token: 'test'}), saveDraft: async candidate => { saved = candidate; }},
