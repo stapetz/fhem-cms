@@ -52,7 +52,10 @@ try {
     ]};
   document.body.append(graph);
   const root = graph.shadowRoot;
+  const updatedPattern = /^Letzte Aktualisierung: \d{2}\.\d{2}\.\d{4} - \d{2}:\d{2}:\d{2}$/;
   await until(() => root.querySelectorAll('[data-svg] polyline').length === 2, 'two live lines not drawn');
+  check(updatedPattern.test(root.querySelector('[data-updated]').textContent),
+    'last successful fetch has the exact date/time format below the chart');
   check(root.querySelector('[data-title]').hidden && !root.querySelector('[data-title]').textContent,
     'missing title stays empty');
   graph.setAttribute('view-only', '');
@@ -76,12 +79,15 @@ try {
   check(calls.some(call => call.source === 'dblog') && calls.some(call => call.source === 'filelog'),
     'each series uses its selected log source');
   const liveLegend = root.querySelectorAll('[data-legend] button');
+  const initialUpdated = root.querySelector('[data-updated]').textContent;
   liveLegend[0].click();
   check(root.querySelectorAll('[data-svg] polyline').length === 1
     && root.querySelector('[data-legend] button').getAttribute('aria-pressed') === 'false',
     'legend hides and marks a line');
   root.querySelector('[data-legend] button').click();
   check(root.querySelectorAll('[data-svg] polyline').length === 2, 'legend restores a line');
+  check(root.querySelector('[data-updated]').textContent === initialUpdated,
+    'legend redraws do not pretend to fetch new data');
   await graph.openConfig();
   const form = root.querySelector('form');
   check(root.querySelector('[data-aggregation]').hidden, 'pie aggregation hidden for line charts');
@@ -107,6 +113,21 @@ try {
   check(Math.abs(granularityBox.top - gridBox.top) < 1 && gridBox.left >= granularityBox.right,
     'grid checkbox is beside granularity');
   const formatControl = fields.querySelector('[data-format]');
+  await until(() => !root.querySelector('.row[data-loading]'), 'configured readings still loading');
+  check(fields.querySelector('[data-unit]').value === '', 'old series without a unit stays unitless');
+  fields.querySelector('[data-unit-choice="W"]').click();
+  check(fields.querySelector('[data-unit]').value === 'W', 'shared unit suggestions populate the series unit');
+  root.querySelectorAll('[data-unit]')[1].value = '°C';
+  check(graph.collect().series[1].unit === '°C', 'custom Unicode unit is collected for its reading');
+  for (const unit of ['x'.repeat(17), 'bad\u0001unit']) {
+    fields.querySelector('[data-unit]').value = unit;
+    let rejected = false;
+    try { graph.collect(); } catch { rejected = true; }
+    check(rejected, 'invalid unit cannot be saved from the graph dialog');
+  }
+  fields.querySelector('[data-unit]').value = '';
+  check(!Object.hasOwn(graph.collect().series[0], 'unit'), 'clearing a unit omits the optional field');
+  fields.querySelector('[data-unit]').value = 'W';
   check(formatControl.tagName === 'SELECT' && formatControl.options.length === 9
     && [...formatControl.options].map(option => option.value).join(',')
       === ',int,round(0),round(1),round(2),round(3),round(4),round(5),round(6)',
@@ -128,6 +149,12 @@ try {
   form.elements.chartType.dispatchEvent(new Event('change', {bubbles:true}));
   check(root.querySelector('[data-aggregation]').hidden, 'pie aggregation hidden for stacks');
   await until(() => root.querySelectorAll('[data-preview] polygon').length === 2, 'stack preview missing');
+  const stackPreview = root.querySelector('[data-preview]');
+  const stackBounds = stackPreview.getBoundingClientRect();
+  stackPreview.onpointermove({clientX:stackBounds.left + stackBounds.width/2});
+  check(root.querySelector('[data-preview-tooltip]').textContent.includes(' W')
+    && root.querySelector('[data-preview-tooltip]').textContent.includes(' °C'),
+    'stacked preview measurements retain their per-reading units');
   root.querySelector('[data-preview-legend] button').click();
   check(root.querySelectorAll('[data-preview] polygon').length === 1, 'preview legend hides a stack');
   form.elements.chartType.value = 'pie';
@@ -140,8 +167,11 @@ try {
     && root.querySelectorAll('[data-preview] [data-pie-label]').length === 2,
     'pie preview labels default to visible');
   const previewLabels = [...root.querySelectorAll('[data-preview] [data-pie-label]')];
-  check(previewLabels[0].textContent.includes('Solar1') && previewLabels[0].textContent.includes('2.50'),
-    'slice label uses the actual device name and formatted value');
+  check(previewLabels[0].querySelector('tspan').textContent === 'Dach'
+    && previewLabels[0].textContent.includes('2.50 W') && !previewLabels[0].textContent.includes('Solar1'),
+    'slice label uses the configured source label and formatted value with unit');
+  check(updatedPattern.test(root.querySelector('[data-preview-updated]').textContent),
+    'preview displays its own last successful fetch timestamp');
   form.elements.showPieLabels.checked = false;
   form.elements.showPieLabels.dispatchEvent(new Event('change', {bubbles:true}));
   await until(() => root.querySelectorAll('[data-preview] [data-pie-label]').length === 0,
@@ -227,9 +257,11 @@ try {
   check(saved.series[0].lineWidth === 4 && saved.series[0].axis === 'left',
     'new rows default to four-pixel lines on the left axis');
   check(saved.series[0].format === 'int', 'integer format is saved with its data series');
+  check(saved.series[0].unit === 'W' && saved.series[1].unit === '°C',
+    'save preserves individual units for both readings');
   const decorated = {...graph.config, showGrid:false, axisLabelLeft:'Leistung', axisLabelRight:'Temperatur', axisLabelX:'Zeit',
-    series:[{...graph.config.series[0], axis:'left', lineStyle:'dashed', lineWidth:4, fill:true},
-      {...graph.config.series[1], axis:'right', lineStyle:'points', lineWidth:3, format:'round(2)'}]};
+    series:[{...graph.config.series[0], unit:'W', axis:'left', lineStyle:'dashed', lineWidth:4, fill:true},
+      {...graph.config.series[1], unit:'°C', axis:'right', lineStyle:'points', lineWidth:3, format:'round(2)'}]};
   const decoratedData = [
     {points:[[1000,-1.7],[2000,2]]}, {points:[[1000,100],[2000,200]]},
   ];
@@ -252,6 +284,10 @@ try {
   plot.onpointermove({clientX:box.left + box.width / 2});
   check(!root.querySelector('[data-tooltip]').hidden && root.querySelector('[data-tooltip]').textContent.includes('Dach: -1')
     && root.querySelector('[data-tooltip]').textContent.includes('Garten: 100.00'), 'hover shows formatted values for both series');
+  check(root.querySelector('[data-tooltip]').textContent.includes('Dach: -1 W')
+    && root.querySelector('[data-tooltip]').textContent.includes('Garten: 100.00 °C')
+    && root.querySelector('[data-legend]').textContent.includes('Dach (W)'),
+    'line tooltips and legend identify units without modifying axis scales');
   check(JSON.stringify(decoratedData) === rawData, 'display formatting does not modify the source values');
   check(parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) >= 12
     && parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) <= 13
@@ -339,8 +375,20 @@ try {
   livePie.onpointermove({clientX:plot.getBoundingClientRect().left + 20});
   check(!tooltip.hidden && tooltip.textContent.includes('Dach: 1'),
     'live pie uses the formatted custom tooltip');
+  check(tooltip.textContent.includes('Dach: 1 W') && plot.querySelector('[data-pie-label]').textContent.includes('1 W'),
+    'live pie uses configured labels and units consistently in slice and tooltip');
   const pieData = [{points:[[1000,1]],summary:{last:1,average:1}},
     {points:[[1000,99]],summary:{last:99,average:99}}];
+  const fallback = {...decorated,chartType:'pie',series:[{...decorated.series[0],label:''},decorated.series[1]]};
+  graph.draw(fallback, pieData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+  check(plot.querySelector('[data-pie-label] tspan').textContent === 'Solar1: power',
+    'missing configured label retains the shared device/reading fallback');
+  const hostile = {...decorated,chartType:'pie',
+    series:[{...decorated.series[0],label:'<img src=x>',unit:'<b>W</b>'},decorated.series[1]]};
+  graph.draw(hostile, pieData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+  check(plot.querySelector('[data-pie-label]').textContent.includes('<img src=x>')
+    && !root.querySelector('img') && !plot.querySelector('b'),
+    'configured labels and units are rendered only as text');
   graph.draw({...decorated,chartType:'pie',showPieLabels:false}, pieData,
     '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
   check(!plot.querySelector('[data-pie-label]') && plot.querySelectorAll('path').length === 2,
@@ -397,9 +445,11 @@ try {
     return originalInterval(callback, delay);
   };
   let latest = 1;
+  let fetchError = false;
   const refreshed = document.createElement('cms-graph');
   const refreshCalls = [];
   refreshed.services = {history:async (device,reading,range) => {
+    if (fetchError) throw new Error('Datenbank nicht erreichbar');
     refreshCalls.push(range);
     return {points:[[1000,latest]], summary:{last:latest,average:latest}};
   }};
@@ -416,8 +466,31 @@ try {
       refresh();
       await until(() => refreshed.currentData[0].summary.last === latest, 'automatic refresh did not draw new data');
       check(refreshCalls.at(-1) === range, `${chartType} refresh retains ${range} range semantics`);
+      check(updatedPattern.test(refreshed.shadowRoot.querySelector('[data-updated]').textContent),
+        `${chartType} displays the last successful refresh time`);
     }
   }
+  const RealDate = window.Date;
+  let fakeTime = RealDate.parse('2026-11-26T10:12:34Z');
+  window.Date = class extends RealDate {
+    constructor(...args) { super(...(args.length ? args : [fakeTime])); }
+  };
+  try {
+    await refreshed.load();
+    const refreshedTime = refreshed.shadowRoot.querySelector('[data-updated]');
+    check(refreshedTime.textContent === 'Letzte Aktualisierung: 26.11.2026 - 11:12:34',
+      'last update is fetch time in Europe/Berlin, not the timestamp of a historical observation');
+    fakeTime += 2000;
+    await refreshed.load();
+    check(refreshedTime.textContent === 'Letzte Aktualisierung: 26.11.2026 - 11:12:36',
+      'successful later fetch advances the update timestamp');
+    fetchError = true;
+    fakeTime += 2000;
+    await refreshed.load();
+    check(refreshedTime.textContent === 'Letzte Aktualisierung: 26.11.2026 - 11:12:36'
+      && refreshed.shadowRoot.querySelector('[data-status]').textContent.includes('Datenbank nicht erreichbar'),
+      'failed fetch is explicit and never advances the successful update timestamp');
+  } finally { window.Date = RealDate; }
   refreshed.remove();
   const racing = document.createElement('cms-graph');
   let releaseFirst, releaseSecond;

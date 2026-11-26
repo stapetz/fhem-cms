@@ -288,8 +288,8 @@ führen den letzten Messwert bis zur nächsten Messung fort; vor dem ersten Wert
 bleibt die Reihe leer. Für die Torte wählen Sie den letzten Rohwert oder den
 Durchschnitt aller gelesenen Rohwerte im Zeitraum. Negative Werte und gekürzte
 Daten werden bei der Torte mit einer Fehlermeldung abgewiesen.
-Bei Torten ist **Device und Wert im Tortenstück einblenden** standardmäßig
-aktiviert. Die zweizeilige Beschriftung verwendet den Device-Namen und das
+Bei Torten ist **Bezeichner und Wert im Tortenstück einblenden** standardmäßig
+aktiviert. Die zweizeilige Beschriftung verwendet den konfigurierten Reihenbezeichner und das
 Werteformat der Reihe und passt sich dem Segment an. Bei sehr kleinen
 Segmenten wird die Schrift entsprechend klein; Legende und Mouseover bleiben
 verfügbar. Die Beschriftung lässt sich im Konfigurationsdialog ausschalten.
@@ -297,6 +297,19 @@ Alle Graph-Typen laden ihre Daten automatisch alle fünf Minuten nach.
 Relative Zeiträume wie „24 Stunden“ wandern dabei mit; eigene Von-/Bis-Bereiche
 bleiben fest und werden erneut abgefragt. Es sind keine sekundengenauen
 Liveupdates.
+Pro Datenreihe ist eine optionale Einheit (z. B. W oder °C) frei eintragbar
+oder aus Vorschlägen wählbar. Sie erscheint an Messwerten und in der Legende;
+es erfolgt keine Umrechnung. Vergleichen Sie in einer Torte nur fachlich
+vergleichbare Größen mit gleichen Einheiten.
+Unter jedem Graphen steht **Letzte Aktualisierung: tt.mm.jjjj - hh:mm:ss**.
+Dies ist der Zeitpunkt des letzten erfolgreichen Datenabrufs (Europe/Berlin),
+nicht der Zeitpunkt des letzten Messwerts. Bei einem Fehler bleibt die letzte
+erfolgreiche Aktualisierung stehen, zusätzlich erscheint die Fehlermeldung.
+Der Zeitraum ist auch bei Torten sinnvoll: „Letzter Wert“ vergleicht den
+jeweils letzten Messwert innerhalb der Auswahl, „Durchschnitt“ die Mittelwerte
+über diesen Bereich. Messreihen können unterschiedliche letzte Messzeitpunkte
+haben. Eine Summe wird nicht berechnet; für Energie aus Leistung wäre eine
+zeitgewichtete Integration erforderlich, für Zählerstände eine Differenz.
 Die Vorschau im Konfigurationsdialog zeigt den gewählten Typ und verwendet
 echte Verlaufsdaten, ohne einen Entwurf zu speichern. Klick auf einen
 Legendeneintrag blendet die Reihe ein oder aus. Zeitraum und Granularität sind

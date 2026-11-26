@@ -4,6 +4,8 @@ import { openDevicePicker } from '../js/device-picker.js';
 import { showCmsModal } from '../js/modal-dialog.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { closeButtonSvg } from '../js/close-button.js';
+import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
+import { formatDateDisplay } from '../js/date-display.js';
 
 const COLORS = ['#3b82f6', '#f59e0b', '#22c55e', '#e879f9', '#ef4444', '#14b8a6'];
 const SVG = 'http://www.w3.org/2000/svg';
@@ -60,6 +62,10 @@ function formatValue(value, format) {
   return match ? value.toFixed(Number(match[1])) : String(value);
 }
 
+function measurement(value, series) {
+  return `${formatValue(value, series.format)}${series.unit ? ` ${series.unit}` : ''}`;
+}
+
 function timeFormatter(config, data, from, to) {
   const bounds = customRange(config.range || '');
   const starts = data.map(result => result.from).filter(Number.isFinite);
@@ -92,6 +98,8 @@ function validate(config) {
   for (const row of config.series) {
     if (!isValidName(row.device) || !isValidName(row.reading) || !Object.hasOwn(SOURCES, row.source)
       || typeof row.label !== 'string' || row.label.length > 64 || /[\u0000-\u001f\u007f]/.test(row.label)
+      || (row.unit !== undefined && (typeof row.unit !== 'string' || row.unit.length < 1
+        || row.unit.length > 16 || /[\u0000-\u001f\u007f]/.test(row.unit)))
       || !/^#[a-fA-F0-9]{6}$/.test(row.color)
       || !['left','right'].includes(row.axis || 'left')
       || !Object.hasOwn(LINE_STYLES, row.lineStyle || 'solid')
@@ -189,6 +197,7 @@ class FHEMCMSGraph extends HTMLElement {
             max(.6rem, calc(.6rem / var(--cms-freeform-scale, 1))); }
         .status { margin:0; color:var(--cms-muted); }
         .status[data-error] { color:var(--cms-danger); }
+        .updated { margin:0; color:var(--cms-muted); font-size:.8rem; overflow-wrap:anywhere; }
         dialog { width:min(94vw,48rem); max-height:94vh; overflow:auto; padding:1rem; color:var(--cms-text);
           background:var(--cms-surface); border:1px solid var(--cms-border); border-radius:1rem; }
         dialog::backdrop { background:var(--cms-backdrop); }
@@ -217,6 +226,7 @@ class FHEMCMSGraph extends HTMLElement {
         .actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.5rem; }
         .preview { height:16rem; flex:none; }
         [hidden] { display:none !important; }
+        ${unitInputCss}
         ${widgetDesignCss}
       </style>
       <article class="tile" data-tile><header><h3 data-title></h3>
@@ -227,7 +237,8 @@ class FHEMCMSGraph extends HTMLElement {
         <div data-live-custom hidden><input type="datetime-local" step="1" data-live-from aria-label="Zeitraum von">
           <input type="datetime-local" step="1" data-live-to aria-label="Zeitraum bis"><button type="button" data-live-apply>Übernehmen</button></div>
         <div class="plot"><svg data-svg viewBox="0 0 400 220" preserveAspectRatio="none" role="img" aria-label="Graph"></svg><div class="graph-tooltip" data-tooltip hidden></div></div>
-        <div class="legend" data-legend></div><p class="status" data-status role="status"></p></article>
+        <div class="legend" data-legend></div><p class="status" data-status role="status"></p>
+        <p class="updated" data-updated>Letzte Aktualisierung: –</p></article>
       <dialog data-dialog aria-label="Graph konfigurieren"><form data-form novalidate>
         <h3>Graph konfigurieren</h3>
         <label>Titel<input name="title" maxlength="64"></label>
@@ -239,7 +250,7 @@ class FHEMCMSGraph extends HTMLElement {
             <label>Raster anzeigen<input type="checkbox" name="showGrid"></label>
           </div>
           <label data-aggregation>Tortenwerte<select name="aggregation"></select></label>
-          <label data-pie-labels>Device und Wert im Tortenstück einblenden<input type="checkbox" name="showPieLabels"></label>
+          <label data-pie-labels>Bezeichner und Wert im Tortenstück einblenden<input type="checkbox" name="showPieLabels"></label>
           <label data-config-from hidden>Von<input type="datetime-local" step="1" name="from"></label>
           <label data-config-to hidden>Bis<input type="datetime-local" step="1" name="to"></label>
         </div>
@@ -252,6 +263,7 @@ class FHEMCMSGraph extends HTMLElement {
         <button type="button" data-add>Datenreihe hinzufügen</button>
         <strong>Vorschau</strong><div class="plot preview"><svg data-preview viewBox="0 0 400 220" preserveAspectRatio="none" role="img" aria-label="Graph-Vorschau"></svg><div class="graph-tooltip" data-preview-tooltip hidden></div></div>
         <div class="legend" data-preview-legend></div><p class="status" data-preview-status role="status"></p>
+        <p class="updated" data-preview-updated>Letzte Aktualisierung: –</p>
         <p class="status" data-error role="alert"></p>
         <div class="actions"><button type="button" data-delete>Widget löschen</button><button type="button" data-cancel>Abbrechen</button>
           <button type="submit" data-save>Speichern</button></div>
@@ -357,6 +369,7 @@ class FHEMCMSGraph extends HTMLElement {
       if (request !== this.request || !this.isConnected) return;
       this.currentData = data;
       this.draw(current, data, '[data-svg]', '[data-legend]', status, this.hiddenSeries);
+      this.markUpdated('[data-updated]');
     } catch (error) {
       if (request !== this.request || !this.isConnected) return;
       this.shadowRoot.querySelector('[data-svg]').replaceChildren();
@@ -365,6 +378,11 @@ class FHEMCMSGraph extends HTMLElement {
       status.textContent = `Graph konnte nicht geladen werden: ${error.message || String(error)}`;
       status.setAttribute('data-error', '');
     }
+  }
+
+  markUpdated(selector) {
+    const timestamp = formatDateDisplay(new Date().toISOString()).replace(' ', ' - ');
+    this.shadowRoot.querySelector(selector).textContent = `Letzte Aktualisierung: ${timestamp}`;
   }
 
   draw(config, data, selector, legendSelector, status, hidden) {
@@ -393,7 +411,7 @@ class FHEMCMSGraph extends HTMLElement {
       const swatch = document.createElement('span');
       swatch.className = 'swatch';
       swatch.style.backgroundColor = row.color;
-      button.append(swatch, document.createTextNode(label(row)));
+      button.append(swatch, document.createTextNode(`${label(row)}${row.unit ? ` (${row.unit})` : ''}`));
       button.addEventListener('click', () => {
         if (hidden.has(index)) hidden.delete(index); else hidden.add(index);
         try {
@@ -430,7 +448,7 @@ class FHEMCMSGraph extends HTMLElement {
           const x2 = width/2 + radius * Math.cos(next), y2 = 110 + radius * Math.sin(next);
           shape = svg('path', {d:`M ${width/2} 110 L ${x1} ${y1} A ${radius} ${radius} 0 ${next-angle > Math.PI ? 1 : 0} 1 ${x2} ${y2} Z`, fill:item.row.color});
         }
-        const description = `${label(item.row)}: ${formatValue(value, item.row.format)}`;
+        const description = `${label(item.row)}: ${measurement(value, item.row)}`;
         shape.setAttribute('aria-label', description);
         shape.onpointermove = event => {
           tooltip.textContent = description;
@@ -452,8 +470,8 @@ class FHEMCMSGraph extends HTMLElement {
           const channels = item.row.color.slice(1).match(/../g).map(channel => parseInt(channel, 16) / 255)
             .map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4);
           text.style.fill = channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722 > .179 ? '#000' : '#fff';
-          text.append(svg('tspan', {x:0, y:-6}, item.row.device),
-            svg('tspan', {x:0, y:6}, formatValue(value, item.row.format)));
+          text.append(svg('tspan', {x:0, y:-6}, label(item.row)),
+            svg('tspan', {x:0, y:6}, measurement(value, item.row)));
           labels.push({text, cx, cy, available});
         }
         angle = next;
@@ -579,7 +597,7 @@ class FHEMCMSGraph extends HTMLElement {
           ...(style === 'dashed' ? {'stroke-dasharray':'8 5'} : style === 'dotted' ? {'stroke-dasharray':'2 4'} : {})}));
         for (const point of row) {
           const circle = svg('circle', {cx:x(point[0]), cy:valueY(point[1]), r:style === 'points' ? 3 : 1, fill:item.row.color,
-            'aria-label':`${label(item.row)}: ${formatValue(point[1], item.row.format)} · ${formatTime(point[0])}`});
+            'aria-label':`${label(item.row)}: ${measurement(point[1], item.row)} · ${formatTime(point[0])}`});
           target.append(circle);
         }
       }
@@ -614,7 +632,7 @@ class FHEMCMSGraph extends HTMLElement {
         const nearest = row.reduce((best, point) => Math.abs(point[0] - timestamp(px)) < Math.abs(best[0] - timestamp(px)) ? point : best);
         const entry = document.createElement('div'), swatch = document.createElement('i');
         swatch.style.backgroundColor = item.row.color;
-        entry.append(swatch, document.createTextNode(`${label(item.row)}: ${formatValue(nearest[1], item.row.format)} · ${formatTime(nearest[0])}`));
+        entry.append(swatch, document.createTextNode(`${label(item.row)}: ${measurement(nearest[1], item.row)} · ${formatTime(nearest[0])}`));
         tooltip.append(entry);
       });
       positionTooltip(event);
@@ -691,6 +709,8 @@ class FHEMCMSGraph extends HTMLElement {
       <label>Y-Achse<select data-axis></select></label>
       <label>Linientyp<select data-line-style></select></label>
       <label>Format<select data-format></select></label>
+      <div><label>Einheit (optional)<input data-unit maxlength="16" autocomplete="off"></label>
+        <div data-unit-choices></div></div>
       <div class="line-controls">
         <label>Linienstärke<input data-line-width type="number" min="1" max="10" step="1"></label>
         <label>Farbe<input data-color type="color"></label>
@@ -701,6 +721,8 @@ class FHEMCMSGraph extends HTMLElement {
     $('[data-device]').value = series.device || '';
     $('[data-label]').value = series.label || '';
     $('[data-format]').replaceChildren(...options(FORMATS, series.format || ''));
+    $('[data-unit]').value = series.unit || '';
+    $('[data-unit-choices]').append(unitSuggestions($('[data-unit]'), {compact:true}));
     $('[data-color]').value = series.color || COLORS[container.children.length % COLORS.length];
     $('[data-axis]').replaceChildren(...options({left:'Links',right:'Rechts'}, series.axis || 'left'));
     $('[data-line-style]').replaceChildren(...options(LINE_STYLES, series.lineStyle || 'solid'));
@@ -779,6 +801,7 @@ class FHEMCMSGraph extends HTMLElement {
       axis:row.querySelector('[data-axis]').value, lineStyle:row.querySelector('[data-line-style]').value,
       lineWidth:Number(row.querySelector('[data-line-width]').value), fill:row.querySelector('[data-fill]').checked,
       format:row.querySelector('[data-format]').value.trim(),
+      ...(row.querySelector('[data-unit]').value.trim() ? {unit:row.querySelector('[data-unit]').value.trim()} : {}),
     }));
     const config = {...this.widgetConfig, title:form.elements.title.value.trim(), series,
       chartType:form.elements.chartType.value, aggregation:form.elements.aggregation.value,
@@ -808,6 +831,7 @@ class FHEMCMSGraph extends HTMLElement {
         && this.isConnected && this.shadowRoot.querySelector('[data-dialog]').open);
       if (request !== this.previewRequest || !this.shadowRoot.querySelector('[data-dialog]').open) return;
       this.draw(config, data, '[data-preview]', '[data-preview-legend]', status, new Set());
+      this.markUpdated('[data-preview-updated]');
     } catch (error) {
       if (request !== this.previewRequest) return;
       this.shadowRoot.querySelector('[data-preview]').replaceChildren();

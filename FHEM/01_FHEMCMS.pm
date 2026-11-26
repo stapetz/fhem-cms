@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.35.0-dev';
+our $FHEMCMS_VERSION = '1.36.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1308,7 +1308,7 @@ sub FHEMCMS_ValidateConfig {
                     if (ref($widget->{series}) ne 'ARRAY' || @{$widget->{series}} < 1 || @{$widget->{series}} > 20);
                 for my $series (@{$widget->{series}}) {
                     $err = $exact->($series, 'Graph-Datenreihe', ['device', 'reading', 'source', 'label', 'color'],
-                        ['axis', 'lineStyle', 'lineWidth', 'fill', 'format']);
+                        ['axis', 'lineStyle', 'lineWidth', 'fill', 'format', 'unit']);
                     return $err if ($err);
                     return 'Ungueltiges Graph-Device oder Reading'
                         if (!$isName->($series->{device}) || !$isName->($series->{reading}));
@@ -1317,6 +1317,10 @@ sub FHEMCMS_ValidateConfig {
                     return 'Ungueltige Graph-Beschriftung'
                         if (!defined($series->{label}) || ref($series->{label}) || length($series->{label}) > 64
                             || $series->{label} =~ /[\x00-\x1f\x7f]/);
+                    return 'Ungueltige Graph-Einheit'
+                        if (exists($series->{unit}) && (!defined($series->{unit}) || ref($series->{unit})
+                            || length($series->{unit}) < 1 || length($series->{unit}) > 16
+                            || $series->{unit} =~ /[\x00-\x1f\x7f]/));
                     return 'Ungueltige Graph-Farbe'
                         if (!defined($series->{color}) || ref($series->{color}) || $series->{color} !~ /\A#[0-9a-fA-F]{6}\z/);
                     return 'Ungueltige Graph-Achse'

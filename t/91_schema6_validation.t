@@ -55,6 +55,16 @@ for my $schema (5, 6) {
     @{$advancedWidget->{series}[0]}{qw(axis lineStyle lineWidth fill format)} =
         ('right', 'dashed', 4, JSON::PP::true, 'round(2)');
     is(FHEMCMS_ValidateConfig($advanced, $schema), undef, 'custom range and graph styles accepted');
+    for my $unit ('W', "\x{b0}C", 'x' x 16) {
+        my $withUnit = $json->decode($json->encode($advanced));
+        $withUnit->{pages}[0]{widgets}[0]{series}[0]{unit} = $unit;
+        is(FHEMCMS_ValidateConfig($withUnit, $schema), undef, "schema $schema accepts optional reading unit");
+    }
+    for my $unit ('', 'x' x 17, "bad\nunit", undef, {}) {
+        my $withUnit = $json->decode($json->encode($advanced));
+        $withUnit->{pages}[0]{widgets}[0]{series}[0]{unit} = $unit;
+        like(FHEMCMS_ValidateConfig($withUnit, $schema), qr/Graph-Einheit/, "schema $schema rejects invalid reading unit");
+    }
     for my $field (['axis', 'middle'], ['lineStyle', 'zigzag'], ['lineWidth', 11], ['fill', 1],
         ['format', 'round(7)'], ['format', 'round(2);system'], ['format', undef]) {
         my $bad = $json->decode($json->encode($advanced));

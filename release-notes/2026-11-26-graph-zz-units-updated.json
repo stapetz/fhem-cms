@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-26",
+  "version": "1.36.0-dev",
+  "title": "Graph-Bezeichner, Einheiten und Aktualisierung",
+  "changes": [
+    "Tortensegmente verwenden die konfigurierten Reihenbezeichner statt technischer Device-Namen. Refs #259.",
+    "Optionale Einheit pro Reading in Legende, Mouseover und Tortenwerten.",
+    "Alle Graph-Typen zeigen Datum und Uhrzeit des letzten erfolgreichen Datenabrufs."
+  ]
+}

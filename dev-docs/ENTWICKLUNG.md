@@ -173,7 +173,7 @@ ausserhalb der Teilstrichbeschriftungen, links -90 und rechts +90 Grad,
 mit der Schriftunterseite zur jeweiligen Achse. Ihr Platz wird bei der
 Berechnung der Plotraender beruecksichtigt.
 Nachtrag 1.35.0-dev: Optionaler Boolean `showPieLabels` (abwesend/true =
-einblenden) steuert zweizeilige Beschriftungen mit Device-Name und formatiertem
+einblenden) steuert zweizeilige Beschriftungen mit Reihenbezeichner und formatiertem
 Rohwert in den Tortensegmenten. Eine einbeschriebene Kreisflaeche begrenzt
 Textposition und Skalierung; kleine Segmente ergeben entsprechend kleine
 Schrift. Legende und Tooltip bleiben unabhaengig verfuegbar. Der Dialog
@@ -181,6 +181,20 @@ zeigt die Option nur fuer Torten; Vorschau und Live verwenden denselben Pfad.
 Alle Graph-Typen laden alle fuenf Minuten neu. Relative Bereiche laufen
 mit der Serverzeit weiter; absolute Von-/Bis-Bereiche bleiben fest, werden
 aber ebenfalls erneut abgefragt. Es handelt sich nicht um Push-Liveupdates.
+Nachtrag 1.36.0-dev: Tortensegmente verwenden denselben konfigurierten
+Reihenbezeichner wie Legende und Tooltip (ohne Bezeichner Device:Reading).
+Pro Reihe ist `unit` optional (1-16 Zeichen, keine Steuerzeichen); leere
+Dialogfelder entfernen das Feld. Das gemeinsame Einheitenfeld mit kompakten
+Vorschlaegen wird wiederverwendet. Einheit erscheint bei Messwerten in
+Tooltip, barrierefreien Messpunkttexten und Tortenbeschriftung sowie in
+Klammern in der Legende; Rohwerte, Achsenskalierung und Berechnung bleiben
+unveraendert. Unterschiedliche Einheiten werden nicht automatisch umgerechnet.
+Unter allen Graph-Typen und in der Vorschau steht separat der Zeitpunkt
+des letzten erfolgreichen Abrufs: `Letzte Aktualisierung: DD.MM.YYYY - HH:mm:ss`
+(Europe/Berlin), nicht der Zeitpunkt des letzten Messpunkts. Ohne erfolgreichen
+Abruf steht dort ein Strich; Fehler und reine Neuzeichnungen aktualisieren
+den Zeitstempel nicht. Die Tortenaggregation bleibt letzter Wert/Durchschnitt;
+eine ungewichtete Summe ist kein Ersatz fuer Integration bzw. Zaehlerdifferenz.
 Regressionen: `prove t/01_fhemcms.t t/91_schema6_validation.t t/92_schema6_persistence.t`,
 `node --test t/115_graph_data.test.js` sowie der Browserfall
 `graph supports multiple log series` in `t/35_schema5_scaling.test.js`.

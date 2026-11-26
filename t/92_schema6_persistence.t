@@ -40,7 +40,7 @@ $draft5->{pages}[0]{widgets} = [{
     axisLabelX => 'Zeit', axisLabelLeft => 'Watt', axisLabelRight => 'Grad', showGrid => JSON::PP::false,
     showPieLabels => JSON::PP::false,
     series => [{device => 'Solar1', reading => 'power', source => 'auto', label => 'Dach', color => '#123abc',
-        axis => 'right', lineStyle => 'dashed', lineWidth => 4, fill => JSON::PP::true, format => 'round(2)'}],
+        axis => 'right', lineStyle => 'dashed', lineWidth => 4, fill => JSON::PP::true, format => 'round(2)', unit => 'W'}],
 }];
 $draft5->{settings}{pageCanvas} = {width => 200, height => 200};
 $draft5->{settings}{pageNavigationRect} = {x => 10, y => 10, w => 180, h => 40};
@@ -77,6 +77,10 @@ $next->{pages}[0]{widgets} = [{
     showOnPin => {reading => JSON::PP::false}, rect => {x => 120, y => 60, w => 80, h => 100},
     position => {centerX => 0, centerY => 100},
 }];
+my $freeformGraph = $json->decode($json->encode($draft5->{pages}[0]{widgets}[0]));
+delete($freeformGraph->{grid});
+$freeformGraph->{rect} = {x => 0, y => 100, w => 200, h => 100};
+push(@{$next->{pages}[0]{widgets}}, $freeformGraph);
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $initial->{token}, 1), qr/veraltet/, 'stale upgrade refused');
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $gridState->{token}), qr/schemaVersion/, 'old writer cannot introduce schema 6');
 my $bad = $json->decode($json->encode($next));
