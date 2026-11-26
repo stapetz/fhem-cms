@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-26",
+  "version": "1.39.0-dev",
+  "title": "Log-Cache in der Administration anzeigen",
+  "changes": [
+    "Die Administration zeigt berechtigte Devices, Aliase und Readings aus dem gemeinsamen Log-Cache tabellarisch und seitenweise an. Refs #259.",
+    "Der Log-Cache steht vor dem CMS-Device-Bestand."
+  ]
+}

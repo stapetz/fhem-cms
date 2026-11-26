@@ -1,9 +1,9 @@
-import { showCmsModal } from './modal-dialog.js?v=admin-20261126-5';
-import { installCloseStyles, styleCloseButton } from './close-button.js?v=admin-20261126-5';
-import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261126-5';
-import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261126-5';
-import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261126-5';
-import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261126-5';
+import { showCmsModal } from './modal-dialog.js?v=admin-20261126-6';
+import { installCloseStyles, styleCloseButton } from './close-button.js?v=admin-20261126-6';
+import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261126-6';
+import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261126-6';
+import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261126-6';
+import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261126-6';
 
 const CONFIG_LIMIT = 1048576;
 
@@ -54,9 +54,10 @@ export class CmsAdminClient {
     this.endpoint = new URL(`${this.base.pathname.replace(/\/$/, '')}/fhemcms-admin`, this.base);
   }
 
-  async request(payload = null, operation = null) {
+  async request(payload = null, operation = null, parameters = {}) {
     const url = new URL(this.endpoint);
     url.searchParams.set('op', operation || (payload ? 'delete' : 'list'));
+    for (const [key, value] of Object.entries(parameters)) url.searchParams.set(key, String(value));
     const options = { credentials: 'same-origin', cache: 'no-store' };
     if (payload) {
       const tokenResponse = await fetch(new URL(`${this.base.pathname.replace(/\/$/, '')}?XHR=1`, this.base),
@@ -77,6 +78,20 @@ export class CmsAdminClient {
   async inventory() { return validateInventory(await this.request()); }
   async cacheStatus() { return this.request(null, 'cache-status'); }
   async rebuildCache() { return this.request({}, 'cache-rebuild'); }
+  async cacheContents(offset) {
+    const result = await this.request(null, 'cache-contents', {offset});
+    if (result?.status === 'pending') return result;
+    if (!result || !Array.isArray(result.items) || result.items.length > 50
+      || !Number.isInteger(result.total) || result.total < 0 || result.total > 20000
+      || result.offset !== offset || !Array.isArray(result.warnings)
+      || result.warnings.some(warning => typeof warning !== 'string')
+      || result.items.some(item => !item || !isValidName(item.name)
+        || (item.alias !== undefined && (typeof item.alias !== 'string' || /[\x00-\x1f\x7f]/.test(item.alias)))
+        || !Array.isArray(item.readings) || item.readings.some(reading => !isValidName(reading)))) {
+      throw new Error('Ungültiger Cache-Inhalt');
+    }
+    return result;
+  }
 
   async remove(items, token) {
     const result = await this.request({ items, token, confirmation: 'DELETE' });
@@ -96,6 +111,9 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
   const status = $('#status');
   const dialog = $('#confirmation');
   const importDialog = $('#import-confirmation');
+  const cacheDialog = $('#cache-dialog');
+  let cacheRequest = 0;
+  let cacheOffset = 0;
   let inventory;
   let busy = false;
   let pendingImport;
@@ -268,6 +286,45 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
       message(`Log-Cache-Aufbau fehlgeschlagen: ${error.message}`, true);
     } finally { finish(); }
   });
+  const loadCachePage = async offset => {
+    const request = ++cacheRequest;
+    cacheOffset = offset;
+    $('#cache-rows').replaceChildren();
+    $('#cache-dialog-status').textContent = 'Cache-Inhalt wird geladen …';
+    $('#cache-previous').disabled = true;
+    $('#cache-next').disabled = true;
+    try {
+      let data;
+      for (let attempt = 0; attempt < 120; attempt++) {
+        data = await client.cacheContents(offset);
+        if (request !== cacheRequest || !cacheDialog.open) return;
+        if (data.status !== 'pending') break;
+        await new Promise(resolve => browser.setTimeout(resolve, 500));
+      }
+      if (!data || data.status === 'pending') throw new Error('Zeitlimit beim Laden des Cache-Inhalts überschritten');
+      for (const item of data.items) {
+        const row = element('tr');
+        row.append(element('td', item.alias ? `${item.name} (${item.alias})` : item.name),
+          element('td', item.readings.join(', ')));
+        $('#cache-rows').append(row);
+      }
+      $('#cache-dialog-status').textContent = `${data.total} Devices${data.total ? `, ${offset + 1}–${offset + data.items.length}` : ''}. ${data.warnings.join(' ')}`;
+      $('#cache-previous').disabled = offset === 0;
+      $('#cache-next').disabled = offset + data.items.length >= data.total;
+    } catch (error) {
+      if (request === cacheRequest && cacheDialog.open) {
+        $('#cache-dialog-status').textContent = `Cache-Inhalt nicht verfügbar: ${error.message}`;
+      }
+    }
+  };
+  $('#cache-show').addEventListener('click', () => {
+    showCmsModal(cacheDialog);
+    void loadCachePage(0);
+  });
+  $('#cache-previous').addEventListener('click', () => { void loadCachePage(Math.max(0, cacheOffset - 50)); });
+  $('#cache-next').addEventListener('click', () => { void loadCachePage(cacheOffset + 50); });
+  $('#cache-close').addEventListener('click', () => cacheDialog.close());
+  cacheDialog.addEventListener('close', () => { cacheRequest++; });
   void updateCacheStatus();
   const cancelImport = () => {
     pendingImport = null;
@@ -302,14 +359,16 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
   const closeWindow = () => requestAdminClose(browser, text => message(text, true));
   installCloseStyles(root.ownerDocument.head);
   styleCloseButton($('#close-window'), 'Fenster schließen');
+  styleCloseButton($('#cache-close'), 'Schließen');
   $('#close-window').addEventListener('click', closeWindow);
   root.addEventListener('keydown', event => {
     if (event.key !== 'Escape' || event.defaultPrevented) return;
     const activeDialog = event.target.closest?.('dialog[open]') || root.querySelector('dialog[open]');
     if (activeDialog) {
-      if (![importDialog, dialog].includes(activeDialog)) return;
+      if (![importDialog, dialog, cacheDialog].includes(activeDialog)) return;
       event.preventDefault();
       if (activeDialog === importDialog) cancelImport();
+      else if (activeDialog === cacheDialog) cacheDialog.close();
       else activeDialog.close('cancel');
       return;
     }

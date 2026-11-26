@@ -3,24 +3,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Globale FHEM-CMS Administration</title>
-<link rel="stylesheet" href="css/fhem-cms.css?v=admin-20261126-5">
-<link rel="stylesheet" href="css/cms-admin.css?v=admin-20261126-5">
+<link rel="stylesheet" href="css/fhem-cms.css?v=admin-20261126-6">
+<link rel="stylesheet" href="css/cms-admin.css?v=admin-20261126-6">
 <main class="cms-admin">
   <header class="cms-admin-header">
     <h1>Globale FHEM-CMS Administration</h1>
     <button class="cms-button cms-admin-close" id="close-window" type="button" aria-label="Fenster schließen" title="Fenster schließen">×</button>
   </header>
-  <p>CMS-Devices und verbliebene Dateistrukturen verwalten. Purge entfernt Konfigurationen, Sicherungen und Medien unwiderruflich. Danach wird das Device gel&ouml;scht.</p>
-  <p>Verwaiste Verzeichnisse werden separat ausgew&auml;hlt. Fremde Dateien und Symlinks bleiben gesch&uuml;tzt. Maximal 20 Eintr&auml;ge pro Vorgang.</p>
-  <button class="cms-button" id="refresh" type="button">Bestand aktualisieren</button>
-  <p id="status" role="status" aria-live="polite"></p>
   <section aria-labelledby="cache-heading">
     <h2 id="cache-heading">Gemeinsamer Log-Cache</h2>
     <p id="cache-status" role="status" aria-live="polite"></p>
-    <button class="cms-button" id="cache-rebuild" type="button">Log-Cache jetzt neu aufbauen</button>
+    <div class="cms-admin-cache-actions">
+      <button class="cms-button" id="cache-rebuild" type="button">Log-Cache jetzt neu aufbauen</button>
+      <button class="cms-button" id="cache-show" type="button">Cache-Inhalt anzeigen</button>
+    </div>
   </section>
   <section aria-labelledby="devices-heading">
     <h2 id="devices-heading">CMS-Devices</h2>
+    <p>CMS-Devices und verbliebene Dateistrukturen verwalten. Purge entfernt Konfigurationen, Sicherungen und Medien unwiderruflich. Danach wird das Device gel&ouml;scht.</p>
+    <p>Verwaiste Verzeichnisse werden separat ausgew&auml;hlt. Fremde Dateien und Symlinks bleiben gesch&uuml;tzt. Maximal 20 Eintr&auml;ge pro Vorgang.</p>
+    <button class="cms-button" id="refresh" type="button">Bestand aktualisieren</button>
+    <p id="status" role="status" aria-live="polite"></p>
     <div id="devices"></div>
     <button class="cms-button" id="delete-devices" type="button" disabled>Ausgew&auml;hlte CMS: Purge + Delete</button>
   </section>
@@ -35,6 +38,22 @@
   </section>
   <p>Eine &Auml;nderung der FHEM-Konfiguration wird nicht automatisch mit <code>save</code> gespeichert. Nach der Pr&uuml;fung bei Bedarf in FHEMWEB speichern.</p>
 </main>
+<dialog id="cache-dialog" aria-labelledby="cache-dialog-title">
+  <header class="cms-admin-cache-header">
+    <h2 id="cache-dialog-title">Inhalt des gemeinsamen Log-Caches</h2>
+    <button class="cms-button" id="cache-close" type="button" aria-label="Schlie&szlig;en"></button>
+  </header>
+  <p>Anzeige der aktuell vorhandenen und freigegebenen Devices aus allen Cache-Quellen.</p>
+  <p id="cache-dialog-status" role="status" aria-live="polite"></p>
+  <div class="cms-admin-cache-table">
+    <table><thead><tr><th scope="col">Device (Alias)</th><th scope="col">Readings</th></tr></thead>
+      <tbody id="cache-rows"></tbody></table>
+  </div>
+  <div class="cms-admin-cache-actions">
+    <button class="cms-button" id="cache-previous" type="button">Vorherige</button>
+    <button class="cms-button" id="cache-next" type="button">N&auml;chste</button>
+  </div>
+</dialog>
 <dialog id="confirmation" aria-labelledby="confirm-title">
   <form method="dialog">
     <h2 id="confirm-title">Unwiderruflich l&ouml;schen</h2>
@@ -61,5 +80,5 @@
     </div>
   </form>
 </dialog>
-<script type="module" src="js/cms-admin.js?v=admin-20261126-5"></script>
+<script type="module" src="js/cms-admin.js?v=admin-20261126-6"></script>
 </html>

@@ -151,6 +151,47 @@ sub FHEMCMS_AdminEndpoint {
     if ($operation eq 'list') {
         my ($inventory, $error) = FHEMCMS_AdminInventory();
         $result = defined($error) ? {error => $error} : $inventory;
+    } elsif ($operation eq 'cache-contents') {
+        if (!Authorized($FW_chash, 'cmd', 'get')) {
+            $result = {error => 'Zugriff verweigert'};
+        } else {
+            my $offset = $FW_webArgs{offset} // '0';
+            my ($dir, $error) = FHEMCMS_LogIndexRoot();
+            if (ref($offset) || $offset !~ /\A\d{1,5}\z/ || $offset > 20000) {
+                $result = {error => 'Ungueltige Cache-Seite'};
+            } elsif (defined($error)) {
+                $result = {error => $error};
+            } else {
+                my $file = File::Spec->catfile($dir, 'log-index.json');
+                my @stat = -l $file ? () : stat($file);
+                my @allowed = grep { FHEMCMS_ValidName($_)
+                    && !(($defs{$_}{TYPE} // '') eq 'FHEMWEB' && $defs{$_}{TEMPORARY})
+                    && Authorized($FW_chash, 'devicename', $_) } sort keys %defs;
+                if (!@stat) {
+                    $result = {error => 'Log-Cache ist noch nicht verfuegbar'};
+                } elsif (@allowed > 20000) {
+                    $result = {error => 'Zu viele Devices fuer die Cache-Ansicht'};
+                } else {
+                    my $key = join("\0", 'cachecontents', $offset, sha256_hex(join("\0", @allowed)),
+                        join(':', @stat[0, 1, 7, 9]));
+                    my $response = FHEMCMS_QueueHistoryJob($key, {
+                        operation => 'cachecontents', cmsName => 'FHEMCMS', device => 'FHEMCMS',
+                        allowed => \@allowed, offset => $offset,
+                    });
+                    my $decoded = eval { $ADMIN_JSON->decode($response) };
+                    if ($@ || ref($decoded) ne 'HASH') {
+                        $result = {error => $response};
+                    } else {
+                        $result = $decoded;
+                        for my $item (@{$result->{items} // []}) {
+                            my $alias = $attr{$item->{name}}{alias};
+                            $item->{alias} = $alias if (defined($alias) && !ref($alias)
+                                && $alias =~ /\A[^\x00-\x1f\x7f]{1,256}\z/);
+                        }
+                    }
+                }
+            }
+        }
     } elsif ($operation eq 'cache-status') {
         if (!Authorized($FW_chash, 'cmd', 'get')) {
             $result = {error => 'Zugriff verweigert'};

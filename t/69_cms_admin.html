@@ -40,6 +40,10 @@ try {
   const client = {
     base: new URL('http://example.test/custom/'),
     inventory: async () => ({token: 'a'.repeat(64), items: items.filter(item => !removed.includes(item.name))}),
+    cacheStatus: async () => ({status: 'ready'}),
+    cacheContents: async offset => ({offset, total: 51, warnings: [], items: offset === 0
+      ? [{name: 'Alpha', alias: '<b>Garage</b>', readings: ['energy', 'power']}]
+      : [{name: 'Zulu', readings: ['temperature']}]}),
     remove: async selection => {
       removed.push(...selection.map(item => item.name));
       return selection.map(item => ({...item, ok: true, message: 'Erledigt'}));
@@ -99,6 +103,26 @@ try {
   const $ = selector => doc.querySelector(selector);
   check(doc.title === 'Globale FHEM-CMS Administration' && $('h1').textContent === doc.title,
     'page heading and browser title use the global administration name');
+  check($('#cache-heading').closest('section').nextElementSibling === $('#devices-heading').closest('section')
+    && $('#devices-heading').compareDocumentPosition($('#refresh')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    'shared cache precedes CMS heading, introduction and refresh');
+  $('#cache-show').click();
+  await wait(() => $('#cache-rows').children.length === 1);
+  check($('#cache-dialog').open && $('#cache-rows').textContent.includes('Alpha (<b>Garage</b>)')
+    && $('#cache-rows').textContent.includes('energy, power') && !$('#cache-rows b'),
+    'cache dialog shows alias and readings as text');
+  $('#cache-next').click();
+  await wait(() => $('#cache-rows').textContent.includes('Zulu'));
+  check(!$('#cache-previous').disabled && $('#cache-next').disabled, 'cache pagination follows total');
+  $('#cache-close').click();
+  check(!$('#cache-dialog').open, 'cache dialog closes without closing administration');
+  frame.style.width = '360px';
+  $('#cache-show').click();
+  await wait(() => $('#cache-rows').children.length === 1);
+  check($('#cache-dialog').getBoundingClientRect().width <= frame.contentWindow.innerWidth
+    && $('#cache-dialog').scrollWidth <= $('#cache-dialog').clientWidth,
+    'cache dialog fits a narrow viewport');
+  $('#cache-close').click();
   check(!doc.querySelector('#configuration-device, #configuration-page, #settings-dialog, #embedded-editor, .cms-admin-toolbar'),
     'inventory has no global CMS selection, settings panels, toolbar or embedded editor');
   check(loadedDevices.length === 0, 'initial inventory never loads a CMS configuration');

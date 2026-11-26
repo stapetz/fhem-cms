@@ -142,6 +142,25 @@ test('cache administration uses GET for status and CSRF-protected POST for rebui
   } finally { globalThis.fetch = previous; }
 });
 
+test('cache contents use a paged read and reject malformed responses', async () => {
+  const previous = globalThis.fetch;
+  const client = new CmsAdminClient('https://example.test/fhem/');
+  try {
+    globalThis.fetch = async (url, options) => {
+      assert.equal(String(url), 'https://example.test/fhem/fhemcms-admin?op=cache-contents&offset=0');
+      assert.equal(options.method, undefined);
+      return Response.json({items: [{name: 'Solar', alias: '<b>Solar</b>', readings: ['power']}],
+        offset: 0, total: 1, warnings: []});
+    };
+    assert.equal((await client.cacheContents(0)).items[0].alias, '<b>Solar</b>');
+    globalThis.fetch = async () => Response.json({status: 'pending'});
+    assert.equal((await client.cacheContents(0)).status, 'pending');
+    globalThis.fetch = async () => Response.json({items: [{name: '../bad', readings: []}],
+      offset: 0, total: 1, warnings: []});
+    await assert.rejects(client.cacheContents(0), /Ungültiger Cache-Inhalt/);
+  } finally { globalThis.fetch = previous; }
+});
+
 test('admin configuration uses schema 5/6 draft controllers and rejects older schemas', async () => {
   const previous = globalThis.fetch;
   const calls = [];

@@ -213,6 +213,54 @@ delete($attr{WEB}{csrfToken});
     like(JSON::PP::decode_json($body)->{error}, qr/Zugriff verweigert/, 'cache status requires get permission');
     delete($denied{'cmd:get'});
 }
+{
+    no warnings 'redefine';
+    my $argument;
+    local *main::BlockingCall = sub { $argument = $_[1]; return {pid => 123}; };
+    local $defs{Alpha} = {NAME => 'Alpha', TYPE => 'dummy'};
+    local $defs{Beta} = {NAME => 'Beta', TYPE => 'dummy'};
+    local $attr{Alpha}{alias} = 'Garage <Nord>';
+    my $cache = {version => 1, builtAt => CORE::time(),
+        fingerprint => FHEMCMS_LogIndexFingerprint(),
+        sources => {dblog => {Database => {Alpha => {power => 1}, Beta => {state => 1}}},
+            filelog => {Files => {Alpha => {energy => 1, power => 1}}}},
+        errors => {dblog => {}, filelog => {}}};
+    is(FHEMCMS_LogIndexWrite("$root/fhem-cms-data", $cache), undef, 'prepares shared cache contents');
+    %FW_webArgs = (op => 'cache-contents', offset => 0);
+    $denied{'cmd:get'} = 1;
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-contents');
+    like(JSON::PP::decode_json($body)->{error}, qr/Zugriff/, 'cache contents require get permission');
+    delete($denied{'cmd:get'});
+    $denied{'devicename:Beta'} = 1;
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-contents');
+    is(JSON::PP::decode_json($body)->{status}, 'pending', 'cache contents are read asynchronously');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($argument));
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-contents');
+    my $contents = JSON::PP::decode_json($body);
+    is_deeply($contents->{items}, [{name => 'Alpha', alias => 'Garage <Nord>',
+        readings => [qw(energy power)]}], 'contents merge sources, include alias and filter forbidden devices');
+    delete($denied{'devicename:Beta'});
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-contents');
+    is(JSON::PP::decode_json($body)->{status}, 'pending', 'different permissions use a separate result');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($argument));
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-contents');
+    $contents = JSON::PP::decode_json($body);
+    is_deeply([map { $_->{name} } @{$contents->{items}}], [qw(Alpha Beta)], 'devices are sorted by name');
+    my $large = {version => 1, builtAt => CORE::time(),
+        sources => {dblog => {Database => {map { sprintf('Sensor%03d', $_) => {state => 1} } 1 .. 55}},
+            filelog => {}}, errors => {dblog => {}, filelog => {}}};
+    my @sensors = sort keys %{$large->{sources}{dblog}{Database}};
+    is(FHEMCMS_LogIndexWrite("$root/fhem-cms-data", $large), undef, 'prepares more than one page');
+    my $page = JSON::PP::decode_json(FHEMCMS_LogIndexContents(\@sensors, 50));
+    is($page->{total}, 55, 'page reports total device count');
+    is_deeply([map { $_->{name} } @{$page->{items}}], [@sensors[50 .. 54]],
+        'second page contains the remaining sorted devices');
+    $page = JSON::PP::decode_json(FHEMCMS_LogIndexContents(\@sensors, 100));
+    is_deeply($page->{items}, [], 'page past the end is empty without failure');
+    %FW_webArgs = (op => 'cache-contents', offset => '../');
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-contents');
+    like(JSON::PP::decode_json($body)->{error}, qr/Cache-Seite/, 'invalid page is rejected');
+}
 like(FHEMCMS_Purge('../'), qr/Ungueltiger/, 'purge validates names at core boundary');
 delete($defs{$_}) for grep { ($defs{$_}{TYPE} // '') eq 'FHEMCMS' } keys %defs;
 $value = inventory();

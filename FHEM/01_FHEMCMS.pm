@@ -24,7 +24,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndex.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndexJobs.pm');
 
-our $FHEMCMS_VERSION = '1.38.2-dev';
+our $FHEMCMS_VERSION = '1.39.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -2598,7 +2598,7 @@ sub FHEMCMS_QueueHistoryJob {
 
 sub FHEMCMS_HistoryJobDescription {
     my ($request) = @_;
-    return 'Reading-Erkennung' if (($request->{operation} // 'history') =~ /\Alog(?:readings|devices)\z/);
+    return 'Reading-Erkennung' if (($request->{operation} // 'history') =~ /\A(?:log(?:readings|devices)|cachecontents)\z/);
     return (($request->{kind} // '') eq 'filelog' ? 'FileLog-Verlauf' : 'DbLog-Verlauf');
 }
 
@@ -2635,10 +2635,19 @@ sub FHEMCMS_HistoryWorker {
     return '' if (!FHEMCMS_ValidName($request->{cmsName}) || !FHEMCMS_ValidName($request->{device})
         || !defined($request->{key}) || ref($request->{key})
         || !defined($request->{token}) || ref($request->{token})
-        || ($operation ne 'history' && $operation ne 'logreadings' && $operation ne 'logdevices'));
+        || ($operation ne 'history' && $operation ne 'logreadings' && $operation ne 'logdevices'
+            && $operation ne 'cachecontents'));
 
     my ($json, $error);
-    if ($operation eq 'logreadings' || $operation eq 'logdevices') {
+    if ($operation eq 'cachecontents') {
+        my $result = FHEMCMS_LogIndexContents($request->{allowed}, $request->{offset});
+        my $decoded = eval { JSON::PP->new->utf8->decode($result // '') };
+        if (!$@ && ref($decoded) eq 'HASH' && ref($decoded->{items}) eq 'ARRAY') {
+            $json = $result;
+        } else {
+            $error = defined($result) && !ref($result) ? $result : 'Cache-Inhalt konnte nicht gelesen werden';
+        }
+    } elsif ($operation eq 'logreadings' || $operation eq 'logdevices') {
         return '' if (($request->{source} // '') !~ /\A(?:auto|dblog|filelog)\z/);
         my $result = $operation eq 'logdevices'
             ? FHEMCMS_LogIndexDevices($request->{cmsName}, $request->{source}, $request->{allowed})
@@ -3740,7 +3749,8 @@ use FHEMWEB and FHEM permissions.</p>
     Ohne Attribut oder bei <code>0</code> fehlt der Menueeintrag.
     Nach Aenderung die CMS-Seite neu laden. Dies ist keine Zugriffssperre
     fuer die direkte URL; FHEMWEB-Berechtigungen bleiben erforderlich.
-    Sie bietet einen manuellen Neuaufbau des gemeinsamen Log-Caches,
+    Sie bietet einen manuellen Neuaufbau und eine tabellarische Ansicht
+    des gemeinsamen Log-Caches fuer aktuell vorhandene, berechtigte Devices,
     bestaetigte Sammelloeschung (Purge vor Delete) und separat
     die Bereinigung eindeutig zuordenbarer verwaister CMS-Verzeichnisse.
     FHEMWEB-Rechte bleiben erforderlich. Die CSRF-Pruefung folgt der

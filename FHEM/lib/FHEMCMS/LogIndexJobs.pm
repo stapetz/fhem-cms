@@ -132,6 +132,43 @@ sub FHEMCMS_LogIndexDevices {
     return JSON::PP->new->utf8->canonical->encode({devices => [sort keys %devices], warnings => \@warnings});
 }
 
+sub FHEMCMS_LogIndexContents {
+    my ($allowed, $offset) = @_;
+    return 'Ungueltige Cache-Abfrage' if (ref($allowed) ne 'ARRAY'
+        || grep { !FHEMCMS_ValidName($_) } @{$allowed});
+    return 'Ungueltige Cache-Seite' if (!defined($offset) || ref($offset)
+        || $offset !~ /\A\d{1,5}\z/ || $offset > 20000);
+    my %allowed = map { $_ => 1 } @{$allowed};
+    my ($dir, $rootError) = FHEMCMS_LogIndexRoot();
+    return $rootError if (defined($rootError));
+    my ($cache, $error) = FHEMCMS_LogIndexRead($dir);
+    return $error if (defined($error));
+    my (%devices, @warnings);
+    for my $kind (qw(dblog filelog)) {
+        for my $name (sort keys %{$cache->{sources}{$kind}}) {
+            my $source = $cache->{sources}{$kind}{$name};
+            for my $device (keys %{$source}) {
+                next if (!$allowed{$device});
+                $devices{$device}{$_} = 1 for keys %{$source->{$device}};
+            }
+        }
+        for my $name (sort keys %{$cache->{errors}{$kind} // {}}) {
+            push(@warnings, $allowed{$name}
+                ? "Logquelle $name: $cache->{errors}{$kind}{$name}; Cache moeglicherweise veraltet"
+                : 'Eine Logquelle konnte nicht aktualisiert werden; Cache moeglicherweise veraltet');
+        }
+    }
+    push(@warnings, 'Logquellen-Konfiguration wurde geaendert; Cache moeglicherweise veraltet')
+        if (($cache->{fingerprint} // '') ne (FHEMCMS_LogIndexFingerprint() // ''));
+    my @names = sort keys %devices;
+    my @page = $offset < @names ? splice(@names, $offset, 50) : ();
+    my $json = JSON::PP->new->utf8->canonical->encode({
+        items => [map { {name => $_, readings => [sort keys %{$devices{$_}}]} } @page],
+        total => scalar(keys %devices), offset => 0 + $offset, warnings => \@warnings,
+    });
+    return length($json) <= 262144 ? $json : 'Cache-Seite ist zu gross zur Anzeige';
+}
+
 sub FHEMCMS_LogIndexStart {
     return 'Cache-Aufbau laeuft bereits' if ($FHEMCMS_LOG_INDEX_JOB);
     return 'Asynchroner Cache-Aufbau ist nicht verfuegbar' if (!defined(&BlockingCall));
