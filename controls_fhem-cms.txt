@@ -80,7 +80,7 @@ UPD 2026-11-27_00:52:05 29161 www/fhem-cms/js/fhem-client.js
 UPD 2026-11-26_21:37:35 81522 www/fhem-cms/js/fhem-cms.js
 UPD 2026-11-22_10:25:12 10205 www/fhem-cms/js/freehtml-css.js
 UPD 2026-11-22_10:40:34 18238 www/fhem-cms/js/freehtml-diagnostics.js
-UPD 2026-11-27_00:52:05 27689 www/fhem-cms/js/freehtml.js
+UPD 2026-11-27_00:57:46 27757 www/fhem-cms/js/freehtml.js
 UPD 2026-11-26_23:43:10 46 www/fhem-cms/js/frontend-version.js
 UPD 2026-11-26_21:37:43 4541 www/fhem-cms/js/graph-data.js
 UPD 2026-11-13_15:48:11 930 www/fhem-cms/js/grid-preference.js
