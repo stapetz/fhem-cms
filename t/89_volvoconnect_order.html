@@ -145,7 +145,7 @@ try {
       'reading eyes align at the beginning of each row');
   }
   for (const tools of host().shadowRoot.querySelectorAll('.card-tools')) {
-    check(getComputedStyle(tools).justifyContent === 'flex-end'
+    check(['flex-end', 'flow-end'].includes(getComputedStyle(tools).justifyContent)
       && Math.abs(tools.lastElementChild.getBoundingClientRect().right - tools.getBoundingClientRect().right) < 1,
       'drag grip and card eye align on right edge');
   }

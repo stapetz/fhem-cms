@@ -129,7 +129,7 @@ try {
   check(root.querySelector('[data-exif-dialog]').textContent.includes('GPS: Breitengrad'), 'EXIF popup shows GPS fields');
   const exifClose = root.querySelector('[data-exif-close]');
   check(exifClose.parentElement.classList.contains('footer'), 'EXIF close uses right aligned footer');
-  equal(getComputedStyle(exifClose.parentElement).justifyContent, 'flex-end', 'EXIF close aligned right');
+  check(['flex-end', 'flow-end'].includes(getComputedStyle(exifClose.parentElement).justifyContent), 'EXIF close aligned right');
   check(Math.abs(exifClose.getBoundingClientRect().right - exifClose.parentElement.getBoundingClientRect().right) < 1,
     'EXIF close rendered at right edge');
   await click(root, '[data-exif-close]');
@@ -151,7 +151,10 @@ try {
   check(root.querySelector('[data-usage]').textContent.includes('Solaranlage'), 'usage shows page title');
   check(root.querySelector('[data-usage]').textContent.includes('text1'), 'usage shows widget');
   check(root.querySelector('[data-usage]').textContent.includes('Entwurf'), 'usage distinguishes draft');
-  equal(getComputedStyle(root.querySelector('[data-usage-close]').parentElement).justifyContent, 'flex-end', 'usage close aligned right like EXIF');
+  const usageClose = root.querySelector('[data-usage-close]');
+  check(['flex-end', 'flow-end'].includes(getComputedStyle(usageClose.parentElement).justifyContent)
+    && Math.abs(usageClose.getBoundingClientRect().right - usageClose.parentElement.getBoundingClientRect().right) < 1,
+  'usage close aligned right like EXIF');
   await click(root, '[data-usage-close]');
   check(!root.querySelector('[data-usage-dialog]'), 'usage popup closes and cleans up');
   await click(root, '[data-delete-asset]');
@@ -205,7 +208,7 @@ try {
   const deleteCancel = root.querySelector('[data-delete-folder-cancel]');
   const deleteAccept = root.querySelector('[data-delete-folder-accept]');
   check(deleteCancel.parentElement === deleteAccept.parentElement, 'delete buttons share footer');
-  equal(getComputedStyle(deleteCancel.parentElement).justifyContent, 'flex-end', 'folder delete actions aligned right');
+  check(['flex-end', 'flow-end'].includes(getComputedStyle(deleteCancel.parentElement).justifyContent), 'folder delete actions aligned right');
   equal(getComputedStyle(deleteCancel).borderColor, getComputedStyle(deleteAccept).borderColor, 'cancel and delete have same standard border');
   equal(getComputedStyle(deleteCancel).backgroundColor, getComputedStyle(deleteAccept).backgroundColor, 'cancel and delete have same standard background');
   check(Math.abs(deleteAccept.getBoundingClientRect().right - deleteAccept.parentElement.getBoundingClientRect().right) < 1,

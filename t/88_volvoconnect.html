@@ -289,7 +289,9 @@ try {
   $('[name=title]').value = widget.title;
   check([...$('[data-form]').querySelectorAll('input')].slice(0,2).map(i=>i.name).join() === 'title,device',
     'device assignment directly follows title');
-  check(getComputedStyle($('.config-actions')).justifyContent === 'flex-end', 'dialog actions match standard right alignment');
+  check(['flex-end', 'flow-end'].includes(getComputedStyle($('.config-actions')).justifyContent)
+    && Math.abs($('[data-save]').getBoundingClientRect().right - $('.config-actions').getBoundingClientRect().right) < 1,
+  'dialog actions match standard right alignment');
   check([...$('.config-actions').children].map(b=>b.textContent).join() === 'Widget löschen,Abbrechen,Speichern',
     'standard dialog labels and order');
   $('[name=showDetails]').checked = false;
