@@ -1,4 +1,4 @@
-UPD 2026-11-26_22:41:38 205950 FHEM/01_FHEMCMS.pm
+UPD 2026-11-26_22:46:12 206041 FHEM/01_FHEMCMS.pm
 UPD 2026-11-26_22:32:44 10146 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-26_22:32:44 16057 FHEM/lib/FHEMCMS/LogIndex.pm
@@ -81,7 +81,7 @@ UPD 2026-11-26_21:37:35 81522 www/fhem-cms/js/fhem-cms.js
 UPD 2026-11-22_10:25:12 10205 www/fhem-cms/js/freehtml-css.js
 UPD 2026-11-22_10:40:34 18238 www/fhem-cms/js/freehtml-diagnostics.js
 UPD 2026-11-22_10:40:34 26626 www/fhem-cms/js/freehtml.js
-UPD 2026-11-26_22:41:38 46 www/fhem-cms/js/frontend-version.js
+UPD 2026-11-26_22:46:12 46 www/fhem-cms/js/frontend-version.js
 UPD 2026-11-26_21:37:43 4541 www/fhem-cms/js/graph-data.js
 UPD 2026-11-13_15:48:11 930 www/fhem-cms/js/grid-preference.js
 UPD 2026-11-24_11:00:18 5062 www/fhem-cms/js/icon-picker.js
