@@ -175,7 +175,7 @@ sub FHEMCMS_LogIndexWorker {
             }
             if (!defined($error)) {
                 ($cache, $error) = FHEMCMS_LogIndexBuild(\@logs, \%attr,
-                    $attr{global}{logdir} // './log', time(), $previous);
+                    $attr{global}{logdir} // './log', CORE::time(), $previous);
             }
             if (!defined($error)) {
                 $cache->{fingerprint} = $request->{fingerprint};

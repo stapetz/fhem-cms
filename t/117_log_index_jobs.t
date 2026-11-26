@@ -5,6 +5,7 @@ use File::Spec;
 use File::Temp qw(tempdir);
 use JSON::PP ();
 use Test::More;
+use Time::HiRes qw(time);
 
 our (%attr, %defs, $FHEMCMS_LOG_INDEX_JOB, $FHEMCMS_LOG_INDEX_ERROR);
 my ($workerArgument, $startFails);
@@ -45,6 +46,7 @@ ok(!$FHEMCMS_LOG_INDEX_JOB, 'completion clears the running job');
 is($FHEMCMS_LOG_INDEX_ERROR, undef, 'successful build has no error');
 my ($cache, $error) = FHEMCMS_LogIndexRead($dataDir);
 is($error, undef, 'completed cache is available');
+like($cache->{builtAt}, qr/\A\d+\z/, 'cache timestamp is integral even when FHEM imports high-resolution time');
 is_deeply($cache->{sources}{filelog}{File_Solar}{Solar}, {power => 1}, 'cache has logged readings');
 is($cache->{fingerprint}, FHEMCMS_LogIndexFingerprint(), 'cache identifies its source configuration');
 my $readings = JSON::PP::decode_json(FHEMCMS_LogIndexReadings('CMS', 'Solar', 'filelog'));

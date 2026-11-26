@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-26",
+  "version": "1.38.1-dev",
+  "title": "Log-Cache-Aufbau unter FHEM korrigiert",
+  "changes": [
+    "Der Cache-Aufbau verwendet ganzzahlige Zeitstempel auch bei hochaufloesender FHEM-Zeitfunktion. Refs #259."
+  ]
+}
