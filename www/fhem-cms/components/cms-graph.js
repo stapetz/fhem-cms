@@ -1,5 +1,5 @@
 import { isValidName, customHistoryRange as customRange } from '../js/fhem-client.js';
-import { graphPieValues, stackGraphSeries } from '../js/graph-data.js';
+import { graphPieValues, linearStackBands, stackGraphSeries } from '../js/graph-data.js';
 import { openDevicePicker } from '../js/device-picker.js';
 import { showCmsModal } from '../js/modal-dialog.js';
 import { widgetDesignCss } from '../js/widget-design.js';
@@ -13,6 +13,7 @@ const RANGES = { '24h': '24 Stunden', '7d': '7 Tage', '30d': '30 Tage', '365d': 
 const GRANULARITIES = { auto: 'Automatisch', raw: 'Rohdaten', '15m': '15 Minuten', '1h': '1 Stunde', '1d': '1 Tag',
   '1w':'1 Woche', '1mo':'1 Monat', '1y':'1 Jahr' };
 const TYPES = { line: 'Linien', stack: 'Gestapelt', pie: 'Torte' };
+const AGGREGATIONS = {last:'Letzter Wert', average:'Durchschnitt', min:'Minimum', max:'Maximum'};
 const SOURCES = { auto: 'Automatisch', dblog: 'DbLog', filelog: 'FileLog' };
 const LINE_STYLES = {solid:'Durchgezogen', dashed:'Gestrichelt', dotted:'Gepunktet', points:'Nur Punkte'};
 const FORMATS = {'':'Unverändert', int:'Ganzzahl (abschneiden)',
@@ -66,20 +67,30 @@ function measurement(value, series) {
   return `${formatValue(value, series.format)}${series.unit ? ` ${series.unit}` : ''}`;
 }
 
+function decimalPlaces(value, format) {
+  if (format === 'int') return 0;
+  const match = /^round\(([0-6])\)$/.exec(format || '');
+  if (match) return Number(match[1]);
+  const [mantissa, exponent = '0'] = String(value).toLowerCase().split('e');
+  return Math.min(100, Math.max(0, (mantissa.split('.')[1]?.length || 0) - Number(exponent)));
+}
+
 function timeFormatter(config, data, from, to) {
   const bounds = customRange(config.range || '');
   const starts = data.map(result => result.from).filter(Number.isFinite);
   const ends = data.map(result => result.to).filter(Number.isFinite);
   const duration = { '24h':86400, '7d':604800, '30d':2592000, '365d':31536000 }[config.range];
-  const start = bounds?.[0] ?? (starts.length ? Math.min(...starts) : duration ? to - duration : from);
   const end = bounds?.[1] ?? (ends.length ? Math.max(...ends) : to);
+  const start = bounds?.[0] ?? (duration ? end - duration : starts.length ? Math.min(...starts) : from);
   const zone = {timeZone:'Europe/Berlin'};
-  if (end - start <= 86400) {
-    return new Intl.DateTimeFormat('de-DE', {...zone, hour:'2-digit', minute:'2-digit'});
-  }
   const year = new Intl.DateTimeFormat('de-DE', {...zone, year:'numeric'});
-  return new Intl.DateTimeFormat('de-DE', {...zone, day:'2-digit', month:'2-digit',
-    ...(year.format(start * 1000) !== year.format(end * 1000) ? {year:'numeric'} : {})});
+  const crossesYear = year.format(start * 1000) !== year.format(end * 1000);
+  const date = {day:'2-digit', month:'2-digit', ...(crossesYear ? {year:'numeric'} : {})};
+  const clock = {hour:'2-digit', minute:'2-digit', hourCycle:'h23'};
+  const span = end - start;
+  const axis = new Intl.DateTimeFormat('de-DE', {...zone,
+    ...(span <= 86400 ? clock : span <= 604800 ? {...date, ...clock} : date)});
+  return {axis};
 }
 
 function validate(config) {
@@ -88,25 +99,34 @@ function validate(config) {
   }
   if (!Object.hasOwn(TYPES, config.chartType) || (!Object.hasOwn(RANGES, config.range) && !customRange(config.range))
     || config.range === 'custom'
-    || !Object.hasOwn(GRANULARITIES, config.granularity) || !['last', 'average'].includes(config.aggregation)) {
+    || !Object.hasOwn(GRANULARITIES, config.granularity) || !Object.hasOwn(AGGREGATIONS, config.aggregation)) {
     throw new Error('Ungültige Diagrammeinstellung');
   }
   if ((config.title || '').length > 64 || /[\u0000-\u001f\u007f]/.test(config.title || '')) throw new Error('Ungültiger Titel');
   if (config.showPieLabels !== undefined && typeof config.showPieLabels !== 'boolean') {
     throw new Error('Ungültige Tortenbeschriftung');
   }
-  for (const row of config.series) {
-    if (!isValidName(row.device) || !isValidName(row.reading) || !Object.hasOwn(SOURCES, row.source)
-      || typeof row.label !== 'string' || row.label.length > 64 || /[\u0000-\u001f\u007f]/.test(row.label)
-      || (row.unit !== undefined && (typeof row.unit !== 'string' || row.unit.length < 1
-        || row.unit.length > 16 || /[\u0000-\u001f\u007f]/.test(row.unit)))
-      || !/^#[a-fA-F0-9]{6}$/.test(row.color)
-      || !['left','right'].includes(row.axis || 'left')
-      || !Object.hasOwn(LINE_STYLES, row.lineStyle || 'solid')
-      || !Number.isInteger(row.lineWidth ?? 4) || (row.lineWidth ?? 4) < 1 || (row.lineWidth ?? 4) > 10
-      || (row.format !== undefined && (typeof row.format !== 'string'
-        || !/^(?:|int|round\([0-6]\))$/.test(row.format)))
-      || (row.fill !== undefined && typeof row.fill !== 'boolean')) throw new Error('Ungültige Datenreihe');
+  if (config.stackLinear !== undefined && typeof config.stackLinear !== 'boolean') {
+    throw new Error('Ungültige Stapeldarstellung');
+  }
+  for (const [index, row] of config.series.entries()) {
+    const name = isValidName(row.device) ? row.device : `Datenreihe ${index + 1}`;
+    if (!isValidName(row.device)) throw new Error(`${name}: Bitte ein gültiges Device auswählen.`);
+    if (!isValidName(row.reading)) throw new Error(`${name}: Bitte ein verfügbares geloggtes Reading auswählen.`);
+    if (!Object.hasOwn(SOURCES, row.source)) throw new Error(`${name}: Ungültige Logquelle.`);
+    if (typeof row.label !== 'string' || row.label.length > 64 || /[\u0000-\u001f\u007f]/.test(row.label))
+      throw new Error(`${name}: Ungültiger Legendentext.`);
+    if (row.unit !== undefined && (typeof row.unit !== 'string' || row.unit.length < 1
+      || row.unit.length > 16 || /[\u0000-\u001f\u007f]/.test(row.unit)))
+      throw new Error(`${name}: Ungültige Einheit (höchstens 16 Zeichen, keine Steuerzeichen).`);
+    if (!/^#[a-fA-F0-9]{6}$/.test(row.color)) throw new Error(`${name}: Ungültige Farbe.`);
+    if (!['left','right'].includes(row.axis || 'left')) throw new Error(`${name}: Ungültige Achse.`);
+    if (!Object.hasOwn(LINE_STYLES, row.lineStyle || 'solid')) throw new Error(`${name}: Ungültiger Linientyp.`);
+    if (!Number.isInteger(row.lineWidth ?? 4) || (row.lineWidth ?? 4) < 1 || (row.lineWidth ?? 4) > 10)
+      throw new Error(`${name}: Linienstärke muss zwischen 1 und 10 liegen.`);
+    if (row.format !== undefined && (typeof row.format !== 'string' || !/^(?:|int|round\([0-6]\))$/.test(row.format)))
+      throw new Error(`${name}: Ungültiges Werteformat.`);
+    if (row.fill !== undefined && typeof row.fill !== 'boolean') throw new Error(`${name}: Ungültige Flächenfüllung.`);
   }
 }
 
@@ -119,6 +139,7 @@ class FHEMCMSGraph extends HTMLElement {
     this.hiddenSeries = new Set();
     this.drawStates = new Map();
     this.pickerAbort = new AbortController();
+    this.rowSequence = 0;
   }
 
   connectedCallback() {
@@ -211,18 +232,29 @@ class FHEMCMSGraph extends HTMLElement {
           .axis-settings { grid-template-columns:1fr; }
         }
         form label { min-width:0; }
+        [data-stack-linear] { grid-column:1 / -1; }
+        [data-stack-linear] label { display:flex; align-items:center; gap:.5rem; }
+        [data-stack-linear] small { display:block; margin-top:.25rem; }
         form input:not([type=checkbox]), form select { width:100%; min-width:0; height:40px; }
         form input[type=checkbox] { width:24px; height:24px; justify-self:start; }
         .row { display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr)); gap:.5rem;
           position:relative; align-items:start; padding:.7rem 3.8rem .7rem .7rem; border:1px solid var(--cms-border); border-radius:.5rem; }
-        .row [data-pick] { min-width:0; width:100%; height:44px; margin-top:calc(1em + .2rem); }
+        .row .device-group { grid-column:1 / -1; display:grid;
+          grid-template-columns:repeat(auto-fit,minmax(min(9rem,100%),1fr)); gap:.3rem .5rem; }
+        .row [data-pick], form input[data-device] { height:44px; }
+        .row [data-pick] { min-width:0; width:100%; align-self:end; }
         .row input[type=color] { padding:.2rem; }
         .row input[type=color]::-webkit-color-swatch-wrapper { padding:0; }
         .row input[type=color]::-webkit-color-swatch { border:0; border-radius:.3rem; }
         .row [data-remove] { position:absolute; right:.35rem; top:.35rem; width:48px; height:48px; padding:0; display:grid; place-items:center; }
         .row [data-remove] svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
-        .row [data-row-status] { margin-top:.3rem; overflow-wrap:anywhere; }
+        .row [data-row-status] { grid-column:1 / -1; min-width:0; white-space:normal; overflow-wrap:anywhere; }
         .row .line-controls { grid-column:1 / -1; display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr)); gap:.5rem; }
+        .row .line-controls label:has([data-color]) { max-width:12rem; }
+        .row .unit-field { grid-column:1 / -1; min-width:0; }
+        .row .unit-entry { display:flex; align-items:start; gap:.5rem; }
+        .row .unit-entry input { flex:0 1 9rem; width:auto; }
+        .row .unit-entry [data-unit-choices] { flex:1; min-width:0; }
         .actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.5rem; }
         .preview { height:16rem; flex:none; }
         [hidden] { display:none !important; }
@@ -232,6 +264,7 @@ class FHEMCMSGraph extends HTMLElement {
       <article class="tile" data-tile><header><h3 data-title></h3>
         <div class="controls"><select data-range aria-label="Zeitraum"></select>
         <select data-granularity aria-label="Granularität"></select>
+        <select data-live-aggregation aria-label="Tortenwerte"></select>
         <button type="button" data-grid aria-label="Raster ein- oder ausblenden" title="Raster ein- oder ausblenden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM9 3v18M15 3v18M3 9h18M3 15h18"/></svg></button></div>
         <button type="button" data-open-config>Konfigurieren</button></header>
         <div data-live-custom hidden><input type="datetime-local" step="1" data-live-from aria-label="Zeitraum von">
@@ -251,6 +284,8 @@ class FHEMCMSGraph extends HTMLElement {
           </div>
           <label data-aggregation>Tortenwerte<select name="aggregation"></select></label>
           <label data-pie-labels>Bezeichner und Wert im Tortenstück einblenden<input type="checkbox" name="showPieLabels"></label>
+          <div data-stack-linear><label><input type="checkbox" name="stackLinear">Messpunkte linear verbinden</label>
+            <small>Zum dauerhaften Speichern ist das aktuelle FHEMCMS-Backend erforderlich.</small></div>
           <label data-config-from hidden>Von<input type="datetime-local" step="1" name="from"></label>
           <label data-config-to hidden>Bis<input type="datetime-local" step="1" name="to"></label>
         </div>
@@ -284,6 +319,10 @@ class FHEMCMSGraph extends HTMLElement {
       }
     });
     $('[data-granularity]').addEventListener('change', event => { this.granularity = event.target.value; void this.load(); });
+    $('[data-live-aggregation]').addEventListener('change', event => {
+      this.aggregation = event.target.value;
+      void this.load();
+    });
     $('[data-grid]').addEventListener('click', () => {
       this.showGrid = !this.showGrid;
       $('[data-grid]').setAttribute('aria-pressed', String(this.showGrid));
@@ -297,6 +336,8 @@ class FHEMCMSGraph extends HTMLElement {
     $('[data-form]').addEventListener('change', () => {
       $('[data-aggregation]').hidden = $('[data-form]').elements.chartType.value !== 'pie';
       $('[data-pie-labels]').hidden = $('[data-form]').elements.chartType.value !== 'pie';
+      $('[data-stack-linear]').hidden = $('[data-form]').elements.chartType.value !== 'stack';
+      this.updateRowControls();
       $('[data-config-from]').hidden = $('[data-config-to]').hidden = $('[data-form]').elements.range.value !== 'custom';
       this.queuePreview();
     });
@@ -308,6 +349,7 @@ class FHEMCMSGraph extends HTMLElement {
     if (!config) return;
     this.range = config.range || '24h';
     this.granularity = config.granularity || 'auto';
+    this.aggregation = config.aggregation || 'last';
     this.showGrid = config.showGrid !== false;
     const title = this.shadowRoot.querySelector('[data-title]');
     title.textContent = config.showTitle === false ? '' : config.title || '';
@@ -315,6 +357,9 @@ class FHEMCMSGraph extends HTMLElement {
     const bounds = customRange(this.range);
     this.shadowRoot.querySelector('[data-range]').replaceChildren(...options(RANGES, bounds ? 'custom' : this.range));
     this.shadowRoot.querySelector('[data-granularity]').replaceChildren(...options(GRANULARITIES, this.granularity));
+    const aggregation = this.shadowRoot.querySelector('[data-live-aggregation]');
+    aggregation.replaceChildren(...options(AGGREGATIONS, this.aggregation));
+    aggregation.hidden = config.chartType !== 'pie';
     this.shadowRoot.querySelector('[data-grid]').setAttribute('aria-pressed', String(this.showGrid));
     this.shadowRoot.querySelector('[data-live-custom]').hidden = !bounds;
     if (bounds) {
@@ -363,7 +408,8 @@ class FHEMCMSGraph extends HTMLElement {
     status.textContent = 'Daten werden geladen …';
     status.removeAttribute('data-error');
     try {
-      const current = {...config, range:this.range, granularity:this.granularity, showGrid:this.showGrid};
+      const current = {...config, range:this.range, granularity:this.granularity,
+        aggregation:this.aggregation, showGrid:this.showGrid};
       validate(current);
       const data = await this.fetchData(current, () => request === this.request && this.isConnected);
       if (request !== this.request || !this.isConnected) return;
@@ -431,6 +477,13 @@ class FHEMCMSGraph extends HTMLElement {
     if (!visible.length) { status.textContent = 'Alle Datenreihen sind ausgeblendet.'; return; }
     if (config.chartType === 'pie') {
       const values = graphPieValues(visible.map(item => item.result), config.aggregation);
+      if (values.every(value => value === null || value <= 0)) {
+        target.append(svg('circle', {cx:width/2, cy:110, r:Math.min(95, width / 2 - 5),
+          fill:'none', stroke:'currentColor', 'stroke-width':2, 'data-empty-pie':''}));
+        status.textContent = 'Keine positiven Werte im gewählten Zeitraum.';
+        return;
+      }
+      if (values.some(value => value !== null && value < 0)) throw new Error('Tortendiagramme benötigen nichtnegative Werte');
       const total = values.reduce((sum, value) => sum + (value ?? 0), 0);
       if (!Number.isFinite(total)) throw new Error('Tortensumme ist zu groß');
       if (total <= 0) { status.textContent = 'Keine positiven Werte im gewählten Zeitraum.'; return; }
@@ -488,19 +541,27 @@ class FHEMCMSGraph extends HTMLElement {
     const points = visible.map(item => item.result.points || []);
     if (!points.some(row => row.length)) { status.textContent = 'Keine Werte im gewählten Zeitraum.'; return; }
     let stacked = null;
+    let stackBands = null;
     if (config.chartType === 'stack') {
       stacked = new Array(points.length);
+      if (config.stackLinear) stackBands = new Array(points.length);
       for (const axis of ['left', 'right']) {
         const indexes = visible.map((item, index) => (item.row.axis || 'left') === axis ? index : -1).filter(index => index >= 0);
-        const groups = stackGraphSeries(indexes.map(index => points[index]));
-        indexes.forEach((index, i) => { stacked[index] = groups[i]; });
+        const groups = stackGraphSeries(indexes.map(index => points[index]), config.stackLinear === true);
+        indexes.forEach((index, i) => {
+          stacked[index] = groups[i];
+          if (stackBands) stackBands[index] = linearStackBands(groups, i);
+        });
       }
     }
     const times = points.flatMap(row => row.map(point => point[0]));
     let from = Math.min(...times), to = Math.max(...times);
     if (from === to) to = from + 1;
     const timeFormat = timeFormatter(config, data, from, to);
-    const formatTime = time => timeFormat.format(time * 1000);
+    const formatAxisTime = time => timeFormat.axis.format(time * 1000);
+    const tooltipTime = new Intl.DateTimeFormat('de-DE', {timeZone:'Europe/Berlin',
+      day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hourCycle:'h23'});
+    const formatTime = time => tooltipTime.format(time * 1000);
     const limits = {left:{low:Infinity, high:-Infinity}, right:{low:Infinity, high:-Infinity}};
     (stacked || points).forEach((row, index) => {
       const axis = limits[visible[index].row.axis || 'left'];
@@ -567,22 +628,26 @@ class FHEMCMSGraph extends HTMLElement {
       }
     }
     if (config.axisLabelX) target.append(svg('text', {x:(left+right)/2, y:219, 'text-anchor':'middle'}, config.axisLabelX));
-    for (const [time, anchor] of [[from, 'start'], [to, 'end']]) {
-      target.append(svg('text', {x:x(time), y:211, 'text-anchor':anchor, 'data-time-tick':''}, formatTime(time)));
+    const tickCount = Math.max(2, Math.min(5, Math.floor((right - left) / 80) + 1));
+    for (let i = 0; i < tickCount; i++) {
+      const time = from + (to - from) * i / (tickCount - 1);
+      target.append(svg('text', {x:x(time), y:211, 'text-anchor':i === 0 ? 'start' : i === tickCount - 1 ? 'end' : 'middle',
+        'data-time-tick':''}, formatAxisTime(time)));
     }
     visible.forEach((item, index) => {
       const axis = item.row.axis || 'left';
       const valueY = value => y(value, axis);
       if (stacked) {
-        const row = stacked[index].filter(point => point[1] !== null);
-        if (!row.length) return;
-        const top = [], bottom = [];
-        row.forEach((point, i) => {
-          if (i) { top.push(`${x(point[0])},${valueY(row[i-1][2])}`); bottom.push(`${x(point[0])},${valueY(row[i-1][1])}`); }
-          top.push(`${x(point[0])},${valueY(point[2])}`);
-          bottom.push(`${x(point[0])},${valueY(point[1])}`);
-        });
-        target.append(svg('polygon', {points:[...top, ...bottom.reverse()].join(' '), fill:item.row.color, opacity:.6}));
+        for (const row of stackBands ? stackBands[index] : [stacked[index].filter(point => point[1] !== null)]) {
+          if (!row.length) continue;
+          const top = [], bottom = [];
+          row.forEach((point, i) => {
+            if (i && !config.stackLinear) { top.push(`${x(point[0])},${valueY(row[i-1][2])}`); bottom.push(`${x(point[0])},${valueY(row[i-1][1])}`); }
+            top.push(`${x(point[0])},${valueY(point[2])}`);
+            bottom.push(`${x(point[0])},${valueY(point[1])}`);
+          });
+          target.append(svg('polygon', {points:[...top, ...bottom.reverse()].join(' '), fill:item.row.color, opacity:.6}));
+        }
       } else {
         const row = points[index];
         if (!row.length) return;
@@ -624,17 +689,36 @@ class FHEMCMSGraph extends HTMLElement {
       crosshair.setAttribute('x2', px);
       tooltip.replaceChildren();
       const header = document.createElement('strong');
-      header.textContent = formatTime(timestamp(px));
       tooltip.append(header);
+      const totals = new Map();
+      let latest = -Infinity;
       visible.forEach((item, index) => {
         const row = points[index];
         if (!row.length) return;
         const nearest = row.reduce((best, point) => Math.abs(point[0] - timestamp(px)) < Math.abs(best[0] - timestamp(px)) ? point : best);
         const entry = document.createElement('div'), swatch = document.createElement('i');
         swatch.style.backgroundColor = item.row.color;
-        entry.append(swatch, document.createTextNode(`${label(item.row)}: ${measurement(nearest[1], item.row)} · ${formatTime(nearest[0])}`));
+        latest = Math.max(latest, nearest[0]);
+        entry.append(swatch, document.createTextNode(`${label(item.row)}: ${measurement(nearest[1], item.row)}`));
         tooltip.append(entry);
+        const axis = item.row.axis || 'left', unit = item.row.unit || '';
+        const key = JSON.stringify([axis, unit]);
+        const group = totals.get(key) || {unit, value:0, digits:0, truncate:true};
+        group.value += nearest[1];
+        group.digits = Math.max(group.digits, decimalPlaces(nearest[1], item.row.format));
+        group.truncate &&= item.row.format === 'int';
+        totals.set(key, group);
       });
+      if (Number.isFinite(latest)) header.textContent = formatTime(latest);
+      for (const group of totals.values()) {
+        const sum = document.createElement('div');
+        sum.dataset.graphTotal = '';
+        const value = Number.isFinite(group.value)
+          ? group.truncate ? String(Math.trunc(group.value)) : group.value.toFixed(group.digits)
+          : 'zu groß';
+        sum.textContent = `∑: ${value}${group.unit ? ` ${group.unit}` : ''}`;
+        tooltip.append(sum);
+      }
       positionTooltip(event);
     };
     target.onpointerleave = () => { if (dragStart === null) { crosshair.setAttribute('hidden', ''); tooltip.hidden = true; } };
@@ -671,10 +755,12 @@ class FHEMCMSGraph extends HTMLElement {
     const config = this.widgetConfig;
     form.elements.title.value = config.title || '';
     form.elements.chartType.replaceChildren(...options(TYPES, config.chartType || 'line'));
-    form.elements.aggregation.replaceChildren(...options({last:'Letzter Wert', average:'Durchschnitt'}, config.aggregation || 'last'));
+    form.elements.aggregation.replaceChildren(...options(AGGREGATIONS, config.aggregation || 'last'));
     this.shadowRoot.querySelector('[data-aggregation]').hidden = form.elements.chartType.value !== 'pie';
     this.shadowRoot.querySelector('[data-pie-labels]').hidden = form.elements.chartType.value !== 'pie';
+    this.shadowRoot.querySelector('[data-stack-linear]').hidden = form.elements.chartType.value !== 'stack';
     form.elements.showPieLabels.checked = config.showPieLabels !== false;
+    form.elements.stackLinear.checked = config.stackLinear === true;
     const bounds = customRange(config.range || '');
     form.elements.range.replaceChildren(...options(RANGES, bounds ? 'custom' : config.range || '24h'));
     form.elements.granularity.replaceChildren(...options(GRANULARITIES, config.granularity || 'auto'));
@@ -692,6 +778,11 @@ class FHEMCMSGraph extends HTMLElement {
     this.queuePreview();
   }
 
+  updateRowControls() {
+    const line = this.shadowRoot.querySelector('[data-form]').elements.chartType.value === 'line';
+    for (const control of this.shadowRoot.querySelectorAll('[data-line-only]')) control.hidden = !line;
+  }
+
   addRow(series = {}) {
     const container = this.shadowRoot.querySelector('[data-rows]');
     if (container.children.length >= 20) {
@@ -700,21 +791,23 @@ class FHEMCMSGraph extends HTMLElement {
     }
     const row = document.createElement('div');
     row.className = 'row';
-    row.innerHTML = `<div><label>Device<input data-device readonly placeholder="Device auswählen"></label>
-      <p class="status" data-row-status role="status"></p></div>
+    const unitId = `unit-${++this.rowSequence}`;
+    row.innerHTML = `<div class="device-group"><label>Device<input data-device readonly placeholder="Device auswählen"></label>
       <button type="button" data-pick>Device auswählen …</button>
+      <p class="status" data-row-status role="status"></p></div>
       <label>Reading<select data-reading><option value="">Reading wählen …</option></select></label>
       <label>Quelle<select data-source></select></label>
       <label>Legende<input data-label maxlength="64"></label>
-      <label>Y-Achse<select data-axis></select></label>
-      <label>Linientyp<select data-line-style></select></label>
+      <label data-line-only>Y-Achse<select data-axis></select></label>
+      <label data-line-only>Linientyp<select data-line-style></select></label>
       <label>Format<select data-format></select></label>
-      <div><label>Einheit (optional)<input data-unit maxlength="16" autocomplete="off"></label>
-        <div data-unit-choices></div></div>
+      <div class="unit-field"><label for="${unitId}">Einheit (optional)</label>
+        <div class="unit-entry"><input id="${unitId}" data-unit maxlength="16" autocomplete="off">
+        <div data-unit-choices></div></div></div>
       <div class="line-controls">
-        <label>Linienstärke<input data-line-width type="number" min="1" max="10" step="1"></label>
+        <label data-line-only>Linienstärke<input data-line-width type="number" min="1" max="10" step="1"></label>
         <label>Farbe<input data-color type="color"></label>
-        <label>Fläche füllen<input data-fill type="checkbox"></label>
+        <label data-line-only>Fläche füllen<input data-fill type="checkbox"></label>
       </div>
       <button type="button" data-remove aria-label="Datenreihe entfernen" title="Datenreihe entfernen">${closeButtonSvg}</button>`;
     const $ = selector => row.querySelector(selector);
@@ -750,6 +843,7 @@ class FHEMCMSGraph extends HTMLElement {
     $('[data-source]').addEventListener('change', () => this.loadReadings(row, $('[data-reading]').value));
     $('[data-remove]').addEventListener('click', () => { row.remove(); this.queuePreview(); });
     container.append(row);
+    this.updateRowControls();
     if (series.device) void this.loadReadings(row, series.reading);
     this.queuePreview();
   }
@@ -811,6 +905,8 @@ class FHEMCMSGraph extends HTMLElement {
       axisLabelX:form.elements.axisLabelX.value.trim(), axisLabelLeft:form.elements.axisLabelLeft.value.trim(),
       axisLabelRight:form.elements.axisLabelRight.value.trim()};
     if (!config.title) delete config.title;
+    if (form.elements.stackLinear.checked) config.stackLinear = true;
+    else delete config.stackLinear;
     validate(config);
     return config;
   }

@@ -921,6 +921,8 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     is($history->{points}[0][1] + 0, 20, 'history keeps the values in time order');
     is($history->{summary}{last}, 29, 'summary uses the last raw value');
     is($history->{summary}{average}, 24.5, 'summary uses the average of all raw values');
+    is($history->{summary}{min}, 20, 'summary uses the minimum of all raw values');
+    is($history->{summary}{max}, 29, 'summary uses the maximum of all raw values');
 
     %main::FHEMCMS_HISTORY_CACHE = ();
     my $bucketedPending = JSON::PP::decode_json(
@@ -989,13 +991,19 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     no warnings 'once';
     local *main::DbLog_Get = sub {
         my ($dbHash, $dbName, $in, $out, @rest) = @_;
+        die 'inherited DbLog handle was reused' if (defined($dbHash->{DBHU}));
+        $dbHash->{DBHU} = 'worker connection';
         return '{"data":[]}' if ($out eq 'webchart' && $rest[2] eq 'Temp');
         return '{"data":[{"READING":"power"},{"READING":"bad name"}]}' if ($out eq 'webchart');
         return () if ($out eq 'array' && ($rest[-1] // '') eq 'Temp:temperature');
         return ({tstamp => POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime(time() - 60)), value => '12.5 W'},
             {tstamp => 'broken', value => '1'});
     };
-    $main::defs{HistDb} = {NAME => 'HistDb', TYPE => 'DbLog'};
+    $main::defs{HistDb} = {NAME => 'HistDb', TYPE => 'DbLog', DBHU => 'parent connection'};
+    my ($isolatedResult, $isolatedError) = FHEMCMS_DbLogCall(
+        $main::defs{HistDb}, 'webchart', 'from', 'to', 'Temp', 'getreadings');
+    is($isolatedError, undef, 'DbLog call does not reuse an inherited handle');
+    is($main::defs{HistDb}{DBHU}, 'parent connection', 'DbLog call restores the original handle');
     {
         no warnings 'redefine';
         local *main::DbLog_Get = sub { die 'database unavailable'; };

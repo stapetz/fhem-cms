@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-26",
+  "version": "1.37.0-dev",
+  "title": "Graph-Zeitachse, lineare Stapel und Mouseover-Summen",
+  "changes": [
+    "Kurze Zeitraeume zeigen Uhrzeiten auf der Achse sowie Datum und Uhrzeit im Mouseover. Refs #259.",
+    "Gestapelte Reihen koennen optional linear verbunden werden.",
+    "Mouseover summiert sichtbare Messwerte getrennt nach Achse und Einheit und zeigt den neuesten Messzeitpunkt einmalig.",
+    "Tortendiagramme bieten Minima und Maxima sowie eine direkt umschaltbare Auswertung; bei ausschliesslich nichtpositiven Werten erscheint ein leerer Kreis.",
+    "DbLog-Hintergrundabfragen nutzen eine eigene Datenbankverbindung statt einer vom FHEM-Hauptprozess geerbten Verbindung."
+  ]
+}

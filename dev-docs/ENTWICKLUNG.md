@@ -133,7 +133,8 @@ Die History-Antwort enthaelt `summary.last` und `summary.average` aus den
 gelesenen Rohwerten, unabhaengig von der Granularitaet; ohne Werte ist
 `summary` null. Bei gekuerzten Daten beziehen sich diese Angaben nur auf
 die gelesenen Werte. Die Graph-Tortenauswertung verweigert solche Daten
-und negative Werte. Automatische Quellenwahl faellt bei leerem DbLog-Verlauf
+und gemischte positive und negative Werte; ausschliesslich nichtpositive Werte
+ergeben einen leeren Kreis. Automatische Quellenwahl faellt bei leerem DbLog-Verlauf
 auf ein passendes FileLog zurueck; eine explizite Quellenwahl bleibt erhalten.
 `graph-data.js` haelt fuer Stapel den letzten Wert bis zur naechsten Messung;
 vor der ersten Messung bleibt die Reihe leer. Negative und positive Werte
@@ -147,6 +148,10 @@ Zwei parallele Logpruefungen begrenzen die Last; ausstehende Pruefungen und
 Fehler werden sichtbar gemeldet, beim Schliessen starten keine weiteren.
 Die Reading-Auswahl enthaelt nur geloggte Readings; nicht mehr verfuegbare
 gespeicherte Readings werden als Hinweis gemeldet, nicht als Option angeboten.
+Die Einheitenvorschlaege stehen neben dem Eingabefeld; Linienart, -staerke,
+Achsseite und Fuellung werden bei Stapel und Torte nicht angeboten, bestehende
+Reiheneinstellungen aber beim Wechsel erhalten. Tooltip-Summen erscheinen als
+∑ und verwenden die groesste Nachkommazahl der sichtbaren beteiligten Reihen.
 Logreadings durchsucht nach Auswahl bis zu zehn Jahre FileLog-Daten, neuere
 Dateien zuerst. Ein erreichtes Zeilenlimit wird explizit als moeglicherweise
 unvollstaendige Reading-Liste angezeigt.
@@ -165,9 +170,11 @@ Tortensegmente erzeugen keinen zusaetzlichen nativen Browser-Tooltip.
 Nachbesserung 1.34.4-dev: Tooltips verwenden kompakte 0.8rem Schrift und
 0.4rem/0.6rem Innenabstand. Die Zeitraum-/Granularitaets-Steuerungsgruppe
 bleibt auch bei ausgeblendetem oder fehlendem Titel rechts oben sichtbar.
-X-Achse, Tooltip und Messpunktbeschriftung verwenden dieselbe Zeitdarstellung
-(Europe/Berlin): bei hoechstens 24 Stunden HH:mm, darueber DD.MM.,
-bei jahresuebergreifender Auswahl DD.MM.YYYY. Massgeblich ist der gewaehlte
+X-Achse und Tooltip verwenden Europe/Berlin: bei hoechstens 24 Stunden
+zeigt die Achse HH:mm; bis sieben Tage zeigt sie Datum und Uhrzeit, darueber
+das Datum. Das Mouseover zeigt einmal Datum mit Jahr und Uhrzeit des neuesten
+angezeigten Messwerts. Jahresuebergreifende Auswahl
+enthaelt das Jahr. Massgeblich ist der gewaehlte
 Zeitraum, nicht die Dichte der Messpunkte. Y-Achsentitel stehen senkrecht
 ausserhalb der Teilstrichbeschriftungen, links -90 und rechts +90 Grad,
 mit der Schriftunterseite zur jeweiligen Achse. Ihr Platz wird bei der
@@ -193,8 +200,18 @@ Unter allen Graph-Typen und in der Vorschau steht separat der Zeitpunkt
 des letzten erfolgreichen Abrufs: `Letzte Aktualisierung: DD.MM.YYYY - HH:mm:ss`
 (Europe/Berlin), nicht der Zeitpunkt des letzten Messpunkts. Ohne erfolgreichen
 Abruf steht dort ein Strich; Fehler und reine Neuzeichnungen aktualisieren
-den Zeitstempel nicht. Die Tortenaggregation bleibt letzter Wert/Durchschnitt;
+den Zeitstempel nicht. Die Tortenaggregation erlaubt letzter Wert, Durchschnitt,
+Minimum und Maximum aus Rohwerten und ist am Widget umschaltbar;
 eine ungewichtete Summe ist kein Ersatz fuer Integration bzw. Zaehlerdifferenz.
+Nachtrag 1.37.0-dev: Die optionale Einstellung `stackLinear` verbindet
+gestapelte Werte linear statt stufenweise; fehlende Anfangswerte bleiben leer,
+der letzte Wert bleibt erhalten. Bei unterschiedlichen Messzeitpunkten werden
+Zwischenwerte vor dem Stapeln interpoliert. Vorschau und Live verwenden den
+gleichen Pfad; bestehende Graphen bleiben ohne die Option stufenweise.
+Hover-Summen addieren unformatierte jeweils naechstgelegene angezeigte
+Messwerte ausschliesslich sichtbarer, nichtleerer Reihen, getrennt nach Achse
+und Einheit. Die angezeigten Messzeitpunkte koennen voneinander abweichen;
+Einheiten werden nicht umgerechnet und fehlende Einheiten bilden eine Gruppe.
 Regressionen: `prove t/01_fhemcms.t t/91_schema6_validation.t t/92_schema6_persistence.t`,
 `node --test t/115_graph_data.test.js` sowie der Browserfall
 `graph supports multiple log series` in `t/35_schema5_scaling.test.js`.

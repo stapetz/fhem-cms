@@ -289,9 +289,16 @@ passendes FileLog, sofern keine andere CMS-Quellenpräferenz gesetzt ist.
 
 Zur Auswahl stehen Linien, gestapelte Flächen und eine Torte. Gestapelte Reihen
 führen den letzten Messwert bis zur nächsten Messung fort; vor dem ersten Wert
-bleibt die Reihe leer. Für die Torte wählen Sie den letzten Rohwert oder den
-Durchschnitt aller gelesenen Rohwerte im Zeitraum. Negative Werte und gekürzte
-Daten werden bei der Torte mit einer Fehlermeldung abgewiesen.
+bleibt die Reihe leer. Optional verbindet **Messpunkte linear verbinden** die
+Stapelwerte mit geraden Linien; Zwischenwerte werden interpoliert, nicht
+gemessen oder mathematisch geglättet. Nach dem letzten Messwert bleibt der
+letzte Wert erhalten. Die Einstellung benötigt ein entsprechend aktuelles
+FHEMCMS-Backend. Für die Torte wählen Sie den letzten Rohwert, Durchschnitt,
+Minimum oder Maximum aller gelesenen Rohwerte im Zeitraum. Die Auswahl ist
+auch direkt am Tortenwidget möglich, ohne die Konfiguration zu ändern.
+Minimum und Maximum erfordern das aktuelle Backend. Sind alle Werte null oder
+negativ, erscheint ein leerer Kreis; bei gemischten positiven und negativen
+Werten oder gekürzten Daten erscheint eine Fehlermeldung.
 Bei Torten ist **Bezeichner und Wert im Tortenstück einblenden** standardmäßig
 aktiviert. Die zweizeilige Beschriftung verwendet den konfigurierten Reihenbezeichner und das
 Werteformat der Reihe und passt sich dem Segment an. Bei sehr kleinen
@@ -322,13 +329,23 @@ Daten oder nicht verfügbarer Quelle erscheint eine Meldung.
 Neben festen Zeiträumen kann ein eigener Zeitraum von bis zu zehn Jahren
 gewählt oder durch Ziehen im Diagramm markiert werden. Auch die Auflösung und
 das Raster lassen sich in der Ansicht ändern. Wochen, Monate und Jahre werden
-als Kalenderzeiträume ausgewertet. Für jede Reihe sind Achsseite, Linientyp,
+als Kalenderzeiträume ausgewertet. Für jede Reihe eines Liniendiagramms sind Achsseite, Linientyp,
 Linienstärke und eine Flächenfüllung konfigurierbar; die Y-Achsen links und
 rechts besitzen getrennte automatische Wertebereiche. Beim Bewegen der Maus
-zeigt das Diagramm die jeweils nächstgelegenen Messwerte und Zeitpunkte.
+zeigt das Diagramm die jeweils nächstgelegenen Messwerte.
+Im Mouseover steht das Datum mit Jahr und Uhrzeit einmal oben; maßgeblich ist
+der neueste der angezeigten Messzeitpunkte.
+Das Mouseover zeigt zusätzlich Summen dieser angezeigten Rohwerte, getrennt
+nach Achse und Einheit und mit dem Zeichen ∑. Die größte Nachkommazahl der
+angezeigten Reihen einer Gruppe bestimmt die Darstellung der Summe;
+ausgeblendete und leere Reihen zählen nicht mit.
+Reihen ohne Einheit werden gemeinsam aufgeführt; ihre
+fachliche Vergleichbarkeit muss selbst geprüft werden. Messzeitpunkte können
+voneinander abweichen; es wird weder zeitlich integriert noch umgerechnet.
 Zeitraum und Auflösung stehen auch ohne Titel rechts oben. Bis einschließlich
-24 Stunden zeigen X-Achse und Mouseover nur Uhrzeiten, bei längeren Zeiträumen
-nur das Datum und bei einem Jahreswechsel zusätzlich das Jahr (Zeitzone
+24 Stunden zeigt die X-Achse Uhrzeiten und das Mouseover Datum und Uhrzeit.
+Bis einschließlich sieben Tagen zeigen beide Datum und Uhrzeit, bei längeren
+Zeiträumen das Datum und bei einem Jahreswechsel zusätzlich das Jahr (Zeitzone
 Europe/Berlin). Die Y-Achsentitel stehen senkrecht neben den Achsen; die
 Schriftunterseite zeigt jeweils zur Achse.
 Pro Datenreihe ist unter **Format** die Anzeige wählbar: Runden auf null bis

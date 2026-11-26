@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { graphPieValues, stackGraphSeries } from '../www/fhem-cms/js/graph-data.js';
+import { graphPieValues, linearStackBands, stackGraphSeries } from '../www/fhem-cms/js/graph-data.js';
 import { blueprintDevices, remapBlueprintDevice } from '../www/fhem-cms/js/fcui-schema5-blueprints.js';
 
 test('graph blueprints discover and remap devices in all series', () => {
@@ -33,6 +33,24 @@ test('stack separates positive and negative values and retains missing series', 
   assert.throws(() => stackGraphSeries([[[1, Number.MAX_VALUE]], [[1, Number.MAX_VALUE]]]), /zu groß/);
 });
 
+test('linear stack interpolates asynchronous series but not before the first observation', () => {
+  const series = [[[0, 0], [10, 10]], [[5, 2], [15, 4]]];
+  assert.deepEqual(stackGraphSeries(series, true), [
+    [[0, 0, 0], [5, 0, 5], [10, 0, 10], [15, 0, 10]],
+    [[0, null, null], [5, 5, 7], [10, 10, 13], [15, 10, 14]],
+  ]);
+  assert.deepEqual(stackGraphSeries(series)[0].map(point => point[2]), [0, 0, 10, 10]);
+});
+
+test('linear stack splits sign changes at zero and keeps both signed baselines', () => {
+  const stacked = stackGraphSeries([[[0, 3], [10, 3]], [[0, -2], [10, -2]], [[0, 4], [10, -4]]], true);
+  assert.deepEqual(stacked[2], [[0, 3, 7], [5, 3, 3], [10, -2, -6]]);
+  assert.deepEqual(linearStackBands(stacked, 2), [
+    [[0, 3, 7], [5, 3, 3]],
+    [[5, -2, -2], [10, -2, -6]],
+  ]);
+});
+
 test('pie uses raw summaries, preserving missing and zero values', () => {
   const data = [
     {summary: {last: 8, average: 2}},
@@ -42,7 +60,9 @@ test('pie uses raw summaries, preserving missing and zero values', () => {
   assert.deepEqual(graphPieValues(data, 'last'), [8, 0, null]);
   assert.deepEqual(graphPieValues(data, 'average'), [2, 1, null]);
   assert.throws(() => graphPieValues(data, 'sum'), /Auswertung/);
-  assert.throws(() => graphPieValues([{summary: {last: -1}}], 'last'), /nichtnegative/);
+  assert.deepEqual(graphPieValues([{summary: {last: -1}}], 'last'), [-1]);
   assert.throws(() => graphPieValues([{truncated: true, summary: {last: 1}}], 'last'), /Gekürzte/);
-  assert.throws(() => graphPieValues([{summary: {last: Infinity}}], 'last'), /nichtnegative/);
+  assert.throws(() => graphPieValues([{summary: {last: Infinity}}], 'last'), /nicht verfügbar/);
+  assert.deepEqual(graphPieValues([{summary:{min:-2, max:5}}], 'min'), [-2]);
+  assert.deepEqual(graphPieValues([{summary:{min:-2, max:5}}], 'max'), [5]);
 });

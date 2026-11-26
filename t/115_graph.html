@@ -73,6 +73,8 @@ try {
   root.querySelector('[data-title]').hidden = true;
   graph.removeAttribute('view-only');
   const initialPlot = root.querySelector('[data-svg]');
+  await until(() => Math.abs(initialPlot.viewBox.baseVal.width / initialPlot.viewBox.baseVal.height
+    - initialPlot.clientWidth / initialPlot.clientHeight) < .02, 'plot resize did not settle');
   const initialViewBox = initialPlot.viewBox.baseVal;
   check(Math.abs(initialViewBox.width / initialViewBox.height - initialPlot.clientWidth / initialPlot.clientHeight) < .02,
     'plot viewBox matches the available widget aspect ratio');
@@ -100,8 +102,9 @@ try {
     - fields.querySelector('[data-reading]').getBoundingClientRect().height) < 1,
     'row text and select controls have equal heights');
   const controls = [...fields.querySelectorAll('input:not([type=checkbox]),select')];
-  check(controls.every(control => Math.abs(control.getBoundingClientRect().height - 40) < 1),
-    'all row inputs and selects are 40px high');
+  check(controls.every(control => Math.abs(control.getBoundingClientRect().height
+    - (control.hasAttribute('data-device') ? 44 : 40)) < 1),
+    'row inputs and selects have consistent heights, with a touch-friendly device picker');
   const axisLeft = form.elements.axisLabelLeft.getBoundingClientRect();
   const axisRight = form.elements.axisLabelRight.getBoundingClientRect();
   check(axisLeft.top !== axisRight.top || axisRight.left - axisLeft.right >= 11,
@@ -133,9 +136,22 @@ try {
       === ',int,round(0),round(1),round(2),round(3),round(4),round(5),round(6)',
     'format selector offers every supported format');
   const deviceBox = fields.querySelector('[data-device]').getBoundingClientRect();
+  const pickBox = fields.querySelector('[data-pick]').getBoundingClientRect();
+  check(Math.abs(deviceBox.top - pickBox.top) < 1 && Math.abs(deviceBox.height - pickBox.height) < 1,
+    'device picker and device input are aligned');
   const statusBox = fields.querySelector('[data-row-status]').getBoundingClientRect();
   check(statusBox.top >= deviceBox.bottom && Math.abs(statusBox.left - deviceBox.left) < 1,
     'log status is directly below the device');
+  check(getComputedStyle(fields.querySelector('[data-row-status]')).whiteSpace === 'normal',
+    'long log messages can wrap instead of being clipped');
+  check(fields.querySelector('[data-row-status]').scrollWidth <= fields.querySelector('[data-row-status]').clientWidth,
+    'log source and reading count are fully visible without horizontal scrolling');
+  const unitBox = fields.querySelector('[data-unit]').getBoundingClientRect();
+  const unitChoiceBox = fields.querySelector('[data-unit-choices]').getBoundingClientRect();
+  check(unitChoiceBox.left >= unitBox.right && Math.abs(unitChoiceBox.top - unitBox.top) < 1,
+    'unit suggestions are beside the input on desktop and mobile');
+  check([...fields.querySelectorAll('[data-line-only]')].every(control => !control.hidden),
+    'line controls are available for line charts');
   const card = fields.getBoundingClientRect(), remove = fields.querySelector('[data-remove]').getBoundingClientRect();
   check(remove.top >= card.top && remove.top - card.top < 10 && card.right - remove.right < 10,
     'remove button is in the top-right corner');
@@ -148,8 +164,30 @@ try {
   form.elements.chartType.value = 'stack';
   form.elements.chartType.dispatchEvent(new Event('change', {bubbles:true}));
   check(root.querySelector('[data-aggregation]').hidden, 'pie aggregation hidden for stacks');
+  check([...root.querySelectorAll('[data-line-only]')].every(control => control.hidden),
+    'stack charts hide line styling, axis selection and fill without changing their values');
+  check(fields.querySelector('[data-color]').getBoundingClientRect().width <= 192,
+    'color input stays compact when line controls are hidden');
+  check(graph.collect().series[0].axis === 'left' && graph.collect().series[0].lineWidth === 4,
+    'hidden line settings remain available in the saved configuration');
+  check(!root.querySelector('[data-stack-linear]').hidden && !form.elements.stackLinear.checked,
+    'linear stack is optional and defaults off');
+  const linearBox = form.elements.stackLinear.getBoundingClientRect();
+  const linearText = document.createRange();
+  linearText.selectNodeContents(form.elements.stackLinear.nextSibling);
+  const linearTextBox = linearText.getBoundingClientRect();
+  check(linearBox.right <= linearTextBox.left && linearBox.top < linearTextBox.bottom
+    && linearTextBox.top < linearBox.bottom,
+    'linear stack label and checkbox share a row with checkbox first');
   await until(() => root.querySelectorAll('[data-preview] polygon').length === 2, 'stack preview missing');
   const stackPreview = root.querySelector('[data-preview]');
+  const steppedPoints = stackPreview.querySelector('polygon').getAttribute('points');
+  form.elements.stackLinear.checked = true;
+  form.elements.stackLinear.dispatchEvent(new Event('change', {bubbles:true}));
+  await until(() => stackPreview.querySelector('polygon')?.getAttribute('points') !== steppedPoints, 'linear stack preview missing');
+  check(graph.collect().stackLinear === true, 'linear stack setting is collected for persistence');
+  form.elements.stackLinear.checked = false;
+  check(!Object.hasOwn(graph.collect(), 'stackLinear'), 'disabled linear stack does not change legacy configurations');
   const stackBounds = stackPreview.getBoundingClientRect();
   stackPreview.onpointermove({clientX:stackBounds.left + stackBounds.width/2});
   check(root.querySelector('[data-preview-tooltip]').textContent.includes(' W')
@@ -162,6 +200,10 @@ try {
   root.querySelector('[data-format]').value = 'round(2)';
   form.elements.chartType.dispatchEvent(new Event('change', {bubbles:true}));
   check(!root.querySelector('[data-aggregation]').hidden, 'pie aggregation shown for pie charts');
+  check([...form.elements.aggregation.options].map(option => option.value).join(',') === 'last,average,min,max',
+    'pie aggregation offers last, average, minimum and maximum');
+  check([...root.querySelectorAll('[data-line-only]')].every(control => control.hidden),
+    'pie charts hide line styling, axis selection and fill');
   await until(() => root.querySelectorAll('[data-preview] path').length === 2, 'pie preview missing');
   check(!root.querySelector('[data-pie-labels]').hidden
     && root.querySelectorAll('[data-preview] [data-pie-label]').length === 2,
@@ -216,6 +258,13 @@ try {
     && ![...addedRow.querySelector('[data-reading]').options].some(option => option.value === 'missingReading')
     && addedRow.querySelector('[data-row-status]').textContent.includes('missingReading'),
     'missing saved readings are reported but never selectable');
+  let readingError = '';
+  try { graph.collect(); } catch (error) { readingError = error.message; }
+  check(readingError.includes('Solar2') && readingError.includes('Reading'),
+    'invalid reading identifies the affected device and field');
+  addedRow.querySelector('[data-row-status]').textContent = 'Eine sehr lange Fehlermeldung '.repeat(20);
+  check(addedRow.querySelector('[data-row-status]').scrollHeight <= addedRow.querySelector('[data-row-status]').clientHeight,
+    'long log messages remain readable without clipping or scrolling');
   addedRow.querySelector('[data-source]').value = 'dblog';
   addedRow.querySelector('[data-pick]').click();
   await until(() => document.querySelector('.cms-dp-dialog [data-info]')?.textContent.includes('Datenbank nicht erreichbar'),
@@ -288,6 +337,9 @@ try {
     && root.querySelector('[data-tooltip]').textContent.includes('Garten: 100.00 °C')
     && root.querySelector('[data-legend]').textContent.includes('Dach (W)'),
     'line tooltips and legend identify units without modifying axis scales');
+  check([...root.querySelectorAll('[data-tooltip] [data-graph-total]')].map(row => row.textContent).join('|')
+    === '∑: -1 W|∑: 100.00 °C',
+    'hover totals use raw values grouped by axis and unit and apply the configured formats');
   check(JSON.stringify(decoratedData) === rawData, 'display formatting does not modify the source values');
   check(parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) >= 12
     && parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) <= 13
@@ -331,9 +383,9 @@ try {
   }
   const epoch = value => Date.parse(value) / 1000;
   const timeCases = [
-    {name:'one day',start:'2026-11-25T00:00:00+01:00',end:'2026-11-26T00:00:00+01:00',pattern:/^\d{2}:\d{2}$/},
-    {name:'over one day',start:'2026-11-25T00:00:00+01:00',end:'2026-11-26T00:00:01+01:00',pattern:/^\d{2}\.\d{2}\.$/},
-    {name:'year boundary',start:'2026-12-30T00:00:00+01:00',end:'2027-01-02T00:00:00+01:00',pattern:/^\d{2}\.\d{2}\.\d{4}$/},
+    {name:'one day',start:'2026-11-25T00:00:00+01:00',end:'2026-11-26T00:00:00+01:00',axis:/^\d{2}:\d{2}$/, tip:/^\d{2}\.\d{2}\.,? \d{2}:\d{2}$/},
+    {name:'over one day',start:'2026-11-25T00:00:00+01:00',end:'2026-11-26T00:00:01+01:00',axis:/^\d{2}\.\d{2}\.,? \d{2}:\d{2}$/, tip:/^\d{2}\.\d{2}\.,? \d{2}:\d{2}$/},
+    {name:'year boundary',start:'2026-12-30T00:00:00+01:00',end:'2027-01-08T00:00:00+01:00',axis:/^\d{2}\.\d{2}\.\d{4}$/, tip:/^\d{2}\.\d{2}\.\d{4}$/},
   ];
   root.querySelector('[data-dialog]').showModal();
   for (const sample of timeCases) {
@@ -346,14 +398,14 @@ try {
     ]) {
       graph.draw({...decorated,range}, values, selector, legendSelector, root.querySelector(statusSelector), new Set());
       const svg = root.querySelector(selector);
-      check([...svg.querySelectorAll('[data-time-tick]')].every(tick => sample.pattern.test(tick.textContent)),
+      check([...svg.querySelectorAll('[data-time-tick]')].every(tick => sample.axis.test(tick.textContent)),
         `${sample.name}: X-axis uses the range-specific time format in ${selector}`);
       const bounds = svg.getBoundingClientRect();
       svg.onpointermove({clientX:bounds.left + bounds.width / 2});
       const tip = root.querySelector(tipSelector);
-      check(sample.pattern.test(tip.querySelector('strong').textContent)
-        && [...tip.querySelectorAll('div')].every(row => sample.pattern.test(row.textContent.split(' · ')[1])),
-        `${sample.name}: tooltip and individual observations share the time format in ${selector}`);
+      check(/^\d{2}\.\d{2}\.\d{4},? \d{2}:\d{2}$/.test(tip.querySelector('strong').textContent)
+        && [...tip.querySelectorAll('div:not([data-graph-total])')].every(row => !row.textContent.includes(' · ')),
+        `${sample.name}: tooltip shows one full timestamp in ${selector}`);
     }
     if (sample.name === 'year boundary') {
       const labels = [...plot.querySelectorAll('[data-time-tick]')].map(tick => tick.textContent);
@@ -361,9 +413,53 @@ try {
         'X-axis explicitly shows both years across a year boundary');
       const sparse = values.map(value => ({...value,points:[[to-3600,1],[to,2]]}));
       graph.draw({...decorated,range}, sparse, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
-      check([...plot.querySelectorAll('[data-time-tick]')].every(tick => sample.pattern.test(tick.textContent)),
+      check([...plot.querySelectorAll('[data-time-tick]')].every(tick => sample.axis.test(tick.textContent)),
         'sparse observations do not replace the selected range format with time-only labels');
     }
+    const relativeStart = epoch('2026-11-25T12:00:00+01:00');
+    const relativeData = decorated.series.map(() => ({from:relativeStart, to:relativeStart+86402,
+      points:[[relativeStart,1],[relativeStart+86400,2]]}));
+    graph.draw({...decorated,range:'24h'}, relativeData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+    check([...plot.querySelectorAll('[data-time-tick]')].every(tick => /^\d{2}:\d{2}$/.test(tick.textContent)),
+      '24-hour selection stays hourly even if source response bounds differ by seconds');
+    const sumConfig = {...decorated, series: [
+      {...decorated.series[0], unit:'W', format:'round(2)'}, {...decorated.series[0], label:'Garten', color:'#ef9900', unit:'W', format:'round(1)'},
+      {...decorated.series[1], label:'Temperatur', unit:'°C'}, {...decorated.series[0], label:'leer', unit:'W'},
+    ]};
+    const sumData = [{points:[[relativeStart,2],[relativeStart+10,5]]},
+      {points:[[relativeStart,3],[relativeStart+10,8]]}, {points:[[relativeStart,20]]}, {points:[]}];
+    graph.draw(sumConfig, sumData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+    const hoverStart = () => plot.onpointermove({clientX:plot.getBoundingClientRect().left});
+    hoverStart();
+    check(root.querySelector('[data-tooltip]').textContent.includes('∑: 5.00 W')
+      && root.querySelector('[data-tooltip]').textContent.includes('∑: 20.00 °C'),
+      'sum includes visible finite nearest measurements and excludes empty series');
+    check(root.querySelector('[data-tooltip] strong').textContent.includes('2026')
+      && ![...root.querySelectorAll('[data-tooltip] div')].some(row => row.textContent.includes(' · ')),
+      'tooltip has one full timestamp and no per-series timestamps');
+    const timeData = [{points:[[relativeStart,2]]}, {points:[[relativeStart+120,3]]}];
+    graph.draw({...sumConfig, series:sumConfig.series.slice(0, 2)}, timeData,
+      '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+    hoverStart();
+    check(root.querySelector('[data-tooltip] strong').textContent.includes('12:02'),
+      'tooltip header uses the most recent of the displayed measurements');
+    graph.draw(sumConfig, sumData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+    root.querySelectorAll('[data-legend] button')[1].click();
+    hoverStart();
+    check(root.querySelector('[data-tooltip]').textContent.includes('∑: 2.00 W')
+      && !root.querySelector('[data-tooltip]').textContent.includes('Garten:'),
+      'hidden series are excluded from tooltip values and totals');
+    root.querySelectorAll('[data-legend] button')[0].click();
+    root.querySelectorAll('[data-legend] button')[1].click();
+    hoverStart();
+    check(root.querySelector('[data-tooltip]').textContent.includes('∑: 3.0 W'),
+      'hiding the most precise series updates total precision');
+    const rawConfig = {...sumConfig, series:sumConfig.series.slice(0, 2).map(row => ({...row, format:''}))};
+    graph.draw(rawConfig, [{points:[[relativeStart,.1]]}, {points:[[relativeStart,.2]]}],
+      '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+    hoverStart();
+    check(root.querySelector('[data-tooltip]').textContent.includes('∑: 0.3 W'),
+      'unformatted decimals determine precision without exposing floating-point artifacts');
   }
   root.querySelector('[data-dialog]').close();
   graph.draw({...decorated, chartType:'pie'}, [
@@ -379,6 +475,26 @@ try {
     'live pie uses configured labels and units consistently in slice and tooltip');
   const pieData = [{points:[[1000,1]],summary:{last:1,average:1}},
     {points:[[1000,99]],summary:{last:99,average:99}}];
+  const liveAggregation = root.querySelector('[data-live-aggregation]');
+  graph.config = {...graph.config, chartType:'pie'};
+  check(!liveAggregation.hidden && [...liveAggregation.options].map(option => option.value).join(',')
+    === 'last,average,min,max', 'pie widget exposes all aggregation choices');
+  graph.config = {...graph.config, chartType:'line'};
+  check(liveAggregation.hidden, 'aggregation choice is hidden for line widgets');
+  for (const pair of [[0, 0], [-1, 0], [-1, -3]]) {
+    graph.draw({...decorated,chartType:'pie'}, pair.map(value => ({
+      points:[[1000,value]], summary:{last:value,average:value},
+    })), '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+    check(!!plot.querySelector('[data-empty-pie]') && !plot.querySelector('path'),
+      'nonpositive pie values render an empty circular outline');
+  }
+  let mixedRejected = false;
+  try {
+    graph.draw({...decorated,chartType:'pie'}, [-1, 2].map(value => ({
+      points:[[1000,value]], summary:{last:value,average:value},
+    })), '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+  } catch (error) { mixedRejected = /nichtnegative/.test(error.message); }
+  check(mixedRejected, 'mixed positive and negative pie values remain an explicit error');
   const fallback = {...decorated,chartType:'pie',series:[{...decorated.series[0],label:''},decorated.series[1]]};
   graph.draw(fallback, pieData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
   check(plot.querySelector('[data-pie-label] tspan').textContent === 'Solar1: power',
@@ -437,6 +553,22 @@ try {
   check(root.querySelectorAll('[data-svg] polygon').length === 20,
     'maximum stack size with distinct timestamps renders without argument overflow');
   graph.remove();
+  const pieWidget = document.createElement('cms-graph');
+  pieWidget.style.cssText = 'width:300px;height:300px';
+  pieWidget.config = {...graph.config, chartType:'pie', aggregation:'last', series:[graph.config.series[0]]};
+  pieWidget.services = {history:async () => ({points:[[1000,3]],
+    summary:{last:3, average:4, min:1, max:8}})};
+  document.body.append(pieWidget);
+  const pieRoot = pieWidget.shadowRoot;
+  await until(() => pieRoot.querySelector('[data-svg] [data-pie-label]'), 'pie widget did not load');
+  for (const [mode, value] of [['min','1'], ['max','8']]) {
+    pieRoot.querySelector('[data-live-aggregation]').value = mode;
+    pieRoot.querySelector('[data-live-aggregation]').dispatchEvent(new Event('change'));
+    await until(() => pieRoot.querySelector('[data-svg] [data-pie-label]')?.textContent.includes(value),
+      `pie widget did not switch to ${mode}`);
+    check(pieWidget.config.aggregation === 'last', 'live pie selection does not modify saved configuration');
+  }
+  pieWidget.remove();
   const originalInterval = window.setInterval;
   let refresh, refreshDelay;
   window.setInterval = (callback, delay) => {

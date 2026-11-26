@@ -47,6 +47,15 @@ for my $schema (5, 6) {
         } else {
             like(FHEMCMS_ValidateConfig($labels, $schema), qr/showPieLabels/, "schema $schema rejects non-boolean pie labels");
         }
+        for my $value (JSON::PP::true, JSON::PP::false, 1, 'true', undef, {}) {
+            my $linear = $json->decode($json->encode($graph));
+            $linear->{pages}[0]{widgets}[0]{stackLinear} = $value;
+            if (JSON::PP::is_bool($value)) {
+                is(FHEMCMS_ValidateConfig($linear, $schema), undef, "schema $schema accepts boolean linear stack");
+            } else {
+                like(FHEMCMS_ValidateConfig($linear, $schema), qr/stackLinear/, "schema $schema rejects non-boolean linear stack");
+            }
+        }
     }
     my $advanced = $json->decode($json->encode($graph));
     my $advancedWidget = $advanced->{pages}[0]{widgets}[0];
@@ -77,6 +86,11 @@ for my $schema (5, 6) {
         my $bad = $json->decode($json->encode($graph));
         $bad->{pages}[0]{widgets}[0]{$field->[0]} = $field->[1];
         like(FHEMCMS_ValidateConfig($bad, $schema), qr/Ungueltiger/, "invalid graph $field->[0] rejected");
+    }
+    for my $aggregation ('min', 'max') {
+        my $pie = $json->decode($json->encode($graph));
+        $pie->{pages}[0]{widgets}[0]{aggregation} = $aggregation;
+        is(FHEMCMS_ValidateConfig($pie, $schema), undef, "schema $schema accepts $aggregation aggregation");
     }
     for my $field (['device', 'bad device'], ['reading', '../bad'], ['source', 'sql'],
         ['color', 'red'], ['label', "bad\nlabel"]) {

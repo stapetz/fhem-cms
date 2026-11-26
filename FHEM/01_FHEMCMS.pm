@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.36.0-dev';
+our $FHEMCMS_VERSION = '1.37.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1178,7 +1178,7 @@ sub FHEMCMS_ValidateConfig {
                     ['title', 'showTitle', 'unit', 'range', 'granularity', 'source']);
             } elsif ($widget->{type} eq 'fhem-graph') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'series', 'chartType', 'aggregation', 'range', 'granularity', 'grid'],
-                    ['title', 'showTitle', 'axisLabelX', 'axisLabelLeft', 'axisLabelRight', 'showGrid', 'showPieLabels']);
+                    ['title', 'showTitle', 'axisLabelX', 'axisLabelLeft', 'axisLabelRight', 'showGrid', 'showPieLabels', 'stackLinear']);
             } elsif ($widget->{type} eq 'fhem-calllist') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
@@ -1287,7 +1287,7 @@ sub FHEMCMS_ValidateConfig {
                             || $widget->{icon} !~ $FHEMCMS_ICON_NAME));
             } elsif ($widget->{type} eq 'fhem-graph') {
                 for my $option (['chartType', qr/\A(?:line|stack|pie)\z/],
-                    ['aggregation', qr/\A(?:last|average)\z/],
+                    ['aggregation', qr/\A(?:last|average|min|max)\z/],
                     ['granularity', qr/\A(?:auto|raw|15m|1h|1d|1w|1mo|1y)\z/]) {
                     my ($field, $pattern) = @{$option};
                     return "Ungueltiger Wert fuer $field"
@@ -1304,6 +1304,8 @@ sub FHEMCMS_ValidateConfig {
                     if (exists($widget->{showGrid}) && !$isBool->($widget->{showGrid}));
                 return 'Ungueltiger Wert fuer showPieLabels'
                     if (exists($widget->{showPieLabels}) && !$isBool->($widget->{showPieLabels}));
+                return 'Ungueltiger Wert fuer stackLinear'
+                    if (exists($widget->{stackLinear}) && !$isBool->($widget->{stackLinear}));
                 return 'Ungueltige Graph-Datenreihen'
                     if (ref($widget->{series}) ne 'ARRAY' || @{$widget->{series}} < 1 || @{$widget->{series}} > 20);
                 for my $series (@{$widget->{series}}) {
@@ -2301,6 +2303,9 @@ sub FHEMCMS_ScanFileLog {
 sub FHEMCMS_DbLogCall {
     my ($dbLog, @args) = @_;
     return (undef, 'DbLog ist nicht verfuegbar') if (!defined(&DbLog_Get));
+    # DbLog's universal handle may have been inherited from the FHEM parent by BlockingCall.
+    # Let DbLog open a separate connection instead of sharing its socket between processes.
+    local $dbLog->{DBHU};
     local $@;
     my @result = eval { DbLog_Get($dbLog, $dbLog->{NAME}, '-', @args) };
     return (undef, 'DbLog-Abfrage fehlgeschlagen') if ($@);
@@ -2454,8 +2459,13 @@ sub FHEMCMS_HistoryData {
     my $summary;
     if (@rows) {
         my $average = 0;
+        my ($min, $max) = ($rows[0][1], $rows[0][1]);
         $average += $_->[1] / @rows for (@rows);
-        $summary = {last => $rows[-1][1], average => $average};
+        for my $row (@rows) {
+            $min = $row->[1] if ($row->[1] < $min);
+            $max = $row->[1] if ($row->[1] > $max);
+        }
+        $summary = {last => $rows[-1][1], average => $average, min => $min, max => $max};
     }
     my $minStep = 1;
     for my $candidate (@FHEMCMS_HISTORY_NICE_STEPS) {
