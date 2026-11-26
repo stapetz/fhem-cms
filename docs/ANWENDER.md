@@ -68,6 +68,10 @@ Nach `update all …` hängt das weitere Vorgehen davon ab, was sich geändert h
 
 `rebuild` erzeugt nur die Startseite `www/fhem-cms/<Device>/index.html` neu und aktualisiert dabei die Versionsparameter, damit der Browser die neuen Dateien lädt. Konfiguration, Entwurf und Backups bleiben unberührt. Dieselbe Neuerzeugung läuft automatisch bei jedem FHEM-Start. Meldet `update` „nothing to do“, obwohl es Änderungen gibt, ist meist das Manifest auf GitHub noch nicht fertig (ein bis zwei Minuten nach dem Push) oder gecacht.
 
+Bei einer DEV-Version des FHEMCMS-Moduls zeigt die CMS-Seite den grünen Hinweis
+**TEST - DEV Version**. In der Geräte-Vorschau wird er ausgeblendet, damit die
+Vorschau die verfügbare Bildschirmfläche zeigt.
+
 ## CMS-Systeme verwalten (seit 1.10.0)
 
 Die zentrale Verwaltung ist direkt unter `/fhem/fhem-cms/admin.html` erreichbar

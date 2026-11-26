@@ -4,6 +4,7 @@ import { FhemClient, isValidName } from './fhem-client.js';
 import { createCmsAdminMenuLinks } from './cms-admin-link.js';
 import { readGridPreference, writeGridPreference } from './grid-preference.js';
 import { DevicePreview } from './device-preview.js';
+import { showDevBanner } from './environment-banner.js';
 import { createSchema5WidgetServices, createWidgetServices } from './widget-services.js';
 import { listenForSettingsPreview } from './fcui-schema5-settings-preview.js';
 import {
@@ -2090,6 +2091,7 @@ async function startSchema5Device(client, shell, card, isSuspended) {
 }
 
 async function initializeCms() {
+  showDevBanner();
   const card = document.querySelector('.cms-status');
   const shell = document.querySelector('.cms-shell');
   const meta = document.querySelector('meta[name="fhem-cms-device"]');

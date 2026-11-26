@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-26",
+  "version": "1.37.0-dev",
+  "title": "DEV-Version sichtbar kennzeichnen",
+  "changes": [
+    "DEV-Versionen zeigen einen gruenen Hinweis am Seitenkopf, nicht aber in der Geraete-Vorschau. Refs #262."
+  ]
+}

@@ -1674,9 +1674,20 @@ body:has(.cms-schema5-grid) {
   outline-offset: 2px;
 }
 
+.cms-dev-banner {
+  position: sticky;
+  top: var(--cms-local-banner-height, 0px);
+  z-index: 42;
+  padding: 8px;
+  background: #176b32;
+  color: #fff;
+  text-align: center;
+  font: 700 14px sans-serif;
+}
+
 .cms-toolbar {
   position: sticky;
-  top: 0.5rem;
+  top: calc(var(--cms-local-banner-height, 0px) + var(--cms-dev-banner-height, 0px) + 0.5rem);
   z-index: 20;
   display: flex;
   width: fit-content;
@@ -2179,7 +2190,7 @@ a.cms-button {
    Neutral als dezentes i, nur Fehler als rotes Ausrufezeichen. */
 html:not(.cms-view) .cms-status {
   position: fixed;
-  top: 0.5rem;
+  top: calc(var(--cms-local-banner-height, 0px) + var(--cms-dev-banner-height, 0px) + 0.5rem);
   right: 0.75rem;
   z-index: 30;
   display: flex;
@@ -2223,7 +2234,7 @@ html:not(.cms-view) .cms-status[data-error]::before {
 
 .cms-status-box {
   position: fixed;
-  top: 2.8rem;
+  top: calc(var(--cms-local-banner-height, 0px) + var(--cms-dev-banner-height, 0px) + 2.8rem);
   right: 0.75rem;
   z-index: 31;
   max-width: min(22rem, calc(100vw - 1.5rem));
@@ -2255,7 +2266,7 @@ html:not(.cms-view) .cms-status[data-error]::before {
 /* Geräte-Vorschau (Bearbeitungsmodus): Auswahl links neben dem roten Ausrufezeichen, Rahmen über der Seite. */
 .cms-device-bar {
   position: fixed;
-  top: 0.5rem;
+  top: calc(var(--cms-local-banner-height, 0px) + var(--cms-dev-banner-height, 0px) + 0.5rem);
   right: 3rem;
   z-index: 41;
   display: flex;
@@ -2289,6 +2300,7 @@ html:not(.cms-view) .cms-status[data-error]::before {
 .cms-device-overlay {
   position: fixed;
   inset: 2.6rem 0 0;
+  top: calc(var(--cms-local-banner-height, 0px) + var(--cms-dev-banner-height, 0px) + 2.6rem);
   z-index: 40;
   display: flex;
   flex-direction: column;

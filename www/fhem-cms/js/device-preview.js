@@ -179,6 +179,7 @@ export class DevicePreview {
       this.iframe.title = 'Vorschau';
       this.iframe.addEventListener('load', this.onFrameLoad);
       const url = new URL(this.getUrl());
+      url.searchParams.set('cms-device-preview', '1');
       const type = previewDeviceType(this.deviceId);
       if (type !== 'desktop') url.searchParams.set('cms-device', type);
       this.iframe.src = url.href;

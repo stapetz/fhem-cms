@@ -54,6 +54,7 @@ try {
   document.body.append(adminClose);
   const preview = new DevicePreview({ getUrl: () => `${location.origin}/`, beforeOpen: async () => {} });
   await preview.select('iphone-se');
+  check(new URL(preview.iframe.src).searchParams.get('cms-device-preview') === '1', 'device preview identifies its iframe');
   const previewClose = document.querySelector('.cms-device-close');
   check(Boolean(previewClose), 'non-native preview has close X');
   for (const theme of ['dark', 'light', 'liquid-glass', 'oled-black', 'catppuccin-mocha']) {
