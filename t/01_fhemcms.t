@@ -915,6 +915,14 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     my $cachedDevices = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logdevices', 'filelog'));
     is_deeply($cachedDevices->{devices}, [qw(Other Temp)], 'bulk device discovery returns indexed devices');
     {
+        local $main::defs{WEB_connection_a} = {NAME => 'WEB_connection_a', TYPE => 'FHEMWEB', TEMPORARY => 1};
+        my $before = scalar @historyJobs;
+        my $withConnection = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logdevices', 'filelog'));
+        is_deeply($withConnection->{devices}, [qw(Other Temp)],
+            'temporary web connections do not invalidate the bulk discovery result');
+        is(scalar @historyJobs, $before, 'temporary web connections do not start a new worker');
+    }
+    {
         no warnings 'redefine';
         local $main::FW_chash = {NAME => 'restricted'};
         local *main::Authorized = sub { return $_[2] ne 'Other'; };

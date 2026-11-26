@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-26",
+  "version": "1.38.2-dev",
+  "title": "Geraeteauswahl bei FHEMWEB-Verbindungen stabilisiert",
+  "changes": [
+    "Kurzlebige FHEMWEB-Verbindungen invalidieren den Cache-Schluessel fuer die Geraeteauswahl nicht mehr. Refs #259."
+  ]
+}

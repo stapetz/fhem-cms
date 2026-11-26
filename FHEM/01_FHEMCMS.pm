@@ -24,7 +24,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndex.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndexJobs.pm');
 
-our $FHEMCMS_VERSION = '1.38.1-dev';
+our $FHEMCMS_VERSION = '1.38.2-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -2375,6 +2375,7 @@ sub FHEMCMS_LogReadings {
     my @allowed;
     if ($all) {
         @allowed = grep { FHEMCMS_ValidName($_)
+            && !(($main::defs{$_}{TYPE} // '') eq 'FHEMWEB' && $main::defs{$_}{TEMPORARY})
             && (!defined($main::FW_chash)
                 || Authorized($main::FW_chash, 'devicename', $_)) } sort keys %main::defs;
         return 'Zu viele Devices fuer die Cache-Auswahl' if (@allowed > 20000);
