@@ -1,4 +1,4 @@
-UPD 2026-11-25_00:47:14 199692 FHEM/01_FHEMCMS.pm
+UPD 2026-11-26_09:00:22 199692 FHEM/01_FHEMCMS.pm
 UPD 2026-11-13_09:27:30 8930 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-20_06:26:48 29073 FHEM/lib/FHEMCMS/Weather.pm
@@ -8,7 +8,7 @@ UPD 2026-11-20_06:54:39 18385 www/fhem-cms/components/cms-button.js
 UPD 2026-11-22_12:10:28 19180 www/fhem-cms/components/cms-calllist.js
 UPD 2026-11-22_11:11:58 23040 www/fhem-cms/components/cms-chart.js
 UPD 2026-11-22_11:11:58 15539 www/fhem-cms/components/cms-clock.js
-UPD 2026-11-25_00:47:14 43335 www/fhem-cms/components/cms-graph.js
+UPD 2026-11-26_09:00:22 43742 www/fhem-cms/components/cms-graph.js
 UPD 2026-11-22_11:00:00 22868 www/fhem-cms/components/cms-html.js
 UPD 2026-11-20_06:54:39 18737 www/fhem-cms/components/cms-icon.js
 UPD 2026-11-24_23:04:31 29177 www/fhem-cms/components/cms-link.js
@@ -41,7 +41,7 @@ UPD 2026-11-24_11:00:18 3231 www/fhem-cms/js/close-button.js
 UPD 2026-11-13_10:06:04 2577 www/fhem-cms/js/cms-admin-link.js
 UPD 2026-11-24_11:00:18 14737 www/fhem-cms/js/cms-admin.js
 UPD 2026-11-14_19:11:25 1865 www/fhem-cms/js/date-display.js
-UPD 2026-11-25_00:00:23 5418 www/fhem-cms/js/device-picker.js
+UPD 2026-11-26_09:00:22 6605 www/fhem-cms/js/device-picker.js
 UPD 2026-11-24_11:00:18 8036 www/fhem-cms/js/device-preview.js
 UPD 2026-11-13_07:06:17 2398 www/fhem-cms/js/device-suggestions.js
 UPD 2026-11-14_16:12:23 4924 www/fhem-cms/js/device-widget-suggestions.js
