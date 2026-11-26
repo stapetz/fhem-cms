@@ -30,6 +30,42 @@ class FHEMCMSHtml extends HTMLElement {
     this.mapRuntime = null;
     this.mapLoading = false;
     this.mapError = '';
+    this.actionStatusTimer = null;
+  }
+
+  async sendSetCommand(action) {
+    if (action.getAttribute('aria-busy') === 'true') return;
+    const status = this.shadowRoot.querySelector('[data-cms-action-status]');
+    window.clearTimeout(this.actionStatusTimer);
+    status.hidden = true;
+    status.removeAttribute('data-error');
+    status.textContent = '';
+    if (!this.hasAttribute('view-only')) {
+      status.textContent = 'Geräteaktionen sind nur in der Ansicht verfügbar.';
+      status.hidden = false;
+      return;
+    }
+
+    action.classList.add('fhem-cms-sending');
+    action.setAttribute('aria-busy', 'true');
+    try {
+      if (typeof this.services?.setCommand !== 'function') {
+        throw new Error('FHEM-Kommunikation ist nicht verfügbar.');
+      }
+      await this.services.setCommand(action.getAttribute('set-device'), action.getAttribute('set-cmd'));
+      status.textContent = 'Befehl gesendet.';
+      this.actionStatusTimer = window.setTimeout(() => {
+        status.hidden = true;
+        status.textContent = '';
+      }, 2000);
+    } catch (error) {
+      status.textContent = `Befehl fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
+      status.setAttribute('data-error', '');
+    } finally {
+      status.hidden = false;
+      action.removeAttribute('aria-busy');
+      window.setTimeout(() => action.classList.remove('fhem-cms-sending'), 450);
+    }
   }
 
   connectedCallback() {
@@ -61,6 +97,13 @@ class FHEMCMSHtml extends HTMLElement {
         button { font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--cms-border, #43564a);
           border-radius: 0.5rem; background: var(--cms-surface-raised, #2a3b32); padding: 0.35rem 0.7rem; }
         button:hover { background: var(--cms-surface-hover, #34493e); }
+        .content [set-device][set-cmd] { cursor: pointer; }
+        .content [set-device][set-cmd].fhem-cms-sending { opacity: 0.65; }
+        [data-cms-action-status] { position: absolute; inset-inline: 0.5rem; bottom: 0.5rem; z-index: 101;
+          margin: 0; padding: 0.35rem 0.55rem; border-radius: 0.4rem; background: var(--cms-surface-raised, #2a3b32);
+          color: var(--cms-text, #edf4ef); font-size: 0.8rem; }
+        [data-cms-action-status][data-error] { color: var(--cms-danger, #ffb4a8); }
+        [data-cms-action-status][hidden] { display: none !important; }
         button:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--cms-accent, #8fd0a8); outline-offset: 2px; }
         .gear { position: absolute; top: 0.2rem; right: 0.3rem; z-index: 2; padding: 0 0.35em; font-size: 0.75rem; line-height: 1.4; }
         :host([view-only]) [data-open-config] { display: none; }
@@ -96,6 +139,7 @@ class FHEMCMSHtml extends HTMLElement {
         <header data-header hidden><h3 data-title></h3></header>
         <button type="button" class="gear" data-open-config title="Widget konfigurieren" aria-label="HTML-Kachel konfigurieren">⚙</button>
         <div class="content" data-content></div>
+        <p data-cms-action-status role="status" aria-live="polite" hidden></p>
       </article>
       <dialog data-dialog aria-labelledby="html-dialog-title">
         <form method="dialog" data-form novalidate>
@@ -124,9 +168,10 @@ class FHEMCMSHtml extends HTMLElement {
               <li>Zustandsklassen: <code>data-cms-class="Device:reading=on:aktiv; Device:temperature&gt;25:heiss"</code> setzt die Klasse, wenn die Bedingung stimmt (<code>= != &gt; &lt; &gt;= &lt;=</code>). Die Klassen definierst du in einem <code>&lt;style&gt;</code>-Element.</li>
             </ul>
             <pre>${EXAMPLE.replace(/</g, '&lt;')}</pre>
-            <p>Erlaubt sind passive HTML-Struktur, Tabellen, Kommentare, Flex-/Grid-CSS, sichere Links und Bilder sowie SVG (Formen, Pfade, lokale Verläufe, Masken und <code>use</code> mit lokalem Ziel). <code>id</code>, <code>class</code>, <code>style</code>, <code>title</code>, ARIA-/data-Attribute und Reading-Attribute sind möglich. Attribute bitte in doppelten Anführungszeichen schreiben.</p>
+            <p>Erlaubt sind sichere HTML-Struktur, Tabellen, Kommentare, Flex-/Grid-CSS, sichere Links und Bilder sowie SVG (Formen, Pfade, lokale Verläufe, Masken und <code>use</code> mit lokalem Ziel). <code>id</code>, <code>class</code>, <code>style</code>, <code>title</code>, ARIA-/data-Attribute und Reading-Attribute sind möglich. Attribute bitte in doppelten Anführungszeichen schreiben.</p>
+            <p>Geräte im Ansichtsmodus kannst du über deklarative Attribute bedienen, ohne JavaScript zu verwenden: <code>&lt;button type="button" set-device="LR_SAT" set-cmd="remoteControl OK"&gt;OK&lt;/button&gt;</code>. <code>set-device</code> und <code>set-cmd</code> gehören zusammen und sind nur auf <code>button</code>, <code>div</code>, <code>span</code> und <code>a</code> erlaubt. Die FHEM-Berechtigungen und der CSRF-Schutz bleiben wirksam.</p>
             <p>CSS verwendet eine Positivliste für Eigenschaften, Funktionen und At-Regeln: moderne Layouts, Animationen, Filter, Variablen, <code>:has()</code> und Attributselektoren sind möglich. Alle Positionierungsarten inklusive <code>fixed</code> bleiben offen, auf die Kachel begrenzt. <code>z-index</code> darf höchstens 100 sein. Unbekannte Regeln und <code>:host</code> werden abgelehnt.</p>
-            <p>Bildquellen, Links, Iframes und CSS-Ressourcen (<code>url()</code>, <code>@import</code>) dürfen lokale Pfade oder HTTP-/HTTPS-URLs verwenden. Einzelne URL-Readings werden bei jeder Anzeige geprüft. Iframes haben keine Anbieterbeschränkung, aber eine feste Sandbox ohne Originfreigabe, Popups oder Topnavigation; Anbieter-/Browserregeln können Einbettungen dennoch blockieren. Externe Ressourcen kontaktieren ihre Anbieter; eigene und importierte Styles können die Widget-Hülle beeinflussen und importierte Styles werden nicht rekursiv geprüft. Skripte im eigenen HTML, Eventhandler, Formulare, <code>srcdoc</code> und aktive SVG-Inhalte bleiben gesperrt.</p>
+            <p>Bildquellen, Links, Iframes und CSS-Ressourcen (<code>url()</code>, <code>@import</code>) dürfen lokale Pfade oder HTTP-/HTTPS-URLs verwenden. Einzelne URL-Readings werden bei jeder Anzeige geprüft. Iframes haben keine Anbieterbeschränkung, aber eine feste Sandbox ohne Originfreigabe, Popups oder Topnavigation; Anbieter-/Browserregeln können Einbettungen dennoch blockieren. Externe Ressourcen kontaktieren ihre Anbieter; eigene und importierte Styles können die Widget-Hülle beeinflussen und importierte Styles werden nicht rekursiv geprüft. Skripte im eigenen HTML, native Eventhandler, Formulare, <code>srcdoc</code> und aktive SVG-Inhalte bleiben gesperrt.</p>
             <p><code>data-value="{{Device:power|int}}"</code> und <code>data-state="{{Device:state}}"</code> setzen sicheren Attributtext für CSS. <code>data-cms-*</code> ist intern reserviert (Ausnahme: <code>data-cms-class</code>). Links auf <code>#id</code> und <code>:target</code> funktionieren innerhalb des Widgets ohne CMS-Seitenwechsel.</p>
             <p>Lokale Fahrzeugkarte: <code>&lt;div id="fahrzeugkarte" data-map="vehicle" data-latitude="{{MeinElch:location_latitude}}" data-longitude="{{MeinElch:location_longitude}}" data-zoom="16" style="height:175px;width:100%"&gt;&lt;/div&gt;</code>. Weißer Automarker, Live-Zentrierung bei Standortwechsel, Zoom 2–19. Normale Updates erhalten Zoom und Kartenausschnitt. OpenStreetMap-Kacheln werden extern geladen.</p>
             <p>Numerische Inline-Styles wie <code>width:{{MeinElch:state_batteryChargeLevel|int}}%</code>, CSS-Variablen, SVG-Geometrie und Kartenkoordinaten unterstützen geprüfte Zahlen mit <code>int</code>, <code>round(0)</code> bis <code>round(6)</code> und numerischem <code>default(50)</code> für fehlende Werte. <code>scroll-behavior:smooth</code> ist erlaubt; <code>map(on:An,off:Aus)</code> funktioniert ebenso wie die Schreibweise mit <code>=</code>.</p>
@@ -168,6 +213,12 @@ class FHEMCMSHtml extends HTMLElement {
     });
     $('[data-insert-placeholder]').addEventListener('click', () => this.insertPlaceholder());
     $('[data-content]').addEventListener('click', (event) => {
+      const action = event.target.closest?.('[set-device][set-cmd]');
+      if (action) {
+        event.preventDefault();
+        void this.sendSetCommand(action);
+        return;
+      }
       const link = event.target.closest('a[href^="#"]');
       if (!link) return;
       const id = link.getAttribute('href').slice(1);
@@ -216,6 +267,7 @@ class FHEMCMSHtml extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.clearTimeout(this.actionStatusTimer);
     queueMicrotask(() => {
       if (this.isConnected) return;
       for (const controller of this.vehicleMaps.values()) controller.destroy();

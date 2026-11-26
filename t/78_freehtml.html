@@ -43,6 +43,75 @@ try {
   check(checkSource(solar) === null, 'reported commented solar layout is accepted');
   const renderedSolar = renderTemplate(sanitize(solar), (_device, reading) => reading === 'state' ? 'on' : '12.345');
   check(renderedSolar.textContent.includes('12.3 W'), 'solar readings and filters still render');
+  const setMarkup = '<button type="button" set-device="LR_SAT" set-cmd="remoteControl OK">OK</button>'
+    + '<div set-device="LR_SAT" set-cmd="channel Das_Erste_HD">Das Erste</div>'
+    + '<span set-device="LR_SAT" set-cmd="remoteControl OK">OK</span>'
+    + '<a href="#target" set-device="LR_SAT" set-cmd="remoteControl OK">OK</a>';
+  check(checkSource(setMarkup) === null, 'declarative set actions validate on allowed elements');
+  const setTemplate = sanitize(setMarkup);
+  check(setTemplate.querySelector('button[type="button"][set-device="LR_SAT"][set-cmd="remoteControl OK"]'),
+    'safe button set action survives sanitizing');
+  check(setTemplate.querySelectorAll('[set-device][set-cmd]').length === 4,
+    'set actions survive sanitizing on every allowed interactive element');
+  for (const bad of [
+    '<button set-device="LR_SAT">OK</button>',
+    '<button set-cmd="remoteControl OK">OK</button>',
+    '<p set-device="LR_SAT" set-cmd="on">On</p>',
+    `<button set-device="${'D'.repeat(65)}" set-cmd="on">On</button>`,
+    '<button type="submit" set-device="LR_SAT" set-cmd="on">On</button>',
+    '<button set-device="LR_SAT" set-cmd="remoteControl OK;shutdown">On</button>',
+    '<button set-device="LR_SAT" set-cmd="remoteControl\\nOK">On</button>',
+    '<button set-device="LR_SAT" set-cmd="on" onclick="alert(1)">On</button>',
+  ]) check(checkSource(bad) !== null, 'unsafe or incomplete set action rejected');
+
+  const actionCalls = [];
+  let resolveAction;
+  const actionHost = createWidgetElement({ id: 'set-action', type: 'fhem-html', html: setMarkup, devices: [] }, {
+    setCommand: (device, command) => {
+      actionCalls.push([device, command]);
+      return new Promise(resolve => { resolveAction = resolve; });
+    },
+  }, new Map(), true);
+  document.body.append(actionHost);
+  const actionButton = actionHost.shadowRoot.querySelector('button[set-device]');
+  const actionClick = new MouseEvent('click', { bubbles: true, cancelable: true, composed: true });
+  actionButton.dispatchEvent(actionClick);
+  check(actionClick.defaultPrevented, 'set action prevents native navigation');
+  check(actionButton.classList.contains('fhem-cms-sending'), 'set action shows sending feedback while pending');
+  check(JSON.stringify(actionCalls) === JSON.stringify([['LR_SAT', 'remoteControl OK']]),
+    'set action sends the validated device and full command');
+  actionButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
+  check(actionCalls.length === 1, 'repeated clicks are ignored while the command is pending');
+  resolveAction();
+  await new Promise(resolve => setTimeout(resolve, 20));
+  check(actionHost.shadowRoot.querySelector('[data-cms-action-status]').textContent === 'Befehl gesendet.',
+    'successful set action reports completion');
+  await new Promise(resolve => setTimeout(resolve, 500));
+  check(!actionButton.classList.contains('fhem-cms-sending'), 'sending feedback is temporary');
+  actionHost.remove();
+
+  let blockedCalls = 0;
+  const editorActionHost = createWidgetElement({ id: 'editor-set-action', type: 'fhem-html',
+    html: '<button set-device="LR_SAT" set-cmd="on">On</button>', devices: [] }, {
+    setCommand: async () => { blockedCalls++; },
+  }, new Map(), false);
+  document.body.append(editorActionHost);
+  editorActionHost.shadowRoot.querySelector('button[set-device]').click();
+  check(blockedCalls === 0, 'editor-mode set actions do not call FHEM');
+  check(editorActionHost.shadowRoot.querySelector('[data-cms-action-status]').textContent
+    === 'Geräteaktionen sind nur in der Ansicht verfügbar.', 'editor-mode set action explains why it is blocked');
+  editorActionHost.remove();
+
+  const failedActionHost = createWidgetElement({ id: 'failed-set-action', type: 'fhem-html',
+    html: '<button set-device="LR_SAT" set-cmd="on">On</button>', devices: [] }, {
+    setCommand: async () => { throw new Error('Zugriff verweigert'); },
+  }, new Map(), true);
+  document.body.append(failedActionHost);
+  failedActionHost.shadowRoot.querySelector('button[set-device]').click();
+  await new Promise(resolve => setTimeout(resolve, 20));
+  check(failedActionHost.shadowRoot.querySelector('[data-cms-action-status]').textContent
+    === 'Befehl fehlgeschlagen: Zugriff verweigert', 'set command errors are visible');
+  failedActionHost.remove();
   check(renderedSolar.querySelector('[style*="display: grid"]'), 'grid layout survives');
   check(renderedSolar.querySelector('table td').textContent.includes('Dach'), 'table content survives');
   const image = '<img src="{{MeinElch:vehicle_images_exteriorImageUrl}}" alt="Fahrzeug" width="100%">';

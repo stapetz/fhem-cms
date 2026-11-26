@@ -93,13 +93,13 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 - Vollständige HTML-Blockkommentare wie `<!-- === BOX START === -->` sind
   auch innerhalb eines `<style>`-Elements erlaubt. Beim Rendern werden sie
   entfernt; der gespeicherte Quelltext bleibt unverändert.
-- Struktur: `div span p h1 h2 h3 h4 h5 h6 strong b em i u small br hr ul ol li section article header footer main aside nav figure figcaption details summary dl dt dd pre code blockquote sub sup mark`
+- Struktur: `div span button p h1 h2 h3 h4 h5 h6 strong b em i u small br hr ul ol li section article header footer main aside nav figure figcaption details summary dl dt dd pre code blockquote sub sup mark`
 - Tabellen: `table thead tbody tfoot tr th td caption`
 - Medien/Navigation: `img a iframe`
 - SVG: `svg g path rect circle ellipse line polyline polygon text tspan defs linearGradient radialGradient stop clipPath mask pattern use animate title desc`; außerdem `<style>`. `pattern` und `use` akzeptieren nur lokale Referenzen.
 - `animate` ermöglicht passive Animationen von Geometrie, Farben und Opazität mit Zeitangaben und Wiederholungen. Für Geometrie wird `attributeType="XML"` empfohlen. Externe Ziele und ereignisgesteuerte Animationen sind nicht erlaubt.
 - SVG-Rechtecke (`rect`) unterstützen `width` und `height` mit nichtnegativen Zahlen und optional `px`, `em`, `rem` oder `%`.
-- Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class device reading filter`, außerdem `id`, passive `data-*`-/ARIA-Attribute, `role` und passende Link-/Bild-/SVG-Attribute.
+- Attribute (immer in doppelten Anführungszeichen): `class style title colspan rowspan data-cms-class device reading filter`, außerdem `id`, passive `data-*`-/ARIA-Attribute, `role` und passende Link-/Bild-/SVG-Attribute. `button` akzeptiert nur `type="button"`.
 - `title`, `alt`, ARIA-Attribute und `data-*` dürfen Live-Platzhalter enthalten. Sie werden als Attributtext gesetzt, niemals als HTML. `data-cms-*` ist intern reserviert; die dokumentierte Ausnahme `data-cms-class` bleibt erhalten.
 - **Zusätzlich erlaubt ab 1.11.0:** HTML-Kommentare, passive Struktur wie `section`, `figure`, `details/summary`, `pre/code`, Links und Bilder sowie statisches SVG mit Formen, Pfaden, Text und lokalen Verläufen. Flex-/Grid-Layout und Farben bleiben möglich.
 - **CSS-Positivliste ab 1.11.0:** Layout-/Größen-/Abstands-/Typografie-/Farb-/Rahmen-Eigenschaften, Flex/Grid, Positionierung, Scrollen, Animationen/Transitions, Filter/Backdrop-Filter, Schatten, Transformationen und SVG-Paintwerte sind erlaubt. Unbekannte Eigenschaften, Funktionen und At-Regeln werden abgelehnt. CSS-Variablen (`--name`, `var()`), `calc/min/max/clamp`, Gradienten und `drop-shadow()` bleiben möglich. Regeln unterstützen `@media`, `@supports`, `@container`, `@layer`, `@keyframes` und wie ausdrücklich freigegeben `@import`. Die genaue Eigenschafts-/Funktionsliste steht in [freehtml-css.js](../www/fhem-cms/js/freehtml-css.js).
@@ -107,7 +107,14 @@ Aufbau: `Device:reading Operator Vergleichswert : Klassenname`. Operatoren: `=`,
 - `content` erlaubt beispielsweise Text für Pseudoelemente wie `.wd::after{content:"N"}`; die bestehenden CSS- und URL-Prüfungen gelten weiterhin.
 - **Layoutschutz:** `position: relative/absolute/fixed/sticky` bleibt erlaubt; feste Elemente bleiben innerhalb der Kachel. `z-index` akzeptiert `auto` oder ganze Zahlen bis **100**, keine Variablen/Formeln. Selektoren `:hover`, `:has(...)` und Attributselektoren funktionieren; `:host`/`:host-context` sind im eigenen CSS gesperrt. `url()` und `@import` erlauben lokale Pfade oder HTTP-/HTTPS-Ressourcen; SVG-Füllungen dürfen `url(#lokaleId)` nutzen.
 - SVG-Attribute wie `transform`, Koordinaten, `stroke-dasharray`, `stroke-dashoffset` und `letter-spacing` können numerische Readings als `{{Device:Reading}}` mit optional `int` oder `round(0)` bis `round(6)` enthalten. Fehlende oder nichtnumerische Werte werden nicht eingesetzt und verursachen eine sichtbare Warnung. Auch Inline-CSS-Variablen unterstützen solche numerischen Platzhalter.
-- **Nicht erlaubt:** `script`, Formulare, Ereignis-Attribute (`onclick` …), `foreignObject`, Animationen von `href`, `style` oder Ereignissen, externe SVG-Referenzen, `javascript:`, `data:`, `srcdoc`, eigene Sandbox-/Berechtigungsfreigaben und CSS-Escapes. Ungültiger Code zeigt einen Fehler beim Speichern.
+- **Deklarative Schreibaktionen:** `set-device` und `set-cmd` müssen gemeinsam auf `<button>`, `<div>`, `<span>` oder `<a>` stehen. Zum Beispiel:
+
+  ```html
+  <button type="button" set-device="LR_SAT" set-cmd="remoteControl OK">OK</button>
+  ```
+
+  Befehle mit Parametern und Leerzeichen sind möglich. JavaScript und Befehlsseparatoren bleiben gesperrt. Schreibaktionen werden nur in der Ansicht ausgeführt; FHEM-Authentifizierung, CSRF-Schutz und die Berechtigungen der angemeldeten FHEM-Sitzung gelten weiterhin.
+- **Nicht erlaubt:** `script`, Formulare, native Ereignis-Attribute (`onclick` …), `foreignObject`, Animationen von `href`, `style` oder Ereignissen, externe SVG-Referenzen, `javascript:`, `data:`, `srcdoc`, eigene Sandbox-/Berechtigungsfreigaben und CSS-Escapes. Ungültiger Code zeigt einen Fehler beim Speichern.
 - Eigene Styles und externe CSS-Imports teilen weiterhin den Shadow-DOM mit der Widget-Hülle. Sie können daher interne Widget-Styles beeinflussen; importierte Stylesheets werden nicht durch den Sanitizer geprüft. Nur vertrauenswürdige Stylesheets einbinden.
 
 ```html

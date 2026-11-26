@@ -1,15 +1,17 @@
 // Freies HTML mit Platzhaltern (S31): strikte Allowlist, kein Skript, Werte werden nur als Text eingesetzt.
 import { validateCssStructure } from './freehtml-css.js';
 import { formatDateDisplay } from './date-display.js';
+import { isValidSetCommand } from './set-command.js';
 export const MAX_FREE_HTML = 50000;
 export const MAX_FREE_DEVICES = 20;
 
-const TAGS = new Set(['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'strong', 'b', 'em', 'i', 'u', 'small', 'br', 'hr',
+const TAGS = new Set(['div', 'span', 'button', 'p', 'h1', 'h2', 'h3', 'h4', 'strong', 'b', 'em', 'i', 'u', 'small', 'br', 'hr',
   'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'style',
   'h5', 'h6', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'figure', 'figcaption',
   'details', 'summary', 'dl', 'dt', 'dd', 'pre', 'code', 'blockquote', 'sub', 'sup', 'mark',
   'caption', 'tfoot', 'a', 'img', 'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line',
   'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'pattern', 'animate', 'title', 'desc', 'iframe']);
+const SET_ACTION_TAGS = new Set(['button', 'div', 'span', 'a']);
 const SVG_TAGS = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
   'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'use', 'pattern', 'animate', 'title', 'desc']);
 const SVG_ATTRIBUTES = new Set(['viewbox', 'preserveaspectratio', 'd', 'x', 'y', 'x1', 'y1', 'x2', 'y2',
@@ -107,6 +109,7 @@ export function extraAttributeAllowed(tag, name, value) {
   if ((name === 'href' && tag === 'a') || (name === 'src' && tag === 'img')) {
     return URL_PLACEHOLDER.test(value) || isSafeHtmlUrl(value);
   }
+  if (tag === 'button' && name === 'type') return value === 'button';
   if (tag === 'a' && name === 'target') return value === '_blank' || value === '_self';
   if (tag === 'a' && name === 'rel') return /^(?:(?:noopener|noreferrer|nofollow|external|author|help|license|next|prev|search|tag)\s*)*$/.test(value);
   if (tag === 'img' && name === 'alt') return value.length <= 200;
@@ -196,7 +199,14 @@ export function checkSource(html) {
       if (tag === 'iframe' && name === 'src' && !extraAttributeAllowed(tag, name, attribute.value)) {
         return 'Die Einbettung benötigt eine HTTP-/HTTPS-URL oder einen lokalen Pfad.';
       }
+      if (name === 'set-device' && (!SET_ACTION_TAGS.has(tag) || !DEVICE_ATTR.test(attribute.value))) {
+        return `Ungültiges set-device-Attribut auf <${tag}>`;
+      }
+      if (name === 'set-cmd' && (!SET_ACTION_TAGS.has(tag) || !isValidSetCommand(attribute.value))) {
+        return `Ungültiges set-cmd-Attribut auf <${tag}>`;
+      }
       if (!['class', 'style', 'title', 'colspan', 'rowspan', 'data-cms-class', 'device', 'reading', 'filter'].includes(name)
+        && name !== 'set-device' && name !== 'set-cmd'
         && !extraAttributeAllowed(tag, name, attribute.value)) {
         return `Das Attribut „${name}“ ist nicht erlaubt (Element <${tag}>)`;
       }
@@ -225,6 +235,9 @@ export function checkSource(html) {
     }
     if (element.hasAttribute('device') !== element.hasAttribute('reading')) {
       return `Die Attribute device und reading gehören zusammen (Element <${tag}>)`;
+    }
+    if (element.hasAttribute('set-device') !== element.hasAttribute('set-cmd')) {
+      return `Die Attribute set-device und set-cmd gehören zusammen (Element <${tag}>)`;
     }
     if (tag === 'style' && (!isSafeCss(element.textContent) || element.textContent.includes('{{'))) {
       return 'Das <style>-Element enthält nicht erlaubte CSS-Regeln, Eigenschaften oder Werte (z-index maximal 100).';
@@ -285,6 +298,10 @@ function cleanChildren(source, target) {
         } else if (name === 'reading' && READING_ATTR.test(value)) {
           element.setAttribute(name, value);
         } else if (name === 'filter' && FILTER_ATTR.test(value)) {
+          element.setAttribute(name, value);
+        } else if (name === 'set-device' && SET_ACTION_TAGS.has(tag) && DEVICE_ATTR.test(value)) {
+          element.setAttribute(name, value);
+        } else if (name === 'set-cmd' && SET_ACTION_TAGS.has(tag) && isValidSetCommand(value)) {
           element.setAttribute(name, value);
         } else if (name === 'data-cms-class') {
           element.setAttribute(name, value.split(';').filter((part) => CONDITION.test(part)).join(';'));

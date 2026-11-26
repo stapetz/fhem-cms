@@ -1705,8 +1705,8 @@ sub FHEMCMS_ValidateConfig {
     return undef;
 }
 
-# Freies HTML (fhem-html): strenge Allowlist fuer Elemente und Attribute; kein Skript, keine
-# Ereignis-Attribute, keine Ressourcen. Platzhalter {{Device:reading}} sind reiner Text.
+# Freies HTML (fhem-html): strenge Allowlist fuer Elemente und Attribute; kein Skript und keine
+# Ereignis-Attribute. Deklarative Schreibaktionen werden separat validiert.
 sub FHEMCMS_ValidateLinks {
     my ($links, $pages) = @_;
     my $json = JSON::PP->new;
@@ -1939,6 +1939,11 @@ sub FHEMCMS_FreeHtmlExtraAttribute {
         return 0 if ($name eq 'href' || $name eq 'transform');
     }
     return $value =~ /\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/ if ($name eq 'id');
+    return $value eq 'button' if ($tag eq 'button' && $name eq 'type');
+    return $value =~ /\A[A-Za-z0-9_.-]{1,64}\z/
+        if ($name eq 'set-device' && $tag =~ /\A(?:button|div|span|a)\z/);
+    return FHEMCMS_FreeHtmlSetCommand($value)
+        if ($name eq 'set-cmd' && $tag =~ /\A(?:button|div|span|a)\z/);
     return 0 if ($name =~ /\Adata-cms-/);
     return length($value) <= 200 if ($name =~ /\A(?:aria-[a-z-]+|data-[a-z0-9-]+|role)\z/);
     if (($tag eq 'a' && $name eq 'href') || ($tag eq 'img' && $name eq 'src')) {
@@ -1979,13 +1984,19 @@ sub FHEMCMS_FreeHtmlExtraAttribute {
     return 0;
 }
 
+sub FHEMCMS_FreeHtmlSetCommand {
+    my ($command) = @_;
+    return defined($command) && !ref($command) && length($command) <= 512
+        && $command =~ /\A[A-Za-z0-9_.-]{1,128}(?: [A-Za-z0-9_.:+,\/%=-]{1,128})*\z/;
+}
+
 sub FHEMCMS_ValidateFreeHtml {
     my ($html) = @_;
     return 'kein Text' if (ref($html) || !defined($html));
     return 'zu lang' if (length($html) > $FHEMCMS_MAX_FREE_HTML);
     return 'enthaelt Steuerzeichen' if ($html =~ /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/);
 
-    my %tags = map { $_ => 1 } qw(div span p h1 h2 h3 h4 strong b em i u small br hr ul ol li
+    my %tags = map { $_ => 1 } qw(div span button p h1 h2 h3 h4 strong b em i u small br hr ul ol li
         table thead tbody tr th td style h5 h6 section article header footer main aside nav figure figcaption
         details summary dl dt dd pre code blockquote sub sup mark caption tfoot a img svg g path rect circle
         ellipse line polyline polygon text tspan defs lineargradient radialgradient stop clippath mask use pattern animate title desc iframe);
@@ -2020,6 +2031,8 @@ sub FHEMCMS_ValidateFreeHtml {
             }
         }
         return 'Die Attribute device und reading gehoeren zusammen' if (!!$seen{device} != !!$seen{reading});
+        return 'Die Attribute set-device und set-cmd gehoeren zusammen'
+            if (!!$seen{'set-device'} != !!$seen{'set-cmd'});
     }
     # Jedes verbliebene '<' muss zu einem erlaubten Tag gehoeren (oben geprueft); nackte '<' oder '>' in Attributen sind unzulaessig.
     my $stripped = $html;

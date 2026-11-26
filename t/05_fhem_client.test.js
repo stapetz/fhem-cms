@@ -77,9 +77,21 @@ test('invalid device and command inputs never reach FHEMWEB', async () => {
   assert.throws(() => new FhemClient('cms\n', 'https://fhem.example/fhem/'), /Device-Name/);
   await assert.rejects(client.setCommand('lamp;set all on', 'on'), /Ungültiger Befehl/);
   await assert.rejects(client.setCommand('lamp\n', 'on'), /Ungültiger Befehl/);
+  await assert.rejects(client.setCommand('lamp', 'remoteControl OK;shutdown'), /Ungültiger Befehl/);
+  await assert.rejects(client.setCommand('lamp', 'remoteControl\nOK'), /Ungültiger Befehl/);
+  await assert.rejects(client.setCommand('lamp', 'remoteControl "OK"'), /Ungültiger Befehl/);
   await assert.rejects(client.setCommand('lamp', 'on', 'on;shutdown'), /Ungültiger Befehl/);
   await assert.rejects(client.setReading('lamp', 'pct', '5;shutdown'), /Ungültiger Sollwert/);
   assert.equal(requests, 0);
+});
+
+test('safe multi-word set commands are passed intact to FHEMWEB', async () => {
+  const commands = [];
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  client.command = async command => { commands.push(command); return ''; };
+  await client.setCommand('LR_SAT', 'remoteControl OK');
+  await client.setCommand('lamp', 'pct 55,2');
+  assert.deepEqual(commands, ['set LR_SAT remoteControl OK', 'set lamp pct 55,2']);
 });
 
 test('icon URLs remain same-origin when FHEMWEB is at the web root', () => {
