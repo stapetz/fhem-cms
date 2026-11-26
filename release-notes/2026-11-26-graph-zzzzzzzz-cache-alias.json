@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-26",
+  "version": "1.39.1-dev",
+  "title": "Aliasdarstellung im Log-Cache korrigiert",
+  "changes": [
+    "Die Cache-Ansicht zeigt Umlaute in FHEM-Aliasnamen korrekt an. Refs #259."
+  ]
+}

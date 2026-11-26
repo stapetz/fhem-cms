@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Cwd qw(abs_path);
 use Digest::SHA qw(sha256_hex);
+use Encode qw(decode FB_CROAK LEAVE_SRC);
 use File::Spec;
 use JSON::PP ();
 
@@ -185,8 +186,17 @@ sub FHEMCMS_AdminEndpoint {
                         $result = $decoded;
                         for my $item (@{$result->{items} // []}) {
                             my $alias = $attr{$item->{name}}{alias};
-                            $item->{alias} = $alias if (defined($alias) && !ref($alias)
-                                && $alias =~ /\A[^\x00-\x1f\x7f]{1,256}\z/);
+                            next if (!defined($alias) || $alias eq '');
+                            if (!ref($alias) && !utf8::is_utf8($alias)) {
+                                local $@;
+                                $alias = eval { decode('UTF-8', $alias, FB_CROAK | LEAVE_SRC) };
+                            }
+                            if (defined($alias) && !ref($alias)
+                                && $alias =~ /\A[^\x00-\x1f\x7f]{1,256}\z/) {
+                                $item->{alias} = $alias;
+                            } else {
+                                push(@{$result->{warnings}}, "Alias von $item->{name} ist ungueltig");
+                            }
                         }
                     }
                 }
