@@ -149,7 +149,8 @@ test('cache contents use a paged read and reject malformed responses', async () 
     globalThis.fetch = async (url, options) => {
       assert.equal(String(url), 'https://example.test/fhem/fhemcms-admin?op=cache-contents&offset=0');
       assert.equal(options.method, undefined);
-      return Response.json({items: [{name: 'Solar', alias: '<b>Solar</b>', readings: ['power']}],
+      return Response.json({items: [{name: 'Solar', alias: '<b>Solar</b>',
+        readings: [{name: 'power', sources: [{type: 'dblog', name: 'DB'}, {type: 'filelog'}]}]}],
         offset: 0, total: 1, warnings: []});
     };
     assert.equal((await client.cacheContents(0)).items[0].alias, '<b>Solar</b>');
@@ -157,6 +158,9 @@ test('cache contents use a paged read and reject malformed responses', async () 
     assert.equal((await client.cacheContents(0)).status, 'pending');
     globalThis.fetch = async () => Response.json({items: [{name: '../bad', readings: []}],
       offset: 0, total: 1, warnings: []});
+    await assert.rejects(client.cacheContents(0), /Ungültiger Cache-Inhalt/);
+    globalThis.fetch = async () => Response.json({items: [{name: 'Solar',
+      readings: [{name: 'power', sources: [{type: 'invalid'}]}]}], offset: 0, total: 1, warnings: []});
     await assert.rejects(client.cacheContents(0), /Ungültiger Cache-Inhalt/);
   } finally { globalThis.fetch = previous; }
 });

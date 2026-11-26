@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-26",
+  "version": "1.40.0-dev",
+  "title": "Logquellen in der Cache-Ansicht",
+  "changes": [
+    "Die Administration zeigt fuer jedes Reading die zugehoerigen DbLog- und FileLog-Quellen an. Refs #259."
+  ]
+}

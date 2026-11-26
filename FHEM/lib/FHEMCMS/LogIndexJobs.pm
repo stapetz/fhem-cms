@@ -149,7 +149,9 @@ sub FHEMCMS_LogIndexContents {
             my $source = $cache->{sources}{$kind}{$name};
             for my $device (keys %{$source}) {
                 next if (!$allowed{$device});
-                $devices{$device}{$_} = 1 for keys %{$source->{$device}};
+                for my $reading (keys %{$source->{$device}}) {
+                    $devices{$device}{$reading}{$kind}{$allowed{$name} ? $name : ''} = 1;
+                }
             }
         }
         for my $name (sort keys %{$cache->{errors}{$kind} // {}}) {
@@ -163,7 +165,17 @@ sub FHEMCMS_LogIndexContents {
     my @names = sort keys %devices;
     my @page = $offset < @names ? splice(@names, $offset, 50) : ();
     my $json = JSON::PP->new->utf8->canonical->encode({
-        items => [map { {name => $_, readings => [sort keys %{$devices{$_}}]} } @page],
+        items => [map {
+            my $device = $_;
+            {name => $device, readings => [map {
+                my $reading = $_;
+                {name => $reading, sources => [map {
+                    my $kind = $_;
+                    map { {type => $kind, ($_ ne '' ? (name => $_) : ())} }
+                        sort keys %{$devices{$device}{$reading}{$kind}};
+                } sort keys %{$devices{$device}{$reading}}]};
+            } sort keys %{$devices{$device}}]};
+        } @page],
         total => scalar(keys %devices), offset => 0 + $offset, warnings => \@warnings,
     });
     return length($json) <= 262144 ? $json : 'Cache-Seite ist zu gross zur Anzeige';

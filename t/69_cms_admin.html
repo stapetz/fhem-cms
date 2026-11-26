@@ -42,8 +42,11 @@ try {
     inventory: async () => ({token: 'a'.repeat(64), items: items.filter(item => !removed.includes(item.name))}),
     cacheStatus: async () => ({status: 'ready'}),
     cacheContents: async offset => ({offset, total: 51, warnings: [], items: offset === 0
-      ? [{name: 'Alpha', alias: '<b>Garage</b>', readings: ['energy', 'power']}]
-      : [{name: 'Zulu', readings: ['temperature']}]}),
+      ? [{name: 'Alpha', alias: '<b>Garage</b>', readings: [
+        {name: 'energy', sources: [{type: 'dblog', name: 'DB'}]},
+        {name: 'power', sources: [{type: 'dblog', name: 'DB'}, {type: 'filelog', name: 'Log'}]},
+      ]}]
+      : [{name: 'Zulu', readings: [{name: 'temperature', sources: [{type: 'filelog'}]}]}]}),
     remove: async selection => {
       removed.push(...selection.map(item => item.name));
       return selection.map(item => ({...item, ok: true, message: 'Erledigt'}));
@@ -109,8 +112,9 @@ try {
   $('#cache-show').click();
   await wait(() => $('#cache-rows').children.length === 1);
   check($('#cache-dialog').open && $('#cache-rows').textContent.includes('Alpha (<b>Garage</b>)')
-    && $('#cache-rows').textContent.includes('energy, power') && !$('#cache-rows b'),
-    'cache dialog shows alias and readings as text');
+    && $('#cache-rows').textContent.includes('energy — DbLog (DB)')
+    && $('#cache-rows').textContent.includes('power — DbLog (DB), FileLog (Log)')
+    && !$('#cache-rows b'), 'cache dialog shows alias and sources per reading as text');
   $('#cache-next').click();
   await wait(() => $('#cache-rows').textContent.includes('Zulu'));
   check(!$('#cache-previous').disabled && $('#cache-next').disabled, 'cache pagination follows total');

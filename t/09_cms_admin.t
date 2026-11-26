@@ -219,6 +219,8 @@ delete($attr{WEB}{csrfToken});
     local *main::BlockingCall = sub { $argument = $_[1]; return {pid => 123}; };
     local $defs{Alpha} = {NAME => 'Alpha', TYPE => 'dummy'};
     local $defs{Beta} = {NAME => 'Beta', TYPE => 'dummy'};
+    local $defs{Database} = {NAME => 'Database', TYPE => 'DbLog'};
+    local $defs{Files} = {NAME => 'Files', TYPE => 'FileLog'};
     local $attr{Alpha}{alias} = 'Garage <Nord>';
     my $cache = {version => 1, builtAt => CORE::time(),
         fingerprint => FHEMCMS_LogIndexFingerprint(),
@@ -238,7 +240,20 @@ delete($attr{WEB}{csrfToken});
     (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-contents');
     my $contents = JSON::PP::decode_json($body);
     is_deeply($contents->{items}, [{name => 'Alpha', alias => 'Garage <Nord>',
-        readings => [qw(energy power)]}], 'contents merge sources, include alias and filter forbidden devices');
+        readings => [
+            {name => 'energy', sources => [{type => 'filelog', name => 'Files'}]},
+            {name => 'power', sources => [{type => 'dblog', name => 'Database'}, {type => 'filelog', name => 'Files'}]},
+        ]}], 'contents retain sources per reading, alias and device permissions');
+    $denied{'devicename:Database'} = 1;
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-contents');
+    is(JSON::PP::decode_json($body)->{status}, 'pending', 'source permissions produce a separate result');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($argument));
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-contents');
+    $contents = JSON::PP::decode_json($body);
+    is_deeply($contents->{items}[0]{readings}[1]{sources}, [
+        {type => 'dblog'}, {type => 'filelog', name => 'Files'}],
+        'unauthorized log source name is not disclosed');
+    delete($denied{'devicename:Database'});
     $attr{Alpha}{alias} = "B\xc3\xbcro";
     (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-contents');
     $contents = JSON::PP::decode_json($body);

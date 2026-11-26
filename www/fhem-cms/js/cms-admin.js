@@ -1,9 +1,9 @@
-import { showCmsModal } from './modal-dialog.js?v=admin-20261126-6';
-import { installCloseStyles, styleCloseButton } from './close-button.js?v=admin-20261126-6';
-import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261126-6';
-import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261126-6';
-import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261126-6';
-import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261126-6';
+import { showCmsModal } from './modal-dialog.js?v=admin-20261126-7';
+import { installCloseStyles, styleCloseButton } from './close-button.js?v=admin-20261126-7';
+import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261126-7';
+import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261126-7';
+import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261126-7';
+import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261126-7';
 
 const CONFIG_LIMIT = 1048576;
 
@@ -87,7 +87,10 @@ export class CmsAdminClient {
       || result.warnings.some(warning => typeof warning !== 'string')
       || result.items.some(item => !item || !isValidName(item.name)
         || (item.alias !== undefined && (typeof item.alias !== 'string' || /[\x00-\x1f\x7f]/.test(item.alias)))
-        || !Array.isArray(item.readings) || item.readings.some(reading => !isValidName(reading)))) {
+        || !Array.isArray(item.readings) || item.readings.some(reading => !reading || !isValidName(reading.name)
+          || !Array.isArray(reading.sources) || !reading.sources.length
+          || reading.sources.some(source => !source || !['dblog', 'filelog'].includes(source.type)
+            || (source.name !== undefined && !isValidName(source.name)))))) {
       throw new Error('Ungültiger Cache-Inhalt');
     }
     return result;
@@ -304,8 +307,16 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
       if (!data || data.status === 'pending') throw new Error('Zeitlimit beim Laden des Cache-Inhalts überschritten');
       for (const item of data.items) {
         const row = element('tr');
-        row.append(element('td', item.alias ? `${item.name} (${item.alias})` : item.name),
-          element('td', item.readings.join(', ')));
+        const readings = element('td');
+        const list = element('ul');
+        list.className = 'cms-admin-cache-readings';
+        for (const reading of item.readings) {
+          const sources = reading.sources.map(source =>
+            `${source.type === 'dblog' ? 'DbLog' : 'FileLog'}${source.name ? ` (${source.name})` : ' (Name nicht freigegeben)'}`);
+          list.append(element('li', `${reading.name} — ${sources.join(', ')}`));
+        }
+        readings.append(list);
+        row.append(element('td', item.alias ? `${item.name} (${item.alias})` : item.name), readings);
         $('#cache-rows').append(row);
       }
       $('#cache-dialog-status').textContent = `${data.total} Devices${data.total ? `, ${offset + 1}–${offset + data.items.length}` : ''}. ${data.warnings.join(' ')}`;

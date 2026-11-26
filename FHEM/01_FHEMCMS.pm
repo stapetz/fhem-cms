@@ -24,7 +24,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndex.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndexJobs.pm');
 
-our $FHEMCMS_VERSION = '1.39.1-dev';
+our $FHEMCMS_VERSION = '1.40.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -3750,7 +3750,9 @@ use FHEMWEB and FHEM permissions.</p>
     Nach Aenderung die CMS-Seite neu laden. Dies ist keine Zugriffssperre
     fuer die direkte URL; FHEMWEB-Berechtigungen bleiben erforderlich.
     Sie bietet einen manuellen Neuaufbau und eine tabellarische Ansicht
-    des gemeinsamen Log-Caches fuer aktuell vorhandene, berechtigte Devices,
+    des gemeinsamen Log-Caches fuer aktuell vorhandene, berechtigte Devices
+    mit Logquelle pro Reading. Die Anzeige beschreibt den Cache und nicht
+    zwingend die fuer ein Diagramm verwendete Quelle,
     bestaetigte Sammelloeschung (Purge vor Delete) und separat
     die Bereinigung eindeutig zuordenbarer verwaister CMS-Verzeichnisse.
     FHEMWEB-Rechte bleiben erforderlich. Die CSRF-Pruefung folgt der
