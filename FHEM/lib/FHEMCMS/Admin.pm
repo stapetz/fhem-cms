@@ -151,13 +151,37 @@ sub FHEMCMS_AdminEndpoint {
     if ($operation eq 'list') {
         my ($inventory, $error) = FHEMCMS_AdminInventory();
         $result = defined($error) ? {error => $error} : $inventory;
-    } elsif ($operation eq 'delete') {
+    } elsif ($operation eq 'cache-status') {
+        if (!Authorized($FW_chash, 'cmd', 'get')) {
+            $result = {error => 'Zugriff verweigert'};
+        } else {
+            my ($dir, $error) = FHEMCMS_LogIndexRoot();
+            if (defined($error)) {
+                $result = {error => $error};
+            } else {
+                my $file = File::Spec->catfile($dir, 'log-index.json');
+                my @stat = -l $file ? () : stat($file);
+                $result = {status => $main::FHEMCMS_LOG_INDEX_JOB ? 'pending'
+                    : defined($main::FHEMCMS_LOG_INDEX_ERROR) ? 'error' : @stat ? 'ready' : 'missing',
+                    updated => @stat ? $stat[9] : undef,
+                    message => $main::FHEMCMS_LOG_INDEX_ERROR};
+            }
+        }
+    } elsif ($operation eq 'delete' || $operation eq 'cache-rebuild') {
         my ($method) = split(/\s+/, $FW_httpheader[0] // '');
         my $expected = $defs{$FW_wname}{CSRFTOKEN};
         my $csrfDisabled = ($attr{$FW_wname}{csrfToken} // '') eq 'none';
         if ($method ne 'POST' || (!$csrfDisabled && (!defined($expected) || $expected eq ''
             || ($FW_webArgs{fwcsrf} // '') ne $expected))) {
             $result = {error => 'POST mit gueltigem FHEMWEB-CSRF-Token erforderlich'};
+        } elsif ($operation eq 'cache-rebuild') {
+            if (!Authorized($FW_chash, 'cmd', 'set')) {
+                $result = {error => 'Zugriff verweigert'};
+            } else {
+                my $error = FHEMCMS_LogIndexStart();
+                $result = defined($error) && $error ne 'Cache-Aufbau laeuft bereits'
+                    ? {error => $error} : {status => 'pending'};
+            }
         } elsif (length($FW_webArgs{payload} // '') > 16384) {
             $result = {error => 'Verwaltungsanfrage ist zu gross'};
         } else {

@@ -1,9 +1,9 @@
-import { showCmsModal } from './modal-dialog.js?v=admin-20261122-4';
-import { installCloseStyles, styleCloseButton } from './close-button.js?v=admin-20261122-4';
-import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261122-4';
-import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261122-4';
-import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261122-4';
-import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261122-4';
+import { showCmsModal } from './modal-dialog.js?v=admin-20261126-5';
+import { installCloseStyles, styleCloseButton } from './close-button.js?v=admin-20261126-5';
+import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261126-5';
+import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261126-5';
+import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261126-5';
+import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261126-5';
 
 const CONFIG_LIMIT = 1048576;
 
@@ -54,9 +54,9 @@ export class CmsAdminClient {
     this.endpoint = new URL(`${this.base.pathname.replace(/\/$/, '')}/fhemcms-admin`, this.base);
   }
 
-  async request(payload = null) {
+  async request(payload = null, operation = null) {
     const url = new URL(this.endpoint);
-    url.searchParams.set('op', payload ? 'delete' : 'list');
+    url.searchParams.set('op', operation || (payload ? 'delete' : 'list'));
     const options = { credentials: 'same-origin', cache: 'no-store' };
     if (payload) {
       const tokenResponse = await fetch(new URL(`${this.base.pathname.replace(/\/$/, '')}?XHR=1`, this.base),
@@ -75,6 +75,8 @@ export class CmsAdminClient {
   }
 
   async inventory() { return validateInventory(await this.request()); }
+  async cacheStatus() { return this.request(null, 'cache-status'); }
+  async rebuildCache() { return this.request({}, 'cache-rebuild'); }
 
   async remove(items, token) {
     const result = await this.request({ items, token, confirmation: 'DELETE' });
@@ -106,6 +108,7 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
   const choices = kind => [...root.querySelectorAll(`input[data-kind="${kind}"]:checked`)];
   const actions = () => {
     $('#refresh').disabled = busy;
+    $('#cache-rebuild').disabled = busy;
     for (const kind of ['device', 'orphan']) {
       const count = choices(kind).length;
       $(`#delete-${kind}s`).disabled = busy || !count || count > 20;
@@ -238,6 +241,34 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
     } finally { finish(); }
   };
   $('#refresh').addEventListener('click', () => { if (!busy) void refresh(); });
+  const updateCacheStatus = async () => {
+    try {
+      const state = await client.cacheStatus();
+      const updated = state.updated ? ` Letzter Stand: ${new Date(state.updated * 1000).toLocaleString('de-DE')}.` : '';
+      $('#cache-status').textContent = ({
+        pending: 'Log-Cache wird im Hintergrund aufgebaut.',
+        ready: 'Log-Cache ist verfügbar.',
+        missing: 'Log-Cache wurde noch nicht aufgebaut.',
+        error: `Log-Cache-Aufbau fehlgeschlagen: ${state.message || 'Unbekannter Fehler'}.`
+      })[state.status] || 'Ungültiger Cache-Status.';
+      $('#cache-status').textContent += updated;
+      if (state.status === 'pending') browser.setTimeout(() => { void updateCacheStatus(); }, 2000);
+    } catch (error) {
+      $('#cache-status').textContent = `Cache-Status nicht verfügbar: ${error.message}`;
+    }
+  };
+  $('#cache-rebuild').addEventListener('click', async () => {
+    if (busy) return;
+    begin('Log-Cache-Aufbau wird gestartet …');
+    try {
+      await client.rebuildCache();
+      message('Log-Cache-Aufbau wurde gestartet.');
+      await updateCacheStatus();
+    } catch (error) {
+      message(`Log-Cache-Aufbau fehlgeschlagen: ${error.message}`, true);
+    } finally { finish(); }
+  });
+  void updateCacheStatus();
   const cancelImport = () => {
     pendingImport = null;
     importDialog.close('cancel');

@@ -22,7 +22,7 @@ const STYLE = `
   .cms-dp-dialog .actions { display: flex; justify-content: flex-end; }
 `;
 
-export function openDevicePicker({ services, title = 'Device auswählen', accept = () => true, signal, classify }) {
+export function openDevicePicker({ services, title = 'Device auswählen', accept = () => true, signal, classify, loadCandidates }) {
   if (signal?.aborted) return Promise.resolve(null);
   return new Promise((resolve) => {
     const dialog = document.createElement('dialog');
@@ -44,12 +44,15 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
     const classifications = new Map();
     const errors = new Map();
     let remaining = 0;
+    let warning = '';
+    const candidateAbort = new AbortController();
 
     const finish = (value) => {
       if (done) {
         return;
       }
       done = true;
+      candidateAbort.abort();
       signal?.removeEventListener('abort', abort);
       if (dialog.open) {
         dialog.close();
@@ -64,7 +67,7 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
       const terms = $('[data-search]').value.toLowerCase().split(/\s+/).filter(Boolean);
       const matches = devices.filter((device) => {
         const haystack = [device.name, device.alias, device.type, device.room, device.parent].join(' ').toLowerCase();
-        return accept(device) && (!classify || classifications.get(device.name) === true)
+        return accept(device) && (!(classify || loadCandidates) || classifications.get(device.name) === true)
           && terms.every((term) => haystack.includes(term));
       });
       const shown = matches.slice(0, MAX_ROWS);
@@ -84,6 +87,7 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
           ? `${shown.length} von ${matches.length} Treffern, Suche weiter einschränken`
           : `${matches.length} Devices`;
       if (remaining) $('[data-info]').textContent += ` · ${remaining} Logprüfungen ausstehend`;
+      if (warning) $('[data-info]').textContent += ` · ${warning}`;
       if (errors.size) {
         const [name, error] = errors.entries().next().value;
         $('[data-info]').textContent += ` · ${errors.size} Logprüfungen fehlgeschlagen (${name}: ${error})`;
@@ -108,7 +112,22 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
     services.listAllDevices().then((list) => {
       if (done) return;
       devices = list;
-      if (classify) {
+      if (loadCandidates) {
+        remaining = 1;
+        loadCandidates(candidateAbort.signal).then(result => {
+          if (done) return;
+          const names = new Set(result.devices);
+          for (const device of devices) classifications.set(device.name, names.has(device.name));
+          warning = result.warnings.join(' ');
+          remaining = 0;
+          render();
+        }, error => {
+          if (done) return;
+          errors.set('Log-Cache', error.message || String(error));
+          remaining = 0;
+          render();
+        });
+      } else if (classify) {
         const candidates = devices.filter(accept);
         remaining = candidates.length;
         let next = 0;

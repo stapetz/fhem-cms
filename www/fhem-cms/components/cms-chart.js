@@ -392,8 +392,9 @@ class FHEMCMSChart extends HTMLElement {
       if (request !== this.readingRequest) return;
       this.fillReadings(result.readings, selected);
       hint.textContent = result.readings.length
-        ? `Quelle: ${SOURCES[result.source] || result.source}; ${result.readings.length} geloggte Readings gefunden.`
+        ? `Quelle: ${result.source === 'mixed' ? 'DbLog und FileLog' : SOURCES[result.source] || result.source}; ${result.readings.length} geloggte Readings gefunden.`
         : 'Keine Daten zum Device vorhanden: keine geloggten Readings in der gewählten Quelle.';
+      if (result.warnings?.length) hint.textContent += ` ${result.warnings.join(' ')}`;
       if (!result.readings.length) {
         this.fillReadings([], '');
         error.textContent = 'Keine Daten zum Device vorhanden.';

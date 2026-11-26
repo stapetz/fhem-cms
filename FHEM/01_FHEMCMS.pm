@@ -21,8 +21,10 @@ use Time::Local ();
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Assets.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
+require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndex.pm');
+require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndexJobs.pm');
 
-our $FHEMCMS_VERSION = '1.37.0-dev';
+our $FHEMCMS_VERSION = '1.38.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -102,11 +104,18 @@ sub FHEMCMS_Define {
     }
 
     $hash->{STATE} = 'defined';
+    FHEMCMS_LogIndexSchedule();
     return undef;
 }
 
 sub FHEMCMS_Undef {
     my ($hash) = @_;
+    if (defined(&RemoveInternalTimer) && !grep {
+        $_ ne ($hash->{NAME} // '') && ref($main::defs{$_}) eq 'HASH'
+            && ($main::defs{$_}{TYPE} // '') eq 'FHEMCMS'
+    } keys %main::defs) {
+        RemoveInternalTimer($main::FHEMCMS_LOG_INDEX_TIMER, 'FHEMCMS_LogIndexTimer');
+    }
     for my $id (keys %main::FHEMCMS_ASSET_UPLOADS) {
         next if ($main::FHEMCMS_ASSET_UPLOADS{$id}{name} ne $hash->{NAME});
         RemoveInternalTimer($id, 'FHEMCMS_AssetUploadExpired');
@@ -130,6 +139,10 @@ sub FHEMCMS_Get {
     if ($cmd eq 'logreadings') {
         return 'logreadings erwartet <device> [auto|dblog|filelog]' if (@args < 1 || @args > 2);
         return FHEMCMS_LogReadings($name, @args);
+    }
+    if ($cmd eq 'logdevices') {
+        return 'logdevices erwartet [auto|dblog|filelog]' if (@args > 1);
+        return FHEMCMS_LogReadings($name, 'all', $args[0] // 'auto', 1);
     }
 
     if ($cmd eq 'history') {
@@ -282,7 +295,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings history weather weathergeocode weatherdevices:noArg weatherstations weathertemperature layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version6state:noArg version5blueprints:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings logdevices history weather weathergeocode weatherdevices:noArg weatherstations weathertemperature layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version6state:noArg version5blueprints:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -2269,7 +2282,15 @@ sub FHEMCMS_FileLogFiles {
         my $file = $fileLog->{logfile};
         $file =~ s/%L/$logdir/g;
         $file = strftime($file, localtime($day));
-        $files{$file} = $day if (-f $file && -r $file);
+        my @candidates = ($file, "$file.gz");
+        my $archive = $main::attr{$fileLog->{NAME}}{archivedir} // '';
+        if ($archive ne '' && $archive !~ /[%\x00-\x1f\x7f]/) {
+            my $archived = File::Spec->catfile($archive, File::Basename::basename($file));
+            push(@candidates, $archived, "$archived.gz");
+        }
+        for my $candidate (@candidates) {
+            $files{$candidate} = $day if (!-l $candidate && -f $candidate && -r $candidate);
+        }
     }
     return sort { $files{$a} <=> $files{$b} || $a cmp $b } keys %files;
 }
@@ -2282,22 +2303,29 @@ sub FHEMCMS_ScanFileLog {
     my @files = FHEMCMS_FileLogFiles($fileLog, $from, $to);
     @files = reverse(@files) if ($newestFirst);
     FILE: for my $file (@files) {
-        open(my $fh, '<', $file) or next;
+        my $fh;
+        if ($file =~ /\.gz\z/) {
+            $fh = IO::Uncompress::Gunzip->new($file, MultiStream => 1, Strict => 1, Transparent => 0);
+            return (0, 'FileLog-Archiv konnte nicht gelesen werden') if (!$fh);
+        } else {
+            open($fh, '<', $file) or return (0, 'FileLog-Datei konnte nicht gelesen werden');
+        }
         while (my $line = <$fh>) {
             if (++$lines > $FHEMCMS_HISTORY_MAX_LINES) {
                 $truncated = 1;
-                close($fh);
+                close($fh) or return (0, 'FileLog-Datei konnte nicht geschlossen werden');
                 last FILE;
             }
             next if (index($line, " $device ") < 0);
-            next if ($line !~ /\A(\d{4})-(\d{2})-(\d{2})_(\d{2}):(\d{2}):(\d{2})\s+\Q$device\E\s+([A-Za-z0-9_.-]+):\s*(\S+)/);
+            next if ($line !~ /\A(\d{4})-(\d{2})-(\d{2})_(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?\s+\Q$device\E\s+([A-Za-z0-9_.-]+):\s*(\S+)/);
             my $epoch = eval { Time::Local::timelocal($6, $5, $4, $3, $2 - 1, $1) };
             next if (!defined($epoch) || $epoch < $from || $epoch > $to);
             $onLine->($epoch, $7, $8);
         }
-        close($fh);
+        return (0, 'FileLog-Datei konnte nicht gelesen werden') if ($file =~ /\.gz\z/ && $fh->error());
+        close($fh) or return (0, 'FileLog-Datei konnte nicht geschlossen werden');
     }
-    return $truncated;
+    return ($truncated, undef);
 }
 
 sub FHEMCMS_DbLogCall {
@@ -2330,19 +2358,40 @@ sub FHEMCMS_HistorySource {
     }
     return (undef, 'Kein DbLog-Device gefunden') if ($mode eq 'dblog');
     if ($mode ne 'dblog') {
-        for my $fileLog (FHEMCMS_LogDevices($cmsName, 'FileLog', 'fileLog')) {
-            return ('filelog', $fileLog) if (!defined($reading) || FHEMCMS_FileLogMatches($fileLog, $device, $reading));
-        }
+        my ($fileLog) = FHEMCMS_LogDevices($cmsName, 'FileLog', 'fileLog');
+        return ('filelog', $fileLog) if ($fileLog);
     }
     return (undef, 'Kein passendes FileLog-Device gefunden');
 }
 
 # get <cms> logreadings <device> [auto|dblog|filelog]: Readings, die zu dem Device protokolliert werden.
 sub FHEMCMS_LogReadings {
-    my ($cmsName, $device, $source) = @_;
+    my ($cmsName, $device, $source, $all) = @_;
     return 'Ungueltiges Device' if (!FHEMCMS_ValidName($device));
     $source //= 'auto';
     return 'Ungueltige Quelle' if ($source !~ /\A(?:auto|dblog|filelog)\z/);
+    return 'FHEMWEB-Berechtigungspruefung nicht verfuegbar'
+        if (defined($main::FW_chash) && !defined(&Authorized));
+    my @allowed;
+    if ($all) {
+        @allowed = grep { FHEMCMS_ValidName($_)
+            && (!defined($main::FW_chash)
+                || Authorized($main::FW_chash, 'devicename', $_)) } sort keys %main::defs;
+        return 'Zu viele Devices fuer die Cache-Auswahl' if (@allowed > 20000);
+    } elsif (defined($main::FW_chash)
+        && !Authorized($main::FW_chash, 'devicename', $device)) {
+        return 'Zugriff auf Device verweigert';
+    }
+
+    my ($dir, $rootError) = FHEMCMS_LogIndexRoot();
+    return $rootError if (defined($rootError));
+    my $file = File::Spec->catfile($dir, 'log-index.json');
+    if (!-e $file && !-l $file) {
+        return $main::FHEMCMS_LOG_INDEX_ERROR if (defined($main::FHEMCMS_LOG_INDEX_ERROR) && !$main::FHEMCMS_LOG_INDEX_JOB);
+        my $startError = $main::FHEMCMS_LOG_INDEX_JOB ? undef : FHEMCMS_LogIndexStart();
+        return $startError if (defined($startError));
+        return FHEMCMS_HistoryPending();
+    }
 
     my $mode = $source eq 'auto' ? ($main::attr{$cmsName}{historySource} // 'auto') : $source;
     $mode = 'auto' if ($mode !~ /\A(?:auto|dblog|filelog)\z/);
@@ -2352,11 +2401,15 @@ sub FHEMCMS_LogReadings {
     return 'Kein DbLog-Device gefunden' if ($mode eq 'dblog' && !@dbLogs);
     return 'Kein DbLog- oder FileLog-Device gefunden' if (!@dbLogs && !@fileLogs);
 
-    my $key = join("\0", 'logreadings', $cmsName, $device, $source, $mode,
+    my $operation = $all ? 'logdevices' : 'logreadings';
+    my $key = join("\0", $operation, $cmsName, $device, $source, $mode,
+        $all ? sha256_hex(join("\0", @allowed)) : '',
+        join(':', (stat($file))[0, 1, 7, 9]),
         join(',', map { $_->{NAME} // '' } @dbLogs),
         join(',', map { $_->{NAME} // '' } @fileLogs));
     return FHEMCMS_QueueHistoryJob($key, {
-        operation => 'logreadings', cmsName => $cmsName, device => $device, source => $source,
+        operation => $operation, cmsName => $cmsName, device => $device, source => $source,
+        ($all ? (allowed => \@allowed) : ()),
     });
 }
 
@@ -2397,8 +2450,9 @@ sub FHEMCMS_LogReadingsData {
     my $now = time();
     for my $fileLog ($mode ne 'dblog' ? FHEMCMS_LogDevices($cmsName, 'FileLog', 'fileLog') : ()) {
         $any = 1;
-        my $limited = FHEMCMS_ScanFileLog($fileLog, $device, $now - 3653 * 86400, $now,
+        my ($limited, $scanError) = FHEMCMS_ScanFileLog($fileLog, $device, $now - 3653 * 86400, $now,
             sub { $seen{$_[1]} = 1 if (length($_[1]) <= 128); }, 1);
+        return $scanError if ($scanError);
         $truncated ||= $limited;
     }
     return $json->encode({source => 'dblog', readings => []})
@@ -2416,7 +2470,8 @@ sub FHEMCMS_HistoryRows {
     my (@rows, $truncated);
     if ($kind eq 'filelog') {
         my $rowLimitReached = 0;
-        $truncated = FHEMCMS_ScanFileLog($logHash, $device, $from, $to, sub {
+        my $scanError;
+        ($truncated, $scanError) = FHEMCMS_ScanFileLog($logHash, $device, $from, $to, sub {
             return if ($_[1] ne $reading);
             my $number = FHEMCMS_ReadingNumber($_[2]);
             return if (!defined($number));
@@ -2426,6 +2481,7 @@ sub FHEMCMS_HistoryRows {
             }
             push(@rows, [$_[0], $number]);
         });
+        return (undef, 0, $scanError) if ($scanError);
         $truncated ||= $rowLimitReached;
         return (\@rows, $truncated, undef);
     }
@@ -2541,7 +2597,7 @@ sub FHEMCMS_QueueHistoryJob {
 
 sub FHEMCMS_HistoryJobDescription {
     my ($request) = @_;
-    return 'Reading-Erkennung' if (($request->{operation} // 'history') eq 'logreadings');
+    return 'Reading-Erkennung' if (($request->{operation} // 'history') =~ /\Alog(?:readings|devices)\z/);
     return (($request->{kind} // '') eq 'filelog' ? 'FileLog-Verlauf' : 'DbLog-Verlauf');
 }
 
@@ -2578,15 +2634,19 @@ sub FHEMCMS_HistoryWorker {
     return '' if (!FHEMCMS_ValidName($request->{cmsName}) || !FHEMCMS_ValidName($request->{device})
         || !defined($request->{key}) || ref($request->{key})
         || !defined($request->{token}) || ref($request->{token})
-        || ($operation ne 'history' && $operation ne 'logreadings'));
+        || ($operation ne 'history' && $operation ne 'logreadings' && $operation ne 'logdevices'));
 
     my ($json, $error);
-    if ($operation eq 'logreadings') {
+    if ($operation eq 'logreadings' || $operation eq 'logdevices') {
         return '' if (($request->{source} // '') !~ /\A(?:auto|dblog|filelog)\z/);
-        my $result = FHEMCMS_LogReadingsData($request->{cmsName}, $request->{device}, $request->{source});
+        my $result = $operation eq 'logdevices'
+            ? FHEMCMS_LogIndexDevices($request->{cmsName}, $request->{source}, $request->{allowed})
+            : FHEMCMS_LogIndexReadings($request->{cmsName}, $request->{device}, $request->{source});
         my $decoded = eval { JSON::PP->new->utf8->decode($result // '') };
-        if (!$@ && ref($decoded) eq 'HASH' && ($decoded->{source} // '') =~ /\A(?:dblog|filelog)\z/
-            && ref($decoded->{readings}) eq 'ARRAY') {
+        if (!$@ && ref($decoded) eq 'HASH'
+            && ($operation eq 'logdevices' ? ref($decoded->{devices}) eq 'ARRAY'
+                : (($decoded->{source} // '') =~ /\A(?:dblog|filelog|mixed)\z/
+                    && ref($decoded->{readings}) eq 'ARRAY'))) {
             $json = $result;
         } else {
             $error = defined($result) && !ref($result) ? $result : 'Reading-Liste konnte nicht gelesen werden';
@@ -2606,17 +2666,28 @@ sub FHEMCMS_HistoryWorker {
             $error = "Kein $expectedType-Device gefunden";
         } else {
             my $ok = eval {
-                ($json, $error) = FHEMCMS_HistoryData($request->{cmsName}, $request->{kind}, $logHash,
-                    $request->{device}, $request->{reading}, $request->{range}, $request->{granularity});
+                if ($request->{kind} eq 'filelog') {
+                    for my $fileLog (FHEMCMS_LogDevices($request->{cmsName}, 'FileLog', 'fileLog')) {
+                        ($json, $error) = FHEMCMS_HistoryData($request->{cmsName}, 'filelog', $fileLog,
+                            $request->{device}, $request->{reading}, $request->{range}, $request->{granularity});
+                        last if (defined($error));
+                        my $data = JSON::PP->new->utf8->decode($json);
+                        last if ($data->{truncated} || $data->{rows});
+                    }
+                } else {
+                    ($json, $error) = FHEMCMS_HistoryData($request->{cmsName}, $request->{kind}, $logHash,
+                        $request->{device}, $request->{reading}, $request->{range}, $request->{granularity});
+                }
                 if (!defined($error) && $request->{source} eq 'auto'
                     && $request->{kind} eq 'dblog' && $request->{mode} eq 'auto') {
                     my $data = JSON::PP->new->utf8->decode($json);
                     if (!$data->{truncated} && !$data->{rows}) {
                         for my $fileLog (FHEMCMS_LogDevices($request->{cmsName}, 'FileLog', 'fileLog')) {
-                            next if (!FHEMCMS_FileLogMatches($fileLog, $request->{device}, $request->{reading}));
                             ($json, $error) = FHEMCMS_HistoryData($request->{cmsName}, 'filelog', $fileLog,
                                 $request->{device}, $request->{reading}, $request->{range}, $request->{granularity});
-                            last;
+                            last if (defined($error));
+                            my $fileData = JSON::PP->new->utf8->decode($json);
+                            last if ($fileData->{truncated} || $fileData->{rows});
                         }
                     }
                 }
@@ -2646,6 +2717,12 @@ sub FHEMCMS_HistoryDone {
             ? $payload->{json}
             : 'Hintergrundabfrage fehlgeschlagen';
     $FHEMCMS_HISTORY_CACHE{$payload->{key}} = {time => time(), json => $response};
+    if (($job->{request}{operation} // '') =~ /\Alog(?:readings|devices)\z/
+        && ($response =~ /Logquellen-Konfiguration wurde geaendert/ || $response =~ /fehlt im Cache/)
+        && !$main::FHEMCMS_LOG_INDEX_JOB) {
+        my $error = FHEMCMS_LogIndexStart();
+        Log3('FHEMCMS', 2, "FHEMCMS: $error") if (defined($error));
+    }
     if (defined($payload->{error}) && !ref($payload->{error}) && $payload->{error} ne '') {
         my $description = FHEMCMS_HistoryJobDescription($job->{request});
         Log3($job->{request}{cmsName}, 2, "FHEMCMS ($job->{request}{cmsName}): $description fehlgeschlagen");
@@ -3662,7 +3739,8 @@ use FHEMWEB and FHEM permissions.</p>
     Ohne Attribut oder bei <code>0</code> fehlt der Menueeintrag.
     Nach Aenderung die CMS-Seite neu laden. Dies ist keine Zugriffssperre
     fuer die direkte URL; FHEMWEB-Berechtigungen bleiben erforderlich.
-    Sie bietet bestaetigte Sammelloeschung (Purge vor Delete) und separat
+    Sie bietet einen manuellen Neuaufbau des gemeinsamen Log-Caches,
+    bestaetigte Sammelloeschung (Purge vor Delete) und separat
     die Bereinigung eindeutig zuordenbarer verwaister CMS-Verzeichnisse.
     FHEMWEB-Rechte bleiben erforderlich. Die CSRF-Pruefung folgt der
     FHEMWEB-Einstellung: Bei explizitem <code>csrfToken none</code> entfaellt
@@ -3685,9 +3763,17 @@ use FHEMWEB and FHEM permissions.</p>
     <li><code>get &lt;name&gt; icons</code>: verfuegbare FHEM-Symbole.</li>
     <li><code>get &lt;name&gt; layoutformat</code>: gespeicherte Schema-Version.</li>
     <li><code>get &lt;name&gt; logreadings &lt;device&gt; [auto|dblog|filelog]</code>:
-    verfuegbare protokollierte Readings fuer Diagramme; DbLog- und FileLog-Pruefungen
-    laufen im Hintergrund und koennen voruebergehend <code>{"status":"pending"}</code>
-    zurueckgeben.</li>
+    verfuegbare protokollierte Readings fuer Diagramme aus dem gemeinsamen
+    Log-Cache. Der erste Aufbau und der taegliche Neuaufbau um 03:00 Uhr
+    FHEM-Serverzeit laufen im Hintergrund. Beim erstmaligen Aufbau wird
+    voruebergehend <code>{"status":"pending"}</code> zurueckgegeben.
+    Bei Fehlern bleiben vorhandene Daten erhalten und werden als moeglicherweise
+    veraltet gekennzeichnet. Die globale Administration kann den Cache neu aufbauen.
+    FileLogs mit externem <code>archivecmd</code>, eigenem <code>outputFormat</code>
+    oder zeitabhaengigen Verzeichnissen werden nicht vollstaendig unterstuetzt
+    und erzeugen eine sichtbare Warnung.</li>
+    <li><code>get &lt;name&gt; logdevices [auto|dblog|filelog]</code>:
+    protokollierte Devices aus demselben Cache.</li>
     <li><code>get &lt;name&gt; history &lt;device&gt; &lt;reading&gt;
     [24h|7d|30d|365d] [auto|raw|15m|1h|1d] [auto|dblog|filelog]</code>:
     historische Werte aus der ausgewaehlten Protokollquelle.</li>

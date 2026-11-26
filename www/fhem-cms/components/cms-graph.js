@@ -826,8 +826,15 @@ class FHEMCMSGraph extends HTMLElement {
       try {
         const source = $('[data-source]').value;
         const device = await openDevicePicker({services:this.services, signal:this.pickerAbort.signal,
+          loadCandidates: this.services.logDevices ? signal => this.services.logDevices(source, signal) : undefined,
           classify: async entry => {
             const result = await this.services.logReadings(entry.name, source);
+            if (!result.readings.length && result.warnings?.length) {
+              throw new Error(result.warnings.join(' '));
+            }
+            if (!result.readings.length && result.truncated) {
+              throw new Error('Logprüfung unvollständig; keine Aussage über vorhandene Readings möglich');
+            }
             return result.readings.length > 0;
           }});
         if (!device || !row.isConnected) return;
@@ -866,11 +873,12 @@ class FHEMCMSGraph extends HTMLElement {
       const choices = { '': 'Reading wählen …' };
       for (const reading of names) choices[reading] = reading;
       select.replaceChildren(...options(choices, names.includes(selected) ? selected : ''));
-      status.textContent = names.length ? `Quelle: ${SOURCES[result.source]}; ${names.length} Readings.`
+      status.textContent = names.length ? `Quelle: ${result.source === 'mixed' ? 'DbLog und FileLog' : SOURCES[result.source]}; ${names.length} Readings.`
         : result.source === 'filelog'
           ? 'Keine FileLog-Readings im untersuchten Zeitraum erkannt.'
           : 'Keine Datenlogs für dieses Device in der gewählten Quelle.';
       if (result.truncated) status.textContent += ' Die Logprüfung wurde begrenzt; die Liste kann unvollständig sein.';
+      if (result.warnings?.length) status.textContent += ` ${result.warnings.join(' ')}`;
       if (selected && !names.includes(selected)) status.textContent += ` Das gespeicherte Reading ${selected} ist nicht verfügbar; bitte ein geloggtes Reading auswählen.`;
     } catch (error) {
       if (!row.isConnected || revision !== row.graphRevision) return;

@@ -18,6 +18,7 @@ export function createWidgetServices({ client, listDevices, listAllDevices, list
     setTarget: (widget, value, device) => client.setReading(device || widget.device, widget.readings.target, value),
     listMedia: () => client.listMedia(),
     logReadings: (device, source) => client.logReadings(device, source),
+    logDevices: (source, signal) => client.logDevices(source, signal),
     history: (device, reading, range, granularity, source) => client.history(device, reading, range, granularity, source),
     weather: (config) => client.weather(config),
     weatherGeocode: (query) => client.weatherGeocode(query),

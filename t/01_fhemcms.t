@@ -4,6 +4,7 @@ use warnings;
 use File::Path qw(make_path remove_tree);
 use File::Spec;
 use File::Temp qw(tempdir);
+use IO::Compress::Gzip qw(gzip);
 use JSON::PP ();
 use MIME::Base64 ();
 use Test::More;
@@ -883,6 +884,8 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     push(@lines, POSIX::strftime('%Y-%m-%d_%H:%M:%S', localtime($now - 9 * 86400)) . ' Temp old: 4');
     write_file($logFile, join("\n", @lines) . "\n");
     $main::defs{HistLog} = {NAME => 'HistLog', TYPE => 'FileLog', REGEXP => 'Temp:.*', logfile => $logFile};
+    $main::defs{Temp} = {NAME => 'Temp', TYPE => 'dummy'};
+    $main::defs{Other} = {NAME => 'Other', TYPE => 'dummy'};
     %main::FHEMCMS_HISTORY_CACHE = ();
 
     my @historyJobs;
@@ -898,12 +901,31 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     };
     my $pendingReadings = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Temp'));
     is($pendingReadings->{status}, 'pending', 'FileLog reading discovery runs in a background worker');
-    is($historyJobs[0]{worker}, 'FHEMCMS_HistoryWorker', 'FileLog discovery uses the managed worker');
-    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
+    is($historyJobs[0]{worker}, 'FHEMCMS_LogIndexWorker', 'initial discovery uses the shared index worker');
+    FHEMCMS_LogIndexDone(FHEMCMS_LogIndexWorker($historyJobs[0]{arg}));
+    FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Temp');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[-1]{arg}));
     my $readings = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Temp'));
     is($readings->{source}, 'filelog', 'logreadings falls back to the FileLog');
     is_deeply($readings->{readings}, ['humidity', 'old', 'state', 'temperature'],
         'logreadings includes readings older than seven days');
+    is(JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logdevices', 'filelog'))->{status},
+        'pending', 'bulk device discovery reads the cache asynchronously');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[-1]{arg}));
+    my $cachedDevices = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logdevices', 'filelog'));
+    is_deeply($cachedDevices->{devices}, [qw(Other Temp)], 'bulk device discovery returns indexed devices');
+    {
+        no warnings 'redefine';
+        local $main::FW_chash = {NAME => 'restricted'};
+        local *main::Authorized = sub { return $_[2] ne 'Other'; };
+        like(FHEMCMS_Get({NAME => $name}, $name, 'logreadings', 'Other', 'filelog'), qr/Zugriff/,
+            'reading lookup respects FHEMWEB device permissions');
+        is(JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logdevices', 'filelog'))->{status},
+            'pending', 'restricted user receives a separate bulk query');
+        FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[-1]{arg}));
+        my $restricted = JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'logdevices', 'filelog'));
+        is_deeply($restricted->{devices}, ['Temp'], 'bulk lookup does not expose a forbidden device');
+    }
     {
         local $main::FHEMCMS_HISTORY_MAX_LINES = 3;
         my $partial = JSON::PP::decode_json(FHEMCMS_LogReadingsData($name, 'Temp', 'filelog'));
@@ -923,6 +945,38 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     is($history->{summary}{average}, 24.5, 'summary uses the average of all raw values');
     is($history->{summary}{min}, 20, 'summary uses the minimum of all raw values');
     is($history->{summary}{max}, 29, 'summary uses the maximum of all raw values');
+    {
+        my $emptyLog = File::Spec->catfile($logDir, 'empty.log');
+        write_file($emptyLog, '');
+        local $main::defs{A_Empty} = {NAME => 'A_Empty', TYPE => 'FileLog',
+            REGEXP => 'Other:.*', logfile => $emptyLog};
+        local $main::defs{HistLog}{REGEXP} = 'Other:.*';
+        %main::FHEMCMS_HISTORY_JOBS = ();
+        %main::FHEMCMS_HISTORY_CACHE = ();
+        @historyJobs = ();
+        FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'raw', 'filelog');
+        FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[0]{arg}));
+        my $historic = JSON::PP::decode_json(
+            FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'raw', 'filelog'));
+        is($historic->{summary}{last}, 29,
+            'history searches multiple FileLogs even when the current regexp no longer matches');
+    }
+    {
+        my $archiveDir = File::Spec->catdir($logDir, 'archive');
+        make_path($archiveDir);
+        my $timestamp = POSIX::strftime('%Y-%m-%d_%H:%M:%S', localtime($now - 60));
+        my $text = "$timestamp.123 Temp temperature: 42\n";
+        my $archive = File::Spec->catfile($archiveDir, 'archived.log.gz');
+        gzip(\$text => $archive) or die 'gzip fixture failed';
+        local $main::attr{ArchivedLog}{archivedir} = $archiveDir;
+        my $log = {NAME => 'ArchivedLog', TYPE => 'FileLog',
+            logfile => File::Spec->catfile($logDir, 'archived.log')};
+        my ($rows, $truncated, $error) = FHEMCMS_HistoryRows($name, 'filelog', $log,
+            'Temp', 'temperature', $now - 3600, $now);
+        is($error, undef, 'history reads gzip archives successfully');
+        is_deeply($rows, [[$now - 60, 42]], 'archived values are available in history');
+        ok(!$truncated, 'archive history is not truncated');
+    }
 
     %main::FHEMCMS_HISTORY_CACHE = ();
     my $bucketedPending = JSON::PP::decode_json(
@@ -985,8 +1039,12 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'bad device', 'temperature'), qr/Ungueltiges Device/, 'history validates the device');
     like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '10y'), qr/Zeitraum/, 'history validates the range');
     like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Temp', 'temperature', '24h', 'auto', 'sql'), qr/Quelle/, 'history validates the source');
-    like(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Lamp', 'state', '24h', 'auto', 'filelog'), qr/FileLog/,
-        'history reports a missing matching FileLog');
+    is(JSON::PP::decode_json(FHEMCMS_Get({NAME => $name}, $name, 'history', 'Lamp', 'state', '24h', 'auto', 'filelog'))->{status},
+        'pending', 'history checks actual FileLog contents asynchronously');
+    FHEMCMS_HistoryDone(FHEMCMS_HistoryWorker($historyJobs[-1]{arg}));
+    my $emptyHistory = JSON::PP::decode_json(
+        FHEMCMS_Get({NAME => $name}, $name, 'history', 'Lamp', 'state', '24h', 'auto', 'filelog'));
+    is($emptyHistory->{rows}, 0, 'history reports no rows when no FileLog has the requested data');
 
     no warnings 'once';
     local *main::DbLog_Get = sub {
@@ -1000,6 +1058,11 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
             {tstamp => 'broken', value => '1'});
     };
     $main::defs{HistDb} = {NAME => 'HistDb', TYPE => 'DbLog', DBHU => 'parent connection'};
+    my ($indexDir) = FHEMCMS_LogIndexRoot();
+    my ($index) = FHEMCMS_LogIndexRead($indexDir);
+    $index->{sources}{dblog}{HistDb} = {Meter => {power => 1}};
+    $index->{fingerprint} = FHEMCMS_LogIndexFingerprint();
+    is(FHEMCMS_LogIndexWrite($indexDir, $index), undef, 'prepares a shared DbLog index fixture');
     my ($isolatedResult, $isolatedError) = FHEMCMS_DbLogCall(
         $main::defs{HistDb}, 'webchart', 'from', 'to', 'Temp', 'getreadings');
     is($isolatedError, undef, 'DbLog call does not reuse an inherited handle');
@@ -1108,6 +1171,7 @@ like(FHEMCMS_Get({NAME => $name}, $name, 'icons'), qr/\["lamp","sub\/door"\]/, '
     is(scalar(keys %main::FHEMCMS_HISTORY_JOBS), 0, 'failed worker starts do not leave stuck jobs');
     delete $main::defs{HistDb};
     delete $main::defs{HistLog};
+    delete @main::defs{qw(Temp Other)};
 }
 
 done_testing();

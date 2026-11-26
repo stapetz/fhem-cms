@@ -110,6 +110,9 @@ test('wizard adds only logged temperature charts and prefers the detected source
   assert.deepEqual(schema5TemperatureChartSuggestion(device, {
     source: 'filelog', readings: ['temperature'],
   })[0].source, 'filelog');
+  assert.equal(schema5TemperatureChartSuggestion(device, {
+    source: 'mixed', readings: ['temperature'],
+  })[0].source, 'auto');
   assert.deepEqual(schema5TemperatureChartSuggestion(device, {
     source: 'dblog', readings: ['state'],
   }), []);

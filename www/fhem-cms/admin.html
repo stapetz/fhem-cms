@@ -3,8 +3,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Globale FHEM-CMS Administration</title>
-<link rel="stylesheet" href="css/fhem-cms.css?v=admin-20261122-4">
-<link rel="stylesheet" href="css/cms-admin.css?v=admin-20261122-4">
+<link rel="stylesheet" href="css/fhem-cms.css?v=admin-20261126-5">
+<link rel="stylesheet" href="css/cms-admin.css?v=admin-20261126-5">
 <main class="cms-admin">
   <header class="cms-admin-header">
     <h1>Globale FHEM-CMS Administration</h1>
@@ -14,6 +14,11 @@
   <p>Verwaiste Verzeichnisse werden separat ausgew&auml;hlt. Fremde Dateien und Symlinks bleiben gesch&uuml;tzt. Maximal 20 Eintr&auml;ge pro Vorgang.</p>
   <button class="cms-button" id="refresh" type="button">Bestand aktualisieren</button>
   <p id="status" role="status" aria-live="polite"></p>
+  <section aria-labelledby="cache-heading">
+    <h2 id="cache-heading">Gemeinsamer Log-Cache</h2>
+    <p id="cache-status" role="status" aria-live="polite"></p>
+    <button class="cms-button" id="cache-rebuild" type="button">Log-Cache jetzt neu aufbauen</button>
+  </section>
   <section aria-labelledby="devices-heading">
     <h2 id="devices-heading">CMS-Devices</h2>
     <div id="devices"></div>
@@ -56,5 +61,5 @@
     </div>
   </form>
 </dialog>
-<script type="module" src="js/cms-admin.js?v=admin-20261122-4"></script>
+<script type="module" src="js/cms-admin.js?v=admin-20261126-5"></script>
 </html>

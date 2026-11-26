@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-26",
+  "version": "1.38.0-dev",
+  "title": "Gemeinsamer Log-Cache fuer Graph-Widgets",
+  "changes": [
+    "Ein gemeinsamer Cache ermittelt protokollierte Devices und Readings aus DbLog und FileLog im Hintergrund. Refs #259.",
+    "Der Cache wird taeglich aktualisiert und kann in der globalen Administration manuell neu aufgebaut werden.",
+    "Fehlerhafte Quellen melden eine Warnung; vorherige Cache-Daten bleiben erhalten."
+  ]
+}

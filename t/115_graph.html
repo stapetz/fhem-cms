@@ -36,12 +36,13 @@ try {
       await new Promise(resolve => setTimeout(resolve, 10));
       activeChecks--;
       if (device === 'Broken') throw new Error('Datenbank nicht erreichbar');
+      if (device === 'Partial') return {source:'filelog', readings:[], truncated:true};
       const loggedSource = device === 'Solar1' ? 'dblog' : 'filelog';
       return {source:loggedSource, readings:device === 'Empty'
         || (source !== 'auto' && source !== loggedSource) ? [] : ['power']};
     },
     listAllDevices: async () => [{name:'Empty',type:'Dummy'}, {name:'Solar2',alias:'Garten',type:'Dummy'},
-      {name:'Solar1',type:'Dummy'}, {name:'Broken',type:'Dummy'}],
+      {name:'Solar1',type:'Dummy'}, {name:'Broken',type:'Dummy'}, {name:'Partial',type:'Dummy'}],
     saveWidget: async value => { writes++; saved = value; },
     deleteWidget: async () => { throw new Error('unexpected delete'); },
   };
@@ -242,11 +243,11 @@ try {
   check(document.querySelectorAll('.cms-dp-dialog [role=option]').length === 0,
     'unverified devices are never offered');
   await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 2
-    && document.querySelector('.cms-dp-dialog [data-info]').textContent.includes('Datenbank nicht erreichbar'),
+    && document.querySelector('.cms-dp-dialog [data-info]').textContent.includes('2 Logprüfungen fehlgeschlagen'),
     'filtered device discovery did not complete or error was hidden');
   const devices = [...document.querySelectorAll('.cms-dp-dialog [role=option]')];
-  check(readingCalls === beforePicker + 4 && maxChecks <= 2
-    && devices.every(device => !/Empty|Broken/.test(device.textContent)),
+  check(readingCalls === beforePicker + 5 && maxChecks <= 2
+    && devices.every(device => !/Empty|Broken|Partial/.test(device.textContent)),
     'only positively checked devices are offered with at most two concurrent checks');
   devices.find(device => device.textContent.includes('Solar2')).click();
   await until(() => root.querySelectorAll('[data-reading]')[2].options.length === 2, 'selected device readings not loaded');
@@ -674,10 +675,24 @@ try {
   check(startedChecks === 2 && !document.querySelector('.cms-dp-dialog'),
     'cancelled discovery starts no further checks and does not restore the dialog');
   const unfilteredPicker = openDevicePicker({services:graph.services});
-  await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 4,
+  await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 5,
     'ordinary device picker must remain unfiltered');
   document.querySelector('.cms-dp-dialog [data-cancel]').click();
   await unfilteredPicker;
+  let bulkCalls = 0;
+  const cachedPicker = openDevicePicker({services:graph.services, loadCandidates:async () => {
+    bulkCalls++;
+    return {devices:['Solar1'], warnings:['Cache möglicherweise veraltet']};
+  }});
+  await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 1,
+    'cached device list did not filter the picker');
+  check(document.querySelector('.cms-dp-dialog [role=option]').textContent.includes('Solar1'),
+    'cached picker only includes indexed devices');
+  check(document.querySelector('.cms-dp-dialog [data-info]').textContent.includes('möglicherweise veraltet'),
+    'cached picker shows source warnings');
+  check(bulkCalls === 1, 'cached picker loads device names once');
+  document.querySelector('.cms-dp-dialog [data-cancel]').click();
+  await cachedPicker;
   const live = {schemaVersion:5,settings:{layoutMode:'grid',gridColumns:12},
     navigation:{orientation:'horizontal',grid:{col:1,row:1,w:12,h:1}},
     pages:[{id:'start',title:'Start',widgets:[]}]};

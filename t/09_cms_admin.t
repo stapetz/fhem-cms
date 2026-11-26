@@ -185,6 +185,34 @@ $FW_webArgs{payload} = JSON::PP->new->encode({token => $value->{token}, confirma
 ok(JSON::PP->new->decode($body)->{results}[0]{ok}, 'explicit csrfToken none permits confirmed deletion without token');
 ok(!$defs{NoCsrf} && !-d "$root/fhem-cms-data/NoCsrf", 'disabled-CSRF deletion actually purges and deletes test CMS');
 delete($attr{WEB}{csrfToken});
+{
+    no warnings 'redefine';
+    my $starts = 0;
+    $defs{WEB}{CSRFTOKEN} = 'test-token';
+    local *main::FHEMCMS_LogIndexStart = sub { $starts++; return undef; };
+    %FW_webArgs = (op => 'cache-rebuild', fwcsrf => 'wrong');
+    @FW_httpheader = ('POST /fhem/fhemcms-admin HTTP/1.1');
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-rebuild');
+    like(JSON::PP::decode_json($body)->{error}, qr/CSRF/, 'cache rebuild requires CSRF');
+    $FW_webArgs{fwcsrf} = 'test-token';
+    @FW_httpheader = ('GET /fhem/fhemcms-admin HTTP/1.1');
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-rebuild');
+    like(JSON::PP::decode_json($body)->{error}, qr/POST/, 'cache rebuild requires POST');
+    @FW_httpheader = ('POST /fhem/fhemcms-admin HTTP/1.1');
+    $denied{'cmd:set'} = 1;
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-rebuild');
+    like(JSON::PP::decode_json($body)->{error}, qr/Zugriff verweigert/, 'cache rebuild requires set permission');
+    is($starts, 0, 'denied requests cannot start cache build');
+    delete($denied{'cmd:set'});
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-rebuild');
+    is(JSON::PP::decode_json($body)->{status}, 'pending', 'authorized request starts cache build');
+    is($starts, 1, 'authorized request starts exactly one build');
+    $denied{'cmd:get'} = 1;
+    %FW_webArgs = (op => 'cache-status');
+    (undef, $body) = FHEMCMS_AdminEndpoint('/fhemcms-admin?op=cache-status');
+    like(JSON::PP::decode_json($body)->{error}, qr/Zugriff verweigert/, 'cache status requires get permission');
+    delete($denied{'cmd:get'});
+}
 like(FHEMCMS_Purge('../'), qr/Ungueltiger/, 'purge validates names at core boundary');
 delete($defs{$_}) for grep { ($defs{$_}{TYPE} // '') eq 'FHEMCMS' } keys %defs;
 $value = inventory();

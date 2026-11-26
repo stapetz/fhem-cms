@@ -161,6 +161,21 @@ test('log reading discovery polls asynchronous results and validates source resp
   await assert.rejects(client.logReadings('Thermometer'), /ungültige Reading-Liste/);
 });
 
+test('bulk logged-device discovery uses the shared cache and supports cancellation', async () => {
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  const commands = [];
+  client.command = async command => {
+    commands.push(command);
+    return JSON.stringify({devices: ['Solar', 'invalid name'], warnings: ['Veraltet']});
+  };
+  assert.deepEqual(await client.logDevices('filelog'), {devices: ['Solar'], warnings: ['Veraltet']});
+  assert.deepEqual(commands, ['get cms logdevices filelog']);
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(client.logDevices('auto', controller.signal), {name: 'AbortError'});
+  await assert.rejects(client.logDevices('invalid'), /Ungültige Quelle/);
+});
+
 test('preview services expose only reads and explicitly reject actions', async () => {
   const calls = [];
   const client = {

@@ -422,7 +422,7 @@ export class FhemClient {
       throw new Error('Ungültiges Device');
     }
     const command = `get ${this.cmsDevice} logreadings ${device} ${source}`;
-    const deadline = Date.now() + 25000;
+    const deadline = Date.now() + 1810000;
     let result;
     while (true) {
       result = await this.parseJsonResult(await this.command(command),
@@ -437,14 +437,35 @@ export class FhemClient {
       throw new Error(result.message || 'Die geloggten Readings konnten nicht gelesen werden');
     }
     if (!result || typeof result !== 'object' || Array.isArray(result)
-      || !/^(?:dblog|filelog)$/.test(result.source) || !Array.isArray(result.readings)) {
+      || !/^(?:dblog|filelog|mixed)$/.test(result.source) || !Array.isArray(result.readings)) {
       throw new Error('FHEM lieferte eine ungültige Reading-Liste');
     }
     return {
       source: result.source,
       readings: result.readings.filter(isValidName),
+      ...(Array.isArray(result.warnings) ? {warnings: result.warnings.filter(value => typeof value === 'string')} : {}),
       ...(result.truncated === true ? {truncated:true} : {})
     };
+  }
+
+  async logDevices(source = 'auto', signal) {
+    if (!/^(?:auto|dblog|filelog)$/.test(source)) throw new Error('Ungültige Quelle');
+    const deadline = Date.now() + 1810000;
+    while (true) {
+      if (signal?.aborted) throw new DOMException('Device-Auswahl abgebrochen', 'AbortError');
+      const result = await this.parseJsonResult(
+        await this.command(`get ${this.cmsDevice} logdevices ${source}`), 'Log-Cache nicht verfügbar');
+      if (result?.status === 'pending') {
+        if (Date.now() >= deadline) throw new Error('Zeitüberschreitung beim Aufbau des Log-Caches');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        continue;
+      }
+      if (result?.status === 'error') throw new Error(result.message || 'Log-Cache nicht verfügbar');
+      if (!Array.isArray(result?.devices) || !Array.isArray(result?.warnings))
+        throw new Error('FHEM lieferte eine ungültige Device-Liste');
+      return {devices: result.devices.filter(isValidName),
+        warnings: result.warnings.filter(value => typeof value === 'string')};
+    }
   }
 
   async history(device, reading, range = '24h', granularity = 'auto', source = 'auto') {

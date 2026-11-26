@@ -123,6 +123,25 @@ test('admin client uses FHEMWEB prefix, fresh CSRF and one non-retried destructi
   } finally { globalThis.fetch = previous; }
 });
 
+test('cache administration uses GET for status and CSRF-protected POST for rebuild', async () => {
+  const previous = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({url: String(url), options});
+    if (String(url).endsWith('?XHR=1')) return new Response('', {headers: {'X-FHEM-csrfToken': 'fresh'}});
+    return Response.json({status: options.method === 'POST' ? 'pending' : 'ready'});
+  };
+  try {
+    const client = new CmsAdminClient('https://example.test/fhem/');
+    assert.equal((await client.cacheStatus()).status, 'ready');
+    assert.equal((await client.rebuildCache()).status, 'pending');
+    assert.equal(calls[0].url, 'https://example.test/fhem/fhemcms-admin?op=cache-status');
+    assert.equal(calls[2].url, 'https://example.test/fhem/fhemcms-admin?op=cache-rebuild');
+    assert.equal(calls[2].options.method, 'POST');
+    assert.equal(calls[2].options.body.get('fwcsrf'), 'fresh');
+  } finally { globalThis.fetch = previous; }
+});
+
 test('admin configuration uses schema 5/6 draft controllers and rejects older schemas', async () => {
   const previous = globalThis.fetch;
   const calls = [];

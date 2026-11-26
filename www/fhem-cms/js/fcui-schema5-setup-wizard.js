@@ -152,7 +152,7 @@ export function schema5TemperatureChartSuggestion(device, logInfo) {
   if (!device || !isValidName(device.name) || !device.readings
     || typeof device.readings !== 'object' || Array.isArray(device.readings)
     || !logInfo || !Array.isArray(logInfo.readings)
-    || !/^(?:dblog|filelog)$/.test(logInfo.source)) return [];
+    || !/^(?:dblog|filelog|mixed)$/.test(logInfo.source)) return [];
   const reading = suggestedReading(
     logInfo.readings.filter((name) => Object.hasOwn(temperatureReadings(device.readings), name)),
     'fhem-chart'
@@ -161,7 +161,7 @@ export function schema5TemperatureChartSuggestion(device, logInfo) {
   const alias = typeof device.alias === 'string' && device.alias.trim()
     && !/[\x00-\x1f\x7f]/.test(device.alias) ? device.alias.trim() : device.name;
   return [{
-    type: 'fhem-chart', device: device.name, reading, source: logInfo.source,
+    type: 'fhem-chart', device: device.name, reading, source: logInfo.source === 'mixed' ? 'auto' : logInfo.source,
     title: `${alias} — Temperaturverlauf`.slice(0, 64), label: 'Temperaturverlauf', unit: '°C',
   }];
 }
@@ -597,7 +597,7 @@ export class Schema5SetupWizard {
       const results = await Promise.all(batch.map(async ({ device, reading }) => {
         try {
           const result = await this.#client.logReadings(device.name);
-          if (!result || !/^(?:dblog|filelog)$/.test(result.source)
+          if (!result || !/^(?:dblog|filelog|mixed)$/.test(result.source)
             || !Array.isArray(result.readings)) {
             throw new Error('FHEM lieferte eine ungültige Reading-Liste.');
           }
@@ -619,8 +619,11 @@ export class Schema5SetupWizard {
           continue;
         }
         readings.set(device.name, result);
+        if (result.warnings?.length) warnings.push(`${device.name}: ${result.warnings.join(' ')}`);
         if (!result.readings.includes(reading)) {
-          warnings.push(`${device.name}: ${reading} ist nicht geloggt; kein Temperaturverlauf ergänzt.`);
+          warnings.push(result.warnings?.length
+            ? `${device.name}: ${reading} konnte nicht vollständig geprüft werden; kein Temperaturverlauf ergänzt.`
+            : `${device.name}: ${reading} ist nicht geloggt; kein Temperaturverlauf ergänzt.`);
         }
       }
     }
