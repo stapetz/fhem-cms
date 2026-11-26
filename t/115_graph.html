@@ -85,6 +85,8 @@ try {
   await graph.openConfig();
   const form = root.querySelector('form');
   check(root.querySelector('[data-aggregation]').hidden, 'pie aggregation hidden for line charts');
+  check(root.querySelector('[data-pie-labels]').hidden && form.elements.showPieLabels.checked,
+    'pie labels default on and their control is hidden for lines');
   check(root.querySelector('dialog').getBoundingClientRect().right <= innerWidth + 1,
     'configuration dialog fits the viewport');
   const fields = root.querySelector('.row');
@@ -134,6 +136,16 @@ try {
   form.elements.chartType.dispatchEvent(new Event('change', {bubbles:true}));
   check(!root.querySelector('[data-aggregation]').hidden, 'pie aggregation shown for pie charts');
   await until(() => root.querySelectorAll('[data-preview] path').length === 2, 'pie preview missing');
+  check(!root.querySelector('[data-pie-labels]').hidden
+    && root.querySelectorAll('[data-preview] [data-pie-label]').length === 2,
+    'pie preview labels default to visible');
+  const previewLabels = [...root.querySelectorAll('[data-preview] [data-pie-label]')];
+  check(previewLabels[0].textContent.includes('Solar1') && previewLabels[0].textContent.includes('2.50'),
+    'slice label uses the actual device name and formatted value');
+  form.elements.showPieLabels.checked = false;
+  form.elements.showPieLabels.dispatchEvent(new Event('change', {bubbles:true}));
+  await until(() => root.querySelectorAll('[data-preview] [data-pie-label]').length === 0,
+    'pie labels cannot be disabled in preview');
   const pieShape = root.querySelector('[data-preview] path');
   const pieBox = root.querySelector('[data-preview]').getBoundingClientRect();
   pieShape.onpointermove({clientX:pieBox.left + pieBox.width / 2});
@@ -204,6 +216,7 @@ try {
   await until(() => writes === 1, 'graph was not saved');
   check(saved.chartType === 'pie' && saved.aggregation === 'average' && saved.series.length === 2,
     'save preserves selected type, aggregate and series');
+  check(saved.showPieLabels === false, 'save preserves disabled pie labels');
   check(saved.series[0].source === 'dblog' && saved.series[1].source === 'filelog',
     'save preserves manually selected sources');
   check(/^\d+_\d+$/.test(saved.range) && saved.granularity === '1mo' && saved.axisLabelRight === 'Grad'
@@ -321,10 +334,38 @@ try {
     {points:[[1000,1.5]], summary:{last:1.5,average:1.5}},
     {points:[[1000,2.5]], summary:{last:2.5,average:2.5}},
   ], '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+  check(plot.querySelectorAll('[data-pie-label]').length === 2, 'old configs without a pie label option default to visible');
   const livePie = plot.querySelector('path');
   livePie.onpointermove({clientX:plot.getBoundingClientRect().left + 20});
   check(!tooltip.hidden && tooltip.textContent.includes('Dach: 1'),
     'live pie uses the formatted custom tooltip');
+  const pieData = [{points:[[1000,1]],summary:{last:1,average:1}},
+    {points:[[1000,99]],summary:{last:99,average:99}}];
+  graph.draw({...decorated,chartType:'pie',showPieLabels:false}, pieData,
+    '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+  check(!plot.querySelector('[data-pie-label]') && plot.querySelectorAll('path').length === 2,
+    'disabling labels leaves pie segments intact');
+  for (const hidden of [new Set(), new Set([0])]) {
+    graph.draw({...decorated,chartType:'pie',showPieLabels:true}, pieData,
+      '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), hidden);
+    const labels = [...plot.querySelectorAll('[data-pie-label]')];
+    check(labels.length === (hidden.size ? 1 : 2), 'pie labels follow visible legend segments');
+    const center = plot.viewBox.baseVal.width / 2;
+    const radius = Math.min(95, center - 5);
+    labels.forEach((text, index) => {
+      const box = text.getBBox(), matrix = text.transform.baseVal.consolidate().matrix;
+      const points = [[box.x,box.y],[box.x+box.width,box.y],[box.x,box.y+box.height],[box.x+box.width,box.y+box.height]]
+        .map(([x,y]) => new DOMPoint(x,y).matrixTransform(matrix));
+      check(points.every(point => Math.hypot(point.x-center,point.y-110) <= radius + .01),
+        'pie label corners remain inside the circle');
+      if (!hidden.size && index === 0) {
+        check(points.every(point => {
+          const angle = (Math.atan2(point.y-110,point.x-center) + Math.PI/2 + Math.PI*2) % (Math.PI*2);
+          return angle <= Math.PI * .02 + .0001;
+        }), 'even a one-percent slice contains its complete device/value label');
+      }
+    });
+  }
   graph.draw(decorated, decoratedData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
   const oldCapture = plot.setPointerCapture;
   plot.setPointerCapture = () => {};
@@ -348,6 +389,36 @@ try {
   check(root.querySelectorAll('[data-svg] polygon').length === 20,
     'maximum stack size with distinct timestamps renders without argument overflow');
   graph.remove();
+  const originalInterval = window.setInterval;
+  let refresh, refreshDelay;
+  window.setInterval = (callback, delay) => {
+    refresh = callback;
+    refreshDelay = delay;
+    return originalInterval(callback, delay);
+  };
+  let latest = 1;
+  const refreshed = document.createElement('cms-graph');
+  const refreshCalls = [];
+  refreshed.services = {history:async (device,reading,range) => {
+    refreshCalls.push(range);
+    return {points:[[1000,latest]], summary:{last:latest,average:latest}};
+  }};
+  refreshed.config = {...graph.config,chartType:'line',series:[graph.config.series[0]]};
+  document.body.append(refreshed);
+  window.setInterval = originalInterval;
+  await until(() => refreshed.currentData?.[0].summary.last === 1, 'initial refresh fixture did not load');
+  check(refreshDelay === 300000, 'live charts automatically poll every five minutes');
+  for (const range of ['24h','7d','30d','365d','1700000000_1700100000']) {
+    for (const chartType of ['line','stack','pie']) {
+      refreshed.widgetConfig = {...refreshed.config,chartType};
+      refreshed.range = range;
+      latest++;
+      refresh();
+      await until(() => refreshed.currentData[0].summary.last === latest, 'automatic refresh did not draw new data');
+      check(refreshCalls.at(-1) === range, `${chartType} refresh retains ${range} range semantics`);
+    }
+  }
+  refreshed.remove();
   const racing = document.createElement('cms-graph');
   let releaseFirst, releaseSecond;
   racing.services = {logReadings: device => new Promise(resolve => {

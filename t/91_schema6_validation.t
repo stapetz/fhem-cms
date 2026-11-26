@@ -39,6 +39,15 @@ for my $schema (5, 6) {
         ],
     };
     is(FHEMCMS_ValidateConfig($graph, $schema), undef, "schema $schema accepts graph with multiple devices");
+    for my $value (JSON::PP::true, JSON::PP::false, 1, 'true', undef, {}) {
+        my $labels = $json->decode($json->encode($graph));
+        $labels->{pages}[0]{widgets}[0]{showPieLabels} = $value;
+        if (JSON::PP::is_bool($value)) {
+            is(FHEMCMS_ValidateConfig($labels, $schema), undef, "schema $schema accepts boolean pie labels");
+        } else {
+            like(FHEMCMS_ValidateConfig($labels, $schema), qr/showPieLabels/, "schema $schema rejects non-boolean pie labels");
+        }
+    }
     my $advanced = $json->decode($json->encode($graph));
     my $advancedWidget = $advanced->{pages}[0]{widgets}[0];
     @{$advancedWidget}{qw(range granularity axisLabelX axisLabelLeft axisLabelRight showGrid)} =

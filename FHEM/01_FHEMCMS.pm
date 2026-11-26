@@ -22,7 +22,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Admin.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'Weather.pm');
 
-our $FHEMCMS_VERSION = '1.34.4-dev';
+our $FHEMCMS_VERSION = '1.35.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1178,7 +1178,7 @@ sub FHEMCMS_ValidateConfig {
                     ['title', 'showTitle', 'unit', 'range', 'granularity', 'source']);
             } elsif ($widget->{type} eq 'fhem-graph') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'series', 'chartType', 'aggregation', 'range', 'granularity', 'grid'],
-                    ['title', 'showTitle', 'axisLabelX', 'axisLabelLeft', 'axisLabelRight', 'showGrid']);
+                    ['title', 'showTitle', 'axisLabelX', 'axisLabelLeft', 'axisLabelRight', 'showGrid', 'showPieLabels']);
             } elsif ($widget->{type} eq 'fhem-calllist') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'limit', 'columns', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-volvoconnect') {
@@ -1302,6 +1302,8 @@ sub FHEMCMS_ValidateConfig {
                 }
                 return 'Ungueltiger Wert fuer showGrid'
                     if (exists($widget->{showGrid}) && !$isBool->($widget->{showGrid}));
+                return 'Ungueltiger Wert fuer showPieLabels'
+                    if (exists($widget->{showPieLabels}) && !$isBool->($widget->{showPieLabels}));
                 return 'Ungueltige Graph-Datenreihen'
                     if (ref($widget->{series}) ne 'ARRAY' || @{$widget->{series}} < 1 || @{$widget->{series}} > 20);
                 for my $series (@{$widget->{series}}) {

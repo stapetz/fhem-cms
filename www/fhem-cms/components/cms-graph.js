@@ -86,6 +86,9 @@ function validate(config) {
     throw new Error('Ungültige Diagrammeinstellung');
   }
   if ((config.title || '').length > 64 || /[\u0000-\u001f\u007f]/.test(config.title || '')) throw new Error('Ungültiger Titel');
+  if (config.showPieLabels !== undefined && typeof config.showPieLabels !== 'boolean') {
+    throw new Error('Ungültige Tortenbeschriftung');
+  }
   for (const row of config.series) {
     if (!isValidName(row.device) || !isValidName(row.reading) || !Object.hasOwn(SOURCES, row.source)
       || typeof row.label !== 'string' || row.label.length > 64 || /[\u0000-\u001f\u007f]/.test(row.label)
@@ -236,6 +239,7 @@ class FHEMCMSGraph extends HTMLElement {
             <label>Raster anzeigen<input type="checkbox" name="showGrid"></label>
           </div>
           <label data-aggregation>Tortenwerte<select name="aggregation"></select></label>
+          <label data-pie-labels>Device und Wert im Tortenstück einblenden<input type="checkbox" name="showPieLabels"></label>
           <label data-config-from hidden>Von<input type="datetime-local" step="1" name="from"></label>
           <label data-config-to hidden>Bis<input type="datetime-local" step="1" name="to"></label>
         </div>
@@ -280,6 +284,7 @@ class FHEMCMSGraph extends HTMLElement {
     $('[data-form]').addEventListener('submit', event => { event.preventDefault(); void this.save(); });
     $('[data-form]').addEventListener('change', () => {
       $('[data-aggregation]').hidden = $('[data-form]').elements.chartType.value !== 'pie';
+      $('[data-pie-labels]').hidden = $('[data-form]').elements.chartType.value !== 'pie';
       $('[data-config-from]').hidden = $('[data-config-to]').hidden = $('[data-form]').elements.range.value !== 'custom';
       this.queuePreview();
     });
@@ -413,6 +418,7 @@ class FHEMCMSGraph extends HTMLElement {
       if (total <= 0) { status.textContent = 'Keine positiven Werte im gewählten Zeitraum.'; return; }
       let angle = -Math.PI / 2;
       const radius = Math.min(95, width / 2 - 5);
+      const labels = [];
       visible.forEach((item, index) => {
         const value = values[index];
         if (!value) return;
@@ -432,8 +438,32 @@ class FHEMCMSGraph extends HTMLElement {
         };
         shape.onpointerleave = () => { tooltip.hidden = true; };
         target.append(shape);
+        if (config.showPieLabels !== false) {
+          const middle = (angle + next) / 2;
+          const full = value === total;
+          const sine = Math.sin(Math.min((next - angle) / 2, Math.PI / 2));
+          // An inscribed circle keeps both text lines inside even narrow segments.
+          const distance = full ? 0 : radius / (1 + sine);
+          const available = full ? radius : radius * sine / (1 + sine);
+          const cx = width / 2 + distance * Math.cos(middle);
+          const cy = 110 + distance * Math.sin(middle);
+          const text = svg('text', {'text-anchor':'middle', 'dominant-baseline':'central',
+            'data-pie-label':'', 'pointer-events':'none', 'aria-hidden':'true'});
+          const channels = item.row.color.slice(1).match(/../g).map(channel => parseInt(channel, 16) / 255)
+            .map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4);
+          text.style.fill = channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722 > .179 ? '#000' : '#fff';
+          text.append(svg('tspan', {x:0, y:-6}, item.row.device),
+            svg('tspan', {x:0, y:6}, formatValue(value, item.row.format)));
+          labels.push({text, cx, cy, available});
+        }
         angle = next;
       });
+      for (const {text, cx, cy, available} of labels) {
+        target.append(text);
+        const box = text.getBBox();
+        const scale = Math.min(1, available * 1.8 / Math.hypot(box.width, box.height));
+        text.setAttribute('transform', `translate(${cx} ${cy}) scale(${scale}) translate(${-box.x-box.width/2} ${-box.y-box.height/2})`);
+      }
       status.textContent = values.some(value => value === null) ? 'Einige Datenreihen enthalten keine Werte.' : warnings;
       return;
     }
@@ -625,6 +655,8 @@ class FHEMCMSGraph extends HTMLElement {
     form.elements.chartType.replaceChildren(...options(TYPES, config.chartType || 'line'));
     form.elements.aggregation.replaceChildren(...options({last:'Letzter Wert', average:'Durchschnitt'}, config.aggregation || 'last'));
     this.shadowRoot.querySelector('[data-aggregation]').hidden = form.elements.chartType.value !== 'pie';
+    this.shadowRoot.querySelector('[data-pie-labels]').hidden = form.elements.chartType.value !== 'pie';
+    form.elements.showPieLabels.checked = config.showPieLabels !== false;
     const bounds = customRange(config.range || '');
     form.elements.range.replaceChildren(...options(RANGES, bounds ? 'custom' : config.range || '24h'));
     form.elements.granularity.replaceChildren(...options(GRANULARITIES, config.granularity || 'auto'));
@@ -752,6 +784,7 @@ class FHEMCMSGraph extends HTMLElement {
       chartType:form.elements.chartType.value, aggregation:form.elements.aggregation.value,
       range:readRange(form.elements.range.value, form.elements.from.value, form.elements.to.value),
       granularity:form.elements.granularity.value, showGrid:form.elements.showGrid.checked,
+      showPieLabels:form.elements.showPieLabels.checked,
       axisLabelX:form.elements.axisLabelX.value.trim(), axisLabelLeft:form.elements.axisLabelLeft.value.trim(),
       axisLabelRight:form.elements.axisLabelRight.value.trim()};
     if (!config.title) delete config.title;

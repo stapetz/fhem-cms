@@ -288,6 +288,15 @@ führen den letzten Messwert bis zur nächsten Messung fort; vor dem ersten Wert
 bleibt die Reihe leer. Für die Torte wählen Sie den letzten Rohwert oder den
 Durchschnitt aller gelesenen Rohwerte im Zeitraum. Negative Werte und gekürzte
 Daten werden bei der Torte mit einer Fehlermeldung abgewiesen.
+Bei Torten ist **Device und Wert im Tortenstück einblenden** standardmäßig
+aktiviert. Die zweizeilige Beschriftung verwendet den Device-Namen und das
+Werteformat der Reihe und passt sich dem Segment an. Bei sehr kleinen
+Segmenten wird die Schrift entsprechend klein; Legende und Mouseover bleiben
+verfügbar. Die Beschriftung lässt sich im Konfigurationsdialog ausschalten.
+Alle Graph-Typen laden ihre Daten automatisch alle fünf Minuten nach.
+Relative Zeiträume wie „24 Stunden“ wandern dabei mit; eigene Von-/Bis-Bereiche
+bleiben fest und werden erneut abgefragt. Es sind keine sekundengenauen
+Liveupdates.
 Die Vorschau im Konfigurationsdialog zeigt den gewählten Typ und verwendet
 echte Verlaufsdaten, ohne einen Entwurf zu speichern. Klick auf einen
 Legendeneintrag blendet die Reihe ein oder aus. Zeitraum und Granularität sind

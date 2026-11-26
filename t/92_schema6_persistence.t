@@ -38,6 +38,7 @@ $draft5->{pages}[0]{widgets} = [{
     id => 'graph', type => 'fhem-graph', grid => {col => 1, row => 2, w => 12, h => 8},
     chartType => 'pie', aggregation => 'average', range => '1700000000_1700100000', granularity => '1mo',
     axisLabelX => 'Zeit', axisLabelLeft => 'Watt', axisLabelRight => 'Grad', showGrid => JSON::PP::false,
+    showPieLabels => JSON::PP::false,
     series => [{device => 'Solar1', reading => 'power', source => 'auto', label => 'Dach', color => '#123abc',
         axis => 'right', lineStyle => 'dashed', lineWidth => 4, fill => JSON::PP::true, format => 'round(2)'}],
 }];
