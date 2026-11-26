@@ -273,8 +273,11 @@ erst das Veröffentlichen aktiviert sie live. Bestehende Seiten behalten ohne
 ### Graph: mehrere historische Datenreihen
 
 Unter **Einfügen → Widget hinzufügen → Graph** können bis zu 20 Device- und
-Reading-Kombinationen ausgewählt werden. Die Logprüfung startet erst nach
-der Geräteauswahl. Bei FileLog werden bis zu zehn Jahre durchsucht; wird das
+Reading-Kombinationen ausgewählt werden. Die Geräteauswahl zeigt nur Devices,
+für die in der gewählten Quelle geloggte Readings nachgewiesen wurden.
+Ausstehende Logprüfungen und Fehler werden unter der Liste angezeigt.
+Auch die Reading-Auswahl enthält ausschließlich geloggte Readings.
+Bei FileLog werden bis zu zehn Jahre durchsucht; wird das
 Zeilenlimit erreicht, meldet der Dialog eine möglicherweise unvollständige Liste.
 Je Reihe sind Quelle (automatisch, DbLog oder FileLog), Legendentext und Farbe
 wählbar. Automatisch bevorzugt DbLog und verwendet bei fehlenden Werten ein
@@ -288,7 +291,7 @@ Daten werden bei der Torte mit einer Fehlermeldung abgewiesen.
 Die Vorschau im Konfigurationsdialog zeigt den gewählten Typ und verwendet
 echte Verlaufsdaten, ohne einen Entwurf zu speichern. Klick auf einen
 Legendeneintrag blendet die Reihe ein oder aus. Zeitraum und Granularität sind
-im Dialog wählbar; live kann der Zeitraum gewechselt werden. Bei fehlenden
+im Dialog wählbar; live kann der Zeitraum auch ohne Widgettitel gewechselt werden. Bei fehlenden
 Daten oder nicht verfügbarer Quelle erscheint eine Meldung.
 Neben festen Zeiträumen kann ein eigener Zeitraum von bis zu zehn Jahren
 gewählt oder durch Ziehen im Diagramm markiert werden. Auch die Auflösung und

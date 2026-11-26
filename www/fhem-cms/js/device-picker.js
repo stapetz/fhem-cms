@@ -22,7 +22,7 @@ const STYLE = `
   .cms-dp-dialog .actions { display: flex; justify-content: flex-end; }
 `;
 
-export function openDevicePicker({ services, title = 'Device auswählen', accept = () => true, signal }) {
+export function openDevicePicker({ services, title = 'Device auswählen', accept = () => true, signal, classify }) {
   if (signal?.aborted) return Promise.resolve(null);
   return new Promise((resolve) => {
     const dialog = document.createElement('dialog');
@@ -41,6 +41,9 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
     const $ = (selector) => dialog.querySelector(selector);
     let devices = [];
     let done = false;
+    const classifications = new Map();
+    const errors = new Map();
+    let remaining = 0;
 
     const finish = (value) => {
       if (done) {
@@ -61,7 +64,8 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
       const terms = $('[data-search]').value.toLowerCase().split(/\s+/).filter(Boolean);
       const matches = devices.filter((device) => {
         const haystack = [device.name, device.alias, device.type, device.room, device.parent].join(' ').toLowerCase();
-        return accept(device) && terms.every((term) => haystack.includes(term));
+        return accept(device) && (!classify || classifications.get(device.name) === true)
+          && terms.every((term) => haystack.includes(term));
       });
       const shown = matches.slice(0, MAX_ROWS);
       $('[data-list]').replaceChildren(...shown.map((device) => {
@@ -79,6 +83,11 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
         : matches.length > shown.length
           ? `${shown.length} von ${matches.length} Treffern, Suche weiter einschränken`
           : `${matches.length} Devices`;
+      if (remaining) $('[data-info]').textContent += ` · ${remaining} Logprüfungen ausstehend`;
+      if (errors.size) {
+        const [name, error] = errors.entries().next().value;
+        $('[data-info]').textContent += ` · ${errors.size} Logprüfungen fehlgeschlagen (${name}: ${error})`;
+      }
     };
 
     $('[data-search]').addEventListener('input', render);
@@ -99,6 +108,28 @@ export function openDevicePicker({ services, title = 'Device auswählen', accept
     services.listAllDevices().then((list) => {
       if (done) return;
       devices = list;
+      if (classify) {
+        const candidates = devices.filter(accept);
+        remaining = candidates.length;
+        let next = 0;
+        const worker = async () => {
+          while (!done && next < candidates.length) {
+            const device = candidates[next++];
+            try {
+              const logged = await classify(device);
+              if (!done) classifications.set(device.name, logged === true);
+            } catch (error) {
+              if (!done) errors.set(device.name, error.message || String(error));
+            }
+            if (!done) {
+              remaining--;
+              render();
+            }
+          }
+        };
+        void worker();
+        void worker();
+      }
       render();
     }, (error) => {
       if (done) return;

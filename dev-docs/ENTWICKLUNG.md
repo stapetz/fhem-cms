@@ -141,8 +141,12 @@ werden getrennt gestapelt.
 `fhem-graph` ist ein eigener Typ und laesst bestehende `fhem-chart`-Widgets
 unveraendert. Der Dialog verwaltet bis zu 20 Reihen mit eigener Logquelle,
 Legende und Farbe, zeigt echte Daten im Liniendiagramm, Stapel oder Torte
-und speichert ausschliesslich einen Entwurf. Die Geraeteauswahl fuehrt keine
-Logpruefungen durch; nach der Auswahl werden Readings und Fehler angezeigt.
+und speichert ausschliesslich einen Entwurf. Die Geraeteauswahl zeigt nur
+Devices mit nachgewiesenen DbLog-/FileLog-Readings in der gewaehlten Quelle.
+Zwei parallele Logpruefungen begrenzen die Last; ausstehende Pruefungen und
+Fehler werden sichtbar gemeldet, beim Schliessen starten keine weiteren.
+Die Reading-Auswahl enthaelt nur geloggte Readings; nicht mehr verfuegbare
+gespeicherte Readings werden als Hinweis gemeldet, nicht als Option angeboten.
 Logreadings durchsucht nach Auswahl bis zu zehn Jahre FileLog-Daten, neuere
 Dateien zuerst. Ein erreichtes Zeilenlimit wird explizit als moeglicherweise
 unvollstaendige Reading-Liste angezeigt.
@@ -158,6 +162,9 @@ deren Format; ohne Format bleibt die automatische Achsenbeschriftung erhalten.
 Der Dialog bietet ausschliesslich die unterstuetzten Formate zur Auswahl.
 Live-Tooltips kompensieren die Freeform-Canvas-Skalierung; Linienpunkte und
 Tortensegmente erzeugen keinen zusaetzlichen nativen Browser-Tooltip.
+Nachbesserung 1.34.3-dev: Tooltips verwenden kompakte 0.9rem Schrift und
+0.4rem/0.6rem Innenabstand. Die Zeitraum-/Granularitaets-Steuerungsgruppe
+bleibt auch bei ausgeblendetem oder fehlendem Titel in der Ansicht sichtbar.
 Regressionen: `prove t/01_fhemcms.t t/91_schema6_validation.t t/92_schema6_persistence.t`,
 `node --test t/115_graph_data.test.js` sowie der Browserfall
 `graph supports multiple log series` in `t/35_schema5_scaling.test.js`.

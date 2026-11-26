@@ -7,6 +7,7 @@
 import '../www/fhem-cms/components/cms-graph.js';
 import { Schema5WidgetPanel } from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
 import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { openDevicePicker } from '../www/fhem-cms/js/device-picker.js';
 const result = document.querySelector('#result');
 let checks = 0;
 const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
@@ -18,7 +19,7 @@ const until = async (condition, message) => {
   throw new Error(message);
 };
 try {
-  let writes = 0, saved, readingCalls = 0;
+  let writes = 0, saved, readingCalls = 0, activeChecks = 0, maxChecks = 0;
   const calls = [];
   const graph = document.createElement('cms-graph');
   graph.style.cssText = 'width:min(600px,95vw);height:400px';
@@ -28,11 +29,19 @@ try {
       const base = device === 'Solar1' ? 2 : 3;
       return {points:[[1000,base],[2000,base+1]],summary:{last:base+1,average:base+.5},truncated:false};
     },
-    logReadings: async device => {
+    logReadings: async (device, source = 'auto') => {
       readingCalls++;
-      return {source:device === 'Solar1' ? 'dblog' : 'filelog', readings:device === 'Empty' ? [] : ['power']};
+      activeChecks++;
+      maxChecks = Math.max(maxChecks, activeChecks);
+      await new Promise(resolve => setTimeout(resolve, 10));
+      activeChecks--;
+      if (device === 'Broken') throw new Error('Datenbank nicht erreichbar');
+      const loggedSource = device === 'Solar1' ? 'dblog' : 'filelog';
+      return {source:loggedSource, readings:device === 'Empty'
+        || (source !== 'auto' && source !== loggedSource) ? [] : ['power']};
     },
-    listAllDevices: async () => [{name:'Empty',type:'Dummy'}, {name:'Solar2',alias:'Garten',type:'Dummy'}, {name:'Solar1',type:'Dummy'}],
+    listAllDevices: async () => [{name:'Empty',type:'Dummy'}, {name:'Solar2',alias:'Garten',type:'Dummy'},
+      {name:'Solar1',type:'Dummy'}, {name:'Broken',type:'Dummy'}],
     saveWidget: async value => { writes++; saved = value; },
     deleteWidget: async () => { throw new Error('unexpected delete'); },
   };
@@ -46,6 +55,11 @@ try {
   await until(() => root.querySelectorAll('[data-svg] polyline').length === 2, 'two live lines not drawn');
   check(root.querySelector('[data-title]').hidden && !root.querySelector('[data-title]').textContent,
     'missing title stays empty');
+  graph.setAttribute('view-only', '');
+  check(root.querySelector('header').getBoundingClientRect().height > 0
+    && root.querySelector('[data-range]').getBoundingClientRect().width > 0,
+    'untitled view-only graphs retain visible time-range controls');
+  graph.removeAttribute('view-only');
   const initialPlot = root.querySelector('[data-svg]');
   const initialViewBox = initialPlot.viewBox.baseVal;
   check(Math.abs(initialViewBox.width / initialViewBox.height - initialPlot.clientWidth / initialPlot.clientHeight) < .02,
@@ -130,16 +144,35 @@ try {
   root.querySelector('[data-add]').click();
   check(root.querySelectorAll('.row').length === 3, 'a new row can be added');
   const beforePicker = readingCalls;
+  maxChecks = 0;
   root.querySelectorAll('[data-pick]')[2].click();
-  await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 3
-    && document.querySelector('.cms-dp-dialog [data-info]').textContent === '3 Devices', 'device discovery did not complete');
+  check(document.querySelectorAll('.cms-dp-dialog [role=option]').length === 0,
+    'unverified devices are never offered');
+  await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 2
+    && document.querySelector('.cms-dp-dialog [data-info]').textContent.includes('Datenbank nicht erreichbar'),
+    'filtered device discovery did not complete or error was hidden');
   const devices = [...document.querySelectorAll('.cms-dp-dialog [role=option]')];
-  check(readingCalls === beforePicker && devices.every(device => !device.textContent.includes('Datenlogs')),
-    'listing devices performs no log discovery and displays no log status');
-  devices[1].click();
+  check(readingCalls === beforePicker + 4 && maxChecks <= 2
+    && devices.every(device => !/Empty|Broken/.test(device.textContent)),
+    'only positively checked devices are offered with at most two concurrent checks');
+  devices.find(device => device.textContent.includes('Solar2')).click();
   await until(() => root.querySelectorAll('[data-reading]')[2].options.length === 2, 'selected device readings not loaded');
   check(root.querySelectorAll('[data-device]')[2].value === 'Solar2', 'device picker sets the chosen row');
   check(root.querySelectorAll('[data-label]')[2].value === 'Garten', 'legend defaults to the device alias');
+  const addedRow = root.querySelectorAll('.row')[2];
+  await graph.loadReadings(addedRow, 'missingReading');
+  check(addedRow.querySelector('[data-reading]').value === ''
+    && ![...addedRow.querySelector('[data-reading]').options].some(option => option.value === 'missingReading')
+    && addedRow.querySelector('[data-row-status]').textContent.includes('missingReading'),
+    'missing saved readings are reported but never selectable');
+  addedRow.querySelector('[data-source]').value = 'dblog';
+  addedRow.querySelector('[data-pick]').click();
+  await until(() => document.querySelector('.cms-dp-dialog [data-info]')?.textContent.includes('Datenbank nicht erreichbar'),
+    'source-specific checks did not complete');
+  check(document.querySelectorAll('.cms-dp-dialog [role=option]').length === 1
+    && document.querySelector('.cms-dp-dialog [role=option]').textContent.includes('Solar1'),
+    'explicit DbLog choice excludes FileLog-only devices');
+  document.querySelector('.cms-dp-dialog [data-cancel]').click();
   check(!root.querySelector('[data-manual-reading]'), 'manual reading field is absent');
   check(root.querySelectorAll('[data-remove]')[2].querySelector('svg')
     && root.querySelectorAll('[data-remove]')[2].getAttribute('aria-label'), 'row removal uses an accessible X icon');
@@ -198,16 +231,19 @@ try {
   check(!root.querySelector('[data-tooltip]').hidden && root.querySelector('[data-tooltip]').textContent.includes('Dach: -1')
     && root.querySelector('[data-tooltip]').textContent.includes('Garten: 100.00'), 'hover shows formatted values for both series');
   check(JSON.stringify(decoratedData) === rawData, 'display formatting does not modify the source values');
-  check(parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) > 16,
-    'tooltip uses a larger font');
+  check(parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) >= 14
+    && parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) <= 15
+    && parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).paddingTop) <= 7,
+    'tooltip uses compact readable text and padding');
   graph.style.setProperty('--cms-freeform-scale', '.5');
   graph.style.transformOrigin = 'top left';
   graph.style.transform = 'scale(.5)';
   const scaledBox = plot.getBoundingClientRect();
   plot.onpointermove({clientX:scaledBox.left + scaledBox.width * .75});
   const tooltip = root.querySelector('[data-tooltip]');
-  check(parseFloat(getComputedStyle(tooltip).fontSize) * .5 >= 17.5,
-    'live tooltip stays readable under canvas scaling');
+  check(parseFloat(getComputedStyle(tooltip).fontSize) * .5 >= 14
+    && parseFloat(getComputedStyle(tooltip).fontSize) * .5 <= 15,
+    'live tooltip stays compact and readable under canvas scaling');
   check(tooltip.textContent.includes('Dach: 2') && tooltip.textContent.includes('Garten: 200.00'),
     'scaled pointer maps to the correct values');
   check(parseFloat(tooltip.style.left) <= plot.clientWidth - tooltip.offsetWidth + 1,
@@ -291,6 +327,25 @@ try {
   release({points:[[1000,1]],summary:{last:1,average:1}});
   await new Promise(resolve => setTimeout(resolve, 30));
   check(requests === 2, 'removing the graph stops further history requests');
+  let releaseCheck, startedChecks = 0;
+  const checkPending = new Promise(resolve => { releaseCheck = resolve; });
+  const picker = openDevicePicker({services:graph.services, classify:async () => {
+    startedChecks++;
+    await checkPending;
+    return true;
+  }});
+  await until(() => startedChecks === 2, 'device checks did not start');
+  document.querySelector('.cms-dp-dialog [data-cancel]').click();
+  check(await picker === null, 'cancelling discovery closes the picker');
+  releaseCheck();
+  await new Promise(resolve => setTimeout(resolve, 30));
+  check(startedChecks === 2 && !document.querySelector('.cms-dp-dialog'),
+    'cancelled discovery starts no further checks and does not restore the dialog');
+  const unfilteredPicker = openDevicePicker({services:graph.services});
+  await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 4,
+    'ordinary device picker must remain unfiltered');
+  document.querySelector('.cms-dp-dialog [data-cancel]').click();
+  await unfilteredPicker;
   const live = {schemaVersion:5,settings:{layoutMode:'grid',gridColumns:12},
     navigation:{orientation:'horizontal',grid:{col:1,row:1,w:12,h:1}},
     pages:[{id:'start',title:'Start',widgets:[]}]};
@@ -313,8 +368,9 @@ try {
   const graphInPanel = panelRoot.querySelector('.cms-widget-dialog-host cms-graph');
   check(graphInPanel?.shadowRoot.querySelector('[data-dialog]').open, 'real widget panel opens the new graph dialog');
   graphInPanel.shadowRoot.querySelector('[data-pick]').click();
-  await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 3
-    && document.querySelector('.cms-dp-dialog [data-info]').textContent === '3 Devices', 'panel device picker unavailable');
+  await until(() => document.querySelectorAll('.cms-dp-dialog [role=option]').length === 2
+    && document.querySelector('.cms-dp-dialog [data-info]').textContent.includes('Datenbank nicht erreichbar'),
+    'panel device picker unavailable');
   [...document.querySelectorAll('.cms-dp-dialog [role=option]')]
     .find(option => option.textContent.startsWith('Solar1')).click();
   const row = graphInPanel.shadowRoot.querySelector('.row');

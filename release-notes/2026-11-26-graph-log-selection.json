@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-26",
+  "version": "1.34.3-dev",
+  "title": "Graph-Zeitraum und geloggte Datenquellen",
+  "changes": [
+    "Graph: Zeitraum und Granularitaet bleiben ohne Widgettitel sichtbar; Mouseover-Box kompakter. Refs #259.",
+    "Geraeteauswahl bietet nur positiv gepruefte Logquellen an; Reading-Auswahl enthaelt nur geloggte Readings. Prueffehler bleiben sichtbar."
+  ]
+}

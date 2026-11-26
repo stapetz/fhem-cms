@@ -157,14 +157,16 @@ class FHEMCMSGraph extends HTMLElement {
         .legend button { display:flex; align-items:center; gap:.35rem; min-height:36px; border:0; background:transparent; }
         .legend button[aria-pressed="false"] { opacity:.5; text-decoration:line-through; }
         .swatch { width:2rem; height:.4rem; border-radius:1rem; flex:none; }
-        .graph-tooltip { position:absolute; z-index:2; pointer-events:none; padding:.8rem 1rem; border:1px solid var(--cms-border);
-          border-radius:.6rem; background:var(--cms-surface); color:var(--cms-text); font-size:1.1rem;
+        header .controls { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; min-width:0; }
+        header select { max-width:100%; min-width:0; }
+        .graph-tooltip { position:absolute; z-index:2; pointer-events:none; padding:.4rem .6rem; border:1px solid var(--cms-border);
+          border-radius:.6rem; background:var(--cms-surface); color:var(--cms-text); font-size:.9rem; line-height:1.3;
           max-width:100%; overflow-wrap:anywhere; }
         .graph-tooltip div { display:flex; align-items:center; gap:.55rem; }
         .graph-tooltip i { width:.9rem; height:.9rem; border-radius:.2rem; flex:none; }
-        [data-tooltip] { font-size:max(1.1rem, calc(1.1rem / var(--cms-freeform-scale, 1)));
-          padding:max(.8rem, calc(.8rem / var(--cms-freeform-scale, 1)))
-            max(1rem, calc(1rem / var(--cms-freeform-scale, 1))); }
+        [data-tooltip] { font-size:max(.9rem, calc(.9rem / var(--cms-freeform-scale, 1)));
+          padding:max(.4rem, calc(.4rem / var(--cms-freeform-scale, 1)))
+            max(.6rem, calc(.6rem / var(--cms-freeform-scale, 1))); }
         .status { margin:0; color:var(--cms-muted); }
         .status[data-error] { color:var(--cms-danger); }
         dialog { width:min(94vw,48rem); max-height:94vh; overflow:auto; padding:1rem; color:var(--cms-text);
@@ -198,9 +200,9 @@ class FHEMCMSGraph extends HTMLElement {
         ${widgetDesignCss}
       </style>
       <article class="tile" data-tile><header><h3 data-title></h3>
-        <select data-range aria-label="Zeitraum"></select>
+        <div class="controls"><select data-range aria-label="Zeitraum"></select>
         <select data-granularity aria-label="Granularität"></select>
-        <button type="button" data-grid aria-label="Raster ein- oder ausblenden" title="Raster ein- oder ausblenden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM9 3v18M15 3v18M3 9h18M3 15h18"/></svg></button>
+        <button type="button" data-grid aria-label="Raster ein- oder ausblenden" title="Raster ein- oder ausblenden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM9 3v18M15 3v18M3 9h18M3 15h18"/></svg></button></div>
         <button type="button" data-open-config>Konfigurieren</button></header>
         <div data-live-custom hidden><input type="datetime-local" step="1" data-live-from aria-label="Zeitraum von">
           <input type="datetime-local" step="1" data-live-to aria-label="Zeitraum bis"><button type="button" data-live-apply>Übernehmen</button></div>
@@ -642,10 +644,14 @@ class FHEMCMSGraph extends HTMLElement {
     $('[data-line-width]').value = series.lineWidth ?? 4;
     $('[data-fill]').checked = series.fill === true;
     $('[data-source]').replaceChildren(...options(SOURCES, series.source || 'auto'));
-    if (series.reading) $('[data-reading]').replaceChildren(...options({[series.reading]: series.reading}, series.reading));
     const pick = async () => {
       try {
-        const device = await openDevicePicker({services:this.services, signal:this.pickerAbort.signal});
+        const source = $('[data-source]').value;
+        const device = await openDevicePicker({services:this.services, signal:this.pickerAbort.signal,
+          classify: async entry => {
+            const result = await this.services.logReadings(entry.name, source);
+            return result.readings.length > 0;
+          }});
         if (!device || !row.isConnected) return;
         $('[data-device]').value = device.name;
         $('[data-label]').value = device.alias || device.name;
@@ -680,13 +686,13 @@ class FHEMCMSGraph extends HTMLElement {
       const names = result.readings;
       const choices = { '': 'Reading wählen …' };
       for (const reading of names) choices[reading] = reading;
-      if (selected && !names.includes(selected)) choices[selected] = `${selected} (nicht verfügbar)`;
-      select.replaceChildren(...options(choices, selected));
+      select.replaceChildren(...options(choices, names.includes(selected) ? selected : ''));
       status.textContent = names.length ? `Quelle: ${SOURCES[result.source]}; ${names.length} Readings.`
         : result.source === 'filelog'
           ? 'Keine FileLog-Readings im untersuchten Zeitraum erkannt.'
           : 'Keine Datenlogs für dieses Device in der gewählten Quelle.';
       if (result.truncated) status.textContent += ' Die Logprüfung wurde begrenzt; die Liste kann unvollständig sein.';
+      if (selected && !names.includes(selected)) status.textContent += ` Das gespeicherte Reading ${selected} ist nicht verfügbar; bitte ein geloggtes Reading auswählen.`;
     } catch (error) {
       if (!row.isConnected || revision !== row.graphRevision) return;
       select.replaceChildren(...options({'':'Reading wählen …'}, ''));
