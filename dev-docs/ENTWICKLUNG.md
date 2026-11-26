@@ -162,9 +162,16 @@ deren Format; ohne Format bleibt die automatische Achsenbeschriftung erhalten.
 Der Dialog bietet ausschliesslich die unterstuetzten Formate zur Auswahl.
 Live-Tooltips kompensieren die Freeform-Canvas-Skalierung; Linienpunkte und
 Tortensegmente erzeugen keinen zusaetzlichen nativen Browser-Tooltip.
-Nachbesserung 1.34.3-dev: Tooltips verwenden kompakte 0.9rem Schrift und
+Nachbesserung 1.34.4-dev: Tooltips verwenden kompakte 0.8rem Schrift und
 0.4rem/0.6rem Innenabstand. Die Zeitraum-/Granularitaets-Steuerungsgruppe
-bleibt auch bei ausgeblendetem oder fehlendem Titel in der Ansicht sichtbar.
+bleibt auch bei ausgeblendetem oder fehlendem Titel rechts oben sichtbar.
+X-Achse, Tooltip und Messpunktbeschriftung verwenden dieselbe Zeitdarstellung
+(Europe/Berlin): bei hoechstens 24 Stunden HH:mm, darueber DD.MM.,
+bei jahresuebergreifender Auswahl DD.MM.YYYY. Massgeblich ist der gewaehlte
+Zeitraum, nicht die Dichte der Messpunkte. Y-Achsentitel stehen senkrecht
+ausserhalb der Teilstrichbeschriftungen, links -90 und rechts +90 Grad,
+mit der Schriftunterseite zur jeweiligen Achse. Ihr Platz wird bei der
+Berechnung der Plotraender beruecksichtigt.
 Regressionen: `prove t/01_fhemcms.t t/91_schema6_validation.t t/92_schema6_persistence.t`,
 `node --test t/115_graph_data.test.js` sowie der Browserfall
 `graph supports multiple log series` in `t/35_schema5_scaling.test.js`.

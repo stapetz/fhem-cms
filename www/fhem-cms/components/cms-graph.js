@@ -60,6 +60,22 @@ function formatValue(value, format) {
   return match ? value.toFixed(Number(match[1])) : String(value);
 }
 
+function timeFormatter(config, data, from, to) {
+  const bounds = customRange(config.range || '');
+  const starts = data.map(result => result.from).filter(Number.isFinite);
+  const ends = data.map(result => result.to).filter(Number.isFinite);
+  const duration = { '24h':86400, '7d':604800, '30d':2592000, '365d':31536000 }[config.range];
+  const start = bounds?.[0] ?? (starts.length ? Math.min(...starts) : duration ? to - duration : from);
+  const end = bounds?.[1] ?? (ends.length ? Math.max(...ends) : to);
+  const zone = {timeZone:'Europe/Berlin'};
+  if (end - start <= 86400) {
+    return new Intl.DateTimeFormat('de-DE', {...zone, hour:'2-digit', minute:'2-digit'});
+  }
+  const year = new Intl.DateTimeFormat('de-DE', {...zone, year:'numeric'});
+  return new Intl.DateTimeFormat('de-DE', {...zone, day:'2-digit', month:'2-digit',
+    ...(year.format(start * 1000) !== year.format(end * 1000) ? {year:'numeric'} : {})});
+}
+
 function validate(config) {
   if (!Array.isArray(config.series) || config.series.length < 1 || config.series.length > 20) {
     throw new Error('Bitte eine bis 20 Datenreihen auswählen.');
@@ -157,14 +173,15 @@ class FHEMCMSGraph extends HTMLElement {
         .legend button { display:flex; align-items:center; gap:.35rem; min-height:36px; border:0; background:transparent; }
         .legend button[aria-pressed="false"] { opacity:.5; text-decoration:line-through; }
         .swatch { width:2rem; height:.4rem; border-radius:1rem; flex:none; }
-        header .controls { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; min-width:0; }
+        header .controls { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center;
+          gap:.5rem; min-width:0; margin-left:auto; }
         header select { max-width:100%; min-width:0; }
         .graph-tooltip { position:absolute; z-index:2; pointer-events:none; padding:.4rem .6rem; border:1px solid var(--cms-border);
-          border-radius:.6rem; background:var(--cms-surface); color:var(--cms-text); font-size:.9rem; line-height:1.3;
+          border-radius:.6rem; background:var(--cms-surface); color:var(--cms-text); font-size:.8rem; line-height:1.3;
           max-width:100%; overflow-wrap:anywhere; }
         .graph-tooltip div { display:flex; align-items:center; gap:.55rem; }
         .graph-tooltip i { width:.9rem; height:.9rem; border-radius:.2rem; flex:none; }
-        [data-tooltip] { font-size:max(.9rem, calc(.9rem / var(--cms-freeform-scale, 1)));
+        [data-tooltip] { font-size:max(.8rem, calc(.8rem / var(--cms-freeform-scale, 1)));
           padding:max(.4rem, calc(.4rem / var(--cms-freeform-scale, 1)))
             max(.6rem, calc(.6rem / var(--cms-freeform-scale, 1))); }
         .status { margin:0; color:var(--cms-muted); }
@@ -434,6 +451,8 @@ class FHEMCMSGraph extends HTMLElement {
     const times = points.flatMap(row => row.map(point => point[0]));
     let from = Math.min(...times), to = Math.max(...times);
     if (from === to) to = from + 1;
+    const timeFormat = timeFormatter(config, data, from, to);
+    const formatTime = time => timeFormat.format(time * 1000);
     const limits = {left:{low:Infinity, high:-Infinity}, right:{low:Infinity, high:-Infinity}};
     (stacked || points).forEach((row, index) => {
       const axis = limits[visible[index].row.axis || 'left'];
@@ -462,8 +481,9 @@ class FHEMCMSGraph extends HTMLElement {
       }
     }
     const tickWidth = axis => Math.max(0, ...ticks[axis].map(text => text.getComputedTextLength()));
-    const leftMargin = Math.max(44, tickWidth('left') + 8);
-    const rightMargin = ticks.right.length ? Math.max(44, tickWidth('right') + 8) : 4;
+    const leftMargin = Math.max(44, tickWidth('left') + 8) + (config.axisLabelLeft ? 16 : 0);
+    const rightMargin = (ticks.right.length ? Math.max(44, tickWidth('right') + 8) : 4)
+      + (config.axisLabelRight ? 16 : 0);
     const marginScale = Math.min(1, (width - 20) / (leftMargin + rightMargin));
     const left = leftMargin * marginScale, right = width - rightMargin * marginScale;
     for (const axis of ['left','right']) {
@@ -484,12 +504,23 @@ class FHEMCMSGraph extends HTMLElement {
         target.append(svg('line', {x1:px, x2:px, y1:15, y2:190, stroke:'currentColor', opacity:.2}));
       }
     }
-    if (config.axisLabelLeft) target.append(svg('text', {x:left, y:10, 'text-anchor':'start'}, config.axisLabelLeft));
-    if (config.axisLabelRight) target.append(svg('text', {x:right, y:10, 'text-anchor':'end'}, config.axisLabelRight));
+    for (const [axis, title, px, angle] of [
+      ['left', config.axisLabelLeft, 10 * marginScale, -90],
+      ['right', config.axisLabelRight, width - 10 * marginScale, 90],
+    ]) {
+      if (!title) continue;
+      const text = svg('text', {x:px, y:102.5, 'text-anchor':'middle',
+        transform:`rotate(${angle} ${px} 102.5)`, 'data-axis-label':axis}, title);
+      if (marginScale < 1) text.style.fontSize = `${10 * marginScale}px`;
+      target.append(text);
+      if (text.getComputedTextLength() > 175) {
+        text.setAttribute('textLength', '175');
+        text.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      }
+    }
     if (config.axisLabelX) target.append(svg('text', {x:(left+right)/2, y:219, 'text-anchor':'middle'}, config.axisLabelX));
     for (const [time, anchor] of [[from, 'start'], [to, 'end']]) {
-      target.append(svg('text', {x:x(time), y:211, 'text-anchor':anchor},
-        new Date(time * 1000).toLocaleString('de-DE', {timeZone:'Europe/Berlin', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})));
+      target.append(svg('text', {x:x(time), y:211, 'text-anchor':anchor, 'data-time-tick':''}, formatTime(time)));
     }
     visible.forEach((item, index) => {
       const axis = item.row.axis || 'left';
@@ -518,7 +549,7 @@ class FHEMCMSGraph extends HTMLElement {
           ...(style === 'dashed' ? {'stroke-dasharray':'8 5'} : style === 'dotted' ? {'stroke-dasharray':'2 4'} : {})}));
         for (const point of row) {
           const circle = svg('circle', {cx:x(point[0]), cy:valueY(point[1]), r:style === 'points' ? 3 : 1, fill:item.row.color,
-            'aria-label':`${label(item.row)}: ${formatValue(point[1], item.row.format)} · ${new Date(point[0]*1000).toLocaleString('de-DE')}`});
+            'aria-label':`${label(item.row)}: ${formatValue(point[1], item.row.format)} · ${formatTime(point[0])}`});
           target.append(circle);
         }
       }
@@ -545,7 +576,7 @@ class FHEMCMSGraph extends HTMLElement {
       crosshair.setAttribute('x2', px);
       tooltip.replaceChildren();
       const header = document.createElement('strong');
-      header.textContent = new Date(timestamp(px) * 1000).toLocaleString('de-DE');
+      header.textContent = formatTime(timestamp(px));
       tooltip.append(header);
       visible.forEach((item, index) => {
         const row = points[index];
@@ -553,7 +584,7 @@ class FHEMCMSGraph extends HTMLElement {
         const nearest = row.reduce((best, point) => Math.abs(point[0] - timestamp(px)) < Math.abs(best[0] - timestamp(px)) ? point : best);
         const entry = document.createElement('div'), swatch = document.createElement('i');
         swatch.style.backgroundColor = item.row.color;
-        entry.append(swatch, document.createTextNode(`${label(item.row)}: ${formatValue(nearest[1], item.row.format)} · ${new Date(nearest[0] * 1000).toLocaleString('de-DE')}`));
+        entry.append(swatch, document.createTextNode(`${label(item.row)}: ${formatValue(nearest[1], item.row.format)} · ${formatTime(nearest[0])}`));
         tooltip.append(entry);
       });
       positionTooltip(event);

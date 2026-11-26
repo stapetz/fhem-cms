@@ -59,6 +59,15 @@ try {
   check(root.querySelector('header').getBoundingClientRect().height > 0
     && root.querySelector('[data-range]').getBoundingClientRect().width > 0,
     'untitled view-only graphs retain visible time-range controls');
+  check(Math.abs(root.querySelector('.controls').getBoundingClientRect().right
+    - root.querySelector('header').getBoundingClientRect().right) < 1,
+    'untitled view-only time controls align to the right');
+  root.querySelector('[data-title]').textContent = 'Solaranlage';
+  root.querySelector('[data-title]').hidden = false;
+  check(Math.abs(root.querySelector('.controls').getBoundingClientRect().right
+    - root.querySelector('header').getBoundingClientRect().right) < 1,
+    'time controls align to the right with a title');
+  root.querySelector('[data-title]').hidden = true;
   graph.removeAttribute('view-only');
   const initialPlot = root.querySelector('[data-svg]');
   const initialViewBox = initialPlot.viewBox.baseVal;
@@ -231,8 +240,8 @@ try {
   check(!root.querySelector('[data-tooltip]').hidden && root.querySelector('[data-tooltip]').textContent.includes('Dach: -1')
     && root.querySelector('[data-tooltip]').textContent.includes('Garten: 100.00'), 'hover shows formatted values for both series');
   check(JSON.stringify(decoratedData) === rawData, 'display formatting does not modify the source values');
-  check(parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) >= 14
-    && parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) <= 15
+  check(parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) >= 12
+    && parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).fontSize) <= 13
     && parseFloat(getComputedStyle(root.querySelector('[data-tooltip]')).paddingTop) <= 7,
     'tooltip uses compact readable text and padding');
   graph.style.setProperty('--cms-freeform-scale', '.5');
@@ -241,8 +250,8 @@ try {
   const scaledBox = plot.getBoundingClientRect();
   plot.onpointermove({clientX:scaledBox.left + scaledBox.width * .75});
   const tooltip = root.querySelector('[data-tooltip]');
-  check(parseFloat(getComputedStyle(tooltip).fontSize) * .5 >= 14
-    && parseFloat(getComputedStyle(tooltip).fontSize) * .5 <= 15,
+  check(parseFloat(getComputedStyle(tooltip).fontSize) * .5 >= 12
+    && parseFloat(getComputedStyle(tooltip).fontSize) * .5 <= 13,
     'live tooltip stays compact and readable under canvas scaling');
   check(tooltip.textContent.includes('Dach: 2') && tooltip.textContent.includes('Garten: 200.00'),
     'scaled pointer maps to the correct values');
@@ -261,6 +270,53 @@ try {
     const textBox = node.getBBox();
     return textBox.x >= -0.5 && textBox.x + textBox.width <= plot.viewBox.baseVal.width + 0.5;
   }), 'six-decimal axis labels fit within the plot');
+  for (const [axis, angle] of [['left',-90], ['right',90]]) {
+    const title = plot.querySelector(`[data-axis-label="${axis}"]`);
+    const titleBox = title.getBoundingClientRect();
+    const tickBoxes = [...plot.querySelectorAll(`[data-axis-tick="${axis}"]`)].map(node => node.getBoundingClientRect());
+    check(title.getAttribute('transform').startsWith(`rotate(${angle} `) && titleBox.height > titleBox.width,
+      `${axis} axis title is vertical with its bottom facing the axis`);
+    check(axis === 'left' ? titleBox.right <= Math.min(...tickBoxes.map(box => box.left))
+      : titleBox.left >= Math.max(...tickBoxes.map(box => box.right)),
+      `${axis} axis title does not overlap tick labels`);
+  }
+  const epoch = value => Date.parse(value) / 1000;
+  const timeCases = [
+    {name:'one day',start:'2026-11-25T00:00:00+01:00',end:'2026-11-26T00:00:00+01:00',pattern:/^\d{2}:\d{2}$/},
+    {name:'over one day',start:'2026-11-25T00:00:00+01:00',end:'2026-11-26T00:00:01+01:00',pattern:/^\d{2}\.\d{2}\.$/},
+    {name:'year boundary',start:'2026-12-30T00:00:00+01:00',end:'2027-01-02T00:00:00+01:00',pattern:/^\d{2}\.\d{2}\.\d{4}$/},
+  ];
+  root.querySelector('[data-dialog]').showModal();
+  for (const sample of timeCases) {
+    const from = epoch(sample.start), to = epoch(sample.end);
+    const range = `${from}_${to}`;
+    const values = decorated.series.map(() => ({from,to,points:[[from,1],[to,2]]}));
+    for (const [selector, legendSelector, statusSelector, tipSelector] of [
+      ['[data-svg]','[data-legend]','[data-status]','[data-tooltip]'],
+      ['[data-preview]','[data-preview-legend]','[data-preview-status]','[data-preview-tooltip]'],
+    ]) {
+      graph.draw({...decorated,range}, values, selector, legendSelector, root.querySelector(statusSelector), new Set());
+      const svg = root.querySelector(selector);
+      check([...svg.querySelectorAll('[data-time-tick]')].every(tick => sample.pattern.test(tick.textContent)),
+        `${sample.name}: X-axis uses the range-specific time format in ${selector}`);
+      const bounds = svg.getBoundingClientRect();
+      svg.onpointermove({clientX:bounds.left + bounds.width / 2});
+      const tip = root.querySelector(tipSelector);
+      check(sample.pattern.test(tip.querySelector('strong').textContent)
+        && [...tip.querySelectorAll('div')].every(row => sample.pattern.test(row.textContent.split(' · ')[1])),
+        `${sample.name}: tooltip and individual observations share the time format in ${selector}`);
+    }
+    if (sample.name === 'year boundary') {
+      const labels = [...plot.querySelectorAll('[data-time-tick]')].map(tick => tick.textContent);
+      check(labels[0].includes('2026') && labels[1].includes('2027'),
+        'X-axis explicitly shows both years across a year boundary');
+      const sparse = values.map(value => ({...value,points:[[to-3600,1],[to,2]]}));
+      graph.draw({...decorated,range}, sparse, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
+      check([...plot.querySelectorAll('[data-time-tick]')].every(tick => sample.pattern.test(tick.textContent)),
+        'sparse observations do not replace the selected range format with time-only labels');
+    }
+  }
+  root.querySelector('[data-dialog]').close();
   graph.draw({...decorated, chartType:'pie'}, [
     {points:[[1000,1.5]], summary:{last:1.5,average:1.5}},
     {points:[[1000,2.5]], summary:{last:2.5,average:2.5}},

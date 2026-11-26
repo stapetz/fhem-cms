@@ -300,6 +300,11 @@ als Kalenderzeiträume ausgewertet. Für jede Reihe sind Achsseite, Linientyp,
 Linienstärke und eine Flächenfüllung konfigurierbar; die Y-Achsen links und
 rechts besitzen getrennte automatische Wertebereiche. Beim Bewegen der Maus
 zeigt das Diagramm die jeweils nächstgelegenen Messwerte und Zeitpunkte.
+Zeitraum und Auflösung stehen auch ohne Titel rechts oben. Bis einschließlich
+24 Stunden zeigen X-Achse und Mouseover nur Uhrzeiten, bei längeren Zeiträumen
+nur das Datum und bei einem Jahreswechsel zusätzlich das Jahr (Zeitzone
+Europe/Berlin). Die Y-Achsentitel stehen senkrecht neben den Achsen; die
+Schriftunterseite zeigt jeweils zur Achse.
 Pro Datenreihe ist unter **Format** die Anzeige wählbar: Runden auf null bis
 sechs Nachkommastellen (`round(0)` bis `round(6)`), Abschneiden (`int`) oder
 unverändert. Jede Y-Achse verwendet das Format ihrer ersten sichtbaren
