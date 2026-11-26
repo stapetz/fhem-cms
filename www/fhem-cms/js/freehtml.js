@@ -276,6 +276,7 @@ function cleanChildren(source, target) {
       const tag = node.localName.toLowerCase();
       const element = node.namespaceURI === 'http://www.w3.org/2000/svg'
         ? document.createElementNS(node.namespaceURI, node.localName) : document.createElement(tag);
+      if (tag === 'button') element.setAttribute('type', 'button');
       if (tag === 'a') element.setAttribute('rel', 'noopener noreferrer');
       if (tag === 'img') element.setAttribute('referrerpolicy', 'no-referrer');
       if (tag === 'iframe') {

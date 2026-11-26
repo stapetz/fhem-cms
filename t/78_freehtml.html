@@ -44,6 +44,7 @@ try {
   const renderedSolar = renderTemplate(sanitize(solar), (_device, reading) => reading === 'state' ? 'on' : '12.345');
   check(renderedSolar.textContent.includes('12.3 W'), 'solar readings and filters still render');
   const setMarkup = '<button type="button" set-device="LR_SAT" set-cmd="remoteControl OK">OK</button>'
+    + '<button set-device="LR_SAT" set-cmd="remoteControl UP">Up</button>'
     + '<div set-device="LR_SAT" set-cmd="channel Das_Erste_HD">Das Erste</div>'
     + '<span set-device="LR_SAT" set-cmd="remoteControl OK">OK</span>'
     + '<a href="#target" set-device="LR_SAT" set-cmd="remoteControl OK">OK</a>';
@@ -51,8 +52,10 @@ try {
   const setTemplate = sanitize(setMarkup);
   check(setTemplate.querySelector('button[type="button"][set-device="LR_SAT"][set-cmd="remoteControl OK"]'),
     'safe button set action survives sanitizing');
-  check(setTemplate.querySelectorAll('[set-device][set-cmd]').length === 4,
+  check(setTemplate.querySelectorAll('[set-device][set-cmd]').length === 5,
     'set actions survive sanitizing on every allowed interactive element');
+  check(setTemplate.querySelectorAll('button[type="button"]').length === 2,
+    'buttons default to non-submitting type');
   for (const bad of [
     '<button set-device="LR_SAT">OK</button>',
     '<button set-cmd="remoteControl OK">OK</button>',
