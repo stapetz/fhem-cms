@@ -1,0 +1,80 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Systemmonitor Regression</title>
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<pre id="result">RUNNING</pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-system-monitor.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const wait = async predicate => {
+  for (let i = 0; i < 100; i++) {
+    if (predicate()) return;
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+  throw new Error('Timeout');
+};
+try {
+  let saved;
+  let fail = false;
+  let calls = 0;
+  const devices = [
+    {name:'System', alias:'FHEM-Server', type:'SYSMON', readings:{
+      fhemuptime_text:'2 Tage', loadavg:'0.3 0.4 0.5', ram:'12 GB', cpu_temp:'0'},
+      readingTimes:{ram:'2026-11-27 21:00:00'}},
+    {name:'DB', type:'DbLog', readings:{state:'connected', LastError:'<script>test<\/script>'}},
+    {name:'Dateilog', type:'FileLog', readings:{}},
+  ];
+  const widget = document.createElement('cms-system-monitor');
+  widget.config = {id:'system', type:'system-monitor', systemDevice:'System',
+    grid:{col:1,row:2,w:6,h:8}};
+  widget.services = {
+    systemMonitorDevices: async () => {
+      check(true, 'system device list is refreshed');
+      calls++;
+      if (fail) throw new Error('Verbindung verloren');
+      return devices;
+    },
+    saveWidget: async candidate => {saved = candidate;},
+    deleteWidget: async () => {},
+  };
+  document.body.append(widget);
+  const root = widget.shadowRoot;
+  await wait(() => root.querySelector('[data-status]').textContent.includes('erfolgreich'));
+  check(root.querySelector('[data-metrics]').textContent.includes('2 Tage')
+    && root.querySelector('[data-metrics]').textContent.includes('12 GB')
+    && root.querySelector('[data-metrics]').textContent.includes('27.11.2026 21:00:00'),
+  'configured system values are displayed');
+  root.querySelector('[data-info] button').click();
+  const details = root.querySelector('[data-details]');
+  check(details.open && details.textContent.includes('DbLog: DB')
+    && details.textContent.includes('FileLog: Dateilog'), 'details contain both log source types');
+  check(!root.querySelector('[data-logs] script') && root.querySelector('[data-logs]').textContent.includes('<script>'),
+    'log readings are rendered as text');
+  check(root.querySelector('[data-logs]').textContent.includes('Keine Status-Readings verfügbar')
+    && details.textContent.includes('nicht selbst ermittelt'), 'missing status and sizes are explicit');
+  details.querySelector('.cms-close-button').click();
+  await widget.openConfig({isNew:true});
+  const form = root.querySelector('[data-form]');
+  check(form.elements.systemDevice.value === 'System', 'configuration selects saved system source');
+  form.elements.title.value = 'Server';
+  form.elements.showTitle.checked = false;
+  form.dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}));
+  await wait(() => saved);
+  check(saved.systemDevice === 'System' && saved.title === 'Server' && saved.showTitle === false,
+    'configuration saves the selected system source and title visibility');
+  fail = true;
+  await widget.refresh();
+  check(root.querySelector('[data-status]').textContent.includes('Verbindung verloren')
+    && root.querySelector('[data-detail-status]').textContent.includes('nicht aktuell'),
+  'failed refresh explicitly marks retained data stale');
+  const before = calls;
+  widget.remove();
+  check(widget.timer && calls === before, 'removing the widget stops its scheduled refresh');
+  output.dataset.result = 'pass'; output.textContent = JSON.stringify({checks});
+} catch (error) {
+  output.dataset.result = 'fail'; output.textContent = error.stack || String(error);
+}
+</script>
