@@ -8,6 +8,17 @@
 - Linien, Stapel und Tortensegmente zeigen Detailwerte beim Antippen auf
   Touchgeraeten; Bereichsauswahl und Scrollen bleiben erhalten. Refs #265.
 
+2026-11-27 - 1.41.0-dev: Graph verschieben, Ladeanzeige und Tooltip-Position
+- Linien- und Stapeldiagramme lassen sich zeitlich verschieben: per
+  Zwei-Finger-Geste auf Touchgeraeten oder mit gehaltener Leertaste und
+  Maustaste am Desktop (Hand-Cursor). Das Verschieben endet am aktuellen
+  Zeitpunkt. Refs #266.
+- Waehrend des Ladens aus FileLog oder DbLog dreht mittig auf dem Graphen ein
+  Ladesymbol. Refs #266.
+- Das Mouseover-Fenster steht in der linken Diagrammhaelfte rechts der
+  Markierungslinie, ab der Mitte links davon; die Zeitraum-Auswahl nutzt eine
+  kleinere Schrift. Refs #266.
+
 2026-11-27 - 1.41.0-dev: Live-Eventmonitor
 - Eigene Live-Ansicht mit 1.000 Ereignissen, Textfilter, Anzeige-Pause und
   FHEMWEB-WebSocket-Status.
