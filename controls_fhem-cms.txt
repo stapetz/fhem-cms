@@ -20,6 +20,7 @@ UPD 2026-11-22_11:11:58 20278 www/fhem-cms/components/cms-slider.js
 UPD 2026-11-24_21:53:00 30292 www/fhem-cms/components/cms-solar-energy.js
 UPD 2026-11-22_12:08:06 31372 www/fhem-cms/components/cms-solarflow.js
 UPD 2026-11-24_22:08:26 25667 www/fhem-cms/components/cms-switch.js
+UPD 2026-11-27_22:11:38 11613 www/fhem-cms/components/cms-system-monitor.js
 UPD 2026-11-22_11:11:58 30880 www/fhem-cms/components/cms-table.js
 UPD 2026-11-27_22:03:07 10813 www/fhem-cms/components/cms-text.js
 UPD 2026-11-22_11:11:58 38579 www/fhem-cms/components/cms-thermostat.js
