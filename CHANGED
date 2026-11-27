@@ -4,6 +4,19 @@
   Wenn-/Sonst-Bereiche in Text und freiem HTML anhand aktueller FHEM-Readings.
   Verschachtelte Gruppen erlauben UND, ODER, XOR und Negation. Refs #144.
 
+2026-11-27 - 1.42.0-dev: FHEM- und Systemstatus
+- Systemstatus-Widget mit bewusst ausgewaehlter SYSMON-Quelle,
+  DbLog-/FileLog-Readings und Zeitstempeln.
+- Aktuelle FileLog- und FHEM-Loggroessen werden begrenzt im Hintergrund
+  gemessen; Fehler bleiben sichtbar.
+- Widget-Vorschau, Vorlagen und Schema-5/6-Entwurfsspeicherung sind integriert.
+- Numerische protokollierte Werte erhalten Verlaufsgraphen im Detaildialog;
+  Verfuegbarkeit wird regelmaessig im Logcache geprueft.
+- Kompakte Graphen in den Werteboxen zeigen rollierende 24 Stunden und
+  aktualisieren alle fuenf Minuten ohne Auswahlfelder.
+- Groessere Werteboxen umbrechen auch auf skalierten Seiten; einzelne Boxen
+  lassen sich im Widgetdialog ausblenden.
+
 2026-11-27 - 1.40.1-dev: Graph-Detailwerte per Touch
 - Linien, Stapel und Tortensegmente zeigen Detailwerte beim Antippen auf
   Touchgeraeten; Bereichsauswahl und Scrollen bleiben erhalten. Refs #265.
