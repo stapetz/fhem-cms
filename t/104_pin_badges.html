@@ -43,6 +43,7 @@ const specs = [
     showText:true,target:'self',grid:{col:1,row:1,w:6,h:3}}]},
   {type:'fhem-graph',chartType:'line',aggregation:'last',range:'24h',granularity:'auto',
     series:[{device:'Demo',reading:'power',source:'auto',label:'Leistung',color:'#123abc'}]},
+  {type:'system-monitor',systemDevice:'Demo'},
 ];
 const snapshot = temperature => new Map([['Demo', [{name:'Demo', readings:{
   temperature, desiredTemperature:'22', state:'off', power:'100',
@@ -170,7 +171,7 @@ try {
     }
     fixture.remove();
     check(Object.keys(PIN_TYPES).length === specs.length, 'all real widget types covered explicitly');
-    for (const spec of specs) check(pinKeepsCard(spec) === ['fhem-clock','text','fhem-link','fhem-graph'].includes(spec.type),
+    for (const spec of specs) check(pinKeepsCard(spec) === ['fhem-clock','text','fhem-link','fhem-graph','system-monitor'].includes(spec.type),
       `${spec.type}: card default`);
 
     for (const scale of [.25,.5,1,1.5]) {
@@ -181,7 +182,8 @@ try {
       await paint();
       check(root.querySelectorAll('cms-pin-badge').length === 15, 'all eligible widgets use pins');
       check(root.querySelector('cms-clock') && root.querySelector('cms-text') && root.querySelector('cms-link')
-        && root.querySelector('cms-graph'), 'clock/text/navigation/graph retain normal cards');
+        && root.querySelector('cms-graph') && root.querySelector('cms-system-monitor'),
+        'clock/text/navigation/graph/system-monitor retain normal cards');
       check(!root.querySelector('cms-thermostat,cms-value,cms-switch,cms-button,cms-chart,cms-weather,cms-volvoconnect'),
         'full widgets for pins are not eagerly instantiated');
       for (const pin of root.querySelectorAll('cms-pin-badge')) {
