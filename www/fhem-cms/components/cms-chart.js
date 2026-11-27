@@ -132,6 +132,11 @@ class FHEMCMSChart extends HTMLElement {
         .tile text { fill: currentColor; font-size: .65em; }
         .tile .line { stroke: #3b82f6; }
         .tile .band { fill: #3b82f6; }
+        :host([compact]) .tile { padding:.25rem; border:0; border-radius:.5rem; gap:0; }
+        :host([compact]) .tile header, :host([compact]) .tile > .stats,
+        :host([compact]) [data-open-config] { display:none; }
+        :host([compact]) .tile .plot { min-height:120px; flex:1 0 120px; }
+        :host([compact]) .tile .message { font-size:.8rem; }
       </style>
       <article class="tile" data-tile>
         <header><h3 data-title></h3>

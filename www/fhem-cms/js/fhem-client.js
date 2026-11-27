@@ -101,8 +101,10 @@ export class FhemClient {
       .filter((item) => item && isValidName(item.Name))
       .map((item) => {
         const readings = {};
+        const readingTimes = {};
         for (const [key, entry] of Object.entries(item.Readings || {})) {
           readings[key] = entry && entry.Value !== undefined ? String(entry.Value) : '';
+          if (typeof entry?.Time === 'string') readingTimes[key] = entry.Time;
         }
         const alias = item.Attributes && typeof item.Attributes.alias === 'string'
           ? item.Attributes.alias
@@ -116,7 +118,8 @@ export class FhemClient {
         const owner = item.Internals && typeof item.Internals.device === 'string' ? item.Internals.device : '';
         const parent = isValidName(owner) && owner !== item.Name ? owner : '';
         const sets = typeof item.PossibleSets === 'string' ? item.PossibleSets : '';
-        return { name: item.Name, alias, type, room, rooms, parent, readings, sets };
+        return { name: item.Name, alias, type, room, rooms, parent, readings, sets,
+          ...(Object.keys(readingTimes).length ? { readingTimes } : {}) };
       });
   }
 
@@ -416,6 +419,28 @@ export class FhemClient {
       throw new Error(text || fallback);
     }
     return result;
+  }
+
+  async systemLogSizes() {
+    const deadline = Date.now() + 25000;
+    while (true) {
+      const result = await this.parseJsonResult(
+        await this.command(`get ${this.cmsDevice} systemlogs`), 'Loggrößen konnten nicht gelesen werden');
+      if (result?.status === 'pending') {
+        if (Date.now() >= deadline) throw new Error('Zeitüberschreitung beim Lesen der Loggrößen');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        continue;
+      }
+      if (!Number.isSafeInteger(result?.checkedAt) || result.checkedAt < 0
+        || !Array.isArray(result.items) || result.items.length > 100
+        || result.items.some(item => !isValidName(item?.name) || !/^(?:FileLog|FHEM)$/.test(item.type)
+          || (typeof item.error === 'string' ? !item.error.length
+            : !Number.isSafeInteger(item.bytes) || item.bytes < 0
+              || !Number.isSafeInteger(item.modifiedAt) || item.modifiedAt < 0))) {
+        throw new Error('FHEM lieferte ungültige Loggrößen');
+      }
+      return result;
+    }
   }
 
   async logReadings(device, source = 'auto') {

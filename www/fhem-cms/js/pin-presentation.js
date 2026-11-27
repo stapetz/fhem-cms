@@ -16,6 +16,7 @@ export const PIN_TYPES = Object.freeze({
   'fhem-graph': {forceCard: true},
   'fhem-calllist': {},
   weather: {},
+  'system-monitor': {forceCard: true},
   'fhem-slider': {},
   'fhem-select': {},
   'fhem-html': {},

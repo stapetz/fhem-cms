@@ -12,6 +12,8 @@ export function createWidgetServices({ client, listDevices, listAllDevices, list
   return {
     listDevices,
     listAllDevices,
+    systemMonitorDevices: () => client.jsonlist('TYPE=SYSMON,TYPE=DbLog,TYPE=FileLog'),
+    systemLogSizes: () => client.systemLogSizes(),
     conditionSnapshots: (names) => {
       if (!Array.isArray(names) || names.length > 20
         || names.some(name => typeof name !== 'string' || !/^[A-Za-z0-9_.-]{1,64}$/.test(name))) {

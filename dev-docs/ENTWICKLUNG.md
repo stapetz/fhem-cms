@@ -31,6 +31,58 @@ Minuten ausgelegte Cache fasst parallele Anfragen zusammen; bei einem Ausfall
 bleibt der vorige Stand gekennzeichnet sichtbar. Warnungen haben einen eigenen
 Verfügbarkeitsstatus. Externe Texte werden ausschließlich als Text eingefügt.
 
+## FHEM- und Systemstatus (dev)
+
+`system-monitor` wird in Schema 5/6 und Widget-Vorlagen validiert.
+`systemDevice` bezeichnet ein bewusst ausgewaehltes SYSMON-Device; keine Quelle
+wird automatisch als lokaler Rechner angenommen. Status und Readings von DbLog
+und FileLog kommen aus `jsonlist2`, einschliesslich vorhandener Reading-Zeiten.
+Die sichtbare Komponente fragt alle 60 Sekunden ab und beendet den Timer beim
+Entfernen. Fehler kennzeichnen alte Werte; Erreichbarkeit bedeutet nicht
+Gesundheit oder Aktualitaet der Readings.
+
+Optionales `hiddenMetrics` enthaelt eindeutige feste Boxschluessel
+(`fhemuptime_text`, `uptime_text`, `loadavg`, `stat_cpu_text`, `cpu_temp`,
+`ram`, `swap`, `root`), keine Device-Referenzen. Abwesend/leeres Array zeigt
+alle Boxen. `fs_root` wird fuer die Box stabil auf `root` normalisiert.
+Der Konfigurationsdialog zeigt aktuelle Werte/Verfuegbarkeit und Checkboxen;
+Quellenwechsel erhaelt die Auswahl. Details bleiben vollstaendig.
+Die Box-Mindestbreite und Inline-Graphhoehe kompensieren den bestehenden
+`--cms-freeform-scale`; damit fuehrt Bildschirmverkleinerung zu Umbruch
+statt ausschliesslich zum Verkleinern der Boxen.
+
+`get <CMS> systemlogs` misst ausschliesslich aktuelle `currentlogfile`-Pfade
+von FileLog und global, ohne Dateiinhalte oder Archivverzeichnisse zu lesen.
+Device-Berechtigungen werden vor der Auftragserstellung geprueft. Die bestehende
+Hintergrundwarteschlange begrenzt Laufzeit, Parallelitaet und Cache; maximal
+100 Quellen, keine Benutzerpfade, Symlinks oder Elternverweise. Pro Datei stehen
+Bytes und Zeitstempel oder ein ausdruecklicher Fehler im Ergebnis. Es werden
+bei der Groessenmessung weder Readings geschrieben noch DbLog-Datenbankabfragen ausgeloest. Vorhandene
+Groessen-Readings werden ohne Einheitenannahme angezeigt. Remote-Rechner werden
+vorerst nur ueber separat eingerichtete SYSMON-Devices dargestellt.
+
+Verlaeufe nutzen die vorhandene `cms-chart`-Komponente und `logReadings`/
+`history`-Dienste. Alle 60 Sekunden wird die Schnittmenge numerischer aktueller
+Readings mit dem Logcache ermittelt; Text-/Mehrfachwerte werden nicht geparst.
+Discovery-Anfragen je Device werden waehrend ihres Laufes zusammengefasst.
+Kompakte Systemcharts stehen in den passenden Werteboxen: feste 24 Stunden,
+keine Auswahlfelder, bestehender 300000ms-Charttimer. Die minuetliche
+Werteaktualisierung erhaelt ihre DOM-Instanzen und loest keine Historyabfrage aus.
+Zusaetzliche Detailcharts existieren nur im offenen Dialog; Schliessen stoppt
+deren Timer.
+Generationspruefungen verwerfen verspaetete Ergebnisse nach Quellenwechsel,
+neuer Abfrage oder Entfernen. Cachefehler entfernen nicht mehr verifizierte
+Graphen. Maximal 12 Devices und 24 Graphen; keine neuen Logging-Regeln,
+UserReadings oder Datenbank-Vollscans.
+
+Regression: `node --test t/120_system_monitor.test.js t/05_fhem_client.test.js
+t/22_schema5_widget_panel.test.js t/27_widget_services.test.js`,
+`prove t/120_system_monitor.t t/91_schema6_validation.t t/92_schema6_persistence.t`,
+`node --test --test-name-pattern='FHEM system monitor|widget selection sorts|Widget-Vorlagen speichern'
+t/35_schema5_scaling.test.js`, Perl-Syntax und `npm run build:check`.
+Die isolierten Perl-Tests pruefen echte Entwurfsspeicherung ohne Aenderung von
+Live, exakte Dateigroessen, Fehler, Berechtigungen und zusammengefasste Auftraege.
+
 ## Zentrale Administration und Kioskseiten (Refs #237, #238)
 
 Die bestehende `admin.html` ist der zentrale Einstieg fuer administrative

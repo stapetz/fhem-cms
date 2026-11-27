@@ -44,6 +44,8 @@ export const WIDGET_PREVIEWS = {
     {device:'Vorschau',showGallery:false}],
   weather: ['Zeigt aktuelles Wetter und eine Wettervorhersage.',
     {config:{dataSource:'fhem_dwd',device:'Vorschau',forecastDays:3,showCurrentDetails:true}}],
+  'system-monitor': ['Zeigt FHEM-Erreichbarkeit, Systemwerte und Status-Readings von Log-Devices.',
+    {systemDevice:'Vorschau'}],
   text: ['Zeigt einen formatierten Textbaustein.',
     {html:'<h2>Willkommen</h2><p>Ein eigener Textbaustein.</p>'}],
   'fhem-link': ['Öffnet eine andere CMS-Seite über eine gestaltbare Kachel.',
@@ -66,6 +68,15 @@ const now = Math.floor(Date.now() / 1000);
 const services = {
   pages:[{id:'start',title:'Start'}],
   iconUrl:() => icon,
+  systemMonitorDevices: async () => [
+    {name:'Vorschau', alias:'FHEM-Rechner', type:'SYSMON', readings:{
+      fhemuptime_text:'2 Tage', loadavg:'0.3 0.4 0.5', ram:'Belegt: 2 GB', ram_used:'2048', cpu_temp:'45'}},
+    {name:'LogDB', type:'DbLog', readings:{state:'connected'}},
+  ],
+  systemLogSizes: async () => ({checkedAt:now, items:[
+    {name:'global', type:'FHEM', bytes:1048576, modifiedAt:now},
+  ]}),
+  logReadings: async () => ({source:'dblog',readings:['ram_used','cpu_temp'],warnings:[]}),
   history:async (device, reading) => ({points: reading === 'humidity'
     ? [[now-7200,35],[now-5400,40],[now-3600,38],[now-1800,43],[now,48]]
     : [[now-7200,19],[now-5400,19.5],[now-3600,20.8],[now-1800,20.2],[now,21.5]],

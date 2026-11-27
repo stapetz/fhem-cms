@@ -31,7 +31,7 @@ try {
   await settle();
   const cards = [...root.querySelectorAll('.cms-widget-choice-card')];
   const names = cards.map(card => card.querySelector('.cms-widget-choice').textContent);
-  check(cards.length === Object.keys(WIDGET_PREVIEWS).length && cards.length === 19,
+  check(cards.length === Object.keys(WIDGET_PREVIEWS).length && cards.length === 20,
     'every offered type has a preview');
   check(JSON.stringify(names) === JSON.stringify([...names].sort((a,b) => a.localeCompare(b,'de'))),
     'widget names are sorted alphabetically');

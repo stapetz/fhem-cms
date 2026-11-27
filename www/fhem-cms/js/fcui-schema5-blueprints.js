@@ -15,7 +15,7 @@ function inspectDevices(value, key, devices) {
     return;
   }
   if (!value || typeof value !== 'object') {
-    if (key === 'device') addDevice(devices, value);
+    if (key === 'device' || key === 'systemDevice') addDevice(devices, value);
     if (typeof value === 'string' && ['html', 'markdown', 'title'].includes(key)) {
       for (const name of markupConditionDevices(value)) addDevice(devices, name);
       for (const match of value.matchAll(/\{\{([A-Za-z0-9_.-]{1,128}):/g)) addDevice(devices, match[1]);
@@ -60,7 +60,7 @@ function remapValue(value, key, source, target) {
       : value.map((entry) => remapValue(entry, '', source, target));
   }
   if (!value || typeof value !== 'object') {
-    if (key === 'device' && value === source) return target;
+    if ((key === 'device' || key === 'systemDevice') && value === source) return target;
     if (typeof value === 'string' && ['html', 'markdown', 'title'].includes(key)) {
       return replaceDeviceInMarkup(value, source, target);
     }

@@ -258,6 +258,59 @@ Die kopierte URL ohne Bearbeitungsmodus normal öffnen; ein zusätzlicher
 Kioskparameter ist nicht nötig. Kiosk blendet die CMS-Navigation aus,
 aktiviert aber nicht automatisch den Browser-Vollbildmodus.
 
+### FHEM- und Systemstatus
+
+Das Widget **FHEM- und Systemstatus** zeigt den Stand einer FHEM-Abfrage sowie
+ausgewählte Systemwerte. Im Widgetdialog lässt sich ein vorhandenes SYSMON-Device
+als Quelle auswählen; für den lokalen Rechner muss dieses Device ausdrücklich
+dessen Werte liefern. Ohne Auswahl oder ohne SYSMON bleiben die Systemwerte
+„Nicht verfügbar“. Das Info-Symbol öffnet Details einschließlich der gefundenen
+DbLog- und FileLog-Devices und ihrer verfügbaren Status-Readings.
+
+Die Abfrage wird während der Anzeige alle 60 Sekunden aktualisiert. Reading-
+Zeitpunkte werden angezeigt, sofern FHEM sie liefert; ein erfolgreicher Abruf
+allein bestätigt nicht, dass die Readings aktuell oder Datenbank und Logs
+fehlerfrei sind. Bei Abfragefehlern bleiben letzte Werte sichtbar und werden
+als nicht aktuell gekennzeichnet. Dateisystembelegung steht im Detail, sofern
+SYSMON `fs_root` oder `root` liefert. Die Größe der aktuellen FileLog-Dateien und des
+FHEM-Logs wird im Hintergrund in Bytes ermittelt, ohne Dateiinhalte zu lesen.
+
+Archive werden nicht summiert. Fehlende, unlesbare oder über Symlinks erreichbare
+Dateien werden ausdrücklich gemeldet. Es gelten die FHEMWEB-Deviceberechtigungen;
+maximal 100 Logquellen und 20 Sekunden Hintergrundlaufzeit sind zugelassen.
+Datenbankgrößen werden nicht selbst ermittelt; vorhandene Readings `DbFileSize`,
+`logfileSize` oder `LogFileSize` werden unverändert mit ihrem Readingnamen
+angezeigt. Der Backend-Befehl lautet `get <CMS-Device> systemlogs`; nach einer
+Modulaktualisierung muss das Backend neu geladen werden. Es werden keine Server im Netzwerk direkt abgefragt;
+ein separat eingerichtetes SYSMON-Device kann als Quelle ausgewählt werden.
+
+Die Werteboxen haben eine Mindestbreite von 320 sichtbaren CSS-Pixeln, soweit
+Platz vorhanden ist, und umbrechen bei schmalerem Widget oder verkleinertem
+Canvas. Die Graphen sind größer dargestellt. Im Widgetdialog zeigt
+**Sichtbare Werteboxen** die erkannten Werte sowie fehlende Werte ausdrücklich
+an. Über die Häkchen lassen sich einzelne Boxen ausblenden; ihre Werte bleiben
+im Detaildialog zugänglich. Ohne individuelle Auswahl erscheinen wie bisher
+alle Boxen. Die Auswahl wird im Entwurf gespeichert.
+
+**Verlaufsgraphen:** Das Widget prüft alle 60 Sekunden über den vorhandenen
+Logcache, welche numerischen Readings der gewählten Systemquelle sowie
+numerischen DbLog-/FileLog-Statuswerte protokolliert sind. Über **ⓘ** werden
+dazu Diagramme mit Zeitraumwahl angezeigt. Neue Cache-Einträge ergänzen die
+Graphen, entfernte Einträge entfernen sie. Die bestehende Cache-Aktualisierung
+gilt weiterhin; das Widget stößt keinen vollständigen Datenbankscan an.
+Passende Systemgraphen stehen zusätzlich direkt in den jeweiligen Werteboxen:
+rollierende letzte 24 Stunden, ohne Zeitraum-/Auflösungswahl, mit Aktualisierung
+alle fünf Minuten. Die minütliche Werte-/Cacheprüfung lädt diese Graphen nicht
+erneut. Zusätzliche ausführliche Diagramme werden nur im offenen Detaildialog
+geladen.
+
+Zusammengesetzte Texte wie `ram`, `loadavg` oder `stat_cpu_percent` werden nicht
+als einzelne Zahl interpretiert. Dafür müssen passende numerische Readings
+wie `ram_used`, `loadavg_1` oder `root_used_percent` vorhanden und protokolliert
+sein. Fehlende Werte werden nicht als Null gezeichnet. Es werden keine
+UserReadings oder Logging-Regeln automatisch angelegt. Die Anzeige ist auf
+12 Devices und 24 Graphen begrenzt; Cache- und Abfragefehler bleiben sichtbar.
+
 ### Live-Eventmonitor
 
 Im Bearbeitungsmodus öffnet **Ansicht → Eventmonitor** den Live-Monitor als

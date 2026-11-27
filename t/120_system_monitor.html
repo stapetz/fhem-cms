@@ -20,9 +20,12 @@ try {
   let saved;
   let fail = false;
   let calls = 0;
+  let cachedReadings = ['ram_used'];
+  let cacheFail = false;
+  let historyCalls = 0;
   const devices = [
     {name:'System', alias:'FHEM-Server', type:'SYSMON', readings:{
-      fhemuptime_text:'2 Tage', loadavg:'0.3 0.4 0.5', ram:'12 GB', cpu_temp:'0'},
+      fhemuptime_text:'2 Tage', loadavg:'0.3 0.4 0.5', ram:'12 GB', ram_used:'12', cpu_temp:'0'},
       readingTimes:{ram:'2026-11-27 21:00:00'}},
     {name:'DB', type:'DbLog', readings:{state:'connected', LastError:'<script>test<\/script>'}},
     {name:'Dateilog', type:'FileLog', readings:{}},
@@ -31,6 +34,23 @@ try {
   widget.config = {id:'system', type:'system-monitor', systemDevice:'System',
     grid:{col:1,row:2,w:6,h:8}};
   widget.services = {
+    logReadings: async () => {
+      if (cacheFail) throw new Error('Cache nicht verfügbar');
+      return {source:'dblog',readings:cachedReadings,warnings:[]};
+    },
+    history: async (device, reading, range, granularity, source) => {
+      historyCalls++;
+      check(device==='System' && ['ram_used','cpu_temp'].includes(reading) && range==='24h'
+        && granularity==='auto' && source==='auto', 'graphs use existing history service');
+      return {from:1795809600,to:1795813200,points:[[1795810000,2,2,2],[1795813000,3,3,3]]};
+    },
+    systemLogSizes: async () => {
+      if (fail) throw new Error('Größenabfrage unterbrochen');
+      return {checkedAt:1795813200, items:[
+        {name:'global', type:'FHEM', bytes:1024, modifiedAt:1795813200},
+        {name:'Dateilog', type:'FileLog', error:'Datei fehlt'},
+      ]};
+    },
     systemMonitorDevices: async () => {
       check(true, 'system device list is refreshed');
       calls++;
@@ -43,33 +63,157 @@ try {
   document.body.append(widget);
   const root = widget.shadowRoot;
   await wait(() => root.querySelector('[data-status]').textContent.includes('erfolgreich'));
+  await wait(() => root.querySelector('[data-graph-status]').textContent.includes('1 Verläufe'));
+  await wait(() => root.querySelector('[data-inline-graphs] cms-chart')?.shadowRoot.querySelector('[data-svg] polyline'));
+  const inline = root.querySelector('[data-metric="ram"] cms-chart');
+  check(inline?.config.range==='24h' && inline.hasAttribute('compact'),'RAM box contains fixed rolling 24-hour graph');
+  check(getComputedStyle(inline.shadowRoot.querySelector('header')).display==='none',
+    'inline graph has no range or resolution controls');
+  const originalInterval = window.setInterval;
+  let intervalMs;
+  window.setInterval = (callback, ms) => {intervalMs=ms;return originalInterval(callback,ms);};
+  try { inline.scheduleRefresh(); } finally {window.setInterval=originalInterval;}
+  check(intervalMs===300000,'inline graph refresh interval is exactly five minutes');
+  const initialHistoryCalls = historyCalls;
+  await widget.refresh();
+  await wait(() => widget.graphs.length===1);
+  check(root.querySelector('[data-metric="ram"] cms-chart')===inline && historyCalls===initialHistoryCalls,
+    'one-minute value refresh preserves chart and does not refresh history');
   check(root.querySelector('[data-metrics]').textContent.includes('2 Tage')
     && root.querySelector('[data-metrics]').textContent.includes('12 GB')
     && root.querySelector('[data-metrics]').textContent.includes('27.11.2026 21:00:00'),
   'configured system values are displayed');
   root.querySelector('[data-info] button').click();
   const details = root.querySelector('[data-details]');
+  await wait(() => root.querySelector('[data-graphs] cms-chart')?.shadowRoot.querySelector('[data-svg] polyline'));
+  check(root.querySelectorAll('[data-graphs] cms-chart').length===1,'cached numeric reading renders real graph');
+  cachedReadings=['ram_used','cpu_temp'];
+  await widget.refresh();
+  await wait(() => root.querySelectorAll('[data-graphs] cms-chart').length===2);
+  check(true,'new cache reading adds graph');
+  cachedReadings=['cpu_temp'];
+  await widget.refresh();
+  await wait(() => root.querySelectorAll('[data-graphs] cms-chart').length===1);
+  check(root.querySelector('[data-graphs] cms-chart').config.reading==='cpu_temp','removed cache reading removes graph');
+  check(!root.querySelector('[data-metric="ram"] cms-chart')
+    && root.querySelector('[data-metric="cpu_temp"] cms-chart'),'inline charts follow cache removal and metric grouping');
+  cacheFail=true;
+  await widget.refresh();
+  await wait(() => root.querySelector('[data-history-status]').textContent.includes('Cache nicht verfügbar'));
+  check(root.querySelectorAll('[data-graphs] cms-chart').length===0,'cache errors remove unverified graphs and show error');
+  cacheFail=false;
+  await widget.refresh();
+  await wait(() => root.querySelectorAll('[data-graphs] cms-chart').length===1);
   check(details.open && details.textContent.includes('DbLog: DB')
     && details.textContent.includes('FileLog: Dateilog'), 'details contain both log source types');
   check(!root.querySelector('[data-logs] script') && root.querySelector('[data-logs]').textContent.includes('<script>'),
     'log readings are rendered as text');
   check(root.querySelector('[data-logs]').textContent.includes('Keine Status-Readings verfügbar')
     && details.textContent.includes('nicht selbst ermittelt'), 'missing status and sizes are explicit');
+  await wait(() => root.querySelector('[data-sizes]').textContent.includes('1.024 Bytes'));
+  check(root.querySelector('[data-sizes]').textContent.includes('FHEM: global')
+    && root.querySelector('[data-sizes]').textContent.includes('Datei fehlt'), 'actual sizes and per-file errors displayed');
+  for (const theme of ['dark', 'light', 'liquid-glass']) {
+    document.documentElement.dataset.cmsTheme = theme;
+    check(getComputedStyle(details).color === getComputedStyle(document.documentElement).getPropertyValue('--cms-text').trim()
+      || getComputedStyle(details).color === getComputedStyle(document.body).color, 'dialog inherits theme text color');
+  }
+  widget.style.width = '1100px';
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  const boxes = [...root.querySelector('[data-metrics]').children];
+  check(boxes[0].getBoundingClientRect().width >= 320
+    && boxes[3].getBoundingClientRect().top > boxes[0].getBoundingClientRect().top,
+    'larger metric boxes wrap into several rows');
+  widget.style.setProperty('--cms-freeform-scale','0.5');
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  check(root.querySelector('[data-metrics]').children[1].getBoundingClientRect().top
+    > root.querySelector('[data-metrics]').children[0].getBoundingClientRect().top,
+    'scaled canvas compensates minimum width and wraps sooner');
+  widget.style.removeProperty('--cms-freeform-scale');
+  widget.style.width = '350px';
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  check(root.querySelector('[data-metrics]').scrollWidth <= root.querySelector('[data-metrics]').clientWidth,
+    'metrics fit a narrow widget');
   details.querySelector('.cms-close-button').click();
+  await wait(() => root.querySelector('[data-graphs]').children.length===0);
+  check(!details.open, 'details close through shared X');
+  root.querySelector('[data-info] button').click();
+  details.querySelector('.cms-close-button').dispatchEvent(new KeyboardEvent('keydown',
+    {key:'Escape',bubbles:true,composed:true,cancelable:true}));
+  check(!details.open, 'Escape closes details within the shadow dialog');
   await widget.openConfig({isNew:true});
   const form = root.querySelector('[data-form]');
   check(form.elements.systemDevice.value === 'System', 'configuration selects saved system source');
+  check(root.querySelectorAll('[data-metric-options] input').length===8
+    && root.querySelector('[data-metric-options]').textContent.includes('12 GB'),
+    'configuration lists recognized values and availability');
+  root.querySelector('[data-metric-options] input[value="ram"]').checked=false;
   form.elements.title.value = 'Server';
   form.elements.showTitle.checked = false;
   form.dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}));
   await wait(() => saved);
-  check(saved.systemDevice === 'System' && saved.title === 'Server' && saved.showTitle === false,
+  check(saved.systemDevice === 'System' && saved.title === 'Server' && saved.showTitle === false
+    && saved.hiddenMetrics.includes('ram'),
     'configuration saves the selected system source and title visibility');
+  widget.config=saved;
+  check(!root.querySelector('[data-metric="ram"]')
+    && root.querySelector('[data-detail-metrics]').textContent.includes('12 GB'),
+    'hidden metric disappears from tile but details stay available');
+  await widget.openConfig();
+  check(!root.querySelector('[data-metric-options] input[value="ram"]').checked,
+    'reopening configuration preserves hidden metric selection');
+  const sourceSelect = form.elements.systemDevice;
+  sourceSelect.value='';
+  sourceSelect.dispatchEvent(new Event('change'));
+  check(!root.querySelector('[data-metric-options] input[value="ram"]').checked
+    && root.querySelector('[data-metric-options]').textContent.includes('Nicht verfügbar'),
+    'source change updates detected values while preserving visibility choice');
+  sourceSelect.value='System';
+  sourceSelect.dispatchEvent(new Event('change'));
+  root.querySelector('[data-metric-options] input[value="ram"]').checked=true;
+  widget.services.saveWidget=async candidate=>{saved=candidate;};
+  await widget.saveConfig();
+  check(!Object.hasOwn(saved,'hiddenMetrics'),'all checked restores legacy default without extra field');
+  widget.config=saved;
+  check(!!root.querySelector('[data-metric="ram"]'),'re-enabled box returns immediately');
+  await widget.openConfig();
+  let releaseSave;
+  let writes = 0;
+  widget.services.saveWidget = async () => { writes++; await new Promise(resolve => {releaseSave = resolve;}); };
+  const saving = widget.saveConfig();
+  await wait(() => releaseSave);
+  form.dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}));
+  root.querySelector('[data-dialog]').dispatchEvent(new Event('cancel', {cancelable:true}));
+  check(writes === 1 && root.querySelector('[data-dialog]').open,
+    'duplicate saves and cancellation are blocked while saving');
+  releaseSave();
+  await saving;
+  await widget.openConfig();
+  widget.services.saveWidget = async () => {throw new Error('Entwurf gesperrt');};
+  await widget.saveConfig();
+  check(root.querySelector('[data-dialog]').open
+    && root.querySelector('[data-config-error]').textContent.includes('Entwurf gesperrt'), 'save failure stays visible');
+  root.querySelector('[data-dialog]').dispatchEvent(new Event('cancel', {cancelable:true}));
+  check(!root.querySelector('[data-dialog]').open, 'Escape cancel path closes configuration');
   fail = true;
   await widget.refresh();
   check(root.querySelector('[data-status]').textContent.includes('Verbindung verloren')
     && root.querySelector('[data-detail-status]').textContent.includes('nicht aktuell'),
   'failed refresh explicitly marks retained data stale');
+  await wait(() => root.querySelector('[data-sizes]').textContent.includes('Größenabfrage unterbrochen'));
+  fail = false;
+  await widget.refresh();
+  await wait(() => root.querySelector('[data-status]').textContent.includes('erfolgreich'));
+  check(!root.querySelector('[data-detail-status]').textContent.includes('nicht aktuell'), 'recovery clears stale status');
+  let releaseCache;
+  widget.services.logReadings = () => new Promise(resolve => {releaseCache=resolve;});
+  await widget.refresh();
+  await wait(() => releaseCache);
+  widget.config = {...widget.config,systemDevice:'Missing'};
+  await wait(() => root.querySelector('[data-status]').textContent.includes('nicht verfügbar'));
+  releaseCache({source:'dblog',readings:['ram_used'],warnings:[]});
+  await new Promise(resolve => setTimeout(resolve,30));
+  check(widget.graphs.length===0,'late cache results from the previous source cannot restore graphs');
   const before = calls;
   widget.remove();
   check(widget.timer && calls === before, 'removing the widget stops its scheduled refresh');

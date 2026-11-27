@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-27",
+  "version": "1.42.0-dev",
+  "title": "FHEM- und Systemstatus",
+  "changes": [
+    "Systemstatus-Widget mit bewusst ausgewaehlter SYSMON-Quelle, DbLog-/FileLog-Readings und Zeitstempeln.",
+    "Aktuelle FileLog- und FHEM-Loggroessen werden begrenzt im Hintergrund gemessen; Fehler bleiben sichtbar.",
+    "Widget-Vorschau, Vorlagen und Schema-5/6-Entwurfsspeicherung sind integriert.",
+    "Numerische protokollierte Werte erhalten Verlaufsgraphen im Detaildialog; Verfuegbarkeit wird regelmaessig im Logcache geprueft.",
+    "Kompakte Graphen in den Werteboxen zeigen rollierende 24 Stunden und aktualisieren alle fuenf Minuten ohne Auswahlfelder.",
+    "Groessere Werteboxen umbrechen auch auf skalierten Seiten; einzelne Boxen lassen sich im Widgetdialog ausblenden."
+  ]
+}

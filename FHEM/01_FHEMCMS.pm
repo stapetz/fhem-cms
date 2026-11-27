@@ -24,7 +24,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndex.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndexJobs.pm');
 
-our $FHEMCMS_VERSION = '1.41.0-dev';
+our $FHEMCMS_VERSION = '1.42.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -143,6 +143,10 @@ sub FHEMCMS_Get {
     if ($cmd eq 'logdevices') {
         return 'logdevices erwartet [auto|dblog|filelog]' if (@args > 1);
         return FHEMCMS_LogReadings($name, 'all', $args[0] // 'auto', 1);
+    }
+    if ($cmd eq 'systemlogs') {
+        return 'systemlogs erwartet keine Parameter' if (@args);
+        return FHEMCMS_SystemLogs($name);
     }
 
     if ($cmd eq 'history') {
@@ -295,7 +299,7 @@ sub FHEMCMS_Get {
         return JSON::PP->new->utf8->encode([FHEMCMS_ListIcons()]);
     }
 
-    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings logdevices history weather weathergeocode weatherdevices:noArg weatherstations weathertemperature layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version6state:noArg version5blueprints:noArg';
+    return 'Unknown argument ' . $cmd . ', choose one of url:noArg config:noArg draft:noArg status:noArg backups:noArg media:noArg assets:noArg icons:noArg logreadings logdevices systemlogs:noArg history weather weathergeocode weatherdevices:noArg weatherstations weathertemperature layoutformat:noArg migrationstate:noArg migrationpreview migrationbackups:noArg migrationrestorepreview version5state:noArg version6state:noArg version5blueprints:noArg';
 }
 
 # Abgelehnte Schreibbefehle werden mit Befehl und Fehlertext protokolliert, nie mit den uebergebenen Inhalten.
@@ -1171,7 +1175,8 @@ sub FHEMCMS_ValidateConfig {
                         && $widget->{type} ne 'fhem-chart' && $widget->{type} ne 'fhem-solarflow'
                         && !($fcui && ($widget->{type} eq 'fhem-link' || $widget->{type} eq 'fhem-calllist'
                             || $widget->{type} eq 'fhem-solar-energy' || $widget->{type} eq 'fhem-volvoconnect'
-                            || $widget->{type} eq 'weather' || $widget->{type} eq 'fhem-graph'))));
+                            || $widget->{type} eq 'weather' || $widget->{type} eq 'fhem-graph'
+                            || $widget->{type} eq 'system-monitor'))));
 
             if ($widget->{type} eq 'text') {
                 my $body = exists($widget->{html}) ? 'html' : 'markdown';
@@ -1193,6 +1198,8 @@ sub FHEMCMS_ValidateConfig {
                     ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'weather') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'config', 'grid'], []);
+            } elsif ($widget->{type} eq 'system-monitor') {
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'systemDevice', 'grid'], ['title', 'showTitle', 'hiddenMetrics']);
             } elsif ($widget->{type} eq 'fhem-icon') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-table') {
@@ -1264,6 +1271,17 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'weather') {
                 my $weatherError = FHEMCMS_ValidateWeather($widget->{config}, $exact);
                 return $weatherError if (defined($weatherError));
+            } elsif ($widget->{type} eq 'system-monitor') {
+                return 'Ungueltige Systemquelle'
+                    if (!defined($widget->{systemDevice}) || ref($widget->{systemDevice})
+                        || ($widget->{systemDevice} ne '' && !$isName->($widget->{systemDevice})));
+                if (exists($widget->{hiddenMetrics})) {
+                    my %allowed = map { $_ => 1 } qw(fhemuptime_text uptime_text loadavg stat_cpu_text cpu_temp ram swap root);
+                    my %seen;
+                    return 'Ungueltige Auswahl der Systemwerte'
+                        if (ref($widget->{hiddenMetrics}) ne 'ARRAY' || @{$widget->{hiddenMetrics}} > 8
+                           || grep { !defined($_) || ref($_) || !$allowed{$_} || $seen{$_}++ } @{$widget->{hiddenMetrics}});
+                }
             } elsif ($widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-solar-energy'
                 && $widget->{type} ne 'fhem-graph'
                 && !($widget->{type} eq 'fhem-solarflow' && !exists($widget->{device}))) {
@@ -1279,7 +1297,8 @@ sub FHEMCMS_ValidateConfig {
                             || length($widget->{label}) < 1 || length($widget->{label}) > 32
                             || $widget->{label} =~ /[\x00-\x1f\x7f]/));
             }
-            if ($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html' || $widget->{type} eq 'fhem-link' || $widget->{type} eq 'weather') {
+            if ($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html' || $widget->{type} eq 'fhem-link'
+                || $widget->{type} eq 'weather' || $widget->{type} eq 'system-monitor') {
                 # keine weiteren Felder
             } elsif ($widget->{type} eq 'fhem-button') {
                 return 'Ungueltiger Wert fuer command' if (!$isName->($widget->{command}));
@@ -2720,6 +2739,68 @@ sub FHEMCMS_HistoryPending {
     return JSON::PP->new->utf8->canonical->encode({status => 'pending'});
 }
 
+sub FHEMCMS_SystemLogs {
+    my ($cmsName) = @_;
+    return 'Ungueltiges CMS-Device' if (!FHEMCMS_ValidName($cmsName));
+    return 'Device-Berechtigungen konnten nicht geprueft werden'
+        if (defined($main::FW_chash) && !defined(&Authorized));
+    my @logs;
+    for my $name (sort keys %main::defs) {
+        next if (!FHEMCMS_ValidName($name));
+        next if (defined($main::FW_chash) && !Authorized($main::FW_chash, 'devicename', $name));
+        my $device = $main::defs{$name};
+        next if (ref($device) ne 'HASH'
+            || (($device->{TYPE} // '') ne 'FileLog' && $name ne 'global'));
+        push(@logs, {name => $name, type => $name eq 'global' ? 'FHEM' : 'FileLog',
+            path => $device->{currentlogfile} // ''});
+        return 'Zu viele Logdateien fuer die Statusabfrage' if (@logs > 100);
+    }
+    my $key = sha256_hex(JSON::PP->new->utf8->canonical->encode([$cmsName, 'systemlogs', \@logs]));
+    return FHEMCMS_QueueHistoryJob($key, {
+        operation => 'systemlogs', cmsName => $cmsName, device => $cmsName, logs => \@logs,
+    });
+}
+
+sub FHEMCMS_SystemLogSizes {
+    my ($logs) = @_;
+    return (undef, 'Ungueltige Logdateiliste') if (ref($logs) ne 'ARRAY' || @{$logs} > 100);
+    my @items;
+    for my $log (@{$logs}) {
+        return (undef, 'Ungueltige Logquelle') if (ref($log) ne 'HASH'
+            || !FHEMCMS_ValidName($log->{name}) || ($log->{type} // '') !~ /\A(?:FileLog|FHEM)\z/);
+        my $item = {name => $log->{name}, type => $log->{type}};
+        my $path = $log->{path};
+        if (!defined($path) || ref($path) || $path eq '' || length($path) > 4096
+            || $path =~ /[\x00-\x1f\x7f]/) {
+            $item->{error} = 'Keine gueltige aktuelle Logdatei verfuegbar';
+        } else {
+            my $absolute = File::Spec->rel2abs($path);
+            my @parts = File::Spec->splitdir($absolute);
+            my $cursor = File::Spec->rootdir();
+            my $unsafe = 0;
+            for my $part (@parts) {
+                next if ($part eq '' || $part eq '.');
+                if ($part eq '..') { $unsafe = 1; last; }
+                $cursor = File::Spec->catdir($cursor, $part);
+                if (-l $cursor) { $unsafe = 1; last; }
+            }
+            my @stat = $unsafe ? () : lstat($absolute);
+            if ($unsafe) {
+                $item->{error} = 'Logpfad mit Symlink oder Elternverweis wird nicht vermessen';
+            } elsif (!@stat || !-f _ || !-r $absolute) {
+                $item->{error} = 'Logdatei fehlt, ist nicht regulaer oder nicht lesbar';
+            } else {
+                $item->{bytes} = 0 + $stat[7];
+                $item->{modifiedAt} = 0 + $stat[9];
+            }
+        }
+        push(@items, $item);
+    }
+    return (JSON::PP->new->utf8->canonical->encode({
+        checkedAt => CORE::time(), items => \@items,
+    }), undef);
+}
+
 sub FHEMCMS_QueueHistoryJob {
     my ($key, $request) = @_;
     my $cached = $FHEMCMS_HISTORY_CACHE{$key};
@@ -2744,6 +2825,7 @@ sub FHEMCMS_QueueHistoryJob {
 
 sub FHEMCMS_HistoryJobDescription {
     my ($request) = @_;
+    return 'Loggroessen-Abfrage' if (($request->{operation} // '') eq 'systemlogs');
     return 'Reading-Erkennung' if (($request->{operation} // 'history') =~ /\A(?:log(?:readings|devices)|cachecontents)\z/);
     return (($request->{kind} // '') eq 'filelog' ? 'FileLog-Verlauf' : 'DbLog-Verlauf');
 }
@@ -2782,10 +2864,12 @@ sub FHEMCMS_HistoryWorker {
         || !defined($request->{key}) || ref($request->{key})
         || !defined($request->{token}) || ref($request->{token})
         || ($operation ne 'history' && $operation ne 'logreadings' && $operation ne 'logdevices'
-            && $operation ne 'cachecontents'));
+            && $operation ne 'cachecontents' && $operation ne 'systemlogs'));
 
     my ($json, $error);
-    if ($operation eq 'cachecontents') {
+    if ($operation eq 'systemlogs') {
+        ($json, $error) = FHEMCMS_SystemLogSizes($request->{logs});
+    } elsif ($operation eq 'cachecontents') {
         my $result = FHEMCMS_LogIndexContents($request->{allowed}, $request->{offset});
         my $decoded = eval { JSON::PP->new->utf8->decode($result // '') };
         if (!$@ && ref($decoded) eq 'HASH' && ref($decoded->{items}) eq 'ARRAY') {

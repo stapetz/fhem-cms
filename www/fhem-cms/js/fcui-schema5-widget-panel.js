@@ -34,6 +34,7 @@ const WIDGET_TYPES = [
     dataSource: 'brightsky', location: null, device: '', customTitle: '', forecastDays: 3,
     showAlertsBanner: true, showCurrentDetails: true, enableDetailPopup: true,
   } }],
+  ['system-monitor', 'FHEM- und Systemstatus', 'system', 6, 8, { systemDevice: '' }],
   ['text', 'Textbaustein', 'x', 6, 2, { html: '' }],
   ['fhem-link', 'LinkWidget', 'k', 4, 3, { links: [] }],
 ];

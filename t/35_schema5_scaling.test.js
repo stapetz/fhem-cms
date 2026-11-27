@@ -327,6 +327,8 @@ async function testServer() {
 }
 
 for (const [name, fixtures] of [
+  ['FHEM system monitor displays safe source data and configuration',
+    [['120_system_monitor.html', 10]]],
   ['Eventmonitor popup, standalone window and live event controls',
     [['119_eventmonitor.html', 20]]],
   ['shared close buttons preserve nested dialog behavior and themes',
