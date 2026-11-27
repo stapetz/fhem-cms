@@ -35,7 +35,7 @@
 
 Dieser Artikel beschreibt den stabilen Funktionsstand '''1.14.0'''. Rasterseiten bleiben verfügbar; für pixelgenaues Freeform wird Schema 6 verwendet. Das ausführliche, bebilderte [https://github.com/stapetz/fhem-cms/wiki GitHub-Handbuch] enthält zusätzliche Beispiele und Widgetaufnahmen.
 
-'''Neu in 1.14.0:''' Interaktiver Floorplan mit kompakten Livewert-Pins, bildbezogener Platzierung und vollständigen Widgetkarten im Popup. Schalter und Taster lassen sich kurz antippen oder für die Detailkarte halten. Einzelne Seiten dürfen das gemeinsame Hintergrundbild überschreiben; Dialoge haben ein einheitliches Schließen-X und Widgets große Bearbeitungswerkzeuge. Die [https://github.com/stapetz/fhem-cms/wiki/Floorplan-Kueche Schritt-für-Schritt-Anleitung Floorplan Küche] zeigt den Aufbau mit elf echten Screenshots.
+'''Neu in 1.14.0:''' Interaktiver Floorplan mit kompakten Livewert-Pins, bildbezogener Platzierung und vollständigen Widgetkarten im Popup. Schalter und Taster lassen sich kurz antippen oder für die Detailkarte halten. Einzelne Seiten dürfen das gemeinsame Hintergrundbild überschreiben; Dialoge haben ein einheitliches Schließen-X und Widgets große Bearbeitungswerkzeuge. Die [https://github.com/stapetz/fhem-cms/wiki/Floorplan-Kueche Schritt-für-Schritt-Anleitung Floorplan Küche] zeigt den Aufbau mit elf Screenshots.
 
 '''Neu in 1.13.0:''' Freies HTML unterstützt bis zu 50.000 Unicode-Zeichen, weitere passive SVG-/CSS-Funktionen und präzise Quelltextdiagnosen. Die zentrale Administration bietet JSON-Import/-Export je CMS; Kioskseiten haben eine kopierbare Live-URL. Standardwidgets sind besser lesbar, SolarFlow-Kreiswerte ausgewogener. CMS-Startseiten revalidieren ihren Browsercache. Die Bedienung ist in den jeweiligen Abschnitten dieses Artikels beschrieben.
 
@@ -347,11 +347,9 @@ jedem Pin bleibt das vollständige normale Widget erhalten. Das vermeidet
 getrennte Detailseiten und doppelte Gerätekonfiguration nur für die Bedienung.
 
 Die ausführliche [https://github.com/stapetz/fhem-cms/wiki/Floorplan-Kueche
-GitHub-Wiki-Anleitung mit elf echten Screenshots] zeigt den vollständigen
-Aufbau. Die Aufnahmen vom 24.11.2026 verwenden einen freigegebenen Grundriss
-und echte FHEM-Geräte; Messwerte ändern sich laufend. Die Seite wurde neu
-angelegt, nicht nur aus einer Vorlage kopiert. Beispielnamen durch eigene
-Geräte und tatsächlich vorhandene Readings ersetzen.
+GitHub-Wiki-Anleitung mit elf Screenshots] zeigt den vollständigen Aufbau.
+Benötigt werden ein Grundrissbild und die einzubindenden FHEM-Geräte.
+Die Gerätenamen und Readings im Beispiel durch die eigenen ersetzen.
 
 ==== 1. Neue Navigationsseite anlegen ====
 
@@ -359,43 +357,41 @@ Geräte und tatsächlich vorhandene Readings ersetzen.
 # Über den Stift '''Navigation einstellen''' den Dialog '''Navigation bearbeiten''' öffnen.
 # Bei '''Seitentitel''' <code>Floorplan Küche</code> und bei '''Dateiname (optional)''' <code>floorplan_kueche</code> eintragen.
 # '''Neue Seite erstellen''' wählen, anschließend '''Speichern'''.
-# Den neuen Navigationspunkt öffnen. Die vorhandenen Seiten bleiben erhalten.
+# Den neuen Navigationspunkt öffnen.
 
 ==== 2. Freie Seite mit Pins einstellen ====
 
 # '''Bearbeiten → Seiteneinstellungen „Floorplan Küche“''' öffnen.
 # Unter '''Seitenlayout → Modus''' '''Frei (Pixelgenau)''' wählen.
 # '''Widgets als Pins darstellen''' einschalten.
-# Die gemeinsame Seitengröße und Rastergröße unverändert lassen. Das Beispiel erbt 2560 × 1440 Pixel von der Startseite; das Bild muss nicht diese Abmessungen haben.
+# Die gemeinsame Seitengröße und Rastergröße beibehalten.
 # Das gewünschte Theme beibehalten, im Beispiel '''Liquid Glass'''.
 
 ==== 3. Eigenen Grundriss aus dem Assetmanager auswählen ====
 
 # '''Hintergrundvererbung von der Startseite überschreiben''' aktivieren. So darf diese Seite einen Grundriss verwenden, während normale Seiten weiter das gemeinsame Startseitenbild nutzen.
 # '''Hintergrundbild auswählen''' öffnen.
-# Im Assetmanager '''Stammordner → Floorplans''' öffnen. Der Ordner heißt im Beispiel tatsächlich „Floorplans“.
-# Das vorhandene Bild <code>floorplan_eg.png</code> auswählen. Das Original hat hier 1646 × 1252 Pixel.
+# Im Assetmanager den Ordner mit dem Grundriss öffnen, im Beispiel '''Stammordner → Floorplans'''.
+# Das Grundrissbild auswählen, im Beispiel <code>floorplan_eg.png</code>.
 # Mit '''Auswählen''' bestätigen und den angezeigten Bildpfad kontrollieren.
 # Bei Bedarf '''Hintergrund-Abdunklung''' anpassen, im Beispiel auf '''12 %''', und '''Speichern'''.
 
 Das Bild wird proportional eingepasst. Freie Ränder sind möglich; die
 Pinpositionen beziehen sich auf die tatsächliche Bildfläche, nicht auf diese
 Ränder. Die Abdunklung verbessert den Kontrast und verändert nicht die Datei.
-Ein vorhandenes Bild nur auswählen; nicht unnötig neu hochladen oder bearbeiten.
-Assetdateiänderungen gelten unabhängig vom Seitenentwurf sofort.
+Änderungen an Assetdateien gelten unabhängig vom Seitenentwurf sofort.
 
 ==== 4. Temperatur-Pin anlegen ====
 
 # '''Einfügen → Widget hinzufügen → Wert-Anzeige''' öffnen.
-# Titel <code>Küche</code> vergeben und das Temperaturgerät auswählen. Im Beispiel heißt es technisch <code>tmp_Kuehlschrank_Keller</code> und hat den Alias „Küche“.
+# Titel <code>Küche</code> vergeben und das Temperaturgerät auswählen, im Beispiel <code>tmp_Kuehlschrank_Keller</code>.
 # Reading <code>temperature</code> wählen und '''Auf Pin anzeigen''' aktiviert lassen.
-# Unter '''Darstellung → Einheit''' ausdrücklich <code>°C</code> eintragen.
-# Optional das konfigurierte Icon <code>temp_temperature</code> auswählen.
+# Unter '''Darstellung → Einheit''' <code>°C</code> eintragen.
+# Optional das Icon <code>temp_temperature</code> auswählen.
 # '''Nicht als Pin darstellen''' ausgeschaltet lassen und '''Speichern'''.
 
 Ergebnis: aktuelle Temperatur mit Einheit auf einer kompakten Pille.
-Der Readingname allein legt keine Einheit fest. Ohne Icon gibt es kein
-Ersatzzeichen wie eine Raute oder einen Dreistrich.
+Die Einheit wird im Widget festgelegt. Ohne Icon wird nur der Wert angezeigt.
 
 ==== 5. Thermostat mit Ist- und Solltemperatur hinzufügen ====
 
@@ -407,7 +403,7 @@ Ersatzzeichen wie eine Raute oder einen Dreistrich.
 
 So bleiben die wichtigsten Temperaturen unmittelbar am Raum sichtbar,
 während Ventilstellung und Bedienung erst bei Bedarf die Detailkarte belegen.
-Die kleine Pin-Vorschau im Konfigurationsdialog zeigt ausdrücklich
+Die Pin-Vorschau im Konfigurationsdialog zeigt
 '''Readingnamen, keine Livewerte'''; die eigentliche Seite zeigt die Werte.
 
 ==== 6. Schalter mit Zustand hinzufügen ====
@@ -417,10 +413,8 @@ Die kleine Pin-Vorschau im Konfigurationsdialog zeigt ausdrücklich
 # Zustandsreading <code>state</code>, An-Befehl <code>on</code> und Aus-Befehl <code>off</code> zuordnen. Nur zum eigenen Gerät passende angebotene Befehle verwenden.
 # '''Auf Pin anzeigen''' beim Zustand einschalten und als Pin speichern.
 
-Das Konfigurieren schaltet das Gerät nicht. Die Beispielposition ist eine
-Demonstration und kein Nachweis des tatsächlichen Einbauorts des Geräts.
-Ohne Readinganzeige und ohne Icon bleibt nur ein Kreis ohne Ersatzzeichen;
-für eine verständliche Oberfläche einen sinnvollen Wert oder ein Icon wählen.
+Das Konfigurieren schaltet das Gerät nicht. Für einen aussagekräftigen Pin
+mindestens die Zustandsanzeige oder ein passendes Icon auswählen.
 
 ==== 7. Pins räumlich platzieren ====
 
@@ -430,10 +424,8 @@ Bildpunkt ziehen. Die X/Y-Anzeige zeigt bildbezogene Prozentwerte mit zwei
 Nachkommastellen. Bei Tastaturfokus auf der Verschiebefläche bewegen Pfeile um
 einen Canvaspixel, Shift+Pfeile um zehn; Escape verwirft die laufende Geste.
 
-Im Beispiel liegen Temperatur bei X 13,50 % / Y 23,75 %, Thermostat bei
-X 36,47 % / Y 22,26 % und Schalter bei X 36,00 % / Y 43,00 %. Das sind nur
-Orientierungswerte für diesen Plan. Eigene Geräte am wirklichen Raum oder
-Einbauort platzieren. Die großen Bearbeitungswerkzeuge erscheinen nach Auswahl
+Die Pins am zugehörigen Raum oder Einbauort platzieren.
+Die Bearbeitungswerkzeuge erscheinen nach Auswahl
 außerhalb des Pins und verdecken den Messwert nicht.
 
 '''Stärke:''' Ändert sich die Bildschirmgröße, bleiben die Pins am zugeordneten

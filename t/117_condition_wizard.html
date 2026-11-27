@@ -1,0 +1,133 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Condition wizard regression</title>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import {openConditionWizard} from '../www/fhem-cms/js/condition-wizard.js';
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const until = async (condition, message) => {
+  for (let i = 0; i < 150; i++) {
+    if (condition()) return;
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+  throw new Error(message);
+};
+try {
+  const services = {listAllDevices:async () => [{name:'Sensor',type:'Dummy',readings:{state:'on'}}]};
+  const opening = openConditionWizard({services, allowElse:true, allowMode:true,
+    initial:{condition:{join:'and',rules:[{device:'Sensor',reading:'state',operator:'==',value:'on'}]}}});
+  const dialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  await until(() => dialog.querySelector('[data-preview]').textContent.includes('wahr'), 'live preview missing');
+  check(!dialog.querySelector('[data-mode-row]').hidden && !dialog.querySelector('[data-else-row]').hidden,
+    'optional controls are visible');
+  const input = dialog.querySelector('.rule input');
+  input.value = 'off';
+  input.dispatchEvent(new Event('input'));
+  check(dialog.querySelector('[data-preview]').textContent.includes('falsch'), 'live preview updates');
+  dialog.querySelector('[data-add]').click();
+  check(dialog.querySelectorAll('.rule').length === 2, 'second rule is added');
+  dialog.querySelectorAll('.rule')[1].querySelector('.source').click();
+  await until(() => document.querySelector('.cms-ph-dialog [data-device-list] button'), 'device picker missing');
+  document.querySelector('.cms-ph-dialog [data-device-list] button').click();
+  document.querySelector('.cms-ph-dialog [data-reading-list] button[title^="state "]').click();
+  document.querySelector('.cms-ph-dialog form').dispatchEvent(new Event('submit', {cancelable:true,bubbles:true}));
+  await until(() => dialog.querySelectorAll('.rule')[1].querySelector('.source').textContent.includes('Sensor'),
+    'chosen reading missing');
+  const second = dialog.querySelectorAll('.rule')[1];
+  second.querySelector('input').value = 'on';
+  second.querySelector('input').dispatchEvent(new Event('input'));
+  dialog.querySelector('[data-join]').value = 'or';
+  dialog.querySelector('[data-join]').dispatchEvent(new Event('change'));
+  check(dialog.querySelector('[data-preview]').textContent.includes('wahr'), 'OR preview uses latest readings');
+  dialog.querySelector('[data-else]').checked = true;
+  dialog.querySelector('[data-mode]').value = 'keep-space';
+  dialog.querySelector('form').dispatchEvent(new Event('submit', {cancelable:true,bubbles:true}));
+  const result = await opening;
+  check(result.condition.rules.length === 2 && result.condition.join === 'or'
+    && result.condition.rules[1].device === 'Sensor' && result.otherwise && result.mode === 'keep-space',
+    'wizard returns validated condition, else and placement');
+  const groupedOpening = openConditionWizard({services, initial:{condition:result.condition}});
+  const groupedDialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  groupedDialog.querySelector('[data-join]').value = 'and';
+  groupedDialog.querySelector('[data-join]').dispatchEvent(new Event('change'));
+  groupedDialog.querySelector('[data-wrap-all]').click();
+  check(groupedDialog.querySelectorAll('.condition-group').length === 1, 'existing rules wrapped in a visible group');
+  groupedDialog.querySelector('[data-join]').value = 'or';
+  groupedDialog.querySelector('[data-join]').dispatchEvent(new Event('change'));
+  groupedDialog.querySelector('[data-add]').click();
+  groupedDialog.querySelectorAll('.rule')[2].querySelector('.source').click();
+  await until(() => document.querySelector('.cms-ph-dialog [data-device-list] button'), 'third device picker missing');
+  document.querySelector('.cms-ph-dialog [data-device-list] button').click();
+  document.querySelector('.cms-ph-dialog [data-reading-list] button[title^="state "]').click();
+  document.querySelector('.cms-ph-dialog form').dispatchEvent(new Event('submit', {cancelable:true,bubbles:true}));
+  await until(() => groupedDialog.querySelectorAll('.rule')[2].querySelector('.source').textContent.includes('Sensor'),
+    'third reading missing');
+  const third = groupedDialog.querySelectorAll('.rule')[2].querySelector('input');
+  third.value = 'on'; third.dispatchEvent(new Event('input'));
+  await until(() => groupedDialog.querySelector('[data-preview]').textContent.includes('wahr'), 'grouped OR preview missing');
+  groupedDialog.querySelector('form').dispatchEvent(new Event('submit', {cancelable:true,bubbles:true}));
+  const grouped = await groupedOpening;
+  check(grouped.condition.expression.op === 'or' && grouped.condition.expression.children[0].op === 'and'
+    && grouped.condition.rules.length === 3, '(A AND B) OR C persisted');
+  const reopened = openConditionWizard({services, initial:{condition:grouped.condition}});
+  const reopenedDialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  check(reopenedDialog.querySelector('[data-join]').value === 'or'
+    && reopenedDialog.querySelector('.condition-group select').value === 'and'
+    && reopenedDialog.querySelectorAll('.condition-group .rule').length === 2,
+    'nested condition reopens without losing grouping');
+  const groupSelect = reopenedDialog.querySelector('.condition-group select');
+  groupSelect.value = 'xor'; groupSelect.dispatchEvent(new Event('change'));
+  const groupNot = reopenedDialog.querySelector('.condition-group input[type=checkbox]');
+  groupNot.checked = true; groupNot.dispatchEvent(new Event('change'));
+  reopenedDialog.querySelector('form').dispatchEvent(new Event('submit', {cancelable:true,bubbles:true}));
+  const modified = await reopened;
+  check(modified.condition.expression.children[0].op === 'xor'
+    && modified.condition.expression.children[0].not === true, 'XOR and group negation persist');
+  const rearranging = openConditionWizard({services, initial:{condition:grouped.condition}});
+  const rearrangeDialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  rearrangeDialog.querySelector('[aria-label="Regel 3 in Gruppe darüber verschieben"]').click();
+  check(rearrangeDialog.querySelectorAll('.condition-group .rule').length === 3,
+    'existing rule moves into preceding group');
+  rearrangeDialog.querySelector('[aria-label="Gruppe Ebene 2 auflösen"]').click();
+  check(!rearrangeDialog.querySelector('.condition-group') && rearrangeDialog.querySelectorAll('.rule').length === 3,
+    'dissolving a group preserves its rules');
+  rearrangeDialog.querySelector('[data-cancel]').click();
+  await rearranging;
+  const cancel = openConditionWizard({services});
+  const cancelDialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  check(getComputedStyle(cancelDialog.querySelector('[data-mode-row]')).display === 'none'
+    && getComputedStyle(cancelDialog.querySelector('[data-else-row]')).display === 'none',
+    'unavailable options are actually hidden');
+  cancelDialog.querySelector('[data-cancel]').click();
+  check(await cancel === null && !document.querySelector('dialog[aria-label="Bedingung bearbeiten"]'),
+    'cancel closes and discards the condition');
+  const unavailable = openConditionWizard({
+    services:{listAllDevices:async () => { throw new Error('Verbindung unterbrochen'); }},
+    initial:{condition:{join:'and',rules:[{device:'Sensor',reading:'state',operator:'==',value:'on'}]}},
+  });
+  const unavailableDialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  await until(() => unavailableDialog.querySelector('[data-preview]').textContent.includes('Verbindung unterbrochen'),
+    'device loading error is visible');
+  unavailableDialog.querySelector('.rule input').dispatchEvent(new Event('input'));
+  check(unavailableDialog.querySelector('[data-preview]').textContent.includes('Verbindung unterbrochen'),
+    'device loading error remains visible after edits');
+  unavailableDialog.querySelector('[data-cancel]').click();
+  await unavailable;
+  const abort = new AbortController();
+  const aborted = openConditionWizard({services, signal:abort.signal});
+  const abortDialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  abortDialog.querySelector('.source').click();
+  await until(() => document.querySelector('.cms-ph-dialog[open]'), 'nested picker missing');
+  abort.abort();
+  check(await aborted === null && !document.querySelector('.cms-ph-dialog')
+    && !document.querySelector('dialog[aria-label="Bedingung bearbeiten"]'),
+  'aborting the parent closes the wizard and nested picker');
+  document.querySelector('#result').textContent = JSON.stringify({checks});
+  document.querySelector('#result').dataset.result = 'pass';
+} catch (error) {
+  document.querySelector('#result').textContent = error.stack;
+  document.querySelector('#result').dataset.result = 'fail';
+}
+</script>

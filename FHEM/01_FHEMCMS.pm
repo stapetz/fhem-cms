@@ -24,7 +24,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndex.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndexJobs.pm');
 
-our $FHEMCMS_VERSION = '1.40.0-dev';
+our $FHEMCMS_VERSION = '1.41.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1123,16 +1123,27 @@ sub FHEMCMS_ValidateConfig {
             if (ref($page->{widgets}) ne 'ARRAY' || @{$page->{widgets}} > 200);
 
         my %widgetIds;
+        my ($conditionRules, $conditionRegex) = (0, 0);
         my @targetGrids = $fcui ? ($config->{navigation}{grid}) : ();
         my $widgetExact = sub {
             my ($widget, $where, $required, $optional) = @_;
-            $optional = [@{$optional}, 'showOnPin'] if ($fcui);
+            $optional = [@{$optional}, 'showOnPin', 'visibility'] if ($fcui);
             return $exact->($widget, $where, $required, $optional) if (!$freeform);
             return $exact->($widget, $where, ['rect', grep { $_ ne 'grid' } @{$required}],
                 [@{$optional}, 'grid', 'hideOnMobile', 'forceCard', 'position']);
         };
         for my $widget (@{$page->{widgets}}) {
             return 'Widget muss ein Objekt sein' if (ref($widget) ne 'HASH');
+            if ($fcui && exists($widget->{visibility})) {
+                my $visibility = $widget->{visibility};
+                $err = $exact->($visibility, 'Sichtbarkeit', ['condition', 'mode'], []);
+                return $err if ($err);
+                return 'Ungueltiger Sichtbarkeitsmodus'
+                    if (ref($visibility->{mode}) || !defined($visibility->{mode})
+                        || $visibility->{mode} !~ /\A(?:collapse|keep-space)\z/);
+                $err = FHEMCMS_ValidateCondition($visibility->{condition});
+                return $err if ($err);
+            }
             if (exists($widget->{position})) {
                 return 'Pin-Positionen sind nur auf Freeform-Seiten erlaubt' if (!$freeform);
                 my $position = $widget->{position};
@@ -1663,6 +1674,30 @@ sub FHEMCMS_ValidateConfig {
                     if (grep { !$keys{$_} || !$isBool->($choices->{$_}) } keys %{$choices});
             }
 
+            my @conditions;
+            push(@conditions, $widget->{visibility}{condition}) if ($fcui && exists($widget->{visibility}));
+            if (($widget->{type} eq 'text' || $widget->{type} eq 'fhem-html') && defined($widget->{html})) {
+                my $markup = $widget->{html};
+                $markup =~ s/<!--(?:(?!-->).)*-->//gs;
+                while ($markup =~ /<(?:span|div)((?:\s+[a-z][a-z0-9-]*\s*=\s*"[^"]*")*)\s*\/?>/gi) {
+                    my $attrs = $1;
+                    while ($attrs =~ /\sdata-cms-(?:if|unless)\s*=\s*"([0-9a-f]+)"/gi) {
+                        my $encoded = $1;
+                        next if (defined(FHEMCMS_ValidateConditionMarkup($encoded)));
+                        my $condition = JSON::PP->new->utf8->decode(pack('H*', $encoded));
+                        push(@conditions, $condition);
+                    }
+                }
+            }
+            for my $condition (@conditions) {
+                $conditionRules += @{$condition->{rules}};
+                for my $rule (@{$condition->{rules}}) {
+                    $conditionRegex += length($rule->{value}) if ($rule->{operator} eq 'regex');
+                }
+            }
+            return 'Zu viele Bedingungsregeln oder zu aufwendige regulaere Ausdruecke auf einer Seite'
+                if ($conditionRules > 200 || $conditionRegex > 4096);
+
             if ($freeform) {
                 my $rect = $widget->{rect};
                 $err = $exact->($rect, 'rect', ['x', 'y', 'w', 'h'], ['z']);
@@ -1990,6 +2025,93 @@ sub FHEMCMS_FreeHtmlSetCommand {
         && $command =~ /\A[A-Za-z0-9_.-]{1,128}(?: [A-Za-z0-9_.:+,\/%=-]{1,128})*\z/;
 }
 
+sub FHEMCMS_ValidateCondition {
+    my ($condition) = @_;
+    return 'Ungueltige Bedingung'
+        if (ref($condition) ne 'HASH'
+            || (join(',', sort keys %{$condition}) ne 'join,rules'
+                && join(',', sort keys %{$condition}) ne 'expression,join,rules')
+            || !defined($condition->{join}) || ref($condition->{join})
+            || $condition->{join} !~ /\A(?:and|or)\z/
+            || ref($condition->{rules}) ne 'ARRAY'
+            || @{$condition->{rules}} < 1 || @{$condition->{rules}} > 20);
+    my $json = JSON::PP->new->allow_nonref;
+    for my $rule (@{$condition->{rules}}) {
+        return 'Ungueltige Bedingungsregel'
+            if (ref($rule) ne 'HASH' || join(',', sort keys %{$rule}) ne 'device,operator,reading,value');
+        for my $key (qw(device reading operator value)) {
+            return 'Ungueltige Bedingungsregel'
+                if (!defined($rule->{$key}) || ref($rule->{$key}) || $json->encode($rule->{$key}) !~ /\A"/);
+        }
+        return 'Ungueltige Bedingungsregel'
+            if ($rule->{device} !~ /\A[A-Za-z0-9_.-]{1,64}\z/
+                || $rule->{reading} !~ /\A\@?[A-Za-z0-9_.-]{1,64}\z/
+                || $rule->{operator} !~ /\A(?:==|!=|<|<=|>|>=|contains|regex)\z/
+                || length($rule->{value}) > 1024 || $rule->{value} =~ /[\x00-\x1f\x7f]/);
+        if ($rule->{operator} =~ /\A(?:<|<=|>|>=)\z/) {
+            return 'Numerischer Vergleich benoetigt eine gueltige Zahl'
+                if ($rule->{value} !~ /\A[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?\z/
+                    || !POSIX::isfinite(0 + $rule->{value}));
+        }
+        if ($rule->{operator} eq 'regex') {
+            my $pattern = $rule->{value};
+            return 'Ungueltiger regulaerer Ausdruck' if (length($pattern) > 128);
+            $pattern =~ s/\A\^//;
+            my $trailing = 0;
+            if ($pattern =~ /\$\z/) {
+                my $prefix = substr($pattern, 0, -1);
+                $trailing++ while ($prefix =~ /\\\z/ && chop($prefix));
+                chop($pattern) if ($trailing % 2 == 0);
+            }
+            return 'Ungueltiger regulaerer Ausdruck'
+                if ($pattern !~ /\A(?:\\[\\.^\$*+?]|[^\\.^\$*+?()\[\]{}|]|\.)[+*?]?(?:(?:\\[\\.^\$*+?]|[^\\.^\$*+?()\[\]{}|]|\.)[+*?]?)*\z/
+                    && $pattern ne '');
+        }
+    }
+    if (exists($condition->{expression})) {
+        my (%seen, $nodes);
+        my $walk;
+        $walk = sub {
+            my ($node, $depth) = @_;
+            return 0 if (++$nodes > 60 || $depth > 8 || ref($node) ne 'HASH');
+            my $keys = join(',', sort keys %{$node});
+            if ($keys eq 'rule') {
+                my $index = $node->{rule};
+                return 0 if (!defined($index) || ref($index)
+                    || $json->encode($index) !~ /\A(?:0|[1-9][0-9]*)\z/
+                    || $index >= @{$condition->{rules}} || $seen{$index}++);
+                return 1;
+            }
+            return 0 if (($keys ne 'children,op' && $keys ne 'children,not,op')
+                || !defined($node->{op}) || ref($node->{op}) || $node->{op} !~ /\A(?:and|or|xor)\z/
+                || (exists($node->{not}) && !JSON::PP::is_bool($node->{not}))
+                || ref($node->{children}) ne 'ARRAY'
+                || @{$node->{children}} < 1 || @{$node->{children}} > 20);
+            for my $child (@{$node->{children}}) {
+                return 0 if (!$walk->($child, $depth + 1));
+            }
+            return 1;
+        };
+        my $valid = ref($condition->{expression}) eq 'HASH'
+            && exists($condition->{expression}{children})
+            && $walk->($condition->{expression}, 1)
+            && keys(%seen) == @{$condition->{rules}};
+        undef $walk;
+        return 'Ungueltiger Bedingungsausdruck' if (!$valid);
+    }
+    return undef;
+}
+
+sub FHEMCMS_ValidateConditionMarkup {
+    my ($value) = @_;
+    return 'Ungueltige Bedingungsmarkierung'
+        if (!defined($value) || ref($value) || length($value) > 50000
+            || $value !~ /\A(?:[0-9a-f]{2})+\z/);
+    my $condition = eval { JSON::PP->new->utf8->decode(pack('H*', $value)) };
+    return 'Ungueltige Bedingungsmarkierung' if ($@);
+    return FHEMCMS_ValidateCondition($condition);
+}
+
 sub FHEMCMS_ValidateFreeHtml {
     my ($html) = @_;
     return 'kein Text' if (ref($html) || !defined($html));
@@ -2000,7 +2122,7 @@ sub FHEMCMS_ValidateFreeHtml {
         table thead tbody tr th td style h5 h6 section article header footer main aside nav figure figcaption
         details summary dl dt dd pre code blockquote sub sup mark caption tfoot a img svg g path rect circle
         ellipse line polyline polygon text tspan defs lineargradient radialgradient stop clippath mask use pattern animate title desc iframe);
-    my %attrs = map { $_ => 1 } qw(class style title colspan rowspan data-cms-class device reading filter);
+    my %attrs = map { $_ => 1 } qw(class style title colspan rowspan data-cms-class data-cms-if data-cms-unless device reading filter);
 
     $html =~ s/<!--(?:(?!-->).)*-->//gs;
     return 'Unvollstaendige Kommentare oder Sonderkonstrukte sind nicht erlaubt' if ($html =~ /<(?:!|\?)/);
@@ -2015,7 +2137,12 @@ sub FHEMCMS_ValidateFreeHtml {
             my ($name, $value) = (lc($1), $2);
             return "Attribut '$name' nicht erlaubt"
                 if (!$attrs{$name} && !FHEMCMS_FreeHtmlExtraAttribute($tag, $name, $value));
-            $seen{$name} = 1;
+            return 'Doppelte Bedingungsmarkierung' if ($seen{$name}++ && $name =~ /\Adata-cms-(?:if|unless)\z/);
+            if ($name eq 'data-cms-if' || $name eq 'data-cms-unless') {
+                return 'Bedingungsmarkierung nur auf span oder div erlaubt' if ($tag ne 'span' && $tag ne 'div');
+                my $error = FHEMCMS_ValidateConditionMarkup($value);
+                return $error if (defined($error));
+            }
             return 'Ungueltiges style-Attribut' if ($name eq 'style' && !FHEMCMS_FreeHtmlCss($value));
             return 'Ungueltiges class-Attribut' if ($name eq 'class' && $value !~ /\A[A-Za-z0-9_ -]{0,200}\z/);
             return 'Ungueltiges colspan/rowspan' if (($name eq 'colspan' || $name eq 'rowspan') && $value !~ /\A[1-9][0-9]?\z/);
@@ -2031,6 +2158,7 @@ sub FHEMCMS_ValidateFreeHtml {
             }
         }
         return 'Die Attribute device und reading gehoeren zusammen' if (!!$seen{device} != !!$seen{reading});
+        return 'Doppelte Bedingungsmarkierung' if ($seen{'data-cms-if'} && $seen{'data-cms-unless'});
         return 'Die Attribute set-device und set-cmd gehoeren zusammen'
             if (!!$seen{'set-device'} != !!$seen{'set-cmd'});
     }
@@ -2059,7 +2187,8 @@ sub FHEMCMS_ValidateHtml {
         p => {class => \%align}, h1 => {class => \%align}, h2 => {class => \%align},
         h3 => {class => \%align}, blockquote => {class => \%align},
         th => {class => \%align}, td => {class => \%align},
-        strong => {}, em => {}, u => {}, s => {}, code => {}, span => {style => 1}, ul => {}, ol => {}, li => {},
+        strong => {}, em => {}, u => {}, s => {}, code => {},
+        span => {style => 1, 'data-cms-if' => 1, 'data-cms-unless' => 1}, ul => {}, ol => {}, li => {},
         table => {}, thead => {}, tbody => {}, tr => {},
         a => {href => 1}, img => {src => 1, alt => 1, class => \%imageClass},
         br => {void => 1}, hr => {void => 1},
@@ -2073,7 +2202,7 @@ sub FHEMCMS_ValidateHtml {
     while (pos($text) < length($text)) {
         next if ($text =~ /\G[^<>&]+/gc);
         next if ($text =~ /\G&(?:amp|lt|gt|quot|nbsp|#39);/gc);
-        if ($text =~ /\G<(\/?)([a-z][a-z0-9]*)((?:\s+[a-z]+="[^"<>]*")*)\s*>/gc) {
+        if ($text =~ /\G<(\/?)([a-z][a-z0-9]*)((?:\s+[a-z][a-z-]*="[^"<>]*")*)\s*>/gc) {
             my ($closing, $tag, $attrs) = ($1, $2, $3);
             return "Tag '$tag' ist nicht erlaubt" if (!$tags{$tag});
             return 'zu viele Elemente' if (++$count > 3000);
@@ -2083,13 +2212,16 @@ sub FHEMCMS_ValidateHtml {
                 next;
             }
             my %seen;
-            while ($attrs =~ /\s+([a-z]+)="([^"<>]*)"/g) {
+            while ($attrs =~ /\s+([a-z][a-z-]*)="([^"<>]*)"/g) {
                 my ($attr, $value) = ($1, $2);
                 return "Attribut '$attr' ist bei '$tag' nicht erlaubt" if (!$tags{$tag}{$attr} || $seen{$attr}++);
                 (my $plain = $value) =~ s/&(?:amp|quot|#39|nbsp|lt|gt);/ /g;
                 return 'ungueltige Zeichenfolge in Attribut' if ($plain =~ /&/);
                 (my $decoded = $value) =~ s/&amp;/&/g;
-                if ($attr eq 'href') {
+                if ($attr eq 'data-cms-if' || $attr eq 'data-cms-unless') {
+                    my $error = FHEMCMS_ValidateConditionMarkup($value);
+                    return $error if (defined($error));
+                } elsif ($attr eq 'href') {
                     return 'ungueltiger Link'
                         if ($decoded !~ m{\A(?:https?://[A-Za-z0-9._~:/?\#\[\]\@!\$&'()*+,;=%-]{1,2000}|mailto:[A-Za-z0-9._%+-]{1,64}\@[A-Za-z0-9.-]{1,255}|\#/[A-Za-z0-9_-]{1,64}|\.\./\.\./fhemcms-assets/[A-Za-z0-9_.-]{1,128}/[0-9a-f]{32})\z});
                 } elsif ($attr eq 'src') {
@@ -2104,6 +2236,7 @@ sub FHEMCMS_ValidateHtml {
                     my @classes = split(/ /, $value);
                     return 'ungueltige Klasse' if (!@classes || grep { !$tags{$tag}{class}{$_} } @classes);
                 }
+                return 'Doppelte Bedingungsmarkierung' if ($seen{'data-cms-if'} && $seen{'data-cms-unless'});
             }
             return "'$tag' braucht ein Pflichtattribut"
                 if (($tag eq 'a' && $attrs !~ /\shref="/) || ($tag eq 'img' && $attrs !~ /\ssrc="/));

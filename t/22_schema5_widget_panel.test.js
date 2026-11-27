@@ -17,6 +17,11 @@ class Element {
     this.value = '';
   }
   append(...children) { this.children.push(...children); }
+  insertBefore(child, reference) {
+    const index = this.children.indexOf(reference);
+    if (index < 0) this.children.push(child);
+    else this.children.splice(index, 0, child);
+  }
   replaceChildren(...children) { this.children = children; }
   setAttribute(name, value) { this.attributes[name] = value; }
   removeAttribute(name) { delete this.attributes[name]; }

@@ -1,0 +1,145 @@
+[b][size=16pt]Neu: Floorplans[/size][/b]
+
+Heute zeige ich euch, wie man das neue Feature Floorplans verwendet.
+
+Wir bauen gemeinsam eine Seite „Floorplan Küche“ auf: mit einem Grundriss als Hintergrund und drei kompakten Pins für Temperatur, Thermostat und Schalter. So sieht man nicht nur die Werte, sondern auch gleich, wohin sie im Haus gehören. Der Plan bleibt sichtbar; die vollständigen Widget-Karten öffnen wir bei Bedarf.
+
+Ihr braucht dafür ein Grundrissbild und die FHEM-Geräte, die ihr auf dem Plan darstellen möchtet. Die Gerätenamen im Beispiel ersetzt ihr einfach durch eure eigenen.
+
+[b]1. Eine neue Seite anlegen[/b]
+
+Öffnet das CMS im Bearbeitungsmodus und wählt in der Navigation den Stift für „Navigation einstellen“.
+
+Im Dialog „Navigation bearbeiten“ legt ihr eine neue Seite an:
+[list]
+[li]Seitentitel: [b]Floorplan Küche[/b][/li]
+[li]Dateiname: [b]floorplan_kueche[/b] – ohne .html[/li]
+[/list]
+Klickt auf „Neue Seite erstellen“, speichert die Navigation und öffnet anschließend den neuen Navigationspunkt.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-01-navigation.png[/img]
+
+[b]2. Die Seite auf Pins umstellen[/b]
+
+Öffnet über „Bearbeiten“ die Seiteneinstellungen für „Floorplan Küche“.
+
+Wählt unter „Seitenlayout → Modus“ die Einstellung [b]Frei (Pixelgenau)[/b] und aktiviert [b]Widgets als Pins darstellen[/b]. Damit könnt ihr die Widgets später direkt auf dem Grundriss verteilen.
+
+Die gemeinsame Seitengröße könnt ihr beibehalten. Das Grundrissbild wird mit seinem Seitenverhältnis eingepasst.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-03a-pinmodus.png[/img]
+
+[b]3. Den Grundriss auswählen[/b]
+
+Aktiviert in den Seiteneinstellungen [b]Hintergrundvererbung von der Startseite überschreiben[/b]. Damit bekommt diese Seite ihren eigenen Grundriss, während die übrigen Seiten weiterhin den gemeinsamen Hintergrund verwenden können.
+
+Öffnet „Hintergrundbild auswählen“. Im Assetmanager wählt ihr euren Grundriss aus. Im Beispiel liegt er unter [b]Stammordner → Floorplans → floorplan_eg.png[/b].
+
+Klickt auf das Bild, wählt das Original und bestätigt mit „Auswählen“.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-02-assetmanager.png[/img]
+
+Zurück in den Seiteneinstellungen könnt ihr den Hintergrund etwas abdunkeln, damit die Werte gut lesbar bleiben. Für diesen Plan verwenden wir [b]12 %[/b].
+
+Speichert die Seiteneinstellungen.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-03-seiteneinstellungen.png[/img]
+
+[b]4. Den ersten Pin anlegen: Temperatur[/b]
+
+Wählt „Einfügen → Widget hinzufügen → Wert-Anzeige“.
+
+Tragt als Titel beispielsweise [b]Küche[/b] ein und wählt unter „Datenquelle“ euren Temperatursensor aus. Im Beispiel verwenden wir das Gerät [b]tmp_Kuehlschrank_Keller[/b] mit dem Reading [b]temperature[/b].
+
+Lasst beim Reading die Option [b]Auf Pin anzeigen[/b] aktiviert. Damit legt ihr fest, welcher Wert direkt auf dem Grundriss erscheinen soll.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-04a-reading.png[/img]
+
+Öffnet anschließend den Abschnitt „Darstellung“:
+[list]
+[li]Tragt als Einheit [b]°C[/b] ein.[/li]
+[li]Wählt auf Wunsch ein passendes Icon, zum Beispiel [b]temp_temperature[/b].[/li]
+[li]Lasst „Nicht als Pin darstellen“ ausgeschaltet.[/li]
+[/list]
+Speichert das Widget. Auf der Seite erscheint nun der Temperatur-Pin. Wenn ihr kein Icon auswählt, wird nur der Wert angezeigt.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-04-wertanzeige.png[/img]
+
+[b]5. Einen Thermostat mit Ist- und Solltemperatur hinzufügen[/b]
+
+Wählt „Einfügen → Widget hinzufügen → Thermostat“ und sucht euren Thermostat aus. Im Beispiel heißt das Gerät [b]th_kueche_Clima[/b].
+
+Ordnet die passenden Readings zu:
+[list]
+[li]Isttemperatur: [b]measured-temp[/b][/li]
+[li]Solltemperatur: [b]desired-temp[/b][/li]
+[li]Ventilstellung: [b]ValvePosition[/b][/li]
+[li]Betriebsart: [b]controlMode[/b][/li]
+[/list]
+Die Readingnamen hängen von eurem Gerät ab.
+
+Aktiviert [b]Auf Pin anzeigen[/b] bei Ist- und Solltemperatur. Ventilstellung und Betriebsart lassen wir für die vollständige Karte stehen, ohne sie auf dem Pin einzublenden.
+
+Nach dem Speichern zeigt ein einzelner Pin beide Temperaturen nebeneinander. So bleibt der Grundriss übersichtlich, ohne auf die wichtigsten Heizungswerte zu verzichten.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-05-thermostat.png[/img]
+
+[b]6. Einen Schalter hinzufügen[/b]
+
+Wählt „Einfügen → Widget hinzufügen → Schalter“ und anschließend euer Schaltgerät. Im Beispiel verwenden wir [b]sw_wiese_Sw_02[/b].
+
+Stellt Folgendes ein:
+[list]
+[li]Reading für den Zustand: [b]state[/b][/li]
+[li][b]Auf Pin anzeigen[/b] aktivieren[/li]
+[li]Befehl für „An“: [b]on[/b][/li]
+[li]Befehl für „Aus“: [b]off[/b][/li]
+[/list]
+Verwendet bei euren Geräten die jeweils angebotenen Befehle. Lasst „Nicht als Pin darstellen“ ausgeschaltet und speichert das Widget.
+
+Der Pin zeigt den Schaltzustand direkt auf dem Grundriss.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-06-schalter.png[/img]
+
+[b]7. Die Pins auf dem Grundriss verteilen[/b]
+
+Neue Pins erscheinen zunächst in der Mitte. Falls sie übereinanderliegen, zieht ihr sie einfach nacheinander an die gewünschte Stelle.
+
+Wählt einen Pin aus und verschiebt ihn mit Maus oder Touch an den zugehörigen Raum oder Einbauort. Über die eingeblendeten Werkzeuge könnt ihr das Widget jederzeit wieder bearbeiten.
+
+Die Positionen beziehen sich auf das Grundrissbild. Dadurch bleiben die Pins auch beim proportionalen Skalieren an der passenden Stelle im Plan.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-07-editor.png[/img]
+
+[b]8. Prüfen und veröffentlichen[/b]
+
+Prüft in der Geräte-Vorschau, ob alle Werte lesbar sind, die Einheiten stimmen und die Pins genügend Abstand haben. Im Editor und in der Geräte-Vorschau löst die Pin-Bedienung keine Schaltbefehle aus.
+
+Wenn alles passt, wählt „Datei → Entwurf veröffentlichen“ und bestätigt die Rückfrage.
+
+[b]Wichtig:[/b] Dabei wird der gesamte aktuelle CMS-Entwurf veröffentlicht, nicht nur diese Seite. Prüft deshalb vorher auch andere vorbereitete Änderungen.
+
+Öffnet anschließend die Liveansicht in einem eigenen Tab. Unsere Seite ist über den Navigationspunkt „Floorplan Küche“ erreichbar.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-08-live.png[/img]
+
+[b]9. Den Floorplan bedienen[/b]
+
+Auf dem Grundriss seht ihr die ausgewählten Live-Werte. Für weitere Informationen öffnet ihr die vollständige Widget-Karte:
+[list]
+[li][b]Temperatur oder Thermostat antippen:[/b] Die vollständige Karte öffnet sich.[/li]
+[li][b]Schalter kurz antippen:[/b] Das Gerät wird geschaltet.[/li]
+[li][b]Schalter länger gedrückt halten:[/b] Die vollständige Karte öffnet sich, ohne dabei umzuschalten.[/li]
+[li][b]X oben rechts:[/b] Die Karte schließen und zum Grundriss zurückkehren.[/li]
+[/list]
+Beim Thermostat habt ihr so die kompakte Übersicht aus Ist- und Solltemperatur auf dem Plan und die vollständige Bedienung im Popup.
+
+[img]https://raw.githubusercontent.com/wiki/stapetz/fhem-cms/images/floorplan/floorplan-09-popup.png[/img]
+
+[b]Das macht den Floorplan im Alltag praktisch[/b]
+
+Ihr erkennt auf einen Blick, wo ein Wert hingehört, ohne dass große Karten den Grundriss verdecken. Mehrere Werte lassen sich auf einem Pin zusammenfassen, und die vollständige Bedienung bleibt nur einen Fingertipp entfernt.
+
+Einzelne Widgets könnt ihr über „Nicht als Pin darstellen“ auch als normale Karten auf derselben Seite behalten. So kombiniert ihr den Grundriss mit den Informationen und Bedienelementen, die ihr dauerhaft sehen möchtet.
+
+Die ausführliche Anleitung findet ihr auch im [url=https://github.com/stapetz/fhem-cms/wiki/Floorplan-Kueche]GitHub-Wiki: Floorplan Küche[/url].

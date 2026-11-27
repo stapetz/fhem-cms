@@ -212,10 +212,76 @@ Hover-Summen addieren unformatierte jeweils naechstgelegene angezeigte
 Messwerte ausschliesslich sichtbarer, nichtleerer Reihen, getrennt nach Achse
 und Einheit. Die angezeigten Messzeitpunkte koennen voneinander abweichen;
 Einheiten werden nicht umgerechnet und fehlende Einheiten bilden eine Gruppe.
+Nachtrag 1.40.1-dev (Refs #265): Ein Touch-Tap zeigt die naechstgelegenen
+Linien-/Stapelwerte beziehungsweise das beruehrte Tortensegment nach dem
+Loslassen weiter an. Ansicht und Vorschau verwenden denselben Tooltip.
+Horizontales Ziehen waehlt in der Ansicht weiterhin einen Zeitraum, vertikales
+Wischen bleibt Scrollen; Abbruch entfernt die Anzeige. Touch-Toleranz:
+weniger als 6 sichtbare CSS-Pixel horizontal gelten als Tap.
+Regression: `node --test --test-name-pattern='graph touch taps|graph supports multiple log series' t/35_schema5_scaling.test.js`.
+Chrome emuliert Phone, Tablet, Canvas-Skalierung und echte Touch-Gesten;
+die Abnahme auf echten iPhone-/iPad-Safari-Geraeten steht aus.
+Nachtrag 1.41.0-dev (Refs #266): Linien- und Stapeldiagramme lassen sich
+zeitlich verschieben: auf Touch mit zwei Fingern, am Desktop mit gehaltener
+Leertaste plus linker Maustaste (Hand-Cursor grab/grabbing ueber die
+wiederverwendbare Hilfe `js/pan-gesture.js`, die Leertaste wirkt nur ueber
+der Flaeche und nie in Formularfeldern). Waehrend der Geste verschiebt eine
+CSS-Translation die Ansicht; beim Loslassen wird das um die Pixeldistanz
+verschobene Konfigurationsfenster als eigener Zeitraum geladen. Die
+Verschiebung ist am aktuellen Zeitpunkt geklemmt; geklemmte oder winzige
+Verschiebungen (unter 2 Sekunden) laden nicht neu. Ein-Finger-Gesten bleiben
+unveraendert (Tap = Werte, horizontales Ziehen = Auswahl, vertikal = Scrollen).
+Waehrend `load()` und der Dialogvorschau dreht mittig ein Spinner-Overlay
+(`[data-spinner]`/`[data-preview-spinner]`), das nur die jeweils juengste
+Anfrage wieder ausblendet. Das Tooltip steht in der linken Plot-Haelfte
+rechts der Cursorlinie, ab der Mitte links davon. Die Zeitraum-/
+Granularitaets-Selects im Widgetkopf verwenden 0.85rem.
+Regression: `node --test --test-name-pattern='graph touch taps' t/35_schema5_scaling.test.js`
+prueft Zwei-Finger-Pan, Klemmung, Space-Pan samt Cursorklassen, Spinner
+und Tooltip-Seitenwechsel; Abnahme auf echten Touch-Geraeten steht aus.
 Regressionen: `prove t/01_fhemcms.t t/91_schema6_validation.t t/92_schema6_persistence.t`,
 `node --test t/115_graph_data.test.js` sowie der Browserfall
 `graph supports multiple log series` in `t/35_schema5_scaling.test.js`.
 Abnahme mit echten DbLog-/FileLog-Quellen und Safari steht aus.
+
+## Gemeinsame Reading-Bedingungen (dev, Refs #144)
+
+Schema 5/6 speichert optional `visibility: {condition, mode}` am Widget;
+`condition` enthaelt `join` (`and`/`or`) und bis zu 20 `rules` mit `device`,
+`reading`, `operator`, `value`. `mode` ist `collapse` oder `keep-space`.
+Optional beschreibt `expression` einen explizit geklammerten Baum: Gruppen
+`{op: "and"|"or"|"xor", children: [...], not?: boolean}` und Blaetter
+`{rule: index}`. Jeder Index verweist genau einmal auf eine gespeicherte Regel;
+die Wurzel ist eine Gruppe. Hoechstens 60 Knoten und 8 Ebenen einschliesslich
+Wurzel und Blaettern. Ohne `expression` bleibt die urspruengliche `join`-Logik
+unveraendert; bei vorhandenem Ausdruck wird `join` nicht ausgewertet.
+Text und freies HTML verwenden validierte, UTF-8-JSON-hexkodierte Bedingungen
+auf `data-cms-if` beziehungsweise `data-cms-unless`; im Text sind die Marker
+`span`, im freien HTML `span` oder `div`. Diese Markierungen werden nie als
+ausfuehrbarer Code interpretiert. JS und Perl pruefen die gleichen Felder;
+Blueprint-Ersetzung und Live-Abonnements beruecksichtigen beide Formen.
+
+Gleichheit ist exakter Textvergleich, Ordnungsvergleiche erfordern endliche
+Dezimalzahlen. AND/OR verwenden dreiwertige Logik; XOR ist bei ungerader Anzahl
+wahrer Kinder wahr und bei unbekannten Kindern unbekannt; NOT belaesst
+unbekannt. Negierte Gruppen ergeben NAND/NOR/XNOR. Unbekannt zeigt weder Wenn
+noch Sonst. Der Regex-Teilumfang ist backtrackingfrei und begrenzt auf 128
+Muster- und 1024 Eingabezeichen. Er erlaubt Literale, `.`, `^`, `$`, `*`, `+`,
+`?` und Escapes dieser Zeichen, keine Gruppen, Alternation, Klassen oder Zaehler.
+Pro Seite sind hoechstens 200 Regeln und insgesamt 4096 Regex-Musterzeichen
+erlaubt; jeder gespeicherte Zweig zaehlt. Im fliessenden Layout gibt `collapse`
+den Platz frei; feste Raster-/Freeformpositionen bleiben unveraendert. Ein
+unsichtbarer Pin schliesst sein Popup, im Editor bleiben Widgets bedienbar.
+
+Regressionen: `node --test t/116_condition.test.js t/11_schema5_widgets.test.js
+t/13_schema5_live.test.js t/21_schema5_widget_session.test.js
+t/22_schema5_widget_panel.test.js t/93_freeform.test.js`,
+`prove t/116_condition.t t/92_schema6_persistence.t` und
+`node --test --test-name-pattern='condition wizard|conditions integrate' t/35_schema5_scaling.test.js`.
+`node --test t/27_widget_services.test.js` prueft die auf ausgewaehlte
+Devices und Kanaele begrenzte Vorschauabfrage. Chrome prueft Regeln, Auswahl,
+Einfuegen, Live-Wechsel, Raster und Pins auch in Touch-Emulation; eine
+Abnahme auf echten Safari-/Touchgeraeten bleibt zusaetzlich erforderlich.
 
 ## Schalter und Pin-Darstellung (dev, Refs #261)
 
@@ -2779,6 +2845,19 @@ und vergleicht Kachelpositionen/-maße zwischen Editor und Ansicht.
 
 ## Änderungen, Tests und Pushes
 
+- `dev` ist der lokale Arbeits- und Testbranch, kein automatisch freigegebener
+  Deployment-Zielbranch. Vor einem möglichen Push nach `dev` zuerst passende
+  automatisierte Tests lokal ausführen und Änderungen an UI/Funktionalität am
+  etablierten lokalen Testserver prüfen. Ein Implementierungs- oder Testauftrag
+  ist keine Push-Freigabe. Nach erfolgreicher lokaler Prüfung Ergebnis und
+  Umfang mitteilen und ausdrücklich Ja/Nein für den vorgesehenen Push erfragen;
+  ohne konkretes Ja nicht pushen oder deployen.
+- Ist ein Deployment für eine Prüfung technisch erforderlich, etwa wegen einer
+  Build-/Paketierungsänderung oder eines nur auf dem Zielsystem prüfbaren
+  Verhaltens, vorher Grund, betroffene Commits und Zielbranch nennen und die
+  ausdrückliche Freigabe abwarten. Ist der lokale Testserver nicht verfügbar
+  oder sein Zugriff unklar, keine entfernte `dev`-Instanz als Ersatz deployen;
+  Einschränkung benennen und den Entwickler fragen.
 - Vor jedem Push die aktuelle Branch-Version mit `git pull --rebase --autostash` aktualisieren. Bei einem neuen Branch ohne Remote-Tracking-Branch zuerst den passenden Remote-Branch festlegen bzw. abrufen.
 - FHEM-Update-Link und -Befehl erst nach abgeschlossener, erfolgreicher
   Ueberwachung aller Build-/Test- und Controls-Workflows zum betreffenden Commit

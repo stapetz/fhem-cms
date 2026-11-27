@@ -8,6 +8,8 @@ import { pinKeepsCard, pinPresentation } from './pin-presentation.js';
 import { createPinWidgetPopup } from './pin-widget-popup.js';
 import { PIN_BEHAVIOR, pinCommand } from './pin-behavior.js';
 import { mountPinEditor } from './pin-editor.js';
+import { evaluateCondition } from './condition.js';
+import { lookupValue } from './freehtml.js';
 
 export function mountSchema5Widgets(GridStack, root, config, pageId, navigation, services, snapshots, editing) {
   if (!navigation || !services || typeof services !== 'object' || !(snapshots instanceof Map)) {
@@ -265,6 +267,22 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
     ? mountFreeformEditor(root, framePage, frame, editing, navigation, true) : null;
   const stopPinEditor = freeform && editing?.onFreeformChange
     ? mountPinEditor(root, page, freeform, editing) : null;
+  const updateVisibility = () => {
+    for (const [id, widget] of widgets) {
+      if (!widget.visibility) continue;
+      const wrapper = pixel ? freeform.wrappers.get(id)
+        : elements.get(id)?.closest('.grid-stack-item');
+      if (!wrapper) continue;
+      const result = widget.visibility
+        ? evaluateCondition(widget.visibility.condition, (device, reading) => lookupValue(currentSnapshots, device, reading))
+        : true;
+      wrapper.toggleAttribute('data-condition-inactive', result !== true);
+      wrapper.toggleAttribute('data-condition-collapse', result !== true && widget.visibility?.mode === 'collapse');
+      wrapper.toggleAttribute('data-condition-editor', Boolean(editing) && result !== true);
+      if (!editing && result !== true) popup.closeWidget(id);
+    }
+  };
+  updateVisibility();
   return {
     measureGrid() {
       if (!grid || !editing) return undefined;
@@ -305,6 +323,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
       for (const [id, widget] of widgets) {
         updateElement(id, elements.get(id));
       }
+      updateVisibility();
       popup.update(updateElement);
     },
     destroy() {

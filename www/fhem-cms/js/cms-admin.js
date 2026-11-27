@@ -1,9 +1,9 @@
-import { showCmsModal } from './modal-dialog.js?v=admin-20261126-7';
-import { installCloseStyles, styleCloseButton } from './close-button.js?v=admin-20261126-7';
-import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261126-7';
-import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261126-7';
-import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261126-7';
-import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261126-7';
+import { showCmsModal } from './modal-dialog.js?v=admin-20261126-9';
+import { installCloseStyles, styleCloseButton, requestWindowClose } from './close-button.js?v=admin-20261126-9';
+import { FhemClient, isValidName } from './fhem-client.js?v=admin-20261126-9';
+import { createSchema5Transport } from './fcui-schema5-transport.js?v=admin-20261126-9';
+import { Schema5DraftController } from './fcui-schema5-draft.js?v=admin-20261126-9';
+import { applyCmsAdminAppearance } from './cms-admin-link.js?v=admin-20261126-9';
 
 const CONFIG_LIMIT = 1048576;
 
@@ -34,19 +34,7 @@ export async function createCmsConfigurationSession(device, base) {
   return { client, controller, schemaVersion, state };
 }
 
-export function requestAdminClose(browser, notify) {
-  try {
-    browser.close();
-  } catch {
-    notify('Der Browser konnte dieses Fenster nicht schließen. Bitte den Tab oder das Fenster manuell schließen.');
-    return;
-  }
-  browser.setTimeout(() => {
-    if (!browser.closed) {
-      notify('Der Browser erlaubt das Schließen dieses Tabs nicht, da er nicht skriptgesteuert geöffnet wurde. Bitte den Tab manuell schließen.');
-    }
-  }, 100);
-}
+export { requestWindowClose as requestAdminClose };
 
 export class CmsAdminClient {
   constructor(base = new URL('../../', import.meta.url)) {
@@ -367,9 +355,27 @@ export async function mountCmsAdmin(root, client = new CmsAdminClient(),
     event.preventDefault();
     cancelImport();
   });
-  const closeWindow = () => requestAdminClose(browser, text => message(text, true));
+  const embedded = !!browser.location && new URL(browser.location.href).searchParams.get('embedded') === '1'
+    && browser.parent !== browser;
+  const closeStatus = () => {
+    if (busy) return 'Ein Vorgang läuft noch. Bitte warten, bevor die Administration geschlossen wird.';
+    if (root.querySelector('dialog[open]')) return 'Bitte zuerst den geöffneten Administrationsdialog schließen.';
+    return '';
+  };
+  if (embedded) browser.cmsAdminCloseStatus = closeStatus;
+  const closeWindow = () => {
+    const error = closeStatus();
+    if (error) {
+      message(error, true);
+      return;
+    }
+    if (embedded) {
+      browser.parent.postMessage('cms-admin-close', browser.location.origin);
+    } else requestWindowClose(browser, text => message(text, true));
+  };
   installCloseStyles(root.ownerDocument.head);
   styleCloseButton($('#close-window'), 'Fenster schließen');
+  if (embedded) $('#close-window').style.display = 'none';
   styleCloseButton($('#cache-close'), 'Schließen');
   $('#close-window').addEventListener('click', closeWindow);
   root.addEventListener('keydown', event => {

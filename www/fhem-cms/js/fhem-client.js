@@ -619,6 +619,18 @@ export class FhemClient {
     this.connect();
   }
 
+  subscribeAll(onEvent, onState) {
+    this.unsubscribe();
+    if (!('WebSocket' in window)) {
+      onState('unavailable');
+      return;
+    }
+
+    this.subscription = { all: true, onEvent, onState, attempt: 0 };
+    onState('connecting');
+    this.connect();
+  }
+
   connect() {
     const subscription = this.subscription;
     if (!subscription) {
@@ -629,7 +641,9 @@ export class FhemClient {
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     url.search = new URLSearchParams({
       XHR: '1',
-      inform: `type=status;filter=NAME=${[...subscription.names].join('|')};fmt=JSON`,
+      inform: subscription.all
+        ? 'type=status;filter=room=all;fmt=JSON'
+        : `type=status;filter=NAME=${[...subscription.names].join('|')};fmt=JSON`,
       fw_id: `cms-${Math.random().toString(36).slice(2, 10)}`,
       timestamp: String(Date.now())
     }).toString();
@@ -638,7 +652,7 @@ export class FhemClient {
     try {
       socket = new WebSocket(url);
     } catch (error) {
-      subscription.onState('polling');
+      subscription.onState(subscription.all ? 'unavailable' : 'polling');
       return;
     }
     this.socket = socket;
@@ -661,7 +675,12 @@ export class FhemClient {
         } catch (error) {
           continue;
         }
-        if (Array.isArray(data) && typeof data[0] === 'string' && subscription.names.has(data[0])) {
+        if (Array.isArray(data) && typeof data[0] === 'string'
+          && (subscription.all || subscription.names.has(data[0]))) {
+          if (subscription.all) {
+            subscription.onEvent(data);
+            continue;
+          }
           subscription.onEvent(data[0]);
         }
       }
@@ -672,7 +691,7 @@ export class FhemClient {
         return;
       }
       this.socket = null;
-      subscription.onState('polling');
+      subscription.onState(subscription.all ? 'reconnecting' : 'polling');
       if (this.subscription !== subscription) return;
       const delay = Math.min(30000, 1000 * 2 ** subscription.attempt);
       subscription.attempt += 1;

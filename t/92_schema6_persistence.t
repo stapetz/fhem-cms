@@ -30,6 +30,11 @@ close($mediaFile) or die $!;
 my ($initial) = FHEMCMS_ReadVersion5State($dataDir);
 my $json = JSON::PP->new->canonical;
 my $draft5 = $json->decode($json->encode($initial->{live}));
+my $conditionRule = {device => 'Demo', reading => 'state', operator => '==', value => 'on'};
+my $condition = {join => 'and', rules => [map { +{%{$conditionRule}} } 1 .. 3],
+    expression => {op => 'or', children => [
+        {op => 'xor', not => JSON::PP::true, children => [{rule => 0}, {rule => 1}]}, {rule => 2}]}};
+my $conditionEncoded = unpack('H*', JSON::PP->new->utf8->encode($condition));
 $draft5->{pages}[0]{title} = 'Grid draft';
 $draft5->{pages}[0]{kiosk} = JSON::PP::true;
 $draft5->{pages}[0]{overrideBackground} = JSON::PP::false;
@@ -39,6 +44,7 @@ $draft5->{pages}[0]{widgets} = [{
     chartType => 'pie', aggregation => 'average', range => '1700000000_1700100000', granularity => '1mo',
     axisLabelX => 'Zeit', axisLabelLeft => 'Watt', axisLabelRight => 'Grad', showGrid => JSON::PP::false,
     showPieLabels => JSON::PP::false, stackLinear => JSON::PP::true,
+    visibility => {condition => $condition, mode => 'keep-space'},
     series => [{device => 'Solar1', reading => 'power', source => 'auto', label => 'Dach', color => '#123abc',
         axis => 'right', lineStyle => 'dashed', lineWidth => 4, fill => JSON::PP::true, format => 'round(2)', unit => 'W'}],
 }];
@@ -70,7 +76,8 @@ $next->{pages}[0]{renderAsPins} = JSON::PP::true;
 $next->{pages}[0]{backgroundDim} = 0.25;
 $next->{pages}[0]{overrideBackground} = JSON::PP::true;
 $next->{pages}[0]{widgets} = [{
-    id => 'pin', type => 'text', markdown => 'Pin card', forceCard => JSON::PP::false,
+    id => 'pin', type => 'text', html => "<p><span data-cms-if=\"$conditionEncoded\">Pin card</span></p>",
+    visibility => {condition => $condition, mode => 'collapse'}, forceCard => JSON::PP::false,
     rect => {x => 20, y => 60, w => 100, h => 100},
 }, {
     id => 'temperature', type => 'fhem-value', device => 'Demo', reading => 'temperature',

@@ -19,6 +19,154 @@ for (const path of candidates) {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 
+test('graph touch taps show values without breaking range selection or scrolling', {
+  skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
+  timeout: 90000,
+}, async () => {
+  const server = await testServer();
+  const profile = await mkdtemp(join(root, 't/.cms-graph-touch-'));
+  const child = spawn(chrome, ['--headless=new', '--no-first-run', '--no-default-browser-check',
+    '--disable-background-networking', '--remote-debugging-address=127.0.0.1',
+    '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank']);
+  child.stdout.resume();
+  child.stderr.resume();
+  const closed = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+  const timeout = setTimeout(() => child.kill('SIGTERM'), 60000);
+  try {
+    const url = `http://127.0.0.1:${server.address().port}/t/116_graph_touch.html`;
+    await browserResult(profile, url, child, async command => {
+      const evaluate = async expression => {
+        const reply = await command('Runtime.evaluate', {expression, awaitPromise:true, returnByValue:true});
+        assert.ok(!reply.exceptionDetails, JSON.stringify(reply.exceptionDetails));
+        return reply.result.value;
+      };
+      await evaluate(`new Promise(resolve => {const timer=setInterval(() => {
+        if (!document.querySelector('#result').dataset.ready) return;
+        clearInterval(timer); resolve();
+      }, 25);})`);
+      const tap = async fraction => {
+        const point = await evaluate(`window.graphTouch.point(${fraction})`);
+        await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...point,id:1}]});
+        await command('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+        await pause(80);
+        return evaluate('window.graphTouch.tip()');
+      };
+      for (const [width,height,scale] of [[390,844,1], [834,1194,.5]]) {
+        await command('Emulation.setDeviceMetricsOverride', {width,height,deviceScaleFactor:1,mobile:false});
+        for (const type of ['line','stack','pie']) {
+          await evaluate(`window.graphTouch.draw('${type}',false,${scale})`);
+          const tip = await tap(type === 'pie' ? .5 : .85);
+          assert.equal(tip.hidden, false, `${width}: ${type} touch tooltip stays visible after release`);
+          assert.match(tip.text, /Solar: 9 W/, `${width}: ${type} displays the selected value`);
+          if (type !== 'pie') {
+            assert.match((await tap(.15)).text, /Solar: 1 W/, `${width}: another tap selects another value`);
+          }
+        }
+      }
+      for (const type of ['line','stack','pie']) {
+        await evaluate(`window.graphTouch.draw('${type}',true,1)`);
+        const tip = await tap(type === 'pie' ? .5 : .85);
+        assert.equal(tip.hidden, false, `preview ${type} touch tooltip stays visible`);
+        assert.match(tip.text, /Solar: 9 W/);
+      }
+      await evaluate("window.graphTouch.draw('line',false,1)");
+      const start = await evaluate('window.graphTouch.point(.2)');
+      const end = await evaluate('window.graphTouch.point(.8)');
+      const before = await evaluate('window.graphTouch.calls()');
+      await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...start,id:1}]});
+      await command('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{x:start.x+4,y:start.y,id:1}]});
+      await command('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+      assert.equal((await evaluate('window.graphTouch.tip()')).hidden, false, 'small finger movement remains a tap');
+      assert.equal(await evaluate('window.graphTouch.calls()'), before, 'a tap never reloads the history');
+      await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...start,id:1}]});
+      await command('Input.dispatchTouchEvent', {type:'touchCancel',touchPoints:[]});
+      assert.equal((await evaluate('window.graphTouch.tip()')).hidden, true, 'cancelled touch hides the tooltip');
+      await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...start,id:1}]});
+      await command('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{...end,id:1}]});
+      await command('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+      await pause(100);
+      assert.equal(await evaluate('window.graphTouch.range()'), 'custom', 'horizontal touch drag selects a range');
+      assert.ok(await evaluate('window.graphTouch.calls()') > before, 'range selection reloads history');
+      await evaluate("window.graphTouch.draw('line',false,1); window.scrollTo(0,0)");
+      const scrollStart = await evaluate('window.graphTouch.point(.5)');
+      await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...scrollStart,id:1}]});
+      for (const distance of [20, 50, 80, 110]) {
+        await command('Input.dispatchTouchEvent', {type:'touchMove',
+          touchPoints:[{x:scrollStart.x,y:scrollStart.y-distance,id:1}]});
+        await pause(30);
+      }
+      await command('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+      await pause(150);
+      const scroll = await evaluate(`({page:window.scrollY, height:document.documentElement.scrollHeight,
+        tile:document.querySelector('cms-graph').shadowRoot.querySelector('.tile').scrollTop,
+        point:window.graphTouch.point(.5)})`);
+      assert.ok(scroll.page > 0 || scroll.tile > 0, `vertical touch gesture scrolls: ${JSON.stringify(scroll)}`);
+      assert.equal((await evaluate('window.graphTouch.tip()')).hidden, true, 'cancelled scroll does not leave a tooltip');
+      const spin = await evaluate('window.graphTouch.loadWithSpinner(150)');
+      assert.equal(spin.during, true, 'spinner shows while the history loads');
+      assert.equal(spin.after, false, 'spinner hides after loading');
+      await evaluate("window.scrollTo(0,0); window.graphTouch.draw('line',false,1); window.graphTouch.resetRange()");
+      const clampBefore = await evaluate('window.graphTouch.calls()');
+      const finger1 = await evaluate('window.graphTouch.point(.3)');
+      const finger2 = await evaluate('window.graphTouch.point(.6)');
+      await command('Input.dispatchTouchEvent', {type:'touchStart',
+        touchPoints:[{...finger1,id:1},{...finger2,id:2}]});
+      await command('Input.dispatchTouchEvent', {type:'touchMove',
+        touchPoints:[{x:finger1.x-90,y:finger1.y,id:1},{x:finger2.x-90,y:finger2.y,id:2}]});
+      await command('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+      await pause(150);
+      assert.equal(await evaluate('window.graphTouch.range()'), '24h', 'panning into the future is clamped at now');
+      assert.equal(await evaluate('window.graphTouch.calls()'), clampBefore, 'a clamped pan never reloads');
+      await command('Input.dispatchTouchEvent', {type:'touchStart',
+        touchPoints:[{...finger1,id:1},{...finger2,id:2}]});
+      await command('Input.dispatchTouchEvent', {type:'touchMove',
+        touchPoints:[{x:finger1.x+90,y:finger1.y,id:1},{x:finger2.x+90,y:finger2.y,id:2}]});
+      await command('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+      await pause(150);
+      assert.equal(await evaluate('window.graphTouch.range()'), 'custom', 'two-finger pan shifts into the past');
+      assert.ok(await evaluate('window.graphTouch.calls()') > clampBefore, 'two-finger pan reloads the history');
+      assert.equal((await evaluate('window.graphTouch.tip()')).hidden, true, 'panning does not leave a tooltip');
+      await evaluate("window.scrollTo(0,0); window.graphTouch.draw('line',false,1); window.graphTouch.resetRange()");
+      const mid = await evaluate('window.graphTouch.point(.5)');
+      await command('Input.dispatchMouseEvent', {type:'mouseMoved', x:mid.x, y:mid.y});
+      await command('Input.dispatchKeyEvent', {type:'keyDown', key:' ', code:'Space', windowsVirtualKeyCode:32});
+      assert.equal((await evaluate('window.graphTouch.plotPan()')).ready, true, 'held space shows the grab cursor');
+      const mouseBefore = await evaluate('window.graphTouch.calls()');
+      await command('Input.dispatchMouseEvent', {type:'mousePressed', x:mid.x, y:mid.y,
+        button:'left', buttons:1, clickCount:1});
+      assert.equal((await evaluate('window.graphTouch.plotPan()')).panning, true, 'space drag shows the grabbing cursor');
+      await command('Input.dispatchMouseEvent', {type:'mouseMoved', x:mid.x+90, y:mid.y, button:'left', buttons:1});
+      await command('Input.dispatchMouseEvent', {type:'mouseReleased', x:mid.x+90, y:mid.y,
+        button:'left', buttons:1, clickCount:1});
+      await command('Input.dispatchKeyEvent', {type:'keyUp', key:' ', code:'Space', windowsVirtualKeyCode:32});
+      await pause(150);
+      assert.equal(await evaluate('window.graphTouch.range()'), 'custom', 'space pan shifts into the past');
+      assert.ok(await evaluate('window.graphTouch.calls()') > mouseBefore, 'space pan reloads the history');
+      assert.equal((await evaluate('window.graphTouch.plotPan()')).ready, false, 'released space restores the cursor');
+      await evaluate("window.scrollTo(0,0); window.graphTouch.draw('line',false,1)");
+      const leftPoint = await evaluate('window.graphTouch.point(.25)');
+      await command('Input.dispatchMouseEvent', {type:'mouseMoved', x:leftPoint.x, y:leftPoint.y});
+      const leftTip = await evaluate('window.graphTouch.tipBox()');
+      assert.equal(leftTip.hidden, false, 'hover in the left half shows the tooltip');
+      assert.ok(leftTip.left >= leftPoint.x, 'tooltip sits right of the cursor line in the left half');
+      const rightPoint = await evaluate('window.graphTouch.point(.75)');
+      await command('Input.dispatchMouseEvent', {type:'mouseMoved', x:rightPoint.x, y:rightPoint.y});
+      const rightTip = await evaluate('window.graphTouch.tipBox()');
+      assert.ok(rightTip.right <= rightPoint.x, 'tooltip sits left of the cursor line in the right half');
+      await evaluate('window.graphTouch.finish()');
+    }, async command => {
+      await command('Emulation.setDeviceMetricsOverride', {width:390,height:844,deviceScaleFactor:1,mobile:false});
+      await command('Emulation.setTouchEmulationEnabled', {enabled:true});
+    });
+  } finally {
+    clearTimeout(timeout);
+    child.kill('SIGTERM');
+    await closed;
+    await new Promise(resolve => server.close(resolve));
+    await rm(profile, {recursive:true, force:true});
+  }
+});
+
 test('phone landscape shared grid reflows consistently in preview and touch view', {
   skip: chrome ? false : 'Chrome not installed; set CHROME_BIN to run the browser regression',
   timeout: 90000,
@@ -179,6 +327,8 @@ async function testServer() {
 }
 
 for (const [name, fixtures] of [
+  ['Eventmonitor popup, standalone window and live event controls',
+    [['119_eventmonitor.html', 20]]],
   ['shared close buttons preserve nested dialog behavior and themes',
     [['111_close_buttons.html', 90]]],
   ['Pin interactions use safe tap and hold commands, keyboard access and popup X',
@@ -260,6 +410,10 @@ for (const [name, fixtures] of [
     [['114_widget_previews.html', 100], ['114_widget_previews.html?width=390', 100]]],
   ['graph supports multiple log series and previews every chart type',
     [['115_graph.html', 10], ['115_graph.html?width=390', 10]]],
+  ['condition wizard validates rules and previews current readings',
+    [['117_condition_wizard.html', 15], ['117_condition_wizard.html?touch=1', 15]]],
+  ['conditions integrate with widgets and text and HTML editors',
+    [['118_condition_integration.html', 39], ['118_condition_integration.html?touch=1', 38]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
     [['75_dialog_layout.html?width=1440', 51], ['75_dialog_layout.html?width=390', 51],
       ['75_dialog_layout.html?width=852', 51]]],
@@ -300,7 +454,7 @@ for (const [name, fixtures] of [
       const interactive = fixture === '110_pin_editor.html' || fixture === '104_pin_badges.html?input=1' || fixture === '108_pin_interactions.html?input=1' || [
         '49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
         '63_responsive_edges.html', '65_widget_dialogs.html', '88_volvoconnect.html',
-        '89_volvoconnect_order.html', '96_popup_scroll.html'].includes(fixture.split('?')[0]);
+        '89_volvoconnect_order.html', '96_popup_scroll.html', '119_eventmonitor.html'].includes(fixture.split('?')[0]);
       const interact = !interactive ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
@@ -315,6 +469,118 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
+        if (fixture === '119_eventmonitor.html') {
+          await evaluate(`(async () => {
+            history.replaceState(null, '', '/www/fhem-cms/CMS/index.html');
+            const {createEventMonitorLink} = await import('/www/fhem-cms/js/eventmonitor-link.js');
+            const button = createEventMonitorLink({cmsDevice:'CMS'});
+            button.id = 'monitor-launcher'; document.body.append(button);
+          })()`);
+          const click = async selector => {
+            const point = await evaluate(`(() => {
+              const rect = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
+              return {x:rect.x + rect.width / 2, y:rect.y + rect.height / 2};
+            })()`);
+            await command('Input.dispatchMouseEvent', {type:'mousePressed', ...point, button:'left', clickCount:1});
+            await command('Input.dispatchMouseEvent', {type:'mouseReleased', ...point, button:'left', clickCount:1});
+          };
+          await click('#monitor-launcher');
+          await evaluate(`new Promise(resolve => {
+            const timer = setInterval(() => {
+              const frame = document.querySelector('.cms-eventmonitor-frame');
+              if (!frame?.contentDocument?.querySelector('[data-filter]')) return;
+              clearInterval(timer); resolve();
+            }, 25);
+          })`);
+          await evaluate(`document.querySelector('.cms-eventmonitor-frame').contentDocument.querySelector('[data-filter]').focus()`);
+          await command('Input.dispatchKeyEvent', {type:'keyDown', key:'Escape', code:'Escape', windowsVirtualKeyCode:27});
+          await command('Input.dispatchKeyEvent', {type:'keyUp', key:'Escape', code:'Escape', windowsVirtualKeyCode:27});
+          await pause(100);
+          assert.equal(await evaluate(`Boolean(document.querySelector('.cms-eventmonitor-modal'))`), false,
+            'Escape inside the actual monitor frame closes the parent popup');
+          await click('#monitor-launcher');
+          const port = Number((await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]);
+          await click('.cms-eventmonitor-modal header a');
+          let targets = [];
+          for (let i = 0; i < 50; i++) {
+            targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+            if (targets.some(target => target.url.includes('/www/fhem-cms/eventmonitor.html?device=CMS')
+              && !target.url.includes('embedded'))) break;
+            await pause(50);
+          }
+          assert.ok(targets.some(target => target.url.includes('/www/fhem-cms/eventmonitor.html?device=CMS')
+            && !target.url.includes('embedded')), 'a real separate browser page opens');
+          assert.equal(await evaluate(`Boolean(document.querySelector('.cms-eventmonitor-modal[open]'))`), false,
+            'opening the separate page closes the popup');
+          const closeStandalone = async (target, method) => {
+            const socket = new WebSocket(target.webSocketDebuggerUrl);
+            await new Promise((resolve, reject) => {
+              socket.addEventListener('open', resolve, {once: true});
+              socket.addEventListener('error', reject, {once: true});
+            });
+            let id = 0;
+            const pending = new Map();
+            socket.addEventListener('message', event => {
+              const message = JSON.parse(event.data);
+              const call = pending.get(message.id);
+              if (!call) return;
+              pending.delete(message.id);
+              if (message.error) call.reject(new Error(JSON.stringify(message.error)));
+              else call.resolve(message.result);
+            });
+            socket.addEventListener('close', () => {
+              for (const call of pending.values()) call.reject(new Error('Monitor window closed'));
+              pending.clear();
+            });
+            const send = (name, params) => new Promise((resolve, reject) => {
+              pending.set(++id, {resolve, reject});
+              socket.send(JSON.stringify({id, method: name, params}));
+            });
+            try {
+              const ready = await send('Runtime.evaluate', {expression: `new Promise(resolve => {
+                const timer = setInterval(() => {
+                  const button = document.querySelector('[data-close]');
+                  if (!button?.querySelector('svg') || button.hidden) return;
+                  clearInterval(timer); resolve(getComputedStyle(button).display !== 'none');
+                }, 25);
+              })`, awaitPromise: true, returnByValue: true, timeout: 10000});
+              assert.equal(ready.result.value, true, 'standalone monitor shows its X');
+              if (method === 'click') {
+                await send('Runtime.evaluate', {expression: `setTimeout(() => document.querySelector('[data-close]').click(), 50)`});
+              } else {
+                try {
+                  await send('Input.dispatchKeyEvent', {
+                    type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+                  });
+                } catch (error) {
+                  if (error.message !== 'Monitor window closed') throw error;
+                }
+              }
+              for (let i = 0; i < 50; i++) {
+                const pages = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+                if (!pages.some(page => page.id === target.id)) return;
+                await pause(50);
+              }
+              assert.fail(`standalone monitor did not close via ${method}`);
+            } finally { socket.close(); }
+          };
+          const target = targets.find(entry => entry.url.includes('/www/fhem-cms/eventmonitor.html?device=CMS')
+            && !entry.url.includes('embedded'));
+          await closeStandalone(target, 'click');
+          await click('#monitor-launcher');
+          await click('.cms-eventmonitor-modal header a');
+          let secondTarget;
+          for (let i = 0; i < 50; i++) {
+            const pages = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+            secondTarget = pages.find(entry => entry.url.includes('/www/fhem-cms/eventmonitor.html?device=CMS')
+              && !entry.url.includes('embedded'));
+            if (secondTarget) break;
+            await pause(50);
+          }
+          assert.ok(secondTarget, 'second standalone monitor opens');
+          await closeStandalone(secondTarget, 'Escape');
+          return;
+        }
         if (fixture === '110_pin_editor.html') {
           const point = () => evaluate('window.pinEditorTest.point()');
           const writes = () => evaluate('window.pinEditorTest.writes()');
@@ -956,6 +1222,14 @@ for (const [name, fixtures] of [
             await command('Emulation.setEmulatedMedia', { features: [{
               name: 'prefers-reduced-motion', value: fixture.includes('reduced=1') ? 'reduce' : 'no-preference',
             }] });
+          }
+          : fixture.startsWith('117_condition_wizard.html?touch=1')
+            || fixture.startsWith('118_condition_integration.html?touch=1')
+          ? async command => {
+            await command('Emulation.setDeviceMetricsOverride', {
+              width:390, height:844, deviceScaleFactor:1, mobile:true,
+            });
+            await command('Emulation.setTouchEmulationEnabled', {enabled:true});
           }
           : fixture.startsWith('114_widget_previews.html')
           ? command => command('Emulation.setDeviceMetricsOverride', {

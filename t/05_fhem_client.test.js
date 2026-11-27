@@ -495,3 +495,56 @@ test('missing WebSocket reports polling without connecting', () => {
   client.subscribe(['lamp'], () => {}, (state) => states.push(state));
   assert.deepEqual(states, ['polling']);
 });
+
+test('subscribeAll receives complete FHEMWEB status records and reconnects independently', () => {
+  const sockets = [];
+  const timers = new Map();
+  let nextTimer = 0;
+  class Socket {
+    constructor(url) {
+      this.url = url;
+      this.listeners = {};
+      sockets.push(this);
+    }
+    addEventListener(type, callback) { this.listeners[type] = callback; }
+    emit(type, value = {}) { this.listeners[type]?.(value); }
+    close() { this.emit('close'); }
+  }
+  globalThis.WebSocket = Socket;
+  globalThis.window = {
+    WebSocket: Socket,
+    setTimeout(callback, delay) {
+      const id = ++nextTimer;
+      timers.set(id, { callback, delay });
+      return id;
+    },
+    clearTimeout(id) { timers.delete(id); },
+  };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  const states = [];
+  const events = [];
+  client.subscribeAll((event) => events.push(event), (state) => states.push(state));
+  assert.equal(new URL(sockets[0].url).searchParams.get('inform'), 'type=status;filter=room=all;fmt=JSON');
+  assert.deepEqual(states, ['connecting']);
+
+  sockets[0].emit('open');
+  sockets[0].emit('message', { data: '["lamp-reading","on","on"]\n["#FHEMWEB:WEB","ignored",""]\ninvalid' });
+  assert.deepEqual(states, ['connecting', 'live']);
+  assert.deepEqual(events, [['lamp-reading', 'on', 'on'], ['#FHEMWEB:WEB', 'ignored', '']]);
+
+  sockets[0].emit('close');
+  assert.deepEqual(states, ['connecting', 'live', 'reconnecting']);
+  assert.equal([...timers.values()][0].delay, 1000);
+  client.unsubscribe();
+  assert.equal(timers.size, 0);
+  sockets[0].emit('message', { data: '["lamp-reading","old","old"]' });
+  assert.equal(events.length, 2, 'unsubscribed socket events are ignored');
+});
+
+test('subscribeAll reports an unavailable WebSocket without falling back to polling', () => {
+  globalThis.window = { clearTimeout() {} };
+  const client = new FhemClient('cms', 'https://fhem.example/fhem/');
+  const states = [];
+  client.subscribeAll(() => {}, (state) => states.push(state));
+  assert.deepEqual(states, ['unavailable']);
+});

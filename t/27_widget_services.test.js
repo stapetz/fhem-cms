@@ -58,6 +58,7 @@ test('device refresh bypasses cache and propagates failures instead of serving s
       return [{ name: 'Sensor', readings: { temperature: String(reads) } }];
     },
   });
+
   assert.equal((await services.listAllDevices())[0].readings.temperature, '1');
   assert.equal((await services.listAllDevices())[0].readings.temperature, '1');
   assert.equal((await services.listAllDevices({ refresh: true }))[0].readings.temperature, '2');
@@ -66,4 +67,14 @@ test('device refresh bypasses cache and propagates failures instead of serving s
   await assert.rejects(services.listAllDevices({ refresh: true }), /refresh failed/);
   fail = false;
   assert.equal((await services.listAllDevices({ refresh: true }))[0].readings.temperature, '4');
+});
+
+test('condition preview reads only valid selected devices and their channels', async () => {
+  const calls = [];
+  const services = createSchema5WidgetServices({jsonlist:async spec => { calls.push(spec); return []; }});
+  assert.deepEqual(await services.conditionSnapshots([]), []);
+  await services.conditionSnapshots(['Demo', 'Other']);
+  assert.deepEqual(calls, ['Demo,device=Demo,Other,device=Other']);
+  assert.throws(() => services.conditionSnapshots(['Demo,.*']), /Ungültige Geräte/);
+  assert.throws(() => services.conditionSnapshots(Array(21).fill('Demo')), /Ungültige Geräte/);
 });

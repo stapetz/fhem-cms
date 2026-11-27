@@ -5,6 +5,8 @@
 import { placeholderText, splitPlaceholders } from './freehtml.js';
 import { openPlaceholderPicker } from './placeholder-picker.js';
 import { ASSET_DOCUMENT } from './asset-contract.js';
+import { decodeCondition, encodeCondition } from './condition-markup.js';
+import { openConditionWizard } from './condition-wizard.js';
 
 export const MAX_HTML = 50000;
 export const MAX_IMAGE_BYTES = 3145728;
@@ -126,6 +128,20 @@ function convert(source, parent, state, depth) {
       continue;
     }
     if (tag === 'span' || tag === 'font' || tag === 'mark') {
+      if (tag === 'span' && (node.hasAttribute('data-cms-if') || node.hasAttribute('data-cms-unless'))) {
+        if (node.hasAttribute('data-cms-if') && node.hasAttribute('data-cms-unless')) {
+          throw new Error('Ein Bereich darf nur eine Bedingungsmarkierung tragen');
+        }
+        const name = node.hasAttribute('data-cms-if') ? 'data-cms-if' : 'data-cms-unless';
+        const value = node.getAttribute(name);
+        decodeCondition(value);
+        const span = document.createElement('span');
+        span.setAttribute(name, value);
+        state.count += 1;
+        convert(node, span, state, depth + 1);
+        parent.append(span);
+        continue;
+      }
       const style = colorStyle(node) || (tag === 'mark' ? 'background-color:#ffe066' : '');
       if (style) {
         const span = document.createElement('span');
@@ -264,6 +280,8 @@ export function editorCss() {
     .editor-area { min-height: 12rem; max-height: 50vh; overflow: auto; padding: 0.5rem; background: var(--cms-bg);
       border: 1px solid var(--cms-border); border-radius: 0.5rem; }
     .editor-area:focus-visible { outline: 2px solid var(--cms-accent); outline-offset: 2px; }
+    .editor-area [data-cms-if] { outline: 1px dashed var(--cms-accent, #8fd0a8); }
+    .editor-area [data-cms-unless] { outline: 1px dotted var(--cms-accent, #8fd0a8); }
     .editor-area img.rt-selected { outline: 2px solid var(--cms-accent); }
     .rt { position: relative; }
     .rt-handle { position: absolute; width: 1.1rem; height: 1.1rem; padding: 0; min-width: 0; border-radius: 0.25rem;
@@ -301,6 +319,8 @@ const BUTTONS = [
   { label: 'Bild', title: 'Bild einfügen', panel: 'image' },
   { label: 'Tabelle', title: 'Tabelle', panel: 'table' },
   { label: '{{ }}', title: 'Platzhalter für einen FHEM-Wert einfügen (Device suchen, Reading wählen)', placeholder: true },
+  { label: 'Wenn …', title: 'Bedingte Textpassage einfügen', condition: true },
+  { label: 'Wenn entfernen', title: 'Bedingung an der Cursorposition entfernen', removeCondition: true },
   null,
   { label: '↶', title: 'Rückgängig', cmd: 'undo' },
   { label: '↷', title: 'Wiederholen', cmd: 'redo' },
@@ -426,6 +446,8 @@ export function createEditor({ root, services, html, onError }) {
   chipify(area);
   let saved = null;
   let selectedImage = null;
+  const conditionAbort = new AbortController();
+  let conditionPending = false;
   const panels = {};
 
   const selection = () => (typeof root.getSelection === 'function' ? root.getSelection() : document.getSelection());
@@ -481,6 +503,21 @@ export function createEditor({ root, services, html, onError }) {
     return saved;
   };
   document.addEventListener('selectionchange', remember);
+
+  const conditionAt = range => {
+    let node = range?.startContainer;
+    if (node?.nodeType !== Node.ELEMENT_NODE) node = node?.parentElement;
+    const marker = node?.closest('[data-cms-if], [data-cms-unless]');
+    if (!marker || !area.contains(marker)) return null;
+    const previous = marker.hasAttribute('data-cms-unless') ? marker.previousSibling : marker;
+    if (previous?.nodeType !== Node.ELEMENT_NODE) return null;
+    if (!previous?.hasAttribute('data-cms-if')) return null;
+    const alternate = previous.nextSibling;
+    if (alternate?.nodeType !== Node.ELEMENT_NODE) return {marker:previous, alternate:null};
+    return {marker:previous, alternate:alternate?.getAttribute('data-cms-unless') === previous.getAttribute('data-cms-if')
+      ? alternate : null};
+  };
+  const unwrap = node => node.replaceWith(...node.childNodes);
 
   const exec = (cmd, value) => {
     restore();
@@ -592,7 +629,100 @@ export function createEditor({ root, services, html, onError }) {
       continue;
     }
     bar.append(button(spec.label, spec.title, () => {
-      if (spec.placeholder) {
+      if (spec.condition) {
+        if (conditionPending) return;
+        remember();
+        const range = saved?.cloneRange();
+        const existing = conditionAt(range);
+        const initial = existing ? {condition:decodeCondition(existing.marker.getAttribute('data-cms-if')),
+          otherwise:Boolean(existing.alternate)} : null;
+        conditionPending = true;
+        openConditionWizard({services, initial, allowElse:true, signal:conditionAbort.signal}).then(result => {
+          if (!result || conditionAbort.signal.aborted) return;
+          if (existing) {
+            if (!area.contains(existing.marker)) throw new Error('Die Textpassage ist nicht mehr vorhanden.');
+            const encoded = encodeCondition(result.condition);
+            existing.marker.setAttribute('data-cms-if', encoded);
+            if (existing.alternate && result.otherwise) existing.alternate.setAttribute('data-cms-unless', encoded);
+            else if (existing.alternate) unwrap(existing.alternate);
+            else if (result.otherwise) {
+              const alternate = document.createElement('span');
+              alternate.setAttribute('data-cms-unless', encoded);
+              alternate.textContent = 'Text für Sonst';
+              existing.marker.after(alternate);
+            }
+            onError('');
+            return;
+          }
+          if (!range || !area.contains(range.commonAncestorContainer)) {
+            onError('Bitte zuerst eine Cursorposition oder Textpassage auswählen.');
+            return;
+          }
+          const block = node => (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement)
+            ?.closest('p,h1,h2,h3,blockquote,li,th,td');
+          const startBlock = block(range.startContainer);
+          const endBlock = block(range.endContainer);
+          const parts = [];
+          if (range.collapsed && !startBlock) {
+            const paragraph = document.createElement('p');
+            range.insertNode(paragraph);
+            range.selectNodeContents(paragraph);
+            parts.push(range);
+          } else if (startBlock && startBlock === endBlock) {
+            parts.push(range);
+          } else {
+            const blocks = [...area.querySelectorAll('p,h1,h2,h3,blockquote,li,th,td')]
+              .filter(node => !node.querySelector('p,h1,h2,h3,blockquote,li,th,td') && range.intersectsNode(node));
+            for (const node of blocks) {
+              const part = document.createRange();
+              part.selectNodeContents(node);
+              if (range.compareBoundaryPoints(Range.START_TO_START, part) > 0) {
+                part.setStart(range.startContainer, range.startOffset);
+              }
+              if (range.compareBoundaryPoints(Range.END_TO_END, part) < 0) {
+                part.setEnd(range.endContainer, range.endOffset);
+              }
+              if (!part.collapsed) parts.push(part);
+            }
+            const selectedText = range.cloneContents().textContent.replace(/\s/g, '');
+            const coveredText = parts.map(part => part.cloneContents().textContent).join('').replace(/\s/g, '');
+            if (!parts.length || selectedText !== coveredText) {
+              onError('Bitte eine vollständige Textpassage innerhalb von Absätzen oder Tabellenzellen auswählen.');
+              return;
+            }
+          }
+          const encoded = encodeCondition(result.condition);
+          const markers = [];
+          for (const part of parts.reverse()) {
+            const marker = document.createElement('span');
+            marker.setAttribute('data-cms-if', encoded);
+            marker.append(part.extractContents());
+            if (!marker.hasChildNodes()) marker.textContent = 'Text für Wenn';
+            part.insertNode(marker);
+            markers.unshift(marker);
+          }
+          let last = markers.at(-1);
+          if (result.otherwise) {
+            const alternate = document.createElement('span');
+            alternate.setAttribute('data-cms-unless', encoded);
+            alternate.textContent = 'Text für Sonst';
+            last.after(alternate);
+            last = alternate;
+          }
+          range.setStartAfter(last);
+          range.collapse(true);
+          saved = range.cloneRange();
+          restore();
+          onError('');
+        }).catch(error => onError(`Bedingung konnte nicht eingefügt werden: ${error.message}`))
+          .finally(() => { conditionPending = false; });
+      } else if (spec.removeCondition) {
+        const existing = conditionAt(currentRange());
+        if (!existing) { onError('Bitte den Cursor in eine bedingte Textpassage setzen.'); return; }
+        if (existing.alternate) unwrap(existing.alternate);
+        unwrap(existing.marker);
+        onError('');
+      } else if (spec.placeholder) {
         remember();
         openPlaceholderPicker({ services }).then((result) => {
           if (result) {
@@ -965,6 +1095,7 @@ export function createEditor({ root, services, html, onError }) {
       return serializeArea(area);
     },
     destroy() {
+      conditionAbort.abort();
       document.removeEventListener('selectionchange', remember);
       window.removeEventListener('resize', placeHandle);
     }

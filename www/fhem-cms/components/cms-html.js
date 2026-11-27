@@ -7,12 +7,96 @@ import { renderVehicleMaps } from '../js/vehicle-map.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
 import { FRONTEND_VERSION } from '../js/frontend-version.js';
+import { decodeCondition, encodeCondition } from '../js/condition-markup.js';
+import { openConditionWizard } from '../js/condition-wizard.js';
 
 const HELP_URL = 'https://github.com/stapetz/fhem-cms/blob/dev/docs/PLATZHALTER.md';
 const EXAMPLE = `<div class="box">
   <b>Wohnzimmer</b><br>
   {{Wohnzimmer:temperature|round(1)|suffix( °C)}}
 </div>`;
+const VOID_TAGS = new Set(['br', 'hr', 'img']);
+const BLOCK_TAGS = new Set(['div', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'section', 'article',
+  'header', 'footer', 'main', 'aside', 'nav', 'figure', 'figcaption', 'details', 'summary',
+  'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+  'pre', 'blockquote']);
+
+function conditionSelection(source, start, end) {
+  let inside = false, quote = '', comment = false;
+  for (let i = 0; i < start; i++) {
+    if (comment) {
+      if (source.startsWith('-->', i)) { comment = false; i += 2; }
+    } else if (inside) {
+      if (quote && source[i] === quote) quote = '';
+      else if (!quote && (source[i] === '"' || source[i] === "'")) quote = source[i];
+      else if (!quote && source[i] === '>') inside = false;
+    } else if (source.startsWith('<!--', i)) { comment = true; i += 3; }
+    else if (source[i] === '<') inside = true;
+  }
+  if (inside || comment) throw new Error('Die Auswahl darf nicht innerhalb eines HTML-Tags beginnen.');
+  const text = source.slice(start, end);
+  const stack = [];
+  let block = false;
+  const tokens = /<!--(?:(?!-->).)*-->|<(\/?)([A-Za-z][A-Za-z0-9]*)((?:\s+[A-Za-z][A-Za-z0-9-]*\s*=\s*"[^"]*")*)\s*(\/?)>/gs;
+  let cursor = 0;
+  for (const match of text.matchAll(tokens)) {
+    if (text.slice(cursor, match.index).includes('<')) throw new Error('Die Auswahl enthält ein unvollständiges HTML-Element.');
+    cursor = match.index + match[0].length;
+    if (!match[2]) continue;
+    const tag = match[2].toLowerCase();
+    if (BLOCK_TAGS.has(tag)) block = true;
+    if (match[1]) {
+      if (stack.pop() !== tag) throw new Error('Die Auswahl muss vollständige HTML-Elemente enthalten.');
+    } else if (!match[4] && !VOID_TAGS.has(tag)) stack.push(tag);
+  }
+  if (stack.length || text.slice(cursor).includes('<')) {
+    throw new Error('Die Auswahl muss vollständige HTML-Elemente enthalten.');
+  }
+  return block ? 'div' : 'span';
+}
+
+function conditionAtSource(source, position) {
+  const tokens = /<!--(?:(?!-->).)*-->|<(\/?)(span|div)((?:\s+[A-Za-z][A-Za-z0-9-]*\s*=\s*"[^"]*")*)\s*>/gis;
+  const stack = [], markers = [];
+  for (const token of source.matchAll(tokens)) {
+    if (!token[2]) continue;
+    if (!token[1]) {
+      const attr = /\s(data-cms-if|data-cms-unless)\s*=\s*"([0-9a-f]+)"/i.exec(token[3]);
+      stack.push({tag:token[2].toLowerCase(), start:token.index, openEnd:token.index + token[0].length,
+        attribute:attr?.[1].toLowerCase(), encoded:attr?.[2]});
+    } else {
+      const item = stack.pop();
+      if (!item || item.tag !== token[2].toLowerCase()) return null;
+      if (item.attribute) markers.push({...item, closeStart:token.index, end:token.index + token[0].length});
+    }
+  }
+  const selected = markers.filter(item => item.start <= position && position <= item.end)
+    .sort((a, b) => b.start - a.start)[0];
+  if (!selected) return null;
+  const marker = selected.attribute === 'data-cms-if' ? selected : markers.find(item =>
+    item.attribute === 'data-cms-if' && item.end === selected.start && item.encoded === selected.encoded);
+  if (!marker) return null;
+  const alternate = markers.find(item => item.attribute === 'data-cms-unless'
+    && item.start === marker.end && item.encoded === marker.encoded);
+  return {marker, alternate};
+}
+
+function replaceConditionSource(source, existing, result) {
+  const {marker, alternate} = existing;
+  const encoded = result && encodeCondition(result.condition);
+  const branch = (part, attribute) => {
+    const body = source.slice(part.openEnd, part.closeStart);
+    if (!encoded) return body;
+    const opening = source.slice(part.start, part.openEnd)
+      .replace(/\bdata-cms-(?:if|unless)\s*=\s*"[0-9a-f]+"/i, `${attribute}="${encoded}"`);
+    return opening + body + source.slice(part.closeStart, part.end);
+  };
+  let replacement = branch(marker, 'data-cms-if');
+  if (alternate) replacement += result?.otherwise ? branch(alternate, 'data-cms-unless')
+    : source.slice(alternate.openEnd, alternate.closeStart);
+  else if (result?.otherwise) replacement += `<${marker.tag} data-cms-unless="${encoded}">Text für Sonst</${marker.tag}>`;
+  return {start:marker.start, end:alternate?.end ?? marker.end, replacement};
+}
 
 class FHEMCMSHtml extends HTMLElement {
   constructor() {
@@ -156,7 +240,9 @@ class FHEMCMSHtml extends HTMLElement {
             <pre data-diagnostic-context></pre>
             <button type="button" data-diagnostic-jump>Zur Stelle im Code</button>
           </div>
-          <div class="row"><button type="button" data-insert-placeholder>Platzhalter suchen und einfügen …</button></div>
+          <div class="row"><button type="button" data-insert-placeholder>Platzhalter suchen und einfügen …</button>
+            <button type="button" data-insert-condition>Bedingten Bereich einfügen / bearbeiten …</button>
+            <button type="button" data-remove-condition>Bedingung entfernen</button></div>
           <details>
             <summary>Platzhalter-Hilfe</summary>
             <p>Werte aus FHEM setzt du mit Platzhaltern ein; sie werden live aktualisiert:</p>
@@ -172,7 +258,7 @@ class FHEMCMSHtml extends HTMLElement {
             <p>Geräte im Ansichtsmodus kannst du über deklarative Attribute bedienen, ohne JavaScript zu verwenden: <code>&lt;button type="button" set-device="LR_SAT" set-cmd="remoteControl OK"&gt;OK&lt;/button&gt;</code>. <code>set-device</code> und <code>set-cmd</code> gehören zusammen und sind nur auf <code>button</code>, <code>div</code>, <code>span</code> und <code>a</code> erlaubt. Die FHEM-Berechtigungen und der CSRF-Schutz bleiben wirksam.</p>
             <p>CSS verwendet eine Positivliste für Eigenschaften, Funktionen und At-Regeln: moderne Layouts, Animationen, Filter, Variablen, <code>:has()</code> und Attributselektoren sind möglich. Alle Positionierungsarten inklusive <code>fixed</code> bleiben offen, auf die Kachel begrenzt. <code>z-index</code> darf höchstens 100 sein. Unbekannte Regeln und <code>:host</code> werden abgelehnt.</p>
             <p>Bildquellen, Links, Iframes und CSS-Ressourcen (<code>url()</code>, <code>@import</code>) dürfen lokale Pfade oder HTTP-/HTTPS-URLs verwenden. Einzelne URL-Readings werden bei jeder Anzeige geprüft. Iframes haben keine Anbieterbeschränkung, aber eine feste Sandbox ohne Originfreigabe, Popups oder Topnavigation; Anbieter-/Browserregeln können Einbettungen dennoch blockieren. Externe Ressourcen kontaktieren ihre Anbieter; eigene und importierte Styles können die Widget-Hülle beeinflussen und importierte Styles werden nicht rekursiv geprüft. Skripte im eigenen HTML, native Eventhandler, Formulare, <code>srcdoc</code> und aktive SVG-Inhalte bleiben gesperrt.</p>
-            <p><code>data-value="{{Device:power|int}}"</code> und <code>data-state="{{Device:state}}"</code> setzen sicheren Attributtext für CSS. <code>data-cms-*</code> ist intern reserviert (Ausnahme: <code>data-cms-class</code>). Links auf <code>#id</code> und <code>:target</code> funktionieren innerhalb des Widgets ohne CMS-Seitenwechsel.</p>
+            <p><code>data-value="{{Device:power|int}}"</code> und <code>data-state="{{Device:state}}"</code> setzen sicheren Attributtext für CSS. <code>data-cms-*</code> ist intern reserviert; <code>data-cms-class</code> und die vom Bedingungsdialog erzeugten Markierungen werden geprüft. Links auf <code>#id</code> und <code>:target</code> funktionieren innerhalb des Widgets ohne CMS-Seitenwechsel.</p>
             <p>Lokale Fahrzeugkarte: <code>&lt;div id="fahrzeugkarte" data-map="vehicle" data-latitude="{{MeinElch:location_latitude}}" data-longitude="{{MeinElch:location_longitude}}" data-zoom="16" style="height:175px;width:100%"&gt;&lt;/div&gt;</code>. Weißer Automarker, Live-Zentrierung bei Standortwechsel, Zoom 2–19. Normale Updates erhalten Zoom und Kartenausschnitt. OpenStreetMap-Kacheln werden extern geladen.</p>
             <p>Numerische Inline-Styles wie <code>width:{{MeinElch:state_batteryChargeLevel|int}}%</code>, CSS-Variablen, SVG-Geometrie und Kartenkoordinaten unterstützen geprüfte Zahlen mit <code>int</code>, <code>round(0)</code> bis <code>round(6)</code> und numerischem <code>default(50)</code> für fehlende Werte. <code>scroll-behavior:smooth</code> ist erlaubt; <code>map(on:An,off:Aus)</code> funktioniert ebenso wie die Schreibweise mit <code>=</code>.</p>
             <p><a href="${HELP_URL}" target="_blank" rel="noopener noreferrer">Ausführliche Beschreibung (PLATZHALTER.md)</a></p>
@@ -212,6 +298,8 @@ class FHEMCMSHtml extends HTMLElement {
       area.setSelectionRange(diagnostic.start, diagnostic.end);
     });
     $('[data-insert-placeholder]').addEventListener('click', () => this.insertPlaceholder());
+    $('[data-insert-condition]').addEventListener('click', () => this.insertCondition());
+    $('[data-remove-condition]').addEventListener('click', () => this.removeCondition());
     $('[data-content]').addEventListener('click', (event) => {
       const action = event.target.closest?.('[set-device][set-cmd]');
       if (action) {
@@ -340,15 +428,67 @@ class FHEMCMSHtml extends HTMLElement {
     area.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
+  async insertCondition() {
+    if (this.conditionPending) return;
+    const area = this.shadowRoot.querySelector('[data-form]').elements.html;
+    const start = area.selectionStart ?? area.value.length;
+    const end = area.selectionEnd ?? start;
+    const original = area.value;
+    const existing = start === end ? conditionAtSource(original, start) : null;
+    this.conditionPending = true;
+    try {
+      const initial = existing ? {condition:decodeCondition(existing.marker.encoded), otherwise:Boolean(existing.alternate)} : null;
+      const result = await openConditionWizard({services:this.services, initial, allowElse:true, signal:this.conditionAbort.signal});
+      if (!result || this.conditionAbort.signal.aborted) return;
+      if (area.value !== original) throw new Error('Der HTML-Code wurde zwischenzeitlich geändert.');
+      if (existing) {
+        const change = replaceConditionSource(original, existing, result);
+        area.setRangeText(change.replacement, change.start, change.end, 'end');
+        area.dispatchEvent(new Event('input', {bubbles:true}));
+        area.focus();
+        return;
+      }
+      const encoded = encodeCondition(result.condition);
+      const selected = original.slice(start, end) || 'Text für Wenn';
+      const tag = conditionSelection(original, start, end);
+      const markup = `<${tag} data-cms-if="${encoded}">${selected}</${tag}>`
+        + (result.otherwise ? `<${tag} data-cms-unless="${encoded}">Text für Sonst</${tag}>` : '');
+      const next = original.slice(0, start) + markup + original.slice(end);
+      const error = checkSource(next);
+      if (error) throw new Error(error);
+      area.setRangeText(markup, start, end, 'end');
+      area.dispatchEvent(new Event('input', {bubbles:true}));
+      area.focus();
+    } catch (error) {
+      this.setDialogError(`Bedingung konnte nicht eingefügt werden: ${error.message || String(error)}`);
+    } finally { this.conditionPending = false; }
+  }
+
+  removeCondition() {
+    const area = this.shadowRoot.querySelector('[data-form]').elements.html;
+    const existing = conditionAtSource(area.value, area.selectionStart);
+    if (!existing) { this.setDialogError('Bitte den Cursor in einen bedingten Bereich setzen.'); return; }
+    const change = replaceConditionSource(area.value, existing, null);
+    area.setRangeText(change.replacement, change.start, change.end, 'end');
+    area.dispatchEvent(new Event('input', {bubbles:true}));
+    area.focus();
+  }
+
   showDevices() {
     const html = this.shadowRoot.querySelector('[data-form]').elements.html.value;
-    const devices = extractDevices(html);
-    this.shadowRoot.querySelector('[data-devices]').textContent = devices.length > 0
-      ? `Verwendete Devices: ${devices.join(', ')}`
-      : 'Noch keine Platzhalter im Code.';
+    try {
+      const devices = extractDevices(html);
+      this.shadowRoot.querySelector('[data-devices]').textContent = devices.length > 0
+        ? `Verwendete Devices: ${devices.join(', ')}`
+        : 'Noch keine Platzhalter im Code.';
+    } catch (error) {
+      this.shadowRoot.querySelector('[data-devices]').textContent = `Geräte können nicht ermittelt werden: ${error.message}`;
+    }
   }
 
   openConfig(options = {}) {
+    this.conditionAbort?.abort();
+    this.conditionAbort = new AbortController();
     this.isNew = Boolean(options.isNew);
     const form = this.shadowRoot.querySelector('[data-form]');
     form.elements.title.value = this.widgetConfig.title || '';
@@ -453,6 +593,7 @@ class FHEMCMSHtml extends HTMLElement {
   }
 
   closeDialog(cancelled) {
+    this.conditionAbort?.abort();
     const dialog = this.shadowRoot.querySelector('[data-dialog]');
     if (dialog.open) {
       dialog.close();

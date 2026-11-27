@@ -1,0 +1,167 @@
+.cms-eventmonitor {
+  position: relative;
+  width: min(100% - 2rem, 80rem);
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem) 0;
+  color: var(--cms-text);
+}
+
+.cms-eventmonitor-header {
+  display: grid;
+  justify-items: start;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.cms-eventmonitor-header h1,
+.cms-eventmonitor-header p {
+  margin: 0;
+}
+
+.cms-eventmonitor-header h1 {
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  padding-inline-end: 4rem;
+}
+
+.cms-eventmonitor-close.cms-close-button {
+  position: absolute;
+  top: clamp(1rem, 3vw, 2rem);
+  right: 0;
+}
+
+.cms-eventmonitor-close.cms-close-button[hidden] { display: none; }
+
+.cms-eventmonitor-close-status { color: var(--cms-danger); }
+
+.cms-eventmonitor[data-embedded] .cms-eventmonitor-header h1 {
+  display: none;
+}
+
+.cms-eventmonitor-header .cms-button {
+  text-decoration: none;
+}
+
+.cms-eventmonitor-connection,
+.cms-eventmonitor-buffer,
+.cms-eventmonitor-pause {
+  color: var(--cms-muted);
+}
+
+.cms-eventmonitor-connection[data-state="live"] {
+  color: var(--cms-accent);
+}
+
+.cms-eventmonitor-connection[data-state="error"],
+.cms-eventmonitor-connection[data-state="unavailable"] {
+  color: var(--cms-danger);
+}
+
+.cms-eventmonitor-panel {
+  min-width: 0;
+  padding: clamp(0.75rem, 2vw, 1.25rem);
+  border: 1px solid var(--cms-border);
+  border-radius: 1rem;
+  background: var(--cms-surface);
+}
+
+:root[data-cms-theme="liquid-glass"] .cms-eventmonitor-panel {
+  background: rgb(19 34 52 / var(--cms-liquid-opacity, 0.88));
+  -webkit-backdrop-filter: blur(var(--cms-liquid-blur, 14.1px));
+  backdrop-filter: blur(var(--cms-liquid-blur, 14.1px));
+  box-shadow: inset 0 1px 3px rgb(255 255 255 / var(--cms-liquid-gloss, 0.094));
+}
+
+.cms-eventmonitor-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.cms-eventmonitor-controls label {
+  display: grid;
+  flex: 1 1 16rem;
+  gap: 0.35rem;
+}
+
+.cms-eventmonitor-controls input {
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--cms-border);
+  border-radius: 0.5rem;
+  color: var(--cms-text);
+  background: var(--cms-bg);
+  font: inherit;
+}
+
+.cms-eventmonitor-controls input:focus-visible,
+.cms-eventmonitor-scroll:focus-visible {
+  outline: 2px solid var(--cms-accent);
+  outline-offset: 2px;
+}
+
+.cms-eventmonitor-buffer,
+.cms-eventmonitor-pause {
+  margin: 0.75rem 0;
+}
+
+.cms-eventmonitor-scroll {
+  max-height: min(68vh, 52rem);
+  overflow: auto;
+  border: 1px solid var(--cms-border);
+  border-radius: 0.6rem;
+}
+
+.cms-eventmonitor-scroll table {
+  width: 100%;
+  min-width: 46rem;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.cms-eventmonitor-scroll th:nth-child(2),
+.cms-eventmonitor-scroll td:nth-child(2) {
+  min-width: 15rem;
+}
+
+.cms-eventmonitor-scroll th,
+.cms-eventmonitor-scroll td {
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--cms-border-subtle);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.cms-eventmonitor-scroll th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--cms-surface-raised);
+}
+
+.cms-eventmonitor-scroll td:first-child {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cms-eventmonitor-scroll tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--cms-surface-raised) 55%, transparent);
+}
+
+.cms-eventmonitor-empty {
+  margin: 1rem 0 0;
+  color: var(--cms-muted);
+}
+
+@media (max-width: 38rem) {
+  .cms-eventmonitor-controls > .cms-button {
+    flex: 1 1 9rem;
+  }
+
+  .cms-eventmonitor-scroll th,
+  .cms-eventmonitor-scroll td {
+    padding: 0.45rem;
+    font-size: 0.9rem;
+  }
+}

@@ -110,6 +110,24 @@ test('schema 5 live page refreshes, reconnects and ignores results after stop', 
     assert.throws(() => live.refresh(), /nicht aktiv/);
     assert.throws(() => live.start(), /bereits gestartet/);
 
+    const condition = {join:'and', rules:[{device:'Guard', reading:'state', operator:'==', value:'on'}]};
+    const {encodeCondition} = await import('../www/fhem-cms/js/condition-markup.js');
+    const conditionalRequests = [], conditionalSubscriptions = [];
+    const conditionalClient = {
+      jsonlist(spec) { conditionalRequests.push(spec); return Promise.resolve([{name:'Guard', readings:{state:'on'}}]); },
+      subscribe(names) { conditionalSubscriptions.push(names); }, unsubscribe() {},
+    };
+    const conditional = new Schema5LivePage(conditionalClient, [
+      {type:'fhem-button', device:'Lamp', visibility:{condition, mode:'collapse'}},
+      {type:'text', html:`<span data-cms-if="${encodeCondition(condition)}">Text</span>`},
+    ], () => {}, () => {}, timers);
+    const startConditional = conditional.start();
+    assert.deepEqual(conditionalSubscriptions.at(-1), ['Guard', 'Lamp'],
+      'conditions subscribe even on widgets that otherwise do not receive snapshots');
+    assert.equal(conditionalRequests.at(-1), 'Guard,device=Guard,Lamp,device=Lamp');
+    await startConditional;
+    conditional.stop();
+
     const modalRequests = [];
     const modalSubscriptions = [];
     const modalUpdates = [];

@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-27",
+  "version": "1.40.1-dev",
+  "title": "Graph-Detailwerte per Touch",
+  "changes": [
+    "Linien, Stapel und Tortensegmente zeigen Detailwerte beim Antippen auf Touchgeraeten; Bereichsauswahl und Scrollen bleiben erhalten. Refs #265."
+  ]
+}

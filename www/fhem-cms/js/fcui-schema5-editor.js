@@ -14,6 +14,7 @@ import { applyCmsPageCanvas, cmsPageCanvas, isFreeform } from './fcui-freeform-l
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-wizard.js';
 import { createCmsAdminMenuLinks } from './cms-admin-link.js';
+import { createEventMonitorLink } from './eventmonitor-link.js';
 import { Schema5SettingsPreview } from './fcui-schema5-settings-preview.js';
 import { readGridPreference, writeGridPreference } from './grid-preference.js';
 import { validateVolvoGroups } from './volvoconnect.js';
@@ -153,7 +154,10 @@ export class Schema5Editor {
     this.#menu('Datei', fileActions);
     this.#menu('Bearbeiten', [this.#page, ...createCmsAdminMenuLinks({ adminMenuEnabled })]);
     this.#menu('Einfügen', [this.#widgets, this.#addDevice]);
-    this.#menu('Ansicht', [this.#previewToggle, this.#gridToggle, this.#arrange]);
+    const viewActions = [this.#previewToggle, this.#gridToggle, this.#arrange];
+    const eventMonitorLink = createEventMonitorLink(client);
+    if (eventMonitorLink) viewActions.push(eventMonitorLink);
+    this.#menu('Ansicht', viewActions);
     this.#toolbar.append(this.#mode, this.#reloadButton);
     this.#setActions(false, false);
     this.#status = document.createElement('p');

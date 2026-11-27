@@ -2,6 +2,7 @@ import { showCmsModal } from './modal-dialog.js';
 import { createWidgetElement, dataFor, devicesOf, groupSnapshots, isLiveWidget } from './widget-factory.js';
 import { FhemClient, isValidName } from './fhem-client.js';
 import { createCmsAdminMenuLinks } from './cms-admin-link.js';
+import { createEventMonitorLink } from './eventmonitor-link.js';
 import { readGridPreference, writeGridPreference } from './grid-preference.js';
 import { DevicePreview } from './device-preview.js';
 import { showDevBanner } from './environment-banner.js';
@@ -230,7 +231,10 @@ export class CmsPage {
     const fileMenu = makeMenu('Datei', [this.setupButton, this.previewButton, this.publishButton, this.discardButton, this.backupsButton, this.purgeButton]);
     const editMenu = makeMenu('Bearbeiten', [this.navButton, ...createCmsAdminMenuLinks(this.client)]);
     this.menu = makeMenu('Einfügen', this.menuButtons);
-    const viewMenu = makeMenu('Ansicht', [this.gridButton]);
+    const viewActions = [this.gridButton];
+    const eventMonitorLink = createEventMonitorLink(this.client);
+    if (eventMonitorLink) viewActions.push(eventMonitorLink);
+    const viewMenu = makeMenu('Ansicht', viewActions);
     document.addEventListener('click', (event) => {
       if (!this.toolbar.contains(event.target)) {
         this.closeMenus();

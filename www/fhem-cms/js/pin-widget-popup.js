@@ -54,6 +54,9 @@ export function createPinWidgetPopup(root, createWidget) {
     update(updateWidget) {
       if (current?.element) updateWidget(current.id, current.element);
     },
+    closeWidget(id) {
+      if (current?.id === id) close();
+    },
     showError(widget, error) {
       this.open(widget);
       const message = doc.createElement('p');

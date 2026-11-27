@@ -11,6 +11,7 @@ import { pinKeepsCard } from './pin-presentation.js';
 import { mountPinReadingOptions } from './pin-reading-options.js';
 import { createWidgetPreview } from './widget-preview.js';
 import { showCmsModal } from './modal-dialog.js';
+import { openConditionWizard } from './condition-wizard.js';
 
 const WIDGET_TYPES = [
   ['thermostat', 'Thermostat', 't', 4, 2, { device: '', readings: { actual: '', target: '' } }],
@@ -309,8 +310,16 @@ export class Schema5WidgetPanel {
       services.pages = (this.#state.draft || this.#state.live).pages.map(({ id, title }) => ({ id, title }));
       let forceCard;
       let pinReadings;
+      let visibility = widget.visibility ? structuredClone(widget.visibility) : null;
+      let conditionPending = false;
+      const conditionAbort = new AbortController();
       const invoke = (name) => async (...args) => {
-        if (this.#closed || this.#busy) throw new Error('Widget-Bearbeitung ist nicht mehr aktiv');
+        if (this.#closed || this.#busy || conditionPending) throw new Error('Widget-Bearbeitung ist nicht mehr aktiv');
+        if (['previewWidget', 'saveWidget'].includes(name)) {
+          args[0] = {...args[0]};
+          if (visibility) args[0].visibility = structuredClone(visibility);
+          else delete args[0].visibility;
+        }
         if (pinReadings && ['previewWidget', 'saveWidget'].includes(name)) args[0] = pinReadings.apply(args[0]);
         if (forceCard && ['previewWidget', 'saveWidget'].includes(name)
           && (forceCard.checked !== pinKeepsCard(widget) || Object.hasOwn(widget, 'forceCard'))) {
@@ -350,6 +359,7 @@ export class Schema5WidgetPanel {
         if (!this.#busy) session.close();
       });
       session.completion.then((outcome) => {
+        conditionAbort.abort();
         pinReadings?.destroy();
         this.#finish(session, outcome);
       });
@@ -362,6 +372,45 @@ export class Schema5WidgetPanel {
         return;
       }
       if (!dialog.open) throw new Error('Widgetdialog wurde nicht geöffnet');
+      const conditionRow = element('div');
+      conditionRow.style.display = 'flex';
+      conditionRow.style.flexWrap = 'wrap';
+      conditionRow.style.gap = '.5rem';
+      const conditionButton = element('button');
+      conditionButton.type = 'button';
+      conditionButton.setAttribute('data-widget-condition', '');
+      const removeCondition = element('button', 'Bedingung entfernen');
+      removeCondition.type = 'button';
+      const updateCondition = () => {
+        conditionButton.textContent = visibility ? 'Sichtbarkeitsbedingung bearbeiten' : 'Sichtbarkeitsbedingung hinzufügen';
+        removeCondition.hidden = !visibility;
+      };
+      conditionButton.addEventListener('click', async () => {
+        if (conditionPending || this.#busy) return;
+        conditionPending = true;
+        conditionButton.disabled = true;
+        try {
+          const result = await openConditionWizard({services, initial:visibility, allowMode:true, signal:conditionAbort.signal});
+          if (result && !conditionAbort.signal.aborted) visibility = result;
+          updateCondition();
+        } catch (error) {
+          const message = `Bedingung konnte nicht geöffnet werden: ${error.message || String(error)}`;
+          const dialogError = dialog.querySelector('[data-dialog-error], [data-error], [role="alert"]');
+          if (dialogError) dialogError.textContent = message;
+          else {
+            this.#status.setAttribute('data-error', '');
+            this.#status.textContent = message;
+          }
+        } finally {
+          conditionPending = false;
+          conditionButton.disabled = false;
+        }
+      });
+      removeCondition.addEventListener('click', () => { visibility = null; updateCondition(); });
+      updateCondition();
+      conditionRow.append(conditionButton, removeCondition);
+      const widgetForm = dialog.querySelector('form');
+      widgetForm.insertBefore(conditionRow, widgetForm.querySelector(':scope > .actions'));
       const page = (this.#state.draft || this.#state.live).pages.find(entry => entry.id === this.#page);
       if (page.renderAsPins === true) {
         pinReadings = mountPinReadingOptions(dialog, widget, services);

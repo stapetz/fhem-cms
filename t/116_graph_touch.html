@@ -1,0 +1,73 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graph touch regression</title>
+<style>body { margin: 0; min-height: 1800px; } cms-graph { display:block; width:90vw; height:350px; }</style>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import '../www/fhem-cms/components/cms-graph.js';
+const graph = document.createElement('cms-graph');
+const config = {id:'touch',type:'fhem-graph',range:'24h',granularity:'auto',chartType:'line',aggregation:'last',
+  series:[{device:'Solar',reading:'power',source:'auto',label:'Solar',color:'#123abc',unit:'W'}]};
+let calls = 0;
+let delay = 0;
+graph.config = config;
+graph.services = {history:async () => {
+  calls++;
+  if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+  return {points:[[1000,1],[2000,9]],summary:{last:9,average:5},truncated:false};
+}};
+document.body.append(graph);
+const root = graph.shadowRoot;
+const data = [{points:[[1000,1],[2000,9]],summary:{last:9,average:5}}];
+for (let attempt = 0; !graph.currentData && attempt < 150; attempt++) {
+  await new Promise(resolve => setTimeout(resolve, 20));
+}
+if (!graph.currentData) throw new Error(root.querySelector('[data-status]').textContent);
+window.graphTouch = {
+  draw(type, preview = false, scale = 1) {
+    graph.style.transformOrigin = 'top left';
+    graph.style.transform = `scale(${scale})`;
+    graph.style.setProperty('--cms-freeform-scale', String(scale));
+    if (preview) root.querySelector('[data-dialog]').showModal();
+    else if (root.querySelector('[data-dialog]').open) root.querySelector('[data-dialog]').close();
+    graph.draw({...config,chartType:type}, data, preview ? '[data-preview]' : '[data-svg]',
+      preview ? '[data-preview-legend]' : '[data-legend]',
+      root.querySelector(preview ? '[data-preview-status]' : '[data-status]'), new Set());
+    this.preview = preview;
+  },
+  point(fraction = .75) {
+    const box = root.querySelector(this.preview ? '[data-preview]' : '[data-svg]').getBoundingClientRect();
+    return {x:box.left + box.width * fraction, y:box.top + box.height * .5};
+  },
+  tip() {
+    const tip = root.querySelector(this.preview ? '[data-preview-tooltip]' : '[data-tooltip]');
+    return {hidden:tip.hidden, text:tip.textContent};
+  },
+  calls() { return calls; },
+  range() { return root.querySelector('[data-range]').value; },
+  resetRange() { root.querySelector('[data-range]').value = '24h'; },
+  tipBox() {
+    const tip = root.querySelector(this.preview ? '[data-preview-tooltip]' : '[data-tooltip]');
+    const box = tip.getBoundingClientRect();
+    return {hidden:tip.hidden, left:box.left, right:box.right};
+  },
+  plotPan() {
+    const plot = root.querySelector('[data-svg]').parentElement;
+    return {ready:plot.classList.contains('pan-ready'), panning:plot.classList.contains('panning')};
+  },
+  async loadWithSpinner(ms) {
+    delay = ms;
+    const promise = graph.load();
+    const during = !root.querySelector('[data-spinner]').hidden;
+    await promise;
+    delay = 0;
+    return {during, after: !root.querySelector('[data-spinner]').hidden};
+  },
+  finish() {
+    document.querySelector('#result').textContent = '{"checks":1}';
+    document.querySelector('#result').dataset.result = 'pass';
+  },
+};
+document.querySelector('#result').dataset.ready = 'true';
+</script>

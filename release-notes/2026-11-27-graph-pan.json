@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-27",
+  "version": "1.41.0-dev",
+  "title": "Graph verschieben, Ladeanzeige und Tooltip-Position",
+  "changes": [
+    "Linien- und Stapeldiagramme lassen sich zeitlich verschieben: per Zwei-Finger-Geste auf Touchgeraeten oder mit gehaltener Leertaste und Maustaste am Desktop (Hand-Cursor). Das Verschieben endet am aktuellen Zeitpunkt. Refs #266.",
+    "Waehrend des Ladens aus FileLog oder DbLog dreht mittig auf dem Graphen ein Ladesymbol. Refs #266.",
+    "Das Mouseover-Fenster steht in der linken Diagrammhaelfte rechts der Markierungslinie, ab der Mitte links davon; die Zeitraum-Auswahl nutzt eine kleinere Schrift. Refs #266."
+  ]
+}

@@ -12,6 +12,13 @@ export function createWidgetServices({ client, listDevices, listAllDevices, list
   return {
     listDevices,
     listAllDevices,
+    conditionSnapshots: (names) => {
+      if (!Array.isArray(names) || names.length > 20
+        || names.some(name => typeof name !== 'string' || !/^[A-Za-z0-9_.-]{1,64}$/.test(name))) {
+        throw new Error('Ungültige Geräte für Bedingungsvorschau');
+      }
+      return names.length ? client.jsonlist(names.flatMap(name => [name, `device=${name}`]).join(',')) : Promise.resolve([]);
+    },
     listIcons,
     iconUrl: (name) => client.iconUrl(name),
     setCommand: (device, command, value) => client.setCommand(device, command, value),

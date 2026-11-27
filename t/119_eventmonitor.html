@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/eventmonitor.css">
+<title>Eventmonitor Browserregression</title>
+<pre id="result">running</pre>
+<main id="monitor">
+  <button type="button" class="cms-eventmonitor-close" data-close hidden>×</button>
+  <p data-close-status role="alert"></p>
+  <p data-device></p>
+  <p data-connection role="status"></p>
+  <label>Filter<input data-filter></label>
+  <button type="button" data-pause aria-pressed="false"></button>
+  <button type="button" data-clear></button>
+  <p data-buffer-info></p>
+  <p data-pause-notice hidden></p>
+  <div class="cms-eventmonitor-scroll" data-event-scroll style="height: 160px; width: 900px; max-width: 100%; overflow: auto">
+    <table><thead><tr><th>Zeit</th><th>Device</th><th>Reading</th><th>Wert</th></tr></thead><tbody data-events></tbody></table>
+  </div>
+  <p data-empty></p>
+</main>
+<script type="module">
+import { initializeEventMonitor } from '../www/fhem-cms/js/eventmonitor.js';
+import { createEventMonitorLink } from '../www/fhem-cms/js/eventmonitor-link.js';
+
+const output = document.querySelector('#result');
+let checks = 0;
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks++;
+};
+const waitClose = async dialog => {
+  for (let i = 0; i < 50 && dialog.isConnected; i++) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+};
+
+try {
+const monitorHtml = await (await fetch('../www/fhem-cms/eventmonitor.html')).text();
+const monitorDocument = new DOMParser().parseFromString(monitorHtml, 'text/html');
+check(!monitorDocument.querySelector('[data-back]'), 'monitor page has no return link in any display mode');
+check(monitorDocument.querySelector('[data-close]') && monitorDocument.querySelector('[data-close-status]'),
+  'standalone monitor provides a close control and error message');
+history.replaceState(null, '', '/fhem/fhem-cms/cms-test/index.html');
+const menuLink = createEventMonitorLink({ cmsDevice: 'cms-test' });
+const expectedMenuLink = new URL('../eventmonitor.html', window.location.href);
+expectedMenuLink.searchParams.set('device', 'cms-test');
+check(menuLink.tagName === 'BUTTON' && menuLink.textContent === 'Eventmonitor'
+  && menuLink.getAttribute('aria-haspopup') === 'dialog',
+  'CMS menu launches the monitor as a dialog');
+menuLink.click();
+const dialog = document.querySelector('.cms-eventmonitor-modal');
+check(dialog?.open, 'monitor popup opens over the current CMS page');
+const frame = dialog.querySelector('iframe');
+const frameUrl = new URL(frame.src);
+expectedMenuLink.searchParams.set('embedded', '1');
+expectedMenuLink.hash = 'theme=dark';
+check(frameUrl.href === expectedMenuLink.href, 'popup iframe receives its device context');
+const openWindowLink = dialog.querySelector('header a');
+const standaloneUrl = new URL(openWindowLink.href);
+check(standaloneUrl.searchParams.get('device') === 'cms-test'
+  && !standaloneUrl.searchParams.has('embedded')
+  && standaloneUrl.hash === frameUrl.hash
+  && openWindowLink.target === '_blank' && openWindowLink.rel === 'noopener',
+  'popup offers a standalone window without opener access');
+const closeRequest = new MessageEvent('message', {
+  data: 'cms-eventmonitor-close', origin: window.location.origin,
+});
+window.dispatchEvent(new MessageEvent('message', {
+  data: 'cms-eventmonitor-close', origin: 'https://other.invalid',
+}));
+check(dialog.open, 'messages from another origin cannot close the popup');
+Object.defineProperty(closeRequest, 'source', { value: frame.contentWindow });
+window.dispatchEvent(closeRequest);
+await waitClose(dialog);
+check(!dialog.open && !dialog.isConnected, 'Escape close request from the monitor closes the popup');
+
+menuLink.click();
+const windowDialog = document.querySelector('.cms-eventmonitor-modal');
+const standaloneLink = windowDialog.querySelector('header a');
+const originalOpen = window.open;
+let opened;
+window.open = () => null;
+standaloneLink.click();
+check(windowDialog.open && windowDialog.querySelector('[role="status"]').textContent.includes('blockiert'),
+  'blocked browser window leaves the popup open with an explanation');
+window.open = (...args) => {
+  opened = { args, opener: window, location: { href: '' } };
+  return opened;
+};
+try {
+  standaloneLink.click();
+} finally {
+  window.open = originalOpen;
+}
+await waitClose(windowDialog);
+check(!windowDialog.open && !windowDialog.isConnected && opened.opener === null
+  && opened.location.href === standaloneUrl.href && opened.args[2].includes('popup'),
+  'opening the standalone link closes the popup');
+menuLink.click();
+const closeDialog = document.querySelector('.cms-eventmonitor-modal');
+closeDialog.querySelector('.cms-close-button').click();
+await waitClose(closeDialog);
+check(!closeDialog.open && !closeDialog.isConnected, 'common X button closes and removes popup');
+document.documentElement.dataset.cmsTheme = 'liquid-glass';
+document.documentElement.style.setProperty('--cms-liquid-blur', '12px');
+menuLink.click();
+const themedDialog = document.querySelector('.cms-eventmonitor-modal');
+const themedUrl = new URL(themedDialog.querySelector('iframe').src);
+check(themedUrl.hash.includes('theme=liquid-glass') && themedUrl.hash.includes('blur=12')
+  && new URL(themedDialog.querySelector('header a').href).hash === themedUrl.hash,
+'popup and standalone window receive the active Liquid Glass appearance');
+themedDialog.querySelector('.cms-close-button').click();
+await waitClose(themedDialog);
+delete document.documentElement.dataset.cmsTheme;
+document.documentElement.style.removeProperty('--cms-liquid-blur');
+
+const callbacks = {};
+  let unsubscribed = false;
+  const calls = [];
+  class Client {
+    constructor(device, endpoint) {
+      calls.push({ device, endpoint: endpoint.href });
+    }
+    async jsonlist(devspec) {
+      calls.push({ devspec });
+      return [{ name: 'lamp' }, { name: 'lamp-switch' }];
+    }
+    subscribeAll(eventCallback, stateCallback) {
+      callbacks.onEvent = eventCallback;
+      callbacks.onState = stateCallback;
+    }
+    unsubscribe() { unsubscribed = true; }
+  }
+  const monitor = await initializeEventMonitor(document.querySelector('#monitor'), {
+    Client,
+    location: {
+      href: 'http://fhem.example/fhem/fhem-cms/eventmonitor.html',
+      search: '?device=cms-test',
+      hash: '#theme=liquid-glass&blur=12&gloss=0.1&opacity=0.8',
+    },
+  });
+  check(document.documentElement.dataset.cmsTheme === 'liquid-glass'
+    && document.documentElement.style.getPropertyValue('--cms-liquid-blur') === '12px'
+    && document.documentElement.style.getPropertyValue('--cms-liquid-opacity') === '0.8',
+  'monitor initialization applies validated theme and Liquid Glass values');
+  check(calls[0].device === 'cms-test', 'CMS device is read from the URL');
+  check(calls[0].endpoint === 'http://fhem.example/fhem/', 'FHEMWEB endpoint is resolved from the CMS URL');
+  check(calls[1].devspec === '.*', 'device names are loaded for event parsing');
+  check(document.querySelector('[data-device]').textContent === 'cms-test', 'CMS context is shown');
+  const { onEvent, onState } = callbacks;
+  onState('live');
+  onEvent(['lamp-switch-target-temp', '21', '21']);
+  onEvent(['lamp-switch-alarm', '<img src=x onerror=alert(1)>', '']);
+  await new Promise(resolve => setTimeout(resolve, 80));
+  check(document.querySelectorAll('[data-events] tr').length === 2, 'two incoming events render');
+  check(document.querySelector('[data-events] tr:first-child td:nth-child(2)').textContent === 'lamp-switch',
+    'longest matching device prefix is used');
+  check(document.querySelector('[data-events] tr:first-child td:nth-child(3)').textContent === 'alarm'
+    && document.querySelector('[data-events] tr:last-child td:nth-child(3)').textContent === 'target-temp',
+    'newest events appear first and reading names are preserved');
+  check(document.querySelector('.cms-eventmonitor-scroll th:nth-child(2)').getBoundingClientRect().width >= 240,
+    'device column is at least 15rem wide');
+  check(document.querySelector('[data-events] img') === null, 'event values are rendered as text');
+
+  const filter = document.querySelector('[data-filter]');
+  filter.value = 'target-temp';
+  filter.dispatchEvent(new Event('input'));
+  check(document.querySelectorAll('[data-events] tr').length === 1, 'text filter narrows the rows');
+  filter.value = '';
+  filter.dispatchEvent(new Event('input'));
+  document.querySelector('[data-pause]').click();
+  onEvent(['lamp-state', 'off', 'off']);
+  await new Promise(resolve => setTimeout(resolve, 80));
+  check(document.querySelectorAll('[data-events] tr').length === 2, 'paused view does not rerender');
+  check(document.querySelector('[data-buffer-info]').textContent.includes('3 / 1000'),
+    'incoming events continue to be buffered while paused');
+  document.querySelector('[data-pause]').click();
+  check(document.querySelectorAll('[data-events] tr').length === 3, 'resume refreshes the visible rows');
+  check(document.querySelector('[data-events] tr:first-child td:nth-child(4)').textContent === 'off',
+    'newest buffered event appears at the top after resuming');
+  for (let i = 0; i < 20; i++) onEvent(['lamp-state', `value-${i}`, '']);
+  await new Promise(resolve => setTimeout(resolve, 80));
+  const scroll = document.querySelector('[data-event-scroll]');
+  check(scroll.scrollTop === 0
+    && document.querySelector('[data-events] tr:first-child td:nth-child(4)').textContent === 'value-19',
+  'new events stay visible at the top without scrolling');
+  scroll.scrollTop = 200;
+  const top = scroll.getBoundingClientRect().top;
+  const anchor = [...document.querySelectorAll('[data-events] tr')]
+    .find(row => row.getBoundingClientRect().bottom > top);
+  const anchorValue = anchor.lastElementChild.textContent;
+  const anchorTop = anchor.getBoundingClientRect().top;
+  onEvent(['lamp-state', 'new-value', '']);
+  await new Promise(resolve => setTimeout(resolve, 80));
+  const restored = [...document.querySelectorAll('[data-events] tr')]
+    .find(row => row.lastElementChild.textContent === anchorValue);
+  check(restored && Math.abs(restored.getBoundingClientRect().top - anchorTop) < 1,
+    'new events preserve the visible older row while scrolled down');
+  document.querySelector('[data-clear]').click();
+  check(document.querySelectorAll('[data-events] tr').length === 0, 'clear empties the event buffer');
+  check(document.querySelector('[data-empty]').textContent === 'Noch keine Ereignisse empfangen.',
+    'empty state is explained');
+  monitor.stop();
+  check(unsubscribed, 'stopping the monitor closes the event subscription');
+
+  const browserListeners = new Map();
+  let postedMessage;
+  const browser = {
+    location: {
+      href: 'http://fhem.example/fhem/fhem-cms/eventmonitor.html',
+      origin: 'http://fhem.example',
+    },
+    parent: { postMessage: (...args) => { postedMessage = args; } },
+    addEventListener(type, listener) { browserListeners.set(type, listener); },
+    removeEventListener(type, listener) {
+      if (browserListeners.get(type) === listener) browserListeners.delete(type);
+    },
+  };
+  await initializeEventMonitor(document.querySelector('#monitor'), {
+    Client,
+    browser,
+    location: {
+      href: browser.location.href,
+      search: '?device=cms-test&embedded=1',
+    },
+  });
+  check(document.querySelector('#monitor').hasAttribute('data-embedded'),
+    'embedded monitor enables the embedded layout');
+  check(getComputedStyle(document.querySelector('[data-close]')).display === 'none',
+    'embedded monitor hides the standalone close button');
+  let prevented = false;
+  browserListeners.get('keydown')({
+    key: 'Escape',
+    preventDefault() { prevented = true; },
+  });
+  check(prevented && postedMessage[0] === 'cms-eventmonitor-close'
+    && postedMessage[1] === browser.location.origin,
+  'Escape in the embedded monitor requests same-origin popup closure');
+  browserListeners.get('pagehide')();
+  check(!browserListeners.has('keydown'), 'embedded key handler is removed on pagehide');
+
+  class FailingClient {
+    async jsonlist() { throw new Error('test failure'); }
+  }
+  let failed = false;
+  try {
+    await initializeEventMonitor(document.querySelector('#monitor'), {
+      Client: FailingClient,
+      browser,
+      location: { href: browser.location.href, search: '?device=cms-test&embedded=1' },
+    });
+  } catch (error) {
+    failed = error.message === 'test failure';
+  }
+  check(failed && browserListeners.has('keydown'), 'Escape is available even when device loading fails');
+  browserListeners.get('pagehide')();
+  check(!browserListeners.has('keydown'), 'failed initialization cleans up the Escape handler');
+
+  let finishLoad;
+  let subscribedAfterClose = false;
+  class SlowClient {
+    jsonlist() { return new Promise(resolve => { finishLoad = resolve; }); }
+    subscribeAll() { subscribedAfterClose = true; }
+    unsubscribe() {}
+  }
+  const pending = initializeEventMonitor(document.querySelector('#monitor'), {
+    Client: SlowClient,
+    browser,
+    location: { href: browser.location.href, search: '?device=cms-test&embedded=1' },
+  });
+  browserListeners.get('pagehide')();
+  finishLoad([]);
+  check(await pending === null && !subscribedAfterClose,
+    'closing during device loading does not start an orphaned subscription');
+
+  const standalone = document.querySelector('#monitor').cloneNode(true);
+  standalone.removeAttribute('data-embedded');
+  document.body.append(standalone);
+  const listeners = new Map();
+  let closeCalls = 0;
+  const standaloneBrowser = {
+    closed: false,
+    close() { closeCalls++; },
+    setTimeout: window.setTimeout.bind(window),
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener(type) { listeners.delete(type); },
+  };
+  await initializeEventMonitor(standalone, {
+    Client, browser: standaloneBrowser,
+    location: { href: browser.location.href, search: '?device=cms-test' },
+  });
+  const button = standalone.querySelector('[data-close]');
+  check(!button.hidden && getComputedStyle(button).display !== 'none'
+    && button.querySelector('svg') && button.getAttribute('aria-label') === 'Fenster schließen',
+  'standalone monitor shows the common close button');
+  button.click();
+  let escapePrevented = false;
+  listeners.get('keydown')({ key: 'Escape', preventDefault() { escapePrevented = true; } });
+  await new Promise(resolve => setTimeout(resolve, 120));
+  check(closeCalls === 2 && escapePrevented
+    && standalone.querySelector('[data-close-status]').textContent.includes('manuell schließen'),
+  'X and Escape request window closure and report browser refusal');
+  listeners.get('pagehide')();
+  button.click();
+  check(closeCalls === 2 && !listeners.has('keydown'), 'standalone close handlers are removed on pagehide');
+  standalone.remove();
+  output.textContent = JSON.stringify({ checks });
+  output.dataset.result = 'pass';
+} catch (error) {
+  output.textContent = error.stack || String(error);
+  output.dataset.result = 'fail';
+}
+</script>

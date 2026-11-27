@@ -1,4 +1,5 @@
 import { openDevicePicker } from './device-picker.js';
+import { decodeCondition, encodeCondition, markupConditionDevices } from './condition-markup.js';
 
 const DEVICE_NAME = /^[A-Za-z0-9_.-]{1,128}$/;
 const MAX_BLUEPRINTS = 100;
@@ -16,6 +17,7 @@ function inspectDevices(value, key, devices) {
   if (!value || typeof value !== 'object') {
     if (key === 'device') addDevice(devices, value);
     if (typeof value === 'string' && ['html', 'markdown', 'title'].includes(key)) {
+      for (const name of markupConditionDevices(value)) addDevice(devices, name);
       for (const match of value.matchAll(/\{\{([A-Za-z0-9_.-]{1,128}):/g)) addDevice(devices, match[1]);
       for (const match of value.matchAll(/\bdevice\s*=\s*"([A-Za-z0-9_.-]{1,128})"/g)) {
         addDevice(devices, match[1]);
@@ -43,6 +45,11 @@ function replaceDeviceInMarkup(text, source, target) {
     .replace(/\bdata-cms-class\s*=\s*"([^"]*)"/g, (attribute, conditions) => {
       const rewritten = conditions.replace(new RegExp(`(^\\s*|;\\s*)${escaped}(?=:)`, 'g'), `$1${target}`);
       return attribute.replace(conditions, rewritten);
+    })
+    .replace(/(\bdata-cms-(?:if|unless)\s*=\s*")([0-9a-f]+)(")/gi, (_attribute, start, encoded, end) => {
+      const condition = decodeCondition(encoded);
+      for (const rule of condition.rules) if (rule.device === source) rule.device = target;
+      return start + encodeCondition(condition) + end;
     });
 }
 

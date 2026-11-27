@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-27",
+  "version": "1.41.0-dev",
+  "title": "Bedingungen fuer Widgets und Textbereiche",
+  "changes": [
+    "Ein gemeinsamer Bedingungsdialog steuert Widget-Sichtbarkeit sowie Wenn-/Sonst-Bereiche in Text und freiem HTML anhand aktueller FHEM-Readings. Verschachtelte Gruppen erlauben UND, ODER, XOR und Negation. Refs #144."
+  ]
+}

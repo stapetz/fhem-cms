@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-27",
+  "version": "1.41.0-dev",
+  "title": "Live-Eventmonitor",
+  "changes": [
+    "Eigene Live-Ansicht mit 1.000 Ereignissen, Textfilter, Anzeige-Pause und FHEMWEB-WebSocket-Status."
+  ]
+}

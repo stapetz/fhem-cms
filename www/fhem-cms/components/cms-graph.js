@@ -4,6 +4,7 @@ import { openDevicePicker } from '../js/device-picker.js';
 import { showCmsModal } from '../js/modal-dialog.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { closeButtonSvg } from '../js/close-button.js';
+import { createSpacebarPan } from '../js/pan-gesture.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 import { formatDateDisplay } from '../js/date-display.js';
 
@@ -159,6 +160,7 @@ class FHEMCMSGraph extends HTMLElement {
       this.resizeObserver.observe(this.shadowRoot.querySelector('[data-svg]'));
       this.resizeObserver.observe(this.shadowRoot.querySelector('[data-preview]'));
     }
+    this.panController = createSpacebarPan(this.shadowRoot.querySelector('[data-svg]').parentElement);
     this.timer = window.setInterval(() => this.load(), 300000);
   }
 
@@ -168,6 +170,8 @@ class FHEMCMSGraph extends HTMLElement {
     this.pickerAbort.abort();
     this.resizeObserver?.disconnect();
     this.drawStates.clear();
+    this.panController?.dispose();
+    this.panController = null;
     window.clearInterval(this.timer);
   }
 
@@ -200,6 +204,13 @@ class FHEMCMSGraph extends HTMLElement {
         :host([view-only]) [data-open-config] { display:none; }
         .plot { position:relative; flex:1; min-height:10rem; border-radius:.75rem; background:rgba(128,128,128,.08); }
         .plot svg { width:100%; height:100%; position:absolute; inset:0; touch-action:pan-y; }
+        .plot.pan-ready svg { cursor:grab; }
+        .plot.panning svg { cursor:grabbing; }
+        .plot .spinner { position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; }
+        .plot .spinner::after { content:''; width:2.2rem; height:2.2rem; border-radius:50%;
+          border:4px solid var(--cms-border); border-top-color:var(--cms-accent);
+          animation:cms-graph-spin .8s linear infinite; }
+        @keyframes cms-graph-spin { to { transform:rotate(360deg); } }
         svg text { fill:currentColor; font-size:10px; }
         .legend { display:flex; flex-wrap:wrap; gap:.25rem; }
         .legend button { display:flex; align-items:center; gap:.35rem; min-height:36px; border:0; background:transparent; }
@@ -208,6 +219,7 @@ class FHEMCMSGraph extends HTMLElement {
         header .controls { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center;
           gap:.5rem; min-width:0; margin-left:auto; }
         header select { max-width:100%; min-width:0; }
+        header .controls select { font-size:.85rem; }
         .graph-tooltip { position:absolute; z-index:2; pointer-events:none; padding:.4rem .6rem; border:1px solid var(--cms-border);
           border-radius:.6rem; background:var(--cms-surface); color:var(--cms-text); font-size:.8rem; line-height:1.3;
           max-width:100%; overflow-wrap:anywhere; }
@@ -269,7 +281,7 @@ class FHEMCMSGraph extends HTMLElement {
         <button type="button" data-open-config>Konfigurieren</button></header>
         <div data-live-custom hidden><input type="datetime-local" step="1" data-live-from aria-label="Zeitraum von">
           <input type="datetime-local" step="1" data-live-to aria-label="Zeitraum bis"><button type="button" data-live-apply>Übernehmen</button></div>
-        <div class="plot"><svg data-svg viewBox="0 0 400 220" preserveAspectRatio="none" role="img" aria-label="Graph"></svg><div class="graph-tooltip" data-tooltip hidden></div></div>
+        <div class="plot"><svg data-svg viewBox="0 0 400 220" preserveAspectRatio="none" role="img" aria-label="Graph"></svg><div class="graph-tooltip" data-tooltip hidden></div><div class="spinner" data-spinner hidden></div></div>
         <div class="legend" data-legend></div><p class="status" data-status role="status"></p>
         <p class="updated" data-updated>Letzte Aktualisierung: –</p></article>
       <dialog data-dialog aria-label="Graph konfigurieren"><form data-form novalidate>
@@ -296,7 +308,7 @@ class FHEMCMSGraph extends HTMLElement {
         </div>
         <section data-rows></section>
         <button type="button" data-add>Datenreihe hinzufügen</button>
-        <strong>Vorschau</strong><div class="plot preview"><svg data-preview viewBox="0 0 400 220" preserveAspectRatio="none" role="img" aria-label="Graph-Vorschau"></svg><div class="graph-tooltip" data-preview-tooltip hidden></div></div>
+        <strong>Vorschau</strong><div class="plot preview"><svg data-preview viewBox="0 0 400 220" preserveAspectRatio="none" role="img" aria-label="Graph-Vorschau"></svg><div class="graph-tooltip" data-preview-tooltip hidden></div><div class="spinner" data-preview-spinner hidden></div></div>
         <div class="legend" data-preview-legend></div><p class="status" data-preview-status role="status"></p>
         <p class="updated" data-preview-updated>Letzte Aktualisierung: –</p>
         <p class="status" data-error role="alert"></p>
@@ -405,8 +417,10 @@ class FHEMCMSGraph extends HTMLElement {
     if (!config?.series?.length) return;
     const request = ++this.request;
     const status = this.shadowRoot.querySelector('[data-status]');
+    const spinner = this.shadowRoot.querySelector('[data-spinner]');
     status.textContent = 'Daten werden geladen …';
     status.removeAttribute('data-error');
+    spinner.hidden = false;
     try {
       const current = {...config, range:this.range, granularity:this.granularity,
         aggregation:this.aggregation, showGrid:this.showGrid};
@@ -423,6 +437,8 @@ class FHEMCMSGraph extends HTMLElement {
       this.drawStates.delete('[data-svg]');
       status.textContent = `Graph konnte nicht geladen werden: ${error.message || String(error)}`;
       status.setAttribute('data-error', '');
+    } finally {
+      if (request === this.request) spinner.hidden = true;
     }
   }
 
@@ -439,13 +455,17 @@ class FHEMCMSGraph extends HTMLElement {
     target.setAttribute('viewBox', `0 0 ${width} 220`);
     target.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     target.onpointermove = target.onpointerleave = target.onpointerdown = target.onpointerup = target.onpointercancel = null;
+    target.style.transform = '';
+    if (selector === '[data-svg]') this.panController?.stop();
     const tooltip = target.parentElement.querySelector('.graph-tooltip');
     tooltip.hidden = true;
     const positionTooltip = event => {
       tooltip.hidden = false;
       const box = target.getBoundingClientRect();
       const localX = (event.clientX - box.left) * target.clientWidth / box.width;
-      tooltip.style.left = `${Math.max(0, Math.min(target.clientWidth - tooltip.offsetWidth, localX + 12))}px`;
+      // Left plot half: tooltip right of the crosshair; right half: left of it.
+      const preferred = localX < target.clientWidth / 2 ? localX + 12 : localX - 12 - tooltip.offsetWidth;
+      tooltip.style.left = `${Math.max(0, Math.min(target.clientWidth - tooltip.offsetWidth, preferred))}px`;
       tooltip.style.top = '8px';
     };
     target.replaceChildren();
@@ -503,11 +523,14 @@ class FHEMCMSGraph extends HTMLElement {
         }
         const description = `${label(item.row)}: ${measurement(value, item.row)}`;
         shape.setAttribute('aria-label', description);
-        shape.onpointermove = event => {
+        const showSlice = event => {
           tooltip.textContent = description;
           positionTooltip(event);
         };
-        shape.onpointerleave = () => { tooltip.hidden = true; };
+        shape.onpointermove = showSlice;
+        shape.onpointerup = event => { if (event.pointerType === 'touch') showSlice(event); };
+        shape.onpointerleave = event => { if (event?.pointerType !== 'touch') tooltip.hidden = true; };
+        shape.onpointercancel = () => { tooltip.hidden = true; };
         target.append(shape);
         if (config.showPieLabels !== false) {
           const middle = (angle + next) / 2;
@@ -670,20 +693,68 @@ class FHEMCMSGraph extends HTMLElement {
     const crosshair = svg('line', {y1:15, y2:190, stroke:'currentColor', 'stroke-dasharray':'3 3', hidden:''});
     const selection = svg('rect', {y:15, height:175, fill:'currentColor', opacity:.15, hidden:''});
     target.append(crosshair, selection);
-    let dragStart = null;
+    const live = selector === '[data-svg]';
+    const panController = live ? this.panController : null;
+    let dragStart = null, dragStartX = null;
+    let pan = null;
+    const touchPoints = new Map();
     const position = event => {
       const box = target.getBoundingClientRect();
       return Math.max(left, Math.min(right, (event.clientX - box.left) * width / box.width));
     };
     const timestamp = px => from + (px-left) / (right-left) * (to-from);
-    target.onpointermove = event => {
+    const touchAverage = () => {
+      let sum = 0;
+      for (const value of touchPoints.values()) sum += value;
+      return sum / touchPoints.size;
+    };
+    // Keeps the pan steady when fingers are added or lifted mid-gesture.
+    const rebasePan = () => {
+      const average = touchAverage();
+      pan.start += average - pan.last;
+      pan.last = average;
+    };
+    const rangeWindow = () => {
+      const bounds = customRange(config.range);
+      if (bounds) return bounds;
+      const duration = {'24h':86400, '7d':604800, '30d':2592000, '365d':31536000}[config.range] || (to - from);
+      const end = Math.floor(Date.now() / 1000);
+      return [end - duration, end];
+    };
+    // Seconds per horizontal client pixel of the drawn time axis.
+    const secondsPerPixel = () => {
+      const box = target.getBoundingClientRect();
+      if (!box.width || right <= left) return 0;
+      return (to - from) / (right - left) * (width / box.width);
+    };
+    // Window shift in seconds, clamped so the view never pans past "now".
+    const panShift = () => Math.min((pan.start - pan.last) * secondsPerPixel(),
+      Math.max(0, Math.floor(Date.now() / 1000) - pan.window[1]));
+    const startPan = start => {
+      dragStart = dragStartX = null;
+      selection.setAttribute('hidden', '');
+      crosshair.setAttribute('hidden', '');
+      tooltip.hidden = true;
+      pan = {start, last:start, window:rangeWindow()};
+      panController?.start();
+    };
+    const movePan = () => {
+      const perPixel = secondsPerPixel();
+      target.style.transform = perPixel ? `translateX(${-panShift() / perPixel}px)` : '';
+    };
+    const endPan = apply => {
+      const shift = Math.round(panShift());
+      const [start, end] = pan.window;
+      pan = null;
+      touchPoints.clear();
+      target.style.transform = '';
+      panController?.stop();
+      const range = `${start + shift}_${end + shift}`;
+      if (!apply || Math.abs(shift) < 2 || !customRange(range)) return;
+      this.applyCustomRange(range);
+    };
+    const showValues = event => {
       const px = position(event);
-      if (dragStart !== null) {
-        selection.removeAttribute('hidden');
-        selection.setAttribute('x', Math.min(px, dragStart));
-        selection.setAttribute('width', Math.abs(px-dragStart));
-        return;
-      }
       crosshair.removeAttribute('hidden');
       crosshair.setAttribute('x1', px);
       crosshair.setAttribute('x2', px);
@@ -721,31 +792,106 @@ class FHEMCMSGraph extends HTMLElement {
       }
       positionTooltip(event);
     };
-    target.onpointerleave = () => { if (dragStart === null) { crosshair.setAttribute('hidden', ''); tooltip.hidden = true; } };
-    target.onpointerdown = selector === '[data-svg]' ? event => {
-      if (event.button !== 0) return;
+    target.onpointermove = event => {
+      if (pan) {
+        if (event.pointerType === 'touch') {
+          if (!touchPoints.has(event.pointerId)) return;
+          touchPoints.set(event.pointerId, event.clientX);
+          pan.last = touchAverage();
+        } else if (event.pointerId === pan.pointer) pan.last = event.clientX;
+        else return;
+        movePan();
+        return;
+      }
+      if (dragStart !== null) {
+        const px = position(event);
+        selection.removeAttribute('hidden');
+        selection.setAttribute('x', Math.min(px, dragStart));
+        selection.setAttribute('width', Math.abs(px-dragStart));
+        return;
+      }
+      showValues(event);
+    };
+    target.onpointerleave = event => {
+      if (dragStart === null && pan === null && event?.pointerType !== 'touch') {
+        crosshair.setAttribute('hidden', '');
+        tooltip.hidden = true;
+      }
+    };
+    target.onpointerdown = live ? event => {
+      if (event.pointerType === 'touch') {
+        touchPoints.set(event.pointerId, event.clientX);
+        target.setPointerCapture(event.pointerId);
+        if (pan) { rebasePan(); return; }
+        if (touchPoints.size === 2) { startPan(touchAverage()); return; }
+      }
+      if (event.button !== 0 || pan) return;
+      if (event.pointerType !== 'touch' && panController?.active) {
+        target.setPointerCapture(event.pointerId);
+        startPan(event.clientX);
+        pan.pointer = event.pointerId;
+        return;
+      }
       dragStart = position(event);
+      dragStartX = event.clientX;
       target.setPointerCapture(event.pointerId);
       tooltip.hidden = true;
     } : null;
-    target.onpointerup = selector === '[data-svg]' ? event => {
-      if (dragStart === null) return;
+    target.onpointerup = event => {
+      if (pan) {
+        if (event.pointerType === 'touch') {
+          touchPoints.delete(event.pointerId);
+          if (touchPoints.size >= 2) { rebasePan(); return; }
+        } else if (event.pointerId !== pan.pointer) return;
+        endPan(true);
+        return;
+      }
+      if (event.pointerType === 'touch') touchPoints.delete(event.pointerId);
+      if (dragStart === null) {
+        if (selector !== '[data-svg]' && event.pointerType === 'touch') showValues(event);
+        return;
+      }
       const end = position(event), start = dragStart;
+      const touchTap = event.pointerType === 'touch' && Math.abs(event.clientX - dragStartX) < 6;
       dragStart = null;
+      dragStartX = null;
       selection.setAttribute('hidden', '');
-      if (Math.abs(end-start) < 3) return;
+      if (touchTap || Math.abs(end-start) < 3) {
+        if (event.pointerType === 'touch') showValues(event);
+        return;
+      }
       const range = `${Math.floor(timestamp(Math.min(start,end)))}_${Math.ceil(timestamp(Math.max(start,end)))}`;
-      const bounds = customRange(range);
-      if (!bounds) return;
-      this.range = range;
-      this.shadowRoot.querySelector('[data-range]').value = 'custom';
-      this.shadowRoot.querySelector('[data-live-custom]').hidden = false;
-      this.shadowRoot.querySelector('[data-live-from]').value = dateInput(bounds[0]);
-      this.shadowRoot.querySelector('[data-live-to]').value = dateInput(bounds[1]);
-      void this.load();
-    } : null;
-    target.onpointercancel = () => { dragStart = null; selection.setAttribute('hidden', ''); };
+      if (!customRange(range)) return;
+      this.applyCustomRange(range);
+    };
+    target.onpointercancel = event => {
+      if (pan) {
+        if (event?.pointerType === 'touch') {
+          touchPoints.delete(event.pointerId);
+          if (touchPoints.size >= 2) { rebasePan(); return; }
+        }
+        endPan(false);
+        return;
+      }
+      if (event?.pointerType === 'touch') touchPoints.delete(event.pointerId);
+      dragStart = null;
+      dragStartX = null;
+      selection.setAttribute('hidden', '');
+      crosshair.setAttribute('hidden', '');
+      tooltip.hidden = true;
+    };
     status.textContent = warnings || (points.some(row => !row.length) ? 'Einige Datenreihen enthalten keine Werte.' : '');
+  }
+
+  applyCustomRange(range) {
+    const bounds = customRange(range);
+    if (!bounds) return;
+    this.range = range;
+    this.shadowRoot.querySelector('[data-range]').value = 'custom';
+    this.shadowRoot.querySelector('[data-live-custom]').hidden = false;
+    this.shadowRoot.querySelector('[data-live-from]').value = dateInput(bounds[0]);
+    this.shadowRoot.querySelector('[data-live-to]').value = dateInput(bounds[1]);
+    void this.load();
   }
 
   openConfig({isNew = false} = {}) {
@@ -927,10 +1073,12 @@ class FHEMCMSGraph extends HTMLElement {
 
   async updatePreview(request) {
     const status = this.shadowRoot.querySelector('[data-preview-status]');
+    const spinner = this.shadowRoot.querySelector('[data-preview-spinner]');
     try {
       const config = this.collect();
       status.textContent = 'Vorschau wird geladen …';
       status.removeAttribute('data-error');
+      spinner.hidden = false;
       const data = await this.fetchData(config, () => request === this.previewRequest
         && this.isConnected && this.shadowRoot.querySelector('[data-dialog]').open);
       if (request !== this.previewRequest || !this.shadowRoot.querySelector('[data-dialog]').open) return;
@@ -943,6 +1091,8 @@ class FHEMCMSGraph extends HTMLElement {
       this.drawStates.delete('[data-preview]');
       status.textContent = `Vorschau: ${error.message || String(error)}`;
       status.setAttribute('data-error', '');
+    } finally {
+      if (request === this.previewRequest) spinner.hidden = true;
     }
   }
 

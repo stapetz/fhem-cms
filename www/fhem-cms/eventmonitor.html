@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="de" data-cms-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FHEM-CMS Eventmonitor</title>
+  <link rel="stylesheet" href="css/fhem-cms.css">
+  <link rel="stylesheet" href="css/eventmonitor.css?v=1.41.0-dev-3">
+  <script type="module" src="js/eventmonitor.js?v=1.41.0-dev-3"></script>
+</head>
+<body>
+  <main class="cms-eventmonitor" data-eventmonitor-app>
+    <header class="cms-eventmonitor-header">
+      <h1>Live-Eventmonitor</h1>
+      <button class="cms-button cms-eventmonitor-close" data-close type="button" aria-label="Fenster schließen" hidden>×</button>
+      <p>CMS-Device: <strong data-device></strong></p>
+      <p class="cms-eventmonitor-connection" data-connection data-state="connecting" role="status" aria-live="polite">
+        Verbindung zu FHEMWEB wird aufgebaut …
+      </p>
+      <p class="cms-eventmonitor-close-status" data-close-status role="alert"></p>
+    </header>
+    <section class="cms-eventmonitor-panel" aria-label="FHEM-Ereignisse">
+      <div class="cms-eventmonitor-controls">
+        <label>
+          Textfilter
+          <input type="search" data-filter placeholder="Device, Reading oder Wert">
+        </label>
+        <button class="cms-button" type="button" data-pause aria-pressed="false">Anzeige pausieren</button>
+        <button class="cms-button" type="button" data-clear>Puffer leeren</button>
+      </div>
+      <p class="cms-eventmonitor-buffer" data-buffer-info aria-live="polite">Puffer: 0 / 1000</p>
+      <p class="cms-eventmonitor-pause" data-pause-notice hidden>
+        Anzeige pausiert. Neue Ereignisse werden weiter im begrenzten Puffer gesammelt.
+      </p>
+      <div class="cms-eventmonitor-scroll" data-event-scroll tabindex="0" aria-label="Ereignisliste">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Zeit</th>
+              <th scope="col">Device</th>
+              <th scope="col">Reading</th>
+              <th scope="col">Wert</th>
+            </tr>
+          </thead>
+          <tbody data-events></tbody>
+        </table>
+      </div>
+      <p class="cms-eventmonitor-empty" data-empty>Geräteliste wird geladen …</p>
+    </section>
+  </main>
+</body>
+</html>

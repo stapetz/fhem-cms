@@ -1,0 +1,276 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<link rel="stylesheet" href="../www/fhem-cms/css/fcui-gridstack.css">
+<div id="grid" class="grid-stack cms-schema5-grid"></div>
+<div id="editor"></div>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import {GridStack} from '../www/fhem-cms/js/fcui-runtime.js';
+import {mountSchema5Widgets} from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+import {devicesOf} from '../www/fhem-cms/js/widget-factory.js';
+import {decodeCondition, encodeCondition} from '../www/fhem-cms/js/condition-markup.js';
+import {checkSource, extractDevices, renderTemplate, sanitize} from '../www/fhem-cms/js/freehtml.js';
+import {cleanHtml, createEditor} from '../www/fhem-cms/js/richtext.js';
+import {Schema5WidgetPanel} from '../www/fhem-cms/js/fcui-schema5-widget-panel.js';
+let checks = 0;
+const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const until = async (condition, message) => {
+  for (let i = 0; i < 150; i++) {
+    if (condition()) return;
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+  throw new Error(message);
+};
+const rule = {device:'Sensor', reading:'state', operator:'==', value:'on'};
+const condition = {join:'and', rules:[rule, {...rule}, {...rule}],
+  expression:{op:'or', children:[{op:'and', children:[{rule:0},{rule:1}]},{rule:2}]}};
+const encoded = encodeCondition(condition);
+const source = `<span data-cms-if="${encoded}"><b>{{Sensor:state}}</b></span><span data-cms-unless="${encoded}">aus</span>`;
+const snapshots = value => new Map([['Sensor', [{name:'Sensor', readings:{state:value}}]]]);
+const services = {listAllDevices:async () => [{name:'Sensor', readings:{state:'on'}}]};
+const chooseRule = async dialog => {
+  dialog.querySelector('.source').click();
+  await until(() => document.querySelector('.cms-ph-dialog [data-device-list] button'), 'picker missing');
+  document.querySelector('.cms-ph-dialog [data-device-list] button').click();
+  document.querySelector('.cms-ph-dialog [data-reading-list] button[title^="state "]').click();
+  document.querySelector('.cms-ph-dialog form').dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
+  await until(() => dialog.querySelector('.source').textContent.includes('Sensor'), 'reading not selected');
+  const input = dialog.querySelector('.rule input');
+  input.value = 'on';
+  input.dispatchEvent(new Event('input'));
+  dialog.querySelector('[aria-label="Regel 1 gruppieren"]').click();
+  const groupOperator = dialog.querySelector('.condition-group select');
+  groupOperator.value = 'xor';
+  groupOperator.dispatchEvent(new Event('change'));
+  dialog.querySelector('[data-else]').checked = true;
+  dialog.querySelector('form').dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
+};
+try {
+  check(checkSource(source) === null, 'free HTML accepts condition markers');
+  check(extractDevices(source).includes('Sensor'), 'condition devices are extracted');
+  check(cleanHtml(source) === source.replace(/<b>/g, '<strong>').replace(/<\/b>/g, '</strong>'),
+    'rich text preserves condition markers');
+  const template = sanitize(source);
+  check(renderTemplate(template, () => 'on').textContent === 'on', 'free HTML true branch');
+  check(renderTemplate(template, () => 'off').textContent === 'aus', 'free HTML else branch');
+  check(renderTemplate(template, () => null).textContent === '', 'unknown hides both branches');
+  check(checkSource('<span data-cms-if="7b7d">x</span>') !== null, 'invalid marker rejected');
+  const actionSource = `<div data-cms-if="${encoded}"><button type="button" set-device="Sensor" set-cmd="on" data-cms-class="Sensor:state=on:active">{{Sensor:state}}</button></div>`;
+  check(checkSource(actionSource) === null, 'conditional block accepts existing class and action syntax');
+  const action = renderTemplate(sanitize(actionSource), () => 'on').querySelector('button');
+  check(action?.classList.contains('active') && action.getAttribute('set-device') === 'Sensor'
+    && action.getAttribute('set-cmd') === 'on' && action.textContent === 'on',
+    'conditional block keeps live placeholder, class and action');
+  check(!renderTemplate(sanitize(actionSource), () => 'off').querySelector('button'),
+    'inactive action is not available');
+
+  const widget = {id:'clock', type:'fhem-clock', style:'digital',
+    visibility:{condition, mode:'collapse'}, grid:{col:1,row:2,w:6,h:2}};
+  check(devicesOf(widget).includes('Sensor'), 'non-live widget subscribes to condition device');
+  const config = {schemaVersion:5, settings:{layoutMode:'grid', gridColumns:12},
+    navigation:{grid:{col:1,row:1,w:12,h:1}}, pages:[{id:'one',widgets:[widget]}]};
+  const root = document.querySelector('#grid');
+  const mounted = mountSchema5Widgets(GridStack, root, config, 'one', document.createElement('nav'), {}, snapshots('off'));
+  const wrapper = root.querySelector('cms-clock').closest('.grid-stack-item');
+  check(wrapper.hasAttribute('data-condition-inactive'), 'false widget inactive');
+  check(getComputedStyle(wrapper).visibility === 'hidden', 'false widget hidden');
+  root.setAttribute('data-mobile-layout', '');
+  check(getComputedStyle(wrapper).display === 'none', 'collapse releases space in flow');
+  mounted.update(snapshots('on'));
+  check(!wrapper.hasAttribute('data-condition-inactive') && getComputedStyle(wrapper).visibility === 'visible',
+    'live update restores widget');
+  mounted.update(new Map());
+  check(wrapper.hasAttribute('data-condition-inactive'), 'missing reading hides widget');
+  mounted.destroy();
+  const keepConfig = structuredClone(config);
+  keepConfig.pages[0].widgets[0].visibility.mode = 'keep-space';
+  const keep = mountSchema5Widgets(GridStack, root, keepConfig, 'one', document.createElement('nav'), {}, snapshots('off'));
+  root.setAttribute('data-mobile-layout', '');
+  const keepWrapper = root.querySelector('cms-clock').closest('.grid-stack-item');
+  check(getComputedStyle(keepWrapper).visibility === 'hidden' && getComputedStyle(keepWrapper).display !== 'none',
+    'keep-space preserves a flowing widget slot');
+  keep.destroy();
+  const pinRoot = document.createElement('div');
+  pinRoot.style.width = '1000px';
+  document.body.append(pinRoot);
+  const pinConfig = {schemaVersion:6, settings:{layoutMode:'grid',gridColumns:12},
+    navigation:{grid:{col:1,row:1,w:12,h:1}}, pages:[{id:'one',title:'Pin',
+      layoutMode:'freeform',renderAsPins:true,canvas:{width:1280,height:800,scaling:'width',mobileBehavior:'scale'},
+      widgets:[{id:'value',type:'fhem-value',device:'Sensor',reading:'state',
+        rect:{x:150,y:200,w:200,h:180}, visibility:{condition,mode:'collapse'}}]}]};
+  const pinView = mountSchema5Widgets(null, pinRoot, pinConfig, 'one', document.createElement('nav'),
+    services, snapshots('on'));
+  const pinWrapper = pinRoot.querySelector('[data-widget-id="value"]');
+  const pin = pinWrapper.querySelector('cms-pin-badge');
+  if (pin) {
+    pin.dispatchEvent(new CustomEvent('pin-open'));
+    check(Boolean(pinRoot.querySelector('.cms-pin-widget-popup[open]')), 'pin opens while condition is true');
+  }
+  pinView.update(snapshots('off'));
+  check(!pinRoot.querySelector('.cms-pin-widget-popup') && getComputedStyle(pinWrapper).visibility === 'hidden',
+    'false condition closes its pin popup and hides pin');
+  pinView.update(snapshots('on'));
+  check(getComputedStyle(pinWrapper).visibility === 'visible', 'pin returns on live update');
+  pinView.destroy();
+  pinRoot.remove();
+  const panelRoot = document.createElement('section');
+  document.body.append(panelRoot);
+  let savedWidget;
+  const controller = {
+    snapshot:() => ({token:'token', live:config, draft:null}),
+    saveWidget:async (_page, candidate) => { savedWidget = candidate; return {token:'next'}; },
+    deleteWidget:async () => {}, previewWidget:async () => {},
+  };
+  new Schema5WidgetPanel({root:panelRoot, controller, services, pageId:'one', token:'token',
+    widgetId:'clock', onClose:() => {}});
+  await until(() => panelRoot.querySelector('cms-clock')?.shadowRoot.querySelector('[data-widget-condition]'),
+    'shared condition control missing');
+  const clock = panelRoot.querySelector('cms-clock');
+  clock.shadowRoot.querySelector('[data-widget-condition]').click();
+  const editDialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  check(editDialog.querySelector('.rule input').value === 'on', 'widget dialog reopens existing condition');
+  editDialog.querySelector('.rule input').value = 'off';
+  editDialog.querySelector('.rule input').dispatchEvent(new Event('input'));
+  editDialog.querySelector('[data-mode]').value = 'keep-space';
+  editDialog.querySelector('form').dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
+  await until(() => !document.querySelector('dialog[aria-label="Bedingung bearbeiten"]'), 'wizard did not close');
+  clock.shadowRoot.querySelector('[data-form]').dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
+  await until(() => savedWidget, 'widget save did not happen');
+  check(savedWidget.visibility.condition.rules[0].value === 'off' && savedWidget.visibility.mode === 'keep-space',
+    'condition and placement survive type-specific widget save');
+  check(savedWidget.visibility.condition.expression.children[0].op === 'and', 'widget save preserves nested groups');
+  panelRoot.remove();
+
+  const text = document.createElement('cms-text');
+  text.config = {id:'text', type:'text', html:`<p>${source}</p>`, grid:{col:1,row:2,w:6,h:2}};
+  document.body.append(text);
+  text.data = snapshots('on');
+  check(text.shadowRoot.querySelector('[data-body]').textContent === 'on', 'text widget renders true branch');
+  text.data = snapshots('off');
+  check(text.shadowRoot.querySelector('[data-body]').textContent === 'aus', 'text widget updates else branch');
+  text.data = new Map();
+  check(text.shadowRoot.querySelector('[data-body]').textContent === '', 'text widget hides unknown branches');
+  text.remove();
+
+  const htmlWidget = document.createElement('cms-html');
+  htmlWidget.services = services;
+  htmlWidget.config = {id:'html', type:'fhem-html', html:'<p>Hallo Welt</p>', devices:[],
+    grid:{col:1,row:2,w:6,h:2}};
+  document.body.append(htmlWidget);
+  htmlWidget.openConfig();
+  const htmlArea = htmlWidget.shadowRoot.querySelector('textarea');
+  htmlArea.setSelectionRange(3, 8);
+  htmlWidget.shadowRoot.querySelector('[data-insert-condition]').click();
+  const htmlDialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  await chooseRule(htmlDialog);
+  await until(() => htmlArea.value.includes('data-cms-if'), 'HTML condition not inserted');
+  const htmlResult = htmlWidget.collectWidget();
+  check(htmlResult.html.includes('>Hallo</span>') && htmlResult.html.includes('data-cms-unless'),
+    'HTML selection and else are persisted');
+  check(decodeCondition(htmlResult.html.match(/data-cms-if="([^"]+)"/)[1]).expression.children[0].op === 'xor',
+    'HTML insertion preserves grouped XOR');
+  check(htmlResult.devices.includes('Sensor'), 'HTML condition device persists');
+  const caret = htmlArea.value.indexOf('Hallo') + 2;
+  htmlArea.setSelectionRange(caret, caret);
+  htmlWidget.shadowRoot.querySelector('[data-insert-condition]').click();
+  const reedit = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  check(reedit.querySelector('.rule input').value === 'on' && reedit.querySelector('[data-else]').checked,
+    'HTML editor reopens existing condition');
+  check(reedit.querySelector('.condition-group select').value === 'xor', 'HTML editor reopens the group');
+  reedit.querySelector('.rule input').value = 'off';
+  reedit.querySelector('.rule input').dispatchEvent(new Event('input'));
+  reedit.querySelector('form').dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
+  await until(() => !document.querySelector('dialog[aria-label="Bedingung bearbeiten"]'), 'HTML edit did not close');
+  check(htmlWidget.collectWidget().html !== htmlResult.html, 'editing updates stored condition');
+  const updatedCaret = htmlArea.value.indexOf('Hallo') + 2;
+  htmlArea.setSelectionRange(updatedCaret, updatedCaret);
+  htmlWidget.shadowRoot.querySelector('[data-remove-condition]').click();
+  check(!htmlArea.value.includes('data-cms-if') && htmlArea.value.includes('HalloText für Sonst'),
+    'removing an HTML condition preserves both texts');
+  htmlArea.value = '<p>Block eins</p><p>Block zwei</p>';
+  htmlArea.setSelectionRange(0, htmlArea.value.length);
+  htmlWidget.shadowRoot.querySelector('[data-insert-condition]').click();
+  await chooseRule(document.querySelector('dialog[aria-label="Bedingung bearbeiten"]'));
+  await until(() => htmlArea.value.includes('data-cms-if'), 'HTML block condition missing');
+  check(htmlArea.value.startsWith('<div data-cms-if=') && checkSource(htmlArea.value) === null,
+    'whole HTML blocks use a valid block wrapper');
+  htmlWidget.closeDialog(false);
+  htmlWidget.config = htmlResult;
+  htmlWidget.data = snapshots('off');
+  check(htmlWidget.shadowRoot.querySelector('[data-content]').textContent.includes('Text für Sonst Welt'),
+    'HTML widget shows else branch with remaining content');
+  htmlWidget.remove();
+
+  const editor = createEditor({root:document, services, html:'<p>Hallo Welt</p>', onError:message => {
+    if (message) throw new Error(message);
+  }});
+  document.querySelector('#editor').append(editor.element);
+  const area = editor.element.querySelector('.editor-area');
+  const node = area.querySelector('p').firstChild;
+  const selection = document.getSelection();
+  selection.setBaseAndExtent(node, 0, node, 5);
+  document.dispatchEvent(new Event('selectionchange'));
+  editor.element.querySelector('[aria-label="Bedingte Textpassage einfügen"]').click();
+  const dialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  await chooseRule(dialog);
+  await until(() => area.querySelector('[data-cms-if]'), 'condition not inserted');
+  const saved = editor.getHtml();
+  check(saved.includes('>Hallo</span>') && saved.includes('data-cms-unless'), 'selected passage and else persist');
+  check(decodeCondition(saved.match(/data-cms-if="([^"]+)"/)[1]).expression.children[0].op === 'xor',
+    'text insertion preserves grouped XOR');
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const markerText = area.querySelector('[data-cms-if]').firstChild;
+  selection.setBaseAndExtent(markerText, 2, markerText, 2);
+  document.dispatchEvent(new Event('selectionchange'));
+  editor.element.querySelector('[aria-label="Bedingte Textpassage einfügen"]').click();
+  const textEditDialog = document.querySelector('dialog[aria-label="Bedingung bearbeiten"]');
+  check(textEditDialog.querySelector('.rule input').value === 'on' && textEditDialog.querySelector('[data-else]').checked,
+    'text editor reopens existing condition');
+  check(textEditDialog.querySelector('.condition-group select').value === 'xor', 'text editor reopens the group');
+  textEditDialog.querySelector('.rule input').value = 'off';
+  textEditDialog.querySelector('.rule input').dispatchEvent(new Event('input'));
+  textEditDialog.querySelector('form').dispatchEvent(new Event('submit', {bubbles:true,cancelable:true}));
+  await until(() => !document.querySelector('dialog[aria-label="Bedingung bearbeiten"]'), 'text edit did not close');
+  check(editor.getHtml() !== saved, 'text editor updates stored condition');
+  selection.setBaseAndExtent(markerText, 2, markerText, 2);
+  document.dispatchEvent(new Event('selectionchange'));
+  editor.element.querySelector('[aria-label="Bedingung an der Cursorposition entfernen"]').click();
+  check(!editor.getHtml().includes('data-cms-if') && editor.getHtml().includes('HalloText für Sonst'),
+    'removing text condition preserves both texts');
+  editor.destroy();
+  const secondEditor = createEditor({root:document, services, html:'<p>Erster</p><p>Zweiter</p>',
+    onError:message => { if (message) throw new Error(message); }});
+  document.querySelector('#editor').append(secondEditor.element);
+  const secondArea = secondEditor.element.querySelector('.editor-area');
+  const paragraphs = secondArea.querySelectorAll('p');
+  selection.setBaseAndExtent(paragraphs[0].firstChild, 2, paragraphs[1].firstChild, 4);
+  document.dispatchEvent(new Event('selectionchange'));
+  secondEditor.element.querySelector('[aria-label="Bedingte Textpassage einfügen"]').click();
+  await chooseRule(document.querySelector('dialog[aria-label="Bedingung bearbeiten"]'));
+  await until(() => secondArea.querySelectorAll('[data-cms-if]').length === 2, 'cross-paragraph condition missing');
+  check(secondArea.querySelectorAll('[data-cms-if]')[0].textContent === 'ster'
+    && secondArea.querySelectorAll('[data-cms-if]')[1].textContent === 'Zwei',
+    'cross-paragraph selection preserves both partial boundaries');
+  check(secondEditor.getHtml().includes('data-cms-unless'), 'cross-paragraph else is serialized');
+  secondEditor.destroy();
+  const emptyEditor = createEditor({root:document, services, html:'', onError:message => {
+    if (message) throw new Error(message);
+  }});
+  document.querySelector('#editor').append(emptyEditor.element);
+  const emptyArea = emptyEditor.element.querySelector('.editor-area');
+  selection.setBaseAndExtent(emptyArea, 0, emptyArea, 0);
+  document.dispatchEvent(new Event('selectionchange'));
+  emptyEditor.element.querySelector('[aria-label="Bedingte Textpassage einfügen"]').click();
+  await chooseRule(document.querySelector('dialog[aria-label="Bedingung bearbeiten"]'));
+  await until(() => emptyArea.querySelector('[data-cms-if]'), 'empty editor insertion missing');
+  check(emptyEditor.getHtml().includes('Text für Wenn'), 'empty editor inserts a conditional passage at the caret');
+  emptyEditor.destroy();
+  document.querySelector('#result').textContent = JSON.stringify({checks});
+  document.querySelector('#result').dataset.result = 'pass';
+} catch (error) {
+  document.querySelector('#result').textContent = error.stack;
+  document.querySelector('#result').dataset.result = 'fail';
+}
+</script>

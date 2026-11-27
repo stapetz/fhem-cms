@@ -2,6 +2,7 @@
 import { validateCssStructure } from './freehtml-css.js';
 import { formatDateDisplay } from './date-display.js';
 import { isValidSetCommand } from './set-command.js';
+import { applyMarkupConditions, decodeCondition, markupConditionDevices } from './condition-markup.js';
 export const MAX_FREE_HTML = 50000;
 export const MAX_FREE_DEVICES = 20;
 
@@ -194,6 +195,9 @@ export function checkSource(html) {
     if (!TAGS.has(tag)) {
       return `Das Element <${tag}> ist nicht erlaubt`;
     }
+    if (element.hasAttribute('data-cms-if') && element.hasAttribute('data-cms-unless')) {
+      return 'Ein Bereich darf nur eine Bedingungsmarkierung tragen';
+    }
     for (const attribute of element.attributes) {
       const name = attribute.name;
       if (tag === 'iframe' && name === 'src' && !extraAttributeAllowed(tag, name, attribute.value)) {
@@ -205,10 +209,14 @@ export function checkSource(html) {
       if (name === 'set-cmd' && (!SET_ACTION_TAGS.has(tag) || !isValidSetCommand(attribute.value))) {
         return `Ungültiges set-cmd-Attribut auf <${tag}>`;
       }
-      if (!['class', 'style', 'title', 'colspan', 'rowspan', 'data-cms-class', 'device', 'reading', 'filter'].includes(name)
+      if (!['class', 'style', 'title', 'colspan', 'rowspan', 'data-cms-class', 'data-cms-if', 'data-cms-unless', 'device', 'reading', 'filter'].includes(name)
         && name !== 'set-device' && name !== 'set-cmd'
         && !extraAttributeAllowed(tag, name, attribute.value)) {
         return `Das Attribut „${name}“ ist nicht erlaubt (Element <${tag}>)`;
+      }
+      if (name === 'data-cms-if' || name === 'data-cms-unless') {
+        if (!['span', 'div'].includes(tag)) return 'Bedingungsmarkierungen sind nur auf span und div erlaubt';
+        try { decodeCondition(attribute.value); } catch (error) { return error.message; }
       }
       if (name === 'style' && !isSafeCss(attribute.value)) {
         return 'Das style-Attribut enthält nicht erlaubte CSS-Eigenschaften oder Werte (z-index maximal 100).';
@@ -249,6 +257,7 @@ export function checkSource(html) {
 // Liefert die Devices, die der Code über Platzhalter und Bedingungen verwendet.
 export function extractDevices(html) {
   const names = new Set();
+  for (const name of markupConditionDevices(html)) names.add(name);
   for (const match of String(html).matchAll(PLACEHOLDER)) {
     names.add(match[1]);
   }
@@ -306,6 +315,9 @@ function cleanChildren(source, target) {
           element.setAttribute(name, value);
         } else if (name === 'data-cms-class') {
           element.setAttribute(name, value.split(';').filter((part) => CONDITION.test(part)).join(';'));
+        } else if ((name === 'data-cms-if' || name === 'data-cms-unless') && ['span', 'div'].includes(tag)) {
+          decodeCondition(value);
+          element.setAttribute(name, value);
         } else if (extraAttributeAllowed(tag, name, value)) {
           if (tag === 'a' && name === 'rel') {
             element.setAttribute('rel', [...new Set(['noopener', 'noreferrer', ...value.split(/\s+/).filter(Boolean)])].join(' '));
@@ -487,6 +499,7 @@ function compare(actual, operator, expected) {
 // Erzeugt aus dem Template eine Kopie mit eingesetzten Werten und gesetzten Bedingungsklassen.
 export function renderTemplate(template, lookup) {
   const copy = template.cloneNode(true);
+  applyMarkupConditions(copy, lookup);
   substituteIn(copy, lookup);
   const container = document.createElement('div');
   container.append(copy);

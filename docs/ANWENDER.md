@@ -77,8 +77,9 @@ Vorschau die verfügbare Bildschirmfläche zeigt.
 Die zentrale Verwaltung ist direkt unter `/fhem/fhem-cms/admin.html` erreichbar
 (bei abweichendem FHEMWEB-Pfad entsprechend anpassen). Erst nach expliziter
 Freigabe mit `attr <CMS-Device> adminMenu 1` oeffnet im Bearbeitungsmodus
-**Bearbeiten → Globale FHEM-CMS Administration** dieselbe Seite in einem neuen Tab,
-auch im bisherigen Schema-4-Editor.
+**Bearbeiten → Globale FHEM-CMS Administration** dieselbe Seite als Popup,
+auch im bisherigen Schema-4-Editor. Über **In eigenem Fenster öffnen** wird
+das Popup geschlossen und die Administration in einem separaten Fenster geöffnet.
 Beim Aufruf uebernimmt die Administration das aktuelle CMS-Theme einschliesslich
 Seitenhintergrund und Liquid-Glass-Darstellung. Direktaufrufe ohne diesen
 Darstellungskontext verwenden weiterhin das dunkle Standardtheme.
@@ -102,11 +103,11 @@ Browsercaches.
   werden angezeigt. Ist eine Speicherung nicht bestätigt, kann sie dennoch
   erfolgt sein: Vor einem erneuten Import den aktuellen Stand über den
   JSON-Export prüfen. Jede Aktion lädt den Zustand des Devices erneut.
-- **×** oben rechts und `Esc` versuchen, die Verwaltungsseite zu schließen.
-  Browser erlauben `window.close()` häufig nur für skriptgesteuert geöffnete
-  Fenster. Wird das Schließen blockiert, erscheint ein Hinweis und der Tab muss
-  manuell geschlossen werden. Der vorhandene Link aus dem CMS öffnet die
-  Administration weiterhin wie bisher in einem neuen Tab.
+- **×** oben rechts und `Esc` schließen das Popup. Laufende Vorgänge und
+  geöffnete Bestätigungsdialoge müssen vorher abgeschlossen werden. Im separat
+  geöffneten Fenster versuchen **×** und `Esc`, das Fenster zu schließen.
+  Bei einem direkten Aufruf kann der Browser dies verweigern; dann erscheint
+  ein Hinweis und der Tab muss manuell geschlossen werden.
 - CMS-Devices per Checkbox auswaehlen und **Purge + Delete** starten.
 - Der Bestaetigungsdialog nennt alle ausgewaehlten Devices. Erst die Eingabe
   `DELETE` gibt die unwiderrufliche Loeschung frei.
@@ -257,6 +258,32 @@ Die kopierte URL ohne Bearbeitungsmodus normal öffnen; ein zusätzlicher
 Kioskparameter ist nicht nötig. Kiosk blendet die CMS-Navigation aus,
 aktiviert aber nicht automatisch den Browser-Vollbildmodus.
 
+### Live-Eventmonitor
+
+Im Bearbeitungsmodus öffnet **Ansicht → Eventmonitor** den Live-Monitor als
+Popup über der aktuellen CMS-Seite. **In eigenem Fenster öffnen** öffnet den
+Monitor separat und schließt anschließend das Popup. Das Popup lässt sich
+außerdem mit **X** oder **Escape** schließen. Die CMS-Seite bleibt dabei geöffnet.
+Auch das separate Fenster lässt sich mit **X** oder **Escape** schließen.
+Verweigert der Browser das Schließen bei einem direkten Aufruf, erscheint ein
+Hinweis zum manuellen Schließen des Tabs.
+Popup und separates Fenster übernehmen beim Öffnen das aktuelle CMS-Theme
+einschließlich Seitenhintergrund und Liquid-Glass-Einstellungen.
+Beim Wechsel ins eigene Fenster beginnt der Ereignispuffer neu.
+Der Monitor nutzt eine eigene FHEMWEB-Inform-WebSocket-Verbindung. Angezeigt
+werden Zeit, Device, Reading und Wert. Der Textfilter durchsucht diese Angaben,
+**Anzeige pausieren** friert die Liste ein, während neue Ereignisse weiter
+gepuffert werden. Neue Ereignisse stehen oben; beim Blättern in älteren
+Einträgen bleibt die Leseposition erhalten. **Puffer leeren** entfernt die
+aktuell gespeicherten Einträge. Auf schmalen Bildschirmen lässt sich die Tabelle
+auch waagerecht verschieben.
+
+Der Puffer enthält höchstens 1.000 Ereignisse. Bei weiteren Ereignissen werden
+die ältesten Einträge verworfen. Ohne WebSocket zeigt der Monitor den
+Verbindungsstatus an, kann aber keine Ereignisse empfangen oder per Polling
+nachliefern. Es werden keine FHEM-Befehle gesendet; Sichtbarkeit und Zugriff
+richten sich nach der bestehenden FHEMWEB-Sitzung und deren Berechtigungen.
+
 ### Gemeinsame Darstellung und Vorschau
 
 Die Größe und Skalierung für alle Raster- und Freeform-Seiten stellst du unter
@@ -333,6 +360,20 @@ als Kalenderzeiträume ausgewertet. Für jede Reihe eines Liniendiagramms sind A
 Linienstärke und eine Flächenfüllung konfigurierbar; die Y-Achsen links und
 rechts besitzen getrennte automatische Wertebereiche. Beim Bewegen der Maus
 zeigt das Diagramm die jeweils nächstgelegenen Messwerte.
+Im Entwicklungsstand 1.40.1-dev zeigt auf Touchgeräten ein kurzes Antippen
+die Detailwerte; bei Torten erscheint der Wert des angetippten Segments. Die
+Anzeige bleibt nach dem Loslassen sichtbar. Ein horizontales Ziehen im Linien-
+oder Stapeldiagramm wählt weiterhin einen Zeitraum; vertikales Wischen scrollt.
+Dies gilt auch für die Vorschau, die keine Bereichsauswahl anbietet.
+Ab 1.41.0-dev lässt sich die Ansicht im Linien- und Stapeldiagramm zeitlich
+verschieben: auf Touchgeräten mit zwei Fingern, am Desktop mit gehaltener
+Leertaste und gedrückter Maustaste (der Mauszeiger wird dabei zur Hand). Nach
+rechts erreicht das Verschieben höchstens den aktuellen Zeitpunkt; in die
+Zukunft lässt sich nicht verschieben. Beim Loslassen wird der verschobene
+Zeitraum als eigener Zeitraum geladen. Während Daten aus FileLog oder DbLog
+geladen werden, dreht mittig auf dem Diagramm ein Ladesymbol.
+Das Mouseover-Fenster steht in der linken Diagrammhälfte rechts der
+Markierungslinie, ab der Mitte links davon.
 Im Mouseover steht das Datum mit Jahr und Uhrzeit einmal oben; maßgeblich ist
 der neueste der angezeigten Messzeitpunkte.
 Das Mouseover zeigt zusätzlich Summen dieser angezeigten Rohwerte, getrennt
@@ -1272,12 +1313,17 @@ Homepage zeigt Live, `?mode=preview` den Entwurf und `?mode=edit` den Editor.
   - *Grenzen:* höchstens 400 Punkte je Diagramm (längere Zeiträume werden zu Mittelwert, Minimum und Maximum zusammengefasst), Ergebnisse werden 30 Sekunden zwischengespeichert. Nur numerische Werte werden dargestellt.
   - *Seit 1.10.0:* DbLog-/FileLog-Verläufe und die Erkennung protokollierter Readings laufen in separaten Hintergrundprozessen. FHEMs Hauptschleife wartet nicht auf die Abfrage; Gerätebedienung und Automatisierungen können weiterlaufen. Identische laufende Anfragen werden zusammengefasst. Höchstens vier Worker arbeiten gleichzeitig; insgesamt sind bis zu 32 laufende oder wartende Aufträge vorgesehen. Ein Worker hat ein Zeitlimit von 20 Sekunden. Ladezustand, Fehler und Zeitüberschreitungen werden angezeigt; ohne verfügbare Hintergrundverarbeitung gibt es einen Fehler statt einer blockierenden Ersatzabfrage. CPU-, Datenbank- und Datenträgerlast entfallen dadurch nicht.
 - **Tabelle:** `Einfügen → Tabelle` zeigt Readings in einer laufend aktualisierten Tabelle. Im Dialog wählen Sie zuerst, ob die Werte aus einem Device (Standard) oder aus mehreren Devices kommen: Bei einem Device wählen Sie es einmal und danach je Zeile nur noch das Reading; bei mehreren Devices wählen Sie je Zeile Device und Reading. Beim Umschalten bleiben die Zeilen erhalten. Optional blendet eine Summenzeile unter der Tabelle die Summe der numerischen Einzelwerte ein (Beschriftung Standard „Summe“, änderbar); die Einheit ist wählbar oder „Automatisch“ (nur wenn alle summierten Werte dieselbe haben); die Beschriftung kann auch ausgeblendet werden, dann steht nur der Wert da. Die Tabellenüberschrift lässt sich ganz ausblenden; die Überschrift der Wertespalte (Standard „Wert“, rechtsbündig) ist änderbar oder einzeln ausblendbar. Die Überschrift der Geräte-/Bezeichnungsspalte ist anpassbar; Readings bleiben intern und werden nicht als eigene Spalte angezeigt. Für jeden Wert können gängige Einheiten wie °C, km, m, %, W oder kWh sowie eine eigene Einheit gewählt werden. Als Name einer Zeile erscheint der FHEM-Alias, sonst der Device-Name; im Feld „Bezeichner“ lässt sich ein eigener Name vergeben.
-- **Freies HTML:** Menü `Einfügen` → `Freies HTML` (Schema 5: **Einfügen → Widget hinzufügen**). HTML/SVG/CSS werden gegen Positivlisten geprüft: sichere Struktur einschließlich `<button>`, Tabellen, moderne Layouts, Animationen, Variablen, Filter, Bilder/Links sowie SVG mit lokalen Referenzen und numerischen Reading-Platzhaltern sind möglich. Schreibaktionen sind deklarativ über `set-device` und `set-cmd` auf `<button>`, `<div>`, `<span>` und `<a>` möglich; FHEM-Authentifizierung, CSRF-Schutz und Berechtigungen bleiben wirksam. `fixed` bleibt auf die Kachel begrenzt; `z-index` höchstens 100. URLs dürfen HTTP, HTTPS oder relative Pfade verwenden und werden auch als Reading live geprüft. Iframes haben keine Anbieterbeschränkung, aber eine feste Sandbox ohne Originfreigabe, Popups oder Topnavigation; Anbieter-/Browserregeln können Einbettungen trotzdem blockieren. Skripte im eigenen HTML, Formulare, native Eventhandler, `srcdoc`, aktive SVG-Inhalte und interne `data-cms-*`-Attribute (außer `data-cms-class`) bleiben gesperrt. Externe Ressourcen kontaktieren ihre Anbieter; eigene und importierte Styles können die Widget-Hülle beeinflussen, und importierte Stylesheets werden nicht rekursiv geprüft. Dialoghilfe und [PLATZHALTER.md](PLATZHALTER.md) beschreiben die Positivliste und Beispiele.
+- **Freies HTML:** Menü `Einfügen` → `Freies HTML` (Schema 5: **Einfügen → Widget hinzufügen**). HTML/SVG/CSS werden gegen Positivlisten geprüft: sichere Struktur einschließlich `<button>`, Tabellen, moderne Layouts, Animationen, Variablen, Filter, Bilder/Links sowie SVG mit lokalen Referenzen und numerischen Reading-Platzhaltern sind möglich. Schreibaktionen sind deklarativ über `set-device` und `set-cmd` auf `<button>`, `<div>`, `<span>` und `<a>` möglich; FHEM-Authentifizierung, CSRF-Schutz und Berechtigungen bleiben wirksam. `fixed` bleibt auf die Kachel begrenzt; `z-index` höchstens 100. URLs dürfen HTTP, HTTPS oder relative Pfade verwenden und werden auch als Reading live geprüft. Iframes haben keine Anbieterbeschränkung, aber eine feste Sandbox ohne Originfreigabe, Popups oder Topnavigation; Anbieter-/Browserregeln können Einbettungen trotzdem blockieren. Skripte im eigenen HTML, Formulare, native Eventhandler, `srcdoc`, aktive SVG-Inhalte und interne `data-cms-*`-Attribute (außer `data-cms-class` und den geprüften Bedingungsmarkierungen) bleiben gesperrt. Externe Ressourcen kontaktieren ihre Anbieter; eigene und importierte Styles können die Widget-Hülle beeinflussen, und importierte Stylesheets werden nicht rekursiv geprüft. Dialoghilfe und [PLATZHALTER.md](PLATZHALTER.md) beschreiben die Positivliste und Beispiele.
 - **Taster:** Menü *Einfügen* → *Taster* (im Schema-5-Editor **Einfügen → Widget hinzufügen**). Device wählen und einen Befehl ohne Parameter (z. B. `toggle`, `on`, `up`) festlegen. Standardmäßig erscheint ein Symbol statt des Befehlstexts: Umschaltpfeile für `toggle`, An-/Aus-Symbol für `on`/`off`, sonst ein Tastensymbol. Unter **Darstellung** wählen Sie **Nur Symbol** oder **Symbol + Beschriftung**. Die optionale Beschriftung ersetzt den Befehlstext. Ein Klick in der Ansicht sendet unverändert den Befehl; im Bearbeitungsmodus wird nichts gesendet.
 - **Schalter:** Menü *Einfügen* → *Schalter* (im Schema-5-Editor **Einfügen → Widget hinzufügen**). Device, Zustandsreading (meist `state`) und die Befehle für „An“ und „Aus“ wählen. Das Symbol selbst ist die Schaltfläche, ohne zusätzlichen Schieber; An, Aus und unbekannter Zustand sind unterscheidbar. Unter **Darstellung** können Sie zusätzlich Text einblenden (Standard An/Aus/Zustand unbekannt, eigene Beschriftung möglich). In der Ansicht schaltet ein Klick; im Bearbeitungsmodus wird nicht geschaltet.
 - **Gemeinsame Symboldarstellung:** Auch vorhandene Schalter und Taster verwenden ohne explizite Einstellung **Nur Symbol**; gespeicherte Beschriftungen gehen nicht verloren und lassen sich wieder zuschalten. Widgettitel bleiben unabhängig davon sichtbar bzw. separat ausblendbar. **Icon wählen …** überschreibt das eingebaute Standardsymbol mit einem eigenen Icon. Im Icon-Picker setzt **Standardsymbol** bzw. **Standardsymbol / Vererbung** die Auswahl zurück. Beim Schalter gilt ein eigenes An-Icon auch für Aus, solange kein eigenes Aus-Icon gewählt wurde; ohne eigene Icons gelten die eingebauten Zustandssymbole. Standardsymbole benötigen keine nachinstallierten FHEM-Iconpakete.
 - **Platzhalter suchen:** Im freien HTML (Knopf *Platzhalter suchen und einfügen …*) und im Textbaustein (Knopf `{{ }}`) suchen Sie ein Device und ein Reading und fügen den Wert ein; im Textbaustein lässt sich der Platzhalter per Klick nachträglich ändern und wie normaler Text formatieren (fett, kursiv, unterstrichen, durchgestrichen, Farbe, Hervorhebung). Details in [PLATZHALTER.md](PLATZHALTER.md).
 - **Textbaustein:** WYSIWYG-Editor mit Fett, Kursiv, Unterstrichen, Durchgestrichen, Überschriften, Listen, Ausrichtung, Links, Tabellen und Bildern. Markieren Sie den gewünschten Text und wählen Sie die Formatierung; auch in Safari bleibt die markierte Stelle beim Bedienen der Werkzeugleiste erhalten. Für Textfarbe oder Hervorhebung wählen Sie unter **Farbe** den Farbwert und anschließend **Anwenden**. Bilder (PNG, JPEG, GIF, höchstens 3 MiB) werden hochgeladen oder aus bereits vorhandenen gewählt; ein Klick auf das Bild öffnet Position (links, Mitte, rechts, voll) und Alternativtext. Die Größe ändern Sie am grünen Ziehpunkt unten rechts am Bild: ziehen (das Seitenverhältnis bleibt erhalten, feinste Auflösung 1 % der Textbreite) oder den Ziehpunkt fokussieren und die Pfeiltasten nutzen. Der Text wird beim Einfügen und Speichern bereinigt, Skripte und fremde Bildquellen sind nicht möglich. Alte Markdown-Bausteine werden beim Bearbeiten umgewandelt.
+- **Reading-Bedingungen (Schema 5/6):** Im Widgetdialog legt **Sichtbarkeitsbedingung hinzufügen** Regeln für die ganze Kachel fest. Im Texteditor markiert **Wenn …** eine Passage; im freien HTML umschließt **Bedingten Bereich einfügen / bearbeiten …** die Auswahl oder fügt an der Cursorposition einen neuen Bereich ein. Der Assistent bietet optional einen Sonst-Zweig und eine Vorschau mit aktuellen Werten. Setzen Sie den Cursor in einen bestehenden Bereich, um seine Bedingung erneut zu öffnen oder zu entfernen; beim Entfernen bleiben beide Texte erhalten. Bei einer absatzübergreifenden Textauswahl wird jeder betroffene Absatz separat markiert.
+  Regeln vergleichen Text exakt mit `==`, `!=` oder `contains`; `<`, `<=`, `>` und `>=` benötigen endliche Dezimalzahlen. `regex` unterstützt Literale, `.`, `^`, `$`, `*`, `+`, `?` und die Escapes dieser Zeichen, jedoch keine Gruppen, Alternativen, Klassen oder Zähler.
+  Jede Gruppe ist eine sichtbare Klammer mit eigener Verknüpfung UND, ODER oder XOR; XOR ist bei einer ungeraden Anzahl wahrer Einträge wahr. **NICHT** kehrt das Gruppenergebnis um und ermöglicht auch NAND, NOR und XNOR. Beispielsweise für `(A UND B) ODER C` erst A und B anlegen, **Alle Regeln in eine Untergruppe setzen**, außen ODER wählen und C hinzufügen. Einzelne Regeln lassen sich auch mit **Gruppieren** einklammern und mit **In Gruppe darüber** verschieben; Gruppen können verschachtelt oder aufgelöst werden. Beim Auflösen entfällt die Verknüpfung und Negation der Gruppe. Es gelten nur die sichtbaren Klammern, keine impliziten Operatorprioritäten.
+  Ein fehlender oder ungültiger Wert ist unbekannt; dann erscheint weder Wenn noch Sonst, sofern nicht eine andere Regel das Gesamtergebnis bereits eindeutig bestimmt. XOR mit unbekanntem Eintrag und NICHT unbekannt bleiben unbekannt. Maximal 20 Regeln, 60 Knoten und 8 Ebenen einschließlich Regeln pro Bedingung sowie 200 Regeln und 4096 Regex-Musterzeichen pro Seite; ein Sonst-Zweig zählt mit.
+  Bei `collapse` rücken Widgets nur in fließenden Layouts nach; feste Raster- und Freeformpositionen bleiben erhalten. `keep-space` lässt den Platz frei. Im Bearbeitungsmodus bleiben ausgeblendete Widgets zugänglich und sind gestrichelt markiert. Bestehende `data-cms-class`-Regeln, Platzhalter und deklarative Aktionen funktionieren unverändert.
 - **Zwei Einstiege am Device:** Beide Links öffnen ein neues Browserfenster. „CMS starten“ öffnet den Bearbeitungsmodus (`?mode=edit`). „Zeige Homepage“ öffnet die Seite ohne Parameter (Standard), also nur die fertige Seite ohne Kopf, Werkzeugleiste und Zahnräder. Die Seitennavigation und die Kachelwerte bleiben. Achtung: Das ist nur eine Ansicht und keine Zugriffssperre, wer `?mode=edit` an die Adresse hängt, kann bearbeiten. Schutz bieten nur `allowed` und FHEMWEB.
 - **Vorschau:** Öffnet in einem neuen Fenster den aktuellen Entwurf so, wie die Seite nach dem Veröffentlichen ausgeliefert würde (ohne Bearbeitungsknöpfe). Der Entwurf wird bei jeder Änderung gespeichert, ein Neuladen des Vorschaufensters zeigt den neuesten Stand.
 - **Kacheln verschieben und skalieren:** Im Bearbeitungsmodus ist das immer möglich (kein eigener Modus). Jede Kachel hat oben rechts nebeneinander die Symbole ⇄ („Widget auf andere Seite verschieben“), ⠿ („Widget auf dieser Seite verschieben“, Griff) und ⚙ („Widget konfigurieren“); Ziehen mit Maus oder Touch, oder Griff fokussieren und Pfeiltasten nutzen. Die Größe ändern Sie am Griff unten rechts der Kachel, der beim Darüberfahren erscheint (ziehen) oder mit Umschalt+Pfeiltasten am fokussierten Kachel-Griff. Position und Größe rasten im gewählten Raster ein (12, 24 oder 48 Spalten, siehe „Seite einrichten“). Was mit anderen Kacheln passiert, hängt von der Positionierung ab: Im Raster rutschen überlappende Kacheln nach unten, bei Fluss und Spalten ordnen sich alle neu an, bei Frei bleiben sie unberührt. Verdrängte Kacheln gleiten an ihren neuen Platz. Das Layout wird gespeichert. Der Konfigurationsdialog der Kacheln enthält keine Rasterfelder mehr. Der Knopf ⇄ oben rechts an jeder Kachel verschiebt sie auf eine andere Seite (unten angehängt, Konfiguration bleibt erhalten); das gilt für alle Widget-Typen. Auf schmalen Bildschirmen ist der Modus ausgeblendet.

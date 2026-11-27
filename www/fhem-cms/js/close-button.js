@@ -36,6 +36,20 @@ export function installCloseStyles(root) {
   root.append(style);
 }
 
+export function requestWindowClose(browser, notify) {
+  try {
+    browser.close();
+  } catch {
+    notify('Der Browser konnte dieses Fenster nicht schließen. Bitte den Tab oder das Fenster manuell schließen.');
+    return;
+  }
+  browser.setTimeout(() => {
+    if (!browser.closed) {
+      notify('Der Browser erlaubt das Schließen dieses Tabs nicht, da er nicht skriptgesteuert geöffnet wurde. Bitte den Tab manuell schließen.');
+    }
+  }, 100);
+}
+
 export function installCloseButton(dialog) {
   const document = dialog.ownerDocument;
   if (!document || typeof document.createElement !== 'function' || !dialog.append) return;

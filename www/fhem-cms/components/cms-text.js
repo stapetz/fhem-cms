@@ -5,6 +5,7 @@ import { MAX_HTML, contentCss, createEditor, editorCss, markdownToHtml, renderHt
 import { titleVisibilityField, titleVisibilityStyles } from '../js/dialog-groups.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { updateWidgetDom } from '../js/widget-dom.js';
+import { applyMarkupConditions } from '../js/condition-markup.js';
 
 class FHEMCMSText extends HTMLElement {
   constructor() {
@@ -145,6 +146,7 @@ class FHEMCMSText extends HTMLElement {
     title.hidden = !this.widgetConfig.title || this.widgetConfig.showTitle === false;
     if (typeof this.widgetConfig.html === 'string') {
       const fragment = renderHtml(this.widgetConfig.html);
+      applyMarkupConditions(fragment, (device, reading) => lookupValue(this.groups, device, reading));
       substituteIn(fragment, (device, reading) => lookupValue(this.groups, device, reading));
       updateWidgetDom(body, fragment);
     } else {

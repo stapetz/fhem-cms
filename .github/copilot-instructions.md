@@ -16,6 +16,21 @@ Details:
 - Anforderungen können dort im Rahmen der Entwicklung dokumentiert und angepasst werden. Prüfe sie vor der Umsetzung und halte Änderungen an Projektzielen oder Anforderungen dort fest.
 - Vision und Roadmap sind Zielbild, nicht automatisch bereits implementierte oder verbindliche Details. Kläre offene Anforderungen, bevor du daraus konkrete Architektur- oder Verhaltensentscheidungen ableitest.
 - Entwicklungsarbeit findet auf `dev` statt.
+- `dev` ist der lokale Arbeits- und Testbranch, kein automatisch freigegebener
+  Deployment-Zielbranch. Änderungen zuerst lokal implementieren und validieren;
+  vor jedem Push/Deployment nach `dev` den etablierten lokalen Testserver für
+  die passenden UI-/Funktionstests verwenden. Ein Auftrag zum Implementieren,
+  Ändern oder Testen ist keine Push-Freigabe.
+- Nach erfolgreicher lokaler Prüfung dem Entwickler Ergebnis und Umfang nennen
+  und vor einem Push/Deployment nach `dev` ausdrücklich um Ja/Nein-Freigabe
+  bitten. Ohne ein konkretes Ja nicht pushen oder deployen, sondern lokal
+  anhalten. Falls ein Deployment für eine Prüfung technisch nötig erscheint
+  (z. B. wegen geänderter Build-/Paketierungsdateien oder eines nur auf dem
+  Zielsystem prüfbaren Verhaltens), zuerst den Grund, die betroffenen Commits
+  und den vorgesehenen Zielbranch erläutern und die Freigabe abwarten.
+- Ist der lokale Testserver nicht verfügbar oder sein Zugriff unklar, keine
+  entfernte `dev`-Instanz als Ersatz deployen; die Einschränkung benennen und
+  den Entwickler nach dem nächsten Schritt fragen.
 - `main` enthält nur ausdrücklich freigegebene Stände. Ohne konkrete Freigabe nicht nach `main` pushen, mergen oder veröffentlichen.
 - Der CMS-Branch `main` existiert bereits und enthält Version `0.1.0`; keinen weiteren Branch gleichen Namens anlegen. Ein ausdrückliches „Go" für einen neuen `main`-Release gibt den aktuellen Umfang aus `Ready to publish` frei. Den bestehenden Branch niemals löschen oder per Force-Push überschreiben; falls sich `dev` nicht nachvollziehbar und sicher integrieren lässt, vor Änderungen an `main` mit dem Entwickler klären.
 - Diese Anweisungen werden auf `dev` gepflegt und nicht ohne ausdrücklichen Auftrag nach `main` übernommen.
@@ -36,6 +51,13 @@ Details:
 ## Änderungen und Prüfung
 
 - Vorhandene Muster und den tatsächlichen Projekt-Stack prüfen, bevor neue Abhängigkeiten oder Verzeichnisstrukturen eingeführt werden.
+- Vor einem möglichen Deployment zuerst die passenden automatisierten Tests
+  lokal ausführen und UI-/Funktionsänderungen über den etablierten lokalen
+  Testserver prüfen. Erst nach bestandener lokaler Prüfung darf um eine
+  Deployment-Freigabe gebeten werden; diese Freigabe muss vor dem Push
+  vorliegen. Build-/Paketierungsänderungen sind kein stillschweigender
+  Deployment-Auftrag: erklären, warum ein Zielsystemtest nötig ist, und Ja/Nein
+  abwarten.
 - Für Perl-Änderungen mindestens die passende Syntaxprüfung ausführen; vorhandene Tests und projektspezifische Prüfungen ebenfalls ausführen.
 - Auf `dev` und `main` muss jedes FHEMCMS-Device die geladene Modulversion im
   Internal `VERSION` anzeigen, damit sie mit `list <Device>` geprüft werden kann.
@@ -47,7 +69,7 @@ Details:
 - Jeder inhaltliche Commit gehört genau zu einem Issue und enthält `Refs #<Nr>`, damit GitHub Commit und Issue verknüpft. Änderungen verschiedener Issues in derselben Datei in getrennte, möglichst unabhängige Commits aufteilen; nie unfertige Arbeit in einen Commit für ein freigegebenes Issue mischen. Issue-lose Änderungen nicht ungeprüft releasen. Wenn Commit-Inhalte vermischt oder abhängig sind, zuerst sauber trennen oder abhängige Issues gemeinsam abnehmen/freigeben; bei Unsicherheit Release anhalten.
 - Nach einem ausdrücklichen Release-Go einen Release-Branch vom aktuellen `main` erstellen und ausschliesslich die issuebezogenen Commits aller im Release enthaltenen `Ready to publish`-Issues darauf cherry-picken. Niemals den gesamten `dev`-Branch mergen oder ganze Dateien aus `dev` kopieren. Vor dem Push Commit-Zuordnung Issue → Hash und vollständigen Diff des Release-Branches prüfen: Jede Änderung muss zu einem ausgewählten freigegebenen Issue oder nötigen Release-Metadaten gehören. Sobald ein Commit zu einem Issue ausserhalb von `Ready to publish` auftaucht, ein benötigter Commit fehlt oder ein Patch nicht unabhängig anwendbar ist, Veröffentlichung stoppen und den Umfang isolieren oder die Issues gemeinsam freigeben lassen.
 - Vor dem Release automatisch die nächste stabile SemVer-Version anhand des letzten `main`-Stands und des tatsächlichen Releaseumfangs bestimmen: rückwärtsinkompatibel = MAJOR, neue kompatible Funktion = MINOR, nur Fehlerkorrekturen/Dokumentation = PATCH; bei gemischten Änderungen gilt die höchste Stufe. Die Versionsnummer ohne `-dev` in `FHEM/01_FHEMCMS.pm` setzen, die stabile Version in `README.md` aktualisieren und `CHANGED` mit Versionsnummer, Datum, Zusammenfassung und Story-Zeilen der tatsächlich ausgewählten Issues pflegen. Die `controls_fhem-cms.txt` generiert der vorhandene Push-Workflow automatisch; nicht von Hand bearbeiten. Nach erfolgreichem Push nur tatsächlich enthaltene Issues schliessen. Nicht enthaltene Issues bleiben offen in `Ready to publish`. Einzelheiten stehen in `dev-docs/ENTWICKLUNG.md`.
-- Nach einem erfolgreichen Commit und Push nach `dev`, der nach FHEM zu übertragende
+- Nur nach ausdrücklich freigegebenem Push nach `dev`: Nach einem erfolgreichen Commit und Push, der nach FHEM zu übertragende
   Änderungen enthält, in der Rückmeldung diesen Aktualisierungs-Codeblock anzeigen.
   Erst anzeigen, wenn die Ueberwachung aller zum Commit gehoerenden Build-/Test-
   und Controls-Workflows abgeschlossen und erfolgreich ist. Danach die tatsaechlich

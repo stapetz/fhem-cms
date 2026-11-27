@@ -185,17 +185,55 @@ try {
     source.setAttribute('data-cms-theme', 'liquid-glass');
     source.style.setProperty('--cms-page-image', `url("${new URL(`../www/fhem-cms/CMS/media/${'a'.repeat(32)}.jpg`, location.href).href}")`);
     source.style.setProperty('--cms-liquid-blur', '12px');
-    link.addEventListener('click', event => event.preventDefault());
     link.click();
-    const appearance = new URL(link.href).hash;
+    const popup = document.querySelector('.cms-eventmonitor-modal');
+    const adminFrame = popup.querySelector('iframe');
+    const appearance = new URL(adminFrame.src).hash;
     check(appearance.includes('theme=liquid-glass') && appearance.includes('blur=12')
       && appearance.includes('background='), `${editorClass}: click transfers current theme and image`);
+    check(new URL(adminFrame.src).searchParams.get('embedded') === '1'
+      && !new URL(popup.querySelector('header a').href).searchParams.has('embedded')
+      && new URL(popup.querySelector('header a').href).hash === appearance,
+    `${editorClass}: popup and separate window share appearance`);
+    adminFrame.contentWindow.cmsAdminCloseStatus = () => 'Ein Vorgang läuft noch.';
+    popup.querySelector('.cms-close-button').click();
+    check(popup.open && popup.querySelector('[role="status"]').textContent.includes('Vorgang'),
+      `${editorClass}: busy administration blocks close`);
+    adminFrame.contentWindow.cmsAdminCloseStatus = () => '';
+    popup.querySelector('.cms-close-button').click();
+    await wait(() => !popup.isConnected);
     if (previousTheme === null) source.removeAttribute('data-cms-theme');
     else source.setAttribute('data-cms-theme', previousTheme);
     if (previousStyle === null) source.removeAttribute('style');
     else source.setAttribute('style', previousStyle);
     toolbar.remove();
   }
+  const menu = doc.createElement('div');
+  menu.className = 'cms-menu-items';
+  const labels = ['Vorschau', 'Raster anzeigen', 'Widgets automatisch anordnen', 'Eventmonitor'];
+  for (const [index, label] of labels.entries()) {
+    const item = index === 3 ? doc.createElement('a') : doc.createElement('button');
+    item.className = 'cms-button';
+    if (index < 2) {
+      item.classList.add('cms-grid-toggle');
+      item.setAttribute('aria-pressed', 'false');
+    }
+    item.textContent = label;
+    menu.append(item);
+  }
+  doc.body.append(menu);
+  const textStart = item => {
+    const range = doc.createRange();
+    range.selectNodeContents(item);
+    return range.getBoundingClientRect().left;
+  };
+  const menuItems = [...menu.children];
+  const starts = menuItems.map(textStart);
+  check(menuItems.every(item => frame.contentWindow.getComputedStyle(item).width
+    === frame.contentWindow.getComputedStyle(menuItems[0]).width)
+    && starts.every(start => Math.abs(start - starts[0]) < 1),
+  'menu buttons and links have a shared width and left-aligned text');
+  menu.remove();
   const context = `#${new URLSearchParams({ theme: 'liquid-glass',
     background: `/fhem/fhem-cms/CMS/media/${'a'.repeat(32)}.jpg`,
     blur: '12', opacity: '0.7', gloss: '0.1' })}`;
@@ -338,6 +376,53 @@ try {
   $('button[value="delete"]').click();
   await wait(() => $('#results').textContent.includes('Purge fehlgeschlagen') && !$('#refresh').disabled);
   check(reloads === 2 && !!$('#results [data-error]'), 'unsuccessful batch keeps per-entry errors visible without reload');
+  history.replaceState(null, '', '/www/fhem-cms/CMS/index.html');
+  document.documentElement.setAttribute('data-cms-theme', 'light');
+  const [realLink] = createCmsAdminMenuLinks({ adminMenuEnabled: true });
+  document.body.append(realLink);
+  realLink.click();
+  const realPopup = document.querySelector('.cms-eventmonitor-modal');
+  const realFrame = realPopup.querySelector('iframe');
+  await wait(() => typeof realFrame.contentWindow?.cmsAdminCloseStatus === 'function');
+  await wait(() => !realFrame.contentWindow.cmsAdminCloseStatus());
+  const realDoc = realFrame.contentDocument;
+  check(realDoc.documentElement.dataset.cmsTheme === 'light'
+    && getComputedStyle(realDoc.querySelector('#close-window')).display === 'none',
+  'real embedded administration uses the current theme and only the outer close button');
+  const realFetch = realFrame.contentWindow.fetch;
+  let releaseInventory;
+  realFrame.contentWindow.fetch = () => new Promise(resolve => { releaseInventory = resolve; });
+  realDoc.querySelector('#refresh').click();
+  realPopup.querySelector('.cms-close-button').click();
+  check(realPopup.open && realPopup.querySelector('[role="status"]').textContent.includes('Vorgang'),
+    'real pending inventory request blocks the outer X');
+  const oldOpen = window.open;
+  let openedWindow;
+  window.open = () => { openedWindow = { opener: window, location: { href: '' } }; return openedWindow; };
+  realPopup.querySelector('header a').click();
+  check(!openedWindow && realPopup.open, 'pending administration also blocks opening a separate window');
+  releaseInventory(Response.json({ token: 'a'.repeat(64), items: [] }));
+  realFrame.contentWindow.fetch = realFetch;
+  await wait(() => !realFrame.contentWindow.cmsAdminCloseStatus());
+  realDoc.querySelector('#confirmation').showModal();
+  realPopup.querySelector('.cms-close-button').click();
+  check(realPopup.open && realPopup.querySelector('[role="status"]').textContent.includes('Administrationsdialog'),
+    'real confirmation prevents the outer X from closing administration');
+  realDoc.querySelector('#confirmation').close();
+  realDoc.body.dispatchEvent(new realFrame.contentWindow.KeyboardEvent('keydown', {
+    key: 'Escape', bubbles: true, cancelable: true,
+  }));
+  await wait(() => !realPopup.isConnected);
+  check(!realPopup.open, 'Escape inside the real administration frame closes its popup');
+  realLink.click();
+  const separatePopup = document.querySelector('.cms-eventmonitor-modal');
+  const expectedWindowUrl = separatePopup.querySelector('header a').href;
+  separatePopup.querySelector('header a').click();
+  window.open = oldOpen;
+  await wait(() => !separatePopup.isConnected);
+  check(openedWindow.opener === null && openedWindow.location.href === expectedWindowUrl
+    && new URL(expectedWindowUrl).hash === '#theme=light',
+  'separate administration window preserves the theme and closes the popup');
   output.dataset.result = 'pass';
   output.textContent = JSON.stringify({checks});
 } catch (error) {

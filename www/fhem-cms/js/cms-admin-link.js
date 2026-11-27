@@ -1,3 +1,5 @@
+import { openEmbeddedTool } from './embedded-tool-dialog.js';
+
 const THEMES = new Set(['dark', 'light', 'liquid-glass', 'oled-black', 'catppuccin-mocha']);
 const BACKGROUND = /^\/(?:[A-Za-z0-9_.-]+\/)*fhem-cms\/[A-Za-z0-9_.-]{1,128}\/media\/[0-9a-f]{32}\.(?:png|jpg|gif)$/;
 const LIQUID = {
@@ -30,6 +32,20 @@ export function applyCmsAdminAppearance(root, hash) {
   for (const [property, value] of values) root.style.setProperty(property, value);
 }
 
+export function captureCmsAppearance(root, baseURI) {
+  const params = new URLSearchParams({ theme: root.getAttribute('data-cms-theme') || 'dark' });
+  const image = root.style.getPropertyValue('--cms-page-image').match(/^url\("([^"]+)"\)$/);
+  if (image) {
+    const url = new URL(image[1], baseURI);
+    if (url.origin === new URL(baseURI).origin) params.set('background', url.pathname);
+  }
+  for (const [key, [property, , unit]] of Object.entries(LIQUID)) {
+    const value = root.style.getPropertyValue(property).trim();
+    if (value) params.set(key, unit ? value.replace(/px$/, '') : value);
+  }
+  return params.toString();
+}
+
 export function createCmsAdminLink() {
   const link = document.createElement('a');
   link.className = 'cms-button';
@@ -37,19 +53,25 @@ export function createCmsAdminLink() {
   link.textContent = 'Globale FHEM-CMS Administration';
   link.target = '_blank';
   link.rel = 'noopener';
-  link.addEventListener('click', () => {
-    const root = document.documentElement;
-    const params = new URLSearchParams({ theme: root.getAttribute('data-cms-theme') || 'dark' });
-    const image = root.style.getPropertyValue('--cms-page-image').match(/^url\("([^"]+)"\)$/);
-    if (image) {
-      const url = new URL(image[1], document.baseURI);
-      if (url.origin === new URL(document.baseURI).origin) params.set('background', url.pathname);
-    }
-    for (const [key, [property, , unit]] of Object.entries(LIQUID)) {
-      const value = root.style.getPropertyValue(property).trim();
-      if (value) params.set(key, unit ? value.replace(/px$/, '') : value);
-    }
-    link.href = `../admin.html#${params}`;
+  link.setAttribute('aria-haspopup', 'dialog');
+  link.addEventListener('click', event => {
+    link.hash = captureCmsAppearance(document.documentElement, document.baseURI);
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    const url = new URL(link.href, document.baseURI);
+    url.searchParams.set('embedded', '1');
+    url.hash = captureCmsAppearance(document.documentElement, document.baseURI);
+    openEmbeddedTool({
+      trigger: link, url, title: 'Globale FHEM-CMS Administration',
+      frameTitle: 'Globale FHEM-CMS Administration', closeMessage: 'cms-admin-close',
+      canClose: frame => {
+        try {
+          return typeof frame?.cmsAdminCloseStatus === 'function' ? frame.cmsAdminCloseStatus() : '';
+        } catch {
+          return 'Der Status der Administration konnte nicht geprüft werden. Bitte erneut versuchen.';
+        }
+      },
+    });
   });
   return link;
 }

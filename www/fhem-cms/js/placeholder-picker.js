@@ -94,8 +94,9 @@ const TEMPLATE = `
 `;
 
 // Liefert { device, reading, filter, asElement } oder null, wenn abgebrochen wurde.
-export function openPlaceholderPicker({ services, initial = null, allowElement = false }) {
+export function openPlaceholderPicker({ services, initial = null, allowElement = false, signal = null }) {
   return new Promise((resolve) => {
+    if (signal?.aborted) { resolve(null); return; }
     const dialog = document.createElement('dialog');
     dialog.className = 'cms-ph-dialog';
     dialog.setAttribute('aria-label', 'Platzhalter suchen');
@@ -245,12 +246,15 @@ export function openPlaceholderPicker({ services, initial = null, allowElement =
     };
 
     const finish = (value) => {
+      signal?.removeEventListener('abort', abort);
       if (dialog.open) {
         dialog.close();
       }
       dialog.remove();
       resolve(value);
     };
+    const abort = () => finish(null);
+    signal?.addEventListener('abort', abort, {once:true});
 
     deviceInput.addEventListener('input', refresh);
     readingInput.addEventListener('input', refresh);

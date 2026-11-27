@@ -3,6 +3,8 @@ import { validatePinPage, validatePinPosition } from './pin-layout.js';
 import { validatePinReadings } from './pin-readings.js';
 import { freeformStartRect, isFreeform, resizeFreeformPage, syncSharedFreeformSize, validateFreeformCanvas, validateFreeformWidget } from './fcui-freeform-layout.js';
 import { navigationStyle } from './fcui-schema5-appearance.js';
+import { conditionCost, validateVisibility } from './condition.js';
+import { markupConditionCost } from './condition-markup.js';
 
 const NAVIGATION = '__nav';
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -90,6 +92,7 @@ function validateLayout(config, includeNavigation = true) {
       throw new Error('Canvas und Navigationsgeometrie sind nur auf Freeform-Seiten erlaubt');
     }
     const ids = new Set();
+    const budget = {rules:0, regex:0};
     const grids = includeNavigation ? [nav] : [];
     for (const widget of page.widgets) {
       if (!widget || typeof widget.id !== 'string' || !ID.test(widget.id)
@@ -97,6 +100,20 @@ function validateLayout(config, includeNavigation = true) {
         throw new Error(`Ungültige oder doppelte Widget-ID auf Seite ${page.id}`);
       }
       ids.add(widget.id);
+      if (Object.hasOwn(widget, 'visibility')) {
+        validateVisibility(widget.visibility);
+        const cost = conditionCost(widget.visibility.condition);
+        budget.rules += cost.rules;
+        budget.regex += cost.regex;
+      }
+      if (['text', 'fhem-html'].includes(widget.type) && typeof widget.html === 'string') {
+        const cost = markupConditionCost(widget.html);
+        budget.rules += cost.rules;
+        budget.regex += cost.regex;
+      }
+      if (budget.rules > 200 || budget.regex > 4096) {
+        throw new Error('Zu viele Bedingungsregeln oder zu aufwendige reguläre Ausdrücke auf einer Seite');
+      }
       if (Object.hasOwn(widget, 'position')) {
         if (!freeform) throw new Error('Pin-Positionen sind nur auf Freeform-Seiten erlaubt');
         validatePinPosition(widget.position);

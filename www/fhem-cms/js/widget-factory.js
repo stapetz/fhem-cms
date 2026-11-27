@@ -18,8 +18,11 @@ import { devicesOfSolarFlow } from '../components/cms-solarflow.js';
 import '../components/cms-solar-energy.js';
 import '../components/cms-volvoconnect.js';
 import { solarEnergyDevices } from './solar-energy.js';
-import { MAX_FREE_DEVICES, extractDevices } from './freehtml.js';
+import { extractDevices } from './freehtml.js';
 import { isValidName } from './fhem-client.js';
+import { conditionDevices } from './condition.js';
+import { markupConditionDevices } from './condition-markup.js';
+export { groupSnapshots } from './condition-snapshots.js';
 
 const tags = new Map([
   ['thermostat', 'cms-thermostat'],
@@ -45,35 +48,27 @@ const tags = new Map([
 const withoutSnapshots = new Set(['fhem-button', 'fhem-clock', 'fhem-chart', 'fhem-graph', 'fhem-link', 'weather']);
 const groupedSnapshots = new Set(['fhem-html', 'text', 'fhem-table', 'fhem-solarflow', 'fhem-solar-energy']);
 
-export function devicesOf(widget) {
+function contentDevicesOf(widget) {
   if (widget.type === 'fhem-table') {
     return [...new Set((widget.rows || []).map((row) => row.device).filter(isValidName))];
   }
   if (widget.type === 'fhem-chart' || widget.type === 'fhem-graph' || widget.type === 'fhem-link' || widget.type === 'weather') return [];
   if (widget.type === 'fhem-solarflow') return devicesOfSolarFlow(widget);
   if (widget.type === 'fhem-solar-energy') return solarEnergyDevices(widget);
-  if (widget.type === 'fhem-html') return widget.devices;
-  if (widget.type === 'text') return extractDevices(widget.html || '').slice(0, MAX_FREE_DEVICES);
+  if (widget.type === 'fhem-html') return [...new Set([...(widget.devices || []), ...markupConditionDevices(widget.html || '')])];
+  if (widget.type === 'text') return extractDevices(widget.html || '');
   return [widget.device];
+}
+
+export function devicesOf(widget) {
+  return [...new Set([...contentDevicesOf(widget),
+    ...(widget.visibility ? conditionDevices(widget.visibility.condition) : [])])];
 }
 
 export function dataFor(widget, snapshots) {
   return groupedSnapshots.has(widget.type)
-    ? new Map(devicesOf(widget).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
+    ? new Map(contentDevicesOf(widget).filter((name) => snapshots.has(name)).map((name) => [name, snapshots.get(name)]))
     : snapshots.get(widget.device) || null;
-}
-
-export function groupSnapshots(mains, results) {
-  const byName = new Map(results.map((item) => [item.name, item]));
-  const groups = new Map();
-  for (const name of mains) {
-    const main = byName.get(name);
-    if (!main) continue;
-    const channels = results.filter((item) => item.parent === name)
-      .sort((a, b) => a.name.localeCompare(b.name));
-    groups.set(name, [main, ...channels]);
-  }
-  return groups;
 }
 
 export function isLiveWidget(widget) {
