@@ -111,12 +111,18 @@ bei unveraenderter Breite bis maximal jetzt. Nur die Daten bewegen sich
 waehrend der Geste; Achsen bleiben stehen. Beim Loslassen wird der neue
 Zeitraum geladen, ohne die gespeicherte Widgetkonfiguration zu veraendern.
 Auch leere historische Zeitfenster bleiben zurueck verschiebbar.
+Pan normalisiert fractional `from`/`to` aus echten History-Ergebnissen auf
+ganze Sekunden, da die API nur `INTEGER_INTEGER` akzeptiert. Nach Commit
+bleibt die alte Kurve verschoben sichtbar, bis die neue History gezeichnet
+wird; Abbruch oder eine geklemmte Nullbewegung stellen die Kurve zurueck.
 Ausgeblendete Chart-Statusflaechen duerfen Pointer-Ereignisse nicht abfangen.
 `createValueProbe` verbindet Graphen (inklusive Vorschau/Torte) und Charts:
 Desktop-Klick aktiviert/deaktiviert Mausverfolgung; Touch zeigt Werte nur
 waehrend der Beruehrung. Bewegungen ab 6px werden nicht als Klick umgedeutet.
 Pan-Start, Abbruch, Blur, Redraw und Entfernen loeschen Popup/Crosshair und
 geben Listener frei. Die Einfinger-Zeitraumauswahl bleibt beim Graph erhalten.
+Escape beendet aktive Werteproben im Capture-Pfad, bevor ein umgebender
+Dialog die Taste verarbeitet. Ohne aktive Probe bleibt Dialog-Escape wirksam.
 Generationspruefungen verwerfen verspaetete Ergebnisse nach Quellenwechsel,
 neuer Abfrage oder Entfernen. Cachefehler entfernen nicht mehr verifizierte
 Graphen. Maximal 12 Devices und 24 Graphen; keine neuen Logging-Regeln,

@@ -26,6 +26,12 @@ test('value probe uses click toggles and held touch with explicit gesture cleanu
     assert.equal(visible,false);
     send('pointermove');
     assert.equal(visible,true,'leaving hides values without changing click mode');
+    const escape = new Event('keydown',{cancelable:true});
+    Object.assign(escape,{key:'Escape'});
+    window.dispatchEvent(escape);
+    assert.equal(visible,false,'Escape clears active values');
+    assert.equal(escape.defaultPrevented,true,'active probe consumes Escape');
+    send('pointerdown'); send('pointerup');
     send('pointerdown'); send('pointerup'); send('pointermove');
     assert.equal(visible,false,'second click disables tracking');
     send('pointerdown',{pointerType:'touch'});

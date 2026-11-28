@@ -24,15 +24,23 @@ export function createValueProbe(target, {show, hide}) {
     else hide();
   };
   const leave = () => { hide(); };
+  const keydown = event => {
+    if (event.key !== 'Escape' || (!enabled && !press)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    clear();
+  };
   const handlers = {pointerdown:down,pointermove:move,pointerup:up,pointerleave:leave,pointercancel:clear};
   for (const [type, handler] of Object.entries(handlers)) target.addEventListener(type, handler);
   window.addEventListener('blur', clear);
+  window.addEventListener('keydown', keydown, true);
   return {
     clear,
     dispose() {
       clear();
       for (const [type, handler] of Object.entries(handlers)) target.removeEventListener(type, handler);
       window.removeEventListener('blur', clear);
+      window.removeEventListener('keydown', keydown, true);
     },
   };
 }

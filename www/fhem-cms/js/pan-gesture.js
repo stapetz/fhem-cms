@@ -68,7 +68,8 @@ export function createTimePan(target, {controller, bounds, plotWidth, start, com
     }
   };
   const begin = x => {
-    const [from, to] = bounds();
+    const [rawFrom, rawTo] = bounds();
+    const from = Math.floor(rawFrom), to = Math.floor(rawTo);
     const width = plotWidth();
     if (!(to > from) || !(width > 0)) return;
     marks = [...target.querySelectorAll('path,polyline,polygon,circle')];
@@ -81,9 +82,9 @@ export function createTimePan(target, {controller, bounds, plotWidth, start, com
     if (!gesture) return;
     const {from, to, shift} = gesture;
     gesture = null;
-    restore();
     controller.stop();
     if (apply && Math.abs(shift) >= 2) commit(from + shift, to + shift);
+    else restore();
   };
   const down = event => {
     if (event.pointerType === 'touch') {

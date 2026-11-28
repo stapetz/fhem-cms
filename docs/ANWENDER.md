@@ -480,7 +480,9 @@ Zeitraum als eigener Zeitraum geladen. Während Daten aus FileLog oder DbLog
 geladen werden, dreht mittig auf dem Diagramm ein Ladesymbol.
 Werte-Popups in Graphen und Diagrammen (auch den System-Mini-Charts) werden
 am Desktop mit einem einfachen Klick aktiviert. Danach folgt die Werteanzeige
-der Maus; ein weiterer Klick schaltet sie aus. Reines Darüberfahren zeigt
+der Maus; ein weiterer Klick schaltet sie aus. Auch **Escape** beendet eine
+aktive Werteanzeige; erst ein weiteres
+Escape kann den umgebenden Detaildialog schließen. Reines Darüberfahren zeigt
 kein Popup. Auf Touch-Geräten erscheinen Werte während der Berührung und
 verschwinden beim Loslassen oder Abbruch. Ein zweiter Finger schaltet die
 Werteanzeige aus und beginnt das Verschieben; horizontales Einfinger-Ziehen

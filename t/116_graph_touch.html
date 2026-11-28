@@ -70,11 +70,16 @@ window.graphTouch = {
     if (kind === 'chart') element.setAttribute('compact', '');
     const requests = [];
     let empty = false;
+    let release;
+    this.delayHistory = () => { release = null; this.delayed = true; };
+    this.releaseHistory = () => { this.delayed = false; release?.(); };
     this.loadEmpty = async () => { empty = true; await element.load(); empty = false; };
-    const now = Math.floor(Date.now()/1000);
+    const now = Math.floor(Date.now()/1000)+.02633;
     element.services = {history:async (device, reading, range) => {
       const [from,to] = range === '24h' ? [now-86400,now] : range.split('_').map(Number);
       requests.push({range,from,to});
+      if (range !== '24h' && !/^\d+_\d+$/.test(range)) throw new Error('Ungültige Verlaufsabfrage');
+      if (this.delayed) await new Promise(resolve=>{release=resolve;});
       return {from,to,points:empty ? [] : [[from+100,1],[from+43200,9],[to-100,3]],summary:{last:3,average:5}};
     }};
     element.config = kind === 'chart' ? {type:'fhem-chart',device:'Solar',reading:'power',range:'24h'}
@@ -100,7 +105,8 @@ window.graphTouch = {
     const svg = this.live.shadowRoot.querySelector('[data-svg]');
     return {requests:this.requests,now:this.now,range:this.live.range,
       transform:svg.querySelector('polyline,path')?.getAttribute('transform'),
-      axis:svg.querySelector('text')?.getAttribute('transform')};
+      axis:svg.querySelector('text')?.getAttribute('transform'),
+      axisText:[...svg.querySelectorAll('text')].map(node=>node.textContent).join('|')};
   },
   async loadWithSpinner(ms) {
     delay = ms;

@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-28",
+  "version": "1.44.1-dev",
+  "title": "Graph-Pan mit echten Zeitstempeln und Escape",
+  "changes": [
+    "Zeitfenster mit Sekundenbruchteilen werden beim Verschieben in API-kompatible ganze Sekunden ueberfuehrt. Refs #266.",
+    "Nach Loslassen bleibt die Kurve an der gezogenen Position, bis die Daten des neuen Zeitfensters geladen sind.",
+    "Escape beendet aktive Werte-Popups ohne den umgebenden Detaildialog zu schliessen.",
+    "Regressionen pruefen echte API-Zeitformate, wartende History-Anfragen und die geaenderte Zeitachse."
+  ]
+}
