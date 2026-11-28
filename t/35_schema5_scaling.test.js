@@ -539,7 +539,7 @@ for (const [name, fixtures] of [
           await evaluate(`new Promise(resolve => {
             const timer = setInterval(() => {
               const frame = document.querySelector('.cms-eventmonitor-frame');
-              if (!frame?.contentDocument?.querySelector('[data-filter]')) return;
+              if (!frame?.contentDocument?.querySelector('[data-eventmonitor-app][data-embedded]')) return;
               clearInterval(timer); resolve();
             }, 25);
           })`);
