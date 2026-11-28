@@ -5,9 +5,13 @@ test('chart ignores detached responses and refreshes on reconnect', async () => 
   const previous = {
     window: globalThis.window, HTMLElement: globalThis.HTMLElement, customElements: globalThis.customElements,
   };
-  globalThis.window = { clearInterval() {} };
+  globalThis.window = { clearInterval() {}, addEventListener() {}, removeEventListener() {} };
   globalThis.HTMLElement = class {
-    attachShadow() { this.shadowRoot = { childElementCount: 1 }; }
+    attachShadow() {
+      this.shadowRoot = {childElementCount:1, querySelector:() => ({
+        addEventListener() {}, removeEventListener() {}, classList:{toggle() {}},
+      })};
+    }
   };
   let Chart;
   globalThis.customElements = {

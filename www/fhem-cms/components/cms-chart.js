@@ -7,6 +7,7 @@ import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js';
 import { setWidgetStatus, widgetStatusStyles } from '../js/widget-status.js';
 import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
+import { createSpacebarPan, createTimePan } from '../js/pan-gesture.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const REFRESH_MS = 300000;
@@ -63,6 +64,7 @@ class FHEMCMSChart extends HTMLElement {
 
   connectedCallback() {
     if (this.shadowRoot.childElementCount) {
+      this.panController = createSpacebarPan(this.shadowRoot.querySelector('.plot'));
       this.load();
       this.scheduleRefresh();
       return;
@@ -81,14 +83,18 @@ class FHEMCMSChart extends HTMLElement {
         .controls select { font: inherit; font-size: 0.75rem; color: inherit; background: var(--cms-bg, #17211d);
           border: 1px solid var(--cms-border, #43564a); border-radius: 0.4rem; padding: 0.1rem 0.2rem; }
         .plot { position: relative; min-height: 0; }
-        svg { width: 100%; height: 100%; display: block; }
+        svg { width: 100%; height: 100%; display: block; touch-action:pan-y;
+          -webkit-user-select:none; user-select:none; }
+        .plot.pan-ready svg { cursor:grab; }
+        .plot.panning svg { cursor:grabbing; }
         .axis { stroke: var(--cms-border, #43564a); stroke-width: 1; }
         .grid { stroke: var(--cms-border, #43564a); stroke-width: 0.5; opacity: 0.5; }
         .band { fill: var(--cms-accent, #8fd0a8); opacity: 0.2; }
         .line { fill: none; stroke: var(--cms-accent, #8fd0a8); stroke-width: 1.6; stroke-linejoin: round; }
         text { fill: var(--cms-muted, #a5c9b2); font-size: 9px; }
         .message { position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
-          color: var(--cms-muted, #a5c9b2); font-size: 1em; padding: 0.5rem; }
+          color: var(--cms-muted, #a5c9b2); font-size: 1em; padding: 0.5rem; pointer-events:none; }
+        .message[hidden] { display:none; }
         .message[data-error] { color: var(--cms-danger, #ffb4a8); }
         ${widgetStatusStyles}
         .stats { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; color: var(--cms-muted, #a5c9b2); font-size: 0.75rem;
@@ -211,11 +217,16 @@ class FHEMCMSChart extends HTMLElement {
       this.closeConfig(false);
     });
     this.render();
+    this.panController = createSpacebarPan(this.shadowRoot.querySelector('.plot'));
     this.load();
     this.scheduleRefresh();
   }
 
   disconnectedCallback() {
+    this.timePan?.dispose();
+    this.timePan = null;
+    this.panController?.dispose();
+    this.panController = null;
     this.requestId += 1;
     this.readingRequest = (this.readingRequest || 0) + 1;
     window.clearInterval(this.timer);
@@ -262,6 +273,8 @@ class FHEMCMSChart extends HTMLElement {
   }
 
   async load() {
+    this.timePan?.dispose();
+    this.timePan = null;
     const config = this.widgetConfig;
     if (!config || !this.services?.history || !isValidName(config.device) || !isValidName(config.reading)) {
       this.message('Noch nicht konfiguriert');
@@ -285,10 +298,17 @@ class FHEMCMSChart extends HTMLElement {
   }
 
   draw(result) {
+    this.timePan?.dispose();
+    this.timePan = null;
     const points = result.points || [];
     const target = this.shadowRoot.querySelector('[data-svg]');
     const stats = this.shadowRoot.querySelector('[data-stats]');
     target.replaceChildren();
+    const custom = /^\d+_\d+$/.test(this.range) ? this.range.split('_').map(Number) : null;
+    const from = custom?.[0] ?? (Number.isFinite(result.from) ? result.from : points[0]?.[0]);
+    const to = custom?.[1] ?? (Number.isFinite(result.to) && result.to > from
+      ? result.to : (points[points.length - 1]?.[0] ?? from) + 1);
+    if (Number.isFinite(from) && Number.isFinite(to) && to > from) this.bindPan(target, from, to);
     if (!points.length) {
       stats.textContent = '';
       this.message('Keine Werte im gewählten Zeitraum');
@@ -296,8 +316,6 @@ class FHEMCMSChart extends HTMLElement {
     }
     this.message('');
     const unit = this.widgetConfig.unit ? ` ${this.widgetConfig.unit}` : '';
-    const from = Number.isFinite(result.from) ? result.from : points[0][0];
-    const to = Number.isFinite(result.to) && result.to > from ? result.to : points[points.length - 1][0] + 1;
     let low = Math.min(...points.map((p) => p[2] ?? p[1]));
     let high = Math.max(...points.map((p) => p[3] ?? p[1]));
     if (high === low) {
@@ -341,6 +359,21 @@ class FHEMCMSChart extends HTMLElement {
       parts.push('Daten gekürzt');
     }
     stats.textContent = parts.join(' · ');
+  }
+
+  bindPan(target, from, to) {
+    this.timePan = createTimePan(target, {
+      controller:this.panController,
+      bounds:() => [from, to],
+      plotWidth:() => target.getBoundingClientRect().width * (W - PAD.left - PAD.right) / W,
+      commit:(start, end) => {
+        this.range = `${start}_${end}`;
+        const select = this.shadowRoot.querySelector('[data-range]');
+        fillSelect(select, {...RANGES, [this.range]:'Verschobener Zeitraum'});
+        select.value = this.range;
+        void this.load();
+      },
+    });
   }
 
   async openConfig({ isNew = false } = {}) {

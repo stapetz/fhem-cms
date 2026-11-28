@@ -4,7 +4,7 @@ import { openDevicePicker } from '../js/device-picker.js';
 import { showCmsModal } from '../js/modal-dialog.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { closeButtonSvg } from '../js/close-button.js';
-import { createSpacebarPan } from '../js/pan-gesture.js';
+import { createSpacebarPan, createTimePan } from '../js/pan-gesture.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 import { formatDateDisplay } from '../js/date-display.js';
 
@@ -165,6 +165,8 @@ class FHEMCMSGraph extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.timePan?.dispose();
+    this.timePan = null;
     this.request++;
     this.previewRequest++;
     this.pickerAbort.abort();
@@ -203,7 +205,8 @@ class FHEMCMSGraph extends HTMLElement {
         [data-grid] svg { width:20px; height:20px; display:block; fill:none; stroke:currentColor; stroke-width:1.6; }
         :host([view-only]) [data-open-config] { display:none; }
         .plot { position:relative; flex:1; min-height:10rem; border-radius:.75rem; background:rgba(128,128,128,.08); }
-        .plot svg { width:100%; height:100%; position:absolute; inset:0; touch-action:pan-y; }
+        .plot svg { width:100%; height:100%; position:absolute; inset:0; touch-action:pan-y;
+          -webkit-user-select:none; user-select:none; }
         .plot.pan-ready svg { cursor:grab; }
         .plot.panning svg { cursor:grabbing; }
         .plot .spinner { position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; }
@@ -456,7 +459,11 @@ class FHEMCMSGraph extends HTMLElement {
     target.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     target.onpointermove = target.onpointerleave = target.onpointerdown = target.onpointerup = target.onpointercancel = null;
     target.style.transform = '';
-    if (selector === '[data-svg]') this.panController?.stop();
+    if (selector === '[data-svg]') {
+      this.timePan?.dispose();
+      this.timePan = null;
+      this.panController?.stop();
+    }
     const tooltip = target.parentElement.querySelector('.graph-tooltip');
     tooltip.hidden = true;
     const positionTooltip = event => {
@@ -562,7 +569,17 @@ class FHEMCMSGraph extends HTMLElement {
       return;
     }
     const points = visible.map(item => item.result.points || []);
-    if (!points.some(row => row.length)) { status.textContent = 'Keine Werte im gewählten Zeitraum.'; return; }
+    if (!points.some(row => row.length)) {
+      status.textContent = 'Keine Werte im gewählten Zeitraum.';
+      const bounds = customRange(config.range);
+      if (selector === '[data-svg]' && bounds) this.timePan = createTimePan(target, {
+        controller:this.panController,
+        bounds:() => bounds,
+        plotWidth:() => target.getBoundingClientRect().width * (width - 48) / width,
+        commit:(start, end) => this.applyCustomRange(`${start}_${end}`),
+      });
+      return;
+    }
     let stacked = null;
     let stackBands = null;
     if (config.chartType === 'stack') {
@@ -579,6 +596,14 @@ class FHEMCMSGraph extends HTMLElement {
     }
     const times = points.flatMap(row => row.map(point => point[0]));
     let from = Math.min(...times), to = Math.max(...times);
+    const requested = customRange(config.range);
+    const starts = data.map(result => result.from).filter(Number.isFinite);
+    const ends = data.map(result => result.to).filter(Number.isFinite);
+    if (requested) [from, to] = requested;
+    else if (starts.length && ends.length && Math.max(...ends) > Math.min(...starts)) {
+      from = Math.min(...starts);
+      to = Math.max(...ends);
+    }
     if (from === to) to = from + 1;
     const timeFormat = timeFormatter(config, data, from, to);
     const formatAxisTime = time => timeFormat.axis.format(time * 1000);
@@ -696,62 +721,22 @@ class FHEMCMSGraph extends HTMLElement {
     const live = selector === '[data-svg]';
     const panController = live ? this.panController : null;
     let dragStart = null, dragStartX = null;
-    let pan = null;
-    const touchPoints = new Map();
     const position = event => {
       const box = target.getBoundingClientRect();
       return Math.max(left, Math.min(right, (event.clientX - box.left) * width / box.width));
     };
     const timestamp = px => from + (px-left) / (right-left) * (to-from);
-    const touchAverage = () => {
-      let sum = 0;
-      for (const value of touchPoints.values()) sum += value;
-      return sum / touchPoints.size;
-    };
-    // Keeps the pan steady when fingers are added or lifted mid-gesture.
-    const rebasePan = () => {
-      const average = touchAverage();
-      pan.start += average - pan.last;
-      pan.last = average;
-    };
     const rangeWindow = () => {
       const bounds = customRange(config.range);
       if (bounds) return bounds;
+      const starts = data.map(result => result.from).filter(Number.isFinite);
+      const ends = data.map(result => result.to).filter(Number.isFinite);
+      if (starts.length && ends.length && Math.max(...ends) > Math.min(...starts)) {
+        return [Math.min(...starts), Math.max(...ends)];
+      }
       const duration = {'24h':86400, '7d':604800, '30d':2592000, '365d':31536000}[config.range] || (to - from);
       const end = Math.floor(Date.now() / 1000);
       return [end - duration, end];
-    };
-    // Seconds per horizontal client pixel of the drawn time axis.
-    const secondsPerPixel = () => {
-      const box = target.getBoundingClientRect();
-      if (!box.width || right <= left) return 0;
-      return (to - from) / (right - left) * (width / box.width);
-    };
-    // Window shift in seconds, clamped so the view never pans past "now".
-    const panShift = () => Math.min((pan.start - pan.last) * secondsPerPixel(),
-      Math.max(0, Math.floor(Date.now() / 1000) - pan.window[1]));
-    const startPan = start => {
-      dragStart = dragStartX = null;
-      selection.setAttribute('hidden', '');
-      crosshair.setAttribute('hidden', '');
-      tooltip.hidden = true;
-      pan = {start, last:start, window:rangeWindow()};
-      panController?.start();
-    };
-    const movePan = () => {
-      const perPixel = secondsPerPixel();
-      target.style.transform = perPixel ? `translateX(${-panShift() / perPixel}px)` : '';
-    };
-    const endPan = apply => {
-      const shift = Math.round(panShift());
-      const [start, end] = pan.window;
-      pan = null;
-      touchPoints.clear();
-      target.style.transform = '';
-      panController?.stop();
-      const range = `${start + shift}_${end + shift}`;
-      if (!apply || Math.abs(shift) < 2 || !customRange(range)) return;
-      this.applyCustomRange(range);
     };
     const showValues = event => {
       const px = position(event);
@@ -793,16 +778,6 @@ class FHEMCMSGraph extends HTMLElement {
       positionTooltip(event);
     };
     target.onpointermove = event => {
-      if (pan) {
-        if (event.pointerType === 'touch') {
-          if (!touchPoints.has(event.pointerId)) return;
-          touchPoints.set(event.pointerId, event.clientX);
-          pan.last = touchAverage();
-        } else if (event.pointerId === pan.pointer) pan.last = event.clientX;
-        else return;
-        movePan();
-        return;
-      }
       if (dragStart !== null) {
         const px = position(event);
         selection.removeAttribute('hidden');
@@ -813,40 +788,19 @@ class FHEMCMSGraph extends HTMLElement {
       showValues(event);
     };
     target.onpointerleave = event => {
-      if (dragStart === null && pan === null && event?.pointerType !== 'touch') {
+      if (dragStart === null && event?.pointerType !== 'touch') {
         crosshair.setAttribute('hidden', '');
         tooltip.hidden = true;
       }
     };
     target.onpointerdown = live ? event => {
-      if (event.pointerType === 'touch') {
-        touchPoints.set(event.pointerId, event.clientX);
-        target.setPointerCapture(event.pointerId);
-        if (pan) { rebasePan(); return; }
-        if (touchPoints.size === 2) { startPan(touchAverage()); return; }
-      }
-      if (event.button !== 0 || pan) return;
-      if (event.pointerType !== 'touch' && panController?.active) {
-        target.setPointerCapture(event.pointerId);
-        startPan(event.clientX);
-        pan.pointer = event.pointerId;
-        return;
-      }
+      if (event.button !== 0) return;
       dragStart = position(event);
       dragStartX = event.clientX;
       target.setPointerCapture(event.pointerId);
       tooltip.hidden = true;
     } : null;
     target.onpointerup = event => {
-      if (pan) {
-        if (event.pointerType === 'touch') {
-          touchPoints.delete(event.pointerId);
-          if (touchPoints.size >= 2) { rebasePan(); return; }
-        } else if (event.pointerId !== pan.pointer) return;
-        endPan(true);
-        return;
-      }
-      if (event.pointerType === 'touch') touchPoints.delete(event.pointerId);
       if (dragStart === null) {
         if (selector !== '[data-svg]' && event.pointerType === 'touch') showValues(event);
         return;
@@ -865,21 +819,24 @@ class FHEMCMSGraph extends HTMLElement {
       this.applyCustomRange(range);
     };
     target.onpointercancel = event => {
-      if (pan) {
-        if (event?.pointerType === 'touch') {
-          touchPoints.delete(event.pointerId);
-          if (touchPoints.size >= 2) { rebasePan(); return; }
-        }
-        endPan(false);
-        return;
-      }
-      if (event?.pointerType === 'touch') touchPoints.delete(event.pointerId);
       dragStart = null;
       dragStartX = null;
       selection.setAttribute('hidden', '');
       crosshair.setAttribute('hidden', '');
       tooltip.hidden = true;
     };
+    if (live) this.timePan = createTimePan(target, {
+      controller:panController,
+      bounds:rangeWindow,
+      plotWidth:() => target.getBoundingClientRect().width * (right - left) / width,
+      start:() => {
+        dragStart = dragStartX = null;
+        selection.setAttribute('hidden', '');
+        crosshair.setAttribute('hidden', '');
+        tooltip.hidden = true;
+      },
+      commit:(start, end) => this.applyCustomRange(`${start}_${end}`),
+    });
     status.textContent = warnings || (points.some(row => !row.length) ? 'Einige Datenreihen enthalten keine Werte.' : '');
   }
 

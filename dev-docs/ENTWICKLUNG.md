@@ -70,6 +70,13 @@ keine Auswahlfelder, bestehender 300000ms-Charttimer. Die minuetliche
 Werteaktualisierung erhaelt ihre DOM-Instanzen und loest keine Historyabfrage aus.
 Zusaetzliche Detailcharts existieren nur im offenen Dialog; Schliessen stoppt
 deren Timer.
+Graph-Widget und `cms-chart` verwenden dieselbe Zeit-Pan-Geste:
+Zwei Finger oder Leertaste plus linke Maustaste verschieben das Zeitfenster
+bei unveraenderter Breite bis maximal jetzt. Nur die Daten bewegen sich
+waehrend der Geste; Achsen bleiben stehen. Beim Loslassen wird der neue
+Zeitraum geladen, ohne die gespeicherte Widgetkonfiguration zu veraendern.
+Auch leere historische Zeitfenster bleiben zurueck verschiebbar.
+Ausgeblendete Chart-Statusflaechen duerfen Pointer-Ereignisse nicht abfangen.
 Generationspruefungen verwerfen verspaetete Ergebnisse nach Quellenwechsel,
 neuer Abfrage oder Entfernen. Cachefehler entfernen nicht mehr verifizierte
 Graphen. Maximal 12 Devices und 24 Graphen; keine neuen Logging-Regeln,
@@ -82,6 +89,10 @@ t/22_schema5_widget_panel.test.js t/27_widget_services.test.js`,
 t/35_schema5_scaling.test.js`, Perl-Syntax und `npm run build:check`.
 Die isolierten Perl-Tests pruefen echte Entwurfsspeicherung ohne Aenderung von
 Live, exakte Dateigroessen, Fehler, Berechtigungen und zusammengefasste Auftraege.
+Pan-Regression: `node --test --test-name-pattern='graph touch taps'
+t/35_schema5_scaling.test.js` prueft echte Desktop-Mauseingabe ohne Touch-Emulation,
+sequentiell aufgesetzte Finger, skalierte Graph-/Chart-Einbettung, Datenbewegung,
+feste 24-Stunden-Fenster und Rueckkehr bis jetzt.
 
 ## Zentrale Administration und Kioskseiten (Refs #237, #238)
 

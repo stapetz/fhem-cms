@@ -153,6 +153,55 @@ test('graph touch taps show values without breaking range selection or scrolling
       await command('Input.dispatchMouseEvent', {type:'mouseMoved', x:rightPoint.x, y:rightPoint.y});
       const rightTip = await evaluate('window.graphTouch.tipBox()');
       assert.ok(rightTip.right <= rightPoint.x, 'tooltip sits left of the cursor line in the right half');
+      for (const kind of ['graph','chart']) for (const scale of [1,.5]) {
+        await command('Emulation.setDeviceMetricsOverride', {width:900,height:1000,deviceScaleFactor:1,mobile:false});
+        await command('Emulation.setTouchEmulationEnabled', {enabled:false});
+        await evaluate(`window.graphTouch.livePan('${kind}',${scale})`);
+        let point = await evaluate('window.graphTouch.livePoint(.5)');
+        await command('Input.dispatchMouseEvent', {type:'mouseMoved',...point});
+        await command('Input.dispatchKeyEvent', {type:'keyDown',key:' ',code:'Space',windowsVirtualKeyCode:32});
+        await command('Input.dispatchMouseEvent', {type:'mousePressed',...point,button:'left',clickCount:1});
+        await command('Input.dispatchMouseEvent', {type:'mouseMoved',x:point.x+60,y:point.y,button:'left',buttons:1});
+        let state = await evaluate('window.graphTouch.liveState()');
+        assert.match(state.transform, /translate/, `${kind}/${scale}: data really moves during desktop pan`);
+        assert.equal(state.axis, null, 'Y-axis stays fixed during pan');
+        await command('Input.dispatchMouseEvent', {type:'mouseReleased',x:point.x+60,y:point.y,button:'left',clickCount:1});
+        await command('Input.dispatchKeyEvent', {type:'keyUp',key:' ',code:'Space',windowsVirtualKeyCode:32});
+        await pause(100);
+        state = await evaluate('window.graphTouch.liveState()');
+        let last = state.requests.at(-1);
+        assert.ok(last.to < state.now, 'desktop pan actually requests past data');
+        assert.equal(last.to-last.from,86400,'desktop pan keeps the 24-hour width');
+        await command('Emulation.setTouchEmulationEnabled', {enabled:true});
+        const a = await evaluate('window.graphTouch.livePoint(.25)');
+        const b = await evaluate('window.graphTouch.livePoint(.5)');
+        await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...a,id:1}]});
+        await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...a,id:1},{...b,id:2}]});
+        await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[
+          {x:a.x+40,y:a.y-30,id:1},{x:b.x+40,y:b.y-30,id:2}]});
+        await pause(80);
+        state = await evaluate('window.graphTouch.liveState()');
+        assert.match(state.transform,/translate/,`${kind}/${scale}: two sequentially placed fingers move the curve`);
+        await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await pause(100);
+        state = await evaluate('window.graphTouch.liveState()');
+        assert.ok(state.requests.at(-1).to < last.to,'touch pan requests an earlier window');
+        assert.equal(state.requests.at(-1).to-state.requests.at(-1).from,86400);
+        await evaluate('window.graphTouch.loadEmpty()');
+        assert.equal((await evaluate('window.graphTouch.liveState()')).transform,undefined,
+          'empty historical window contains no invented curve');
+        point = await evaluate('window.graphTouch.livePoint(.8)');
+        await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[
+          {...point,id:1},{x:point.x-40,y:point.y,id:2}]});
+        await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[
+          {x:point.x-350,y:point.y,id:1},{x:point.x-390,y:point.y,id:2}]});
+        await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await pause(100);
+        state = await evaluate('window.graphTouch.liveState()');
+        last = state.requests.at(-1);
+        assert.ok(Math.abs(last.to-Math.floor(Date.now()/1000)) <= 3,'return pan from an empty window stops at the present');
+        assert.equal(last.to-last.from,86400,'return pan does not zoom');
+      }
       await evaluate('window.graphTouch.finish()');
     }, async command => {
       await command('Emulation.setDeviceMetricsOverride', {width:390,height:844,deviceScaleFactor:1,mobile:false});

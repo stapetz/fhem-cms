@@ -388,6 +388,13 @@ Alle Graph-Typen laden ihre Daten automatisch alle fünf Minuten nach.
 Relative Zeiträume wie „24 Stunden“ wandern dabei mit; eigene Von-/Bis-Bereiche
 bleiben fest und werden erneut abgefragt. Es sind keine sekundengenauen
 Liveupdates.
+Linien- und Stapelgraphen sowie das Diagramm-Widget lassen sich mit zwei
+Fingern oder Leertaste plus linker Maustaste horizontal verschieben:
+nach rechts ziehen für ältere Daten, nach links bis höchstens jetzt.
+Die Fensterbreite bleibt unverändert; nach dem Loslassen wird der gewählte
+Zeitbereich neu geladen. Auch aus einem leeren historischen Fenster kann
+zurückgeschoben werden. Ein Finger bleibt für Werteanzeige und
+Zeitraumauswahl beim Graph-Widget verfügbar.
 Pro Datenreihe ist eine optionale Einheit (z. B. W oder °C) frei eintragbar
 oder aus Vorschlägen wählbar. Sie erscheint an Messwerten und in der Legende;
 es erfolgt keine Umrechnung. Vergleichen Sie in einer Torte nur fachlich

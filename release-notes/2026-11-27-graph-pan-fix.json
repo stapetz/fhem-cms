@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-27",
+  "version": "1.42.1-dev",
+  "title": "Zeit-Pan fuer Graphen und Systemcharts",
+  "changes": [
+    "Gemeinsame Zwei-Finger- und Leertaste-Maus-Steuerung fuer Graph-Widget und Diagramme einschliesslich Systemmonitor. Refs #266.",
+    "Die Kurve bewegt sich horizontal bei fester Fensterbreite und stehenden Achsen; die Rueckfahrt endet bei jetzt.",
+    "Ausgeblendete Statusflaechen blockieren keine Gesten mehr; leere historische Fenster bleiben zurueck verschiebbar.",
+    "Browserregressionen pruefen echte Datenbewegung, skalierte Einbettung, Desktop-Maus und diagonal bewegte, sequentiell aufgesetzte Finger."
+  ]
+}

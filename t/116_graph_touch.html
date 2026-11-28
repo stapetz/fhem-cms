@@ -6,6 +6,7 @@
 <pre id="result">RUNNING</pre>
 <script type="module">
 import '../www/fhem-cms/components/cms-graph.js';
+import '../www/fhem-cms/components/cms-chart.js';
 const graph = document.createElement('cms-graph');
 const config = {id:'touch',type:'fhem-graph',range:'24h',granularity:'auto',chartType:'line',aggregation:'last',
   series:[{device:'Solar',reading:'power',source:'auto',label:'Solar',color:'#123abc',unit:'W'}]};
@@ -55,6 +56,47 @@ window.graphTouch = {
   plotPan() {
     const plot = root.querySelector('[data-svg]').parentElement;
     return {ready:plot.classList.contains('pan-ready'), panning:plot.classList.contains('panning')};
+  },
+  async livePan(kind, scale) {
+    document.querySelector('#embedded')?.remove();
+    graph.hidden = true;
+    window.scrollTo(0,0);
+    const wrapper = document.createElement('div');
+    wrapper.id = 'embedded';
+    wrapper.style.cssText = `width:600px;height:400px;transform:scale(${scale});transform-origin:top left`;
+    const element = document.createElement(kind === 'chart' ? 'cms-chart' : 'cms-graph');
+    element.style.cssText = 'display:block;width:100%;height:100%';
+    element.setAttribute('view-only', '');
+    if (kind === 'chart') element.setAttribute('compact', '');
+    const requests = [];
+    let empty = false;
+    this.loadEmpty = async () => { empty = true; await element.load(); empty = false; };
+    const now = Math.floor(Date.now()/1000);
+    element.services = {history:async (device, reading, range) => {
+      const [from,to] = range === '24h' ? [now-86400,now] : range.split('_').map(Number);
+      requests.push({range,from,to});
+      return {from,to,points:empty ? [] : [[from+100,1],[from+43200,9],[to-100,3]],summary:{last:3,average:5}};
+    }};
+    element.config = kind === 'chart' ? {type:'fhem-chart',device:'Solar',reading:'power',range:'24h'}
+      : {...config};
+    wrapper.append(element);
+    document.body.prepend(wrapper);
+    for (let n=0;n<100 && !element.shadowRoot.querySelector('polyline,path');n++) {
+      await new Promise(resolve=>setTimeout(resolve,20));
+    }
+    this.live = element;
+    this.requests = requests;
+    this.now = now;
+  },
+  livePoint(fraction) {
+    const box = this.live.shadowRoot.querySelector('[data-svg]').getBoundingClientRect();
+    return {x:box.left+box.width*fraction,y:box.top+box.height*.5};
+  },
+  liveState() {
+    const svg = this.live.shadowRoot.querySelector('[data-svg]');
+    return {requests:this.requests,now:this.now,range:this.live.range,
+      transform:svg.querySelector('polyline,path')?.getAttribute('transform'),
+      axis:svg.querySelector('text')?.getAttribute('transform')};
   },
   async loadWithSpinner(ms) {
     delay = ms;
