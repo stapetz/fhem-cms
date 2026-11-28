@@ -1,4 +1,4 @@
-UPD 2026-11-28_17:18:50 223082 FHEM/01_FHEMCMS.pm
+UPD 2026-11-28_18:40:15 223082 FHEM/01_FHEMCMS.pm
 UPD 2026-11-26_22:59:41 12916 FHEM/lib/FHEMCMS/Admin.pm
 UPD 2026-11-12_10:29:43 29982 FHEM/lib/FHEMCMS/Assets.pm
 UPD 2026-11-26_22:32:44 16057 FHEM/lib/FHEMCMS/LogIndex.pm
@@ -31,7 +31,7 @@ UPD 2026-11-26_23:43:10 3895 www/fhem-cms/css/cms-admin.css
 UPD 2026-11-27_22:03:07 3558 www/fhem-cms/css/eventmonitor.css
 UPD 2026-11-08_10:43:57 6060 www/fhem-cms/css/fcui-gridstack.css
 UPD 2026-11-13_17:56:27 15580 www/fhem-cms/css/fcui-map.css
-UPD 2026-11-28_17:18:50 67579 www/fhem-cms/css/fhem-cms.css
+UPD 2026-11-28_18:40:15 68872 www/fhem-cms/css/fhem-cms.css
 UPD 2026-11-27_22:03:07 2296 www/fhem-cms/eventmonitor.html
 UPD 2026-11-10_07:50:19 26290 www/fhem-cms/examples/fcui-check.html
 UPD 2026-11-08_21:07:16 4844 www/fhem-cms/examples/migration-preview.html
@@ -60,7 +60,7 @@ UPD 2026-11-26_21:37:35 835 www/fhem-cms/js/environment-banner.js
 UPD 2026-11-27_22:03:07 7739 www/fhem-cms/js/event-monitor.js
 UPD 2026-11-27_22:03:07 925 www/fhem-cms/js/eventmonitor-link.js
 UPD 2026-11-27_22:03:07 2941 www/fhem-cms/js/eventmonitor.js
-UPD 2026-11-28_17:18:50 20526 www/fhem-cms/js/fcui-freeform-edit.js
+UPD 2026-11-28_18:40:15 22808 www/fhem-cms/js/fcui-freeform-edit.js
 UPD 2026-11-28_17:18:50 8294 www/fhem-cms/js/fcui-freeform-layout.js
 UPD 2026-11-24_20:36:50 14463 www/fhem-cms/js/fcui-freeform-view.js
 UPD 2026-11-13_17:56:27 150460 www/fhem-cms/js/fcui-map-runtime.js
@@ -92,7 +92,7 @@ UPD 2026-11-27_22:03:07 81752 www/fhem-cms/js/fhem-cms.js
 UPD 2026-11-22_10:25:12 10205 www/fhem-cms/js/freehtml-css.js
 UPD 2026-11-22_10:40:34 18238 www/fhem-cms/js/freehtml-diagnostics.js
 UPD 2026-11-27_22:03:07 28632 www/fhem-cms/js/freehtml.js
-UPD 2026-11-28_17:18:50 46 www/fhem-cms/js/frontend-version.js
+UPD 2026-11-28_18:40:15 46 www/fhem-cms/js/frontend-version.js
 UPD 2026-11-26_21:37:43 4541 www/fhem-cms/js/graph-data.js
 UPD 2026-11-13_15:48:11 930 www/fhem-cms/js/grid-preference.js
 UPD 2026-11-24_11:00:18 5062 www/fhem-cms/js/icon-picker.js

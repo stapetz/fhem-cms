@@ -33,6 +33,12 @@ Speicherbalken
 - Graphentitel verwenden lesbare Bezeichnungen statt technischer Reading-Namen
   und doppelter Device-Praefixe.
 
+2026-11-28 - 1.45.3-dev: Gruppen und Mehrfachauswahl deutlich hervorheben
+- Alle ausgewaehlten Widgets farbig markieren; gemeinsamer Auswahlrahmen mit
+  Anzahl und Gruppenstatus.
+- Markierungen auch fuer Floorplan-Pins, beim Verschieben und auf skalierten
+  Ansichten sichtbar.
+
 2026-11-28 - 1.44.0-dev: Werte-Popups mit Klick und gehaltener Beruehrung
 - Graphen und Diagramme inklusive System-Mini-Charts zeigen Werte am Desktop
   nach Klick; ein weiterer Klick deaktiviert die Mausverfolgung. Refs #266.
