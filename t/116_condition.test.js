@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import {readFileSync} from 'node:fs';
 import { conditionDevices, evaluateCondition, validateCondition } from '../www/fhem-cms/js/condition.js';
 import { decodeCondition, encodeCondition, markupConditionDevices } from '../www/fhem-cms/js/condition-markup.js';
 import { blueprintDevices, remapBlueprintDevice } from '../www/fhem-cms/js/fcui-schema5-blueprints.js';
@@ -10,6 +11,18 @@ const rule = (operator, value, device = 'Sensor') => ({device, reading:'state', 
 const condition = (join, ...rules) => ({join, rules});
 const evaluate = (operator, expected, actual) =>
   evaluateCondition(condition('and', rule(operator, expected)), () => actual);
+
+test('documented manual HTML conditions use valid identical if/unless encodings', () => {
+  const documentation = readFileSync(new URL('../docs/ANWENDER.md',import.meta.url),'utf8');
+  const codes = [...documentation.matchAll(/data-cms-(?:if|unless)="([0-9a-f]+)"/g)].map(match=>match[1]);
+  assert.equal(codes.length,2);
+  assert.equal(codes[0],codes[1]);
+  const rule = decodeCondition(codes[0]);
+  assert.deepEqual(rule,{join:'and',rules:[{device:'Lampe',reading:'state',operator:'==',value:'on'}]});
+  assert.equal(evaluateCondition(rule,()=> 'on'),true);
+  assert.equal(evaluateCondition(rule,()=> 'off'),false);
+  assert.equal(evaluateCondition(rule,()=> null),null);
+});
 
 test('condition comparisons use exact text and strict finite numbers', () => {
   assert.equal(evaluate('==', '01', '1'), false);

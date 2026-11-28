@@ -74,6 +74,11 @@ Texte in Klammern dürfen kein `|`, `(`, `)`, `{` oder `}` enthalten.
 
 ## Zustandsklassen (Bedingungen)
 
+Für echte Wenn-/Sonst-Bereiche mit `data-cms-if` und `data-cms-unless`
+(einschließlich manuell einsetzbarer Syntax und Kodierungsbeispiel) siehe
+[Reading-Bedingungen](ANWENDER.md). Der Bedingungsassistent kann auch ohne
+markierten Text einen Bereich an der Cursorposition einfügen.
+
 Mit dem Attribut `data-cms-class` setzt ein Element eine CSS-Klasse, solange eine Bedingung stimmt. Mehrere Bedingungen trennt `;`:
 
 ```html

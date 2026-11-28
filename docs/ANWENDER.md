@@ -1441,6 +1441,48 @@ Homepage zeigt Live, `?mode=preview` den Entwurf und `?mode=edit` den Editor.
   Jede Gruppe ist eine sichtbare Klammer mit eigener Verknüpfung UND, ODER oder XOR; XOR ist bei einer ungeraden Anzahl wahrer Einträge wahr. **NICHT** kehrt das Gruppenergebnis um und ermöglicht auch NAND, NOR und XNOR. Beispielsweise für `(A UND B) ODER C` erst A und B anlegen, **Alle Regeln in eine Untergruppe setzen**, außen ODER wählen und C hinzufügen. Einzelne Regeln lassen sich auch mit **Gruppieren** einklammern und mit **In Gruppe darüber** verschieben; Gruppen können verschachtelt oder aufgelöst werden. Beim Auflösen entfällt die Verknüpfung und Negation der Gruppe. Es gelten nur die sichtbaren Klammern, keine impliziten Operatorprioritäten.
   Ein fehlender oder ungültiger Wert ist unbekannt; dann erscheint weder Wenn noch Sonst, sofern nicht eine andere Regel das Gesamtergebnis bereits eindeutig bestimmt. XOR mit unbekanntem Eintrag und NICHT unbekannt bleiben unbekannt. Maximal 20 Regeln, 60 Knoten und 8 Ebenen einschließlich Regeln pro Bedingung sowie 200 Regeln und 4096 Regex-Musterzeichen pro Seite; ein Sonst-Zweig zählt mit.
   Bei `collapse` rücken Widgets nur in fließenden Layouts nach; feste Raster- und Freeformpositionen bleiben erhalten. `keep-space` lässt den Platz frei. Im Bearbeitungsmodus bleiben ausgeblendete Widgets zugänglich und sind gestrichelt markiert. Bestehende `data-cms-class`-Regeln, Platzhalter und deklarative Aktionen funktionieren unverändert.
+  **Ohne Auswahl/manuell im freien HTML:** Cursor platzieren und **Bedingten Bereich einfügen / bearbeiten …** wählen; eine Markierung ist nicht erforderlich.
+  Für direkt geschriebenes HTML gibt es zwei Möglichkeiten:
+
+  **Einfache Zustandsklasse:** `Device:reading Operator Wert : Klasse`, zum Beispiel:
+  ```html
+  <style>.nicht-an { display: none; }</style>
+  <div data-cms-class="Lampe:state!=on:nicht-an">Die Lampe ist eingeschaltet.</div>
+  ```
+  Die Klasse wird gesetzt, wenn `Lampe:state` nicht `on` ist. Dies ist eine
+  CSS-Regel, kein Wenn-/Sonst-Bereich: Bei fehlendem Reading wird keine Klasse
+  gesetzt und der Text bleibt sichtbar. Operatoren und weitere Beispiele:
+  [Zustandsklassen](PLATZHALTER.md#zustandsklassen-bedingungen).
+
+  **Echter Wenn-/Sonst-Bereich:** `data-cms-if` und `data-cms-unless` auf
+  `div` oder `span`. Beide Attribute enthalten dieselbe Bedingung als
+  hexadezimal kodiertes UTF-8-JSON, nicht als FHEM-/Perl-Ausdruck.
+  Dieses direkt einsetzbare Beispiel prüft `Lampe:state == on`:
+  ```html
+  <div data-cms-if="7b226a6f696e223a22616e64222c2272756c6573223a5b7b22646576696365223a224c616d7065222c2272656164696e67223a227374617465222c226f70657261746f72223a223d3d222c2276616c7565223a226f6e227d5d7d">
+    Die Lampe ist eingeschaltet.
+  </div>
+  <div data-cms-unless="7b226a6f696e223a22616e64222c2272756c6573223a5b7b22646576696365223a224c616d7065222c2272656164696e67223a227374617465222c226f70657261746f72223a223d3d222c2276616c7565223a226f6e227d5d7d">
+    Die Lampe ist nicht eingeschaltet.
+  </div>
+  ```
+  Der Sonst-Bereich ist optional. Bei unbekanntem Reading erscheinen beide
+  Bereiche nicht. Zum Erzeugen eines eigenen Attributwerts können Sie dieses
+  JavaScript **außerhalb des Widgets**, beispielsweise in der Browserkonsole,
+  ausführen und die ausgegebene Zeichenfolge in beide Attribute kopieren:
+  ```javascript
+  const bedingung = {
+    join: "and",
+    rules: [{device: "Lampe", reading: "state", operator: "==", value: "on"}]
+  };
+  console.log(Array.from(new TextEncoder().encode(JSON.stringify(bedingung)),
+    byte => byte.toString(16).padStart(2, "0")).join(""));
+  ```
+  `join` ist `and` oder `or`; `rules` enthält die Regeln. Device, Reading und
+  Vergleichswert passen Sie vor dem Kodieren an. Der Vergleichswert ist immer
+  eine Zeichenfolge, auch bei Zahlen (`value: "25"`). Für verschachtelte
+  UND/ODER/XOR/NICHT-Bedingungen empfiehlt sich der Assistent. Skripte im
+  HTML-Widget bleiben gesperrt; die Attribute werden beim Speichern validiert.
 - **Zwei Einstiege am Device:** Beide Links öffnen ein neues Browserfenster. „CMS starten“ öffnet den Bearbeitungsmodus (`?mode=edit`). „Zeige Homepage“ öffnet die Seite ohne Parameter (Standard), also nur die fertige Seite ohne Kopf, Werkzeugleiste und Zahnräder. Die Seitennavigation und die Kachelwerte bleiben. Achtung: Das ist nur eine Ansicht und keine Zugriffssperre, wer `?mode=edit` an die Adresse hängt, kann bearbeiten. Schutz bieten nur `allowed` und FHEMWEB.
 - **Vorschau:** Öffnet in einem neuen Fenster den aktuellen Entwurf so, wie die Seite nach dem Veröffentlichen ausgeliefert würde (ohne Bearbeitungsknöpfe). Der Entwurf wird bei jeder Änderung gespeichert, ein Neuladen des Vorschaufensters zeigt den neuesten Stand.
 - **Kacheln verschieben und skalieren:** Im Bearbeitungsmodus ist das immer möglich (kein eigener Modus). Jede Kachel hat oben rechts nebeneinander die Symbole ⇄ („Widget auf andere Seite verschieben“), ⠿ („Widget auf dieser Seite verschieben“, Griff) und ⚙ („Widget konfigurieren“); Ziehen mit Maus oder Touch, oder Griff fokussieren und Pfeiltasten nutzen. Die Größe ändern Sie am Griff unten rechts der Kachel, der beim Darüberfahren erscheint (ziehen) oder mit Umschalt+Pfeiltasten am fokussierten Kachel-Griff. Position und Größe rasten im gewählten Raster ein (12, 24 oder 48 Spalten, siehe „Seite einrichten“). Was mit anderen Kacheln passiert, hängt von der Positionierung ab: Im Raster rutschen überlappende Kacheln nach unten, bei Fluss und Spalten ordnen sich alle neu an, bei Frei bleiben sie unberührt. Verdrängte Kacheln gleiten an ihren neuen Platz. Das Layout wird gespeichert. Der Konfigurationsdialog der Kacheln enthält keine Rasterfelder mehr. Der Knopf ⇄ oben rechts an jeder Kachel verschiebt sie auf eine andere Seite (unten angehängt, Konfiguration bleibt erhalten); das gilt für alle Widget-Typen. Auf schmalen Bildschirmen ist der Modus ausgeblendet.
