@@ -123,6 +123,9 @@ Pan-Start, Abbruch, Blur, Redraw und Entfernen loeschen Popup/Crosshair und
 geben Listener frei. Die Einfinger-Zeitraumauswahl bleibt beim Graph erhalten.
 Escape beendet aktive Werteproben im Capture-Pfad, bevor ein umgebender
 Dialog die Taste verarbeitet. Ohne aktive Probe bleibt Dialog-Escape wirksam.
+Systemmonitor-Details verwenden formatierten Kennzahlen-/Progressstatus;
+Rohtexte bleiben als eingeklappte Originalwerte erhalten. `system-detail`
+am Chart aktiviert kompakte 36px-Auswahlfelder und lesbare Titel.
 Generationspruefungen verwerfen verspaetete Ergebnisse nach Quellenwechsel,
 neuer Abfrage oder Entfernen. Cachefehler entfernen nicht mehr verifizierte
 Graphen. Maximal 12 Devices und 24 Graphen; keine neuen Logging-Regeln,

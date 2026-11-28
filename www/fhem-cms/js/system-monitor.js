@@ -208,6 +208,9 @@ export function systemMonitorSnapshot(devices, systemDevice = '', mappings = [])
 
 const GRAPH_READINGS = {
   cpu_usage: ['CPU-Auslastung', '%'],
+  loadavg_1: ['Lastmittel · 1 Minute', ''],
+  loadavg_5: ['Lastmittel · 5 Minuten', ''],
+  loadavg_15: ['Lastmittel · 15 Minuten', ''],
   net_rx_kbs: ['Netzwerk Empfang', 'KiB/s'],
   net_tx_kbs: ['Netzwerk Versand', 'KiB/s'],
   fhemuptime: ['FHEM-Laufzeit', 's'],

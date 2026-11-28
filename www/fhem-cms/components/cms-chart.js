@@ -83,6 +83,13 @@ class FHEMCMSChart extends HTMLElement {
         .controls { display: flex; gap: 0.3rem; }
         .controls select { font: inherit; font-size: 0.75rem; color: inherit; background: var(--cms-bg, #17211d);
           border: 1px solid var(--cms-border, #43564a); border-radius: 0.4rem; padding: 0.1rem 0.2rem; }
+        :host([system-detail]) .tile { padding:1rem; gap:.75rem; border-radius:.75rem; }
+        :host([system-detail]) .tile header { display:grid; grid-template-columns:1fr; gap:.5rem; padding:0; font-size:1rem; }
+        :host([system-detail]) .tile h3 { font-size:1rem; font-weight:600; white-space:normal; line-height:1.4; }
+        :host([system-detail]) .controls { display:flex; flex-wrap:wrap; gap:.5rem; }
+        :host([system-detail]) .tile .controls select { width:auto; flex:1; min-width:7rem;
+          max-width:100%; min-height:36px; height:36px; font-size:.8rem; padding:.25rem .4rem; }
+        :host([system-detail]) .tile .stats { font-size:.8rem; line-height:1.5; }
         .plot { position: relative; min-height: 0; }
         svg { width: 100%; height: 100%; display: block; touch-action:pan-y;
           -webkit-user-select:none; user-select:none; }

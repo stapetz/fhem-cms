@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-28",
+  "version": "1.44.1-dev",
+  "title": "Aufgeraeumte Systemmonitor-Details",
+  "changes": [
+    "Detailkarten zeigen dieselben formatierten Kennzahlen und validierten Speicherbalken wie das Dashboard. Originalwerte bleiben aufklappbar erhalten. Refs #267.",
+    "Breiterer Dialog, responsive Karten und kompakte Zeitraum-/Aufloesungsfelder schaffen mehr Platz fuer die Verlaeufe.",
+    "Graphentitel verwenden lesbare Bezeichnungen statt technischer Reading-Namen und doppelter Device-Praefixe."
+  ]
+}

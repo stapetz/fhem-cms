@@ -271,7 +271,9 @@ Die Startboxen kombinieren Kennzahlen und vorhandene 24h-Verläufe:
   Diese Readings müssen vom Device in KiB/s geliefert werden;
   fehlende Werte erscheinen als „–“, nicht als Null.
 
-Die Rohtexte bleiben im Infofenster erhalten. Die Netzwerkbox lässt sich wie
+Das Infofenster zeigt dieselben formatierten Kennzahlen und Speicherbalken
+wie die Dashboardboxen in einem großzügigen Raster. Abweichende Rohtexte
+bleiben unter **Originalwert anzeigen** aufklappbar. Die Netzwerkbox lässt sich wie
 die übrigen Boxen in der Widgetkonfiguration ausblenden. Das Widget richtet
 weder Netzwerk-Readings noch Logging selbst ein.
 

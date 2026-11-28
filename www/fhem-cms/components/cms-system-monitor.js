@@ -36,6 +36,13 @@ class FHEMCMSSystemMonitor extends HTMLElement {
         [data-error] { color:var(--cms-danger); }
         [data-graphs] { display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr)); }
         [data-graphs] cms-chart { height:340px; min-width:0; }
+        [data-details] { width:min(96vw,80rem); padding:1.5rem; }
+        [data-detail-metrics] { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr)); gap:1rem; }
+        [data-details] > h3 { margin:1.75rem 0 .75rem; }
+        [data-details] .metric > strong { margin:.5rem 0; font-size:1.3rem; line-height:1.4; }
+        [data-details] small { display:block; color:var(--cms-muted); line-height:1.5; }
+        .raw-details { margin-top:.75rem; color:var(--cms-muted); font-size:.85rem; }
+        .raw-details p { white-space:pre-wrap; margin:.5rem 0; }
         [data-inline-graphs] cms-chart, [data-inline-graphs] cms-graph { display:block; height:calc(180px / var(--cms-freeform-scale,1)); min-width:0; margin-top:.75rem; }
         .metric > strong { font-size:1.25em; font-variant-numeric:tabular-nums; }
         .metric progress { display:block; width:100%; height:.5rem; margin:.65rem 0; accent-color:var(--cms-accent); }
@@ -273,8 +280,11 @@ class FHEMCMSSystemMonitor extends HTMLElement {
       const chart = document.createElement('cms-chart');
       chart.dataset.key = key;
       chart.setAttribute('view-only', '');
+      chart.setAttribute('system-detail', '');
       chart.services = {history: (...args) => this.services.history(...args)};
-      chart.config = {...graph, range:'24h', granularity:'auto', source:'auto'};
+      chart.config = {...graph, title:graph.device === this.snapshot?.selected
+        ? graph.title.replace(`${graph.device} · `,'') : graph.title,
+        range:'24h', granularity:'auto', source:'auto'};
       container.append(chart);
     }
   }
@@ -398,12 +408,17 @@ class FHEMCMSSystemMonitor extends HTMLElement {
       const value = document.createElement('strong');
       const timestamp = document.createElement('small');
       label.textContent = item.label;
-      value.textContent = item.value ?? 'Nicht verfügbar';
-      timestamp.textContent = item.value ? `Stand: ${item.timestamp ? formatDateDisplay(item.timestamp) : 'unbekannt'}` : '';
+      value.textContent = item.displayValue ?? item.value ?? 'Nicht verfügbar';
+      const currentTimestamp = item.displayTimestamp ?? item.timestamp;
+      timestamp.textContent = item.displayValue || item.value
+        ? `Stand: ${currentTimestamp ? formatDateDisplay(currentTimestamp) : 'unbekannt'}` : '';
       row.append(label, value, timestamp);
       details.append(row);
       const key = item.key;
-      if (hidden.has(key)) continue;
+      if (hidden.has(key)) {
+        this.decorateDetailMetric(row,item);
+        continue;
+      }
       let tile = [...metrics.children].find(node => node.dataset.metric === key);
       if (!tile) {
         tile = row.cloneNode(true);
@@ -418,7 +433,6 @@ class FHEMCMSSystemMonitor extends HTMLElement {
         tile.querySelector('small').textContent = timestamp.textContent;
       }
       tile.querySelector('strong').textContent = item.displayValue ?? value.textContent;
-      const currentTimestamp = item.displayTimestamp ?? item.timestamp;
       tile.querySelector('small').textContent = item.displayValue || item.value
         ? `Stand: ${currentTimestamp ? formatDateDisplay(currentTimestamp) : 'unbekannt'}` : '';
       let progress = tile.querySelector('progress');
@@ -432,7 +446,9 @@ class FHEMCMSSystemMonitor extends HTMLElement {
         progress.value = item.progress;
         progress.textContent = `${item.progress.toLocaleString('de-DE',{maximumFractionDigits:1})} %`;
       } else progress?.remove();
+      this.decorateDetailMetric(row,item);
     }
+
     const logs = this.shadowRoot.querySelector('[data-logs]');
     logs.replaceChildren();
     for (const type of ['DbLog', 'FileLog']) {
@@ -455,6 +471,26 @@ class FHEMCMSSystemMonitor extends HTMLElement {
         }
         logs.append(section);
       }
+    }
+  }
+
+  decorateDetailMetric(row, item) {
+    if (Number.isFinite(item.progress)) {
+      const progress = document.createElement('progress');
+      progress.max = 100;
+      progress.value = item.progress;
+      progress.setAttribute('aria-label',`${item.label} belegt`);
+      row.querySelector('strong').after(progress);
+    }
+    if (item.value && item.value !== item.displayValue) {
+      const raw = document.createElement('details');
+      raw.className = 'raw-details';
+      const summary = document.createElement('summary');
+      summary.textContent = 'Originalwert anzeigen';
+      const text = document.createElement('p');
+      text.textContent = item.value;
+      raw.append(summary,text);
+      row.append(raw);
     }
   }
 

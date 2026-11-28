@@ -107,6 +107,15 @@ try {
   await wait(() => root.querySelectorAll('[data-graphs] cms-chart').length===1);
   check(details.open && details.textContent.includes('DbLog: DB')
     && details.textContent.includes('FileLog: Dateilog'), 'details contain both log source types');
+  check(getComputedStyle(root.querySelector('[data-detail-metrics]')).display==='grid',
+    'detail metric cards use a spacious responsive grid');
+  const detailChart=root.querySelector('[data-graphs] cms-chart');
+  check(detailChart.hasAttribute('system-detail') && detailChart.config.title==='CPU-Temperatur',
+    'detail charts use human labels without duplicate device prefix');
+  const detailSelect=detailChart.shadowRoot.querySelector('[data-range]');
+  check(detailSelect.getBoundingClientRect().height<=37
+    && parseFloat(getComputedStyle(detailSelect).fontSize)<=13,
+    'detail range controls remain compact instead of inheriting oversized headers');
   check(!root.querySelector('[data-logs] script') && root.querySelector('[data-logs]').textContent.includes('<script>'),
     'log readings are rendered as text');
   check(root.querySelector('[data-logs]').textContent.includes('Keine Status-Readings verfügbar')
@@ -236,6 +245,12 @@ try {
     'CPU uses compact numeric percentage');
   check(root.querySelector('[data-detail-metrics]').textContent.includes('user: 1.77 %'),
     'CPU raw text remains in details');
+  const detailCpu=[...root.querySelector('[data-detail-metrics]').children].find(row=>row.querySelector('span').textContent==='CPU-Auslastung');
+  check(detailCpu.querySelector('strong').textContent===root.querySelector('[data-metric="stat_cpu_text"] > strong').textContent
+    && detailCpu.querySelector('.raw-details') && !detailCpu.querySelector('.raw-details').open,
+    'detail CPU uses the same formatted value as dashboard, raw value is collapsed');
+  const detailRam=[...root.querySelector('[data-detail-metrics]').children].find(row=>row.querySelector('span').textContent==='Arbeitsspeicher');
+  check(detailRam?.querySelector('progress')?.value>0,'detail memory card retains validated progress');
   check(root.querySelector('[data-metric="ram"] > strong').textContent.includes('640,4 / 1.642,4 MB'),
     'RAM shows current usage and real capacity');
   check(root.querySelector('[data-metric="root"] progress').value===49
