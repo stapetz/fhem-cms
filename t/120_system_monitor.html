@@ -40,7 +40,8 @@ try {
     },
     history: async (device, reading, range, granularity, source) => {
       historyCalls++;
-      check(device==='System' && ['ram_used','cpu_temp'].includes(reading) && range==='24h'
+      check(device==='System' && ['ram_used','cpu_temp','cpu_usage','root_used_percent','swap_used',
+        'net_rx_kbs','net_tx_kbs','alternate_cpu','extra_temperature',...Array.from({length:26},(_,i)=>`compare_${i}`)].includes(reading) && range==='24h'
         && granularity==='auto' && source==='auto', 'graphs use existing history service');
       return {from:1795809600,to:1795813200,points:[[1795810000,2,2,2],[1795813000,3,3,3]]};
     },
@@ -80,7 +81,7 @@ try {
   check(root.querySelector('[data-metric="ram"] cms-chart')===inline && historyCalls===initialHistoryCalls,
     'one-minute value refresh preserves chart and does not refresh history');
   check(root.querySelector('[data-metrics]').textContent.includes('2 Tage')
-    && root.querySelector('[data-metrics]').textContent.includes('12 GB')
+    && root.querySelector('[data-metrics]').textContent.includes('12 MB belegt')
     && root.querySelector('[data-metrics]').textContent.includes('27.11.2026 21:00:00'),
   'configured system values are displayed');
   root.querySelector('[data-info] button').click();
@@ -144,10 +145,25 @@ try {
   await widget.openConfig({isNew:true});
   const form = root.querySelector('[data-form]');
   check(form.elements.systemDevice.value === 'System', 'configuration selects saved system source');
-  check(root.querySelectorAll('[data-metric-options] input').length===8
-    && root.querySelector('[data-metric-options]').textContent.includes('12 GB'),
+  check(root.querySelectorAll('[data-visible]').length===9
+    && root.querySelector('[data-mappings]').textContent.includes('12 MB belegt'),
     'configuration lists recognized values and availability');
-  root.querySelector('[data-metric-options] input[value="ram"]').checked=false;
+  check(!root.querySelector('[data-metric-options]'),'visibility is not a separate configuration list');
+  const titleLabel=form.elements.showTitle.closest('label');
+  check(getComputedStyle(titleLabel).display==='flex' && getComputedStyle(titleLabel).alignItems==='center',
+    'title checkbox and caption share one aligned line');
+  const ramControls=root.querySelector('[data-mapping-row="ram"] [data-mapping-controls]');
+  const inputs=[...ramControls.querySelectorAll('.mapping-fields > label > input,.mapping-fields > label > select')].slice(0,4);
+  const rects=inputs.map(input=>input.getBoundingClientRect());
+  check((innerWidth<=520 || Math.abs(rects[0].top-rects[1].top)<1 && Math.abs(rects[2].top-rects[3].top)<1)
+    && rects.every(rect=>Math.abs(rect.height-48)<1),'input/select tops and heights align despite wrapped labels');
+  if (innerWidth<=520) check(rects.every(rect=>Math.abs(rect.left-rects[0].left)<1)
+    && ramControls.scrollWidth<=ramControls.clientWidth+1,'narrow configuration stacks fields without overflow');
+  root.querySelector('[data-visible][value="ram"]').checked=false;
+  root.querySelector('[data-visible][value="ram"]').dispatchEvent(new Event('change'));
+  check(ramControls.hidden && getComputedStyle(ramControls).display==='none'
+    && [...ramControls.querySelectorAll('input,select,button')].every(input=>input.disabled),
+    'unchecked box hides and disables its editing controls');
   form.elements.title.value = 'Server';
   form.elements.showTitle.checked = false;
   form.dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}));
@@ -160,17 +176,21 @@ try {
     && root.querySelector('[data-detail-metrics]').textContent.includes('12 GB'),
     'hidden metric disappears from tile but details stay available');
   await widget.openConfig();
-  check(!root.querySelector('[data-metric-options] input[value="ram"]').checked,
+  check(!root.querySelector('[data-visible][value="ram"]').checked,
     'reopening configuration preserves hidden metric selection');
   const sourceSelect = form.elements.systemDevice;
   sourceSelect.value='';
   sourceSelect.dispatchEvent(new Event('change'));
-  check(!root.querySelector('[data-metric-options] input[value="ram"]').checked
-    && root.querySelector('[data-metric-options]').textContent.includes('Nicht verfügbar'),
+  check(!root.querySelector('[data-visible][value="ram"]').checked
+    && root.querySelector('[data-mappings]').textContent.includes('Nicht verfügbar'),
     'source change updates detected values while preserving visibility choice');
   sourceSelect.value='System';
   sourceSelect.dispatchEvent(new Event('change'));
-  root.querySelector('[data-metric-options] input[value="ram"]').checked=true;
+  root.querySelector('[data-visible][value="ram"]').checked=true;
+  root.querySelector('[data-visible][value="ram"]').dispatchEvent(new Event('change'));
+  check(!root.querySelector('[data-mapping-row="ram"] [data-mapping-controls]').hidden
+    && !root.querySelector('[data-mapping-row="ram"] [data-field="reading"]').disabled,
+    'rechecking box restores editable mapping fields');
   widget.services.saveWidget=async candidate=>{saved=candidate;};
   await widget.saveConfig();
   check(!Object.hasOwn(saved,'hiddenMetrics'),'all checked restores legacy default without extra field');
@@ -205,6 +225,167 @@ try {
   await widget.refresh();
   await wait(() => root.querySelector('[data-status]').textContent.includes('erfolgreich'));
   check(!root.querySelector('[data-detail-status]').textContent.includes('nicht aktuell'), 'recovery clears stale status');
+  Object.assign(devices[0].readings,{cpu_usage:'14.2',stat_cpu_text:'user: 1.77 %',
+    ram:'Total: 1642.43 MB, Used: 640.41 MB',ram_used:'640.41',
+    root:'Raw root details',root_used_percent:'49',swap:'Total: 2048 MB, Used: 0 MB',swap_used:'0',
+    net_rx_kbs:'2.5',net_tx_kbs:'1.1'});
+  cachedReadings=['cpu_usage','ram_used','root_used_percent','swap_used','net_rx_kbs','net_tx_kbs'];
+  await widget.refresh();
+  await wait(()=>root.querySelector('[data-metric="network"] cms-graph')?.currentData?.length===2);
+  check(root.querySelector('[data-metric="stat_cpu_text"] > strong').textContent==='14,2 %',
+    'CPU uses compact numeric percentage');
+  check(root.querySelector('[data-detail-metrics]').textContent.includes('user: 1.77 %'),
+    'CPU raw text remains in details');
+  check(root.querySelector('[data-metric="ram"] > strong').textContent.includes('640,4 / 1.642,4 MB'),
+    'RAM shows current usage and real capacity');
+  check(root.querySelector('[data-metric="root"] progress').value===49
+    && root.querySelector('[data-metric="swap"] progress').value===0,
+    'root and swap progress include true zero');
+  const network = root.querySelector('[data-metric="network"] cms-graph');
+  check(network.config.series.length===2 && network.config.series[0].color!==network.config.series[1].color
+    && network.config.series.every(series=>series.unit==='KiB/s'),'network shares one two-color chart with explicit unit');
+  check(getComputedStyle(network.shadowRoot.querySelector('header')).display==='none'
+    && network.shadowRoot.querySelectorAll('[data-legend] button').length===2,
+    'compact network graph hides selectors but preserves both legend entries');
+  const networkCalls=historyCalls;
+  await widget.refresh();
+  await wait(()=>widget.graphs.length===6);
+  check(root.querySelector('[data-metric="network"] cms-graph')===network && historyCalls===networkCalls,
+    'value refresh preserves network chart and its five-minute history schedule');
+  cachedReadings=cachedReadings.filter(reading=>reading!=='net_tx_kbs');
+  await widget.refresh();
+  await wait(()=>root.querySelector('[data-metric="network"] cms-graph')?.config.series.length===1);
+  check(true,'removed logcache series is removed from the shared network chart');
+  delete devices[0].readings.net_tx_kbs;
+  devices[0].readings.ram='Total: 2 GB';
+  await widget.refresh();
+  check(root.querySelector('[data-metric="network"] > strong').textContent.includes('↑ –')
+    && !root.querySelector('[data-metric="ram"] progress'),
+    'missing direction and unrecognized memory capacity do not invent zero or percent');
+  await widget.openConfig();
+  root.querySelector('[data-visible][value="network"]').checked=false;
+  root.querySelector('[data-visible][value="network"]').dispatchEvent(new Event('change'));
+  widget.services.saveWidget=async candidate=>{saved=candidate;};
+  await widget.saveConfig();
+  widget.config=saved;
+  check(saved.hiddenMetrics.includes('network') && !root.querySelector('[data-metric="network"]'),
+    'network box visibility is saved and applied');
+  devices[0].readings.alternate_cpu='8.5';
+  devices[0].readings.extra_temperature='-3.2';
+  cachedReadings.push('alternate_cpu','extra_temperature');
+  await widget.openConfig();
+  const cpuMapping=root.querySelector('[data-mapping-row="stat_cpu_text"]');
+  check(cpuMapping.querySelector('[data-field="reading"]').value==='cpu_usage'
+    && cpuMapping.querySelector('[data-field="unit"]').value==='%',
+    'detected CPU source and unit are prefilled');
+  cpuMapping.querySelector('[data-field="reading"]').value='alternate_cpu';
+  cpuMapping.querySelector('[data-field="reading"]').dispatchEvent(new Event('change'));
+  cpuMapping.querySelector('[data-field="label"]').value='Andere CPU';
+  cpuMapping.querySelector('[data-field="label"]').dispatchEvent(new Event('change'));
+  root.querySelector('[data-add-metric]').click();
+  const extra=root.querySelector('[data-mapping-row^="custom-"]');
+  const extraKey=extra.dataset.mappingRow;
+  for (const [field,value] of Object.entries({label:'Zusatztemperatur',reading:'extra_temperature',unit:'°C'})) {
+    extra.querySelector(`[data-field="${field}"]`).value=value;
+    extra.querySelector(`[data-field="${field}"]`).dispatchEvent(new Event('change'));
+  }
+  await widget.saveConfig();
+  check(saved.metricMappings.length===2 && saved.metricMappings.find(item=>item.key===extraKey).unit==='°C',
+    'only manual CPU mapping and added metric are saved');
+  widget.config=saved;
+  await wait(()=>root.querySelector(`[data-metric="${extraKey}"] > strong`)?.textContent==='-3,2 °C');
+  await wait(()=>root.querySelector(`[data-metric="${extraKey}"] cms-chart`));
+  check(root.querySelector('[data-metric="stat_cpu_text"] > strong').textContent==='8,5 %'
+    && root.querySelector('[data-metric="stat_cpu_text"] > span').textContent==='Andere CPU',
+    'override controls live CPU value and title');
+  check(root.querySelector('[data-metric="stat_cpu_text"] cms-chart').config.reading==='alternate_cpu'
+    && root.querySelector(`[data-metric="${extraKey}"] cms-chart`).config.reading==='extra_temperature',
+    'configured readings control cached charts rather than default names');
+  await widget.openConfig();
+  const dualRow=root.querySelector(`[data-mapping-row="${extraKey}"]`);
+  dualRow.querySelector('[data-add-series]').click();
+  dualRow.querySelector('[data-series-field="reading"]').value='alternate_cpu';
+  dualRow.querySelector('[data-series-field="reading"]').dispatchEvent(new Event('change'));
+  dualRow.querySelector('[data-series-field="unit"]').value='%';
+  dualRow.querySelector('[data-series-field="unit"]').dispatchEvent(new Event('change'));
+  dualRow.querySelector('[data-add-series]').click();
+  const third=dualRow.querySelectorAll('[data-series-row]')[1];
+  third.querySelector('[data-series-field="reading"]').value='cpu_usage';
+  third.querySelector('[data-series-field="reading"]').dispatchEvent(new Event('change'));
+  third.querySelector('[data-series-field="unit"]').value='%';
+  third.querySelector('[data-series-field="unit"]').dispatchEvent(new Event('change'));
+  await widget.saveConfig();
+  check(saved.metricMappings.find(item=>item.key===extraKey).additionalReadings.length===2
+    && !Object.hasOwn(saved.metricMappings.find(item=>item.key===extraKey),'secondaryReading'),
+    'dynamic additions save a list rather than a fixed second reading');
+  widget.config=saved;
+  await wait(()=>root.querySelector(`[data-metric="${extraKey}"] cms-graph`)?.currentData?.length===3);
+  check(root.querySelector(`[data-metric="${extraKey}"] cms-graph`).config.series.some(item=>item.axis==='right' && item.unit==='%'),
+    'second custom reading with different unit uses a separate right axis');
+  await widget.openConfig();
+  check(root.querySelectorAll(`[data-mapping-row="${extraKey}"] [data-series-row]`).length===2,
+    'reopening retains every additional reading');
+  root.querySelector(`[data-mapping-row="${extraKey}"] [data-remove-series]`).click();
+  check(root.querySelectorAll(`[data-mapping-row="${extraKey}"] [data-series-row]`).length===1,
+    'each added reading can be removed separately');
+  check(root.querySelector('[data-mapping-row="stat_cpu_text"] [data-field="reading"]').value==='alternate_cpu',
+    'reopening preserves manual source');
+  sourceSelect.value='';
+  sourceSelect.dispatchEvent(new Event('change'));
+  check(root.querySelector('[data-mapping-row="stat_cpu_text"] [data-field="reading"]').value==='alternate_cpu',
+    'source change retains explicit mappings even when readings are unavailable');
+  sourceSelect.value='System';
+  sourceSelect.dispatchEvent(new Event('change'));
+  const customAgain=root.querySelector(`[data-mapping-row="${extraKey}"]`);
+  customAgain.querySelector('[data-field="label"]').value='';
+  customAgain.querySelector('[data-field="label"]').dispatchEvent(new Event('change'));
+  const beforeInvalid=saved;
+  await widget.saveConfig();
+  check(saved===beforeInvalid && root.querySelector('[data-dialog]').open
+    && root.querySelector('[data-config-error]').textContent.includes('Ungültige'),
+    'invalid mapping blocks save and shows explicit error');
+  customAgain.querySelector('[data-field="label"]').value='Zusatztemperatur';
+  customAgain.querySelector('[data-field="label"]').dispatchEvent(new Event('change'));
+  root.querySelector(`[data-mapping-row="${extraKey}"] [data-reset-mapping]`).click();
+  root.querySelector('[data-mapping-row="stat_cpu_text"] [data-reset-mapping]').click();
+  await widget.saveConfig();
+  check(!Object.hasOwn(saved,'metricMappings'),'reset removes overrides and added metrics');
+  widget.config=saved;
+  await wait(()=>!root.querySelector(`[data-metric="${extraKey}"]`)
+    && root.querySelector('[data-metric="stat_cpu_text"] > strong').textContent==='14,2 %');
+  check(true,'reset restores detected values and removes additional graph');
+  const previousCache=cachedReadings;
+  const names=Array.from({length:26},(_,i)=>`compare_${i}`);
+  names.forEach((name,i)=>{devices[0].readings[name]=String(i);});
+  cachedReadings=[...cachedReadings,...names];
+  widget.config={...saved,metricMappings:[{key:extraKey,label:'Viele Reihen',reading:names[0],unit:'%',
+    additionalReadings:names.slice(1).map(reading=>({reading,unit:'%'}))}]};
+  await wait(()=>root.querySelectorAll(`[data-metric="${extraKey}"] cms-graph`).length===2
+    && [...root.querySelectorAll(`[data-metric="${extraKey}"] cms-graph`)].every(chart=>chart.currentData?.length));
+  const grouped=[...root.querySelectorAll(`[data-metric="${extraKey}"] cms-graph`)];
+  check(grouped.map(chart=>chart.config.series.length).join(',')==='20,6'
+    && grouped.flatMap(chart=>chart.config.series).length===26,
+    'more than 24 configured histories remain visible in bounded chart groups');
+  await widget.refresh();
+  await widget.refreshGraphs(devices,widget.generation);
+  check(grouped.every(chart=>chart.isConnected),'periodic refresh preserves every split chart instance');
+  await widget.openConfig();
+  const manyRow=root.querySelector(`[data-mapping-row="${extraKey}"]`);
+  manyRow.querySelector('[data-add-series]').click();
+  check(manyRow.querySelectorAll('[data-series-row]').length===26,'dialog can add beyond twenty readings');
+  manyRow.querySelectorAll('[data-remove-series]')[25].click();
+  await widget.saveConfig();
+  check(saved.metricMappings[0].additionalReadings.length===25,'long reading lists persist without truncation');
+  widget.config={...saved,metricMappings:[{key:extraKey,label:'Einheiten',reading:names[0],unit:'%',
+    additionalReadings:[{reading:names[1],unit:'W'},{reading:names[2],unit:'°C'}]}]};
+  await wait(()=>root.querySelectorAll(`[data-metric="${extraKey}"] cms-chart`).length===3);
+  const separate=[...root.querySelectorAll(`[data-metric="${extraKey}"] cms-chart`)];
+  await widget.refresh();
+  await widget.refreshGraphs(devices,widget.generation);
+  check(separate.every(chart=>chart.isConnected),'three distinct units keep separate charts across refresh');
+  cachedReadings=previousCache;
+  names.forEach(name=>{delete devices[0].readings[name];});
+  widget.config={...saved,metricMappings:[]};
   let releaseCache;
   widget.services.logReadings = () => new Promise(resolve => {releaseCache=resolve;});
   await widget.refresh();

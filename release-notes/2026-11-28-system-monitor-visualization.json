@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-28",
+  "version": "1.43.0-dev",
+  "title": "Systemstatus mit Kennzahlen, Netzwerk und Speicherbalken",
+  "changes": [
+    "CPU-Auslastung wird aus cpu_usage als kompakter Prozentwert angezeigt; Rohdetails bleiben im Infofenster.",
+    "RAM, Swap und Root-Belegung kombinieren Kennzahl, validierten Fortschrittsbalken und vorhandenen Verlauf.",
+    "Die ausblendbare Netzwerkbox zeigt Empfang und Versand in KiB/s mit gemeinsamem Zwei-Linien-Graphen.",
+    "Fehlende Kapazitaeten und Richtungen bleiben unbekannt; Logging und SYSMON-Konfiguration werden nicht veraendert.",
+    "Automatisch vorbelegte Reading-Zuordnungen und Einheiten sind ueberschreibbar und auf automatische Erkennung zuruecksetzbar.",
+    "Bis zu zwoelf eigene Werteboxen mit optionalem Gesamt-Reading und dynamisch hinzufuegbaren Datenreihen lassen sich im Entwurf speichern. Sichtbarkeit und gleich hohe Eingaben sind direkt je Box zusammengefasst."
+  ]
+}

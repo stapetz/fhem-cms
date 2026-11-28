@@ -24,7 +24,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndex.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndexJobs.pm');
 
-our $FHEMCMS_VERSION = '1.42.0-dev';
+our $FHEMCMS_VERSION = '1.43.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1199,7 +1199,7 @@ sub FHEMCMS_ValidateConfig {
             } elsif ($widget->{type} eq 'weather') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'config', 'grid'], []);
             } elsif ($widget->{type} eq 'system-monitor') {
-                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'systemDevice', 'grid'], ['title', 'showTitle', 'hiddenMetrics']);
+                $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'systemDevice', 'grid'], ['title', 'showTitle', 'hiddenMetrics', 'metricMappings']);
             } elsif ($widget->{type} eq 'fhem-icon') {
                 $err = $widgetExact->($widget, 'Widget', ['id', 'type', 'device', 'reading', 'states', 'grid'], ['title', 'showTitle']);
             } elsif ($widget->{type} eq 'fhem-table') {
@@ -1275,11 +1275,63 @@ sub FHEMCMS_ValidateConfig {
                 return 'Ungueltige Systemquelle'
                     if (!defined($widget->{systemDevice}) || ref($widget->{systemDevice})
                         || ($widget->{systemDevice} ne '' && !$isName->($widget->{systemDevice})));
+                my %allowed = map { $_ => 1 } qw(fhemuptime_text uptime_text loadavg stat_cpu_text cpu_temp ram swap root network);
+                if (exists($widget->{metricMappings})) {
+                    return 'Ungueltige Wertezuordnungen'
+                        if (ref($widget->{metricMappings}) ne 'ARRAY' || @{$widget->{metricMappings}} > 21);
+                    my %seenMapping;
+                    my %units = map { $_ => 1 } ('', '%', "\x{00b0}C", qw(B KiB MiB GiB MB GB B/s KiB/s MiB/s kB/s Mbit/s s W));
+                    my $customCount = 0;
+                    for my $mapping (@{$widget->{metricMappings}}) {
+                        my $mappingError = $exact->($mapping, 'Wertezuordnung',
+                            [qw(key label reading unit)], [qw(totalReading secondaryReading secondaryUnit additionalReadings)]);
+                        return $mappingError if (defined($mappingError));
+                        my $key = $mapping->{key};
+                        return 'Ungueltiger Werteschluessel'
+                            if (!defined($key) || ref($key)
+                                || (!$allowed{$key} && $key !~ /^custom-[A-Za-z0-9_-]{1,40}$/)
+                                || $seenMapping{$key}++);
+                        if ($key =~ /^custom-/) {
+                            return 'Hoechstens zwoelf weitere Werteboxen erlaubt' if (++$customCount > 12);
+                            $allowed{$key} = 1;
+                        }
+                        return 'Ungueltige Wertebezeichnung'
+                            if (!defined($mapping->{label}) || ref($mapping->{label})
+                                || $mapping->{label} !~ /\S/ || length($mapping->{label}) > 64
+                                || $mapping->{label} =~ /[\x00-\x1f\x7f]/);
+                        for my $field (qw(reading totalReading secondaryReading)) {
+                            next if (!exists($mapping->{$field}));
+                            return 'Ungueltiges Werte-Reading'
+                                if (!defined($mapping->{$field}) || ref($mapping->{$field})
+                                    || ($mapping->{$field} ne '' && !$isName->($mapping->{$field})));
+                        }
+                        for my $field (qw(unit secondaryUnit)) {
+                            next if (!exists($mapping->{$field}));
+                            return 'Ungueltige Werteeinheit'
+                                if (!defined($mapping->{$field}) || ref($mapping->{$field}) || !$units{$mapping->{$field}});
+                        }
+                        if (exists($mapping->{additionalReadings})) {
+                            return 'Ungueltige weitere Datenreihen'
+                                if (ref($mapping->{additionalReadings}) ne 'ARRAY'
+                                    || (defined($mapping->{secondaryReading}) && $mapping->{secondaryReading} ne ''));
+                            my %seenReading;
+                            $seenReading{$mapping->{reading}} = 1 if ($mapping->{reading} ne '');
+                            for my $row (@{$mapping->{additionalReadings}}) {
+                                my $rowError = $exact->($row, 'Weitere Datenreihe', [qw(reading unit)], []);
+                                return $rowError if (defined($rowError));
+                                return 'Ungueltiges weiteres Reading'
+                                    if (!defined($row->{reading}) || ref($row->{reading})
+                                        || ($row->{reading} ne '' && (!$isName->($row->{reading}) || $seenReading{$row->{reading}}++)));
+                                return 'Ungueltige weitere Einheit'
+                                    if (!defined($row->{unit}) || ref($row->{unit}) || !$units{$row->{unit}});
+                            }
+                        }
+                    }
+                }
                 if (exists($widget->{hiddenMetrics})) {
-                    my %allowed = map { $_ => 1 } qw(fhemuptime_text uptime_text loadavg stat_cpu_text cpu_temp ram swap root);
                     my %seen;
                     return 'Ungueltige Auswahl der Systemwerte'
-                        if (ref($widget->{hiddenMetrics}) ne 'ARRAY' || @{$widget->{hiddenMetrics}} > 8
+                        if (ref($widget->{hiddenMetrics}) ne 'ARRAY' || @{$widget->{hiddenMetrics}} > 21
                            || grep { !defined($_) || ref($_) || !$allowed{$_} || $seen{$_}++ } @{$widget->{hiddenMetrics}});
                 }
             } elsif ($widget->{type} ne 'fhem-clock' && $widget->{type} ne 'fhem-table' && $widget->{type} ne 'fhem-solar-energy'

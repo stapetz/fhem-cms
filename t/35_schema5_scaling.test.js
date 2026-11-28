@@ -377,7 +377,7 @@ async function testServer() {
 
 for (const [name, fixtures] of [
   ['FHEM system monitor displays safe source data and configuration',
-    [['120_system_monitor.html', 10]]],
+    [['120_system_monitor.html', 10], ['120_system_monitor.html?width=390', 10]]],
   ['Eventmonitor popup, standalone window and live event controls',
     [['119_eventmonitor.html', 20]]],
   ['shared close buttons preserve nested dialog behavior and themes',
@@ -1233,7 +1233,12 @@ for (const [name, fixtures] of [
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture === '111_close_buttons.html'
+        fixture.startsWith('120_system_monitor.html')
+          ? command => command('Emulation.setDeviceMetricsOverride', {
+            width:Number(new URLSearchParams(fixture.split('?')[1]).get('width') || 1440),
+            height:1000,deviceScaleFactor:1,mobile:false,
+          })
+          : fixture === '111_close_buttons.html'
           ? command => command('Emulation.setFocusEmulationEnabled', { enabled: true })
           : fixture === '102_widget_editor_tools.html?touch=1'
           ? async command => {

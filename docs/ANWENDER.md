@@ -260,6 +260,44 @@ aktiviert aber nicht automatisch den Browser-Vollbildmodus.
 
 ### FHEM- und Systemstatus
 
+Die Startboxen kombinieren Kennzahlen und vorhandene 24h-Verläufe:
+
+- **CPU:** Prozentwert aus `cpu_usage`, statt des langen CPU-Rohtexts.
+- **RAM/Swap:** Belegt/Gesamt in MB, Prozentwert und schmaler Belegungsbalken.
+  Ohne erkannte Gesamtkapazität wird kein Prozentwert oder Balken erfunden.
+- **Dateisystem /:** Belegung aus `root_used_percent` mit Balken.
+- **Netzwerk:** Empfang (`net_rx_kbs`) und Versand (`net_tx_kbs`) in KiB/s,
+  mit zwei verschiedenfarbigen Linien in einem gemeinsamen Graphen.
+  Diese Readings müssen vom Device in KiB/s geliefert werden;
+  fehlende Werte erscheinen als „–“, nicht als Null.
+
+Die Rohtexte bleiben im Infofenster erhalten. Die Netzwerkbox lässt sich wie
+die übrigen Boxen in der Widgetkonfiguration ausblenden. Das Widget richtet
+weder Netzwerk-Readings noch Logging selbst ein.
+
+Unter **Reading-Zuordnung und Einheiten** sind bekannte Werte automatisch
+vorbelegt. Pro Box können Bezeichnung, Wert-Reading und Einheit überschrieben
+werden. **Automatische Erkennung verwenden** entfernt die manuelle Zuordnung.
+Unveränderte Boxen bleiben automatisch anpassbar; explizite Zuordnungen bleiben
+auch beim Wechsel der SYSMON-Quelle erhalten.
+
+**Weitere Wertebox hinzufügen** ergänzt bis zu zwölf eigene Kennzahlen aus dem
+gewählten SYSMON-Device, auch Textwerte. Optional lässt sich ein Gesamt-Reading
+für Belegt/Gesamt und Fortschritt auswählen. Beide Readings müssen dieselbe
+Einheit besitzen. **Weiteres Reading hinzufügen** ergänzt beliebig weitere
+Kennzahlen und Verlaufskurven, beispielsweise Empfang/Versand oder mehrere
+Temperaturen. Jede zusätzliche Reihe lässt sich einzeln entfernen.
+Zwei unterschiedliche Einheiten nutzen getrennte Y-Achsen; mehr Einheiten
+oder mehr als 20 Reihen werden übersichtlich auf Teilgraphen verteilt.
+Das Häkchen direkt im Bereich jeder Box steuert deren Sichtbarkeit:
+ausgeschaltet sind die Eingaben ausgeblendet, die Zuordnung bleibt erhalten.
+Einheiten sind auswählbar, werden aber nicht automatisch umgerechnet.
+Fehlende Readings bleiben sichtbar unbekannt; ein leeres Wert-Reading schaltet
+die Zuordnung ab. Eigene Boxen lassen sich ausblenden oder entfernen.
+Verlaufskurven erscheinen nur für numerische Readings, die im Logcache stehen.
+Die Zuordnungen werden im Entwurf gespeichert und benötigen das entsprechend
+aktualisierte FHEMCMS-Modul.
+
 Das Widget **FHEM- und Systemstatus** zeigt den Stand einer FHEM-Abfrage sowie
 ausgewählte Systemwerte. Im Widgetdialog lässt sich ein vorhandenes SYSMON-Device
 als Quelle auswählen; für den lokalen Rechner muss dieses Device ausdrücklich
@@ -303,6 +341,14 @@ rollierende letzte 24 Stunden, ohne Zeitraum-/Auflösungswahl, mit Aktualisierun
 alle fünf Minuten. Die minütliche Werte-/Cacheprüfung lädt diese Graphen nicht
 erneut. Zusätzliche ausführliche Diagramme werden nur im offenen Detaildialog
 geladen.
+
+Auch diese Diagramme lassen sich mit zwei Fingern oder mit gehaltener
+Leertaste und linker Maustaste horizontal verschieben. Der Zeitraum bleibt
+24 Stunden breit. Die Kurve nach rechts ziehen zeigt ältere Daten; nach links
+ziehen führt zurück, höchstens bis jetzt. Beim Loslassen werden Daten für
+das verschobene Fenster geladen. Dieses Fenster bleibt während der
+Fünf-Minuten-Aktualisierung fest; Neuöffnen startet wieder bei den letzten
+24 Stunden. Die gespeicherte Widgetkonfiguration bleibt unverändert.
 
 Zusammengesetzte Texte wie `ram`, `loadavg` oder `stat_cpu_percent` werden nicht
 als einzelne Zahl interpretiert. Dafür müssen passende numerische Readings

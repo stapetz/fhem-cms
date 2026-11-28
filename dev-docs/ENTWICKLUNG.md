@@ -43,13 +43,48 @@ Gesundheit oder Aktualitaet der Readings.
 
 Optionales `hiddenMetrics` enthaelt eindeutige feste Boxschluessel
 (`fhemuptime_text`, `uptime_text`, `loadavg`, `stat_cpu_text`, `cpu_temp`,
-`ram`, `swap`, `root`), keine Device-Referenzen. Abwesend/leeres Array zeigt
+`ram`, `swap`, `root`, `network`), keine Device-Referenzen. Abwesend/leeres Array zeigt
 alle Boxen. `fs_root` wird fuer die Box stabil auf `root` normalisiert.
 Der Konfigurationsdialog zeigt aktuelle Werte/Verfuegbarkeit und Checkboxen;
 Quellenwechsel erhaelt die Auswahl. Details bleiben vollstaendig.
 Die Box-Mindestbreite und Inline-Graphhoehe kompensieren den bestehenden
 `--cms-freeform-scale`; damit fuehrt Bildschirmverkleinerung zu Umbruch
 statt ausschliesslich zum Verkleinern der Boxen.
+CPU verwendet bevorzugt das validierte Prozent-Reading `cpu_usage`.
+RAM/Swap zeigen numerische `_used`-Readings in MB; Kapazitaet kommt aus
+`_total` oder dem expliziten `Total: ... MB`-Praefix des SYSMON-Textreadings.
+Fortschritt wird nur bei positiver Kapazitaet und Belegung innerhalb der
+Kapazitaet gezeichnet. Root nutzt `root_used_percent`/`fs_root_used_percent`
+zwischen 0 und 100. Rohtexte bleiben in den Details erhalten.
+Die Netzwerkbox kombiniert `net_rx_kbs` und `net_tx_kbs` (KiB/s) in einem
+kompakten `cms-graph` mit gemeinsamer Achse und getrennten Farben/Legenden.
+Fehlende Richtungen bleiben unbekannt; verfuegbare Logcache-Reihen werden
+einzeln hinzugefuegt/entfernt. Unveraenderte Reihen erhalten ihre DOM-Instanz,
+ihren verschobenen Zeitraum und den Fuenf-Minuten-Timer.
+Optionales `metricMappings` speichert nur manuell ueberschriebene Zuordnungen
+und weitere Boxen (maximal zwoelf, Schluessel `custom-...`). Bekannte Boxen
+bleiben ohne Zuordnung dynamisch automatisch erkannt. Jede Zuordnung enthaelt
+`key`, `label`, `reading`, `unit`; optional `totalReading` und `additionalReadings`
+(Liste aus `{reading, unit}`, eindeutige nichtleere Reading-Namen).
+Legacy-`secondaryReading`/`secondaryUnit` werden weiterhin gelesen und beim
+Bearbeiten in die Liste uebernommen; neue Liste und Legacy-Reading gleichzeitig
+sind ungueltig. Alle Readings beziehen sich auf die explizite Systemquelle.
+Weitere Reihen sind dynamisch hinzufuegbar/entfernbar, ohne feste Anzahl.
+Pro Graph bleiben maximal 20 Reihen; groessere Listen oder mehr als zwei
+Einheiten werden in Teilgraphen aufgeteilt. Konfigurierte Reihen werden nicht
+durch die Grenze fuer automatisch erkannte Verlaeufe abgeschnitten.
+Einheiten stammen aus einer festen Auswahlliste und werden nicht umgerechnet;
+Gesamtwerte verwenden dieselbe Einheit. Ein leeres Reading deaktiviert die
+Zuordnung ausdruecklich. Zusätzliche Boxschluessel sind in `hiddenMetrics`
+nur erlaubt, wenn die zugehoerige Zuordnung existiert. Schema 5/6, Vorlagen
+und echte Entwurfsspeicherung validieren diese Felder.
+Der Dialog belegt erkannte Readings/Einheiten vor, erhaelt explizite Zuordnungen
+beim Quellenwechsel und bietet Zuruecksetzen/Entfernen.
+Sichtbarkeit wird direkt je Zuordnungsbereich eingestellt; ausgeschaltete
+Boxen verstecken und deaktivieren ihre Eingaben, behalten aber die Zuordnung.
+Titelcheckbox und Text stehen nebeneinander; Eingaben sind gleich hoch.
+Graphen nutzen die zugeordneten Readings/Einheiten im Logcache; anders benannte Readings werden
+nicht allein aufgrund ihres Namens oder Werts als bekannte Metrik geraten.
 
 `get <CMS> systemlogs` misst ausschliesslich aktuelle `currentlogfile`-Pfade
 von FileLog und global, ohne Dateiinhalte oder Archivverzeichnisse zu lesen.

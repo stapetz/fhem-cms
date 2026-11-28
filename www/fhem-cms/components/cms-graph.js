@@ -272,6 +272,12 @@ class FHEMCMSGraph extends HTMLElement {
         .row .unit-entry [data-unit-choices] { flex:1; min-width:0; }
         .actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.5rem; }
         .preview { height:16rem; flex:none; }
+        :host([compact]) .tile { padding:.25rem; border:0; gap:.2rem; }
+        :host([compact]) header, :host([compact]) [data-live-custom],
+        :host([compact]) [data-updated], :host([compact]) [data-open-config] { display:none; }
+        :host([compact]) .plot { min-height:80px; }
+        :host([compact]) .legend button { min-height:24px; font-size:.75rem; padding:.15rem .3rem; }
+        :host([compact]) [data-status]:empty { display:none; }
         [hidden] { display:none !important; }
         ${unitInputCss}
         ${widgetDesignCss}

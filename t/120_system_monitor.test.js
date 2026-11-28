@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { loadSystemMonitorDevices, systemMonitorSnapshot, systemMonitorGraphCandidates, systemMonitorMetricForGraph } from '../www/fhem-cms/js/system-monitor.js';
+import { loadSystemMonitorDevices, systemMonitorSnapshot, systemMonitorGraphCandidates, systemMonitorMetricForGraph,
+  systemMonitorMetricMappings, validateSystemMetricMappings } from '../www/fhem-cms/js/system-monitor.js';
 import { blueprintDevices, remapBlueprintDevice } from '../www/fhem-cms/js/fcui-schema5-blueprints.js';
 import { FhemClient } from '../www/fhem-cms/js/fhem-client.js';
 
@@ -109,7 +110,95 @@ test('inline graphs are grouped into the corresponding metric boxes', () => {
   for (const [reading, metric] of Object.entries({
     ram_used:'ram', swap_used:'swap', root_used_percent:'root',fs_root_used_percent:'root',
     loadavg_1:'loadavg',loadavg_15:'loadavg',cpu_temp:'cpu_temp',fhemuptime:'fhemuptime_text',
-    cpu_usage:'stat_cpu_text',uptime:'uptime_text',
+    cpu_usage:'stat_cpu_text',uptime:'uptime_text',net_rx_kbs:'network',net_tx_kbs:'network',
   })) assert.equal(systemMonitorMetricForGraph(reading),metric);
   assert.equal(systemMonitorMetricForGraph('CacheUsage'),null);
+});
+
+test('system metrics combine real numeric values with validated memory capacity', () => {
+  const source = {name:'Local',type:'SYSMON',readings:{stat_cpu_text:'user: 1.77 %',cpu_usage:'14.2',
+    ram:'Total: 1642.43 MB, Used: 640.41 MB',ram_used:'640.41',root:'Raw root details',
+    root_used_percent:'49',swap:'Total: 2048.00 MB, Used: 0 MB',swap_used:'0',
+    net_rx_kbs:'2.5',net_tx_kbs:'0'},readingTimes:{cpu_usage:'2026-11-28 00:03:20'}};
+  const metrics = systemMonitorSnapshot([source],'Local').metrics;
+  const cpu = metrics.find(item => item.reading==='stat_cpu_text');
+  assert.equal(cpu.value,'user: 1.77 %','raw CPU details remain available');
+  assert.equal(cpu.displayValue,'14,2 %');
+  assert.equal(cpu.displayTimestamp,'2026-11-28 00:03:20');
+  const ram = metrics.find(item => item.reading==='ram');
+  assert.equal(ram.displayValue,'640,4 / 1.642,4 MB · 39 %');
+  assert.ok(Math.abs(ram.progress-640.41/1642.43*100) < 1e-9);
+  assert.equal(metrics.find(item=>item.reading==='root').progress,49);
+  assert.equal(metrics.find(item=>item.reading==='swap').progress,0,'zero usage is valid');
+  assert.equal(metrics.find(item=>item.reading==='network').displayValue,'↓ 2,5 · ↑ 0 KiB/s');
+  for (const value of ['NaN','1e999','-1','101','0;set bad']) {
+    source.readings.cpu_usage = value;
+    assert.equal(systemMonitorSnapshot([source],'Local').metrics[3].displayValue,undefined);
+  }
+  source.readings.ram = 'Total: 2 GB';
+  assert.equal(systemMonitorSnapshot([source],'Local').metrics.find(item=>item.reading==='ram').progress,undefined,
+    'different or missing capacity units are not guessed');
+  source.readings.ram = 'Total: 10 MB';
+  assert.equal(systemMonitorSnapshot([source],'Local').metrics.find(item=>item.reading==='ram').progress,undefined,
+    'usage above capacity does not create a misleading bar');
+  delete source.readings.net_tx_kbs;
+  assert.equal(systemMonitorSnapshot([source],'Local').metrics.at(-1).displayValue,'↓ 2,5 · ↑ – KiB/s');
+});
+
+test('monitor detects defaults, honors explicit mappings and adds arbitrary source readings', () => {
+  const devices=[{name:'Server',type:'SYSMON',readings:{cpu_usage:'2',ram_used:'3',
+    ram:'Total: 12 MB',cpu_other:'14.2',memory_gb:'1.5',capacity_gb:'8',cold:'-4.5',
+    in_rate:'3',out_rate:'7',note:'Alles gut'}}];
+  const defaults=systemMonitorMetricMappings(devices,'Server');
+  assert.equal(defaults.find(item=>item.key==='stat_cpu_text').reading,'cpu_usage');
+  assert.equal(defaults.find(item=>item.key==='ram').unit,'MB');
+  assert.equal(defaults.find(item=>item.key==='network').reading,'');
+  const mappings=[
+    {key:'stat_cpu_text',label:'Prozessor',reading:'cpu_other',unit:'%'},
+    {key:'ram',label:'Speicher',reading:'memory_gb',unit:'GB',totalReading:'capacity_gb'},
+    {key:'network',label:'Netz',reading:'in_rate',unit:'Mbit/s',secondaryReading:'out_rate',secondaryUnit:'Mbit/s'},
+    {key:'custom-temperature',label:'Kalt',reading:'cold',unit:'°C'},
+    {key:'custom-note',label:'Hinweis',reading:'note',unit:''},
+  ];
+  validateSystemMetricMappings(mappings);
+  assert.equal(systemMonitorMetricMappings(devices,'Server',mappings).find(item=>item.key==='stat_cpu_text').reading,'cpu_other');
+  const metrics=systemMonitorSnapshot(devices,'Server',mappings).metrics;
+  assert.equal(metrics.find(item=>item.key==='stat_cpu_text').displayValue,'14,2 %');
+  assert.equal(metrics.find(item=>item.key==='ram').progress,18.75);
+  assert.equal(metrics.find(item=>item.key==='custom-temperature').displayValue,'-4,5 °C');
+  assert.equal(metrics.find(item=>item.key==='custom-note').displayValue,'Alles gut');
+  assert.equal(metrics.find(item=>item.key==='network').displayValue,'↓ 3 Mbit/s · ↑ 7 Mbit/s');
+  const graphs=systemMonitorGraphCandidates(devices,'Server',mappings);
+  assert.ok(!graphs.some(item=>item.reading==='cpu_usage'),'overridden automatic CPU graph is not restored');
+  assert.equal(graphs.find(item=>item.reading==='memory_gb' && item.metric==='ram').unit,'GB');
+  assert.equal(graphs.find(item=>item.reading==='cold' && item.metric==='custom-temperature').unit,'°C');
+  assert.equal(systemMonitorSnapshot([], 'Missing', mappings).metrics.find(item=>item.key==='custom-temperature').displayValue,'Nicht verfügbar');
+  assert.equal(systemMonitorSnapshot(devices,'Server',[]).metrics[3].displayValue,'2 %','reset restores automatic source');
+  for (const invalid of [null,{},[mappings[0],mappings[0]],[{...mappings[0],reading:'bad;set'}],
+    [{...mappings[0],key:'unknown'}],[{...mappings[0],unit:'unknown'}],
+    [{...mappings[0],label:'bad\nlabel'}],[{...mappings[0],device:'Other'}]]) {
+    assert.throws(()=>validateSystemMetricMappings(invalid));
+  }
+  assert.throws(()=>validateSystemMetricMappings(Array.from({length:13},(_,i)=>({
+    key:`custom-${i}`,label:'Extra',reading:'cold',unit:'°C'}))),/zwölf/);
+});
+
+test('dynamic reading lists keep all values and chart units and reject ambiguous rows', () => {
+  const mapping={key:'custom-many',label:'Vergleich',reading:'one',unit:'%',
+    additionalReadings:[{reading:'two',unit:'%'},{reading:'three',unit:'W'},{reading:'four',unit:'°C'}]};
+  const devices=[{name:'Local',type:'SYSMON',readings:{one:'1',two:'2',three:'3',four:'-4'}}];
+  validateSystemMetricMappings([mapping]);
+  assert.equal(systemMonitorSnapshot(devices,'Local',[mapping]).metrics.at(-1).displayValue,
+    'one 1 % · two 2 % · three 3 W · four -4 °C');
+  assert.deepEqual(systemMonitorGraphCandidates(devices,'Local',[mapping]).map(row=>[row.reading,row.unit]),
+    [['one','%'],['two','%'],['three','W'],['four','°C']]);
+  for (const invalid of [
+    {...mapping,additionalReadings:{}}, {...mapping,additionalReadings:[null]},
+    {...mapping,additionalReadings:[{reading:'one',unit:'%'}]},
+    {...mapping,additionalReadings:[{reading:'two',unit:'bad'}]},
+    {...mapping,additionalReadings:[{reading:'bad;set',unit:'%'}]},
+    {...mapping,secondaryReading:'old'},
+  ]) assert.throws(()=>validateSystemMetricMappings([invalid]),/Datenreihen/);
+  const many={...mapping,additionalReadings:Array.from({length:25},(_,i)=>({reading:`r${i}`,unit:''}))};
+  assert.doesNotThrow(()=>validateSystemMetricMappings([many]));
 });

@@ -25,11 +25,47 @@ my $config = {
     pages => [{id => 'start', title => 'Start', widgets => [$widget]}],
 };
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'schema 5 accepts system monitor');
-$widget->{hiddenMetrics} = ['ram', 'root'];
+$widget->{metricMappings} = [
+    {key => 'ram', label => 'Memory', reading => 'mem_used', unit => 'GB', totalReading => 'mem_total',
+        additionalReadings => [{reading => 'other_used', unit => 'GB'}, {reading => 'third_used', unit => 'GB'}]},
+    {key => 'custom-temp', label => 'Temperature', reading => 'temperature', unit => "\x{00b0}C"},
+];
+$widget->{hiddenMetrics} = ['custom-temp'];
+is(FHEMCMS_ValidateConfig($config, 5), undef, 'schema 5 accepts mappings and hidden additional box');
+is(FHEMCMS_ValidateBlueprints([{name => 'Mapped', widget => $widget}]), undef, 'blueprints preserve mappings');
+for my $invalid (
+    {}, [undef], [{key => 'ram', label => 'Memory', reading => 'bad;set', unit => 'MB'}],
+    [{key => 'custom-a', label => 'Memory', reading => 'memory', unit => 'bad'}],
+    [{key => 'unknown', label => 'Memory', reading => 'memory', unit => 'MB'}],
+    [{key => 'ram', label => "bad\ntext", reading => 'memory', unit => 'MB'}],
+    [{key => 'ram', label => 'Memory', reading => 'memory', unit => 'MB', device => 'Other'}],
+    [{key => 'ram', label => 'Memory', reading => 'memory', unit => 'MB', additionalReadings => {}}],
+    [{key => 'ram', label => 'Memory', reading => 'memory', unit => 'MB', additionalReadings => [undef]}],
+    [{key => 'ram', label => 'Memory', reading => 'memory', unit => 'MB',
+        additionalReadings => [{reading => 'memory', unit => 'MB'}]}],
+    [{key => 'ram', label => 'Memory', reading => 'memory', unit => 'MB',
+        additionalReadings => [{reading => 'other', unit => 'bad'}]}],
+    [{key => 'ram', label => 'Memory', reading => 'memory', unit => 'MB',
+        additionalReadings => [{reading => 'other', unit => 'MB', unknown => 1}]}],
+) {
+    local $widget->{metricMappings} = $invalid;
+    ok(defined(FHEMCMS_ValidateConfig($config, 5)), 'invalid mappings rejected');
+}
+my $many = JSON::PP->new->decode(JSON::PP->new->encode($config));
+$many->{pages}[0]{widgets}[0]{metricMappings}[0]{additionalReadings} =
+    [map {{reading => "reading_$_", unit => 'GB'}} (1..25)];
+is(FHEMCMS_ValidateConfig($many, 5), undef, 'more than twenty dynamic readings are valid');
+{
+    local $widget->{metricMappings} = [map { {key => "custom-$_", label => 'Extra', reading => 'temperature', unit => 'MB'} } 1..13];
+    ok(defined(FHEMCMS_ValidateConfig($config, 5)), 'thirteenth extra metric is rejected');
+}
+$widget->{hiddenMetrics} = ['ram', 'root', 'network'];
 is(FHEMCMS_ValidateConfig($config, 5), undef, 'schema 5 accepts hidden metric keys');
 is(FHEMCMS_ValidateBlueprints([{name => 'Monitor', widget => $widget}]), undef, 'blueprint accepts system monitor');
 $config->{schemaVersion} = 6;
 is(FHEMCMS_ValidateConfig($config, 6), undef, 'schema 6 grid accepts system monitor');
+$widget->{hiddenMetrics} = [qw(fhemuptime_text uptime_text loadavg stat_cpu_text cpu_temp ram swap root network)];
+is(FHEMCMS_ValidateConfig($config, 6), undef, 'all nine visualized metrics may be hidden');
 delete($widget->{grid});
 $widget->{rect} = {x => 0, y => 0, w => 200, h => 100};
 $config->{pages}[0]{layoutMode} = 'freeform';
@@ -39,7 +75,7 @@ for my $invalid (undef, {}, 'ram', ['ram','ram'], ['fs_root'], ['bad'], [undef],
     $widget->{hiddenMetrics} = $invalid;
     like(FHEMCMS_ValidateConfig($config, 6), qr/Auswahl der Systemwerte/, 'invalid metric selection rejected');
 }
-$widget->{hiddenMetrics} = ['ram','root'];
+$widget->{hiddenMetrics} = ['ram','root','network'];
 delete($widget->{rect});
 $widget->{grid} = {col => 1, row => 2, w => 6, h => 8};
 delete($config->{pages}[0]{layoutMode});
