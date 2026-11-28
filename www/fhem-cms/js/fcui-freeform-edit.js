@@ -122,11 +122,12 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
   function updateToolbar() {
     count.textContent = `${selection.filter(widget => widget !== nav).length} Widgets ausgewählt`;
     multiple.textContent = selection.length > 1 || additiveMode ? 'Auswahl aufheben' : 'Mehrfachauswahl';
-    multiple.setAttribute('aria-pressed', String(additiveMode));
+    multiple.setAttribute('aria-pressed', String(additiveMode || selection.length > 1));
     const grouped = isGrouped();
     group.textContent = grouped ? 'Gruppe aufheben' : 'Gruppieren';
     group.setAttribute('aria-label', grouped ? 'Gruppierung der Auswahl aufheben' : 'Auswahl gruppieren');
     group.title = group.getAttribute('aria-label');
+    group.setAttribute('aria-pressed', String(grouped));
     group.disabled = (!grouped && selection.length < 2) || selected === nav || typeof editing.onGroupChange !== 'function';
     transfer.disabled = !selection.length || selected === nav || page.renderAsPins === true || typeof editing.onMove !== 'function';
   }
@@ -208,6 +209,30 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     if (!error.textContent) closeProperties(true);
   });
   let handles;
+  function drawSelectionFrame() {
+    if (selection.length < 2 || !handles) return;
+    const canvas = view.canvas.getBoundingClientRect();
+    const scale = view.getScale();
+    const bounds = selection.map(widget => entries.get(widget.id).getBoundingClientRect());
+    const left = Math.min(...bounds.map(box => box.left));
+    const top = Math.min(...bounds.map(box => box.top));
+    const right = Math.max(...bounds.map(box => box.right));
+    const bottom = Math.max(...bounds.map(box => box.bottom));
+    setFreeformBox(handles, {x: (left - canvas.left) / scale, y: (top - canvas.top) / scale,
+      w: (right - left) / scale, h: (bottom - top) / scale, z: 1});
+  }
+  let selectionFrame;
+  const scheduleSelectionFrame = () => {
+    if (selectionFrame !== undefined) return;
+    selectionFrame = win.requestAnimationFrame(() => {
+      selectionFrame = undefined;
+      drawSelectionFrame();
+    });
+  };
+  const selectionObserver = new win.ResizeObserver(scheduleSelectionFrame);
+  selectionObserver.observe(view.canvas.parentElement);
+  for (const widget of cards) selectionObserver.observe(entries.get(widget.id));
+  win.addEventListener('resize', scheduleSelectionFrame, options);
   function draw(rect, guides = []) {
     overlay.querySelectorAll('.cms-freeform-guide').forEach(node => node.remove());
     if (!selected || !rect) return;
@@ -226,6 +251,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
       fitWidgetTools(entries.get(change.id), view.canvas);
     }
     setFreeformBox(handles, {...rect, z: 1});
+    drawSelectionFrame();
     if (active && active.direction !== 'move') {
       handles.append(size);
       size.textContent = `${rect.w} × ${rect.h} px`;
@@ -243,7 +269,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     for (const widget of previous) {
       const wrapper = entries.get(widget.id);
       if (wrapper.contains(doc.activeElement) || overlay.contains(doc.activeElement)) doc.activeElement.blur();
-      wrapper.classList.remove('cms-widget-selected');
+      wrapper.classList.remove('cms-widget-selected', 'cms-widget-multi-selected', 'cms-widget-group-selected');
       wrapper.querySelector('.cms-widget-geometry')?.removeAttribute('disabled');
     }
     controls.remove();
@@ -263,10 +289,20 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     const wrapper = entries.get(selected.id);
     for (const widget of selection) {
       entries.get(widget.id).classList.add('cms-widget-selected');
+      entries.get(widget.id).classList.toggle('cms-widget-multi-selected', selection.length > 1);
+      entries.get(widget.id).classList.toggle('cms-widget-group-selected', selection.length > 1 && isGrouped());
       if (selection.length > 1) entries.get(widget.id).querySelector('.cms-widget-geometry')?.setAttribute('disabled', '');
     }
     handles = doc.createElement('div');
     handles.className = 'cms-freeform-handles';
+    if (selection.length > 1) {
+      handles.classList.add('cms-freeform-selection-frame');
+      handles.classList.toggle('cms-freeform-group-frame', isGrouped());
+      const label = doc.createElement('span');
+      label.className = 'cms-freeform-selection-label';
+      label.textContent = `${isGrouped() ? 'Gruppe' : 'Mehrfachauswahl'} · ${selection.length} Widgets`;
+      handles.append(label);
+    }
     for (const direction of selection.length > 1 || hasPins() ? [] : ['n','ne','e','se','s','sw','w','nw']) {
       const handle = button(handles, '', `Größe ändern (${direction})`, () => {});
       handle.dataset.dir = direction;
@@ -404,5 +440,16 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
       if (!selection.some(widget => widget.id === id)) select(id, false, true);
     }
   }
-  return () => { end({}, false); events.abort(); toolbar.remove(); pinTooltip.remove(); };
+  return () => {
+    end({}, false);
+    events.abort();
+    selectionObserver.disconnect();
+    if (selectionFrame !== undefined) win.cancelAnimationFrame(selectionFrame);
+    for (const widget of selection) {
+      entries.get(widget.id).classList.remove('cms-widget-multi-selected', 'cms-widget-group-selected');
+    }
+    overlay.remove();
+    toolbar.remove();
+    pinTooltip.remove();
+  };
 }

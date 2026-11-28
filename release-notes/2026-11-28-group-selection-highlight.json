@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-28",
+  "version": "1.45.3-dev",
+  "title": "Gruppen und Mehrfachauswahl deutlich hervorheben",
+  "changes": [
+    "Alle ausgewaehlten Widgets farbig markieren; gemeinsamer Auswahlrahmen mit Anzahl und Gruppenstatus.",
+    "Markierungen auch fuer Floorplan-Pins, beim Verschieben und auf skalierten Ansichten sichtbar."
+  ]
+}

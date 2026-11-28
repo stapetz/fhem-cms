@@ -619,6 +619,12 @@ Mehrfachauswahl oder mehreren ausgewählten Widgets heißt derselbe Menüpunkt
 Die Gruppierungsfunktionen und der Auswahlzähler stehen in einer eigenen,
 leicht farblich abgesetzten Menübox neben der normalen Bearbeitungsmenüleiste.
 Auf schmalen Bildschirmen bricht die Box in die nächste Zeile um.
+Bei mehreren ausgewählten Widgets sind alle Mitglieder farbig umrandet.
+Ein gemeinsamer Rahmen mit **Mehrfachauswahl · N Widgets** macht den Umfang
+sichtbar; gespeicherte Gruppen zeigen **Gruppe · N Widgets** und einen
+durchgezogenen statt gestrichelten Rahmen. Beim Anklicken eines Gruppenmitglieds
+werden alle Mitglieder markiert, auch Floorplan-Pins. Die Markierungen bleiben
+beim Verschieben sichtbar und verschwinden beim Aufheben der Auswahl.
 
 Ziehe ein ausgewähltes Widget an seiner Verschiebefläche: Die gesamte Auswahl
 bewegt sich mit unveränderten Abständen und Größen. Pfeiltasten verschieben

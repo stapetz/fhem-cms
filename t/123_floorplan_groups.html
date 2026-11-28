@@ -51,8 +51,23 @@ try{
   click('a');check(selected()==='a','pin single selection');
   check(card('a').querySelector('.cms-pin-position')?.textContent.includes('30.00%'),'pin position tooltip preserved');
   click('b',{ctrlKey:true});check(selected()==='a,b','Ctrl selects two pins');
+  const checkFrame = () => {
+    const box = root.querySelector('.cms-freeform-selection-frame').getBoundingClientRect();
+    const members = ['a','b'].map(id => card(id).getBoundingClientRect());
+    check(Math.abs(box.left - Math.min(...members.map(member => member.left))) < 1
+      && Math.abs(box.right - Math.max(...members.map(member => member.right))) < 1
+      && Math.abs(box.top - Math.min(...members.map(member => member.top))) < 1
+      && Math.abs(box.bottom - Math.max(...members.map(member => member.bottom))) < 1,
+      'frame includes complete visible pin bounds, not only their centers');
+  };
+  checkFrame();
+  check(['a','b'].every(id => card(id).classList.contains('cms-widget-multi-selected')
+    && getComputedStyle(card(id)).outlineWidth === '2px'),'pin members get unscaled visible outlines');
+  check(root.querySelector('.cms-freeform-selection-label').textContent === 'Mehrfachauswahl · 2 Widgets',
+    'pin selection labelled without intercepting inputs');
   check(action('Mehrfachauswahl umschalten').textContent==='Auswahl aufheben','pin selection menu toggles');
   drag('b',50,30);
+  checkFrame();
   check(saves.length===1&&saves[0].length===2,'pins saved in one batch');
   check(saves[0][0].position.centerX===35&&saves[0][1].position.centerX===65,'pin horizontal percentage spacing preserved');
   check(saves[0][0].position.centerY===35&&saves[0][1].position.centerY===65,'pin vertical percentage spacing preserved');
@@ -63,8 +78,13 @@ try{
   check(saves.at(-1)[0].position.centerX===70&&saves.at(-1)[1].position.centerX===100,'shared pin clamp preserves spacing at image edge');
   action('Auswahl gruppieren').click();
   mount();click('b');check(selected()==='a,b','floorplan group expands after remount');
+  check(['a','b'].every(id => card(id).classList.contains('cms-widget-group-selected'))
+    && root.querySelector('.cms-freeform-selection-label').textContent === 'Gruppe · 2 Widgets',
+    'clicking one pin marks the complete persistent group');
+  checkFrame();
   check(action('Gruppierung der Auswahl aufheben')?.textContent==='Gruppe aufheben','floorplan grouped state changes action');
   action('Gruppierung der Auswahl aufheben').click();mount();
+  check(!root.querySelector('.cms-widget-multi-selected,.cms-freeform-selection-frame'),'floorplan deselection clears markers');
   click('a');card('card').dispatchEvent(new MouseEvent('click',{bubbles:true,metaKey:true}));
   check(selected()==='a,card','mixed pin and card selection');
   drag('a',50,30);

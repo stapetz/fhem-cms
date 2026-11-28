@@ -58,8 +58,38 @@ try {
   check(action('Mehrfachauswahl umschalten').textContent === 'Auswahl aufheben','selection action changes label');
   check(!action('Widget-Auswahl aufheben'),'no redundant deselect button');
   check(!root.querySelector('.cms-freeform-handles button'),'no group resize handles');
+  const checkSelectionFrame = () => {
+    const frame = root.querySelector('.cms-freeform-selection-frame');
+    const rect = frame.getBoundingClientRect();
+    const bounds = ['a','b'].map(id => card(id).getBoundingClientRect());
+    check(Math.abs(rect.left - Math.min(...bounds.map(box => box.left))) < 1
+      && Math.abs(rect.right - Math.max(...bounds.map(box => box.right))) < 1
+      && Math.abs(rect.top - Math.min(...bounds.map(box => box.top))) < 1
+      && Math.abs(rect.bottom - Math.max(...bounds.map(box => box.bottom))) < 1,
+      'selection frame encloses actual selected widget bounds');
+    check(getComputedStyle(frame).pointerEvents === 'none'
+      && getComputedStyle(frame.querySelector('span')).pointerEvents === 'none',
+      'frame and label never block clicks or dragging');
+  };
+  checkSelectionFrame();
+  check(card('a').classList.contains('cms-widget-multi-selected') && card('b').classList.contains('cms-widget-multi-selected')
+    && !card('c').classList.contains('cms-widget-multi-selected'),'only selected members marked');
+  check(root.querySelector('.cms-freeform-selection-label').textContent === 'Mehrfachauswahl · 2 Widgets',
+    'multi-selection explicitly labelled');
+  check(action('Mehrfachauswahl umschalten').getAttribute('aria-pressed') === 'true',
+    'modifier-selected widgets activate menu highlight');
+  for (const theme of ['dark','light','oled-black','catppuccin-mocha','liquid-glass']) {
+    document.documentElement.dataset.cmsTheme = theme;
+    const styles = getComputedStyle(card('a'));
+    check(styles.outlineStyle === 'dashed' && styles.outlineColor === getComputedStyle(root.querySelector('.cms-freeform-selection-frame')).outlineColor,
+      'members and frame share themed highlight');
+    const actualScale = card('a').getBoundingClientRect().width / 100;
+    check(Math.abs(parseFloat(styles.outlineWidth) * actualScale - 2) < .4,'member contour stays two screen pixels');
+  }
+  document.documentElement.dataset.cmsTheme = 'dark';
   const scale = card('a').getBoundingClientRect().width / 100;
   drag('b',50*scale,30*scale);
+  checkSelectionFrame();
   check(saves.length === 1 && saves[0].length === 2,'one batch commit');
   check(saves[0][0].rect.x === 150 && saves[0][1].rect.x === 350,'pointer delta divided by effective scale');
   check(saves[0][0].rect.y === 130 && saves[0][1].rect.y === 230,'relative vertical offsets kept');
@@ -80,6 +110,16 @@ try {
   action('Auswahl gruppieren').click();
   check(groupCalls.length === 1 && page.widgets[0].groupId === page.widgets[1].groupId,'group action persists common membership');
   mount(); click('b'); check(selected() === 'a,b','group selected through any member after remount');
+  check(root.querySelector('.cms-freeform-selection-label').textContent === 'Gruppe · 2 Widgets'
+    && getComputedStyle(root.querySelector('.cms-freeform-selection-frame')).outlineStyle === 'solid',
+    'group identified by label and solid frame');
+  check(['a','b'].every(id => card(id).classList.contains('cms-widget-group-selected')
+    && getComputedStyle(card(id)).outlineStyle === 'solid'),'all group members visibly marked on member click');
+  check(action('Gruppierung der Auswahl aufheben').getAttribute('aria-pressed') === 'true','group action highlighted');
+  root.style.width = '600px';
+  await new Promise(resolve => setTimeout(resolve,150));
+  checkSelectionFrame();
+  root.style.width = location.search.includes('width=390') ? '100%' : '800px';
   check(action('Gruppierung der Auswahl aufheben').textContent === 'Gruppe aufheben' && !action('Auswahl gruppieren'),
     'one group action changes to ungroup');
   action('Auswahl auf andere Seite verschieben').click();
@@ -92,6 +132,8 @@ try {
   click('b',{altKey:true}); check(selected() === 'a,b','Alt adds widget');
   document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
   check(selected() === '','Escape clears selection');
+  check(!root.querySelector('.cms-freeform-selection-frame')
+    && !root.querySelector('.cms-widget-multi-selected,.cms-widget-group-selected'),'Escape removes all selection markers');
   action('Mehrfachauswahl umschalten').click();
   click('a'); click('c'); check(selected() === 'a,c','touch-friendly selection toggle');
   drag('c',3000,3000);
@@ -102,6 +144,7 @@ try {
     'combined selection action clears and exits multi-select');
   click('a'); check(root.querySelectorAll('.cms-freeform-handles button').length === 8,'single resize remains available');
   view.destroy(); check(!root.querySelector('.cms-freeform-selection-tools'),'toolbar cleanup');
+  check(!root.querySelector('.cms-freeform-selection-frame'),'frame cleaned up on unmount');
   view = undefined;
   root.style.width = '100%';
   const live = structuredClone(config);

@@ -51,6 +51,13 @@ Schmale Ansichten umbrechen die Boxen ohne horizontalen Overflow.
 Menuebutton-Groesse folgt der normalen Menueleiste ohne eigene Mindesthoehe.
 Mehrfachauswahl/Auswahl aufheben und Gruppieren/Gruppe aufheben sind jeweils
 ein dynamischer Button; Tastaturhinweise stehen nur in der Anwenderdoku.
+Mehrfachauswahl markiert jedes Mitglied mit einer Theme-Akzentkontur sowie
+einem gemeinsamen nicht-interaktiven Rahmen und Anzahl-Label. Gruppen verwenden
+durchgezogene, fluechtige Mehrfachauswahlen gestrichelte Konturen. Konturen und
+Label behalten ihre sichtbare Groesse beim Canvas-Skalieren; Pin-Mitglieder
+werden in physischen Pixeln markiert. Der Rahmen misst die tatsaechlichen
+Wrapper-Bounds (einschliesslich Pins), wird bei Drag/Resize aktualisiert und
+mit Observer/AnimationFrame beim Unmount entfernt. Daten bleiben unveraendert.
 
 Die Auswahl ist flüchtig; nur Gruppierungen sind persistent. Gruppen können
 zusammengeführt/aufgelöst werden. Kopieren/Vorlagen-Einfügen entfernt die

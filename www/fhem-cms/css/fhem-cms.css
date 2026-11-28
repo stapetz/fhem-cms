@@ -2586,6 +2586,17 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   background-size: max(10px, var(--cms-freeform-snap)) max(10px, var(--cms-freeform-snap));
 }
 .cms-freeform-widget.cms-widget-selected { z-index: 10001 !important; }
+.cms-freeform-widget.cms-widget-multi-selected {
+  outline: calc(2px / var(--cms-freeform-scale, 1)) dashed var(--cms-accent);
+  outline-offset: calc(-2px / var(--cms-freeform-scale, 1));
+  box-shadow: inset 0 0 0 calc(5px / var(--cms-freeform-scale, 1))
+    color-mix(in srgb, var(--cms-accent) 30%, transparent);
+}
+.cms-freeform-widget.cms-widget-group-selected { outline-style: solid; }
+.cms-freeform-widget.cms-freeform-pin.cms-widget-multi-selected {
+  outline-width: 2px; outline-offset: -2px; border-radius: 999px;
+  box-shadow: inset 0 0 0 5px color-mix(in srgb, var(--cms-accent) 30%, transparent);
+}
 .cms-freeform-properties {
   position: fixed;
   inset: auto;
@@ -2648,6 +2659,22 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   position: absolute;
   border-radius: .5rem;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cms-accent) 45%, transparent);
+}
+.cms-freeform-handles.cms-freeform-selection-frame {
+  outline: calc(2px / var(--cms-freeform-scale, 1)) dashed var(--cms-accent);
+  outline-offset: calc(4px / var(--cms-freeform-scale, 1));
+  box-shadow: none;
+}
+.cms-freeform-handles.cms-freeform-group-frame { outline-style: solid; }
+.cms-freeform-selection-label {
+  position: absolute; top: 0; left: 0;
+  transform: scale(calc(1 / var(--cms-freeform-scale, 1)));
+  transform-origin: top left;
+  padding: .2rem .45rem; border-radius: .25rem;
+  color: var(--cms-text); background: var(--cms-toolbar);
+  border: 1px solid var(--cms-accent);
+  font: 600 12px/1.4 system-ui, sans-serif; white-space: nowrap;
+  pointer-events: none;
 }
 .cms-freeform-handles button {
   position: absolute; pointer-events: auto; touch-action: none;
