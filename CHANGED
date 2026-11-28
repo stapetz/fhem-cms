@@ -15,6 +15,14 @@ Speicherbalken
   hinzufuegbaren Datenreihen lassen sich im Entwurf speichern. Sichtbarkeit und
   gleich hohe Eingaben sind direkt je Box zusammengefasst.
 
+2026-11-28 - 1.44.0-dev: Werte-Popups mit Klick und gehaltener Beruehrung
+- Graphen und Diagramme inklusive System-Mini-Charts zeigen Werte am Desktop
+  nach Klick; ein weiterer Klick deaktiviert die Mausverfolgung. Refs #266.
+- Touch zeigt Werte nur waehrend der Beruehrung. Loslassen, Abbruch und
+  Zweifinger-Pan blenden Popup und Markierung aus.
+- Ein-Finger-Zeitraumauswahl, vertikales Scrollen und Leertaste-Maus-Pan
+  bleiben erhalten; Vorschau und Torten verwenden dieselbe Bedienung.
+
 2026-11-27 - 1.41.0-dev: Bedingungen fuer Widgets und Textbereiche
 - Ein gemeinsamer Bedingungsdialog steuert Widget-Sichtbarkeit sowie
   Wenn-/Sonst-Bereiche in Text und freiem HTML anhand aktueller FHEM-Readings.
