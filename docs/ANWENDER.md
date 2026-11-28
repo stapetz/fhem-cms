@@ -614,6 +614,9 @@ Im Bearbeitungsmodus auf freien Pixel-Seiten kannst du mehrere Widgets mit
 ist ebenfalls möglich. Ein weiterer Auswahlklick entfernt das Widget bzw.
 seine ganze Gruppe aus der Auswahl. Für Touch-Geräte gibt es über dem Canvas
 den Schalter **Mehrfachauswahl**; danach Widgets antippen.
+Die Gruppierungsfunktionen und der Auswahlzähler stehen in einer eigenen,
+leicht farblich abgesetzten Menübox neben der normalen Bearbeitungsmenüleiste.
+Auf schmalen Bildschirmen bricht die Box in die nächste Zeile um.
 
 Ziehe ein ausgewähltes Widget an seiner Verschiebefläche: Die gesamte Auswahl
 bewegt sich mit unveränderten Abständen und Größen. Pfeiltasten verschieben

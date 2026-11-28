@@ -42,6 +42,12 @@ an der Gesamt-Boundingbox begrenzt und in einer einzigen versionierten
 Entwurfstransaktion gespeichert. `rect.z`, Größen, Widget-IDs und Inhalte
 bleiben erhalten. Escape/Pointercancel speichern nicht.
 
+Die Freeform-Auswahlleiste wird ueber `groupToolbarHost` in die gemeinsame
+`cms-editor-toolbar-row` neben der normalen Menuebox eingehaengt. Sie nutzt
+`cms-toolbar`/`cms-button`, mit Theme-basierter dezenter Farbabweichung.
+Der Freeform-Editor entfernt sie beim Unmount; Raster/Pin/Vorschau zeigen sie
+nicht. Schmale Ansichten umbrechen die Boxen ohne horizontalen Overflow.
+
 Die Auswahl ist flüchtig; nur Gruppierungen sind persistent. Gruppen können
 zusammengeführt/aufgelöst werden. Kopieren/Vorlagen-Einfügen entfernt die
 Gruppenzuordnung, Widget-Konfigurationsänderungen behalten sie. Beim Löschen

@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-28",
+  "version": "1.45.1-dev",
+  "title": "Freeform: Gruppenmenue neben der Bearbeitungsmenueleiste",
+  "changes": [
+    "Gruppierungsfunktionen, Auswahlzaehler und Bedienhinweise in eigener farblich abgesetzter Menuebox.",
+    "Gemeinsame Menuezeile mit identischem Look und Feel; responsiver Umbruch auf schmalen Ansichten."
+  ]
+}

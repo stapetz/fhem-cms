@@ -148,6 +148,7 @@ export class Schema5View {
       this.view = mountSchema5Widgets(this.GridStack, this.root, this.config, pageId,
         navigation, services, new Map(), this.editing && {
           showGrid: this.editing.showGrid,
+          groupToolbarHost: this.editing.groupToolbarHost,
           onChange: (items) => this.editing.onChange(pageId, items),
           selectedWidget: this.editing.selectedWidget,
           selectedWidgets: this.editing.selectedWidgets,

@@ -98,6 +98,7 @@ try {
   click('a'); check(root.querySelectorAll('.cms-freeform-handles button').length === 8,'single resize remains available');
   view.destroy(); check(!root.querySelector('.cms-freeform-selection-tools'),'toolbar cleanup');
   view = undefined;
+  root.style.width = '100%';
   const live = structuredClone(config);
   live.navigation.orientation = 'horizontal';
   live.pages.push({id:'target',title:'Ziel',layoutMode:'freeform',canvas:structuredClone(page.canvas),widgets:[]});
@@ -121,6 +122,22 @@ try {
     throw new Error(`Editor did not finish: ${root.textContent}`);
   };
   await editor.start();
+  const toolbarRow = root.querySelector('.cms-editor-toolbar-row');
+  const menuBox = toolbarRow.querySelector('.cms-toolbar:not(.cms-freeform-selection-tools)');
+  const groupBox = toolbarRow.querySelector('.cms-freeform-selection-tools');
+  check(groupBox && groupBox.parentElement === menuBox.parentElement,'group menu shares editor toolbar row');
+  check(!root.querySelector('.cms-schema5-workspace .cms-freeform-selection-tools'),'no separate toolbar over graph canvas');
+  check(getComputedStyle(groupBox).borderRadius === getComputedStyle(menuBox).borderRadius,
+    'group menu uses same rounded box layout');
+  check(getComputedStyle(groupBox).backgroundColor !== getComputedStyle(menuBox).backgroundColor,'group box subtly tinted');
+  check([...groupBox.querySelectorAll('button')].every(button => button.classList.contains('cms-button')),
+    'group controls reuse menu button style');
+  check(groupBox.querySelector('.cms-freeform-selection-hint').textContent.includes('Cmd/Strg'),'selection hint visible in menu box');
+  if (!location.search.includes('width=390')) {
+    check(Math.abs(menuBox.getBoundingClientRect().top-groupBox.getBoundingClientRect().top) < 1,'desktop menu boxes on same row');
+  } else {
+    check(groupBox.getBoundingClientRect().width <= toolbarRow.getBoundingClientRect().width+1,'group menu fits narrow row');
+  }
   click('a'); click('b',{ctrlKey:true});
   action('Auswahl gruppieren').click();
   await wait(() => writes === 1 && action('Auswahl gruppieren') && !root.querySelector('.cms-schema5-grid')?.inert);
@@ -139,6 +156,7 @@ try {
     'real editor transfers whole group through panel and controller');
   check(JSON.stringify(state.live) === JSON.stringify(live),'real editor leaves live unchanged');
   editor.stop();
+  check(!toolbarRow.querySelector('.cms-freeform-selection-tools'),'group menu removed on editor stop');
   root.replaceChildren();
   root.className = '';
   mount();

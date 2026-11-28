@@ -499,7 +499,7 @@ for (const [name, fixtures] of [
   ['condition wizard validates rules and previews current readings',
     [['117_condition_wizard.html', 15], ['117_condition_wizard.html?touch=1', 15]]],
   ['Freeform groups support shared movement, selection and cancellation',
-    [['122_freeform_groups.html', 35], ['122_freeform_groups.html?width=390', 35]]],
+    [['122_freeform_groups.html', 43], ['122_freeform_groups.html?width=390', 43]]],
   ['conditions integrate with widgets and text and HTML editors',
     [['118_condition_integration.html', 39], ['118_condition_integration.html?touch=1', 38]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',

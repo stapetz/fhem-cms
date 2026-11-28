@@ -77,10 +77,12 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
   const multi = typeof editing.onFreeformChanges === 'function' && page.layoutMode === 'freeform'
     && page.renderAsPins !== true;
   const toolbar = doc.createElement('div');
-  toolbar.className = 'cms-freeform-selection-tools';
+  toolbar.className = 'cms-toolbar cms-freeform-selection-tools';
   toolbar.setAttribute('role', 'group');
   toolbar.setAttribute('aria-label', 'Widget-Auswahl und Gruppen');
   const count = doc.createElement('output');
+  count.setAttribute('aria-live', 'polite');
+  count.title = 'Cmd/Strg/Alt-Klick: Auswahl erweitern. Ziehen: gemeinsam verschieben. Escape: abbrechen oder Auswahl aufheben.';
   toolbar.append(count);
   const multiple = button(toolbar, 'Mehrfachauswahl', 'Mehrfachauswahl umschalten', () => {
     additiveMode = !additiveMode;
@@ -91,7 +93,15 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
   const ungroup = button(toolbar, 'Gruppe aufheben', 'Gruppierung der Auswahl aufheben', () => editing.onGroupChange(selection.map(widget => widget.id), false));
   const transfer = button(toolbar, 'Auf andere Seite', 'Auswahl auf andere Seite verschieben', () => editing.onMove(selection.map(widget => widget.id)));
   button(toolbar, 'Auswahl aufheben', 'Widget-Auswahl aufheben', () => select());
-  if (multi) root.prepend(toolbar);
+  const hint = doc.createElement('span');
+  hint.className = 'cms-freeform-selection-hint';
+  hint.textContent = 'Cmd/Strg/Alt-Klick · Escape: aufheben';
+  toolbar.append(hint);
+  for (const node of toolbar.querySelectorAll('button')) node.classList.add('cms-button');
+  if (multi) {
+    if (editing.groupToolbarHost) editing.groupToolbarHost.append(toolbar);
+    else root.prepend(toolbar);
+  }
   const selectionRect = () => selection.length > 1 ? freeformBounds(selection) : selected?.rect;
   function updateToolbar() {
     count.textContent = `${selection.length} Widgets ausgewählt`;

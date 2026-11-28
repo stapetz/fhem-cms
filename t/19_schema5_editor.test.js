@@ -268,8 +268,9 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
     assert.equal(document.documentElement.getAttribute('data-cms-frames'), 'on');
     const [, , content] = root.children;
     const toolbar = { children: toolbarControls(root.children[0]) };
-    assert.equal(root.children[0].className, 'cms-toolbar');
-    const [fileMenu, editMenu, insertMenu, viewMenu] = root.children[0].children;
+    assert.equal(root.children[0].className, 'cms-editor-toolbar-row');
+    assert.equal(root.children[0].children[0].className, 'cms-toolbar');
+    const [fileMenu, editMenu, insertMenu, viewMenu] = root.children[0].children[0].children;
     assert.ok(!fileMenu.children[1].children.some(item => item.textContent === 'Globale FHEM-CMS Administration'),
       'administration entry is absent without explicit CMS opt-in');
     assert.deepEqual([fileMenu, editMenu, insertMenu, viewMenu].map((menu) => menu.children[0].textContent),
@@ -451,7 +452,7 @@ test('editor connects view and grid draft, and suspends in-flight writes on page
       GridStack, root: waitingRoot, controller: waitingController, client, services: {}, browser,
     });
     const starting = waitingEditor.start();
-    assert.equal(waitingRoot.children[0].children[3].children[1].children[1].getAttribute('aria-pressed'),
+    assert.equal(waitingRoot.children[0].children[0].children[3].children[1].children[1].getAttribute('aria-pressed'),
       'true', 'new editor restores saved preference');
     browser.dispatch('pagehide');
     rejectRead(new Error('Verbindung verloren'));
@@ -568,7 +569,7 @@ print JSON::PP->new->utf8->canonical->encode({result => $result, error => $error
     const root = new Element('section');
     editor = new Schema5Editor({ GridStack, root, controller, client, services: {}, browser, adminMenuEnabled: true });
     await editor.start();
-    assert.ok(root.children[0].children[1].children[1].children.some(item =>
+    assert.ok(root.children[0].children[0].children[1].children[1].children.some(item =>
       item.textContent === 'Globale FHEM-CMS Administration'), 'explicit CMS opt-in shows administration entry');
     const [, status, content] = root.children;
     const toolbar = { children: toolbarControls(root.children[0]) };

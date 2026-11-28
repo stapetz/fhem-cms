@@ -45,6 +45,7 @@ export class Schema5Editor {
   #services;
   #browser;
   #toolbar;
+  #toolbarRow;
   #page;
   #mode;
   #widgets;
@@ -99,6 +100,9 @@ export class Schema5Editor {
     this.#setupWizardStorageKey = `fhem-cms:setup-wizard:${client.endpoint?.pathname || ''}:${client.cmsDevice || ''}`;
     this.#toolbar = document.createElement('div');
     this.#toolbar.className = 'cms-toolbar';
+    this.#toolbarRow = document.createElement('div');
+    this.#toolbarRow.className = 'cms-editor-toolbar-row';
+    this.#toolbarRow.append(this.#toolbar);
     this.#toolbar.setAttribute('role', 'toolbar');
     this.#toolbar.setAttribute('aria-label', 'Bearbeiten');
     this.#page = document.createElement('button');
@@ -307,7 +311,7 @@ export class Schema5Editor {
     });
     this.#appearance = ['data-cms-theme', 'data-cms-frames'].map((name) =>
       [name, document.documentElement.getAttribute(name)]);
-    this.#root.append(this.#toolbar, this.#status, this.#content);
+    this.#root.append(this.#toolbarRow, this.#status, this.#content);
     this.#browser.addEventListener('pagehide', this.#onHide);
     this.#browser.addEventListener('pageshow', this.#onShow);
     this.#browser.addEventListener('pointerdown', this.#onPointer);
@@ -352,6 +356,7 @@ export class Schema5Editor {
         this.#arrange.hidden = isFreeform(page);
       },
       editing: this.#previewMode ? undefined : {
+        groupToolbarHost: this.#toolbarRow,
         showGrid: () => this.#showGrid,
         selectedWidget: this.#freeformSelection?.pageId === (this.#browser.location.hash.slice(2) || config.pages[0].id)
           ? this.#freeformSelection.id : undefined,
