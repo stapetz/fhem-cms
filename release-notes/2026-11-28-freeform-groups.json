@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-28",
+  "version": "1.45.0-dev",
+  "title": "Freeform: Mehrfachauswahl und Widget-Gruppen",
+  "changes": [
+    "Widgets per Cmd/Strg/Alt-Klick oder Mehrfachauswahl-Schalter gemeinsam markieren und verschieben.",
+    "Auswahl gruppieren, Gruppen aufheben und gemeinsam auf andere Freeform-Seiten verschieben.",
+    "Relative Abstaende, Widget-Inhalte und bestehende Einzelwidget-Bedienung bleiben erhalten."
+  ]
+}

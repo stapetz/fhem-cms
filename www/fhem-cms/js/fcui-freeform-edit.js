@@ -1,4 +1,4 @@
-import { fitFreeformRect, validateFreeformWidget } from './fcui-freeform-layout.js';
+import { fitFreeformRect, validateFreeformWidget, freeformSelection, freeformBounds, translateFreeformWidgets } from './fcui-freeform-layout.js';
 import { fitWidgetTools, setFreeformBox } from './fcui-freeform-view.js';
 import { containPopupScroll } from './modal-dialog.js';
 import { installCloseStyles, styleCloseButton } from './close-button.js';
@@ -58,6 +58,8 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
   controls.setAttribute('role', 'group');
   controls.setAttribute('aria-label', 'Pixelposition und Größe');
   let selected, active, preview, raf, dragged;
+  let selection = [];
+  let additiveMode = false;
   const button = (parent, text, label, action) => {
     const node = doc.createElement('button');
     node.type = 'button';
@@ -72,6 +74,37 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
   const cards = page.widgets.filter(widget => !view.isPin(widget.id));
   const entries = new Map([['__nav', view.navBox], ...[...view.wrappers].filter(([id]) => !view.isPin(id))]);
   const widgets = editNavigation ? [nav, ...cards] : cards;
+  const multi = typeof editing.onFreeformChanges === 'function' && page.layoutMode === 'freeform'
+    && page.renderAsPins !== true;
+  const toolbar = doc.createElement('div');
+  toolbar.className = 'cms-freeform-selection-tools';
+  toolbar.setAttribute('role', 'group');
+  toolbar.setAttribute('aria-label', 'Widget-Auswahl und Gruppen');
+  const count = doc.createElement('output');
+  toolbar.append(count);
+  const multiple = button(toolbar, 'Mehrfachauswahl', 'Mehrfachauswahl umschalten', () => {
+    additiveMode = !additiveMode;
+    multiple.setAttribute('aria-pressed', String(additiveMode));
+  });
+  multiple.setAttribute('aria-pressed', 'false');
+  const group = button(toolbar, 'Gruppieren', 'Auswahl gruppieren', () => editing.onGroupChange(selection.map(widget => widget.id), true));
+  const ungroup = button(toolbar, 'Gruppe aufheben', 'Gruppierung der Auswahl aufheben', () => editing.onGroupChange(selection.map(widget => widget.id), false));
+  const transfer = button(toolbar, 'Auf andere Seite', 'Auswahl auf andere Seite verschieben', () => editing.onMove(selection.map(widget => widget.id)));
+  button(toolbar, 'Auswahl aufheben', 'Widget-Auswahl aufheben', () => select());
+  if (multi) root.prepend(toolbar);
+  const selectionRect = () => selection.length > 1 ? freeformBounds(selection) : selected?.rect;
+  function updateToolbar() {
+    count.textContent = `${selection.length} Widgets ausgewählt`;
+    group.disabled = selection.length < 2 || typeof editing.onGroupChange !== 'function';
+    ungroup.disabled = !selection.some(widget => widget.groupId) || typeof editing.onGroupChange !== 'function';
+    transfer.disabled = !selection.length || selected === nav || typeof editing.onMove !== 'function';
+  }
+  function saveSelection(rect) {
+    if (selection.length < 2) return save(rect);
+    const bounds = freeformBounds(selection);
+    const changes = translateFreeformWidgets(selection, rect.x - bounds.x, rect.y - bounds.y, page.canvas);
+    return editing.onFreeformChanges(changes, selection.map(widget => widget.id));
+  }
   const size = doc.createElement('span');
   size.className = 'cms-widget-dimensions';
   if (editNavigation && !view.navBox.querySelector('.cms-widget-config')) {
@@ -142,8 +175,13 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
   function draw(rect, guides = []) {
     overlay.querySelectorAll('.cms-freeform-guide').forEach(node => node.remove());
     if (!selected || !rect) return;
-    setFreeformBox(entries.get(selected.id), selected === nav ? {...rect, z: 10000} : rect);
-    fitWidgetTools(entries.get(selected.id), view.canvas);
+    const changes = selection.length > 1
+      ? translateFreeformWidgets(selection, rect.x - freeformBounds(selection).x, rect.y - freeformBounds(selection).y, page.canvas)
+      : [{id: selected.id, rect: selected === nav ? {...rect, z: 10000} : rect}];
+    for (const change of changes) {
+      setFreeformBox(entries.get(change.id), change.rect);
+      fitWidgetTools(entries.get(change.id), view.canvas);
+    }
     setFreeformBox(handles, {...rect, z: 1});
     if (active && active.direction !== 'move') {
       handles.append(size);
@@ -157,35 +195,53 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
       overlay.append(line);
     }
   }
-  function select(id, focus = false) {
-    if (selected) {
-      const wrapper = entries.get(selected.id);
+  function select(id, focus = false, additive = false) {
+    const previous = selection;
+    for (const widget of previous) {
+      const wrapper = entries.get(widget.id);
       if (wrapper.contains(doc.activeElement) || overlay.contains(doc.activeElement)) doc.activeElement.blur();
       wrapper.classList.remove('cms-widget-selected');
+      wrapper.querySelector('.cms-widget-geometry')?.removeAttribute('disabled');
     }
-    view.canvas.addEventListener('cms-pin-select', () => select(), options);
     controls.remove();
-    selected = widgets.find(widget => widget.id === id);
+    const target = widgets.find(widget => widget.id === id);
+    const next = target && multi && target !== nav ? freeformSelection(page, [id]) : target ? [target] : [];
+    if (additive && target && target !== nav && !previous.includes(nav)) {
+      const remove = next.every(widget => previous.includes(widget));
+      selection = remove ? previous.filter(widget => !next.includes(widget))
+        : [...previous, ...next.filter(widget => !previous.includes(widget))];
+    } else selection = next;
+    selected = selection[0];
     overlay.replaceChildren();
+    updateToolbar();
     if (!selected) return;
-    const wrapper = entries.get(id);
-    wrapper.classList.add('cms-widget-selected');
+    const wrapper = entries.get(selected.id);
+    for (const widget of selection) {
+      entries.get(widget.id).classList.add('cms-widget-selected');
+      if (selection.length > 1) entries.get(widget.id).querySelector('.cms-widget-geometry')?.setAttribute('disabled', '');
+    }
     handles = doc.createElement('div');
     handles.className = 'cms-freeform-handles';
-    for (const direction of ['n','ne','e','se','s','sw','w','nw']) {
+    for (const direction of selection.length > 1 ? [] : ['n','ne','e','se','s','sw','w','nw']) {
       const handle = button(handles, '', `Größe ändern (${direction})`, () => {});
       handle.dataset.dir = direction;
     }
     overlay.append(handles);
-    draw(selected.rect);
+    draw(selectionRect());
     if (focus) wrapper.querySelector('[data-dir="move"]')?.focus({preventScroll: true});
   }
+  view.canvas.addEventListener('cms-pin-select', () => select(), options);
+  const selectClicked = (id, event, focus = false) => {
+    const additive = multi && (additiveMode || event.metaKey || event.ctrlKey || event.altKey);
+    const same = selection.some(widget => widget.id === id);
+    select(!additive && same ? undefined : id, focus, additive);
+  };
   for (const [id, wrapper] of entries) {
     const tools = wrapper.querySelector('.cms-widget-tools');
     const move = wrapper.querySelector('[data-dir="move"]');
     if (!tools || !move) continue;
     move.addEventListener('click', event => {
-      if (!active && (!dragged || event.detail === 0)) select(selected?.id === id ? undefined : id);
+      if (!active && (!dragged || event.detail === 0)) selectClicked(id, event);
     }, options);
     if (id === '__nav') continue;
     const geometry = button(tools, '↔', 'Pixelposition und Größe einstellen', () => {
@@ -216,7 +272,7 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     if (widget && !active && !event.target.closest('.cms-widget-tools,.cms-freeform-properties,[data-dir="move"],a:not([aria-current])')) {
       if (event.target.closest('a[aria-current]')) event.preventDefault();
       const id = widget.dataset.widgetId || '__nav';
-      select(selected?.id === id ? undefined : id, selected?.id !== id);
+      selectClicked(id, event, !selection.some(widget => widget.id === id));
     }
     if (event.target === view.canvas && !active) select();
   }, options);
@@ -224,20 +280,22 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     dragged = false;
     const direction = event.target.dataset.dir;
     if (!direction || active || event.button !== 0) return;
+    if (multi && (event.metaKey || event.ctrlKey || ((event.altKey || additiveMode) && !selection.some(widget =>
+      entries.get(widget.id).contains(event.target))))) return;
     const wrapper = event.target.closest('.cms-freeform-widget,.cms-freeform-navigation');
     const id = wrapper && (wrapper.dataset.widgetId || '__nav');
-    if (id && selected?.id !== id) select(id);
+    if (id && !selection.some(widget => widget.id === id)) select(id);
     if (!selected) return;
     event.preventDefault();
     event.target.focus();
     active = {id: event.pointerId, target: event.target, direction, x: event.clientX, y: event.clientY, scale: view.getScale(), moved: false};
     event.target.setPointerCapture(event.pointerId);
-    draw(selected.rect);
+    draw(selectionRect());
   }, options);
   function calculate(event) {
-    return freeformGesture(selected.rect, active.direction,
+    return freeformGesture(selectionRect(), active.direction,
       (event.clientX - active.x) / active.scale, (event.clientY - active.y) / active.scale,
-      page.canvas, widgets.filter(widget => widget !== selected), event.altKey);
+      page.canvas, widgets.filter(widget => !selection.includes(widget)), event.altKey);
   }
   view.canvas.addEventListener('pointermove', event => {
     if (active?.id !== event.pointerId) return;
@@ -249,14 +307,14 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     if (!active || (event.pointerId !== undefined && event.pointerId !== active.id)) return;
     const {id, target, moved} = active;
     const rect = commit && (active.moved || event.clientX !== active.x || event.clientY !== active.y)
-      ? calculate(event).rect : selected.rect;
+      ? calculate(event).rect : selectionRect();
     active = null;
     dragged = moved;
     if (target.hasPointerCapture(id)) target.releasePointerCapture(id);
     if (raf !== undefined) win.cancelAnimationFrame(raf);
     raf = undefined;
     draw(rect);
-    if (commit && ['x','y','w','h'].some(key => rect[key] !== selected.rect[key])) save(rect);
+    if (commit && ['x','y','w','h'].some(key => rect[key] !== selectionRect()[key])) saveSelection(rect);
   }
   view.canvas.addEventListener('pointerup', event => end(event, true), options);
   view.canvas.addEventListener('pointercancel', event => end(event, false), options);
@@ -278,9 +336,15 @@ export function mountFreeformEditor(root, page, view, editing, navigation, editN
     if (!delta) return;
     event.preventDefault();
     const step = event.shiftKey ? 10 : 1;
-    save(fitFreeformRect({...selected.rect, x: selected.rect.x + delta[0] * step,
-      y: selected.rect.y + delta[1] * step}, page.canvas));
+    const rect = selectionRect();
+    saveSelection(fitFreeformRect({...rect, x: rect.x + delta[0] * step,
+      y: rect.y + delta[1] * step}, page.canvas));
   }, options);
-  select(editing.selectedWidget, true);
-  return () => { end({}, false); events.abort(); };
+  select(editing.selectedWidgets?.[0] ?? editing.selectedWidget, true);
+  if (multi && editing.selectedWidgets?.length > 1) {
+    for (const id of editing.selectedWidgets.slice(1)) {
+      if (!selection.some(widget => widget.id === id)) select(id, false, true);
+    }
+  }
+  return () => { end({}, false); events.abort(); toolbar.remove(); };
 }

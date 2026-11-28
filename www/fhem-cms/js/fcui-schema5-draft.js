@@ -1,7 +1,7 @@
 import { applySchema5GridItems, reflowSchema5Widget, schema5GridItems } from './fcui-schema5-layout.js';
 import { fitLinkWidget } from './link-widget.js';
 import { normalizeWidgetIds, uniqueWidgetId, widgetIds } from './widget-ids.js';
-import { fitFreeformRect, freeformStartRect, isFreeform, syncSharedFreeformSize } from './fcui-freeform-layout.js';
+import { fitFreeformRect, freeformStartRect, isFreeform, syncSharedFreeformSize, freeformSelection, translateFreeformWidgets } from './fcui-freeform-layout.js';
 import { centerNewPin } from './pin-layout.js';
 
 export class WidgetLayoutError extends Error {}
@@ -166,6 +166,8 @@ export class Schema5DraftController {
       copy.rect = action === 'update' ? original.rect : copy.rect
         ?? freeformStartRect(copy, page.widgets.length, page.canvas, Number(candidate.settings.gridColumns));
       if (action === 'update' && original.hideOnMobile !== undefined) copy.hideOnMobile = original.hideOnMobile;
+      if (action === 'update' && original.groupId !== undefined) copy.groupId = original.groupId;
+      if (action === 'create') delete copy.groupId;
       if (action === 'update' && original.position !== undefined) copy.position = structuredClone(original.position);
       if (action === 'create' && page.renderAsPins === true && copy.position === undefined) {
         centerNewPin(copy, page.canvas);
@@ -223,7 +225,9 @@ export class Schema5DraftController {
     if (!page) throw new Error('Unbekannte Seite');
     const index = page.widgets.findIndex((entry) => entry.id === widgetId);
     if (index < 0) throw new Error('Unbekanntes Widget');
-    page.widgets.splice(index, 1);
+    const [deleted] = page.widgets.splice(index, 1);
+    const remainingGroup = deleted.groupId && page.widgets.filter(widget => widget.groupId === deleted.groupId);
+    if (remainingGroup?.length === 1) delete remainingGroup[0].groupId;
     return this.saveDraft(candidate, expectedToken);
   }
 
@@ -251,6 +255,7 @@ export class Schema5DraftController {
     const ids = widgetIds(candidate);
     let copy = structuredClone(widget);
     copy.id = uniqueCopyId(copy.id, ids);
+    delete copy.groupId;
     const columns = Number(candidate.settings.gridColumns);
     if (copy.type === 'fhem-link' && !isFreeform(page)) {
       copy = fitLinkWidget(copy, columns, candidate.pages, null);
@@ -340,6 +345,7 @@ export class Schema5DraftController {
     if (sourceId === targetId) throw new Error('Zielseite muss verschieden sein');
     const index = source.widgets.findIndex((widget) => widget.id === widgetId);
     if (index < 0) throw new Error('Unbekanntes Widget');
+    if (source.widgets[index].groupId) return this.moveWidgets(sourceId, targetId, [widgetId], expectedToken);
     const widget = source.widgets.splice(index, 1)[0];
     if (widgetIds(candidate).has(widget.id)) widget.id = uniqueWidgetId(widget.id, widgetIds(candidate));
     if (isFreeform(target)) {
@@ -354,6 +360,38 @@ export class Schema5DraftController {
       delete widget.position;
     }
     target.widgets.push(widget);
+    return this.saveDraft(candidate, expectedToken);
+  }
+
+  moveWidgets(sourceId, targetId, ids, expectedToken) {
+    const state = this.snapshot();
+    requireToken(state, expectedToken);
+    const candidate = state.draft || state.live;
+    const source = candidate.pages.find(page => page.id === sourceId);
+    const target = candidate.pages.find(page => page.id === targetId);
+    if (sourceId === targetId || !isFreeform(source) || !isFreeform(target)) {
+      throw new Error('Auswahl kann nur auf eine andere Freeform-Seite verschoben werden');
+    }
+    if (source.renderAsPins === true || target.renderAsPins === true) throw new Error('Gruppentransfer ist auf Pin-Seiten nicht verfügbar');
+    const widgets = freeformSelection(source, ids);
+    if (target.widgets.length + widgets.length > 200) throw new Error('Die Zielseite enthält danach mehr als 200 Widgets');
+    const changes = translateFreeformWidgets(widgets, 0, 0, target.canvas);
+    const groups = new Set(target.widgets.map(widget => widget.groupId).filter(Boolean));
+    const remapped = new Map();
+    for (const widget of widgets) {
+      if (widget.groupId && groups.has(widget.groupId) && !remapped.has(widget.groupId)) {
+        remapped.set(widget.groupId, uniqueWidgetId(widget.groupId, new Set([...groups, ...remapped.values()])));
+      }
+    }
+    source.widgets = source.widgets.filter(widget => !widgets.includes(widget));
+    const usedIds = widgetIds(candidate);
+    for (const [index, widget] of widgets.entries()) {
+      widget.rect = changes[index].rect;
+      if (usedIds.has(widget.id)) widget.id = uniqueWidgetId(widget.id, usedIds);
+      usedIds.add(widget.id);
+      if (remapped.has(widget.groupId)) widget.groupId = remapped.get(widget.groupId);
+      target.widgets.push(widget);
+    }
     return this.saveDraft(candidate, expectedToken);
   }
 

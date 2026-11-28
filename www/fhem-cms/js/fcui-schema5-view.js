@@ -150,6 +150,11 @@ export class Schema5View {
           showGrid: this.editing.showGrid,
           onChange: (items) => this.editing.onChange(pageId, items),
           selectedWidget: this.editing.selectedWidget,
+          selectedWidgets: this.editing.selectedWidgets,
+          onFreeformChanges: typeof this.editing.onFreeformChanges === 'function'
+            ? (changes, ids) => this.editing.onFreeformChanges(pageId, changes, ids) : undefined,
+          onGroupChange: typeof this.editing.onGroupChange === 'function'
+            ? (ids, grouped) => this.editing.onGroupChange(pageId, ids, grouped) : undefined,
           onFreeformChange: (id, rect, hide, position) => this.editing.onFreeformChange(pageId, id, rect, hide, position),
           onEdit: (id) => this.editing.onEdit(pageId, id),
           onPopupSettings: typeof this.editing.onPopupSettings === 'function'

@@ -87,6 +87,8 @@ $next->{pages}[0]{widgets} = [{
 my $freeformGraph = $json->decode($json->encode($draft5->{pages}[0]{widgets}[0]));
 delete($freeformGraph->{grid});
 $freeformGraph->{rect} = {x => 0, y => 100, w => 200, h => 100};
+$freeformGraph->{groupId} = 'saved-group';
+$next->{pages}[0]{widgets}[0]{groupId} = 'saved-group';
 push(@{$next->{pages}[0]{widgets}}, $freeformGraph);
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $initial->{token}, 1), qr/veraltet/, 'stale upgrade refused');
 like(FHEMCMS_WriteVersion5Draft($dataDir, $next, $gridState->{token}), qr/schemaVersion/, 'old writer cannot introduce schema 6');
@@ -103,6 +105,12 @@ for my $invalid (undef, [], {}, {centerX => '50', centerY => 50}, {centerX => -1
     $bad->{pages}[0]{widgets}[1]{position} = $invalid;
     like(FHEMCMS_WriteVersion5Draft($dataDir, $bad, $gridState->{token}, 1), qr/Pin-Position/,
         'invalid Pin percentages refused before persistence');
+}
+$bad = $json->decode($json->encode($next));
+for my $invalid ('bad group', 1, JSON::PP::true, undef, {}) {
+    $bad->{pages}[0]{widgets}[0]{groupId} = $invalid;
+    like(FHEMCMS_WriteVersion5Draft($dataDir, $bad, $gridState->{token}, 1), qr/Widget-Gruppe/,
+        'invalid group ID refused before persistence');
 }
 $bad = $json->decode($json->encode($next));
 $bad->{pages}[0]{canvas}{width} = 199;

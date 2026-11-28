@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<main class="cms-shell"><div id="root" style="width:800px"></div></main>
+<output id="result">pending</output>
+<script type="module">
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+import { setFreeformGroup } from '../www/fhem-cms/js/fcui-freeform-layout.js';
+import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+const root = document.querySelector('#root'), result = document.querySelector('#result');
+if (location.search.includes('width=390')) root.style.width = '100%';
+let checks = 0, saves = [], groupCalls = [], transfers = [];
+const check = (value,name) => { if (!value) throw new Error(name); checks++; };
+const config = {schemaVersion:6,settings:{layoutMode:'grid',gridColumns:12},
+  navigation:{grid:{col:1,row:1,w:12,h:1}},pages:[
+    {id:'home',title:'Home',layoutMode:'freeform',canvas:{width:1000,height:600,scaling:'width',snapGrid:1},widgets:[
+      {id:'a',type:'text',markdown:'A',rect:{x:100,y:100,w:100,h:100,z:2}},
+      {id:'b',type:'text',markdown:'B',rect:{x:300,y:200,w:100,h:100,z:4}},
+      {id:'c',type:'text',markdown:'C',rect:{x:600,y:400,w:100,h:100}},
+    ]},
+  ]};
+const page = config.pages[0], original = JSON.stringify(page.widgets);
+let view;
+const editing = {
+  onEdit:() => {},onFreeformChange:(id,rect) => saves.push([{id,rect}]),
+  onFreeformChanges:changes => saves.push(changes),
+  onGroupChange:(ids,grouped) => {groupCalls.push({ids,grouped});setFreeformGroup(page,ids,grouped ? 'g1' : undefined);},
+  onMove:ids => transfers.push(ids),
+};
+const card = id => root.querySelector(`[data-widget-id="${id}"]`);
+const move = id => card(id).querySelector('[data-dir="move"]');
+const selected = () => [...root.querySelectorAll('.cms-freeform-widget.cms-widget-selected')].map(node => node.dataset.widgetId).sort().join(',');
+const click = (id,options = {}) => card(id).dispatchEvent(new MouseEvent('click',{bubbles:true,...options}));
+const mount = () => {
+  view?.destroy();
+  view = mountSchema5Widgets(GridStack,root,config,'home',document.createElement('nav'),{},new Map(),editing);
+};
+const action = label => root.querySelector(`[aria-label="${label}"]`);
+const pointer = (node,type,x,y,options = {}) => node.dispatchEvent(new PointerEvent(type,{
+  bubbles:true,pointerId:17,button:0,clientX:x,clientY:y,...options,
+}));
+function drag(id,dx,dy,cancel = false) {
+  const target = move(id), start = target.getBoundingClientRect();
+  target.setPointerCapture = () => {};
+  target.hasPointerCapture = () => false;
+  pointer(target,'pointerdown',start.left+20,start.top+20);
+  pointer(target,'pointermove',start.left+20+dx,start.top+20+dy,{altKey:true});
+  pointer(target,cancel ? 'pointercancel' : 'pointerup',start.left+20+dx,start.top+20+dy,{altKey:true});
+}
+try {
+  mount();
+  await new Promise(resolve => setTimeout(resolve,150));
+  click('a'); check(selected() === 'a','single selection');
+  click('b',{metaKey:true}); check(selected() === 'a,b','Cmd expands selection');
+  check(!root.querySelector('.cms-freeform-handles button'),'no group resize handles');
+  const scale = card('a').getBoundingClientRect().width / 100;
+  drag('b',50*scale,30*scale);
+  check(saves.length === 1 && saves[0].length === 2,'one batch commit');
+  check(saves[0][0].rect.x === 150 && saves[0][1].rect.x === 350,'pointer delta divided by effective scale');
+  check(saves[0][0].rect.y === 130 && saves[0][1].rect.y === 230,'relative vertical offsets kept');
+  check(saves[0][0].rect.z === 2 && saves[0][1].rect.z === 4,'layers kept');
+  check(JSON.stringify(page.widgets) === original,'drag does not mutate original config');
+  drag('a',80,50,true); check(saves.length === 1,'pointercancel never saves');
+  check(card('a').style.left === '100px' && card('b').style.left === '300px','cancel restores every selected rect');
+  const escapeTarget = move('a');
+  escapeTarget.setPointerCapture = () => {};
+  escapeTarget.hasPointerCapture = () => false;
+  pointer(escapeTarget,'pointerdown',50,50);
+  pointer(escapeTarget,'pointermove',90,80);
+  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  check(saves.length === 1 && card('a').style.left === '100px' && card('b').style.left === '300px',
+    'Escape cancels full group gesture without saving');
+  move('a').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:true,bubbles:true}));
+  check(saves.length === 2 && saves[1][0].rect.x === 110 && saves[1][1].rect.x === 310,'Shift arrow moves selection ten pixels');
+  action('Auswahl gruppieren').click();
+  check(groupCalls.length === 1 && page.widgets[0].groupId === page.widgets[1].groupId,'group action persists common membership');
+  mount(); click('b'); check(selected() === 'a,b','group selected through any member after remount');
+  action('Auswahl auf andere Seite verschieben').click();
+  check(transfers[0].sort().join(',') === 'a,b','transfer includes complete group');
+  check(card('a').querySelector('.cms-widget-geometry').disabled,'individual geometry unavailable for group');
+  action('Gruppierung der Auswahl aufheben').click();
+  check(!page.widgets[0].groupId && !page.widgets[1].groupId,'ungroup preserves widgets');
+  mount(); click('a'); click('b',{ctrlKey:true}); check(selected() === 'a,b','Ctrl adds widget');
+  click('b',{ctrlKey:true}); check(selected() === 'a','Ctrl removes widget');
+  click('b',{altKey:true}); check(selected() === 'a,b','Alt adds widget');
+  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  check(selected() === '','Escape clears selection');
+  action('Mehrfachauswahl umschalten').click();
+  click('a'); click('c'); check(selected() === 'a,c','touch-friendly selection toggle');
+  action('Mehrfachauswahl umschalten').click();
+  drag('c',3000,3000);
+  check(saves.at(-1)[1].rect.x === 900 && saves.at(-1)[1].rect.y === 500,'group boundary clamps as one box');
+  check(saves.at(-1)[1].rect.x - saves.at(-1)[0].rect.x === 500,'boundary keeps horizontal spacing');
+  action('Widget-Auswahl aufheben').click();
+  click('a'); check(root.querySelectorAll('.cms-freeform-handles button').length === 8,'single resize remains available');
+  view.destroy(); check(!root.querySelector('.cms-freeform-selection-tools'),'toolbar cleanup');
+  view = undefined;
+  const live = structuredClone(config);
+  live.navigation.orientation = 'horizontal';
+  live.pages.push({id:'target',title:'Ziel',layoutMode:'freeform',canvas:structuredClone(page.canvas),widgets:[]});
+  let state = {live,draft:null,token:'a'.repeat(64)}, writes = 0;
+  const controller = new Schema5DraftController({
+    read:async () => structuredClone(state),
+    save:async (draft,token) => {
+      check(token === state.token,'editor uses current token');
+      state = {live,draft:structuredClone(draft),token:(++writes).toString(16).padStart(64,'0')};
+    },
+    publish:async () => {throw new Error('No live publication expected');},
+    discard:async () => {throw new Error('No discard expected');},
+  });
+  const editor = new Schema5Editor({GridStack,root,controller,browser:window,services:{},
+    client:{jsonlist:async () => [],subscribe:() => {},unsubscribe:() => {}}});
+  const wait = async predicate => {
+    for (let i=0;i<80;i++) {
+      if (predicate()) return;
+      await new Promise(resolve => setTimeout(resolve,25));
+    }
+    throw new Error(`Editor did not finish: ${root.textContent}`);
+  };
+  await editor.start();
+  click('a'); click('b',{ctrlKey:true});
+  action('Auswahl gruppieren').click();
+  await wait(() => writes === 1 && action('Auswahl gruppieren') && !root.querySelector('.cms-schema5-grid')?.inert);
+  check(state.draft.pages[0].widgets[0].groupId === state.draft.pages[0].widgets[1].groupId,
+    'real editor saves grouping through draft controller');
+  check(selected() === 'a,b','real editor restores group selection after saving');
+  move('a').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:true,bubbles:true}));
+  await wait(() => writes === 2 && action('Auswahl gruppieren') && !root.querySelector('.cms-schema5-grid')?.inert);
+  check(state.draft.pages[0].widgets[0].rect.x === 110 && state.draft.pages[0].widgets[1].rect.x === 310,
+    'real editor saves both new geometries in one transaction');
+  action('Auswahl auf andere Seite verschieben').click();
+  check(root.querySelector('.cms-panel-save') && root.querySelector('select').value === 'target','real editor opens group transfer panel');
+  root.querySelector('.cms-panel-save').click();
+  await wait(() => writes === 3 && action('Auswahl gruppieren'));
+  check(state.draft.pages[0].widgets.length === 1 && state.draft.pages[1].widgets.length === 2,
+    'real editor transfers whole group through panel and controller');
+  check(JSON.stringify(state.live) === JSON.stringify(live),'real editor leaves live unchanged');
+  editor.stop();
+  root.replaceChildren();
+  root.className = '';
+  mount();
+  const events = [];
+  for (const type of ['pointerdown','pointermove','pointerup','pointercancel','lostpointercapture']) {
+    document.addEventListener(type,event => events.push({type,dir:event.target.dataset.dir,
+      meta:event.metaKey,ctrl:event.ctrlKey,alt:event.altKey,x:event.clientX,y:event.clientY}),true);
+  }
+  window.freeformGroups = {selected,card,move,config,saves,events};
+  result.dataset.ready = 'true';
+  result.dataset.result = 'pass';
+  result.dataset.count = String(checks);
+  result.textContent = JSON.stringify({ok:true,checks});
+} catch (error) {
+  result.dataset.result = 'fail';
+  result.textContent = JSON.stringify({ok:false,error:error.stack,checks});
+}
+</script>
+</html>

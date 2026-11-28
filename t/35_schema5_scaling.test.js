@@ -498,6 +498,8 @@ for (const [name, fixtures] of [
     [['115_graph.html', 10], ['115_graph.html?width=390', 10]]],
   ['condition wizard validates rules and previews current readings',
     [['117_condition_wizard.html', 15], ['117_condition_wizard.html?touch=1', 15]]],
+  ['Freeform groups support shared movement, selection and cancellation',
+    [['122_freeform_groups.html', 35], ['122_freeform_groups.html?width=390', 35]]],
   ['conditions integrate with widgets and text and HTML editors',
     [['118_condition_integration.html', 39], ['118_condition_integration.html?touch=1', 38]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
@@ -540,7 +542,8 @@ for (const [name, fixtures] of [
       const interactive = fixture === '110_pin_editor.html' || fixture === '104_pin_badges.html?input=1' || fixture === '108_pin_interactions.html?input=1' || [
         '49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
         '63_responsive_edges.html', '65_widget_dialogs.html', '88_volvoconnect.html',
-        '89_volvoconnect_order.html', '96_popup_scroll.html', '119_eventmonitor.html'].includes(fixture.split('?')[0]);
+        '89_volvoconnect_order.html', '96_popup_scroll.html', '119_eventmonitor.html',
+        '122_freeform_groups.html'].includes(fixture.split('?')[0]);
       const interact = !interactive ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
@@ -555,6 +558,60 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
+        if (fixture.startsWith('122_freeform_groups.html')) {
+          const point = async id => evaluate(`(() => {
+            const bounds = window.freeformGroups.card(${JSON.stringify(id)}).getBoundingClientRect();
+            return {x:bounds.x+bounds.width/2,y:bounds.y+bounds.height/2};
+          })()`);
+          const mouseClick = async (id,modifiers = 0) => {
+            const p = await point(id);
+            await command('Input.dispatchMouseEvent',{type:'mousePressed',...p,button:'left',clickCount:1,modifiers});
+            await command('Input.dispatchMouseEvent',{type:'mouseReleased',...p,button:'left',clickCount:1,modifiers});
+          };
+          await mouseClick('a');
+          await mouseClick('b',4);
+          assert.equal(await evaluate('window.freeformGroups.selected()'),'a,b','real Meta-click selects both');
+          const before = await evaluate('window.freeformGroups.saves.length');
+          const start = await point('b');
+          const scale = await evaluate('window.freeformGroups.card("a").getBoundingClientRect().width / 100');
+          const target = await evaluate(`document.elementFromPoint(${start.x},${start.y})?.outerHTML`);
+          await command('Input.dispatchMouseEvent',{type:'mousePressed',...start,button:'left',clickCount:1});
+          await pause(30);
+          await command('Input.dispatchMouseEvent',{type:'mouseMoved',x:start.x+100*scale,y:start.y+50*scale,button:'left',buttons:1,modifiers:1});
+          await pause(30);
+          await command('Input.dispatchMouseEvent',{type:'mouseReleased',x:start.x+100*scale,y:start.y+50*scale,button:'left',clickCount:1,modifiers:1});
+          const saved = await evaluate('window.freeformGroups.saves.at(-1)');
+          assert.equal(await evaluate('window.freeformGroups.saves.length'),before+1,
+            `${fixture}: drag target ${target}; ${JSON.stringify(await evaluate('window.freeformGroups.events'))}`);
+          assert.deepEqual(saved.map(entry => [entry.id,entry.rect.x,entry.rect.y]),[['a',200,150],['b',400,250]],
+            'real captured pointer translates both widgets in Canvas pixels');
+          assert.equal(await evaluate('window.freeformGroups.selected()'),'a,b','drag release retains selection');
+          await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+          await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+          assert.equal(await evaluate('window.freeformGroups.selected()'),'');
+          await command('Emulation.setTouchEmulationEnabled',{enabled:true});
+          const toggle = await evaluate(`(() => {
+            const bounds=document.querySelector('[aria-label="Mehrfachauswahl umschalten"]').getBoundingClientRect();
+            return {x:bounds.x+bounds.width/2,y:bounds.y+bounds.height/2};
+          })()`);
+          const tap = async p => {
+            await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...p,id:1}]});
+            await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+            await pause(80);
+          };
+          await tap(toggle);
+          await tap(await point('a'));
+          await tap(await point('c'));
+          assert.equal(await evaluate('window.freeformGroups.selected()'),'a,c','real touch selects with the toggle');
+          const touchStart = await point('c');
+          await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...touchStart,id:1}]});
+          await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:touchStart.x+50*scale,y:touchStart.y+20*scale,id:1}]});
+          await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+          const touchSaved = await evaluate('window.freeformGroups.saves.at(-1)');
+          assert.deepEqual(touchSaved.map(entry => [entry.id,entry.rect.x,entry.rect.y]),[['a',150,120],['c',650,420]],
+            'touch moves the selection without leaving multi-select mode');
+          return;
+        }
         if (fixture === '119_eventmonitor.html') {
           await evaluate(`(async () => {
             history.replaceState(null, '', '/www/fhem-cms/CMS/index.html');
@@ -1268,7 +1325,11 @@ for (const [name, fixtures] of [
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture.startsWith('120_system_monitor.html')
+        fixture.startsWith('122_freeform_groups.html')
+          ? command => command('Emulation.setDeviceMetricsOverride', {
+            width:fixture.includes('width=390') ? 390 : 1440,height:1000,deviceScaleFactor:1,mobile:false,
+          })
+          : fixture.startsWith('120_system_monitor.html')
           ? command => command('Emulation.setDeviceMetricsOverride', {
             width:Number(new URLSearchParams(fixture.split('?')[1]).get('width') || 1440),
             height:1000,deviceScaleFactor:1,mobile:false,

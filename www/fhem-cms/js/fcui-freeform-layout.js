@@ -81,6 +81,48 @@ export function validateFreeformWidget(widget, canvas) {
   if (hideOnMobile !== undefined && typeof hideOnMobile !== 'boolean') {
     throw new Error('Ungültige Einstellung für die mobile Sichtbarkeit');
   }
+  if (Object.hasOwn(widget, 'groupId')
+    && (typeof widget.groupId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(widget.groupId))) {
+    throw new Error('Ungültige Widget-Gruppe');
+  }
+}
+
+export function freeformSelection(page, ids) {
+  if (!isFreeform(page) || !Array.isArray(ids) || !ids.length || new Set(ids).size !== ids.length) {
+    throw new Error('Gültige Freeform-Auswahl erforderlich');
+  }
+  const selected = ids.map(id => page.widgets.find(widget => widget.id === id));
+  if (selected.some(widget => !widget)) throw new Error('Unbekanntes Widget in der Auswahl');
+  const groups = new Set(selected.map(widget => widget.groupId).filter(Boolean));
+  return page.widgets.filter(widget => ids.includes(widget.id) || groups.has(widget.groupId));
+}
+
+export function freeformBounds(widgets) {
+  const x = Math.min(...widgets.map(widget => widget.rect.x));
+  const y = Math.min(...widgets.map(widget => widget.rect.y));
+  return {x, y, w: Math.max(...widgets.map(widget => widget.rect.x + widget.rect.w)) - x,
+    h: Math.max(...widgets.map(widget => widget.rect.y + widget.rect.h)) - y};
+}
+
+export function translateFreeformWidgets(widgets, dx, dy, canvas) {
+  const bounds = freeformBounds(widgets);
+  const fitted = fitFreeformRect({...bounds, x: bounds.x + dx, y: bounds.y + dy}, canvas);
+  if (bounds.w > canvas.width || bounds.h > canvas.height) throw new Error('Gruppe passt nicht auf den Ziel-Canvas');
+  return widgets.map(widget => ({id: widget.id, rect: {...widget.rect,
+    x: widget.rect.x + fitted.x - bounds.x, y: widget.rect.y + fitted.y - bounds.y}}));
+}
+
+export function setFreeformGroup(page, ids, groupId) {
+  const widgets = freeformSelection(page, ids);
+  if (page.renderAsPins === true) throw new Error('Gruppierung ist auf Pin-Seiten nicht verfügbar');
+  if (groupId !== undefined) {
+    if (widgets.length < 2) throw new Error('Mindestens zwei Widgets zum Gruppieren auswählen');
+    validateFreeformWidget({...widgets[0], groupId}, page.canvas);
+  }
+  for (const widget of widgets) {
+    if (groupId === undefined) delete widget.groupId;
+    else widget.groupId = groupId;
+  }
 }
 
 export function freeformScale(canvas, width, height) {

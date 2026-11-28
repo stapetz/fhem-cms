@@ -10,7 +10,7 @@ import { createSchema5Transport } from './fcui-schema5-transport.js';
 import { createSchema5WidgetServices } from './widget-services.js';
 import { applySchema5GridItems, arrangeSchema5Widgets, schema5GridItems } from './fcui-schema5-layout.js';
 import { DevicePreview } from './device-preview.js';
-import { applyCmsPageCanvas, cmsPageCanvas, isFreeform } from './fcui-freeform-layout.js';
+import { applyCmsPageCanvas, cmsPageCanvas, isFreeform, setFreeformGroup } from './fcui-freeform-layout.js';
 import { measureSchema5Navigation } from './fcui-schema5-navigation-fit.js';
 import { isSchema5InitialSetup, Schema5SetupWizard } from './fcui-schema5-setup-wizard.js';
 import { createCmsAdminMenuLinks } from './cms-admin-link.js';
@@ -355,6 +355,16 @@ export class Schema5Editor {
         showGrid: () => this.#showGrid,
         selectedWidget: this.#freeformSelection?.pageId === (this.#browser.location.hash.slice(2) || config.pages[0].id)
           ? this.#freeformSelection.id : undefined,
+        selectedWidgets: this.#freeformSelection?.pageId === (this.#browser.location.hash.slice(2) || config.pages[0].id)
+          ? this.#freeformSelection.ids : undefined,
+        onFreeformChanges: (pageId, changes, ids) => {
+          this.#layoutSavePromise = this.#saveFreeformSelection(pageId, changes, ids);
+          return this.#layoutSavePromise;
+        },
+        onGroupChange: (pageId, ids, grouped) => {
+          this.#layoutSavePromise = this.#saveFreeformSelection(pageId, [], ids, grouped);
+          return this.#layoutSavePromise;
+        },
         onFreeformChange: (pageId, id, rect, hide, position) => {
           this.#layoutSavePromise = this.#saveFreeform(pageId, id, rect, hide, position);
           return this.#layoutSavePromise;
@@ -500,6 +510,33 @@ export class Schema5Editor {
         if (hide !== undefined) widget.hideOnMobile = hide;
       }
       this.#freeformSelection = {pageId, id};
+      const result = await this.#controller.saveDraft(candidate, state.token);
+      await this.#display(result, generation);
+    } catch (error) {
+      if (generation === this.#generation) this.#error(error);
+    } finally {
+      this.#layoutSaving = false;
+    }
+  }
+
+  async #saveFreeformSelection(pageId, changes, ids, grouped) {
+    if (!this.#active || this.#suspended || !this.#view || this.#layoutSaving) return;
+    this.#layoutSaving = true;
+    const generation = ++this.#generation;
+    this.#view.lock();
+    this.#setActions(false, false);
+    try {
+      const state = this.#controller.snapshot();
+      const candidate = state.draft || state.live;
+      const page = candidate.pages.find(entry => entry.id === pageId);
+      if (!isFreeform(page)) throw new Error('Freeform-Seite erforderlich');
+      for (const {id, rect} of changes) {
+        const widget = page.widgets.find(entry => entry.id === id);
+        if (!widget) throw new Error('Unbekanntes Widget');
+        widget.rect = rect;
+      }
+      if (grouped !== undefined) setFreeformGroup(page, ids, grouped ? this.#browser.crypto.randomUUID() : undefined);
+      this.#freeformSelection = {pageId, ids};
       const result = await this.#controller.saveDraft(candidate, state.token);
       await this.#display(result, generation);
     } catch (error) {

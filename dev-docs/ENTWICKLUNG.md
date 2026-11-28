@@ -31,6 +31,34 @@ Minuten ausgelegte Cache fasst parallele Anfragen zusammen; bei einem Ausfall
 bleibt der vorige Stand gekennzeichnet sichtbar. Warnungen haben einen eigenen
 Verfügbarkeitsstatus. Externe Texte werden ausschließlich als Text eingefügt.
 
+## Freeform-Mehrfachauswahl und Gruppen (dev, Refs #227)
+
+Schema 6 erlaubt auf Freeform-Widgets optional `groupId` als String mit
+`[A-Za-z0-9_-]{1,64}`. Die Kennung gilt nur innerhalb ihrer Seite und ist
+keine Widget-ID oder Device-Referenz. Alte Daten ohne Kennung bleiben identisch.
+Client und Perl validieren das Feld; Rasterwidgets erlauben es nicht.
+Gruppenwahl expandiert auf alle Mitglieder. Eine gemeinsame Translation wird
+an der Gesamt-Boundingbox begrenzt und in einer einzigen versionierten
+Entwurfstransaktion gespeichert. `rect.z`, Größen, Widget-IDs und Inhalte
+bleiben erhalten. Escape/Pointercancel speichern nicht.
+
+Die Auswahl ist flüchtig; nur Gruppierungen sind persistent. Gruppen können
+zusammengeführt/aufgelöst werden. Kopieren/Vorlagen-Einfügen entfernt die
+Gruppenzuordnung, Widget-Konfigurationsänderungen behalten sie. Beim Löschen
+eines vorletzten Mitglieds wird die verbleibende Einzelzuordnung entfernt.
+Beim Wechsel ins Raster wird `groupId` entfernt. Transfer erfolgt nur zwischen
+Freeform-Seiten ohne Pin-Modus; zu kleine Ziel-Canvas und Widgetlimits werden
+vor dem Schreiben abgelehnt. Zielseitige Kennungskollisionen werden für die
+gesamte Gruppe gemeinsam umbenannt, ohne fremde Zielgruppen zu verbinden.
+Navigation, Pins, Gruppen-Resize und separate Phone-Geometrie sind nicht Teil
+dieses Umfangs.
+
+Regressionen: `node --test t/122_freeform_groups.test.js`,
+`node --test --test-name-pattern='Freeform groups|Freeform layout' t/35_schema5_scaling.test.js`
+und `prove t/91_schema6_validation.t t/92_schema6_persistence.t`.
+Erwartet: gemeinsame unverzerrte Translation, unveränderte Live-Daten,
+persistente Gruppen und explizite Ablehnung ungültiger Transfers.
+
 ## FHEM- und Systemstatus (dev)
 
 `system-monitor` wird in Schema 5/6 und Widget-Vorlagen validiert.

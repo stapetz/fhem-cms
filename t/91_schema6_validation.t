@@ -26,6 +26,9 @@ my $config = {
     ],
 };
 my $bytes = $json->encode($config);
+my $groupOnGrid = $json->decode($bytes);
+$groupOnGrid->{pages}[0]{widgets}[0]{groupId} = 'group';
+like(FHEMCMS_ValidateConfig($groupOnGrid, 6), qr/Widget-Gruppe/, 'grouping rejected on a grid widget');
 for my $schema (5, 6) {
     my $graph = $json->decode($bytes);
     pop(@{$graph->{pages}});
@@ -222,6 +225,8 @@ for my $case (
     ['vertical overflow', sub { $_[1]{rect}{y} = 1 }, qr/Koordinaten/],
     ['out-of-range layer', sub { $_[1]{rect}{z} = 10000 }, qr/rect\.z/],
     ['numeric boolean', sub { $_[1]{hideOnMobile} = 1 }, qr/hideOnMobile/],
+    ['invalid group string', sub { $_[1]{groupId} = 'bad group' }, qr/Widget-Gruppe/],
+    ['numeric group ID', sub { $_[1]{groupId} = 1 }, qr/Widget-Gruppe/],
     ['phase-2 mobile rectangle', sub { $_[1]{mobileRect} = {} }, qr/mobileRect/],
     ['invalid remembered grid position', sub { $_[1]{grid}{col} = 0 }, qr/Rasterwerte/],
     ['invalid existing asset format', sub { $_[0]{background} = 'unknown.png' }, qr/Hintergrundbild/],

@@ -2625,6 +2625,13 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
 .cms-freeform-stack .cms-freeform-widget[hidden] { display: none; }
 .cms-freeform-stack .cms-freeform-widget > :first-child { height: auto; max-width: 100%; }
 .cms-freeform-overlay { position: absolute; inset: 0; z-index: 10002; pointer-events: none; }
+.cms-freeform-selection-tools {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+  padding: .5rem; background: var(--cms-bg); border: 1px solid var(--cms-border);
+  position: sticky; top: 0; z-index: 10003;
+}
+.cms-freeform-selection-tools button { min-height: 48px; }
+.cms-freeform-selection-tools [aria-pressed="true"] { outline: 2px solid var(--cms-accent); }
 .cms-freeform-handles {
   position: absolute;
   border-radius: .5rem;

@@ -607,6 +607,37 @@ Das Widget sendet nur in der normalen Ansicht und nur Befehle/Werte aus dem
 aktuellen Geräteangebot. Laufende Anforderungen sperren die Bedienelemente;
 Fehler bleiben sichtbar. Im Editor wird nicht geschaltet.
 
+### Freeform: Mehrfachauswahl und Gruppen (dev, ab 1.45.0-dev)
+
+Im Bearbeitungsmodus auf freien Pixel-Seiten kannst du mehrere Widgets mit
+**Cmd-Klick** am Mac bzw. **Strg-Klick** unter Windows auswählen. **Alt-Klick**
+ist ebenfalls möglich. Ein weiterer Auswahlklick entfernt das Widget bzw.
+seine ganze Gruppe aus der Auswahl. Für Touch-Geräte gibt es über dem Canvas
+den Schalter **Mehrfachauswahl**; danach Widgets antippen.
+
+Ziehe ein ausgewähltes Widget an seiner Verschiebefläche: Die gesamte Auswahl
+bewegt sich mit unveränderten Abständen und Größen. Pfeiltasten verschieben
+die Auswahl um einen Canvas-Pixel, mit Shift um zehn. Alt während des Ziehens
+deaktiviert wie bisher Raster und Hilfslinien. Die gesamte Auswahl bleibt
+innerhalb des Canvas. Escape bzw. ein abgebrochener Pointer verwirft die Geste;
+Escape ohne aktive Geste hebt die Auswahl auf.
+
+**Gruppieren** speichert die gemeinsame Zuordnung als Entwurf. Ein Klick auf
+ein Mitglied wählt künftig die ganze Gruppe. **Gruppe aufheben** entfernt
+die Zuordnung, nicht die Widgets. **Auf andere Seite** überträgt die gesamte
+Auswahl mit Inhalt und Gruppen auf eine andere Freeform-Seite. Bei kleineren
+Canvas-Maßen wird sie gemeinsam an den Rand geschoben, nicht einzeln skaliert.
+Passt die Gruppe nicht hinein, erscheint eine Fehlermeldung und es wird nichts
+gespeichert. Raster- und Pin-Seiten sind für diesen Gruppentransfer keine Ziele.
+
+Navigation und Pins bleiben einzeln bedienbar. Gruppen haben keine gemeinsamen
+Resize-Griffe; zum Ändern einer einzelnen Größe zunächst die Gruppe aufheben.
+Einzelne Widget-Einstellungen bleiben zugänglich. Eine Widget-Kopie oder
+Vorlagen-Einfügung wird nicht automatisch Mitglied der Quellgruppe.
+Der Wechsel einer Seite ins Raster löst ihre Gruppen auf.
+Alle Änderungen betreffen zunächst nur den Entwurf; Live bleibt bis zur
+Veröffentlichung unverändert.
+
 ### Theme-Manager und Hintergrundbilder
 
 Unter **Bearbeiten → Seiteneinstellungen**

@@ -129,7 +129,7 @@ function validateLayout(config, includeNavigation = true) {
         if (widget.grid !== undefined) geometry(widget.grid, columns);
         continue;
       }
-      if (widget.rect !== undefined || widget.hideOnMobile !== undefined) throw new Error('Freeform-Daten auf einer Rasterseite');
+      if (widget.rect !== undefined || widget.hideOnMobile !== undefined || Object.hasOwn(widget, 'groupId')) throw new Error('Freeform-Daten auf einer Rasterseite');
       const current = geometry(widget.grid, columns);
       if (grids.some((other) => overlaps(current, other))) {
         throw new Error(`Rasterüberschneidung auf Seite ${page.id}`);
@@ -210,6 +210,7 @@ export function changePageLayout(config, pageId, mode, canvas, measurements) {
         delete widget.rect;
         delete widget.hideOnMobile;
         delete widget.position;
+        delete widget.groupId;
       }
       for (const widget of pending) {
         const { w, h } = widget.grid || { w: Math.max(1, columns / 3), h: 3 };

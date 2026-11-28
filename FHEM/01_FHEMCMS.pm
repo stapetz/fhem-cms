@@ -24,7 +24,7 @@ require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndex.pm');
 require File::Spec->catfile(File::Basename::dirname(File::Spec->rel2abs(__FILE__)), 'lib', 'FHEMCMS', 'LogIndexJobs.pm');
 
-our $FHEMCMS_VERSION = '1.44.2-dev';
+our $FHEMCMS_VERSION = '1.45.0-dev';
 our ($readingFnAttributes, $FW_ME);
 our (%attr, %data);
 our $FHEMCMS_MAX_CONFIG_BYTES = 1048576;
@@ -1134,10 +1134,14 @@ sub FHEMCMS_ValidateConfig {
             $optional = [@{$optional}, 'showOnPin', 'visibility'] if ($fcui);
             return $exact->($widget, $where, $required, $optional) if (!$freeform);
             return $exact->($widget, $where, ['rect', grep { $_ ne 'grid' } @{$required}],
-                [@{$optional}, 'grid', 'hideOnMobile', 'forceCard', 'position']);
+                [@{$optional}, 'grid', 'hideOnMobile', 'forceCard', 'position', 'groupId']);
         };
         for my $widget (@{$page->{widgets}}) {
             return 'Widget muss ein Objekt sein' if (ref($widget) ne 'HASH');
+            return 'Ungueltige Widget-Gruppe'
+                if (exists($widget->{groupId}) && (!$freeform || ref($widget->{groupId})
+                    || !defined($widget->{groupId})
+                    || $scalarJson->encode($widget->{groupId}) !~ /\A"[A-Za-z0-9_-]{1,64}"\z/));
             if ($fcui && exists($widget->{visibility})) {
                 my $visibility = $widget->{visibility};
                 $err = $exact->($visibility, 'Sichtbarkeit', ['condition', 'mode'], []);

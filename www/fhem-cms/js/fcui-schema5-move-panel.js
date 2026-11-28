@@ -1,3 +1,5 @@
+import { freeformSelection, isFreeform } from './fcui-freeform-layout.js';
+
 function element(tag, text) {
   const result = document.createElement(tag);
   if (text !== undefined) result.textContent = text;
@@ -12,6 +14,7 @@ export class Schema5MovePanel {
   #token;
   #pageId;
   #widgetId;
+  #widgetIds;
   #onClose;
   #status;
   #select;
@@ -30,20 +33,26 @@ export class Schema5MovePanel {
     if (state.token !== token) throw new Error('Zustand ist veraltet; bitte erneut laden');
     const config = state.draft || state.live;
     const page = config.pages.find((entry) => entry.id === pageId);
-    const widget = page?.widgets.find((entry) => entry.id === widgetId);
+    const ids = Array.isArray(widgetId) ? widgetId : [widgetId];
+    const widget = page?.widgets.find((entry) => entry.id === ids[0]);
     if (!page || !widget) throw new Error('Unbekanntes Widget');
+    const selection = isFreeform(page) ? freeformSelection(page, ids) : [widget];
+    const grouped = selection.length > 1 || Boolean(widget.groupId);
     this.#root = root;
     this.#controller = controller;
     this.#token = token;
     this.#pageId = pageId;
-    this.#widgetId = widgetId;
+    this.#widgetId = widget.id;
+    this.#widgetIds = grouped ? selection.map(entry => entry.id) : null;
     this.#onClose = onClose;
     const name = widget.title || widget.id;
-    const heading = element('h2', 'Widget auf andere Seite verschieben');
-    const hint = element('p', `„${name}“ wird auf der Zielseite unterhalb der vorhandenen Inhalte eingeordnet und als Entwurf gespeichert.`);
+    const heading = element('h2', grouped ? 'Widget-Auswahl auf andere Seite verschieben' : 'Widget auf andere Seite verschieben');
+    const hint = element('p', grouped
+      ? `${selection.length} Widgets werden gemeinsam auf eine andere Freeform-Seite verschoben. Abstände, Inhalte und Gruppen bleiben erhalten. Die Änderung wird als Entwurf gespeichert.`
+      : `„${name}“ wird auf der Zielseite unterhalb der vorhandenen Inhalte eingeordnet und als Entwurf gespeichert.`);
     this.#status = element('p');
     this.#status.setAttribute('role', 'status');
-    const targets = config.pages.filter((entry) => entry.id !== pageId);
+    const targets = config.pages.filter((entry) => entry.id !== pageId && (!grouped || (isFreeform(entry) && entry.renderAsPins !== true)));
     const selectLabel = element('label', 'Zielseite ');
     this.#select = element('select');
     for (const target of targets) {
@@ -64,7 +73,7 @@ export class Schema5MovePanel {
     footer.className = 'cms-panel-footer';
     footer.append(this.#close, this.#move);
     root.append(heading, hint, this.#status, selectLabel, footer);
-    if (!targets.length) this.#statusText('Es gibt keine weitere Seite.', true);
+    if (!targets.length) this.#statusText(grouped ? 'Es gibt keine weitere Freeform-Seite ohne Pin-Darstellung.' : 'Es gibt keine weitere Seite.', true);
     this.#move.addEventListener('click', () => this.#commit());
     this.#close.addEventListener('click', () => {
       if (this.#busy || this.#closed) return;
@@ -102,7 +111,8 @@ export class Schema5MovePanel {
     this.#select.disabled = true;
     this.#statusText('Widget wird verschoben …');
     try {
-      await this.#controller.moveWidget(this.#pageId, target.id, this.#widgetId, grid, this.#token);
+      if (this.#widgetIds) await this.#controller.moveWidgets(this.#pageId, target.id, this.#widgetIds, this.#token);
+      else await this.#controller.moveWidget(this.#pageId, target.id, this.#widgetId, grid, this.#token);
       if (this.#closed) return;
       this.#busy = false;
       const outcome = { requiresReload: false };
