@@ -15,6 +15,15 @@ Speicherbalken
   hinzufuegbaren Datenreihen lassen sich im Entwurf speichern. Sichtbarkeit und
   gleich hohe Eingaben sind direkt je Box zusammengefasst.
 
+2026-11-28 - 1.44.2-dev: Systemmonitor mit klarem Hinweis bei fehlender Quelle
+- Ohne zugreifbares SYSMON-Device zeigen Widget und Konfiguration einen
+  Backend-Einrichtungshinweis statt leerer Werteboxen und Reading-Felder. Refs
+  #267.
+- Die Quellensuche bleibt rein lesend: Das Widget erzeugt keine Devices und
+  waehlt keine Systemquelle eigenmaechtig.
+- Nach Einrichtung der Quelle wechselt die regelmaessige Pruefung wieder zur
+  normalen Darstellung.
+
 2026-11-28 - 1.44.1-dev: Aufgeraeumte Systemmonitor-Details
 - Detailkarten zeigen dieselben formatierten Kennzahlen und validierten
   Speicherbalken wie das Dashboard. Originalwerte bleiben aufklappbar erhalten.
@@ -41,6 +50,13 @@ Speicherbalken
   schliessen.
 - Regressionen pruefen echte API-Zeitformate, wartende History-Anfragen und die
   geaenderte Zeitachse.
+
+2026-11-28 - 1.44.2-dev: Gezogene Graphposition bleibt beim Nachladen erhalten
+- Groessenaenderungen zeichnen waehrend Pan und Nachladen nicht mehr die alte
+  unverschobene Kurve neu. Refs #266.
+- Weitere Pan-Gesten auf der noch wartenden alten Datenbasis werden
+  unterdrueckt; neue Daten ersetzen die gezogene Kurve nach erfolgreichem
+  Laden.
 
 2026-11-27 - 1.41.0-dev: Bedingungen fuer Widgets und Textbereiche
 - Ein gemeinsamer Bedingungsdialog steuert Widget-Sichtbarkeit sowie
