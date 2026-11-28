@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-28",
+  "version": "1.44.0-dev",
+  "title": "Werte-Popups mit Klick und gehaltener Beruehrung",
+  "changes": [
+    "Graphen und Diagramme inklusive System-Mini-Charts zeigen Werte am Desktop nach Klick; ein weiterer Klick deaktiviert die Mausverfolgung. Refs #266.",
+    "Touch zeigt Werte nur waehrend der Beruehrung. Loslassen, Abbruch und Zweifinger-Pan blenden Popup und Markierung aus.",
+    "Ein-Finger-Zeitraumauswahl, vertikales Scrollen und Leertaste-Maus-Pan bleiben erhalten; Vorschau und Torten verwenden dieselbe Bedienung."
+  ]
+}

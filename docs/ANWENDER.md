@@ -428,7 +428,7 @@ Werten oder gekürzten Daten erscheint eine Fehlermeldung.
 Bei Torten ist **Bezeichner und Wert im Tortenstück einblenden** standardmäßig
 aktiviert. Die zweizeilige Beschriftung verwendet den konfigurierten Reihenbezeichner und das
 Werteformat der Reihe und passt sich dem Segment an. Bei sehr kleinen
-Segmenten wird die Schrift entsprechend klein; Legende und Mouseover bleiben
+Segmenten wird die Schrift entsprechend klein; Legende und Werte-Popup bleiben
 verfügbar. Die Beschriftung lässt sich im Konfigurationsdialog ausschalten.
 Alle Graph-Typen laden ihre Daten automatisch alle fünf Minuten nach.
 Relative Zeiträume wie „24 Stunden“ wandern dabei mit; eigene Von-/Bis-Bereiche
@@ -464,25 +464,32 @@ gewählt oder durch Ziehen im Diagramm markiert werden. Auch die Auflösung und
 das Raster lassen sich in der Ansicht ändern. Wochen, Monate und Jahre werden
 als Kalenderzeiträume ausgewertet. Für jede Reihe eines Liniendiagramms sind Achsseite, Linientyp,
 Linienstärke und eine Flächenfüllung konfigurierbar; die Y-Achsen links und
-rechts besitzen getrennte automatische Wertebereiche. Beim Bewegen der Maus
-zeigt das Diagramm die jeweils nächstgelegenen Messwerte.
-Im Entwicklungsstand 1.40.1-dev zeigt auf Touchgeräten ein kurzes Antippen
-die Detailwerte; bei Torten erscheint der Wert des angetippten Segments. Die
-Anzeige bleibt nach dem Loslassen sichtbar. Ein horizontales Ziehen im Linien-
+rechts besitzen getrennte automatische Wertebereiche. Nach Aktivierung per
+Klick zeigt das Diagramm beim Bewegen der Maus die nächstgelegenen Messwerte.
+Auf Touchgeräten zeigt die Berührung die Detailwerte; bei Torten erscheint
+der Wert des berührten Segments. Loslassen blendet die Werte aus.
+Ein horizontales Ziehen im Linien-
 oder Stapeldiagramm wählt weiterhin einen Zeitraum; vertikales Wischen scrollt.
 Dies gilt auch für die Vorschau, die keine Bereichsauswahl anbietet.
 Ab 1.41.0-dev lässt sich die Ansicht im Linien- und Stapeldiagramm zeitlich
 verschieben: auf Touchgeräten mit zwei Fingern, am Desktop mit gehaltener
 Leertaste und gedrückter Maustaste (der Mauszeiger wird dabei zur Hand). Nach
-rechts erreicht das Verschieben höchstens den aktuellen Zeitpunkt; in die
+rechts ziehen zeigt ältere Daten, nach links geht es bis zum aktuellen Zeitpunkt; in die
 Zukunft lässt sich nicht verschieben. Beim Loslassen wird der verschobene
 Zeitraum als eigener Zeitraum geladen. Während Daten aus FileLog oder DbLog
 geladen werden, dreht mittig auf dem Diagramm ein Ladesymbol.
-Das Mouseover-Fenster steht in der linken Diagrammhälfte rechts der
+Werte-Popups in Graphen und Diagrammen (auch den System-Mini-Charts) werden
+am Desktop mit einem einfachen Klick aktiviert. Danach folgt die Werteanzeige
+der Maus; ein weiterer Klick schaltet sie aus. Reines Darüberfahren zeigt
+kein Popup. Auf Touch-Geräten erscheinen Werte während der Berührung und
+verschwinden beim Loslassen oder Abbruch. Ein zweiter Finger schaltet die
+Werteanzeige aus und beginnt das Verschieben; horizontales Einfinger-Ziehen
+behält beim Graph-Widget die Zeitraumauswahl.
+Das Werte-Popup steht in der linken Diagrammhälfte rechts der
 Markierungslinie, ab der Mitte links davon.
-Im Mouseover steht das Datum mit Jahr und Uhrzeit einmal oben; maßgeblich ist
+Im Graph-Popup steht das Datum mit Jahr und Uhrzeit einmal oben; maßgeblich ist
 der neueste der angezeigten Messzeitpunkte.
-Das Mouseover zeigt zusätzlich Summen dieser angezeigten Rohwerte, getrennt
+Das Graph-Popup zeigt zusätzlich Summen dieser angezeigten Rohwerte, getrennt
 nach Achse und Einheit und mit dem Zeichen ∑. Die größte Nachkommazahl der
 angezeigten Reihen einer Gruppe bestimmt die Darstellung der Summe;
 ausgeblendete und leere Reihen zählen nicht mit.

@@ -11,6 +11,16 @@ import { openDevicePicker } from '../www/fhem-cms/js/device-picker.js';
 const result = document.querySelector('#result');
 let checks = 0;
 const check = (condition, message) => { if (!condition) throw new Error(message); checks++; };
+const inspectValues = (node, clientX) => {
+  const target = node.closest('svg');
+  target.valueProbe.clear();
+  const capture = target.setPointerCapture;
+  target.setPointerCapture = () => {};
+  try {
+    for (const type of ['pointerdown','pointerup','pointermove']) node.dispatchEvent(new PointerEvent(type,
+      {bubbles:true,pointerId:1,pointerType:'mouse',button:0,clientX,clientY:target.getBoundingClientRect().top+40}));
+  } finally { target.setPointerCapture = capture; }
+};
 const until = async (condition, message) => {
   for (let i = 0; i < 150; i++) {
     if (condition()) return;
@@ -190,7 +200,7 @@ try {
   form.elements.stackLinear.checked = false;
   check(!Object.hasOwn(graph.collect(), 'stackLinear'), 'disabled linear stack does not change legacy configurations');
   const stackBounds = stackPreview.getBoundingClientRect();
-  stackPreview.onpointermove({clientX:stackBounds.left + stackBounds.width/2});
+  inspectValues(stackPreview,stackBounds.left + stackBounds.width/2);
   check(root.querySelector('[data-preview-tooltip]').textContent.includes(' W')
     && root.querySelector('[data-preview-tooltip]').textContent.includes(' °C'),
     'stacked preview measurements retain their per-reading units');
@@ -221,12 +231,12 @@ try {
     'pie labels cannot be disabled in preview');
   const pieShape = root.querySelector('[data-preview] path');
   const pieBox = root.querySelector('[data-preview]').getBoundingClientRect();
-  pieShape.onpointermove({clientX:pieBox.left + pieBox.width / 2});
+  inspectValues(pieShape,pieBox.left + pieBox.width / 2);
   check(!root.querySelector('[data-preview-tooltip]').hidden
     && root.querySelector('[data-preview-tooltip]').textContent.includes('2.50')
     && pieShape.getAttribute('aria-label').includes('2.50') && !pieShape.querySelector('title'),
     'pie hover displays the formatted raw average without a native tooltip');
-  pieShape.onpointerleave();
+  root.querySelector('[data-preview]').dispatchEvent(new PointerEvent('pointerleave'));
   check(root.querySelector('[data-preview-tooltip]').hidden, 'pie tooltip hides after pointer leaves');
   root.querySelector('[data-format]').append(new Option('invalid', 'round(7)'));
   root.querySelector('[data-format]').value = 'round(7)';
@@ -331,7 +341,7 @@ try {
     'line points do not cause a second native browser tooltip');
   check(!plot.querySelector('line[opacity="0.2"]'), 'grid can be hidden');
   const box = plot.getBoundingClientRect();
-  plot.onpointermove({clientX:box.left + box.width / 2});
+  inspectValues(plot,box.left + box.width / 2);
   check(!root.querySelector('[data-tooltip]').hidden && root.querySelector('[data-tooltip]').textContent.includes('Dach: -1')
     && root.querySelector('[data-tooltip]').textContent.includes('Garten: 100.00'), 'hover shows formatted values for both series');
   check(root.querySelector('[data-tooltip]').textContent.includes('Dach: -1 W')
@@ -350,7 +360,7 @@ try {
   graph.style.transformOrigin = 'top left';
   graph.style.transform = 'scale(.5)';
   const scaledBox = plot.getBoundingClientRect();
-  plot.onpointermove({clientX:scaledBox.left + scaledBox.width * .75});
+  inspectValues(plot,scaledBox.left + scaledBox.width * .75);
   const tooltip = root.querySelector('[data-tooltip]');
   check(parseFloat(getComputedStyle(tooltip).fontSize) * .5 >= 12
     && parseFloat(getComputedStyle(tooltip).fontSize) * .5 <= 13,
@@ -402,7 +412,7 @@ try {
       check([...svg.querySelectorAll('[data-time-tick]')].every(tick => sample.axis.test(tick.textContent)),
         `${sample.name}: X-axis uses the range-specific time format in ${selector}`);
       const bounds = svg.getBoundingClientRect();
-      svg.onpointermove({clientX:bounds.left + bounds.width / 2});
+      inspectValues(svg,bounds.left + bounds.width / 2);
       const tip = root.querySelector(tipSelector);
       check(/^\d{2}\.\d{2}\.\d{4},? \d{2}:\d{2}$/.test(tip.querySelector('strong').textContent)
         && [...tip.querySelectorAll('div:not([data-graph-total])')].every(row => !row.textContent.includes(' · ')),
@@ -430,7 +440,7 @@ try {
     const sumData = [{points:[[relativeStart,2],[relativeStart+10,5]]},
       {points:[[relativeStart,3],[relativeStart+10,8]]}, {points:[[relativeStart,20]]}, {points:[]}];
     graph.draw(sumConfig, sumData, '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
-    const hoverStart = () => plot.onpointermove({clientX:plot.getBoundingClientRect().left});
+    const hoverStart = () => inspectValues(plot,plot.getBoundingClientRect().left);
     hoverStart();
     check(root.querySelector('[data-tooltip]').textContent.includes('∑: 5.00 W')
       && root.querySelector('[data-tooltip]').textContent.includes('∑: 20.00 °C'),
@@ -469,7 +479,7 @@ try {
   ], '[data-svg]', '[data-legend]', root.querySelector('[data-status]'), new Set());
   check(plot.querySelectorAll('[data-pie-label]').length === 2, 'old configs without a pie label option default to visible');
   const livePie = plot.querySelector('path');
-  livePie.onpointermove({clientX:plot.getBoundingClientRect().left + 20});
+  inspectValues(livePie,plot.getBoundingClientRect().left + 20);
   check(!tooltip.hidden && tooltip.textContent.includes('Dach: 1'),
     'live pie uses the formatted custom tooltip');
   check(tooltip.textContent.includes('Dach: 1 W') && plot.querySelector('[data-pie-label]').textContent.includes('1 W'),

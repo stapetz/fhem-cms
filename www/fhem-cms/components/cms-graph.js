@@ -5,6 +5,7 @@ import { showCmsModal } from '../js/modal-dialog.js';
 import { widgetDesignCss } from '../js/widget-design.js';
 import { closeButtonSvg } from '../js/close-button.js';
 import { createSpacebarPan, createTimePan } from '../js/pan-gesture.js';
+import { createValueProbe } from '../js/value-probe.js';
 import { unitInputCss, unitSuggestions } from '../js/unit-input.js';
 import { formatDateDisplay } from '../js/date-display.js';
 
@@ -165,6 +166,7 @@ class FHEMCMSGraph extends HTMLElement {
   }
 
   disconnectedCallback() {
+    for (const target of this.shadowRoot.querySelectorAll('[data-svg],[data-preview]')) target.valueProbe?.dispose();
     this.timePan?.dispose();
     this.timePan = null;
     this.request++;
@@ -458,6 +460,7 @@ class FHEMCMSGraph extends HTMLElement {
 
   draw(config, data, selector, legendSelector, status, hidden) {
     const target = this.shadowRoot.querySelector(selector);
+    target.valueProbe?.dispose();
     const legend = this.shadowRoot.querySelector(legendSelector);
     this.drawStates.set(selector, {config, data, legendSelector, status, hidden});
     const width = Math.max(120, Math.min(5000, target.clientHeight ? 220 * target.clientWidth / target.clientHeight : 400));
@@ -536,14 +539,6 @@ class FHEMCMSGraph extends HTMLElement {
         }
         const description = `${label(item.row)}: ${measurement(value, item.row)}`;
         shape.setAttribute('aria-label', description);
-        const showSlice = event => {
-          tooltip.textContent = description;
-          positionTooltip(event);
-        };
-        shape.onpointermove = showSlice;
-        shape.onpointerup = event => { if (event.pointerType === 'touch') showSlice(event); };
-        shape.onpointerleave = event => { if (event?.pointerType !== 'touch') tooltip.hidden = true; };
-        shape.onpointercancel = () => { tooltip.hidden = true; };
         target.append(shape);
         if (config.showPieLabels !== false) {
           const middle = (angle + next) / 2;
@@ -572,6 +567,15 @@ class FHEMCMSGraph extends HTMLElement {
         text.setAttribute('transform', `translate(${cx} ${cy}) scale(${scale}) translate(${-box.x-box.width/2} ${-box.y-box.height/2})`);
       }
       status.textContent = values.some(value => value === null) ? 'Einige Datenreihen enthalten keine Werte.' : warnings;
+      target.valueProbe = createValueProbe(target, {
+        show:event => {
+          const description = event.target.closest('[aria-label]')?.getAttribute('aria-label');
+          if (!description || event.target === target) { tooltip.hidden = true; return; }
+          tooltip.textContent = description;
+          positionTooltip(event);
+        },
+        hide:() => { tooltip.hidden = true; },
+      });
       return;
     }
     const points = visible.map(item => item.result.points || []);
@@ -791,13 +795,6 @@ class FHEMCMSGraph extends HTMLElement {
         selection.setAttribute('width', Math.abs(px-dragStart));
         return;
       }
-      showValues(event);
-    };
-    target.onpointerleave = event => {
-      if (dragStart === null && event?.pointerType !== 'touch') {
-        crosshair.setAttribute('hidden', '');
-        tooltip.hidden = true;
-      }
     };
     target.onpointerdown = live ? event => {
       if (event.button !== 0) return;
@@ -808,7 +805,6 @@ class FHEMCMSGraph extends HTMLElement {
     } : null;
     target.onpointerup = event => {
       if (dragStart === null) {
-        if (selector !== '[data-svg]' && event.pointerType === 'touch') showValues(event);
         return;
       }
       const end = position(event), start = dragStart;
@@ -817,7 +813,6 @@ class FHEMCMSGraph extends HTMLElement {
       dragStartX = null;
       selection.setAttribute('hidden', '');
       if (touchTap || Math.abs(end-start) < 3) {
-        if (event.pointerType === 'touch') showValues(event);
         return;
       }
       const range = `${Math.floor(timestamp(Math.min(start,end)))}_${Math.ceil(timestamp(Math.max(start,end)))}`;
@@ -831,11 +826,16 @@ class FHEMCMSGraph extends HTMLElement {
       crosshair.setAttribute('hidden', '');
       tooltip.hidden = true;
     };
+    target.valueProbe = createValueProbe(target, {
+      show:showValues,
+      hide:() => { crosshair.setAttribute('hidden',''); tooltip.hidden = true; },
+    });
     if (live) this.timePan = createTimePan(target, {
       controller:panController,
       bounds:rangeWindow,
       plotWidth:() => target.getBoundingClientRect().width * (right - left) / width,
       start:() => {
+        target.valueProbe.clear();
         dragStart = dragStartX = null;
         selection.setAttribute('hidden', '');
         crosshair.setAttribute('hidden', '');

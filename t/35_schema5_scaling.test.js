@@ -47,16 +47,18 @@ test('graph touch taps show values without breaking range selection or scrolling
       const tap = async fraction => {
         const point = await evaluate(`window.graphTouch.point(${fraction})`);
         await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...point,id:1}]});
+        const held = await evaluate('window.graphTouch.tip()');
         await command('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
         await pause(80);
-        return evaluate('window.graphTouch.tip()');
+        assert.equal((await evaluate('window.graphTouch.tip()')).hidden,true,'touch release hides values');
+        return held;
       };
       for (const [width,height,scale] of [[390,844,1], [834,1194,.5]]) {
         await command('Emulation.setDeviceMetricsOverride', {width,height,deviceScaleFactor:1,mobile:false});
         for (const type of ['line','stack','pie']) {
           await evaluate(`window.graphTouch.draw('${type}',false,${scale})`);
           const tip = await tap(type === 'pie' ? .5 : .85);
-          assert.equal(tip.hidden, false, `${width}: ${type} touch tooltip stays visible after release`);
+          assert.equal(tip.hidden, false, `${width}: ${type} touch tooltip shows while held`);
           assert.match(tip.text, /Solar: 9 W/, `${width}: ${type} displays the selected value`);
           if (type !== 'pie') {
             assert.match((await tap(.15)).text, /Solar: 1 W/, `${width}: another tap selects another value`);
@@ -66,7 +68,7 @@ test('graph touch taps show values without breaking range selection or scrolling
       for (const type of ['line','stack','pie']) {
         await evaluate(`window.graphTouch.draw('${type}',true,1)`);
         const tip = await tap(type === 'pie' ? .5 : .85);
-        assert.equal(tip.hidden, false, `preview ${type} touch tooltip stays visible`);
+        assert.equal(tip.hidden, false, `preview ${type} touch tooltip shows while held`);
         assert.match(tip.text, /Solar: 9 W/);
       }
       await evaluate("window.graphTouch.draw('line',false,1)");
@@ -76,7 +78,7 @@ test('graph touch taps show values without breaking range selection or scrolling
       await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...start,id:1}]});
       await command('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{x:start.x+4,y:start.y,id:1}]});
       await command('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
-      assert.equal((await evaluate('window.graphTouch.tip()')).hidden, false, 'small finger movement remains a tap');
+      assert.equal((await evaluate('window.graphTouch.tip()')).hidden, true, 'small finger movement clears popup on release');
       assert.equal(await evaluate('window.graphTouch.calls()'), before, 'a tap never reloads the history');
       await command('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{...start,id:1}]});
       await command('Input.dispatchTouchEvent', {type:'touchCancel',touchPoints:[]});
@@ -146,18 +148,33 @@ test('graph touch taps show values without breaking range selection or scrolling
       await evaluate("window.scrollTo(0,0); window.graphTouch.draw('line',false,1)");
       const leftPoint = await evaluate('window.graphTouch.point(.25)');
       await command('Input.dispatchMouseEvent', {type:'mouseMoved', x:leftPoint.x, y:leftPoint.y});
+      assert.equal((await evaluate('window.graphTouch.tip()')).hidden,true,'hover alone does not activate values');
+      await command('Input.dispatchMouseEvent', {type:'mousePressed',...leftPoint,button:'left',clickCount:1});
+      await command('Input.dispatchMouseEvent', {type:'mouseReleased',...leftPoint,button:'left',clickCount:1});
       const leftTip = await evaluate('window.graphTouch.tipBox()');
-      assert.equal(leftTip.hidden, false, 'hover in the left half shows the tooltip');
+      assert.equal(leftTip.hidden, false, 'first click activates mouse tracking');
       assert.ok(leftTip.left >= leftPoint.x, 'tooltip sits right of the cursor line in the left half');
       const rightPoint = await evaluate('window.graphTouch.point(.75)');
       await command('Input.dispatchMouseEvent', {type:'mouseMoved', x:rightPoint.x, y:rightPoint.y});
       const rightTip = await evaluate('window.graphTouch.tipBox()');
       assert.ok(rightTip.right <= rightPoint.x, 'tooltip sits left of the cursor line in the right half');
+      await command('Input.dispatchMouseEvent', {type:'mousePressed',...rightPoint,button:'left',clickCount:1});
+      await command('Input.dispatchMouseEvent', {type:'mouseReleased',...rightPoint,button:'left',clickCount:1});
+      await command('Input.dispatchMouseEvent', {type:'mouseMoved',...leftPoint});
+      assert.equal((await evaluate('window.graphTouch.tip()')).hidden,true,'second click disables subsequent mouse tracking');
       for (const kind of ['graph','chart']) for (const scale of [1,.5]) {
         await command('Emulation.setDeviceMetricsOverride', {width:900,height:1000,deviceScaleFactor:1,mobile:false});
         await command('Emulation.setTouchEmulationEnabled', {enabled:false});
         await evaluate(`window.graphTouch.livePan('${kind}',${scale})`);
         let point = await evaluate('window.graphTouch.livePoint(.5)');
+        await command('Input.dispatchMouseEvent', {type:'mouseMoved',...point});
+        assert.equal((await evaluate('window.graphTouch.liveTip()')).hidden,true,`${kind}: no hover-only popup`);
+        await command('Input.dispatchMouseEvent', {type:'mousePressed',...point,button:'left',clickCount:1});
+        await command('Input.dispatchMouseEvent', {type:'mouseReleased',...point,button:'left',clickCount:1});
+        assert.equal((await evaluate('window.graphTouch.liveTip()')).hidden,false,`${kind}: click activates values`);
+        await command('Input.dispatchMouseEvent', {type:'mousePressed',...point,button:'left',clickCount:1});
+        await command('Input.dispatchMouseEvent', {type:'mouseReleased',...point,button:'left',clickCount:1});
+        assert.equal((await evaluate('window.graphTouch.liveTip()')).hidden,true,`${kind}: second click hides values`);
         await command('Input.dispatchMouseEvent', {type:'mouseMoved',...point});
         await command('Input.dispatchKeyEvent', {type:'keyDown',key:' ',code:'Space',windowsVirtualKeyCode:32});
         await command('Input.dispatchMouseEvent', {type:'mousePressed',...point,button:'left',clickCount:1});
@@ -176,7 +193,9 @@ test('graph touch taps show values without breaking range selection or scrolling
         const a = await evaluate('window.graphTouch.livePoint(.25)');
         const b = await evaluate('window.graphTouch.livePoint(.5)');
         await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...a,id:1}]});
+        assert.equal((await evaluate('window.graphTouch.liveTip()')).hidden,false,`${kind}: held first finger shows values`);
         await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...a,id:1},{...b,id:2}]});
+        assert.equal((await evaluate('window.graphTouch.liveTip()')).hidden,true,`${kind}: second finger clears popup for pan`);
         await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[
           {x:a.x+40,y:a.y-30,id:1},{x:b.x+40,y:b.y-30,id:2}]});
         await pause(80);

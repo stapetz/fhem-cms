@@ -8,6 +8,7 @@ import { dialogGroupStyles, titleVisibilityField } from '../js/dialog-groups.js'
 import { setWidgetStatus, widgetStatusStyles } from '../js/widget-status.js';
 import { createManualFieldTracker, suggestedReading } from '../js/device-suggestions.js';
 import { createSpacebarPan, createTimePan } from '../js/pan-gesture.js';
+import { createValueProbe } from '../js/value-probe.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const REFRESH_MS = 300000;
@@ -95,6 +96,10 @@ class FHEMCMSChart extends HTMLElement {
         .message { position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
           color: var(--cms-muted, #a5c9b2); font-size: 1em; padding: 0.5rem; pointer-events:none; }
         .message[hidden] { display:none; }
+        [data-tooltip] { position:absolute; top:8px; z-index:2; pointer-events:none;
+          padding:.4rem .6rem; border:1px solid var(--cms-border, #43564a);
+          border-radius:.4rem; background:var(--cms-surface, #202e27); font-size:.8rem; }
+        [data-tooltip][hidden] { display:none; }
         .message[data-error] { color: var(--cms-danger, #ffb4a8); }
         ${widgetStatusStyles}
         .stats { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; color: var(--cms-muted, #a5c9b2); font-size: 0.75rem;
@@ -223,6 +228,7 @@ class FHEMCMSChart extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.valueProbe?.dispose();
     this.timePan?.dispose();
     this.timePan = null;
     this.panController?.dispose();
@@ -273,6 +279,7 @@ class FHEMCMSChart extends HTMLElement {
   }
 
   async load() {
+    this.valueProbe?.dispose();
     this.timePan?.dispose();
     this.timePan = null;
     const config = this.widgetConfig;
@@ -298,10 +305,18 @@ class FHEMCMSChart extends HTMLElement {
   }
 
   draw(result) {
+    this.valueProbe?.dispose();
     this.timePan?.dispose();
     this.timePan = null;
     const points = result.points || [];
     const target = this.shadowRoot.querySelector('[data-svg]');
+    let tooltip = target.parentElement.querySelector('[data-tooltip]');
+    if (!tooltip) {
+      tooltip = document.createElement('div');
+      tooltip.dataset.tooltip = '';
+      target.parentElement.append(tooltip);
+    }
+    tooltip.hidden = true;
     const stats = this.shadowRoot.querySelector('[data-stats]');
     target.replaceChildren();
     const custom = /^\d+_\d+$/.test(this.range) ? this.range.split('_').map(Number) : null;
@@ -359,12 +374,32 @@ class FHEMCMSChart extends HTMLElement {
       parts.push('Daten gekürzt');
     }
     stats.textContent = parts.join(' · ');
+    const crosshair = svg('line', {class:'axis',x1:0,x2:0,y1:PAD.top,y2:H-PAD.bottom,hidden:''});
+    target.append(crosshair);
+    this.valueProbe = createValueProbe(target, {
+      show:event => {
+        const box = target.getBoundingClientRect();
+        const px = Math.max(PAD.left,Math.min(W-PAD.right,(event.clientX-box.left)*W/box.width));
+        const time = from+(px-PAD.left)/(W-PAD.left-PAD.right)*(to-from);
+        const point = points.reduce((best,item)=>Math.abs(item[0]-time)<Math.abs(best[0]-time) ? item : best);
+        crosshair.removeAttribute('hidden');
+        crosshair.setAttribute('x1',px);
+        crosshair.setAttribute('x2',px);
+        tooltip.textContent = `${formatDateDisplay(new Date(point[0]*1000).toISOString())} · ${this.widgetConfig.reading}: ${niceNumber(point[1])}${unit}`;
+        tooltip.hidden = false;
+        const local = (event.clientX-box.left)*target.clientWidth/box.width;
+        const left = local<target.clientWidth/2 ? local+12 : local-12-tooltip.offsetWidth;
+        tooltip.style.left = `${Math.max(0,Math.min(target.clientWidth-tooltip.offsetWidth,left))}px`;
+      },
+      hide:() => { tooltip.hidden = true; crosshair.setAttribute('hidden',''); },
+    });
   }
 
   bindPan(target, from, to) {
     this.timePan = createTimePan(target, {
       controller:this.panController,
       bounds:() => [from, to],
+      start:() => this.valueProbe?.clear(),
       plotWidth:() => target.getBoundingClientRect().width * (W - PAD.left - PAD.right) / W,
       commit:(start, end) => {
         this.range = `${start}_${end}`;
