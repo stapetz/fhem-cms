@@ -101,6 +101,11 @@ window.graphTouch = {
     const tip = this.live.shadowRoot.querySelector('[data-tooltip]');
     return {hidden:tip.hidden,text:tip.textContent};
   },
+  async resizeWhileWaiting() {
+    this.live.style.height = '360px';
+    this.live.style.width = '560px';
+    await new Promise(resolve=>setTimeout(resolve,120));
+  },
   liveState() {
     const svg = this.live.shadowRoot.querySelector('[data-svg]');
     return {requests:this.requests,now:this.now,range:this.live.range,

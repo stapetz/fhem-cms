@@ -120,6 +120,9 @@ Ausgeblendete Chart-Statusflaechen duerfen Pointer-Ereignisse nicht abfangen.
 Desktop-Klick aktiviert/deaktiviert Mausverfolgung; Touch zeigt Werte nur
 waehrend der Beruehrung. Bewegungen ab 6px werden nicht als Klick umgedeutet.
 Pan-Start, Abbruch, Blur, Redraw und Entfernen loeschen Popup/Crosshair und
+`cms-graph` unterdrueckt ResizeObserver-Redraws waehrend Pan und laufender
+Historyanfrage. Sonst kann eine Groessenaenderung den alten unverschobenen
+Draw-State zeichnen und die wartende Kurve zurueckspringen lassen.
 geben Listener frei. Die Einfinger-Zeitraumauswahl bleibt beim Graph erhalten.
 Escape beendet aktive Werteproben im Capture-Pfad, bevor ein umgebender
 Dialog die Taste verarbeitet. Ohne aktive Probe bleibt Dialog-Escape wirksam.

@@ -153,6 +153,7 @@ class FHEMCMSGraph extends HTMLElement {
         for (const entry of entries) {
           const selector = entry.target.hasAttribute('data-svg') ? '[data-svg]' : '[data-preview]';
           const state = this.drawStates.get(selector);
+          if (selector === '[data-svg]' && (this.loading || this.timePan?.busy)) continue;
           if (state && entry.contentRect.width > 0 && entry.contentRect.height > 0) {
             this.draw(state.config, state.data, selector, state.legendSelector, state.status, state.hidden);
           }
@@ -427,6 +428,7 @@ class FHEMCMSGraph extends HTMLElement {
     const config = this.widgetConfig;
     if (!config?.series?.length) return;
     const request = ++this.request;
+    this.loading = true;
     const status = this.shadowRoot.querySelector('[data-status]');
     const spinner = this.shadowRoot.querySelector('[data-spinner]');
     status.textContent = 'Daten werden geladen …';
@@ -449,7 +451,10 @@ class FHEMCMSGraph extends HTMLElement {
       status.textContent = `Graph konnte nicht geladen werden: ${error.message || String(error)}`;
       status.setAttribute('data-error', '');
     } finally {
-      if (request === this.request) spinner.hidden = true;
+      if (request === this.request) {
+        this.loading = false;
+        spinner.hidden = true;
+      }
     }
   }
 

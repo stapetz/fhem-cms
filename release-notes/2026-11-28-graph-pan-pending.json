@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-28",
+  "version": "1.44.2-dev",
+  "title": "Gezogene Graphposition bleibt beim Nachladen erhalten",
+  "changes": [
+    "Groessenaenderungen zeichnen waehrend Pan und Nachladen nicht mehr die alte unverschobene Kurve neu. Refs #266.",
+    "Weitere Pan-Gesten auf der noch wartenden alten Datenbasis werden unterdrueckt; neue Daten ersetzen die gezogene Kurve nach erfolgreichem Laden."
+  ]
+}

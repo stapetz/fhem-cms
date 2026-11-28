@@ -194,6 +194,9 @@ test('graph touch taps show values without breaking range selection or scrolling
         state = await evaluate('window.graphTouch.liveState()');
         assert.equal(state.transform,shifted,'released curve stays at dragged position while history is pending');
         assert.match(state.requests.at(-1).range,/^\d+_\d+$/,'fractional source bounds produce API-compatible integer range');
+        await evaluate('window.graphTouch.resizeWhileWaiting()');
+        assert.equal((await evaluate('window.graphTouch.liveState()')).transform,shifted,
+          'layout changes during loading must not redraw the unshifted old curve');
         await evaluate('window.graphTouch.releaseHistory()');
         await pause(100);
         state = await evaluate('window.graphTouch.liveState()');

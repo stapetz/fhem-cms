@@ -52,7 +52,7 @@ export function createSpacebarPan(surface) {
 
 export function createTimePan(target, {controller, bounds, plotWidth, start, commit}) {
   const touches = new Map();
-  let gesture = null, suppressTouch = false;
+  let gesture = null, suppressTouch = false, pending = false;
   let marks = [], original = [];
   const restore = () => marks.forEach((mark, i) => {
     if (original[i] === null) mark.removeAttribute('transform');
@@ -83,10 +83,14 @@ export function createTimePan(target, {controller, bounds, plotWidth, start, com
     const {from, to, shift} = gesture;
     gesture = null;
     controller.stop();
-    if (apply && Math.abs(shift) >= 2) commit(from + shift, to + shift);
+    if (apply && Math.abs(shift) >= 2) {
+      pending = true;
+      commit(from + shift, to + shift);
+    }
     else restore();
   };
   const down = event => {
+    if (pending) { consume(event); return; }
     if (event.pointerType === 'touch') {
       touches.set(event.pointerId, event.clientX);
       if (touches.size < 2 && !suppressTouch) return;
@@ -149,6 +153,7 @@ export function createTimePan(target, {controller, bounds, plotWidth, start, com
   target.addEventListener('touchmove', preventNativePan, {passive:false});
   window.addEventListener('blur', reset);
   return {
+    get busy() { return Boolean(gesture) || pending; },
     dispose() {
       reset();
       for (const [type, handler] of Object.entries(handlers)) target.removeEventListener(type, handler, true);
