@@ -410,6 +410,28 @@ try {
   releaseCache({source:'dblog',readings:['ram_used'],warnings:[]});
   await new Promise(resolve => setTimeout(resolve,30));
   check(widget.graphs.length===0,'late cache results from the previous source cannot restore graphs');
+  const originalSource=devices.shift();
+  widget.services.logReadings=async()=>({readings:cachedReadings,warnings:[]});
+  await widget.refresh();
+  check(!root.querySelector('[data-missing-source]').hidden
+    && root.querySelector('[data-missing-source]').textContent.includes('FHEM-Backend'),
+    'no SYSMON shows a clear backend setup notice instead of fake system values');
+  check(root.querySelector('[data-metrics]').hidden && root.querySelector('[data-info]').hidden
+    && root.querySelector('[data-graph-status]').hidden,
+    'missing source hides metric grid, graph status and details launcher');
+  await widget.openConfig({isNew:true});
+  check(!root.querySelector('[data-config-missing-source]').hidden
+    && root.querySelector('[data-mapping-section]').hidden && root.querySelector('[data-source-field]').hidden,
+    'new widget without SYSMON has tidy setup notice and no irrelevant reading fields');
+  widget.closeConfig(false);
+  devices.unshift(originalSource);
+  await widget.refresh();
+  check(root.querySelector('[data-missing-source]').hidden && !root.querySelector('[data-metrics]').hidden,
+    'minute refresh restores normal display after backend SYSMON is added');
+  await widget.openConfig();
+  check(root.querySelector('[data-config-missing-source]').hidden && !root.querySelector('[data-source-field]').hidden,
+    'reopened config offers existing source without creating or selecting one');
+  widget.closeConfig(false);
   const before = calls;
   widget.remove();
   check(widget.timer && calls === before, 'removing the widget stops its scheduled refresh');

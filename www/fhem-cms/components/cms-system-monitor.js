@@ -33,6 +33,10 @@ class FHEMCMSSystemMonitor extends HTMLElement {
         .metric span, .metric strong { display:block; }
         .metric span { color:var(--cms-muted); font-size:.8em; }
         .status { color:var(--cms-muted); }
+        .source-notice { padding:1.5rem; border:1px solid var(--cms-border); border-radius:.75rem;
+          line-height:1.6; background:var(--cms-surface); }
+        .source-notice h3 { margin:0 0 .75rem; }
+        .source-notice p { margin:.5rem 0; }
         [data-error] { color:var(--cms-danger); }
         [data-graphs] { display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr)); }
         [data-graphs] cms-chart { height:340px; min-width:0; }
@@ -77,6 +81,11 @@ class FHEMCMSSystemMonitor extends HTMLElement {
         <header><h3 data-title>FHEM- und Systemstatus</h3><span class="controls" data-info></span></header>
         <button type="button" data-open-config aria-label="Systemmonitor konfigurieren">⚙</button>
         <p class="status" data-status role="status">Status wird geladen …</p>
+        <section class="source-notice" data-missing-source hidden role="status">
+          <h3>Kein SYSMON-Device vorhanden</h3>
+          <p>Es wurde kein zugängliches SYSMON-Device in FHEM gefunden. Bitte lege zuerst im FHEM-Backend ein SYSMON-Device an und wähle es anschließend in der Widgetkonfiguration aus.</p>
+          <p>Das Widget legt keine Devices an und ändert keine SYSMON-Konfiguration.</p>
+        </section>
         <p class="status" data-graph-status role="status">Verläufe werden im Logcache geprüft …</p>
         <div class="metrics" data-metrics></div>
       </article>
@@ -95,9 +104,14 @@ class FHEMCMSSystemMonitor extends HTMLElement {
           <h2 id="system-monitor-config-title">Systemmonitor konfigurieren</h2>
           <label>Titel<input name="title" maxlength="64" autocomplete="off"></label>
           ${titleVisibilityField}
-          <label>Systemquelle (SYSMON)<select name="systemDevice"><option value="">Keine Systemquelle ausgewählt</option></select></label>
-          <p>Wähle ausdrücklich das SYSMON-Device des FHEM-Rechners. Ohne SYSMON bleiben Systemwerte unbekannt.</p>
-          <fieldset><legend>Reading-Zuordnung und Einheiten</legend>
+          <section class="source-notice" data-config-missing-source hidden role="status">
+            <h3>Kein SYSMON-Device vorhanden</h3>
+            <p>Bitte lege zuerst im FHEM-Backend ein SYSMON-Device an. Öffne danach diese Konfiguration erneut und wähle die Systemquelle aus. Das Widget legt selbst keine Devices an.</p>
+            <p>Bei eingeschränkten Berechtigungen muss ein vorhandenes Device für diesen FHEMWEB-Zugang freigegeben sein.</p>
+          </section>
+          <label data-source-field>Systemquelle (SYSMON)<select name="systemDevice"><option value="">Keine Systemquelle ausgewählt</option></select></label>
+          <p data-source-help>Wähle ausdrücklich das SYSMON-Device des FHEM-Rechners. Ohne SYSMON bleiben Systemwerte unbekannt.</p>
+          <fieldset data-mapping-section><legend>Reading-Zuordnung und Einheiten</legend>
             <p>Erkannte Readings sind vorbelegt. Einheiten müssen zu den Quelldaten passen; es erfolgt keine automatische Umrechnung.
               Gesamt-Reading verwendet dieselbe Einheit wie der Wert. Das Häkchen je Box schaltet Anzeige und Eingaben frei.
               Weitere Readings vergleichen mehrere Werte im selben Graphen (z. B. Empfang und Versand).
@@ -389,6 +403,15 @@ class FHEMCMSSystemMonitor extends HTMLElement {
 
   render() {
     const snapshot = this.snapshot;
+    const missing = snapshot.systems.length === 0;
+    this.shadowRoot.querySelector('[data-missing-source]').hidden = !missing;
+    for (const selector of ['[data-metrics]','[data-graph-status]','[data-info]']) {
+      this.shadowRoot.querySelector(selector).hidden = missing;
+    }
+    if (missing && this.shadowRoot.querySelector('[data-details]').open) {
+      this.shadowRoot.querySelector('[data-details]').close();
+      this.renderGraphs();
+    }
     const status = snapshot.selected ? `FHEM-Abfrage erfolgreich · Systemquelle: ${snapshot.selected}`
       : this.widgetConfig?.systemDevice ? 'FHEM erreichbar · gewählte Systemquelle nicht verfügbar'
         : 'FHEM erreichbar · keine Systemquelle ausgewählt';
@@ -506,11 +529,13 @@ class FHEMCMSSystemMonitor extends HTMLElement {
     this.metricSelection = new Set(this.widgetConfig?.hiddenMetrics || []);
     this.mappingDraft = structuredClone(this.widgetConfig?.metricMappings || []);
     this.configDevices = [];
+    this.showMissingConfigSource(false);
     this.renderMetricOptions([], this.widgetConfig?.systemDevice || '');
     this.renderMappingOptions([], this.widgetConfig?.systemDevice || '');
     try {
       const devices = await loadSystemMonitorDevices(this.services?.systemMonitorDevices);
       this.configDevices = devices;
+      this.showMissingConfigSource(systemMonitorSnapshot(devices).systems.length === 0);
       for (const device of systemMonitorSnapshot(devices).systems) {
         select.add(new Option(device.alias ? `${device.name} (${device.alias})` : device.name, device.name));
       }
@@ -536,6 +561,14 @@ class FHEMCMSSystemMonitor extends HTMLElement {
     for (const input of this.shadowRoot.querySelectorAll('[data-visible]')) {
       if (input.checked) this.metricSelection.delete(input.value);
       else this.metricSelection.add(input.value);
+    }
+
+  }
+
+  showMissingConfigSource(missing) {
+    this.shadowRoot.querySelector('[data-config-missing-source]').hidden = !missing;
+    for (const selector of ['[data-source-field]','[data-source-help]','[data-mapping-section]']) {
+      this.shadowRoot.querySelector(selector).hidden = missing;
     }
   }
 

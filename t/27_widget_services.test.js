@@ -2,6 +2,16 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createSchema5WidgetServices, createWidgetServices } from '../www/fhem-cms/js/widget-services.js';
 
+test('system monitor discovery is read-only and never creates a missing SYSMON', async () => {
+  const calls = [];
+  const services=createSchema5WidgetServices({
+    jsonlist:async spec=>{calls.push(spec);return [];},
+    command:()=>{throw new Error('no mutation command permitted');},
+  });
+  assert.deepEqual(await services.systemMonitorDevices(),[]);
+  assert.deepEqual(calls,['TYPE=SYSMON,TYPE=DbLog,TYPE=FileLog']);
+});
+
 test('shared widget services preserve client arguments and allow retry after failed reads', async () => {
   const calls = [];
   let fail = true;

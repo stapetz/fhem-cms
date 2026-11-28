@@ -260,6 +260,13 @@ aktiviert aber nicht automatisch den Browser-Vollbildmodus.
 
 ### FHEM- und Systemstatus
 
+Das Widget erstellt **niemals automatisch ein SYSMON-Device**. Wenn kein
+zugängliches SYSMON-Device vorhanden ist, zeigt es statt leerer Kennzahlen
+einen aufgeräumten Hinweis: Zuerst ein SYSMON-Device im FHEM-Backend anlegen
+(oder ein vorhandenes Device für den FHEMWEB-Zugang freigeben), anschließend
+die Widgetkonfiguration erneut öffnen und die Quelle bewusst auswählen.
+Der Hinweis wird bei der regelmäßigen Quellenprüfung aktualisiert.
+
 Die Startboxen kombinieren Kennzahlen und vorhandene 24h-Verläufe:
 
 - **CPU:** Prozentwert aus `cpu_usage`, statt des langen CPU-Rohtexts.

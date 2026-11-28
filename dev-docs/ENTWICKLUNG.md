@@ -37,6 +37,11 @@ Verfügbarkeitsstatus. Externe Texte werden ausschließlich als Text eingefügt.
 `systemDevice` bezeichnet ein bewusst ausgewaehltes SYSMON-Device; keine Quelle
 wird automatisch als lokaler Rechner angenommen. Status und Readings von DbLog
 und FileLog kommen aus `jsonlist2`, einschliesslich vorhandener Reading-Zeiten.
+Fehlt ein zugreifbares SYSMON-Device, zeigt Dashboard/Konfiguration einen
+Backend-Einrichtungshinweis statt leerer Metriken. Die Discovery ist rein
+lesend und legt niemals Devices an; bestehende Zuordnungen bleiben erhalten.
+Nach Backend-Einrichtung wird der normale Zustand bei Quellenrefresh bzw.
+erneutem Oeffnen der Konfiguration wiederhergestellt.
 Die sichtbare Komponente fragt alle 60 Sekunden ab und beendet den Timer beim
 Entfernen. Fehler kennzeichnen alte Werte; Erreichbarkeit bedeutet nicht
 Gesundheit oder Aktualitaet der Readings.
@@ -115,14 +120,14 @@ Pan normalisiert fractional `from`/`to` aus echten History-Ergebnissen auf
 ganze Sekunden, da die API nur `INTEGER_INTEGER` akzeptiert. Nach Commit
 bleibt die alte Kurve verschoben sichtbar, bis die neue History gezeichnet
 wird; Abbruch oder eine geklemmte Nullbewegung stellen die Kurve zurueck.
+`cms-graph` unterdrueckt ResizeObserver-Redraws waehrend Pan und laufender
+Historyanfrage. Sonst kann eine Groessenaenderung den alten unverschobenen
+Draw-State zeichnen und die wartende Kurve zurueckspringen lassen.
 Ausgeblendete Chart-Statusflaechen duerfen Pointer-Ereignisse nicht abfangen.
 `createValueProbe` verbindet Graphen (inklusive Vorschau/Torte) und Charts:
 Desktop-Klick aktiviert/deaktiviert Mausverfolgung; Touch zeigt Werte nur
 waehrend der Beruehrung. Bewegungen ab 6px werden nicht als Klick umgedeutet.
 Pan-Start, Abbruch, Blur, Redraw und Entfernen loeschen Popup/Crosshair und
-`cms-graph` unterdrueckt ResizeObserver-Redraws waehrend Pan und laufender
-Historyanfrage. Sonst kann eine Groessenaenderung den alten unverschobenen
-Draw-State zeichnen und die wartende Kurve zurueckspringen lassen.
 geben Listener frei. Die Einfinger-Zeitraumauswahl bleibt beim Graph erhalten.
 Escape beendet aktive Werteproben im Capture-Pfad, bevor ein umgebender
 Dialog die Taste verarbeitet. Ohne aktive Probe bleibt Dialog-Escape wirksam.

@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-28",
+  "version": "1.44.2-dev",
+  "title": "Systemmonitor mit klarem Hinweis bei fehlender Quelle",
+  "changes": [
+    "Ohne zugreifbares SYSMON-Device zeigen Widget und Konfiguration einen Backend-Einrichtungshinweis statt leerer Werteboxen und Reading-Felder. Refs #267.",
+    "Die Quellensuche bleibt rein lesend: Das Widget erzeugt keine Devices und waehlt keine Systemquelle eigenmaechtig.",
+    "Nach Einrichtung der Quelle wechselt die regelmaessige Pruefung wieder zur normalen Darstellung."
+  ]
+}
