@@ -1,9 +1,30 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {centerNewPin, pinCanvasPoint, pinImageFrame, validatePinPosition} from '../www/fhem-cms/js/pin-layout.js';
+import {centerNewPin, pinCanvasPoint, pinImageFrame, validatePinPosition, translateFloorplanSelection} from '../www/fhem-cms/js/pin-layout.js';
 import {schema5GridItems, changePageLayout} from '../www/fhem-cms/js/fcui-schema5-layout.js';
 import {Schema5DraftController} from '../www/fhem-cms/js/fcui-schema5-draft.js';
 import {Schema5WidgetSession} from '../www/fhem-cms/js/fcui-schema5-widget-session.js';
+
+test('Floorplan selection translates pins and cards against one shared image boundary', () => {
+  const canvas = {width:1000,height:600}, frame = pinImageFrame(canvas,{width:600,height:600});
+  const widgets = [
+    {id:'a',rect:{x:0,y:0,w:100,h:100},position:{centerX:20,centerY:30}},
+    {id:'b',rect:{x:0,y:0,w:100,h:100},position:{centerX:70,centerY:60}},
+    {id:'card',rect:{x:100,y:400,w:100,h:100}},
+  ];
+  const isPin = id => id !== 'card', position = widget => widget.position;
+  const original = structuredClone(widgets);
+  const moved = translateFloorplanSelection(widgets,60,30,canvas,frame,isPin,position);
+  assert.deepEqual(moved.map(widget => widget.position),[{centerX:30,centerY:35},{centerX:80,centerY:65},undefined]);
+  assert.deepEqual(moved[2].rect,{x:160,y:430,w:100,h:100});
+  const edge = translateFloorplanSelection(widgets,5000,5000,canvas,frame,isPin,position);
+  assert.equal(edge[1].position.centerX,100);
+  assert.equal(edge[0].position.centerX,50);
+  assert.equal(edge[2].rect.y,500,'card bottom constrains entire selection');
+  assert.deepEqual(widgets,original,'pure translation never changes source widgets');
+  assert.throws(() => translateFloorplanSelection([],0,0,canvas,frame,isPin,position),/Floorplan/);
+  assert.throws(() => translateFloorplanSelection(widgets,NaN,0,canvas,frame,isPin,position),/Floorplan/);
+});
 
 test('Pin positions are exact bounded percentages, optional and Freeform-only', () => {
   for (const position of [{centerX:0,centerY:100},{centerX:42.53,centerY:61.83}]) {

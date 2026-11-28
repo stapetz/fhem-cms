@@ -55,6 +55,8 @@ try {
   await new Promise(resolve => setTimeout(resolve,150));
   click('a'); check(selected() === 'a','single selection');
   click('b',{metaKey:true}); check(selected() === 'a,b','Cmd expands selection');
+  check(action('Mehrfachauswahl umschalten').textContent === 'Auswahl aufheben','selection action changes label');
+  check(!action('Widget-Auswahl aufheben'),'no redundant deselect button');
   check(!root.querySelector('.cms-freeform-handles button'),'no group resize handles');
   const scale = card('a').getBoundingClientRect().width / 100;
   drag('b',50*scale,30*scale);
@@ -78,6 +80,8 @@ try {
   action('Auswahl gruppieren').click();
   check(groupCalls.length === 1 && page.widgets[0].groupId === page.widgets[1].groupId,'group action persists common membership');
   mount(); click('b'); check(selected() === 'a,b','group selected through any member after remount');
+  check(action('Gruppierung der Auswahl aufheben').textContent === 'Gruppe aufheben' && !action('Auswahl gruppieren'),
+    'one group action changes to ungroup');
   action('Auswahl auf andere Seite verschieben').click();
   check(transfers[0].sort().join(',') === 'a,b','transfer includes complete group');
   check(card('a').querySelector('.cms-widget-geometry').disabled,'individual geometry unavailable for group');
@@ -90,11 +94,12 @@ try {
   check(selected() === '','Escape clears selection');
   action('Mehrfachauswahl umschalten').click();
   click('a'); click('c'); check(selected() === 'a,c','touch-friendly selection toggle');
-  action('Mehrfachauswahl umschalten').click();
   drag('c',3000,3000);
   check(saves.at(-1)[1].rect.x === 900 && saves.at(-1)[1].rect.y === 500,'group boundary clamps as one box');
   check(saves.at(-1)[1].rect.x - saves.at(-1)[0].rect.x === 500,'boundary keeps horizontal spacing');
-  action('Widget-Auswahl aufheben').click();
+  action('Mehrfachauswahl umschalten').click();
+  check(selected() === '' && action('Mehrfachauswahl umschalten').textContent === 'Mehrfachauswahl',
+    'combined selection action clears and exits multi-select');
   click('a'); check(root.querySelectorAll('.cms-freeform-handles button').length === 8,'single resize remains available');
   view.destroy(); check(!root.querySelector('.cms-freeform-selection-tools'),'toolbar cleanup');
   view = undefined;
@@ -132,7 +137,12 @@ try {
   check(getComputedStyle(groupBox).backgroundColor !== getComputedStyle(menuBox).backgroundColor,'group box subtly tinted');
   check([...groupBox.querySelectorAll('button')].every(button => button.classList.contains('cms-button')),
     'group controls reuse menu button style');
-  check(groupBox.querySelector('.cms-freeform-selection-hint').textContent.includes('Cmd/Strg'),'selection hint visible in menu box');
+  check(!groupBox.querySelector('.cms-freeform-selection-hint'),'keyboard help is not displayed in menu box');
+  const normalMenu = menuBox.querySelector('summary'), selectionButton = groupBox.querySelector('button');
+  check(Math.abs(normalMenu.getBoundingClientRect().height-selectionButton.getBoundingClientRect().height)<1,
+    'group buttons match normal menu item height');
+  check(getComputedStyle(normalMenu).fontSize === getComputedStyle(selectionButton).fontSize,
+    'group labels match normal menu font size');
   if (!location.search.includes('width=390')) {
     check(Math.abs(menuBox.getBoundingClientRect().top-groupBox.getBoundingClientRect().top) < 1,'desktop menu boxes on same row');
   } else {
@@ -140,12 +150,12 @@ try {
   }
   click('a'); click('b',{ctrlKey:true});
   action('Auswahl gruppieren').click();
-  await wait(() => writes === 1 && action('Auswahl gruppieren') && !root.querySelector('.cms-schema5-grid')?.inert);
+  await wait(() => writes === 1 && action('Mehrfachauswahl umschalten') && !root.querySelector('.cms-schema5-grid')?.inert);
   check(state.draft.pages[0].widgets[0].groupId === state.draft.pages[0].widgets[1].groupId,
     'real editor saves grouping through draft controller');
   check(selected() === 'a,b','real editor restores group selection after saving');
   move('a').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:true,bubbles:true}));
-  await wait(() => writes === 2 && action('Auswahl gruppieren') && !root.querySelector('.cms-schema5-grid')?.inert);
+  await wait(() => writes === 2 && action('Mehrfachauswahl umschalten') && !root.querySelector('.cms-schema5-grid')?.inert);
   check(state.draft.pages[0].widgets[0].rect.x === 110 && state.draft.pages[0].widgets[1].rect.x === 310,
     'real editor saves both new geometries in one transaction');
   action('Auswahl auf andere Seite verschieben').click();

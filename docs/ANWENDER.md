@@ -613,7 +613,9 @@ Im Bearbeitungsmodus auf freien Pixel-Seiten kannst du mehrere Widgets mit
 **Cmd-Klick** am Mac bzw. **Strg-Klick** unter Windows auswählen. **Alt-Klick**
 ist ebenfalls möglich. Ein weiterer Auswahlklick entfernt das Widget bzw.
 seine ganze Gruppe aus der Auswahl. Für Touch-Geräte gibt es über dem Canvas
-den Schalter **Mehrfachauswahl**; danach Widgets antippen.
+den Schalter **Mehrfachauswahl**; danach Widgets antippen. Bei aktiver
+Mehrfachauswahl oder mehreren ausgewählten Widgets heißt derselbe Menüpunkt
+**Auswahl aufheben**. Anklicken löscht die Auswahl und beendet den Modus.
 Die Gruppierungsfunktionen und der Auswahlzähler stehen in einer eigenen,
 leicht farblich abgesetzten Menübox neben der normalen Bearbeitungsmenüleiste.
 Auf schmalen Bildschirmen bricht die Box in die nächste Zeile um.
@@ -623,17 +625,26 @@ bewegt sich mit unveränderten Abständen und Größen. Pfeiltasten verschieben
 die Auswahl um einen Canvas-Pixel, mit Shift um zehn. Alt während des Ziehens
 deaktiviert wie bisher Raster und Hilfslinien. Die gesamte Auswahl bleibt
 innerhalb des Canvas. Escape bzw. ein abgebrochener Pointer verwirft die Geste;
-Escape ohne aktive Geste hebt die Auswahl auf.
+**Escape ohne aktive Geste hebt die Auswahl auf.** Diese Tastaturhinweise
+stehen nur hier in der Dokumentation, nicht als zusätzlicher Text in der Menübox.
 
 **Gruppieren** speichert die gemeinsame Zuordnung als Entwurf. Ein Klick auf
-ein Mitglied wählt künftig die ganze Gruppe. **Gruppe aufheben** entfernt
+ein Mitglied wählt künftig die ganze Gruppe. Der Menüpunkt wechselt dann von
+**Gruppieren** zu **Gruppe aufheben**; dieser entfernt
 die Zuordnung, nicht die Widgets. **Auf andere Seite** überträgt die gesamte
 Auswahl mit Inhalt und Gruppen auf eine andere Freeform-Seite. Bei kleineren
 Canvas-Maßen wird sie gemeinsam an den Rand geschoben, nicht einzeln skaliert.
 Passt die Gruppe nicht hinein, erscheint eine Fehlermeldung und es wird nichts
 gespeichert. Raster- und Pin-Seiten sind für diesen Gruppentransfer keine Ziele.
 
-Navigation und Pins bleiben einzeln bedienbar. Gruppen haben keine gemeinsamen
+**Floorplan-Seiten:** Mehrfachauswahl, Gruppierung und gemeinsames Verschieben
+funktionieren auch mit Pins und gemischten Auswahlen aus Pins und normalen
+Karten. Pins behalten ihre prozentuale Bildposition (auf zwei Nachkommastellen
+gerundet); die Bewegung wird gemeinsam an den Bildrändern begrenzt, Karten
+bleiben im Canvas. Auch Pfeiltasten, Shift und Escape funktionieren.
+Der Seitentransfer einer Auswahl von Floorplan-Seiten ist weiterhin deaktiviert.
+
+Die Navigation bleibt einzeln bedienbar. Gruppen haben keine gemeinsamen
 Resize-Griffe; zum Ändern einer einzelnen Größe zunächst die Gruppe aufheben.
 Einzelne Widget-Einstellungen bleiben zugänglich. Eine Widget-Kopie oder
 Vorlagen-Einfügung wird nicht automatisch Mitglied der Quellgruppe.

@@ -535,10 +535,11 @@ export class Schema5Editor {
       const candidate = state.draft || state.live;
       const page = candidate.pages.find(entry => entry.id === pageId);
       if (!isFreeform(page)) throw new Error('Freeform-Seite erforderlich');
-      for (const {id, rect} of changes) {
+      for (const {id, rect, position} of changes) {
         const widget = page.widgets.find(entry => entry.id === id);
         if (!widget) throw new Error('Unbekanntes Widget');
         widget.rect = rect;
+        if (position !== undefined) widget.position = position;
       }
       if (grouped !== undefined) setFreeformGroup(page, ids, grouped ? this.#browser.crypto.randomUUID() : undefined);
       this.#freeformSelection = {pageId, ids};

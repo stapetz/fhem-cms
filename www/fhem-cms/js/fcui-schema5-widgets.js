@@ -265,7 +265,7 @@ export function mountSchema5Widgets(GridStack, root, config, pageId, navigation,
   }
   const stopEditor = frame && editing?.onFreeformChange
     ? mountFreeformEditor(root, framePage, frame, editing, navigation, true) : null;
-  const stopPinEditor = freeform && editing?.onFreeformChange
+  const stopPinEditor = freeform && editing?.onFreeformChange && !editing.onFreeformChanges
     ? mountPinEditor(root, page, freeform, editing) : null;
   const updateVisibility = () => {
     for (const [id, widget] of widgets) {

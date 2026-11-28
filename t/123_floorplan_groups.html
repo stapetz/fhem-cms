@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<link rel="stylesheet" href="../www/fhem-cms/css/fhem-cms.css">
+<main class="cms-shell"><div id="root" style="width:800px"></div></main>
+<output id="result">pending</output>
+<script type="module">
+import { mountSchema5Widgets } from '../www/fhem-cms/js/fcui-schema5-widgets.js';
+import { Schema5Editor } from '../www/fhem-cms/js/fcui-schema5-editor.js';
+import { Schema5DraftController } from '../www/fhem-cms/js/fcui-schema5-draft.js';
+import { setFreeformGroup } from '../www/fhem-cms/js/fcui-freeform-layout.js';
+import { GridStack } from '../www/fhem-cms/js/fcui-runtime.js';
+const root=document.querySelector('#root'), result=document.querySelector('#result');
+if (location.search.includes('width=390')) root.style.width='100%';
+let checks=0,saves=[],view,commands=0;
+const check=(value,name)=>{if(!value)throw new Error(name);checks++;};
+const config={schemaVersion:6,settings:{layoutMode:'grid',gridColumns:12},
+  navigation:{orientation:'horizontal',grid:{col:1,row:1,w:12,h:1}},
+  pages:[{id:'home',title:'Grundriss',layoutMode:'freeform',renderAsPins:true,
+    canvas:{width:1000,height:600,scaling:'width',mobileBehavior:'scale'},
+    widgets:[
+      {id:'a',type:'fhem-value',device:'Demo',reading:'temperature',rect:{x:250,y:130,w:100,h:100},position:{centerX:30,centerY:30}},
+      {id:'b',type:'fhem-value',device:'Demo',reading:'humidity',rect:{x:550,y:310,w:100,h:100},position:{centerX:60,centerY:60}},
+      {id:'card',type:'text',html:'<p>Karte</p>',rect:{x:100,y:400,w:100,h:100}},
+    ]}]};
+const page=config.pages[0],original=JSON.stringify(config);
+const services={setCommand:()=>{commands++;}};
+const editing={onEdit:()=>{},onFreeformChange:(id,rect)=>saves.push([{id,rect}]),
+  onFreeformChanges:changes=>saves.push(changes),
+  onGroupChange:(ids,grouped)=>setFreeformGroup(page,ids,grouped?'floor-group':undefined)};
+const card=id=>root.querySelector(`[data-widget-id="${id}"]`);
+const move=id=>card(id).querySelector('[data-dir="move"]');
+const selected=()=>[...root.querySelectorAll('.cms-freeform-widget.cms-widget-selected')].map(node=>node.dataset.widgetId).sort().join(',');
+const action=label=>root.querySelector(`[aria-label="${label}"]`);
+const click=(id,options={})=>move(id).dispatchEvent(new MouseEvent('click',{bubbles:true,...options}));
+const mount=()=>{
+  view?.destroy();
+  view=mountSchema5Widgets(GridStack,root,config,'home',document.createElement('nav'),services,new Map(),editing);
+};
+const pointer=(target,type,x,y)=>target.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:19,isPrimary:true,
+  button:0,clientX:x,clientY:y}));
+const drag=(id,dx,dy,cancel=false)=>{
+  const target=move(id),scale=root.querySelector('.cms-freeform-canvas').getBoundingClientRect().width/1000;
+  target.setPointerCapture=()=>{};target.hasPointerCapture=()=>false;
+  pointer(target,'pointerdown',100,100);pointer(target,'pointermove',100+dx*scale,100+dy*scale);
+  pointer(target,cancel?'pointercancel':'pointerup',100+dx*scale,100+dy*scale);
+};
+try{
+  mount();await new Promise(resolve=>setTimeout(resolve,120));
+  check(root.querySelector('.cms-freeform-selection-tools'),'floorplan offers selection menu');
+  click('a');check(selected()==='a','pin single selection');
+  check(card('a').querySelector('.cms-pin-position')?.textContent.includes('30.00%'),'pin position tooltip preserved');
+  click('b',{ctrlKey:true});check(selected()==='a,b','Ctrl selects two pins');
+  check(action('Mehrfachauswahl umschalten').textContent==='Auswahl aufheben','pin selection menu toggles');
+  drag('b',50,30);
+  check(saves.length===1&&saves[0].length===2,'pins saved in one batch');
+  check(saves[0][0].position.centerX===35&&saves[0][1].position.centerX===65,'pin horizontal percentage spacing preserved');
+  check(saves[0][0].position.centerY===35&&saves[0][1].position.centerY===65,'pin vertical percentage spacing preserved');
+  check(JSON.stringify(config)===original&&commands===0,'pin movement writes no live data or commands');
+  drag('a',50,30,true);check(saves.length===1,'pin cancellation does not save');
+  check(card('a').style.left==='300px'&&card('b').style.left==='600px','cancel restores all pins');
+  drag('a',5000,5000);
+  check(saves.at(-1)[0].position.centerX===70&&saves.at(-1)[1].position.centerX===100,'shared pin clamp preserves spacing at image edge');
+  action('Auswahl gruppieren').click();
+  mount();click('b');check(selected()==='a,b','floorplan group expands after remount');
+  check(action('Gruppierung der Auswahl aufheben')?.textContent==='Gruppe aufheben','floorplan grouped state changes action');
+  action('Gruppierung der Auswahl aufheben').click();mount();
+  click('a');card('card').dispatchEvent(new MouseEvent('click',{bubbles:true,metaKey:true}));
+  check(selected()==='a,card','mixed pin and card selection');
+  drag('a',50,30);
+  const mixed=saves.at(-1);
+  check(mixed[0].position.centerX===35&&mixed[1].rect.x===150,'mixed selection translates in common Canvas coordinates');
+  check(mixed[0].position.centerY===35&&mixed[1].rect.y===430,'mixed vertical translation');
+  view.destroy();view=undefined;root.style.width='100%';
+  let state={live:structuredClone(config),draft:null,token:'a'.repeat(64)},writes=0;
+  const live=JSON.stringify(state.live);
+  const controller=new Schema5DraftController({read:async()=>structuredClone(state),
+    save:async(draft,token)=>{check(token===state.token,'floorplan uses current draft token');state={...state,draft:structuredClone(draft),
+      token:(++writes).toString(16).padStart(64,'0')};},
+    publish:async()=>{throw new Error('No publication');},discard:async()=>{throw new Error('No discard');}});
+  const editor=new Schema5Editor({GridStack,root,controller,services,browser:window,
+    client:{jsonlist:async()=>[],subscribe:()=>{},unsubscribe:()=>{}}});
+  const wait=async(n)=>{
+    for(let i=0;i<100;i++){if(writes===n&&action('Mehrfachauswahl umschalten')&&!root.querySelector('.cms-schema5-grid')?.inert)return;
+      await new Promise(resolve=>setTimeout(resolve,25));}
+    throw new Error(root.textContent);
+  };
+  await editor.start();click('a');click('b',{ctrlKey:true});
+  action('Auswahl gruppieren').click();await wait(1);
+  check(state.draft.pages[0].widgets[0].groupId===state.draft.pages[0].widgets[1].groupId,'real editor persists floorplan group');
+  move('a').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:true,bubbles:true}));
+  await wait(2);
+  check(state.draft.pages[0].widgets[0].position.centerX===31&&state.draft.pages[0].widgets[1].position.centerX===61,
+    'real editor persists group Pin percentages');
+  check(JSON.stringify(state.live)===live,'real floorplan editor preserves Live');
+  action('Gruppierung der Auswahl aufheben').click();await wait(3);
+  check(!state.draft.pages[0].widgets[0].groupId&&!state.draft.pages[0].widgets[1].groupId,'real editor ungroup keeps pins');
+  editor.stop();root.replaceChildren();root.className='';mount();
+  window.floorplanGroups={card,move,selected,saves,config};
+  result.dataset.ready='true';result.dataset.result='pass';
+  result.textContent=JSON.stringify({ok:true,checks});
+}catch(error){result.dataset.result='fail';result.textContent=JSON.stringify({ok:false,error:error.stack,checks});}
+</script>
+</html>

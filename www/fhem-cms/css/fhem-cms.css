@@ -2638,14 +2638,12 @@ body:has(> .cms-shell .cms-freeform-landscape-full) {
   background: color-mix(in srgb, var(--cms-toolbar) 90%, var(--cms-accent) 10%);
   border-color: color-mix(in srgb, var(--cms-toolbar-border) 75%, var(--cms-accent) 25%);
 }
-.cms-freeform-selection-tools button { min-height: 48px; }
 .cms-toolbar.cms-freeform-selection-tools [aria-pressed="true"] {
   background: var(--cms-toolbar-hover); border-color: var(--cms-toolbar-outline);
 }
 .cms-freeform-selection-tools output {
   padding: .3rem .7rem; font-size: .9rem; color: var(--cms-text);
 }
-.cms-freeform-selection-hint { padding: .3rem .7rem; font-size: .8rem; color: var(--cms-muted); }
 .cms-freeform-handles {
   position: absolute;
   border-radius: .5rem;

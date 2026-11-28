@@ -45,8 +45,12 @@ bleiben erhalten. Escape/Pointercancel speichern nicht.
 Die Freeform-Auswahlleiste wird ueber `groupToolbarHost` in die gemeinsame
 `cms-editor-toolbar-row` neben der normalen Menuebox eingehaengt. Sie nutzt
 `cms-toolbar`/`cms-button`, mit Theme-basierter dezenter Farbabweichung.
-Der Freeform-Editor entfernt sie beim Unmount; Raster/Pin/Vorschau zeigen sie
-nicht. Schmale Ansichten umbrechen die Boxen ohne horizontalen Overflow.
+Der Freeform-Editor entfernt sie beim Unmount; Raster/Vorschau zeigen sie
+nicht. Floorplan-Seiten nutzen dieselbe Auswahlverwaltung fuer Pins/Karten.
+Schmale Ansichten umbrechen die Boxen ohne horizontalen Overflow.
+Menuebutton-Groesse folgt der normalen Menueleiste ohne eigene Mindesthoehe.
+Mehrfachauswahl/Auswahl aufheben und Gruppieren/Gruppe aufheben sind jeweils
+ein dynamischer Button; Tastaturhinweise stehen nur in der Anwenderdoku.
 
 Die Auswahl ist flüchtig; nur Gruppierungen sind persistent. Gruppen können
 zusammengeführt/aufgelöst werden. Kopieren/Vorlagen-Einfügen entfernt die
@@ -56,11 +60,17 @@ Beim Wechsel ins Raster wird `groupId` entfernt. Transfer erfolgt nur zwischen
 Freeform-Seiten ohne Pin-Modus; zu kleine Ziel-Canvas und Widgetlimits werden
 vor dem Schreiben abgelehnt. Zielseitige Kennungskollisionen werden für die
 gesamte Gruppe gemeinsam umbenannt, ohne fremde Zielgruppen zu verbinden.
-Navigation, Pins, Gruppen-Resize und separate Phone-Geometrie sind nicht Teil
+Floorplan-Gesten uebersetzen den gemeinsamen Canvas-Versatz in prozentuale
+Bildpositionen fuer Pins (bestehende 0.01-Prozent-Praezision) und Pixelpositionen
+fuer Karten. Gemeinsame Grenzen beruecksichtigen Bildrahmen und Kartengroessen.
+Der Editor speichert `position` und `rect` fuer alle Mitglieder atomar.
+Floorplan-Gruppierung ist erlaubt, Floorplan-Seitentransfer bleibt deaktiviert.
+Der bisherige Pin-Editor bleibt fuer Aufrufer ohne Batch-Speicherdienst erhalten.
+Navigation, Gruppen-Resize und separate Phone-Geometrie sind nicht Teil
 dieses Umfangs.
 
 Regressionen: `node --test t/122_freeform_groups.test.js`,
-`node --test --test-name-pattern='Freeform groups|Freeform layout' t/35_schema5_scaling.test.js`
+`node --test --test-name-pattern='Freeform groups|Floorplan groups' t/35_schema5_scaling.test.js`
 und `prove t/91_schema6_validation.t t/92_schema6_persistence.t`.
 Erwartet: gemeinsame unverzerrte Translation, unveränderte Live-Daten,
 persistente Gruppen und explizite Ablehnung ungültiger Transfers.

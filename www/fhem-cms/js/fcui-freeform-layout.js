@@ -114,7 +114,6 @@ export function translateFreeformWidgets(widgets, dx, dy, canvas) {
 
 export function setFreeformGroup(page, ids, groupId) {
   const widgets = freeformSelection(page, ids);
-  if (page.renderAsPins === true) throw new Error('Gruppierung ist auf Pin-Seiten nicht verfügbar');
   if (groupId !== undefined) {
     if (widgets.length < 2) throw new Error('Mindestens zwei Widgets zum Gruppieren auswählen');
     validateFreeformWidget({...widgets[0], groupId}, page.canvas);

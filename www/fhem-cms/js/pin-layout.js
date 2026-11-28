@@ -69,3 +69,29 @@ export function pinCanvasPoint(position, frame) {
     y: frame.y + position.centerY / 100 * frame.h,
   };
 }
+
+export function translateFloorplanSelection(widgets, dx, dy, canvas, frame, isPin, positionFor) {
+  validateFrame(frame);
+  if (!Array.isArray(widgets) || !widgets.length || ![dx, dy].every(Number.isFinite)) {
+    throw new Error('Ungültige Floorplan-Auswahl oder Verschiebung');
+  }
+  const points = widgets.map(widget => isPin(widget.id)
+    ? {widget, pin: true, point: pinCanvasPoint(positionFor(widget), frame)}
+    : {widget, pin: false, point: {x: widget.rect.x, y: widget.rect.y}});
+  let minX = -Infinity, maxX = Infinity, minY = -Infinity, maxY = Infinity;
+  for (const {widget, pin, point} of points) {
+    minX = Math.max(minX, (pin ? frame.x : 0) - point.x);
+    maxX = Math.min(maxX, (pin ? frame.x + frame.w : canvas.width - widget.rect.w) - point.x);
+    minY = Math.max(minY, (pin ? frame.y : 0) - point.y);
+    maxY = Math.min(maxY, (pin ? frame.y + frame.h : canvas.height - widget.rect.h) - point.y);
+  }
+  if (minX > maxX || minY > maxY) throw new Error('Floorplan-Auswahl passt nicht in die Bezugsfläche');
+  const x = Math.max(minX, Math.min(maxX, dx)), y = Math.max(minY, Math.min(maxY, dy));
+  return points.map(({widget, pin, point}) => {
+    if (!pin) return {id: widget.id, rect: {...widget.rect, x: Math.round(point.x + x), y: Math.round(point.y + y)}};
+    const position = pinPercentPoint({x: point.x + x, y: point.y + y}, frame);
+    const center = pinCanvasPoint(position, frame);
+    return {id: widget.id, position, rect: fitFreeformRect({...widget.rect,
+      x: center.x - widget.rect.w / 2, y: center.y - widget.rect.h / 2}, canvas)};
+  });
+}

@@ -499,7 +499,9 @@ for (const [name, fixtures] of [
   ['condition wizard validates rules and previews current readings',
     [['117_condition_wizard.html', 15], ['117_condition_wizard.html?touch=1', 15]]],
   ['Freeform groups support shared movement, selection and cancellation',
-    [['122_freeform_groups.html', 43], ['122_freeform_groups.html?width=390', 43]]],
+    [['122_freeform_groups.html', 49], ['122_freeform_groups.html?width=390', 49]]],
+  ['Floorplan groups support mixed selection and shared Pin placement',
+    [['123_floorplan_groups.html', 24], ['123_floorplan_groups.html?width=390', 24]]],
   ['conditions integrate with widgets and text and HTML editors',
     [['118_condition_integration.html', 39], ['118_condition_integration.html?touch=1', 38]]],
   ['All widget dialogs use consistent desktop and responsive widths with full-width table units',
@@ -543,7 +545,7 @@ for (const [name, fixtures] of [
         '49_link_widget.html', '51_asset_manager.html', '61_asset_image.html', '62_page_modal.html',
         '63_responsive_edges.html', '65_widget_dialogs.html', '88_volvoconnect.html',
         '89_volvoconnect_order.html', '96_popup_scroll.html', '119_eventmonitor.html',
-        '122_freeform_groups.html'].includes(fixture.split('?')[0]);
+        '122_freeform_groups.html','123_floorplan_groups.html'].includes(fixture.split('?')[0]);
       const interact = !interactive ? undefined : async command => {
         const evaluate = async expression => {
           const reply = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, timeout: 20000 });
@@ -558,6 +560,44 @@ for (const [name, fixtures] of [
         const failure = await evaluate(`document.querySelector('#result').dataset.result === 'fail'
           ? document.querySelector('#result').textContent : null`);
         assert.equal(failure, null, failure);
+        if (fixture.startsWith('123_floorplan_groups.html')) {
+          const point = async id => evaluate(`(() => {
+            const bounds=window.floorplanGroups.move(${JSON.stringify(id)}).getBoundingClientRect();
+            return {x:bounds.x+bounds.width/2,y:bounds.y+bounds.height/2};
+          })()`);
+          const click = async(id,modifiers=0)=>{
+            const p=await point(id);
+            await command('Input.dispatchMouseEvent',{type:'mousePressed',...p,button:'left',clickCount:1,modifiers});
+            await command('Input.dispatchMouseEvent',{type:'mouseReleased',...p,button:'left',clickCount:1,modifiers});
+          };
+          await click('a');await click('b',4);
+          assert.equal(await evaluate('window.floorplanGroups.selected()'),'a,b','real floorplan Meta selection');
+          const start=await point('b');
+          const scale=await evaluate('document.querySelector(".cms-freeform-canvas").getBoundingClientRect().width/1000');
+          await command('Input.dispatchMouseEvent',{type:'mousePressed',...start,button:'left',clickCount:1});
+          await command('Input.dispatchMouseEvent',{type:'mouseMoved',x:start.x+50*scale,y:start.y+30*scale,button:'left',buttons:1});
+          await command('Input.dispatchMouseEvent',{type:'mouseReleased',x:start.x+50*scale,y:start.y+30*scale,button:'left',clickCount:1});
+          assert.deepEqual((await evaluate('window.floorplanGroups.saves.at(-1)')).map(change=>change.position),
+            [{centerX:35,centerY:35},{centerX:65,centerY:65}],'real captured drag preserves Pin offsets');
+          await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+          await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+          await command('Emulation.setTouchEmulationEnabled',{enabled:true});
+          const toggle=await evaluate(`(()=>{const b=document.querySelector('[aria-label="Mehrfachauswahl umschalten"]').getBoundingClientRect();
+            return {x:b.x+b.width/2,y:b.y+b.height/2};})()`);
+          const tap=async p=>{
+            await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...p,id:1}]});
+            await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await pause(80);
+          };
+          await tap(toggle);await tap(await point('a'));await tap(await point('b'));
+          assert.equal(await evaluate('window.floorplanGroups.selected()'),'a,b','touch floorplan multi-select');
+          const t=await point('a');
+          await command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...t,id:1}]});
+          await command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:t.x+50*scale,y:t.y+30*scale,id:1}]});
+          await command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+          assert.deepEqual((await evaluate('window.floorplanGroups.saves.at(-1)')).map(change=>change.position),
+            [{centerX:35,centerY:35},{centerX:65,centerY:65}],'touch moves both floorplan Pins');
+          return;
+        }
         if (fixture.startsWith('122_freeform_groups.html')) {
           const point = async id => evaluate(`(() => {
             const bounds = window.freeformGroups.card(${JSON.stringify(id)}).getBoundingClientRect();
@@ -1325,7 +1365,7 @@ for (const [name, fixtures] of [
       };
       const data = await browserResult(profile,
         `http://127.0.0.1:${server.address().port}/t/${fixture}`, child, interact,
-        fixture.startsWith('122_freeform_groups.html')
+        fixture.startsWith('122_freeform_groups.html') || fixture.startsWith('123_floorplan_groups.html')
           ? command => command('Emulation.setDeviceMetricsOverride', {
             width:fixture.includes('width=390') ? 390 : 1440,height:1000,deviceScaleFactor:1,mobile:false,
           })

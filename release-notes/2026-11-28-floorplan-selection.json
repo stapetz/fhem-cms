@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-28",
+  "version": "1.45.2-dev",
+  "title": "Kompakte Auswahlmenues und Floorplan-Mehrfachauswahl",
+  "changes": [
+    "Gruppenmenues folgen der Groesse normaler Menuepunkte; Auswahl und Gruppierung wechseln ihren Menuepunkt zum Aufheben.",
+    "Tastaturhinweise nur noch in der Doku statt in der Menueleiste.",
+    "Pins und Karten auf Floorplan-Seiten gemeinsam auswaehlen, gruppieren und verschieben."
+  ]
+}
