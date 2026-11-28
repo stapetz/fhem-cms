@@ -58,6 +58,14 @@ Speicherbalken
   unterdrueckt; neue Daten ersetzen die gezogene Kurve nach erfolgreichem
   Laden.
 
+2026-11-28 - 1.45.0-dev: Freeform: Mehrfachauswahl und Widget-Gruppen
+- Widgets per Cmd/Strg/Alt-Klick oder Mehrfachauswahl-Schalter gemeinsam
+  markieren und verschieben.
+- Auswahl gruppieren, Gruppen aufheben und gemeinsam auf andere Freeform-Seiten
+  verschieben.
+- Relative Abstaende, Widget-Inhalte und bestehende Einzelwidget-Bedienung
+  bleiben erhalten.
+
 2026-11-27 - 1.41.0-dev: Bedingungen fuer Widgets und Textbereiche
 - Ein gemeinsamer Bedingungsdialog steuert Widget-Sichtbarkeit sowie
   Wenn-/Sonst-Bereiche in Text und freiem HTML anhand aktueller FHEM-Readings.
